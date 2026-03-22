@@ -48,9 +48,6 @@ func TestLoad_emptyDATABASE_URL_afterFile(t *testing.T) {
 }
 
 func TestLoad_resolveFromRepoRoot(t *testing.T) {
-	if testing.Short() {
-		t.Skip("uses Chdir")
-	}
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module envload_root_test\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -62,12 +59,14 @@ func TestLoad_resolveFromRepoRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := os.Chdir(old); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
 	if err := os.Chdir(root); err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		_ = os.Chdir(old)
-	}()
 	t.Setenv("DATABASE_URL", "")
 	path, err := Load("")
 	if err != nil {
