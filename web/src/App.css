@@ -193,3 +193,12 @@ th {
 .stack-row-actions {
   margin-top: 0.75rem;
 }
+
+.confirm-dialog {
+  border: 1px solid #fecaca;
+  box-shadow: 0 2px 8px rgb(185 28 28 / 12%);
+}
+
+.confirm-dialog h2 {
+  margin-top: 0;
+}

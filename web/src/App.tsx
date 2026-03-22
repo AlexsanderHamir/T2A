@@ -1,3 +1,4 @@
+import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { StreamStatusHint } from "./components/StreamStatusHint";
 import { TaskCreateForm } from "./components/TaskCreateForm";
@@ -33,8 +34,17 @@ export default function App() {
         loading={app.loading}
         busy={app.busy}
         onEdit={app.openEdit}
-        onDelete={app.removeTask}
+        onRequestDelete={app.requestDelete}
       />
+
+      {app.deleteTarget ? (
+        <DeleteConfirmDialog
+          taskTitle={app.deleteTarget.title}
+          busy={app.busy}
+          onCancel={app.cancelDelete}
+          onConfirm={() => void app.confirmDelete()}
+        />
+      ) : null}
 
       {app.editing ? (
         <TaskEditForm

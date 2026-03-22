@@ -30,6 +30,12 @@ export function useTasksApp() {
   const [editStatus, setEditStatus] = useState<Status>("ready");
   const [editPriority, setEditPriority] = useState<Priority>("medium");
 
+  /** In-app delete confirmation (avoids `window.confirm`, which breaks input focus in some browsers). */
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
   const refresh = useCallback(async () => {
     try {
       setError(null);
@@ -122,8 +128,18 @@ export function useTasksApp() {
     }
   }
 
-  async function removeTask(id: string) {
-    if (!window.confirm("Delete this task?")) return;
+  const requestDelete = useCallback((t: Task) => {
+    setDeleteTarget({ id: t.id, title: t.title });
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteTarget(null);
+  }, []);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
+    setDeleteTarget(null);
     setBusy(true);
     setError(null);
     try {
@@ -164,6 +180,9 @@ export function useTasksApp() {
     openEdit,
     closeEdit,
     submitEdit,
-    removeTask,
+    deleteTarget,
+    requestDelete,
+    cancelDelete,
+    confirmDelete,
   };
 }

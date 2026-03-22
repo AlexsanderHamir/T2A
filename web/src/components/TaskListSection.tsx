@@ -5,7 +5,8 @@ type Props = {
   loading: boolean;
   busy: boolean;
   onEdit: (t: Task) => void;
-  onDelete: (id: string) => void;
+  /** Opens in-app delete confirmation (do not call `window.confirm` from the table). */
+  onRequestDelete: (t: Task) => void;
 };
 
 export function TaskListSection({
@@ -13,7 +14,7 @@ export function TaskListSection({
   loading,
   busy,
   onEdit,
-  onDelete,
+  onRequestDelete,
 }: Props) {
   return (
     <section className="panel">
@@ -56,12 +57,12 @@ export function TaskListSection({
                     >
                       Edit
                     </button>
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => void onDelete(t.id)}
-                      disabled={busy}
-                    >
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onRequestDelete(t)}
+                        disabled={busy}
+                      >
                       Delete
                     </button>
                   </div>

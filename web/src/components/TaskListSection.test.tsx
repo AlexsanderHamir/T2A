@@ -11,7 +11,7 @@ describe("TaskListSection", () => {
         loading
         busy={false}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
+        onRequestDelete={vi.fn()}
       />,
     );
     expect(screen.getByRole("status")).toHaveTextContent("Loading…");
@@ -24,7 +24,7 @@ describe("TaskListSection", () => {
         loading={false}
         busy={false}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
+        onRequestDelete={vi.fn()}
       />,
     );
     expect(screen.getByText("No tasks yet.")).toBeInTheDocument();
@@ -33,6 +33,7 @@ describe("TaskListSection", () => {
   it("renders rows and calls onEdit", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
+    const onRequestDelete = vi.fn();
     const task = {
       id: "1",
       title: "Alpha",
@@ -46,10 +47,12 @@ describe("TaskListSection", () => {
         loading={false}
         busy={false}
         onEdit={onEdit}
-        onDelete={vi.fn()}
+        onRequestDelete={onRequestDelete}
       />,
     );
     await user.click(screen.getByRole("button", { name: /^edit$/i }));
     expect(onEdit).toHaveBeenCalledWith(task);
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(onRequestDelete).toHaveBeenCalledWith(task);
   });
 });
