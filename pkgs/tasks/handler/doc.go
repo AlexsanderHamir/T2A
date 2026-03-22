@@ -17,8 +17,9 @@
 // POST body: id (optional; default new UUID), title (required, non-empty after trim),
 // initial_prompt, status, priority (see domain package for enums; defaults ready / medium).
 //
-// PATCH body: optional title, initial_prompt, status, priority (JSON null to clear optional
-// pointer fields in decoding); at least one field required. See store.UpdateTaskInput.
+// PATCH body: optional title, initial_prompt, status, priority (pointer fields: omitted key
+// or JSON null means “no change”; at least one field must be non-nil after decode). See
+// store.UpdateTaskInput.
 //
 // Errors: domain.ErrNotFound → 404 "not found", domain.ErrInvalidInput → 400 "bad request";
 // other store errors → 500. Response bodies are plain text, not JSON.

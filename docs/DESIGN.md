@@ -95,6 +95,8 @@ flowchart TB
 
 `dbcheck` runs once: connectivity check, optional migrate, then exit. `taskapi` is the long-lived HTTP server; the SSE hub exists only inside that process.
 
+**Environment loading:** `taskapi` uses `internal/envload.Load`. `dbcheck` does not import that package but follows the same rules: walk from `cwd` to find `go.mod`, default `<repo-root>/.env` or `-env`, `godotenv.Overload`, and a non-empty `DATABASE_URL`. `dbcheck` uses a **30s** context deadline around `PingContext`; `taskapi` has no analogous startup ping beyond `gorm.Open`.
+
 ## Startup flow (`taskapi`)
 
 1. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
@@ -108,10 +110,12 @@ flowchart TB
 | Capability | Method / path | Notes |
 |------------|----------------|--------|
 | Create task | `POST /tasks` | Title required after trim; optional `id` (else UUID); default status `ready`, priority `medium`. |
-| List tasks | `GET /tasks` | Query `limit` (0–200, default 50), `offset` (≥ 0). Store also caps internally. |
-| Get one task | `GET /tasks/{id}` | |
-| Partial update | `PATCH /tasks/{id}` | At least one field; see store for semantics and audit events. |
-| Delete task | `DELETE /tasks/{id}` | 204, empty body. |
+| List tasks | `GET /tasks` | Query `limit` (0–200, default 50), `offset` (≥ 0). **Non-positive `limit` is coerced to 50** in the store (so `limit=0` means the default page size, not “zero rows”). Results are ordered by **`id ASC`** (lexicographic string order, not creation time unless IDs happen to sort that way). |
+| Get one task | `GET /tasks/{id}` | Empty or whitespace `id` → 400. |
+| Partial update | `PATCH /tasks/{id}` | At least one optional field must decode to a **non-nil** pointer (omitted key and JSON `null` both leave that field unchanged and do not count). To set `initial_prompt` to empty, send `""`. Title cannot be cleared (empty string after trim is rejected). See store for validation and audit events. |
+| Delete task | `DELETE /tasks/{id}` | 204, empty body. Empty `id` → 400. |
+
+The HTTP mux is mounted at **`/`** with no additional path prefix: only the routes above are served (no `/health`).
 
 Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for attribution. It is not an authentication mechanism.
 
@@ -122,6 +126,10 @@ Errors: 404 with plain text `not found`, 400 with `bad request`, 500 with `inter
 ## Server-Sent Events (`GET /events`)
 
 Connected clients receive `text/event-stream`. The stream tells them a task id changed so they can call REST again for full rows.
+
+Responses also set `Cache-Control: no-cache`, `Connection: keep-alive`, and **`X-Accel-Buffering: no`** so reverse proxies (e.g. nginx) disable response buffering for SSE.
+
+**Failure modes:** if the handler was constructed with a nil hub, the server returns **503** `event stream unavailable`. If the `ResponseWriter` does not implement `http.Flusher`, the server returns **500** `streaming unsupported` (unusual with `net/http` defaults).
 
 Wire format:
 
@@ -145,14 +153,20 @@ Clients typically use `EventSource` in the browser (or any SSE-capable client), 
 
 Tasks: CRUD via GORM; ordering and list limits match the store package doc.
 
-Audit: append-only `task_events` for typed changes (created, title/prompt/status/priority, etc.). Used for history and debugging; events are not replayed into the SSE hub.
+**REST shape vs audit:** the JSON task resource has **no** `created_at` / `updated_at` fields. **Timestamps live only on `task_events`** (`At` in **UTC** when the event is written). Operators needing “when did this task last change?” should query audit rows (or add a future API field).
+
+**Concurrency:** `Update` runs in a transaction and loads the task row with a **row lock** (`SELECT … FOR UPDATE` via GORM). Concurrent patches to the **same** task serialize; there is **no ETag / version** on the task row—last successful transaction wins.
+
+Audit: append-only `task_events` for typed changes. Event type strings are `domain.EventType` values (e.g. `task_created`, `status_changed`, `prompt_appended`; title edits are stored as `message_added` in code). Used for history and debugging; events are **not** replayed into the SSE hub.
+
+**Schema:** `postgres.Migrate` runs GORM **`AutoMigrate`** for `domain.Task` and `domain.TaskEvent` only. There are **no** checked-in versioned SQL migrations or down migrations.
 
 ## Technical choices
 
 | Choice | Rationale |
 |--------|-----------|
 | Go `net/http` and Go 1.22 route patterns | Small surface, no extra router dependency. |
-| GORM + Postgres | Migrations; tests often use SQLite. |
+| GORM + Postgres | Production DB; `AutoMigrate` for bootstrap; **tests use SQLite** via `testdb.OpenSQLite` and the same store code. |
 | SSE instead of WebSockets | Updates are server-to-client only; simpler for notify-only. |
 | In-memory `SSEHub` | Few moving parts for one process; no Redis/NATS in v1. |
 | Small SSE payload (`type` + `id`) | Keeps streams light; clients use REST for bodies. |
@@ -166,6 +180,13 @@ Audit: append-only `task_events` for typed changes (created, title/prompt/status
 4. No rate limiting or explicit request body size limits beyond normal JSON handling and validation.
 5. Error responses are plain text, not a structured JSON error type.
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
+7. **No `/health` or `/readiness` HTTP routes** — use port open checks, `dbcheck`, or an outer proxy health model.
+8. **`taskapi` serves plain HTTP** — TLS is expected at a reverse proxy or load balancer, not inside this binary.
+9. **Schema evolution is `AutoMigrate` only** — no versioned migration files, rollback story, or drift detection beyond what GORM provides.
+10. **List ordering is fixed** (`id ASC`); no sort or filter query parameters.
+11. **`POST /tasks` with a client-supplied `id` that already exists** fails at the database layer and is surfaced as a **500** (not a dedicated 409 conflict response).
+12. **No ETag / If-Match** on tasks; concurrent edits to the same row last-winner within locking rules (see Persistence).
+13. If JSON **encoding** of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
 
 ## Out of scope (today)
 
@@ -173,6 +194,8 @@ Audit: append-only `task_events` for typed changes (created, title/prompt/status
 - Idempotency keys on `POST`.
 - Outbound webhooks.
 - ETag / conditional GET (possible future optimization; see `UI_TASK.MD`).
+- Versioned SQL migrations and multi-step schema upgrades.
+- Built-in metrics / OpenTelemetry (only `slog` logs today).
 
 ## Related references
 
