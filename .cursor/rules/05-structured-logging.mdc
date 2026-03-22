@@ -1,105 +1,45 @@
 ---
 description: >-
-  Use when adding or changing log statements, replacing `fmt.Print`/`println`, or choosing
-  log levels and fields for debugging and production. Enforces structured logging (e.g. `slog`)
-  with consistent context and appropriate severity.
+  When: adding or changing runtime logs. Invariant: structured logger (Go: log/slog), each line
+  has key-value context; Error logs include err; ¬ secrets in fields. HTTP: operation + traceID;
+  CLI/small cmd: operation + cmd name suffices for traceID.
 alwaysApply: false
 ---
-# Logging
 
-## The Rule
-Every log entry must be structured, carry context, and be written at the correct level.
-Random `fmt.Println` and bare error strings are not logging — remove them.
+# Structured logging
 
-## Library
-Use `slog` (Go 1.21+) — it is the standard structured logging library.
+**When to apply:** replace `Println`, choose level, add observability.
 
-```go
-import "log/slog"
+## Invariants
 
-slog.Info("order processed", "orderID", id, "userID", userID, "total", total)
-slog.Error("failed to process order", "orderID", id, "err", err)
-```
+1. **L1:** Runtime diagnostics ⇒ `slog` (or project standard), not `fmt.Print*` in prod code.
+2. **L2:** Every line: `msg` + **≥2** attributes (`operation`, scope id, …).
+3. **L3:** `level == Error` ⇒ attribute `err` present.
+4. **L4:** `∀ field ∈ log: field ∉ {password, token, secret, Authorization, cookie, PII}`.
+5. **L5:** Same failure ⇒ **one** log at the boundary (see rule 04).
 
-## Log Levels
+## Level selection (decision)
 
-| Level | When to Use |
-|---|---|
-| `Debug` | Detailed flow tracing — never on in production |
-| `Info` | Significant business events — order placed, user created, job started |
-| `Warn` | Unexpected but recoverable — retry attempt, fallback used, config missing with default |
-| `Error` | Operation failed and requires attention — always includes `err` field |
+| Condition | Level |
+| --- | --- |
+| Routine state change user cares about | Info |
+| Recoverable anomaly / retry | Warn |
+| Request/work unit failed | Error + `err` |
+| Deep trace (off in prod) | Debug |
 
-## Mandatory Context Fields
-Every log entry must include the fields relevant to its scope:
+## Field minimum
 
-```go
-// Request-scoped — always include
-"traceID", traceID
-"userID",  userID
+- **HTTP / jobs:** `operation`, `traceID`, plus entity ids.
+- **CLI:** `operation`, `cmd` (program name).
+- **Errors:** always `err`, plus `operation` and scope ids.
 
-// Operation-scoped — always include
-"operation", "getUserByID"
+## Forbidden
 
-// Error logs — always include
-"err", err
-```
+- `log.Fatal` outside `main` (use `Error` + return / `os.Exit` in `main`).
+- Duplicate logs for the same error in repo + handler + handler.
 
-Never log a bare message with no context:
-```go
-// Bad — useless in production
-slog.Info("done")
-slog.Error("something went wrong")
+## Agent checklist
 
-// Good — actionable and traceable
-slog.Info("user fetched", "operation", "getUserByID", "userID", id, "traceID", traceID)
-slog.Error("failed to fetch user", "operation", "getUserByID", "userID", id, "traceID", traceID, "err", err)
-```
-
-## Where to Log
-
-Log at the boundary where the error is **handled** — not where it originates.
-This mirrors the error handling rule: one layer handles, one layer logs.
-
-```
-Repository    → never log, return the error
-Service       → never log, wrap and return
-Handler       → log at error level with full context, return response
-```
-
-```go
-// Bad — logging at origin, not the boundary
-func (r *UserRepo) GetByID(id int) (*User, error) {
-    user, err := r.db.Query(...)
-    if err != nil {
-        slog.Error("db error", "err", err) // wrong layer
-        return nil, err
-    }
-}
-
-// Good — log only at the handler boundary
-func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
-    user, err := h.service.GetUserByID(id)
-    if err != nil {
-        slog.Error("failed to get user", "operation", "getUser", "userID", id, "traceID", traceID, "err", err)
-        http.Error(w, "internal error", http.StatusInternalServerError)
-        return
-    }
-}
-```
-
-## Never Do This
-- `fmt.Println` or `fmt.Printf` for any runtime output — use `slog`.
-- Log and continue after an error — log at the boundary, then return or respond.
-- Log sensitive data — no passwords, tokens, PII, or secrets in any log entry.
-- Use `log.Fatal` outside of `main` — it calls `os.Exit` and skips deferred cleanup.
-- Log the same error at multiple layers — it creates noise and false alert counts.
-
-## Checklist
-Before committing, verify:
-- [ ] No `fmt.Println` or `fmt.Printf` in non-test code.
-- [ ] Every log entry has at minimum `operation` and `traceID` fields.
-- [ ] Error logs always include the `err` field.
-- [ ] Nothing sensitive is logged — no tokens, passwords, or PII.
-- [ ] Logging only occurs at the handling boundary, not at origin.
-- [ ] `log.Fatal` only appears in `main`.
+- [ ] No bare `fmt.Print` in non-test code.
+- [ ] Every `Error` log has `err` key.
+- [ ] No sensitive values in attributes.

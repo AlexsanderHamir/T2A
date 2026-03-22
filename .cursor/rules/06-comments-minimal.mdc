@@ -1,58 +1,43 @@
 ---
 description: >-
-  Use when adding GoDoc, inline `//` comments, or reviewing PRs for comment noise.
-  Default: prefer clear names over comments. Only comment for why, workarounds, specs/tickets,
-  or surprising behavior—not to restate what the code already says.
+  When: writing GoDoc, // comments, or reviewing noise. Default: ¬comment if rename/extract can
+  express intent. Comment iff reason ∈ {why not what, workaround, external ref, surprising
+  invariant}. ¬ commented-out code; TODO only with ticket id.
 alwaysApply: false
 ---
-# Comments
 
-## Default: Don't Comment
-Well-named functions, variables, and types are the documentation.
-If you feel the urge to comment, first try to make the code clearer.
-```go
-// Bad — comment restates what the code says
-// get user by id
-user, err := getUserByID(id)
+# Comments: minimal
 
-// Good — no comment needed, code is self-evident
-user, err := getUserByID(id)
-```
+**When to apply:** any new comment, GoDoc, PR cleanup.
 
-## When to Comment
-Only comment when the code cannot express the intent on its own:
+## Decision (apply in order)
 
-- **Why, not what** — explain non-obvious decisions, tradeoffs, or constraints.
-- **Workarounds** — document why a hack exists and what it's working around.
-- **External references** — link to a spec, RFC, ticket, or bug that explains the context.
-- **Surprising behavior** — warn about a non-obvious edge case or gotcha.
-```go
-// Retry limit matches the upstream API's documented backoff window (see JIRA-1234)
-const maxRetries = 7
+1. **Rename** symbol → intent obvious? ⇒ **stop** (no comment).
+2. **Extract** helper with descriptive name? ⇒ **stop**.
+3. **Else** if comment explains **why** / workaround / ticket / non-obvious invariant ⇒ **allow**.
+4. **Else** ⇒ **delete** comment.
 
-// sync.Map used here — profiling showed mutex contention at >10k rps
-var cache sync.Map
-```
+## Predicate → allowed
 
-## Never Comment
-- What the code does — the code says that.
-- Function signatures, parameter names, or return types that are already clear.
-- Noise markers: `// end of loop`, `// constructor`, `// helper`.
-- Commented-out code — delete it, git remembers.
-- TODO/FIXME unless tied to a ticket: `// TODO(JIRA-456): remove after migration`.
+| `comment_explains` | Allowed |
+| --- | --- |
+| what code does (restates code) | no |
+| why this design vs alternatives | yes |
+| workaround + reference | yes |
+| spec/RFC/issue link | yes |
+| guard for surprising edge case | yes |
 
-## GoDoc (Go-specific)
-Only write GoDoc comments on exported symbols, and only when the name alone isn't enough:
-```go
-// Paginator fetches results in pages to avoid loading large datasets into memory.
-type Paginator struct { ... }
+## GoDoc
 
-// No comment needed — name is self-documenting
-func (p *Paginator) NextPage() ([]Result, error) { ... }
-```
+Exported symbol: GoDoc iff `name alone insufficient` for a caller. Unexported: usually none.
 
-## The Test
-Before adding a comment, ask:
-- Can I rename something to make this obvious?
-- Can I extract a helper with a descriptive name?
-- If neither works — then comment.
+## Forbidden
+
+- Section markers: `// ---`, `// end`, `// helper` only.
+- Commented-out blocks (use git).
+- `TODO` without tracker: `TODO(JIRA-123): …` only.
+
+## Agent checklist
+
+- [ ] Each remaining comment fails the “rename/extract first” test.
+- [ ] No GoDoc on obvious `GetID` / `String`-style names.

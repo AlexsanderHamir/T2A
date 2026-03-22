@@ -1,50 +1,42 @@
 ---
 description: >-
-  Use when the user asks to commit, split work into PRs, or plan a multi-step feature.
-  Enforces one logical change per commit (no unrelated bundling) and a recommended order
-  (types → data layer → service → handlers → tests → docs/config). Use before writing
-  large changes to sequence commits for review and safe revert.
+  When: user asks to commit, plan work, or split a PR. Invariants: 1 commit = 1 revertible
+  concern; no uncommitted work before starting the next layer; message must not join unrelated
+  concerns (treat “and” in the subject line as a split signal).
 alwaysApply: false
 ---
-# Atomic Commits
 
-## The Rule
-Every commit must represent one complete, logical change that can be understood, reviewed, and reverted in isolation.
-Never bundle unrelated changes. Never finish a feature in one giant commit.
+# Atomic commits
 
-## Commit Order — Plan Before You Code
-Before writing any code, decompose the work into an ordered commit sequence:
-```
-1. add data model / types
-2. add repository / data layer
-3. add service / business logic
-4. add handler / interface layer
-5. add unit tests
-6. add integration tests (if needed)
-7. update docs / config
-```
+**When to apply:** commits, PR scope, multi-step features, “what order should I do this?”
 
-Commit after each step. Do not proceed to the next step with uncommitted work.
+## Invariants
 
-## Format
-```
-<type>(<scope>): <what changed and why>
+1. **I1 (atomicity):** `commit C` touches only one logical concern. `revert C` must not drop unrelated behavior.
+2. **I2 (sequence):** Finish step `n` and commit before starting `n+1` (no mixed layers in one WIP tree).
+3. **I3 (hygiene):** `build(C) ∧ tests(C)` must pass at `HEAD` after every commit.
 
-feat(user): add GetByID to user repository
-fix(auth): handle expired token before claims are parsed
-refactor(order): extract price calculation into helper
-test(user): cover GetByID happy path and not-found case
-chore(deps): upgrade go-chi to v5.1.0
-```
+## Default commit order (total order)
 
-## Rules
-- One concern per commit — if you'd use "and" in the message, split it.
-- Commit must build and pass tests — never commit broken code.
-- No "WIP", "misc", "fixes", or "stuff" messages.
-- Refactors and features are separate commits.
-- Test additions are their own commit, not bundled with implementation.
+`1` types/model → `2` data/repo → `3` service/domain → `4` handler/API → `5` unit tests → `6` integration tests (if any) → `7` docs/config
 
-## Before Every Commit, Verify
-- Does `git diff` show only what this commit intends to change?
-- Does the commit message fully describe the change without reading the diff?
-- Do tests pass?
+## Message grammar
+
+`type(scope): imperative reason`  
+Types: `feat` `fix` `refactor` `test` `chore` …
+
+## Split rule (predicate)
+
+`message_contains_unrelated_and` ∨ `diff_touches_two_concerns` ⇒ **split into two commits.**
+
+## Forbidden
+
+- Subjects: WIP, misc, fixes, stuff, “and” joining unrelated work.
+- Committing red: failing build or tests.
+- Bundling **refactor** with **feat** in one commit.
+
+## Agent checklist (all true)
+
+- [ ] Planned steps are committed in order; no skipped layer with local changes pending.
+- [ ] `git diff --staged` ⊆ one concern; message describes it without reading the diff.
+- [ ] Tests pass.

@@ -1,75 +1,44 @@
 ---
 description: >-
-  Use when adding or changing automated tests (unit or focused integration), naming test
-  cases, or discussing coverage. Enforces testing behavior not internals, Arrange-Act-Assert,
-  descriptive test names, and no abandoned skip/todo tests.
+  When: writing or changing tests. Invariants: test observes public behavior, not private layout;
+  structure is Arrange→Act→Assert; one behavioral thesis per test; ¬ skip/todo left behind.
+  This repo is Go: use go test and coverage; aim high coverage without chasing 100% as a religion.
 alwaysApply: false
 ---
-# Unit Testing
 
-## Core Principles
-- Test behavior, not implementation. If a refactor breaks tests without changing behavior, the tests are wrong.
-- One assertion focus per test — a test can have multiple `expect` calls if they validate one behavior.
-- Every test must fail for the right reason before it passes.
-- Never leave `skip`, `todo`, or commented-out tests — delete or finish them.
+# Unit tests (behavior)
 
-## Structure
-- Arrange / Act / Assert — always in that order, always readable at a glance.
-- Name tests as full sentences: `returns null when user is not found`, not `test1` or `works`.
-- Group by unit under `describe`, one `describe` block per function or class.
-```ts
-describe('getUserById', () => {
-  it('returns the user when found', () => { ... })
-  it('returns null when user does not exist', () => { ... })
-  it('throws when id is invalid', () => { ... })
-})
+**When to apply:** new code paths, regressions, refactors.
+
+## Invariants
+
+1. **T1:** Test asserts **observable outcome**, not how it was computed (¬ assert on unexported details unless unavoidable).
+2. **T2:** Structure = **Arrange → Act → Assert** (visually separable).
+3. **T3:** One test = one thesis `S`; multiple `if` branches in one test ⇒ split unless `S` is single scenario table row.
+4. **T4:** `t.Skip` / TODO tests ⇒ **forbidden** in committed code unless issue link + timebox (prefer delete).
+5. **T5:** Unit test ⇒ ¬ network, ¬ real DB, ¬ shared mutable global (use fakes / `t.TempDir` / in-memory).
+
+## Naming (Go)
+
+`TestFoo/returns_error_when_input_empty` or table `name: "empty input"` — sentence-like, not `Test1`.
+
+## Coverage (this project: Go)
+
+```bash
+go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
 ```
 
-## Coverage — Target 100%
-Run the appropriate coverage tool for the language and iterate until all lines, branches, and functions are covered:
+**Target:** increase until meaningful branches covered; **100%** is ideal for small packages, not mandatory for every file if cost explodes — exclude only with explicit comment and reason.
 
-| Language | Tool | Command |
-|---|---|---|
-| TypeScript / JavaScript | Vitest or Jest | `vitest run --coverage` / `jest --coverage` |
-| Python | pytest-cov | `pytest --cov=. --cov-report=term-missing` |
-| Go | built-in | `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out` |
-| Rust | cargo-tarpaulin | `cargo tarpaulin --out term` |
-| Swift | Xcode | `xcodebuild test -enableCodeCoverage YES` |
-| Ruby | SimpleCov | add to test helper, run suite |
-| Java / Kotlin | JaCoCo | `./gradlew test jacocoTestReport` |
+## Forbidden
 
-### Coverage Loop — Do Not Stop Until 100%
-1. Run the coverage command.
-2. Read the report — identify every uncovered line, branch, and function.
-3. Write the missing tests.
-4. Re-run coverage.
-5. Repeat until the report shows 100% lines, branches, and functions.
+- Mocking private methods to “pass”.
+- Order-dependent tests (no shared env without reset).
+- Asserting volatile values (UUID, `time.Now()`) without bounds or matchers.
 
-Uncovered code is unfinished work. Do not move on.
+## Agent checklist
 
-### What 100% Means
-- Every line executed by at least one test.
-- Every branch (`if/else`, `switch`, ternary, null check) tested for each outcome.
-- Every exported function has at least one dedicated test.
-- 100% coverage does not mean 100% correct — it means no code is invisible to tests.
-
-### Acceptable Exclusions (annotate explicitly)
-Only exclude code that cannot meaningfully be tested:
-```ts
-/* istanbul ignore next */  // JS/TS
-# pragma: no cover          // Python
-//nolint:unused             // Go
-```
-Exclusions must be rare, intentional, and reviewed — not a shortcut.
-
-## Speed & Isolation
-- Unit tests must not touch the network, filesystem, or database — mock or stub them.
-- No shared mutable state between tests. Each test sets up its own data.
-- Tests should run in milliseconds — if a test is slow, it's not a unit test.
-
-## Code Smells to Eliminate
-- Mocking internals or private methods — test the public interface only.
-- Tests that only pass in a specific order — full isolation required.
-- Assertions on exact irrelevant values (e.g. UUIDs, timestamps) — use matchers like `expect.any(String)`.
-- Copy-pasted setup — extract to `beforeEach` or a factory helper.
-- Testing framework internals or third-party libraries — only test your code.
+- [ ] Test fails if behavior regresses; passes after intended change.
+- [ ] New logic has at least one test at the right layer (unit vs integration).
+- [ ] No skipped tests without tracked follow-up.

@@ -1,131 +1,48 @@
 ---
 description: >-
-  Use when writing or reviewing code that returns or receives errors (Go `error`, HTTP
-  handlers, parsers, I/O). Enforces handling every error: propagate or wrap with context,
-  never ignore (`_`), panic in normal paths, or log-and-continue without a deliberate
-  recovery strategy.
+  When: any `(T, error)` or `error` return path in Go (or equivalent). Invariants: ∀ errors
+  either handled locally or returned wrapped; ¬∃ silent discard (`_`), panic in normal flow, or
+  log-and-continue without recovery. Repositories return; HTTP boundary translates + logs once.
 alwaysApply: false
 ---
-# Error Handling
 
-## The Rule
-Every error must be handled. Ignoring, swallowing, or deferring an error is a bug.
-If you don't know how to handle it, propagate it up — never hide it.
+# Errors: never ignore
 
-## Never Do This
-```go
-// Swallowing — silent failure, impossible to debug
-result, _ := parseOrder(data)
+**When to apply:** I/O, parsing, DB, handlers, migrations.
 
-// Panic in business logic — crashes the entire service
-result, err := parseOrder(data)
-if err != nil {
-    panic(err)
-}
+## Invariants
 
-// Logging and continuing — the error is lost, execution proceeds broken
-if err != nil {
-    log.Println(err)
-}
-```
+1. **E1:** `err != nil` ⇒ `(return wrapped err) ∨ (handle and not continue blindly)`.
+2. **E2:** Upward return ⇒ `fmt.Errorf("operation: %w", err)` (add locating context).
+3. **E3:** Request/business path ⇒ `¬ panic(err)`.
+4. **E4:** Repository / pure lib: **return only** — no logging errors there.
+5. **E5:** API boundary: map to status + **one** log with context; ¬ leak raw internals.
 
-## Always Do This
+## Layer table (who does what)
 
-### Check Every Error
-```go
-result, err := parseOrder(data)
-if err != nil {
-    return fmt.Errorf("parseOrder: %w", err)
-}
-```
+| Layer | On `err != nil` |
+| --- | --- |
+| Repo / DB | wrap, return |
+| Service | wrap or map to domain error, return |
+| Handler | translate status, log, respond |
+| `main` | log + exit(1) or equivalent |
 
-### Wrap With Context
-Every error returned up the call stack must carry context that explains where it came from and why.
-Format: `"<operation>: %w"` — short, no capital letters, no punctuation at the end.
+## Sentinel pattern (optional)
 
 ```go
-// Bad — no context, useless in a stack trace
-return err
-
-// Good — caller knows exactly where it broke
-return fmt.Errorf("getUserByID %d: %w", id, err)
-return fmt.Errorf("order.parseItems: %w", err)
-return fmt.Errorf("db.queryUser: %w", err)
+var ErrNotFound = errors.New("not found")
+// return fmt.Errorf("getUser %d: %w", id, ErrNotFound)
+// if errors.Is(err, ErrNotFound) { ... }
 ```
 
-### Sentinel Errors for Known Conditions
-Define package-level sentinel errors for conditions callers need to handle explicitly:
+## Forbidden
 
-```go
-var (
-    ErrNotFound      = errors.New("not found")
-    ErrUnauthorized  = errors.New("unauthorized")
-    ErrInvalidInput  = errors.New("invalid input")
-)
+- `_, _ = f()` discarding `error`
+- `log.Print(err)` then same path continues as if success
+- `return err` with no added context when crossing a package boundary
 
-// Return them consistently
-if user == nil {
-    return nil, fmt.Errorf("getUserByID %d: %w", id, ErrNotFound)
-}
+## Agent checklist
 
-// Callers check with errors.Is — never string match
-if errors.Is(err, ErrNotFound) {
-    // handle
-}
-```
-
-### Unwrap When You Need the Cause
-```go
-var target *ValidationError
-if errors.As(err, &target) {
-    // handle typed error
-}
-```
-
-## Error Boundaries — Where to Handle vs Propagate
-
-| Layer | Behavior |
-|---|---|
-| Repository / DB | Wrap with context, return to service |
-| Service / Business logic | Wrap, translate to domain errors, return to handler |
-| Handler / API boundary | Translate to HTTP/gRPC status, log with context, never leak internals |
-| Main / top level | Log, alert, exit or recover gracefully |
-
-Never handle an error at the wrong layer. A repository should not log — it should return.
-A handler should not return raw DB errors — it should translate them.
-
-## Logging Errors
-Log at the boundary where the error is handled, not where it originates.
-Always include context — never log a bare error string.
-
-```go
-// Bad — no context
-log.Println(err)
-
-// Good — structured, with context
-log.Printf("handler.getUser: userID=%d err=%v", id, err)
-```
-
-## Panics
-- Never panic in business logic, handlers, or libraries.
-- Panic only for programmer errors that should never occur at runtime (uninitialized required dependencies).
-- Always recover at the top-level server boundary and convert to a 500.
-
-```go
-// Acceptable — programming error, not a runtime condition
-func NewService(repo Repository) *Service {
-    if repo == nil {
-        panic("NewService: repo is required")
-    }
-    return &Service{repo: repo}
-}
-```
-
-## Checklist
-Before committing any code that touches errors, verify:
-- [ ] No `_` discarding an error.
-- [ ] Every error is wrapped with `fmt.Errorf("operation: %w", err)`.
-- [ ] Sentinel errors used for conditions callers must handle.
-- [ ] Errors logged only at the handling boundary, not at origin.
-- [ ] No panics outside of initialisation.
-- [ ] No raw internal errors leaking to API responses.
+- [ ] No `_` on `error` values.
+- [ ] Every `return err` from another package is wrapped at least once.
+- [ ] Logs for failures appear at most once at the handling boundary.

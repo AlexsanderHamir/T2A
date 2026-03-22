@@ -1,38 +1,39 @@
 ---
 description: >-
-  Use when refactoring, adding new packages, or splitting large functions/files.
-  Enforces single-purpose functions, shallow nesting, composition over inheritance,
-  dependency injection via parameters, and feature/domain-oriented file layout.
+  When: refactor, new package, or function/file growth. Invariants: one behavioral purpose per
+  function; nesting depth ≤ 2 for main path; dependencies passed in, not globals; one primary
+  concern per file. Numeric triggers: ~30 lines/function, ~200–300 lines/file before split review.
 alwaysApply: false
 ---
-# Composability
 
-## Functions
-- Do one thing. If you'd use "and" to describe it, split it.
-- Keep functions under ~30 lines — extract beyond that.
-- Name by behavior: `formatUserDisplayName`, not `format`.
-- Prefer pure functions (input → output, no side effects).
-- Use early returns and guard clauses to avoid nesting > 2 levels deep.
+# Composable code
 
-## Composition
-- Compose behavior from small units — avoid inheritance.
-- Inject dependencies as parameters rather than hard-importing them.
-- Return and accept standard types; avoid unnecessary custom wrappers.
+**When to apply:** structure, extraction, new modules, readability review.
 
-## Files & Modules
-- One primary concern per file.
-- Group by feature/domain, then type:
-```
-  features/user/
-    userService.ts   # orchestration
-    userHelpers.ts   # pure helpers
-    userTypes.ts     # types & interfaces
-    index.ts         # barrel export
-```
-- Keep files under ~200–300 lines; split when a file grows beyond a single concern.
+## Invariants
 
-## Refactor Triggers
-Before extending existing code, ask:
-- Should this logic be a named helper?
-- Does this belong in its own module?
-- Am I duplicating something extractable?
+1. **I1:** Function `f` describable without “and” as a coordinator of distinct behaviors ⇒ split `f`.
+2. **I2:** `lines(f) > 30` ⇒ extract unless `f` is a single linear translation (then justify).
+3. **I3:** `nesting_depth(main_path) > 2` ⇒ use guards / early return.
+4. **I4:** Side effects ⇒ pushed to edges; core logic prefers pure `input → output`.
+5. **I5:** `dependencies` ∈ parameters (or explicit ctor), not hidden imports/singletons.
+6. **I6:** One **primary** concern per file; `lines(file) > 250` ⇒ consider split.
+
+## Composition rules
+
+| Rule | Predicate | Action |
+| --- | --- | --- |
+| Name | name is noun-only or vague | rename to **verb + object** (`formatUserDisplayName`) |
+| Reuse | duplicate logic ≥ 2 sites | extract one named helper |
+| Module | feature crosses unrelated domains | split by **domain/** then role (`service`, `repo`, `types`) |
+
+## Forbidden
+
+- Inheritance for behavior sharing (prefer small interfaces + functions).
+- “God” files mixing unrelated domains without subpackages.
+
+## Agent checklist
+
+- [ ] No function needs “and” to describe what it does.
+- [ ] No block indents deeper than 2 levels on the happy path.
+- [ ] File name matches its single main responsibility.
