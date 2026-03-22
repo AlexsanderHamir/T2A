@@ -11,14 +11,14 @@ import (
 func connectAndPing(ctx context.Context, dsn string) (*gorm.DB, error) {
 	db, err := tasks.OpenPostgres(dsn, nil)
 	if err != nil {
-		return nil, fmt.Errorf("open postgres: %w", err)
+		return nil, fmt.Errorf("tasks.OpenPostgres: %w", err)
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("sql.DB: %w", err)
+		return nil, fmt.Errorf("gorm sql.DB: %w", err)
 	}
 	if err := sqlDB.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("ping: %w", err)
+		return nil, fmt.Errorf("ping database: %w", err)
 	}
 	return db, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -13,7 +14,7 @@ func findRepoRoot(startDir string) (string, error) {
 		if _, err := os.Stat(mod); err == nil {
 			return dir, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
+			return "", fmt.Errorf("stat %s: %w", mod, err)
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -29,7 +30,7 @@ func resolveDotenvPath(workingDir, flagPath string) (string, error) {
 	}
 	root, err := findRepoRoot(workingDir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("find repo root from %s: %w", workingDir, err)
 	}
 	return filepath.Join(root, ".env"), nil
 }

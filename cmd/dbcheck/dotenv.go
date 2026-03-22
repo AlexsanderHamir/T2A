@@ -9,7 +9,7 @@ import (
 
 func loadDotenv(path string) error {
 	if err := godotenv.Overload(path); err != nil {
-		return fmt.Errorf("read %s: %w", path, err)
+		return fmt.Errorf("godotenv overload %q: %w", path, err)
 	}
 	if os.Getenv("DATABASE_URL") == "" {
 		return fmt.Errorf("DATABASE_URL is empty after loading %s", path)
