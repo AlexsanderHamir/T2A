@@ -6,7 +6,6 @@ import (
 	"gorm.io/datatypes"
 )
 
-// Status is the current lifecycle state of a task (schema.md: task.status).
 type Status string
 
 const (
@@ -18,7 +17,6 @@ const (
 	StatusFailed  Status = "failed"
 )
 
-// Priority is task urgency (schema.md: task.priority).
 type Priority string
 
 const (
@@ -28,7 +26,6 @@ const (
 	PriorityCritical Priority = "critical"
 )
 
-// EventType is task_events.type (schema.md).
 type EventType string
 
 const (
@@ -50,7 +47,6 @@ const (
 	EventTaskFailed             EventType = "task_failed"
 )
 
-// Actor is who recorded the event (schema.md: events[].by).
 type Actor string
 
 const (
@@ -58,7 +54,6 @@ const (
 	ActorAgent Actor = "agent"
 )
 
-// Task is the current snapshot row (schema.md: task).
 type Task struct {
 	ID            string   `gorm:"primaryKey"`
 	Title         string   `gorm:"not null"`
@@ -67,13 +62,11 @@ type Task struct {
 	Priority      Priority `gorm:"not null;check:priority IN ('low','medium','high','critical'),name:chk_tasks_priority"`
 }
 
-// TaskEvent is one append-only log entry (schema.md: events[]).
-// Data holds the event-specific JSON object (e.g. status_changed: from/to).
 type TaskEvent struct {
 	TaskID string    `gorm:"primaryKey;index:task_events_task_id_at,priority:1;index:task_events_task_id_type,priority:1"`
 	Seq    int64     `gorm:"primaryKey;check:seq > 0,name:chk_task_events_seq"`
 	At     time.Time `gorm:"not null;index:task_events_task_id_at,priority:2"`
-	// type / by: reserved-ish in SQL; enum checks live in Go (EventType, Actor). DB still stores text/jsonb.
+	// Avoid GORM CHECK tags on columns named type/by; validate with EventType and Actor in Go instead.
 	Type EventType `gorm:"column:type;not null;index:task_events_task_id_type,priority:2"`
 	By   Actor     `gorm:"column:by;not null"`
 	Data datatypes.JSON `gorm:"column:data_json;type:jsonb;not null;default:'{}'"`
