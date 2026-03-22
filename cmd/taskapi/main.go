@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -52,7 +53,10 @@ func main() {
 
 	taskStore := store.NewStore(db)
 	mux := http.NewServeMux()
-	ui.Register(mux)
+	if err := ui.Register(mux); err != nil {
+		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.ui", "err", err)
+		os.Exit(1)
+	}
 	mux.Handle("/", handler.NewHandler(taskStore))
 
 	srv := &http.Server{
@@ -61,7 +65,8 @@ func main() {
 	}
 
 	go func() {
-		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr)
+		uiURL := fmt.Sprintf("http://localhost:%s/", *port)
+		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr, "ui", uiURL)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
 			os.Exit(1)
