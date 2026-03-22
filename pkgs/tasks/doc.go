@@ -35,7 +35,7 @@
 // JSON request bodies are decoded with disallow-unknown-fields enabled; trailing data after
 // the top-level value is rejected.
 //
-// POST /tasks body fields: id (optional; default id is task_ + UUID), title (required,
+// POST /tasks body fields: id (optional; default id is a new UUID string), title (required,
 // non-empty after trim), initial_prompt, status, priority (enums; defaults ready / medium).
 //
 // PATCH /tasks/{id} body: optional title, initial_prompt, status, priority (omit or JSON null

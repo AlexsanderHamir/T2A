@@ -58,7 +58,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by Actor) (*Task
 	}
 	id := strings.TrimSpace(in.ID)
 	if id == "" {
-		id = "task_" + uuid.NewString()
+		id = uuid.NewString()
 	}
 
 	t := &Task{
