@@ -23,6 +23,19 @@ go run ./cmd/taskapi
 
 Use **`-h`** on each command for flags (`-env`, `-migrate`, and `-port` for `taskapi`).
 
+With **`taskapi`** running, open **`http://127.0.0.1:8080/`** for a minimal HTML shell (templates in `internal/ui/templates`). The JSON API stays at **`/tasks`**, etc.
+
+### Tailwind CSS (optional tooling)
+
+Styles are compiled into `internal/ui/static/app.css` (embedded at build time). After you change classes in `internal/ui/templates/*.html`:
+
+```bash
+npm install
+npm run build:css
+```
+
+Then rebuild or `go run` the server. Node is only needed for that CSS step, not to run the Go binary.
+
 ## Documentation by package
 
 Behavior and contracts live next to the code as Go package docs (not duplicated here).
@@ -34,6 +47,7 @@ Behavior and contracts live next to the code as Go package docs (not duplicated 
 | [`pkgs/tasks/postgres`](pkgs/tasks/postgres/doc.go) | GORM Postgres open + schema migrate |
 | [`pkgs/tasks/store`](pkgs/tasks/store/doc.go) | CRUD and task_events audit log |
 | [`pkgs/tasks/handler`](pkgs/tasks/handler/doc.go) | REST JSON routes and request rules |
+| [`internal/ui`](internal/ui/doc.go) | Placeholder HTML + embedded Tailwind CSS for `taskapi` |
 | [`internal/envload`](internal/envload/doc.go) | Loading `.env` and requiring `DATABASE_URL` |
 | [`cmd/taskapi`](cmd/taskapi/doc.go) | HTTP server wiring, flags, shutdown |
 | [`cmd/dbcheck`](cmd/dbcheck/doc.go) | Connectivity check, migrate flag |

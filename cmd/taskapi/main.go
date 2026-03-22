@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/internal/ui"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -50,9 +51,13 @@ func main() {
 	}
 
 	taskStore := store.NewStore(db)
+	mux := http.NewServeMux()
+	ui.Register(mux)
+	mux.Handle("/", handler.NewHandler(taskStore))
+
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", *port),
-		Handler: handler.NewHandler(taskStore),
+		Handler: mux,
 	}
 
 	go func() {

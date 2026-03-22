@@ -1,0 +1,10 @@
+{
+  "name": "t2a",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./internal/ui/css/input.css -o ./internal/ui/static/app.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
