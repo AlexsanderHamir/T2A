@@ -1,5 +1,8 @@
 ---
-description: When adding logging to the codebase
+description: >-
+  Use when adding or changing log statements, replacing `fmt.Print`/`println`, or choosing
+  log levels and fields for debugging and production. Enforces structured logging (e.g. `slog`)
+  with consistent context and appropriate severity.
 alwaysApply: false
 ---
 # Logging

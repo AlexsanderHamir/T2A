@@ -1,5 +1,8 @@
 ---
-description: When adding any comment to the codebase
+description: >-
+  Use when adding GoDoc, inline `//` comments, or reviewing PRs for comment noise.
+  Default: prefer clear names over comments. Only comment for why, workarounds, specs/tickets,
+  or surprising behavior—not to restate what the code already says.
 alwaysApply: false
 ---
 # Comments

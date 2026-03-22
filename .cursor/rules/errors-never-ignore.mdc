@@ -1,5 +1,9 @@
 ---
-description: Error handling
+description: >-
+  Use when writing or reviewing code that returns or receives errors (Go `error`, HTTP
+  handlers, parsers, I/O). Enforces handling every error: propagate or wrap with context,
+  never ignore (`_`), panic in normal paths, or log-and-continue without a deliberate
+  recovery strategy.
 alwaysApply: false
 ---
 # Error Handling

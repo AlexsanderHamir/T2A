@@ -1,5 +1,8 @@
 ---
-description: Validate input & output, don't assume what the code is doing.
+description: >-
+  Use when integrating external or untrusted shapes (API/JSON responses, DB rows, files,
+  queues, env). Enforces confirming real runtime data—run, log, or inspect—before writing
+  transforms, mappings, or assumptions about nullability and optional fields.
 alwaysApply: false
 ---
 # Validate Input & Output

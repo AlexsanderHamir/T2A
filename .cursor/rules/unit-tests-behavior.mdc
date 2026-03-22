@@ -1,5 +1,8 @@
 ---
-description: How to add unit tests
+description: >-
+  Use when adding or changing automated tests (unit or focused integration), naming test
+  cases, or discussing coverage. Enforces testing behavior not internals, Arrange-Act-Assert,
+  descriptive test names, and no abandoned skip/todo tests.
 alwaysApply: false
 ---
 # Unit Testing

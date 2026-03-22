@@ -1,5 +1,8 @@
 ---
-description: How to structure code
+description: >-
+  Use when refactoring, adding new packages, or splitting large functions/files.
+  Enforces single-purpose functions, shallow nesting, composition over inheritance,
+  dependency injection via parameters, and feature/domain-oriented file layout.
 alwaysApply: false
 ---
 # Composability
