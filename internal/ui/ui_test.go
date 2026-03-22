@@ -9,7 +9,9 @@ import (
 
 func TestRegister_home_serves_html(t *testing.T) {
 	mux := http.NewServeMux()
-	Register(mux)
+	if err := Register(mux); err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
@@ -29,7 +31,9 @@ func TestRegister_home_serves_html(t *testing.T) {
 
 func TestRegister_static_serves_css(t *testing.T) {
 	mux := http.NewServeMux()
-	Register(mux)
+	if err := Register(mux); err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/static/app.css", nil)
 	rec := httptest.NewRecorder()

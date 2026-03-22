@@ -2,6 +2,7 @@ package ui
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
@@ -18,8 +19,11 @@ const logCmd = "taskapi"
 
 // Register adds HTML routes on mux: GET / (home) and GET /static/* (compiled Tailwind CSS).
 // Register before mounting the JSON API with Handle("/", api) so GET / and /static/ win.
-func Register(mux *http.ServeMux) {
-	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
+func Register(mux *http.ServeMux) error {
+	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
+	if err != nil {
+		return fmt.Errorf("parse templates: %w", err)
+	}
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -32,7 +36,8 @@ func Register(mux *http.ServeMux) {
 
 	sub, err := fs.Sub(staticFS, "static")
 	if err != nil {
-		panic("ui: static embed: " + err.Error())
+		return fmt.Errorf("static embed: %w", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(sub))))
+	return nil
 }
