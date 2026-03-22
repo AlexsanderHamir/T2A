@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
-	"github.com/AlexsanderHamir/T2A/internal/ui"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -53,10 +52,6 @@ func main() {
 
 	taskStore := store.NewStore(db)
 	mux := http.NewServeMux()
-	if err := ui.Register(mux); err != nil {
-		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.ui", "err", err)
-		os.Exit(1)
-	}
 	mux.Handle("/", handler.NewHandler(taskStore))
 
 	srv := &http.Server{
@@ -65,8 +60,8 @@ func main() {
 	}
 
 	go func() {
-		uiURL := fmt.Sprintf("http://localhost:%s/", *port)
-		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr, "ui", uiURL)
+		baseURL := fmt.Sprintf("http://localhost:%s/", *port)
+		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr, "url", baseURL)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
 			os.Exit(1)
