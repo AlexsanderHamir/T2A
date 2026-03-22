@@ -1,0 +1,53 @@
+---
+description: >-
+  When data crosses a trust boundary (API, DB, file, queue, env, CLI), validate
+  against real runtime input before writing non-trivial transforms. Prefer captured
+  fixtures over invented payloads. Do not assume schemas and types fully match reality.
+alwaysApply: false
+---
+
+# Validate runtime data
+
+**When to apply:** parsing or mapping external input, handling nullable or optional fields, and multi-step data pipelines.
+
+## Invariants
+
+1. **Trust boundary first:** when data enters from outside the codebase, confirm its real runtime shape before relying on it.
+2. **Real samples over guessed fixtures:** prefer captured payloads or records over invented JSON based only on types or docs.
+3. **Optional means both paths:** if a field may be missing or null, test both present and absent cases.
+4. **Validate after transformation boundaries:** if one layer reshapes data for another, validate again where new assumptions begin.
+
+## Required actions
+
+- Capture at least one real sample for each important boundary shape.
+- Store reusable samples in `testdata/` when practical.
+- Write tests from real payloads before or alongside mapping logic.
+- Remove temporary probes after confirming shape, but keep the tests or fixtures.
+
+## Avoid
+
+- Writing parsers or mappers based only on static types
+- Inventing fixtures from structs without checking real inputs
+- Assuming upstream contracts are always accurate
+- Leaving debug probes in production code unless intentionally gated
+
+## Heuristics
+
+- The less you control the producer, the less you should trust the shape.
+- Every nullable, optional, or polymorphic field deserves an explicit test.
+- In a pipeline, validate wherever assumptions change, not only at the first ingress.
+
+## Minimal probe pattern
+
+```go
+// one-off probe to confirm runtime shape, then replace with tests/fixtures
+// log.Printf("probe: %+v", v)
+```
+
+
+## Checklist
+
+* [ ] I verified the runtime shape using a real sample, not only the type definition
+* [ ] Tests or fixtures come from real payloads where practical
+* [ ] Optional or nullable fields are tested in both present and absent forms
+* [ ] New assumptions introduced by later layers were validated there too

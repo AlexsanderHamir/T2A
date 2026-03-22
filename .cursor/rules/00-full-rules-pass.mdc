@@ -1,0 +1,33 @@
+---
+description: >-
+  When the user asks for a full pass against project Cursor rules, to apply every rule in order,
+  or to audit/fix the repo against all standards. Committing is the final step only.
+alwaysApply: false
+---
+
+# Full rules pass (workflow)
+
+**When to apply:** phrases like “apply all cursor rules”, “go through every rule”, “rules audit on the whole repo”, or an explicit full codebase standards pass.
+
+## Intent
+
+Work through **each numbered project rule in order** (`01` → `08`), one rule at a time: understand it, scan the codebase for gaps, implement fixes, run **build/tests** before moving on. **Do not commit until the pass is complete** (unless the user asks to commit earlier).
+
+## Order of operations
+
+1. **List** `.cursor/rules/` and process files in **numeric prefix order**, skipping **this** file (`00-*`).
+2. For **`01`** through **`07`**: apply each rule to the codebase (code, tests, docs as required).
+3. **`08-atomic-commits`** is **not** a code-style rule—it governs **how to commit**. While applying **`01`–`07`**, only **plan** commits (split concerns); **do not run `git commit`** until step 4.
+4. **Last — commit:** run tests (e.g. `go test ./...`). Then commit per **`08-atomic-commits`** (atomic commits, one concern each). If there is nothing to commit, say so.
+
+## Numbering
+
+- **`00-*`** is the **workflow** (this file). **`01`–`07`** are substantive standards; **`08-atomic-commits`** is last so a full pass ends with committing.
+- If you add a new standard rule, renumber so **`08` stays atomic commits** (e.g. insert at **`08`** and rename **`08-atomic-commits`** → **`09-atomic-commits`**), or add **`09`**, **`10`**, … after **`08`**.
+- If two rules share the same number, rename so prefixes are **unique and ordered**.
+
+## Agent checklist
+
+- [ ] Rules applied **in order**; no skipping unless the rule is clearly N/A for the repo state.
+- [ ] **Commit** only after the full pass (or explicit user request to commit sooner).
+- [ ] **Tests** (and build) pass at end before committing.
