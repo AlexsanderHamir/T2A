@@ -1,8 +1,8 @@
 // Command taskapi is an HTTP server for task CRUD backed by Postgres.
 //
 // It loads environment with envload.Load (repo-root .env or -env path), opens the database with
-// pkgs/tasks/postgres.Open, optionally runs postgres.Migrate, then mounts handler.NewHandler
-// for the JSON task API on /.
+// pkgs/tasks/postgres.Open, optionally runs postgres.Migrate, constructs handler.NewSSEHub for
+// task change notifications, then mounts handler.NewHandler (REST + GET /events SSE) on /.
 //
 // Flags (see also -h):
 //

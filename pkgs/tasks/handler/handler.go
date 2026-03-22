@@ -19,11 +19,14 @@ const httpLogCmd = "taskapi"
 
 type Handler struct {
 	store *store.Store
+	hub   *SSEHub
 }
 
-func NewHandler(s *store.Store) http.Handler {
-	h := &Handler{store: s}
+// NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
+func NewHandler(s *store.Store, hub *SSEHub) http.Handler {
+	h := &Handler{store: s, hub: hub}
 	m := http.NewServeMux()
+	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
 	m.Handle("GET /tasks/{id}", http.HandlerFunc(h.get))
@@ -72,6 +75,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, op, err)
 		return
 	}
+	h.notifyChange(TaskCreated, t.ID)
 	writeJSON(w, op, http.StatusCreated, t)
 }
 
@@ -121,6 +125,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, op, err)
 		return
 	}
+	h.notifyChange(TaskUpdated, t.ID)
 	writeJSON(w, op, http.StatusOK, t)
 }
 
@@ -131,6 +136,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, op, err)
 		return
 	}
+	h.notifyChange(TaskDeleted, id)
 	w.WriteHeader(http.StatusNoContent)
 }
 

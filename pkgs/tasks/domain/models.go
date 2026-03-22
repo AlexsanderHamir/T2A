@@ -7,11 +7,11 @@ import (
 )
 
 type Task struct {
-	ID            string   `gorm:"primaryKey"`
-	Title         string   `gorm:"not null"`
-	InitialPrompt string   `gorm:"type:text;not null"`
-	Status        Status   `gorm:"not null;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
-	Priority      Priority `gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
+	ID            string   `json:"id" gorm:"primaryKey"`
+	Title         string   `json:"title" gorm:"not null"`
+	InitialPrompt string   `json:"initial_prompt" gorm:"type:text;not null"`
+	Status        Status   `json:"status" gorm:"not null;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
+	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 }
 
 type TaskEvent struct {

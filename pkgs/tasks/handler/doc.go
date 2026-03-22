@@ -2,6 +2,8 @@
 //
 // # Routes (Go 1.22 patterns on the returned mux)
 //
+//   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with
+//                              type task_created | task_updated | task_deleted and id (UUID)
 //   - POST   /tasks           — create; 201 + JSON task
 //   - GET    /tasks           — list; query limit (0–200, default 50), offset (≥ 0, default 0)
 //   - GET    /tasks/{id}      — 200 + task

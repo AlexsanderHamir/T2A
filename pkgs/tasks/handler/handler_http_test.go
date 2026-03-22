@@ -18,7 +18,7 @@ import (
 func newTaskTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	db := testdb.OpenSQLite(t)
-	h := NewHandler(store.NewStore(db))
+	h := NewHandler(store.NewStore(db), NewSSEHub())
 	return httptest.NewServer(h)
 }
 

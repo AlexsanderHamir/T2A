@@ -51,8 +51,9 @@ func main() {
 	}
 
 	taskStore := store.NewStore(db)
+	hub := handler.NewSSEHub()
 	mux := http.NewServeMux()
-	mux.Handle("/", handler.NewHandler(taskStore))
+	mux.Handle("/", handler.NewHandler(taskStore, hub))
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", *port),
