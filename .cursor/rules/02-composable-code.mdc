@@ -1,8 +1,9 @@
 ---
 description: >-
-  When: refactor, new package, or function/file growth. Invariants: one behavioral purpose per
-  function; nesting depth ≤ 2 for main path; dependencies passed in, not globals; one primary
-  concern per file. Numeric triggers: ~30 lines/function, ~200–300 lines/file before split review.
+  When: refactoring, adding new packages/modules, or reviewing function/file growth.
+  Favor composable code: one clear responsibility per function, shallow control flow,
+  explicit dependencies, and one primary concern per file. Line counts are review
+  triggers, not hard limits.
 alwaysApply: false
 ---
 
@@ -12,28 +13,36 @@ alwaysApply: false
 
 ## Invariants
 
-1. **I1:** Function `f` describable without “and” as a coordinator of distinct behaviors ⇒ split `f`.
-2. **I2:** `lines(f) > 30` ⇒ extract unless `f` is a single linear translation (then justify).
-3. **I3:** `nesting_depth(main_path) > 2` ⇒ use guards / early return.
-4. **I4:** Side effects ⇒ pushed to edges; core logic prefers pure `input → output`.
-5. **I5:** `dependencies` ∈ parameters (or explicit ctor), not hidden imports/singletons.
-6. **I6:** One **primary** concern per file; `lines(file) > 250` ⇒ consider split.
+1. **Single responsibility:** a function should do one primary job at one level of abstraction.
+2. **Extraction trigger:** if a function grows beyond ~30 lines, review whether part of it should be extracted. Keep it together if it is still a single linear flow.
+3. **Shallow flow:** if happy-path nesting exceeds 2 levels, prefer guards, early returns, or helper extraction.
+4. **Effects at the edges:** push I/O, mutation, and external calls outward; keep core logic as close as possible to pure `input -> output`.
+5. **Explicit dependencies:** pass dependencies through parameters or constructors; avoid hidden mutable globals and implicit singletons.
+6. **Single file concern:** each file should have one primary concern. If a file grows past ~200–300 lines, review whether it should be split.
 
-## Composition rules
+## Heuristics
 
-| Rule | Predicate | Action |
-| --- | --- | --- |
-| Name | name is noun-only or vague | rename to **verb + object** (`formatUserDisplayName`) |
-| Reuse | duplicate logic ≥ 2 sites | extract one named helper |
-| Module | feature crosses unrelated domains | split by **domain/** then role (`service`, `repo`, `types`) |
+- If a function is best described with unrelated verbs, split it.
+- If logic is duplicated in 2 or more places, extract a named helper.
+- If a module crosses unrelated domains, split by domain first, then by role.
 
-## Forbidden
+## Naming
 
-- Inheritance for behavior sharing (prefer small interfaces + functions).
-- “God” files mixing unrelated domains without subpackages.
+- Prefer names that reveal behavior.
+- Functions should usually read as **verb + object**.
+- Avoid vague names like `handleData`, `processThing`, or `manager`.
 
-## Agent checklist
+## Avoid
 
-- [ ] No function needs “and” to describe what it does.
-- [ ] No block indents deeper than 2 levels on the happy path.
-- [ ] File name matches its single main responsibility.
+- Deeply nested happy paths
+- God files mixing unrelated concerns
+- Refactors that increase indirection without improving clarity
+- Inheritance used only for behavior sharing where composition would be simpler
+
+## Checklist
+
+- [ ] Each function has one clear responsibility
+- [ ] Happy-path control flow stays shallow
+- [ ] Core logic is separated from side effects where practical
+- [ ] Dependencies are explicit
+- [ ] File contents match one main responsibility
