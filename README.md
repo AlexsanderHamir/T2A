@@ -37,7 +37,7 @@ curl.exe -N http://127.0.0.1:8080/events
 
 ## Web UI (optional)
 
-A **Vite + React + TypeScript** SPA in **`web/`** implements task **create, list, edit, and delete** against the same **`/tasks`** API as scripts and agents. It opens **`GET /events`** (SSE) so the table **refreshes when tasks change** elsewhere, without reloading the page.
+A **Vite + React + TypeScript** SPA in **`web/`** implements task **create, list, edit, and delete** against the same **`/tasks`** API as scripts and agents. It opens **`GET /events`** (SSE) so the table **refreshes when tasks change** elsewhere, without reloading the page. **Delete** uses an **in-app confirmation** (not the browser’s `window.confirm`) so focus and typing keep working in embedded or Chromium-based hosts.
 
 ### Dev flow (browser → Vite → `taskapi`)
 
@@ -88,7 +88,7 @@ Open the URL Vite prints (usually **`http://localhost:5173`**). In dev, **`/task
 | **`hooks/useTasksApp.ts`** | Task list state, **`EventSource`** subscription, **`refresh`**, and create / update / delete handlers. |
 | **`api.ts`** | Typed **`fetch`** wrappers for **`/tasks`** (and errors). |
 | **`types.ts`** | JSON-aligned TypeScript types. |
-| **`components/`** | **`TaskCreateForm`**, **`TaskListSection`**, **`TaskEditForm`**, shared **`StatusSelect`** / **`PrioritySelect`**, **`ErrorBanner`**, **`StreamStatusHint`**. |
+| **`components/`** | **`TaskCreateForm`**, **`TaskListSection`**, **`TaskEditForm`**, **`DeleteConfirmDialog`**, shared **`StatusSelect`** / **`PrioritySelect`**, **`ErrorBanner`**, **`StreamStatusHint`**. |
 | **`test/`** | Vitest **`setup`** (RTL **`cleanup`**), **`EventSource`** stub, **`requestUrl`** helper for mocks. |
 
 ### Production / deployment
