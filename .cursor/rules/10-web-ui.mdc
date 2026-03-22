@@ -73,7 +73,7 @@ Assert:
 ## Test isolation
 
 1. Default test runs must use **no real network** and **no real `taskapi`**.
-2. Explicitly mock browser APIs missing from jsdom, including **`EventSource`**, **`window.alert`**, and **`window.confirm`**, when relevant.
+2. Explicitly mock browser APIs missing from jsdom (**`EventSource`**, **`window.alert`**, etc.) when relevant. In **product code**, prefer **in-app confirmation dialogs** over **`window.confirm`** / **`window.prompt`** (native dialogs often break focus and typing in Chromium/Electron shells). Mock **`window.confirm`** in tests only when legacy code still uses it.
 3. Do not leave **`.skip`** in committed tests without a tracked reason in a comment.
 4. Register **`afterEach(cleanup)`** from **`@testing-library/react`** in the Vitest **`setup`** file (this repo: **`src/test/setup.ts`**) so mounted trees and async updates do not leak between tests.
 
