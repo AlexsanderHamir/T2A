@@ -1,0 +1,74 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks"
+)
+
+const cmdName = "taskapi"
+
+func main() {
+	port := flag.String("port", "8080", "HTTP listen port")
+	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
+	migrate := flag.Bool("migrate", false, "run GORM AutoMigrate before serving")
+	flag.Parse()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
+	path, err := envload.Load(*envPath)
+	if err != nil {
+		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.env", "err", err)
+		os.Exit(1)
+	}
+	slog.Info("env loaded", "cmd", cmdName, "operation", "taskapi.startup", "path", path)
+
+	db, err := tasks.OpenPostgres(os.Getenv("DATABASE_URL"), nil)
+	if err != nil {
+		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.db", "err", err)
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	if *migrate {
+		if err := tasks.MigratePostgreSQL(ctx, db); err != nil {
+			slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate", "err", err)
+			os.Exit(1)
+		}
+		slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate")
+	}
+
+	store := tasks.NewStore(db)
+	srv := &http.Server{
+		Addr:    net.JoinHostPort("", *port),
+		Handler: tasks.NewHandler(store),
+	}
+
+	go func() {
+		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("shutdown", "cmd", cmdName, "operation", "taskapi.shutdown", "err", err)
+		os.Exit(1)
+	}
+}
