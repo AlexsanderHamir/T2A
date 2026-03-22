@@ -169,13 +169,13 @@ func decodeJSON(r io.Reader, dst any) error {
 	if err := dec.Decode(dst); err != nil {
 		return fmt.Errorf("json decode: %w", err)
 	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		if err != nil {
-			return fmt.Errorf("json trailing data: %w", err)
+	if err := dec.Decode(&struct{}{}); err != nil {
+		if err == io.EOF {
+			return nil
 		}
-		return fmt.Errorf("%w: json trailing data", domain.ErrInvalidInput)
+		return fmt.Errorf("json trailing data: %w", err)
 	}
-	return nil
+	return fmt.Errorf("%w: json trailing data", domain.ErrInvalidInput)
 }
 
 func writeJSON(w http.ResponseWriter, op string, code int, v any) {
