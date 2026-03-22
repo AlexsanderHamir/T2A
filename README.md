@@ -56,6 +56,7 @@ Read locally with:
 
 ```bash
 go doc -all ./pkgs/tasks/...
+go doc -all ./internal/ui
 go doc -all ./internal/envload
 go doc -all ./cmd/taskapi
 go doc -all ./cmd/dbcheck

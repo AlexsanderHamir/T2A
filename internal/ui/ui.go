@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"net/http"
 )
 
@@ -13,6 +14,8 @@ var templateFS embed.FS
 //go:embed static/app.css
 var staticFS embed.FS
 
+const logCmd = "taskapi"
+
 // Register adds HTML routes on mux: GET / (home) and GET /static/* (compiled Tailwind CSS).
 // Register before mounting the JSON API with Handle("/", api) so GET / and /static/ win.
 func Register(mux *http.ServeMux) {
@@ -21,6 +24,7 @@ func Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := tmpl.ExecuteTemplate(w, "home.html", nil); err != nil {
+			slog.Error("template render failed", "cmd", logCmd, "operation", "ui.home", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
