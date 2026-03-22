@@ -44,5 +44,8 @@
 // Handler error mapping: [ErrNotFound] → 404 "not found", [ErrInvalidInput] → 400 "bad
 // request", other errors → 500 "internal server error". Bodies are plain text, not JSON.
 //
-// Fixtures and decode tests live under testdata/ and in handler_helpers_test.go.
+// Tests: JSON/list helpers in handler_helpers_test.go and testdata/; [Store] behavior and
+// enum scanning in store_test.go and sqltypes_test.go; HTTP routes via httptest with
+// in-memory SQLite (sqlite_test.go, handler_http_test.go). [OpenPostgres] is not unit-tested
+// here (requires a real DSN / network).
 package tasks
