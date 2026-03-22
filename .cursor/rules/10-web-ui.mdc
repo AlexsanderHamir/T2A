@@ -17,10 +17,11 @@ Applies only to **`web/`**. Backend rules remain governed by their own files.
 
 1. **Use strict TypeScript.** Do not use `any` unless unavoidable; if used, justify it in a one-line comment and narrow it immediately.
 2. **Keep components focused.** Prefer small components with clear responsibilities. Lift state only when shared. Do not prop-drill beyond two levels without introducing context, and document new context usage briefly.
-3. **Centralize API access.** Keep HTTP calls and JSON typing in **`api.ts`** and related **`types.ts`** files. Do not place raw or untyped `fetch` calls inside components for app API access.
-4. **Handle failures visibly.** For user-triggered actions, do not swallow errors. Show a toast, inline error, or banner, and log when appropriate.
-5. **Preserve accessibility.** Interactive elements must be keyboard accessible. Form controls must have an associated label or `aria-label`. Loading and error states must not rely on color alone.
-6. **Keep styling maintainable.** Prefer **`App.css`** or colocated CSS modules. Avoid inline styles except for rare, isolated cases.
+3. **Split UI into components and files.** Whenever it improves clarity, **extract** forms, tables, panels, hooks, and repeated chunks into **their own components** (and usually **their own files**). Avoid **large monolith files**—if a file approaches **~200 lines** or combines several distinct screens/flows, **refactor** into **`src/components/`** (or feature folders) with **one primary component per file** unless helpers are trivial and tightly coupled. Do not keep growing a single **`App.tsx`**-style dump when pieces can stand alone.
+4. **Centralize API access.** Keep HTTP calls and JSON typing in **`api.ts`** and related **`types.ts`** files. Do not place raw or untyped `fetch` calls inside components for app API access.
+5. **Handle failures visibly.** For user-triggered actions, do not swallow errors. Show a toast, inline error, or banner, and log when appropriate.
+6. **Preserve accessibility.** Interactive elements must be keyboard accessible. Form controls must have an associated label or `aria-label`. Loading and error states must not rely on color alone.
+7. **Keep styling maintainable.** Prefer **`App.css`** or colocated CSS modules. Avoid inline styles except for rare, isolated cases.
 
 ## Test stack
 
@@ -91,5 +92,6 @@ npm run build
 - [ ] `npm test` passes from `web/`.
 - [ ] Tests were added or updated for changed behavior, or a brief exception is documented.
 - [ ] No raw app-API `fetch` calls were added to components.
+- [ ] New or changed UI is split into reasonably sized components/files where it helps; no unnecessary growth of monolith files.
 - [ ] Keyboard accessibility remains intact for critical flows.
 - [ ] `npm run build` was run after substantive changes that could affect typing or bundling.
