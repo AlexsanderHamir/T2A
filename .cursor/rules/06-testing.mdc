@@ -8,6 +8,8 @@ alwaysApply: true
 
 # Testing (unit, cross-component, coverage)
 
+**Scope:** Go code in this module. For **`web/`** (Vite/React), use **`10-web-ui.mdc`** (`npm test` in `web/`).
+
 ## Agent obligation
 
 When you **add or change** production code in this module, finish relevant **`go test`** runs. When the user asks about **tests, coverage, or quality**, or when you complete a non-trivial feature or fix:
