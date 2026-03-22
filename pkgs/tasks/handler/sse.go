@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -55,6 +56,7 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 	}
 	b, err := json.Marshal(ev)
 	if err != nil {
+		slog.Error("sse publish marshal failed", "cmd", httpLogCmd, "operation", "tasks.sse.publish", "err", err)
 		return
 	}
 	line := string(b)
@@ -80,7 +82,7 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		slog.Error("streaming unsupported", "cmd", httpLogCmd, "operation", op)
+		slog.Error("streaming unsupported", "cmd", httpLogCmd, "operation", op, "err", errors.New("response writer is not an http.Flusher"))
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
