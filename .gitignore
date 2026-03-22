@@ -3,3 +3,4 @@ coverage.out
 coverage*.out
 coverage
 node_modules/
+web/dist/

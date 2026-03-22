@@ -35,6 +35,24 @@ curl.exe -s -X POST http://127.0.0.1:8080/tasks -H "Content-Type: application/js
 curl.exe -N http://127.0.0.1:8080/events
 ```
 
+## Web UI (optional)
+
+A minimal **Vite + React + TypeScript** app in **`web/`** covers task **create, list, edit, delete** and listens to **`/events`** so the list **updates when anything changes** (including other tabs or agents), without reloading the page.
+
+1. Start **`taskapi`** on **`127.0.0.1:8080`** (default).
+2. In another terminal:
+
+```bash
+cd web
+npm install
+npm test
+npm run dev
+```
+
+Open the URL Vite prints (usually **`http://localhost:5173`**). Requests to **`/tasks`** and **`/events`** are **proxied** to the API in dev, so you do not need CORS on the server.
+
+To point the proxy somewhere else: set **`VITE_TASKAPI_ORIGIN`** (e.g. `http://127.0.0.1:9090`) when running Vite.
+
 ## For developers
 
 Route and type details live next to the code. From the repo root:
