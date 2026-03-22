@@ -1,12 +1,13 @@
 # T2A — system design
 
-How `taskapi` fits together: data flow, HTTP surface, real-time notifications, and current tradeoffs. Package comments and `README.md` remain the day-to-day entry points; this file is the map.
+Backend for **delegating many tasks to agents** (and operators): how `taskapi` fits together—data flow, HTTP surface, real-time notifications, and tradeoffs. Package comments and `README.md` remain the day-to-day entry points; this file is the map.
 
 ## Goals
 
+- Support **mass delegation**: lots of tasks in flight, with agents and people acting through the same system without ad-hoc state.
 - Postgres is the single source of truth: tasks plus an append-only `task_events` audit trail.
-- Humans, scripts, and agents all change state through the same REST API; the store validates and records audit events.
-- Browsers can subscribe to lightweight “something changed” signals (`GET /events`) and refetch JSON from the REST API when they need full rows.
+- Humans, scripts, and agents all change state through the same REST API; the store validates and records audit events (`X-Actor` distinguishes user vs agent on events).
+- Browsers and runners can subscribe to lightweight “something changed” signals (`GET /events`) and refetch JSON from the REST API when they need full rows.
 
 ## Architecture overview
 
@@ -201,7 +202,7 @@ Audit: append-only `task_events` for typed changes. Event type strings are `doma
 
 | Document | Role |
 |----------|------|
-| `README.md` | Build, run, Postgres, PowerShell `curl.exe` examples. |
+| `README.md` | Quickstart: build, test, run commands; PowerShell `curl.exe` tip; pointers here and to `go doc`. |
 | `UI_TASK.MD` | Product note on SPA + SSE. |
 | `pkgs/tasks/handler/doc.go` | Routes and request rules. |
 | `pkgs/tasks/store/doc.go` | Store behavior and list caps. |

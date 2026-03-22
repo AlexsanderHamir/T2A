@@ -1,26 +1,13 @@
 # T2A
 
-Go module **`github.com/AlexsanderHamir/T2A`**: Postgres-backed tasks, an audit event log, a REST API, and small CLIs to check the database and run the server.
+**T2A** is for **delegating lots of tasks to agents** and keeping humans and automation on the same page. Tasks live in **one shared place**, you **create and update them through a web API**, every important change is **recorded** (who did what), and **UIs or runners can listen for updates** instead of polling constantly.
 
-```mermaid
-flowchart LR
-  subgraph clients[Clients]
-    B[Browser / SPA]
-    A[Agent]
-    C[Scripts / curl]
-  end
-  API[taskapi]
-  DB[(PostgreSQL)]
-  B -->|REST + SSE /events| API
-  A -->|REST| API
-  C -->|REST| API
-  API --> DB
-```
+This repo is the Go implementation (**`github.com/AlexsanderHamir/T2A`**). For a fuller picture of how it works and where the rough edges are, see **`docs/DESIGN.md`**.
 
 ## Prerequisites
 
 - **Go** 1.25+
-- **PostgreSQL** and a repo-root **`.env`** (gitignored) with **`DATABASE_URL`** set to a Postgres URI.
+- A **Postgres** database and a **`.env`** file at the repo root (gitignored) with **`DATABASE_URL`** pointing at it.
 
 ## Build and test
 
@@ -32,48 +19,27 @@ go test ./...
 ## Run
 
 ```bash
-go run ./cmd/dbcheck
-go run ./cmd/taskapi
+go run ./cmd/dbcheck    # checks the database; add -migrate to update tables
+go run ./cmd/taskapi    # starts the web server; add -h for -port, -env, -migrate
 ```
 
-Use **`-h`** on each command for flags (`-env`, `-migrate`, and `-port` for `taskapi`).
+With **`taskapi`** running (by default **`http://127.0.0.1:8080`**):
 
-With **`taskapi`** running:
+- Work with tasks at **`/tasks`** and **`/tasks/{id}`** — methods, query options, and error behavior are described in **`docs/DESIGN.md`**.
+- Open **`/events`** in a client that supports **live streams** to hear when tasks change (same doc explains the format).
 
-- **JSON API:** **`http://127.0.0.1:8080/tasks`** (and `/tasks/{id}` for get/patch/delete).
-- **SSE (live updates):** **`GET http://127.0.0.1:8080/events`** — `text/event-stream` with `data:` JSON lines `{"type":"task_created|task_updated|task_deleted","id":"<uuid>"}` after successful writes. Use **`EventSource`** in the browser (or equivalent) and refetch tasks when an event arrives.
-
-**Windows PowerShell:** backslash-escaped JSON (`-d "{\"title\":\"live\"}"`) is often wrong for `curl`. Use single-quoted JSON and **`curl.exe`** so you hit real curl, not `Invoke-WebRequest`:
+**Windows PowerShell:** use **`curl.exe`** and single-quoted JSON so Windows does not treat `curl` as a different command:
 
 ```powershell
 curl.exe -s -X POST http://127.0.0.1:8080/tasks -H "Content-Type: application/json" -d '{"title":"live"}'
 curl.exe -N http://127.0.0.1:8080/events
 ```
 
-## Design
+## For developers
 
-For architecture, flows, SSE behavior, coverage, and limitations, see **`docs/DESIGN.md`**.
-
-## Documentation by package
-
-Behavior and contracts live next to the code as Go package docs (not duplicated here).
-
-| Path | What it covers |
-|------|----------------|
-| [`pkgs/tasks`](pkgs/tasks/doc.go) | Overview of the task subsystem (subpackages below) |
-| [`pkgs/tasks/domain`](pkgs/tasks/domain/doc.go) | Models, enums, errors, SQL enum scanning |
-| [`pkgs/tasks/postgres`](pkgs/tasks/postgres/doc.go) | GORM Postgres open + schema migrate |
-| [`pkgs/tasks/store`](pkgs/tasks/store/doc.go) | CRUD and task_events audit log |
-| [`pkgs/tasks/handler`](pkgs/tasks/handler/doc.go) | REST JSON routes and request rules |
-| [`internal/envload`](internal/envload/doc.go) | Loading `.env` and requiring `DATABASE_URL` |
-| [`cmd/taskapi`](cmd/taskapi/doc.go) | HTTP server wiring, flags, shutdown |
-| [`cmd/dbcheck`](cmd/dbcheck/doc.go) | Connectivity check, migrate flag |
-
-Read locally with:
+Route and type details live next to the code. From the repo root:
 
 ```bash
 go doc -all ./pkgs/tasks/...
-go doc -all ./internal/envload
-go doc -all ./cmd/taskapi
-go doc -all ./cmd/dbcheck
+go doc -all ./internal/envload ./cmd/taskapi ./cmd/dbcheck
 ```
