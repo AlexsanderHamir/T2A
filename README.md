@@ -2,6 +2,21 @@
 
 Go module **`github.com/AlexsanderHamir/T2A`**: Postgres-backed tasks, an audit event log, a REST API, and small CLIs to check the database and run the server.
 
+```mermaid
+flowchart LR
+  subgraph clients[Clients]
+    B[Browser / SPA]
+    A[Agent]
+    C[Scripts / curl]
+  end
+  API[taskapi]
+  DB[(PostgreSQL)]
+  B -->|REST + SSE /events| API
+  A -->|REST| API
+  C -->|REST| API
+  API --> DB
+```
+
 ## Prerequisites
 
 - **Go** 1.25+
@@ -23,7 +38,21 @@ go run ./cmd/taskapi
 
 Use **`-h`** on each command for flags (`-env`, `-migrate`, and `-port` for `taskapi`).
 
-With **`taskapi`** running, the JSON API is at **`http://127.0.0.1:8080/tasks`** (and related routes under `/tasks`).
+With **`taskapi`** running:
+
+- **JSON API:** **`http://127.0.0.1:8080/tasks`** (and `/tasks/{id}` for get/patch/delete).
+- **SSE (live updates):** **`GET http://127.0.0.1:8080/events`** — `text/event-stream` with `data:` JSON lines `{"type":"task_created|task_updated|task_deleted","id":"<uuid>"}` after successful writes. Use **`EventSource`** in the browser (or equivalent) and refetch tasks when an event arrives.
+
+**Windows PowerShell:** backslash-escaped JSON (`-d "{\"title\":\"live\"}"`) is often wrong for `curl`. Use single-quoted JSON and **`curl.exe`** so you hit real curl, not `Invoke-WebRequest`:
+
+```powershell
+curl.exe -s -X POST http://127.0.0.1:8080/tasks -H "Content-Type: application/json" -d '{"title":"live"}'
+curl.exe -N http://127.0.0.1:8080/events
+```
+
+## Design
+
+For architecture, flows, SSE behavior, coverage, and limitations, see **`docs/DESIGN.md`**.
 
 ## Documentation by package
 
