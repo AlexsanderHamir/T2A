@@ -32,7 +32,10 @@ func TestHTTP_create_and_list(t *testing.T) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusCreated {
-		b, _ := io.ReadAll(res.Body)
+		b, errRead := io.ReadAll(res.Body)
+		if errRead != nil {
+			t.Fatal(errRead)
+		}
 		t.Fatalf("status %d body %s", res.StatusCode, b)
 	}
 	var created domain.Task
@@ -102,7 +105,9 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, err := io.ReadAll(res.Body)
-	_ = res.Body.Close()
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +130,9 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 		t.Fatal(err)
 	}
 	patchBytes, err := io.ReadAll(res2.Body)
-	_ = res2.Body.Close()
+	if cerr := res2.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,8 +212,13 @@ func TestHTTP_patch_rejects_empty_patch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, _ := io.ReadAll(res.Body)
-	_ = res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("create %d %s", res.StatusCode, b)
 	}

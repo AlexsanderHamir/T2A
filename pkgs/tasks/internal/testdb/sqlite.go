@@ -23,7 +23,11 @@ func OpenSQLite(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = sqlDB.Close() })
+	t.Cleanup(func() {
+		if err := sqlDB.Close(); err != nil {
+			t.Errorf("close sqlite: %v", err)
+		}
+	})
 
 	if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
 		t.Fatal(err)
