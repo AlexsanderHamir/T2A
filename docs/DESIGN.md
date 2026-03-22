@@ -198,11 +198,20 @@ Audit: append-only `task_events` for typed changes. Event type strings are `doma
 - Versioned SQL migrations and multi-step schema upgrades.
 - Built-in metrics / OpenTelemetry (only `slog` logs today).
 
+## Optional browser client (`web/`)
+
+The repo includes an optional **Vite + React** SPA under **`web/`** that consumes this document’s **REST** and **SSE** endpoints (`/tasks`, `/events`). It does **not** change server behavior or add new routes on **`taskapi`**.
+
+- **Development:** the Vite dev server **proxies** `/tasks` and `/events` to **`taskapi`**, avoiding CORS during local work.
+- **Production:** serve **`web/dist`** so the browser talks to the API with **same-origin** URLs, or terminate TLS and route at a **gateway**; the Go server still ships **without CORS** (see [Limitations](#limitations)).
+
+Operator-facing **scripts, layout, and deployment notes** live in the root **`README.md`** (*Web UI* section), not duplicated here.
+
 ## Related references
 
 | Document | Role |
 |----------|------|
-| `README.md` | Quickstart: build, test, run commands; PowerShell `curl.exe` tip; pointers here and to `go doc`. |
+| `README.md` | Quickstart; **`taskapi`** and **`dbcheck`**; PowerShell `curl.exe`; **Web UI** (`web/`: scripts, proxy, `src` layout, production). |
 | `UI_TASK.MD` | Product note on SPA + SSE. |
 | `pkgs/tasks/handler/doc.go` | Routes and request rules. |
 | `pkgs/tasks/store/doc.go` | Store behavior and list caps. |

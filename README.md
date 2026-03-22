@@ -37,7 +37,24 @@ curl.exe -N http://127.0.0.1:8080/events
 
 ## Web UI (optional)
 
-A minimal **Vite + React + TypeScript** app in **`web/`** covers task **create, list, edit, delete** and listens to **`/events`** so the list **updates when anything changes** (including other tabs or agents), without reloading the page.
+A **Vite + React + TypeScript** SPA in **`web/`** implements task **create, list, edit, and delete** against the same **`/tasks`** API as scripts and agents. It opens **`GET /events`** (SSE) so the table **refreshes when tasks change** elsewhere, without reloading the page.
+
+### Dev flow (browser → Vite → `taskapi`)
+
+```mermaid
+flowchart LR
+  B[Browser on Vite port]
+  V[Vite dev server]
+  A["taskapi :8080"]
+  B -->|HTML/JS/CSS| V
+  V -->|proxies /tasks and /events| A
+```
+
+### Prerequisites
+
+- **Node.js** (current LTS is fine) and **npm**, for **`web/`** only.
+
+### Run locally
 
 1. Start **`taskapi`** on **`127.0.0.1:8080`** (default).
 2. In another terminal:
@@ -49,15 +66,47 @@ npm test
 npm run dev
 ```
 
-Open the URL Vite prints (usually **`http://localhost:5173`**). Requests to **`/tasks`** and **`/events`** are **proxied** to the API in dev, so you do not need CORS on the server.
+Open the URL Vite prints (usually **`http://localhost:5173`**). In dev, **`/tasks`** and **`/events`** are **proxied** to the API (see **`web/vite.config.ts`**), so the Go server does not need **CORS** for local UI work.
 
-To point the proxy somewhere else: set **`VITE_TASKAPI_ORIGIN`** (e.g. `http://127.0.0.1:9090`) when running Vite.
+**Proxy target:** set **`VITE_TASKAPI_ORIGIN`** when starting Vite if `taskapi` is not at `http://127.0.0.1:8080` (for example `http://127.0.0.1:9090`).
+
+### Scripts (run inside **`web/`**)
+
+| Command | Purpose |
+|--------|---------|
+| **`npm run dev`** | Vite dev server with proxy. |
+| **`npm test`** | **Vitest** + Testing Library (no real network; **`fetch`** / **`EventSource`** mocked). |
+| **`npm run test:watch`** | Vitest watch mode. |
+| **`npm run build`** | Typecheck and emit production assets to **`web/dist/`**. |
+| **`npm run preview`** | Local preview of the **`dist`** build (still expects API reachability; configure proxy or same-origin yourself). |
+
+### Source layout (`web/src/`)
+
+| Path | Role |
+|------|------|
+| **`App.tsx`** | Root layout; wires **`useTasksApp`** to presentational components. |
+| **`hooks/useTasksApp.ts`** | Task list state, **`EventSource`** subscription, **`refresh`**, and create / update / delete handlers. |
+| **`api.ts`** | Typed **`fetch`** wrappers for **`/tasks`** (and errors). |
+| **`types.ts`** | JSON-aligned TypeScript types. |
+| **`components/`** | **`TaskCreateForm`**, **`TaskListSection`**, **`TaskEditForm`**, shared **`StatusSelect`** / **`PrioritySelect`**, **`ErrorBanner`**, **`StreamStatusHint`**. |
+| **`test/`** | Vitest **`setup`** (RTL **`cleanup`**), **`EventSource`** stub, **`requestUrl`** helper for mocks. |
+
+### Production / deployment
+
+**`npm run build`** produces static files under **`web/dist/`**. The Go **`taskapi`** binary does **not** serve this folder. In production, either:
+
+- Serve **`dist`** from the **same origin** as the API (single host, path routing), or  
+- Put a **reverse proxy** in front that forwards **`/tasks`** and **`/events`** to **`taskapi`** and serves the SPA for other paths.
+
+The API ships **without CORS** for arbitrary third-party origins; see **`docs/DESIGN.md`** (limitations). Adding CORS or embedding static files in Go would be a separate change.
 
 ## For developers
 
-Route and type details live next to the code. From the repo root:
+**Go:** route and type details live next to the code. From the repo root:
 
 ```bash
 go doc -all ./pkgs/tasks/...
 go doc -all ./internal/envload ./cmd/taskapi ./cmd/dbcheck
 ```
+
+**Web:** TypeScript sources and tests are under **`web/src/`**; run **`npm test`** from **`web/`** (see *Web UI* above).
