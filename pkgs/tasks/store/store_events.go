@@ -1,10 +1,11 @@
-package tasks
+package store
 
 import (
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -18,11 +19,11 @@ func nextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 	return max + 1, nil
 }
 
-func appendEvent(tx *gorm.DB, taskID string, seq int64, typ EventType, by Actor, data []byte) error {
+func appendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by domain.Actor, data []byte) error {
 	if data == nil {
 		data = []byte("{}")
 	}
-	ev := TaskEvent{
+	ev := domain.TaskEvent{
 		TaskID: taskID,
 		Seq:    seq,
 		At:     time.Now().UTC(),

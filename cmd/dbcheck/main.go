@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
 )
 
@@ -72,8 +72,8 @@ func migrateIfRequested(ctx context.Context, db *gorm.DB, want bool) error {
 	if !want {
 		return nil
 	}
-	if err := tasks.MigratePostgreSQL(ctx, db); err != nil {
-		return fmt.Errorf("tasks.MigratePostgreSQL: %w", err)
+	if err := postgres.Migrate(ctx, db); err != nil {
+		return fmt.Errorf("postgres.Migrate: %w", err)
 	}
 	return nil
 }

@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
 )
 
 func connectAndPing(ctx context.Context, dsn string) (*gorm.DB, error) {
-	db, err := tasks.OpenPostgres(dsn, nil)
+	db, err := postgres.Open(dsn, nil)
 	if err != nil {
-		return nil, fmt.Errorf("tasks.OpenPostgres: %w", err)
+		return nil, fmt.Errorf("postgres.Open: %w", err)
 	}
 	sqlDB, err := db.DB()
 	if err != nil {

@@ -1,4 +1,4 @@
-package tasks
+package handler
 
 import (
 	"errors"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 func TestDecodeJSON_taskCreate_fixture(t *testing.T) {
@@ -22,7 +24,7 @@ func TestDecodeJSON_taskCreate_fixture(t *testing.T) {
 	if got.Title != "Example from testdata" {
 		t.Fatalf("title: %q", got.Title)
 	}
-	if got.Status != StatusReady {
+	if got.Status != domain.StatusReady {
 		t.Fatalf("status: %s", got.Status)
 	}
 }
@@ -36,7 +38,7 @@ func TestDecodeJSON_taskPatch_fixture(t *testing.T) {
 	if err := decodeJSON(strings.NewReader(string(b)), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Status == nil || *got.Status != StatusRunning {
+	if got.Status == nil || *got.Status != domain.StatusRunning {
 		t.Fatalf("status: %v", got.Status)
 	}
 }
@@ -57,7 +59,7 @@ func TestDecodeJSON_rejectsTrailingJSON(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidInput) && !strings.Contains(err.Error(), "trailing") {
+	if !errors.Is(err, domain.ErrInvalidInput) && !strings.Contains(err.Error(), "trailing") {
 		t.Fatalf("unexpected err: %v", err)
 	}
 }
@@ -111,11 +113,11 @@ func TestDecodeJSON_trailing_garbage_after_object(t *testing.T) {
 
 func TestActorFromRequest(t *testing.T) {
 	r := &http.Request{Header: http.Header{}}
-	if actorFromRequest(r) != ActorUser {
+	if actorFromRequest(r) != domain.ActorUser {
 		t.Fatal("default actor")
 	}
 	r.Header.Set("X-Actor", "agent")
-	if actorFromRequest(r) != ActorAgent {
+	if actorFromRequest(r) != domain.ActorAgent {
 		t.Fatal("agent")
 	}
 }

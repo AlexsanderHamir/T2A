@@ -1,8 +1,6 @@
-package tasks
+package domain
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestStatus_Scan_string_and_bytes(t *testing.T) {
 	var s Status

@@ -1,15 +1,17 @@
-package tasks
+package testdb
 
 import (
 	"context"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func openTestSQLite(t *testing.T) *gorm.DB {
+// OpenSQLite returns an in-memory GORM DB with task schema migrated (for store/handler tests).
+func OpenSQLite(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -26,7 +28,7 @@ func openTestSQLite(t *testing.T) *gorm.DB {
 	if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := MigratePostgreSQL(context.Background(), db); err != nil {
+	if err := postgres.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
 	return db

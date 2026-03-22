@@ -1,8 +1,8 @@
 // Command taskapi is an HTTP server for task CRUD backed by Postgres.
 //
-// It loads environment with [envload.Load] (repo-root .env or -env path), opens the database
-// with [tasks.OpenPostgres], optionally runs [tasks.MigratePostgreSQL], then serves
-// [tasks.NewHandler] on all interfaces.
+// It loads environment with envload.Load (repo-root .env or -env path), opens the database with
+// pkgs/tasks/postgres.Open, optionally runs postgres.Migrate, then serves handler.NewHandler on
+// all interfaces.
 //
 // Flags (see also -h):
 //
@@ -12,5 +12,6 @@
 //
 // Structured logs go to stderr. SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout.
 //
-// REST contract: see package documentation for github.com/AlexsanderHamir/T2A/pkgs/tasks.
+// REST contract: see package github.com/AlexsanderHamir/T2A/pkgs/tasks/handler and domain types
+// in github.com/AlexsanderHamir/T2A/pkgs/tasks/domain.
 package main

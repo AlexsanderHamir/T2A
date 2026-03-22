@@ -1,4 +1,4 @@
-package tasks
+package handler
 
 import (
 	"bytes"
@@ -9,13 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
 )
 
 func newTaskTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	db := openTestSQLite(t)
-	h := NewHandler(NewStore(db))
+	db := testdb.OpenSQLite(t)
+	h := NewHandler(store.NewStore(db))
 	return httptest.NewServer(h)
 }
 
@@ -32,7 +35,7 @@ func TestHTTP_create_and_list(t *testing.T) {
 		b, _ := io.ReadAll(res.Body)
 		t.Fatalf("status %d body %s", res.StatusCode, b)
 	}
-	var created Task
+	var created domain.Task
 	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +55,7 @@ func TestHTTP_create_and_list(t *testing.T) {
 		t.Fatalf("list status %d", res2.StatusCode)
 	}
 	var payload struct {
-		Tasks []Task `json:"tasks"`
+		Tasks []domain.Task `json:"tasks"`
 	}
 	if err := json.NewDecoder(res2.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
@@ -106,7 +109,7 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("create %d %s", res.StatusCode, b)
 	}
-	var created Task
+	var created domain.Task
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
@@ -129,11 +132,11 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 	if res2.StatusCode != http.StatusOK {
 		t.Fatalf("patch %d %s", res2.StatusCode, patchBytes)
 	}
-	var updated Task
+	var updated domain.Task
 	if err := json.Unmarshal(patchBytes, &updated); err != nil {
 		t.Fatal(err)
 	}
-	if updated.Status != StatusRunning {
+	if updated.Status != domain.StatusRunning {
 		t.Fatalf("status %s", updated.Status)
 	}
 
@@ -207,7 +210,7 @@ func TestHTTP_patch_rejects_empty_patch(t *testing.T) {
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("create %d %s", res.StatusCode, b)
 	}
-	var created Task
+	var created domain.Task
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}

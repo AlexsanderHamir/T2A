@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 const cmdName = "taskapi"
@@ -32,7 +34,7 @@ func main() {
 	}
 	slog.Info("env loaded", "cmd", cmdName, "operation", "taskapi.startup", "path", path)
 
-	db, err := tasks.OpenPostgres(os.Getenv("DATABASE_URL"), nil)
+	db, err := postgres.Open(os.Getenv("DATABASE_URL"), nil)
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.db", "err", err)
 		os.Exit(1)
@@ -40,17 +42,17 @@ func main() {
 
 	ctx := context.Background()
 	if *migrate {
-		if err := tasks.MigratePostgreSQL(ctx, db); err != nil {
+		if err := postgres.Migrate(ctx, db); err != nil {
 			slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate", "err", err)
 			os.Exit(1)
 		}
 		slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate")
 	}
 
-	store := tasks.NewStore(db)
+	taskStore := store.NewStore(db)
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", *port),
-		Handler: tasks.NewHandler(store),
+		Handler: handler.NewHandler(taskStore),
 	}
 
 	go func() {

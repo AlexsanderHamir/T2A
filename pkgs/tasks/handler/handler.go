@@ -1,4 +1,4 @@
-package tasks
+package handler
 
 import (
 	"encoding/json"
@@ -10,16 +10,19 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 const httpLogCmd = "taskapi"
 
 type Handler struct {
-	store *Store
+	store *store.Store
 }
 
-func NewHandler(store *Store) http.Handler {
-	h := &Handler{store: store}
+func NewHandler(s *store.Store) http.Handler {
+	h := &Handler{store: s}
 	m := http.NewServeMux()
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
@@ -30,24 +33,24 @@ func NewHandler(store *Store) http.Handler {
 }
 
 type taskCreateJSON struct {
-	ID            string   `json:"id"`
-	Title         string   `json:"title"`
-	InitialPrompt string   `json:"initial_prompt"`
-	Status        Status   `json:"status"`
-	Priority      Priority `json:"priority"`
+	ID            string         `json:"id"`
+	Title         string         `json:"title"`
+	InitialPrompt string         `json:"initial_prompt"`
+	Status        domain.Status  `json:"status"`
+	Priority      domain.Priority `json:"priority"`
 }
 
 type taskPatchJSON struct {
-	Title         *string   `json:"title"`
-	InitialPrompt *string   `json:"initial_prompt"`
-	Status        *Status   `json:"status"`
-	Priority      *Priority `json:"priority"`
+	Title         *string          `json:"title"`
+	InitialPrompt *string          `json:"initial_prompt"`
+	Status        *domain.Status   `json:"status"`
+	Priority      *domain.Priority `json:"priority"`
 }
 
 type listResponse struct {
-	Tasks  []Task `json:"tasks"`
-	Limit  int    `json:"limit"`
-	Offset int    `json:"offset"`
+	Tasks  []domain.Task `json:"tasks"`
+	Limit  int           `json:"limit"`
+	Offset int           `json:"offset"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +61,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	by := actorFromRequest(r)
-	t, err := h.store.Create(r.Context(), CreateTaskInput{
+	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:            body.ID,
 		Title:         body.Title,
 		InitialPrompt: body.InitialPrompt,
@@ -106,7 +109,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, op, err, http.StatusBadRequest)
 		return
 	}
-	in := UpdateTaskInput{
+	in := store.UpdateTaskInput{
 		Title:         body.Title,
 		InitialPrompt: body.InitialPrompt,
 		Status:        body.Status,
@@ -137,26 +140,26 @@ func parseListParams(q url.Values) (limit, offset int, err error) {
 	if v := q.Get("limit"); v != "" {
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 || n > 200 {
-			return 0, 0, fmt.Errorf("%w: limit must be integer 0..200", ErrInvalidInput)
+			return 0, 0, fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
 		}
 		limit = n
 	}
 	if v := q.Get("offset"); v != "" {
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 {
-			return 0, 0, fmt.Errorf("%w: offset must be non-negative integer", ErrInvalidInput)
+			return 0, 0, fmt.Errorf("%w: offset must be non-negative integer", domain.ErrInvalidInput)
 		}
 		offset = n
 	}
 	return limit, offset, nil
 }
 
-func actorFromRequest(r *http.Request) Actor {
+func actorFromRequest(r *http.Request) domain.Actor {
 	switch strings.ToLower(strings.TrimSpace(r.Header.Get("X-Actor"))) {
 	case "agent":
-		return ActorAgent
+		return domain.ActorAgent
 	default:
-		return ActorUser
+		return domain.ActorUser
 	}
 }
 
@@ -170,7 +173,7 @@ func decodeJSON(r io.Reader, dst any) error {
 		if err != nil {
 			return fmt.Errorf("json trailing data: %w", err)
 		}
-		return fmt.Errorf("%w: json trailing data", ErrInvalidInput)
+		return fmt.Errorf("%w: json trailing data", domain.ErrInvalidInput)
 	}
 	return nil
 }
@@ -192,10 +195,10 @@ func writeStoreError(w http.ResponseWriter, op string, err error) {
 	msg := "internal server error"
 	code := http.StatusInternalServerError
 	switch {
-	case errors.Is(err, ErrNotFound):
+	case errors.Is(err, domain.ErrNotFound):
 		msg = "not found"
 		code = http.StatusNotFound
-	case errors.Is(err, ErrInvalidInput):
+	case errors.Is(err, domain.ErrInvalidInput):
 		msg = "bad request"
 		code = http.StatusBadRequest
 	}

@@ -1,4 +1,4 @@
-package tasks
+package domain
 
 import (
 	"database/sql/driver"
