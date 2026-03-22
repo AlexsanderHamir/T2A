@@ -8,8 +8,9 @@
 //
 // Typical wiring (see cmd/taskapi):
 //
-//	db, _ := postgres.Open(dsn, nil)
-//	postgres.Migrate(ctx, db)
+//	db, err := postgres.Open(dsn, nil)
+//	if err != nil { ... }
+//	if err := postgres.Migrate(ctx, db); err != nil { ... }
 //	s := store.NewStore(db)
 //	http.Handler = handler.NewHandler(s)
 package tasks
