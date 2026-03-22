@@ -18,7 +18,7 @@ alwaysApply: false
 2. **Clear structure:** organize each test as Arrange → Act → Assert.
 3. **One thesis per test:** each test should verify one behavioral claim; split mixed scenarios unless using table-driven cases where each row is one scenario.
 4. **No committed skips:** do not leave `t.Skip` or TODO-style tests in committed code unless there is a tracked issue and a clear reason.
-5. **Keep unit tests isolated:** no real network, no real database, and no shared mutable global state; use fakes, in-memory substitutes, and `t.TempDir()` where appropriate.
+5. **Keep unit tests isolated:** no real network, no real database, and no shared mutable global state; use fakes, in-memory substitutes, and `t.TempDir()` where appropriate. For handler+store style tests, external boundaries, and mocks, see **`09-cross-component-testing.mdc`**.
 
 ## Naming
 

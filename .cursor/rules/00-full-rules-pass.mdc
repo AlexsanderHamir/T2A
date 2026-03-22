@@ -14,7 +14,7 @@ When this file is referenced, execute a full repo pass against `.cursor/rules/` 
 
 1. List `.cursor/rules/` and sort files by numeric prefix.
 2. Skip this file (`00-*`) during rule application.
-3. Apply each substantive rule in order across the repo.
+3. Apply substantive standards in numeric order **`01` → `07`**, then **`09`** (if present). Treat **`08-atomic-commits`** as the final step only (committing), not as a middle “audit” pass—see step 5–6.
 4. For each rule:
    - read and understand the rule
    - inspect the repo for violations or missing work
