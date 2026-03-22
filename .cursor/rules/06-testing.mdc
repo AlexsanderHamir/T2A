@@ -1,0 +1,83 @@
+---
+description: >-
+  Go testing standard: unit and cross-component tests, isolation (no external
+  network/DB in default runs), coverage discipline. When changing code or
+  answering test health: run go test with coverage, scan gaps, add missing tests.
+alwaysApply: true
+---
+
+# Testing (unit, cross-component, coverage)
+
+## Agent obligation
+
+When you **add or change** production code in this module, finish relevant **`go test`** runs. When the user asks about **tests, coverage, or quality**, or when you complete a non-trivial feature or fix:
+
+1. Run **`go test ./... -count=1`** (must pass).
+2. Run coverage for library code (excludes `cmd` mains from the denominator if you use the scoped command below):
+
+```bash
+go test "-coverprofile=coverage.out" ./pkgs/... ./internal/... -count=1
+go tool cover -func coverage.out
+```
+
+3. Scan the report: packages at **0%**, functions with **low** coverage on **hot or error paths**, and **new code** without tests.
+4. **Implement** missing tests where they fit the rules below (use the terminal; do not invent coverage percentages).
+5. If something is intentionally untested (e.g. `main` glue, Postgres-only `Open`), say so briefly in code or PR—do not silently skip.
+
+`coverage.out` is gitignored; do not commit it.
+
+## Layers (baseline)
+
+| Layer | What it is | This repo |
+|-------|------------|-----------|
+| **Unit** | One package, observable behavior; minimal seams | `domain` tests, handler helpers (`decodeJSON`, `parseListParams`), pure logic |
+| **Cross-component** | Several packages, **one process**; real in-memory DB / `httptest` | `httptest.NewServer(NewHandler(store.NewStore(testdb.OpenSQLite(t)), NewSSEHub()))` |
+| **Integration (opt-in)** | Real Postgres, real network, Docker | Only behind **`//go:build integration`**, never required for **`go test ./...`** |
+
+Cross-component tests are still **not** “external”: no outbound internet, no real Postgres in default runs.
+
+## Invariants
+
+1. **Behavior, not internals:** assert outcomes callers see; avoid locking tests to unexported details.
+2. **Arrange → Act → Assert**; **one** clear claim per test (or one table row).
+3. **No committed `t.Skip`** without a tracked issue and reason.
+4. **Isolation (default `go test`):**
+   - No real external **network** (no `https://` production/vendor calls).
+   - No **Postgres** or other network DB; use **`testdb.OpenSQLite`**, fakes, or `sqlmock`.
+   - **`httptest.Server` / `httptest.NewRecorder`** against handlers you build in the test are allowed (in-process).
+   - **Mock or stub** S3, SMTP, payments, etc. via interfaces + fakes or `httptest`, never real services.
+   - No reliance on **real credentials** in env; use `t.Setenv` / temp `.env` files in tests (no `t.Parallel` with `t.Setenv` / `t.Chdir`).
+5. **No hidden shared mutable globals** between tests unless reset.
+
+## Naming
+
+- Prefer names like `TestFoo_ReturnsErrorWhenInputEmpty` or table field `name: "empty input returns error"`.
+- Avoid `Test1`, `TestBasic`, `works`.
+
+## Patterns
+
+- Table-driven tests when logic repeats with different inputs.
+- Smallest case that reproduces a regression.
+- Control time, randomness, UUIDs via injection, bounds, or matchers.
+
+## Avoid
+
+- Asserting unexported state when public behavior is enough.
+- Mocking private methods to force a path.
+- Order-dependent tests or shared env without reset.
+- Sleep-based waiting on real latency.
+- `TestMain` that starts Docker or daemons unless behind an **integration** build tag and docs.
+- Requiring **`.env` / `DATABASE_URL`** for **`go test ./...`**.
+
+## Coverage expectations
+
+- Aim for **strong coverage of branches and errors** in **`pkgs/`** and **`internal/`**; **100%** is optional, not mandatory everywhere.
+- **`cmd/*`** often stays at **0%** until `main` is refactored into testable `run()`—that is normal; prioritize libraries.
+
+## Checklist
+
+- [ ] `go test ./...` passes.
+- [ ] Coverage was run when code or tests changed materially; gaps addressed or explained.
+- [ ] Tests would fail on the regression they guard.
+- [ ] Default tests need no real network or Postgres.
+- [ ] No stray `t.Skip` without a tracked reason.
