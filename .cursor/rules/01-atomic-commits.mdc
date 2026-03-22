@@ -1,42 +1,47 @@
 ---
 description: >-
-  When: user asks to commit, plan work, or split a PR. Invariants: 1 commit = 1 revertible
-  concern; no uncommitted work before starting the next layer; message must not join unrelated
-  concerns (treat “and” in the subject line as a split signal).
+  When the user asks to commit code. Invariants: 1 commit = 1 revertible concern;
+  no unrelated staged changes; commit message must describe a single concern.
 alwaysApply: false
 ---
 
 # Atomic commits
 
-**When to apply:** commits, PR scope, multi-step features, “what order should I do this?”
+**When to apply:** when creating or suggesting a commit
 
 ## Invariants
 
-1. **I1 (atomicity):** `commit C` touches only one logical concern. `revert C` must not drop unrelated behavior.
-2. **I2 (sequence):** Finish step `n` and commit before starting `n+1` (no mixed layers in one WIP tree).
-3. **I3 (hygiene):** `build(C) ∧ tests(C)` must pass at `HEAD` after every commit.
+1. **Atomicity:** one commit touches only one logical concern.
+2. **Revertibility:** reverting the commit should not remove unrelated behavior.
+3. **Hygiene:** build and relevant tests pass at `HEAD` before committing.
 
-## Default commit order (total order)
+## Commit rule
 
-`1` types/model → `2` data/repo → `3` service/domain → `4` handler/API → `5` unit tests → `6` integration tests (if any) → `7` docs/config
+- Stage only files related to one concern.
+- Do not include unrelated edits in the same commit.
+- If the staged diff contains two concerns, split it into separate commits.
+- Do not mix **refactor** and **feature work** in the same commit unless the refactor is strictly required for that feature and cannot stand alone.
 
 ## Message grammar
 
-`type(scope): imperative reason`  
-Types: `feat` `fix` `refactor` `test` `chore` …
+`type(scope): imperative summary`
 
-## Split rule (predicate)
-
-`message_contains_unrelated_and` ∨ `diff_touches_two_concerns` ⇒ **split into two commits.**
+Examples:
+- `feat(auth): add refresh token rotation`
+- `fix(cache): prevent stale user reads`
+- `refactor(api): extract request validation`
+- `test(queue): cover retry backoff behavior`
 
 ## Forbidden
 
-- Subjects: WIP, misc, fixes, stuff, “and” joining unrelated work.
-- Committing red: failing build or tests.
-- Bundling **refactor** with **feat** in one commit.
+- WIP-style commits: `wip`, `misc`, `stuff`, `fixes`
+- One commit covering multiple unrelated changes
+- Commit messages that join unrelated concerns
+- Committing with failing build or tests
 
-## Agent checklist (all true)
+## Checklist
 
-- [ ] Planned steps are committed in order; no skipped layer with local changes pending.
-- [ ] `git diff --staged` ⊆ one concern; message describes it without reading the diff.
-- [ ] Tests pass.
+- [ ] `git diff --staged` contains one logical concern
+- [ ] Commit message describes that concern clearly
+- [ ] Build passes
+- [ ] Relevant tests pass
