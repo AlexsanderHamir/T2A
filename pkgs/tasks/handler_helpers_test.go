@@ -90,6 +90,25 @@ func TestParseListParams_invalidOffset(t *testing.T) {
 	}
 }
 
+func TestParseListParams_limit_200_ok(t *testing.T) {
+	limit, offset, err := parseListParams(url.Values{"limit": {"200"}, "offset": {"3"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if limit != 200 || offset != 3 {
+		t.Fatalf("limit=%d offset=%d", limit, offset)
+	}
+}
+
+func TestDecodeJSON_trailing_garbage_after_object(t *testing.T) {
+	const raw = `{"title":"x","initial_prompt":""}junk`
+	var got taskCreateJSON
+	err := decodeJSON(strings.NewReader(raw), &got)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestActorFromRequest(t *testing.T) {
 	r := &http.Request{Header: http.Header{}}
 	if actorFromRequest(r) != ActorUser {
