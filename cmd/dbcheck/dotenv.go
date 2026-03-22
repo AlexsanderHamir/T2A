@@ -1,0 +1,18 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/joho/godotenv"
+)
+
+func loadDotenv(path string) error {
+	if err := godotenv.Overload(path); err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	if os.Getenv("DATABASE_URL") == "" {
+		return fmt.Errorf("DATABASE_URL is empty after loading %s", path)
+	}
+	return nil
+}
