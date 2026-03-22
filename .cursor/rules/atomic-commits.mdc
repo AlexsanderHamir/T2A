@@ -1,5 +1,9 @@
 ---
-description: How to approach tasks & How to commit
+description: >-
+  Use when the user asks to commit, split work into PRs, or plan a multi-step feature.
+  Enforces one logical change per commit (no unrelated bundling) and a recommended order
+  (types → data layer → service → handlers → tests → docs/config). Use before writing
+  large changes to sequence commits for review and safe revert.
 alwaysApply: false
 ---
 # Atomic Commits
