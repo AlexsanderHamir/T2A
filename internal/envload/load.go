@@ -16,7 +16,7 @@ func findRepoRoot(startDir string) (string, error) {
 		if _, err := os.Stat(mod); err == nil {
 			return dir, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
+			return "", fmt.Errorf("stat %s: %w", mod, err)
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -44,7 +44,7 @@ func Load(envFileOverride string) (path string, err error) {
 	}
 	path, err = resolveDotenvPath(wd, envFileOverride)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("resolve .env path: %w", err)
 	}
 	if err := godotenv.Overload(path); err != nil {
 		return path, fmt.Errorf("godotenv overload %q: %w", path, err)
