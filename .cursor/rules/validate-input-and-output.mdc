@@ -1,0 +1,87 @@
+---
+description: Validate input & output, don't assume what the code is doing.
+alwaysApply: false
+---
+# Validate Input & Output
+
+## The Rule
+Assumptions about data are bugs waiting to happen.
+Before writing logic that transforms, maps, or depends on a data shape — **confirm what the data actually looks like at runtime.**
+Reading code is not enough. Run it.
+
+## When You Must Confirm
+- Any function that parses, transforms, or maps data.
+- Any external input: API response, database row, file, queue message, env config.
+- Any function whose output feeds into another function.
+- Any complicated or multi-step data pipeline.
+- Any assumption about nullability, zero values, or optional fields.
+
+## How to Confirm
+
+### 1. Print It First
+Before writing transformation logic, write a quick probe:
+```go
+// Confirm the shape before building on top of it
+data, err := fetchUserFromDB(id)
+if err != nil {
+    log.Fatal(err)
+}
+log.Printf("DEBUG user shape: %+v\n", data)
+```
+
+Run it. Read the output. Then write the logic.
+
+### 2. Write a Table-Driven Confirmation Test
+For complicated transformations, write a test that prints or asserts the actual shape:
+```go
+func TestParseOrderResponse(t *testing.T) {
+    raw := loadFixture("testdata/order_response.json")
+    result, err := parseOrderResponse(raw)
+    require.NoError(t, err)
+
+    // Confirm the exact shape — don't assume
+    assert.Equal(t, "completed", result.Status)
+    assert.Equal(t, 3, len(result.Items))
+    assert.Equal(t, 49.99, result.Items[0].Price)
+}
+```
+
+### 3. Use Real Fixtures, Not Invented Data
+- Capture real API responses, DB rows, and file contents into `testdata/`.
+- Never invent fixture data from reading a struct — the real source may differ.
+- If a field is nullable in the struct, test both the null and non-null case with real data.
+```
+testdata/
+  order_response.json       ← real captured API response
+  order_response_empty.json ← real edge case
+  user_row.json             ← real DB output
+```
+
+### 4. Confirm At Every Boundary
+Data changes shape as it moves through layers. Confirm at each one:
+```
+External API → confirm raw response shape
+     ↓
+Parser / Mapper → confirm mapped struct
+     ↓
+Service logic → confirm inputs AND outputs
+     ↓
+DB write / output → confirm what was actually persisted
+```
+
+Never assume a downstream layer receives what the upstream layer intended.
+
+## Rules
+- Never write a transformation before confirming the input shape at runtime.
+- Never assume a field exists, is non-null, or matches the struct definition — verify.
+- Never invent test data — capture it from the real source.
+- If the real data contradicts the code's assumptions, the code is wrong — fix it.
+- Remove debug probes before committing, but keep the confirmation tests.
+
+## The Test
+Before writing any data logic, ask:
+- Have I seen what this data actually looks like at runtime?
+- Am I assuming a field exists that I haven't confirmed?
+- Does my test use real captured data or data I invented?
+
+If the answer to any of these is uncertain — run it first.

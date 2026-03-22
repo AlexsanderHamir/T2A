@@ -1,0 +1,55 @@
+---
+description: When adding any comment to the codebase
+alwaysApply: false
+---
+# Comments
+
+## Default: Don't Comment
+Well-named functions, variables, and types are the documentation.
+If you feel the urge to comment, first try to make the code clearer.
+```go
+// Bad — comment restates what the code says
+// get user by id
+user, err := getUserByID(id)
+
+// Good — no comment needed, code is self-evident
+user, err := getUserByID(id)
+```
+
+## When to Comment
+Only comment when the code cannot express the intent on its own:
+
+- **Why, not what** — explain non-obvious decisions, tradeoffs, or constraints.
+- **Workarounds** — document why a hack exists and what it's working around.
+- **External references** — link to a spec, RFC, ticket, or bug that explains the context.
+- **Surprising behavior** — warn about a non-obvious edge case or gotcha.
+```go
+// Retry limit matches the upstream API's documented backoff window (see JIRA-1234)
+const maxRetries = 7
+
+// sync.Map used here — profiling showed mutex contention at >10k rps
+var cache sync.Map
+```
+
+## Never Comment
+- What the code does — the code says that.
+- Function signatures, parameter names, or return types that are already clear.
+- Noise markers: `// end of loop`, `// constructor`, `// helper`.
+- Commented-out code — delete it, git remembers.
+- TODO/FIXME unless tied to a ticket: `// TODO(JIRA-456): remove after migration`.
+
+## GoDoc (Go-specific)
+Only write GoDoc comments on exported symbols, and only when the name alone isn't enough:
+```go
+// Paginator fetches results in pages to avoid loading large datasets into memory.
+type Paginator struct { ... }
+
+// No comment needed — name is self-documenting
+func (p *Paginator) NextPage() ([]Result, error) { ... }
+```
+
+## The Test
+Before adding a comment, ask:
+- Can I rename something to make this obvious?
+- Can I extract a helper with a descriptive name?
+- If neither works — then comment.

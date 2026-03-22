@@ -1,0 +1,102 @@
+---
+description: When adding logging to the codebase
+alwaysApply: false
+---
+# Logging
+
+## The Rule
+Every log entry must be structured, carry context, and be written at the correct level.
+Random `fmt.Println` and bare error strings are not logging — remove them.
+
+## Library
+Use `slog` (Go 1.21+) — it is the standard structured logging library.
+
+```go
+import "log/slog"
+
+slog.Info("order processed", "orderID", id, "userID", userID, "total", total)
+slog.Error("failed to process order", "orderID", id, "err", err)
+```
+
+## Log Levels
+
+| Level | When to Use |
+|---|---|
+| `Debug` | Detailed flow tracing — never on in production |
+| `Info` | Significant business events — order placed, user created, job started |
+| `Warn` | Unexpected but recoverable — retry attempt, fallback used, config missing with default |
+| `Error` | Operation failed and requires attention — always includes `err` field |
+
+## Mandatory Context Fields
+Every log entry must include the fields relevant to its scope:
+
+```go
+// Request-scoped — always include
+"traceID", traceID
+"userID",  userID
+
+// Operation-scoped — always include
+"operation", "getUserByID"
+
+// Error logs — always include
+"err", err
+```
+
+Never log a bare message with no context:
+```go
+// Bad — useless in production
+slog.Info("done")
+slog.Error("something went wrong")
+
+// Good — actionable and traceable
+slog.Info("user fetched", "operation", "getUserByID", "userID", id, "traceID", traceID)
+slog.Error("failed to fetch user", "operation", "getUserByID", "userID", id, "traceID", traceID, "err", err)
+```
+
+## Where to Log
+
+Log at the boundary where the error is **handled** — not where it originates.
+This mirrors the error handling rule: one layer handles, one layer logs.
+
+```
+Repository    → never log, return the error
+Service       → never log, wrap and return
+Handler       → log at error level with full context, return response
+```
+
+```go
+// Bad — logging at origin, not the boundary
+func (r *UserRepo) GetByID(id int) (*User, error) {
+    user, err := r.db.Query(...)
+    if err != nil {
+        slog.Error("db error", "err", err) // wrong layer
+        return nil, err
+    }
+}
+
+// Good — log only at the handler boundary
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+    user, err := h.service.GetUserByID(id)
+    if err != nil {
+        slog.Error("failed to get user", "operation", "getUser", "userID", id, "traceID", traceID, "err", err)
+        http.Error(w, "internal error", http.StatusInternalServerError)
+        return
+    }
+}
+```
+
+## Never Do This
+- `fmt.Println` or `fmt.Printf` for any runtime output — use `slog`.
+- Log and continue after an error — log at the boundary, then return or respond.
+- Log sensitive data — no passwords, tokens, PII, or secrets in any log entry.
+- Use `log.Fatal` outside of `main` — it calls `os.Exit` and skips deferred cleanup.
+- Log the same error at multiple layers — it creates noise and false alert counts.
+
+## Checklist
+Before committing, verify:
+- [ ] No `fmt.Println` or `fmt.Printf` in non-test code.
+- [ ] Every log entry has at minimum `operation` and `traceID` fields.
+- [ ] Error logs always include the `err` field.
+- [ ] Nothing sensitive is logged — no tokens, passwords, or PII.
+- [ ] Logging only occurs at the handling boundary, not at origin.
+- [ ] `log.Fatal` only appears in `main`.

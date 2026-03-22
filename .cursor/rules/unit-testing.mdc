@@ -1,0 +1,72 @@
+---
+description: How to add unit tests
+alwaysApply: false
+---
+# Unit Testing
+
+## Core Principles
+- Test behavior, not implementation. If a refactor breaks tests without changing behavior, the tests are wrong.
+- One assertion focus per test — a test can have multiple `expect` calls if they validate one behavior.
+- Every test must fail for the right reason before it passes.
+- Never leave `skip`, `todo`, or commented-out tests — delete or finish them.
+
+## Structure
+- Arrange / Act / Assert — always in that order, always readable at a glance.
+- Name tests as full sentences: `returns null when user is not found`, not `test1` or `works`.
+- Group by unit under `describe`, one `describe` block per function or class.
+```ts
+describe('getUserById', () => {
+  it('returns the user when found', () => { ... })
+  it('returns null when user does not exist', () => { ... })
+  it('throws when id is invalid', () => { ... })
+})
+```
+
+## Coverage — Target 100%
+Run the appropriate coverage tool for the language and iterate until all lines, branches, and functions are covered:
+
+| Language | Tool | Command |
+|---|---|---|
+| TypeScript / JavaScript | Vitest or Jest | `vitest run --coverage` / `jest --coverage` |
+| Python | pytest-cov | `pytest --cov=. --cov-report=term-missing` |
+| Go | built-in | `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out` |
+| Rust | cargo-tarpaulin | `cargo tarpaulin --out term` |
+| Swift | Xcode | `xcodebuild test -enableCodeCoverage YES` |
+| Ruby | SimpleCov | add to test helper, run suite |
+| Java / Kotlin | JaCoCo | `./gradlew test jacocoTestReport` |
+
+### Coverage Loop — Do Not Stop Until 100%
+1. Run the coverage command.
+2. Read the report — identify every uncovered line, branch, and function.
+3. Write the missing tests.
+4. Re-run coverage.
+5. Repeat until the report shows 100% lines, branches, and functions.
+
+Uncovered code is unfinished work. Do not move on.
+
+### What 100% Means
+- Every line executed by at least one test.
+- Every branch (`if/else`, `switch`, ternary, null check) tested for each outcome.
+- Every exported function has at least one dedicated test.
+- 100% coverage does not mean 100% correct — it means no code is invisible to tests.
+
+### Acceptable Exclusions (annotate explicitly)
+Only exclude code that cannot meaningfully be tested:
+```ts
+/* istanbul ignore next */  // JS/TS
+# pragma: no cover          // Python
+//nolint:unused             // Go
+```
+Exclusions must be rare, intentional, and reviewed — not a shortcut.
+
+## Speed & Isolation
+- Unit tests must not touch the network, filesystem, or database — mock or stub them.
+- No shared mutable state between tests. Each test sets up its own data.
+- Tests should run in milliseconds — if a test is slow, it's not a unit test.
+
+## Code Smells to Eliminate
+- Mocking internals or private methods — test the public interface only.
+- Tests that only pass in a specific order — full isolation required.
+- Assertions on exact irrelevant values (e.g. UUIDs, timestamps) — use matchers like `expect.any(String)`.
+- Copy-pasted setup — extract to `beforeEach` or a factory helper.
+- Testing framework internals or third-party libraries — only test your code.

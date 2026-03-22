@@ -1,0 +1,46 @@
+---
+description: How to approach tasks & How to commit
+alwaysApply: false
+---
+# Atomic Commits
+
+## The Rule
+Every commit must represent one complete, logical change that can be understood, reviewed, and reverted in isolation.
+Never bundle unrelated changes. Never finish a feature in one giant commit.
+
+## Commit Order — Plan Before You Code
+Before writing any code, decompose the work into an ordered commit sequence:
+```
+1. add data model / types
+2. add repository / data layer
+3. add service / business logic
+4. add handler / interface layer
+5. add unit tests
+6. add integration tests (if needed)
+7. update docs / config
+```
+
+Commit after each step. Do not proceed to the next step with uncommitted work.
+
+## Format
+```
+<type>(<scope>): <what changed and why>
+
+feat(user): add GetByID to user repository
+fix(auth): handle expired token before claims are parsed
+refactor(order): extract price calculation into helper
+test(user): cover GetByID happy path and not-found case
+chore(deps): upgrade go-chi to v5.1.0
+```
+
+## Rules
+- One concern per commit — if you'd use "and" in the message, split it.
+- Commit must build and pass tests — never commit broken code.
+- No "WIP", "misc", "fixes", or "stuff" messages.
+- Refactors and features are separate commits.
+- Test additions are their own commit, not bundled with implementation.
+
+## Before Every Commit, Verify
+- Does `git diff` show only what this commit intends to change?
+- Does the commit message fully describe the change without reading the diff?
+- Do tests pass?

@@ -1,0 +1,35 @@
+---
+description: How to structure code
+alwaysApply: false
+---
+# Composability
+
+## Functions
+- Do one thing. If you'd use "and" to describe it, split it.
+- Keep functions under ~30 lines — extract beyond that.
+- Name by behavior: `formatUserDisplayName`, not `format`.
+- Prefer pure functions (input → output, no side effects).
+- Use early returns and guard clauses to avoid nesting > 2 levels deep.
+
+## Composition
+- Compose behavior from small units — avoid inheritance.
+- Inject dependencies as parameters rather than hard-importing them.
+- Return and accept standard types; avoid unnecessary custom wrappers.
+
+## Files & Modules
+- One primary concern per file.
+- Group by feature/domain, then type:
+```
+  features/user/
+    userService.ts   # orchestration
+    userHelpers.ts   # pure helpers
+    userTypes.ts     # types & interfaces
+    index.ts         # barrel export
+```
+- Keep files under ~200–300 lines; split when a file grows beyond a single concern.
+
+## Refactor Triggers
+Before extending existing code, ask:
+- Should this logic be a named helper?
+- Does this belong in its own module?
+- Am I duplicating something extractable?
