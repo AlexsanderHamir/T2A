@@ -1,0 +1,49 @@
+---
+description: >-
+  When: new packages, commands, HTTP APIs, or workflows users run. Invariants: document
+  behavior and contracts callers rely on—not a prose copy of the implementation; one obvious
+  entry doc per surface (root vs pkg vs cmd); keep env, flags, and endpoints in sync with code.
+alwaysApply: false
+---
+
+# Document functionality
+
+**When to apply:** new or changed **public** surface (packages, CLIs, REST routes), setup/run steps, security or data guarantees. **Not** for restating what a single function does—that stays in code + minimal GoDoc (see rule **06**).
+
+## Invariants
+
+1. **D1:** Documentation describes **what the system does for a user** (inputs, outputs, failures, prerequisites)—not line-by-line internals.
+2. **D2:** `doc_claim ⇒ code_supports` — flags, env vars, paths, status codes, and examples must match the repo at commit time.
+3. **D3:** **One** primary entry per scope: repo `README.md` for “clone → run → test”; optional `pkgs/<pkg>/README.md` or `doc.go` when the package is imported or operated on its own; `cmd/<name>/` may rely on root README unless the binary has unusual flags.
+4. **D4:** Prefer **stable identifiers** in docs: package path, command name, route prefix—not volatile line numbers or private symbol names unless necessary.
+5. **D5:** Breaking behavior ⇒ update the same PR’s docs (or the follow-up commit immediately after, per **01**).
+
+## Predicate → document where
+
+| Change | Minimum doc touch |
+| --- | --- |
+| New `cmd/…` entrypoint | Root README “Run” or a short **Usage** section listing flags + env |
+| New exported API or error contract | **Package doc** (`doc.go` or lead file) or exported symbol GoDoc |
+| New HTTP routes or auth rules | Root README or package doc: method, path, headers, status table |
+| New env var or migration step | README or `cmd` help text; never only in chat |
+| Internal refactor, same behavior | Usually **no** new prose |
+
+## Forbidden
+
+- README sprawl that duplicates GoDoc for every exported func (link to `pkg.go.dev` or summarize package purpose once).
+- Stale screenshots or copy-paste dumps that won’t be maintained.
+- “Documentation” that is only an AI narrative with no commands a human can run.
+- Duplicating **06** (inline comments / GoDoc on obvious names)—this rule is **scope- and artifact-level**.
+
+## Go conventions (this repo)
+
+- **Package comment** (one block above `package name`): role of the package, main types, threading/DB expectations if non-obvious.
+- **`doc.go`**: use when the package has many files and no natural home for the package comment.
+- **Commands**: `-h` / flag text should match `README` for the same binary.
+
+## Agent checklist
+
+- [ ] A new operator can run or integrate using only git-tracked docs + `-h` (no secret steps).
+- [ ] Env vars, ports, and routes in docs match `main`, handlers, and `envload` behavior.
+- [ ] No new doc file unless an existing entry (README / package doc) cannot absorb the change cleanly.
+- [ ] Cross-linked rules: **06** (comments/GoDoc tone), **01** (doc updates with behavior or right after).
