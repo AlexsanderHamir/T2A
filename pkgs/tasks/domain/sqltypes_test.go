@@ -50,3 +50,33 @@ func TestPriority_Scan_bytes(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestStatus_Value(t *testing.T) {
+	v, err := StatusReady.Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != string(StatusReady) {
+		t.Fatalf("got %v", v)
+	}
+}
+
+func TestPriority_Value(t *testing.T) {
+	v, err := PriorityMedium.Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != string(PriorityMedium) {
+		t.Fatalf("got %v", v)
+	}
+}
+
+func TestActor_Value(t *testing.T) {
+	v, err := ActorUser.Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != string(ActorUser) {
+		t.Fatalf("got %v", v)
+	}
+}
