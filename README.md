@@ -25,24 +25,18 @@ go run ./cmd/taskapi    # starts the web server; add -h for -port, -env, -migrat
 
 ### API + web UI together
 
-From the **repo root** (same **`.env`** / **`DATABASE_URL`** as above). The script runs **`go mod download`** and **`npm install`** in **`web/`** before starting servers:
+From the **repo root** (same **`.env`** / **`DATABASE_URL`**). **`scripts/dev.ps1`** (Windows) or **`scripts/dev.sh`** (Git Bash / macOS / Linux) installs **`web/`** deps, builds **`taskapi`** to **`taskapi-dev(.exe)`**, frees the API port if needed, starts **`taskapi`** then **`npm run dev`**. **Ctrl+C** stops Vite and the API.
 
-**PowerShell (Windows):**
+If you use a port other than **8080**, set **`DEV_TASKAPI_PORT`** and match **`VITE_TASKAPI_ORIGIN`** for Vite (see *Web UI* below).
 
 ```powershell
 .\scripts\dev.ps1
 ```
 
-**Git Bash, macOS, or Linux:**
-
 ```bash
 chmod +x ./scripts/dev.sh   # once, if needed
 ./scripts/dev.sh
 ```
-
-This starts **`taskapi`** (default **`http://127.0.0.1:8080`**) and then **`npm run dev`** in **`web/`**. **Ctrl+C** stops Vite; the script stops the API process when Vite exits.
-
-If **8080** is taken, run **`taskapi`** with another **`-port`** and set **`VITE_TASKAPI_ORIGIN`** when starting Vite (see *Web UI* below).
 
 With **`taskapi`** running (by default **`http://127.0.0.1:8080`**):
 

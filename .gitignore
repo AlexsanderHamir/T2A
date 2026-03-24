@@ -4,3 +4,5 @@ coverage*.out
 coverage
 node_modules/
 web/dist/
+taskapi-dev
+taskapi-dev.exe
