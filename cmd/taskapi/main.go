@@ -55,15 +55,21 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", handler.NewHandler(taskStore, hub))
 
+	ln, err := net.Listen("tcp", net.JoinHostPort("", *port))
+	if err != nil {
+		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.listen", "err", err)
+		os.Exit(1)
+	}
+
+	baseURL := fmt.Sprintf("http://localhost:%s/", *port)
+	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", ln.Addr().String(), "url", baseURL)
+
 	srv := &http.Server{
-		Addr:    net.JoinHostPort("", *port),
 		Handler: mux,
 	}
 
 	go func() {
-		baseURL := fmt.Sprintf("http://localhost:%s/", *port)
-		slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", srv.Addr, "url", baseURL)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
 			os.Exit(1)
 		}
