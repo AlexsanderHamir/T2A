@@ -23,6 +23,27 @@ go run ./cmd/dbcheck    # checks the database; add -migrate to update tables
 go run ./cmd/taskapi    # starts the web server; add -h for -port, -env, -migrate
 ```
 
+### API + web UI together
+
+From the **repo root** (same **`.env`** / **`DATABASE_URL`** as above). The script runs **`go mod download`** and **`npm install`** in **`web/`** before starting servers:
+
+**PowerShell (Windows):**
+
+```powershell
+.\scripts\dev.ps1
+```
+
+**Git Bash, macOS, or Linux:**
+
+```bash
+chmod +x ./scripts/dev.sh   # once, if needed
+./scripts/dev.sh
+```
+
+This starts **`taskapi`** (default **`http://127.0.0.1:8080`**) and then **`npm run dev`** in **`web/`**. **Ctrl+C** stops Vite; the script stops the API process when Vite exits.
+
+If **8080** is taken, run **`taskapi`** with another **`-port`** and set **`VITE_TASKAPI_ORIGIN`** when starting Vite (see *Web UI* below).
+
 With **`taskapi`** running (by default **`http://127.0.0.1:8080`**):
 
 - Work with tasks at **`/tasks`** and **`/tasks/{id}`** — methods, query options, and error behavior are described in **`docs/DESIGN.md`**.
