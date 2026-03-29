@@ -302,15 +302,14 @@ Wire format:
 
 For local UI work, `**taskapi**` can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
 
-Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). A background ticker then publishes `**task_updated`** every **`3s`** for the **first task** in list order (`id ASC`, same as `GET /tasks`), or a fixed placeholder if the list is empty — unless you override `**T2A_SSE_TEST_INTERVAL**` with another Go duration (e.g. `5s`; must be **≥ 1s**). Set `**T2A_SSE_TEST_INTERVAL=0`** to turn off the ticker only (dev routes and create-time extra events still run).
+Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). A background ticker every **`3s`** (unless `**T2A_SSE_TEST_INTERVAL**` overrides, or `**0**` disables the ticker) runs the **same persistence path as `PATCH /tasks`**: a no-op priority update on the **first task** in list order (`id ASC`), then **`task_updated`** on the SSE hub. If there are no tasks, ticks are skipped.
 
-When test mode is on, each successful `**POST /tasks**` still emits the normal `**task_created**` for the new row, then **also** emits **`task_updated`** for the **first task in list order** (same ordering as `GET /tasks`: `id ASC`), so the UI can exercise extra refetches against a stable “first row” without calling `**/dev/**` by hand.
-
+When test mode is on, each successful `**POST /tasks**` still emits the normal `**task_created**` for the new row, then **also** performs that same **`store.Update` + `task_updated`** for the **first task in list order** (same ordering as `GET /tasks`: `id ASC`). If the list is empty after create, the extra step is skipped.
 
 | Method | Path               | Behavior                                                                                                                                                                           |
 | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/dev/sse/ping`    | Publishes one `**task_updated**`. Query `**id**` overrides the task id; otherwise first list task or placeholder. **204** empty body.                                              |
-| `POST` | `/dev/sse/publish` | JSON `{"type":"<task_created or task_updated or task_deleted>","id":"..."}`. Omit `**type`** → `**task_updated**`. Omit `**id**` → same id resolution as ping. **204** empty body. |
+| `GET`  | `/dev/sse/ping`    | **`task_updated`**: `store.Update` (no-op priority) then SSE, same as `PATCH`. Query `**id**` or first list task. **404** if no tasks / missing task. **204** on success.             |
+| `POST` | `/dev/sse/publish` | **`task_updated`**: same as ping. **`task_created`** / **`task_deleted`**: SSE **only** (no DB write — use real `POST`/`DELETE /tasks` for persistence). **404** if id required and no tasks. |
 
 
 Vite dev server proxies `**/dev`** to `**taskapi**` (see `**web/vite.config.ts**`) so you can open `**http://localhost:5173/dev/sse/ping**` or `**curl -X POST http://127.0.0.1:8080/dev/sse/publish ...**` against the API directly.

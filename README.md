@@ -42,7 +42,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**. For synthetic SSE during UI development, set **`T2A_SSE_TEST=1`**: the API then emits **`task_updated` every 3 seconds** for the first task in the list (override with **`T2A_SSE_TEST_INTERVAL`**, or **`0`** to disable the ticker). Each **`POST /tasks`** also emits an extra **`task_updated`** for that first task; **`GET /dev/sse/ping`** / **`POST /dev/sse/publish`** remain available (see *Server-Sent Events* in **`docs/DESIGN.md`**).
+With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**. For synthetic SSE during UI development, set **`T2A_SSE_TEST=1`**: the API runs a **`store.Update`** (same path as **`PATCH /tasks`**) on the first list task every **3s** (override with **`T2A_SSE_TEST_INTERVAL`**, or **`0`** to disable the ticker), then broadcasts **`task_updated`**. Each **`POST /tasks`** triggers the same extra update for that first task; **`GET /dev/sse/ping`** / **`POST /dev/sse/publish`** (`task_updated`) do the same (see *Server-Sent Events* in **`docs/DESIGN.md`**).
 
 **Windows PowerShell:** use **`curl.exe`** and single-quoted JSON:
 

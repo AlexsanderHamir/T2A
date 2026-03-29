@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,14 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 const (
 	sseTestEnvVar      = "T2A_SSE_TEST"
 	sseTestIntervalVar = "T2A_SSE_TEST_INTERVAL"
-	// fallbackTestTaskID is used when the DB has no tasks so the UI still receives a valid-shaped event.
-	fallbackTestTaskID = "00000000-0000-0000-0000-000000000001"
 )
 
 // SSETestEnabled reports whether T2A_SSE_TEST=1 (dev-only SSE test routes and optional ticker).
@@ -26,7 +26,8 @@ func SSETestEnabled() bool {
 }
 
 // RegisterSSETestRoutes registers GET /dev/sse/ping and POST /dev/sse/publish when enabled is true.
-// Both endpoints inject synthetic TaskChangeEvent values into the hub (same wire format as real mutations).
+// task_updated paths persist via store.Update (same as PATCH) before broadcasting; task_created / task_deleted
+// only send SSE frames (no DB writes) — use POST /tasks or DELETE /tasks for full persistence.
 func RegisterSSETestRoutes(mux *http.ServeMux, st *store.Store, hub *SSEHub, enabled bool) {
 	if !enabled || mux == nil || st == nil || hub == nil {
 		return
@@ -37,7 +38,7 @@ func RegisterSSETestRoutes(mux *http.ServeMux, st *store.Store, hub *SSEHub, ena
 		"GET", "/dev/sse/ping", "POST", "/dev/sse/publish")
 }
 
-// RunSSETestTicker publishes task_updated on the hub at the given interval until the process exits.
+// RunSSETestTicker persists a no-op task update and broadcasts task_updated on the given interval.
 // Call only when SSETestEnabled() is true; interval should be >= 1s.
 func RunSSETestTicker(st *store.Store, hub *SSEHub, every time.Duration) {
 	if st == nil || hub == nil || every < time.Second {
@@ -48,8 +49,13 @@ func RunSSETestTicker(st *store.Store, hub *SSEHub, every time.Duration) {
 		defer tick.Stop()
 		ctx := context.Background()
 		for range tick.C {
-			id := pickTestTaskID(ctx, st)
-			hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: id})
+			id, ok := pickFirstTaskID(ctx, st)
+			if !ok {
+				continue
+			}
+			if err := persistTaskUpdatedSSE(ctx, st, hub, id); err != nil {
+				slog.Debug("sse test tick skipped", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick", "err", err)
+			}
 		}
 	}()
 	slog.Info("sse test ticker started", "cmd", httpLogCmd, "operation", "tasks.sse_test.ticker", "interval", every.String())
@@ -69,9 +75,22 @@ func sseTestPing(st *store.Store, hub *SSEHub) http.HandlerFunc {
 		ctx := r.Context()
 		id := strings.TrimSpace(r.URL.Query().Get("id"))
 		if id == "" {
-			id = pickTestTaskID(ctx, st)
+			var ok bool
+			id, ok = pickFirstTaskID(ctx, st)
+			if !ok {
+				http.Error(w, "no tasks", http.StatusNotFound)
+				return
+			}
 		}
-		hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: id})
+		if err := persistTaskUpdatedSSE(ctx, st, hub, id); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				http.Error(w, "task not found", http.StatusNotFound)
+				return
+			}
+			slog.Warn("sse test ping failed", "cmd", httpLogCmd, "operation", "tasks.sse_test.ping", "err", err)
+			http.Error(w, "update failed", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
@@ -100,9 +119,27 @@ func sseTestPublish(st *store.Store, hub *SSEHub) http.HandlerFunc {
 		}
 		id := strings.TrimSpace(body.ID)
 		if id == "" {
-			id = pickTestTaskID(ctx, st)
+			var have bool
+			id, have = pickFirstTaskID(ctx, st)
+			if !have {
+				http.Error(w, "no tasks", http.StatusNotFound)
+				return
+			}
 		}
-		hub.Publish(TaskChangeEvent{Type: typ, ID: id})
+		switch typ {
+		case TaskUpdated:
+			if err := persistTaskUpdatedSSE(ctx, st, hub, id); err != nil {
+				if errors.Is(err, domain.ErrNotFound) {
+					http.Error(w, "task not found", http.StatusNotFound)
+					return
+				}
+				slog.Warn("sse test publish failed", "cmd", httpLogCmd, "operation", "tasks.sse_test.publish", "err", err)
+				http.Error(w, "update failed", http.StatusInternalServerError)
+				return
+			}
+		case TaskCreated, TaskDeleted:
+			hub.Publish(TaskChangeEvent{Type: typ, ID: id})
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
@@ -118,14 +155,4 @@ func parseTaskChangeType(s string) (TaskChangeType, bool) {
 	default:
 		return "", false
 	}
-}
-
-// pickTestTaskID returns the first task id in list order (id ASC, same as GET /tasks).
-// Used by dev routes, the optional ticker, and POST /tasks when T2A_SSE_TEST=1.
-func pickTestTaskID(ctx context.Context, st *store.Store) string {
-	rows, err := st.List(ctx, 1, 0)
-	if err != nil || len(rows) == 0 {
-		return fallbackTestTaskID
-	}
-	return rows[0].ID
 }

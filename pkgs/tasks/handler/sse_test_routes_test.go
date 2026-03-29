@@ -1,13 +1,16 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -15,6 +18,11 @@ import (
 func TestSSETestRoutes_POST_publish(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
+	ctx := context.Background()
+	created, err := st.Create(ctx, store.CreateTaskInput{Title: "x"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hub := NewSSEHub()
 	mux := http.NewServeMux()
 	RegisterSSETestRoutes(mux, st, hub, true)
@@ -24,7 +32,8 @@ func TestSSETestRoutes_POST_publish(t *testing.T) {
 	ch, cancel := hub.Subscribe()
 	defer cancel()
 
-	res, err := http.Post(srv.URL+"/dev/sse/publish", "application/json", strings.NewReader(`{"type":"task_updated","id":"abc-1"}`))
+	body := fmt.Sprintf(`{"type":"task_updated","id":%q}`, created.ID)
+	res, err := http.Post(srv.URL+"/dev/sse/publish", "application/json", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +48,7 @@ func TestSSETestRoutes_POST_publish(t *testing.T) {
 		if err := json.Unmarshal([]byte(line), &ev); err != nil {
 			t.Fatal(err)
 		}
-		if ev.Type != TaskUpdated || ev.ID != "abc-1" {
+		if ev.Type != TaskUpdated || ev.ID != created.ID {
 			t.Fatalf("got %+v", ev)
 		}
 	case <-time.After(2 * time.Second):
@@ -50,6 +59,10 @@ func TestSSETestRoutes_POST_publish(t *testing.T) {
 func TestSSETestRoutes_GET_ping(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
+	ctx := context.Background()
+	if _, err := st.Create(ctx, store.CreateTaskInput{Title: "p"}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
 	hub := NewSSEHub()
 	mux := http.NewServeMux()
 	RegisterSSETestRoutes(mux, st, hub, true)
