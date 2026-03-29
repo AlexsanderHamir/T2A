@@ -430,10 +430,101 @@ select {
   cursor: pointer;
   text-transform: capitalize;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.65rem center;
   padding-right: 2rem;
+}
+
+select.select-native {
+  background-color: var(--bg-elevated);
+  border-color: rgb(var(--slate-shadow) / 10%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.85) inset, var(--shadow-sm);
+}
+
+select.select-native:hover {
+  border-color: rgb(var(--slate-shadow) / 14%);
+}
+
+select.select-native:focus-visible {
+  border-color: rgb(79 70 229 / 32%);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+/* Custom priority dropdown (portal + fixed layer; avoids modal clipping) */
+.field--custom-select {
+  min-width: 11rem;
+}
+
+button.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.65rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid rgb(var(--slate-shadow) / 11%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+button.custom-select-trigger:hover:not(:disabled) {
+  transform: none;
+  filter: none;
+  border-color: rgb(var(--slate-shadow) / 16%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm),
+    0 4px 14px rgb(var(--slate-shadow) / 6%);
+}
+
+button.custom-select-trigger:focus-visible {
+  outline: none;
+  border-color: rgb(79 70 229 / 35%);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.custom-select-value-pill.cell-pill,
+.custom-select-option-pill.cell-pill {
+  font-size: 0.8125rem;
+  padding: 0.12rem 0.45rem;
+}
+
+.custom-select-chevron {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: rgb(var(--slate-shadow) / 45%);
+}
+
+.custom-select-dropdown {
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  border-radius: var(--radius-md);
+  border: 1px solid rgb(var(--slate-shadow) / 9%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 100%) 0%, rgb(252 252 254 / 100%) 100%);
+  box-shadow: var(--shadow-md);
+}
+
+.custom-select-option {
+  padding: 0.2rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.custom-select-option--highlight {
+  background: rgb(var(--slate-shadow) / 5%);
+}
+
+.custom-select-option:hover {
+  background: rgb(var(--slate-shadow) / 4%);
 }
 
 textarea {

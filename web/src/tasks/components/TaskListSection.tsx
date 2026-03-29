@@ -86,6 +86,7 @@ export function TaskListSection({
             <div className="field task-list-filter-field">
               <label htmlFor="task-list-filter-status">Status</label>
               <select
+                className="select-native"
                 id="task-list-filter-status"
                 value={statusFilter}
                 onChange={(e) =>
@@ -103,6 +104,7 @@ export function TaskListSection({
             <div className="field task-list-filter-field">
               <label htmlFor="task-list-filter-priority">Priority</label>
               <select
+                className="select-native"
                 id="task-list-filter-priority"
                 value={priorityFilter}
                 onChange={(e) =>
