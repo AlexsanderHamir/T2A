@@ -4,7 +4,7 @@
 
 Go implementation: **`github.com/AlexsanderHamir/T2A`**.
 
-**Documentation:** **[`docs/README.md`](docs/README.md)** (what to read first) · **[`docs/DESIGN.md`](docs/DESIGN.md)** ( **`taskapi`**, HTTP, SSE, DB) · **[`docs/WEB.md`](docs/WEB.md)** (optional **`web/`** SPA).
+**Documentation:** **[`docs/README.md`](docs/README.md)** (what to read first) · **[`docs/DESIGN.md`](docs/DESIGN.md)** ( **`taskapi`**, HTTP, SSE, DB) · **[`docs/WEB.md`](docs/WEB.md)** (optional **`web/`** SPA). **AI / contributor map:** **[`AGENTS.md`](AGENTS.md)**.
 
 ## Prerequisites
 
@@ -73,6 +73,8 @@ Opens Vite’s URL (often **`http://localhost:5173`**). Dev server **proxies** *
 **Production:** build static assets; serve **`dist`** same-origin as the API or behind a reverse proxy (**`taskapi`** does not serve **`dist`**). No CORS in the binary — see **`docs/DESIGN.md`** (limitations).
 
 ## For developers
+
+**Orientation (repo map, test commands, pitfalls):** **[`AGENTS.md`](AGENTS.md)**.
 
 ```bash
 go doc -all ./pkgs/tasks/...

@@ -6,6 +6,7 @@ Long-form design and contracts live here; the root **`README.md`** stays command
 
 | Doc | Use it for |
 |-----|------------|
+| **[../AGENTS.md](../AGENTS.md)** | Short map for **humans and coding agents**: where code lives, what to run before finishing, link-out to rules. |
 | **[../README.md](../README.md)** | Prerequisites, build/test, run **`dbcheck`** / **`taskapi`**, dev scripts, npm commands for **`web/`**. |
 | **[DESIGN.md](./DESIGN.md)** | **`taskapi`**: HTTP + SSE, env vars, **`REPO_ROOT`** / **`/repo`**, persistence, limits, Mermaid for the server. |
 | **[WEB.md](./WEB.md)** | **`web/`** SPA: React Query, SSE invalidation, **`parseTaskApi`**, **`web/src`** layout, tests. |
