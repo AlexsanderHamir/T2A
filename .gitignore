@@ -6,3 +6,5 @@ node_modules/
 web/dist/
 taskapi-dev
 taskapi-dev.exe
+/handler
+/handler.exe
