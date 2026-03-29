@@ -204,6 +204,65 @@ func TestHTTP_create_rejects_invalid_status(t *testing.T) {
 	}
 }
 
+func TestHTTP_patch_json_null_leaves_field_unchanged(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Priority != domain.PriorityMedium {
+		t.Fatalf("default priority: %s", created.Priority)
+	}
+
+	// JSON null must behave like omitted: do not clear status; still apply priority.
+	patchBody := `{"status":null,"priority":"high"}`
+	req, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID, strings.NewReader(patchBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	res2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchBytes, err := io.ReadAll(res2.Body)
+	if cerr := res2.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res2.StatusCode != http.StatusOK {
+		t.Fatalf("patch %d %s", res2.StatusCode, patchBytes)
+	}
+	var updated domain.Task
+	if err := json.Unmarshal(patchBytes, &updated); err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusReady {
+		t.Fatalf("status should stay ready, got %s", updated.Status)
+	}
+	if updated.Priority != domain.PriorityHigh {
+		t.Fatalf("priority: %s", updated.Priority)
+	}
+}
+
 func TestHTTP_patch_rejects_empty_patch(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

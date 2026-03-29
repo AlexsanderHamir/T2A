@@ -95,6 +95,7 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if _, err := fmt.Fprintf(w, "retry: 3000\n\n"); err != nil {
+		logSSEWriteError(r, op, err)
 		return
 	}
 	flusher.Flush()
@@ -108,11 +109,21 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if _, err := fmt.Fprintf(w, "data: %s\n\n", line); err != nil {
+				logSSEWriteError(r, op, err)
 				return
 			}
 			flusher.Flush()
 		}
 	}
+}
+
+// logSSEWriteError records an unexpected SSE write failure. Client disconnects are silent
+// (request context canceled) to avoid noise and duplicate logs with normal stream end.
+func logSSEWriteError(r *http.Request, op string, err error) {
+	if err == nil || r.Context().Err() != nil {
+		return
+	}
+	slog.Warn("sse write failed", "cmd", httpLogCmd, "operation", op, "err", err)
 }
 
 func (h *Handler) notifyChange(typ TaskChangeType, id string) {
