@@ -13,5 +13,5 @@
 //	if err := postgres.Migrate(ctx, db); err != nil { ... }
 //	s := store.NewStore(db)
 //	hub := handler.NewSSEHub()
-//	http.Handler = handler.NewHandler(s, hub)
+//	http.Handler = handler.NewHandler(s, hub, repoRootOrNil)
 package tasks

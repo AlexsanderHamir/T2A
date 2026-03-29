@@ -9,6 +9,8 @@
 //   - GET    /tasks/{id}      — 200 + task
 //   - PATCH  /tasks/{id}      — partial update; 200 + task
 //   - DELETE /tasks/{id}      — 204, no body
+//   - GET    /repo/search     — optional; JSON paths (q=); 503 if REPO_ROOT unset
+//   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
 //
