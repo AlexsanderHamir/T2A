@@ -163,8 +163,15 @@ export function TaskListSection({
                           <Link
                             to={`/tasks/${t.id}`}
                             className="cell-title-link"
+                            aria-label={`Open task details: ${t.title}`}
                           >
-                            {t.title}
+                            <span className="cell-title-text">{t.title}</span>
+                            <span
+                              className="cell-title-open-hint"
+                              aria-hidden="true"
+                            >
+                              →
+                            </span>
                           </Link>
                         </td>
                         <td>
