@@ -616,18 +616,69 @@ th {
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-full);
   text-transform: capitalize;
+  border: 1px solid transparent;
 }
 
-.cell-pill--muted {
-  background: rgb(0 0 0 / 5%);
-  color: var(--text-secondary);
-  border: 1px solid rgb(0 0 0 / 6%);
+/* Status — distinct semantic hues */
+.cell-pill--status-ready {
+  background: rgb(241 245 249);
+  color: rgb(51 65 85);
+  border-color: rgb(226 232 240);
 }
 
-.cell-pill--priority {
-  background: rgb(0 0 0 / 5%);
-  color: var(--text-primary);
-  border: 1px solid rgb(0 0 0 / 9%);
+.cell-pill--status-running {
+  background: rgb(238 242 255);
+  color: rgb(67 56 202);
+  border-color: rgb(199 210 254);
+}
+
+.cell-pill--status-blocked {
+  background: rgb(255 251 235);
+  color: rgb(146 64 14);
+  border-color: rgb(253 230 138);
+}
+
+.cell-pill--status-review {
+  background: rgb(245 243 255);
+  color: rgb(91 33 182);
+  border-color: rgb(221 214 254);
+}
+
+.cell-pill--status-done {
+  background: rgb(236 253 245);
+  color: rgb(4 120 87);
+  border-color: rgb(167 243 208);
+}
+
+.cell-pill--status-failed {
+  background: rgb(255 241 242);
+  color: rgb(190 18 60);
+  border-color: rgb(254 205 211);
+}
+
+/* Priority — escalation (low → critical) */
+.cell-pill--priority-low {
+  background: rgb(248 250 252);
+  color: rgb(100 116 139);
+  border-color: rgb(226 232 240);
+}
+
+.cell-pill--priority-medium {
+  background: rgb(240 249 255);
+  color: rgb(3 105 161);
+  border-color: rgb(186 230 253);
+}
+
+.cell-pill--priority-high {
+  background: rgb(255 247 237);
+  color: rgb(194 65 12);
+  border-color: rgb(254 215 170);
+}
+
+.cell-pill--priority-critical {
+  background: rgb(255 241 242);
+  color: rgb(190 18 60);
+  border-color: rgb(254 205 211);
 }
 
 .actions {

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
+import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import {
   PRIORITIES,
   STATUSES,
@@ -175,12 +176,12 @@ export function TaskListSection({
                           </Link>
                         </td>
                         <td>
-                          <span className="cell-pill cell-pill--muted">
+                          <span className={statusPillClass(t.status)}>
                             {t.status}
                           </span>
                         </td>
                         <td>
-                          <span className="cell-pill cell-pill--priority">
+                          <span className={priorityPillClass(t.priority)}>
                             {t.priority}
                           </span>
                         </td>

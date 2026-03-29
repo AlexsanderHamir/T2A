@@ -5,6 +5,7 @@ import { getTask, listTaskEvents } from "@/api";
 import type { TaskEventType } from "@/types";
 import { userAttention } from "../taskAttention";
 import { eventTypeLabel } from "../taskEventLabels";
+import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
 
@@ -95,8 +96,10 @@ export function TaskDetailPage({ app }: Props) {
       <header className="task-detail-header">
         <h2 className="task-detail-title">{task.title}</h2>
         <div className="task-detail-meta">
-          <span className="cell-pill cell-pill--muted">{task.status}</span>
-          <span className="cell-pill cell-pill--priority">{task.priority}</span>
+          <span className={statusPillClass(task.status)}>{task.status}</span>
+          <span className={priorityPillClass(task.priority)}>
+            {task.priority}
+          </span>
         </div>
       </header>
 
