@@ -11,6 +11,8 @@ alwaysApply: false
 
 **When to apply:** new or changed public surfaces such as packages, CLIs, HTTP routes, setup steps, security guarantees, or data-handling behavior.
 
+**Prose style** (bold, voice, headings): **`12-documentation-style.mdc`** when editing `README.md`, `docs/*.md`, `CONTRIBUTING.md`, or `AGENTS.md`.
+
 ## Invariants
 
 1. **Document behavior, not internals:** describe what users and callers can rely on—inputs, outputs, prerequisites, failure modes, and guarantees.
@@ -44,9 +46,9 @@ alwaysApply: false
 
 ## Diagrams (Mermaid)
 
-- For **markdown** documentation (`README.md`, `docs/*.md`, design notes such as `UI_TASK.MD`), when explaining **how things work**—architecture, request flows, data movement, or multi-component interactions—include a **Mermaid** diagram when it improves clarity (flowcharts, sequence diagrams, and similar).
-- Keep the **canonical** detailed architecture in **`docs/DESIGN.md`**; other files may use a simplified view or a focused sequence.
-- **Do not** embed Mermaid in **Go package comments** (`go doc` does not render it); link to `docs/DESIGN.md` or another markdown file instead.
+- For markdown (`README.md`, `docs/*.md`, design notes such as `UI_TASK.MD`), when explaining how things work—architecture, request flows, data movement, or multi-component interactions—add a Mermaid diagram when it improves clarity (flowcharts, sequence diagrams, and similar).
+- Keep the canonical detailed architecture in `docs/DESIGN.md`; other files may use a simplified view or a focused sequence.
+- Do not embed Mermaid in Go package comments (`go doc` does not render it); link to `docs/DESIGN.md` or another markdown file instead.
 
 ## Avoid
 

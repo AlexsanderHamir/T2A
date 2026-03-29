@@ -1,0 +1,52 @@
+---
+description: >-
+  Prose style for README, docs/*.md, CONTRIBUTING, and AGENTS: plain language,
+  scannable structure, minimal emphasis—aligned with widely used public guides
+  (Microsoft Writing Style Guide, Google developer documentation style).
+alwaysApply: false
+---
+
+# Documentation style (markdown and technical prose)
+
+**When to apply:** editing root `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/**/*.md`, or other user-facing prose. For *what* to document and where, see `07-document-functionality.mdc`. For GoDoc and inline comments, see `05-comments-minimal.mdc`.
+
+## External references (industry-standard baselines)
+
+Use these as the mental model for tone and structure (no need to copy every rule into this repo):
+
+- [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide/welcome/) — plain language, inclusive wording, consistent terminology, user-focused tasks.
+- [Google developer documentation style guide](https://developers.google.com/style) — second person for procedures (“you”), active voice, short sentences, defined terms on first use.
+
+## Tone and voice
+
+1. Address the reader directly for steps: “Copy `.env.example` to `.env`.”
+2. Prefer active voice and short paragraphs; one idea per paragraph when possible.
+3. Define jargon once, then use the same term consistently (match code identifiers: `taskapi`, `REPO_ROOT`).
+4. Do not pad with marketing tone, filler, or “simply / just / obviously.”
+
+## Emphasis: use sparingly
+
+Bold and italics lose power when everything is highlighted.
+
+- Avoid habitually bolding file names, commands, env vars, routes, and code tokens. Use inline code (backticks) for literals: `go test`, `DATABASE_URL`, `GET /tasks`.
+- Reserve bold for rare cases: a single warning line, or one critical word in a caution—not for every row of a table or every proper noun.
+- Do not combine bold inside backticks (`` **`like this`** ``); pick one. Prefer backticks for identifiers.
+- Lists and headings already provide structure; they rarely need bold lead-ins.
+
+## Structure
+
+- Use sentence-case headings (this repo’s convention unless a proper name requires capitals).
+- Put prerequisites before procedures; use numbered steps for sequences, bullets for options.
+- Prefer tables for route matrices and env var summaries; keep cell text concise.
+- Use Mermaid for multi-step flows where a diagram helps (see `07-document-functionality.mdc`).
+
+## Accuracy
+
+- Documented flags, env vars, paths, status codes, and examples must match the code at the current commit (`07-document-functionality` + `11-api-contracts` when APIs change).
+
+## Checklist
+
+- [ ] Procedures use direct, active wording; literals use backticks, not bold
+- [ ] Bold appears only where it truly signals danger, emphasis, or a single key term
+- [ ] Terminology matches `docs/DESIGN.md` / code symbols
+- [ ] No decorative bold in tables or link text unless an external guide would do the same

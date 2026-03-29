@@ -8,16 +8,16 @@ alwaysApply: false
 
 # API and client contract sync
 
-**When:** you change task REST routes, query params, JSON response shapes, SSE **`data:`** line schema, or **`domain.EventType`** / audit payloads exposed in **`GET /tasks/{id}/events`**.
+**When:** you change task REST routes, query params, JSON response shapes, SSE `data:` line schema, or `domain.EventType` / audit payloads exposed in `GET /tasks/{id}/events`.
 
 ## Checklist
 
-1. **`docs/DESIGN.md`** — routes, examples, env vars, and limitations match the code.
-2. **`web/src/api/parseTaskApi.ts`** (+ **`web/src/types/`** if enums/shapes change) — validate real-looking JSON; reject unknown fields where the server does.
-3. **Tests** — extend **`parseTaskApi.test.ts`**, handler **`httptest`** tests, and/or store tests; default **`go test ./...`** and **`npm test`** stay free of real Postgres and outbound network.
-4. **`README.md`** / **`docs/WEB.md`** — only if user-facing commands, Vite env (**`VITE_*`**), or proxy behavior change.
+1. `docs/DESIGN.md` — routes, examples, env vars, and limitations match the code.
+2. `web/src/api/parseTaskApi.ts` (+ `web/src/types/` if enums/shapes change) — validate real-looking JSON; reject unknown fields where the server does.
+3. Tests — extend `parseTaskApi.test.ts`, handler `httptest` tests, and/or store tests; default `go test ./...` and `npm test` stay free of real Postgres and outbound network.
+4. `README.md` / `docs/WEB.md` — only if user-facing commands, Vite env (`VITE_*`), or proxy behavior change.
 
 ## Avoid
 
-- Documenting a field in **`DESIGN.md`** that **`parseTaskApi`** does not accept.
-- Adding **`fetch`** outside **`web/src/api/`** for app APIs (**`10-web-ui`**).
+- Documenting a field in `DESIGN.md` that `parseTaskApi` does not accept.
+- Adding `fetch` outside `web/src/api/` for app APIs (`10-web-ui`).
