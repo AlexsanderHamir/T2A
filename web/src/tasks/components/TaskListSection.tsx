@@ -33,15 +33,18 @@ export function TaskListSection({
 }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [titleSearch, setTitleSearch] = useState("");
 
   const filteredTasks = useMemo(() => {
+    const q = titleSearch.trim().toLowerCase();
     return tasks.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (priorityFilter !== "all" && t.priority !== priorityFilter)
         return false;
+      if (q && !t.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter]);
+  }, [tasks, statusFilter, priorityFilter, titleSearch]);
 
   return (
     <section className="panel">
@@ -97,6 +100,17 @@ export function TaskListSection({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="field grow task-list-search-field">
+              <label htmlFor="task-list-search-title">Search titles</label>
+              <input
+                id="task-list-search-title"
+                type="search"
+                value={titleSearch}
+                onChange={(e) => setTitleSearch(e.target.value)}
+                placeholder="Search by title…"
+                autoComplete="off"
+              />
             </div>
           </div>
           {filteredTasks.length === 0 ? (

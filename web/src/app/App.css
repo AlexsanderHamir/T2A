@@ -521,6 +521,15 @@ th {
   min-width: 10rem;
 }
 
+.task-list-search-field {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+
+.task-list-search-field input[type="search"] {
+  width: 100%;
+}
+
 .task-list-filter-empty {
   padding: 1.25rem 1rem 2rem;
 }

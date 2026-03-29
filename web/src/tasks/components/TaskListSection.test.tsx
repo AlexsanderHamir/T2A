@@ -120,6 +120,46 @@ describe("TaskListSection", () => {
     expect(screen.getByText("High done")).toBeInTheDocument();
   });
 
+  it("filters rows by title search", async () => {
+    const user = userEvent.setup();
+    const tasks = [
+      {
+        id: "1",
+        title: "Alpha task",
+        initial_prompt: "",
+        status: "ready" as const,
+        priority: "medium" as const,
+      },
+      {
+        id: "2",
+        title: "Beta",
+        initial_prompt: "",
+        status: "ready" as const,
+        priority: "medium" as const,
+      },
+    ];
+    render(
+      <TaskListSection
+        tasks={tasks}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Alpha task")).toBeInTheDocument();
+    expect(screen.getByText("Beta")).toBeInTheDocument();
+
+    const search = screen.getByLabelText(/^search titles$/i);
+    await user.type(search, "alp");
+    expect(screen.getByText("Alpha task")).toBeInTheDocument();
+    expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+
+    await user.clear(search);
+    expect(screen.getByText("Beta")).toBeInTheDocument();
+  });
+
   it("shows copy when no tasks match filters", async () => {
     const user = userEvent.setup();
     render(
