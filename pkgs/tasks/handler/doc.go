@@ -1,4 +1,6 @@
 // Package handler exposes REST JSON CRUD for tasks backed by a store.Store (pkgs/tasks/store).
+// Wiring and shared HTTP helpers: handler.go. Task routes and DTOs: handler_tasks.go.
+// GET /repo/*: repo_handlers.go. GET /events: sse.go.
 //
 // Mutating routes should follow: decode and validate the request, call the store, map errors
 // to HTTP status, then call notifyChange after a successful write. Keep domain rules in
