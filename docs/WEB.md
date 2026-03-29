@@ -10,7 +10,7 @@ Canonical description of the optional **Vite + React + TypeScript** SPA. Server 
 
 ## Stack
 
-Vite 5, React 18, TypeScript strict, TanStack Query (**`queryClient.ts`**), TipTap (**`RichPromptEditor`**), **`fetch`** only under **`src/api/`** (import **`@/api`** or **`../api`**), Vitest + Testing Library (**`fetch`** / **`EventSource`** mocked in tests).
+Vite 5, React 18, TypeScript strict, TanStack Query (**`queryClient.ts`**), TipTap (**`RichPromptEditor`**, **`RichPromptMenuBar`**, **`MentionRangePanel`**), **`fetch`** only under **`src/api/`** (import **`@/api`** or **`../api`**), Vitest + Testing Library (**`fetch`** / **`EventSource`** mocked in tests).
 
 ## SPA in the system
 
