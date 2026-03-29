@@ -330,6 +330,26 @@ Use a vertical slice so new behavior stays testable and reviewable:
 3. `handler` — Decode and validate HTTP bodies, call the store, translate errors to status codes, then call `notifyChange` after successful writes so SSE subscribers refetch. Keep business rules out of the handler when they belong in store or domain.
 4. Optional `web/` — Extend `web/src/types/` and `web/src/api/` (`parseTaskApi` and related parsers); then UI under `web/src/tasks/`. Do not add raw `fetch` calls in components for task APIs.
 
+Mutating task request (happy path):
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant H as Handler
+  participant S as Store
+  participant P as PostgreSQL
+  participant U as SSEHub
+
+  C->>H: PATCH /tasks/id JSON
+  H->>H: decode body, optional repo mention check
+  H->>S: Update(ctx, id, input, actor)
+  S->>P: transaction row lock and save
+  P-->>S: ok
+  S-->>H: task
+  H->>U: notifyChange task_updated
+  H-->>C: 200 JSON task
+```
+
 Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For a full checklist aimed at agents, see `.cursor/rules/13-extensibility.mdc`.
 
 ## Technical choices
