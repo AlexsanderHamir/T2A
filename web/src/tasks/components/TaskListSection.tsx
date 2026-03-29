@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import {
   PRIORITIES,
@@ -15,6 +16,11 @@ type Props = {
   refreshing: boolean;
   /** A create/update/delete request is in flight. */
   saving: boolean;
+  /**
+   * When true (default), status lines wait briefly before appearing so fast
+   * requests do not flash unreadable text. Set false in tests.
+   */
+  smoothTransitions?: boolean;
   onEdit: (t: Task) => void;
   /** Opens in-app delete confirmation (do not call `window.confirm` from the table). */
   onRequestDelete: (t: Task) => void;
@@ -23,14 +29,23 @@ type Props = {
 type StatusFilter = "all" | Status;
 type PriorityFilter = "all" | Priority;
 
+const LOADING_STATUS_DELAY_MS = 220;
+const SYNC_STATUS_DELAY_MS = 180;
+
 export function TaskListSection({
   tasks,
   loading,
   refreshing,
   saving,
+  smoothTransitions = true,
   onEdit,
   onRequestDelete,
 }: Props) {
+  const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
+  const syncDelayMs = smoothTransitions ? SYNC_STATUS_DELAY_MS : 0;
+  const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
+  const showSyncLine = useDelayedTrue(refreshing && !loading, syncDelayMs);
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [titleSearch, setTitleSearch] = useState("");
@@ -49,19 +64,18 @@ export function TaskListSection({
   return (
     <section className="panel">
       <h2>All tasks</h2>
-      {refreshing ? (
-        <p className="sync-hint" aria-live="polite" role="status">
+      {refreshing && !loading && showSyncLine ? (
+        <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…
         </p>
       ) : null}
-      {loading ? (
-        <p className="muted" role="status">
+      {loading && showLoadingLine ? (
+        <p className="muted task-list-phase-msg" role="status">
           Loading…
         </p>
-      ) : tasks.length === 0 ? (
-        <p className="muted empty-state">No tasks yet.</p>
-      ) : (
-        <>
+      ) : null}
+      {!loading ? (
+        <div className="task-list-content task-list-content--enter">
           <div
             className="task-list-filters"
             role="search"
@@ -113,24 +127,32 @@ export function TaskListSection({
               />
             </div>
           </div>
-          {filteredTasks.length === 0 ? (
-            <p className="muted empty-state task-list-filter-empty">
-              No tasks match these filters.
-            </p>
-          ) : (
-            <div className="table-wrap">
-              <table aria-busy={refreshing}>
-                <thead>
-                  <tr>
-                    <th scope="col">Title</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Priority</th>
-                    <th scope="col">Prompt</th>
-                    <th scope="col">Actions</th>
+          <div className="table-wrap task-list-table-wrap">
+            <table aria-busy={refreshing}>
+              <thead>
+                <tr>
+                  <th scope="col">Title</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Priority</th>
+                  <th scope="col">Prompt</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="task-list-tbody">
+                {tasks.length === 0 ? (
+                  <tr className="task-list-empty-row">
+                    <td colSpan={5} className="task-list-empty-cell">
+                      No tasks yet.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredTasks.map((t) => {
+                ) : filteredTasks.length === 0 ? (
+                  <tr className="task-list-empty-row">
+                    <td colSpan={5} className="task-list-empty-cell">
+                      No tasks match these filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTasks.map((t) => {
                     const promptPreview = previewTextFromPrompt(
                       t.initial_prompt,
                     );
@@ -174,13 +196,13 @@ export function TaskListSection({
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

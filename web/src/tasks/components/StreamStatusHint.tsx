@@ -1,10 +1,23 @@
+import { useDelayedTrue } from "@/lib/useDelayedTrue";
+
 type Props = {
   connected: boolean;
   /** Task list is refetching after SSE or focus (data may still be shown). */
   listSyncing?: boolean;
+  /** When true (default), the syncing pill waits briefly before appearing. */
+  smoothTransitions?: boolean;
 };
 
-export function StreamStatusHint({ connected, listSyncing }: Props) {
+const SYNC_PILL_DELAY_MS = 200;
+
+export function StreamStatusHint({
+  connected,
+  listSyncing,
+  smoothTransitions = true,
+}: Props) {
+  const syncDelayMs = smoothTransitions ? SYNC_PILL_DELAY_MS : 0;
+  const showSyncPill = useDelayedTrue(Boolean(listSyncing), syncDelayMs);
+
   return (
     <div className="stream-status">
       <div className="stream-status-main">
@@ -15,8 +28,11 @@ export function StreamStatusHint({ connected, listSyncing }: Props) {
         <span className="stream-status-text">
           {connected ? "Live updates" : "Waiting for connection"}
         </span>
-        {listSyncing ? (
-          <span className="stream-pill stream-pill--sync" role="status">
+        {listSyncing && showSyncPill ? (
+          <span
+            className="stream-pill stream-pill--sync stream-pill--sync-enter"
+            role="status"
+          >
             Syncing…
           </span>
         ) : null}

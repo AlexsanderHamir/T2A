@@ -11,6 +11,7 @@ describe("TaskListSection", () => {
         loading
         refreshing={false}
         saving={false}
+        smoothTransitions={false}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -25,6 +26,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing
         saving={false}
+        smoothTransitions={false}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
