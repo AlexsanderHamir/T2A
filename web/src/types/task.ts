@@ -69,6 +69,7 @@ export const TASK_EVENT_TYPES = [
   "approval_granted",
   "task_completed",
   "task_failed",
+  "sync_ping",
 ] as const;
 
 export type TaskEventType = (typeof TASK_EVENT_TYPES)[number];

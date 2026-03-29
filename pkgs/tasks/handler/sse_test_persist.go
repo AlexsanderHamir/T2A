@@ -13,9 +13,8 @@ import (
 
 const sseTestListPage = 200 // store.List maximum page size
 
-// persistTaskUpdatedSSE applies a no-op priority update via the same store.Update path as PATCH /tasks
-// (transaction, row lock, Save), then publishes task_updated on the hub — matching real mutations.
-// The priority value is unchanged, so applyTaskPatches typically adds no audit row, but the update transaction still runs.
+// persistTaskUpdatedSSE appends a sync_ping audit row (same persistence as real timeline entries), then
+// publishes task_updated on the hub so clients refetch list and GET /tasks/{id}/events.
 func persistTaskUpdatedSSE(ctx context.Context, st *store.Store, hub *SSEHub, id string) error {
 	if st == nil || hub == nil {
 		return errors.New("store or hub nil")
@@ -24,16 +23,10 @@ func persistTaskUpdatedSSE(ctx context.Context, st *store.Store, hub *SSEHub, id
 	if id == "" {
 		return fmt.Errorf("task id: %w", domain.ErrInvalidInput)
 	}
-	t, err := st.Get(ctx, id)
-	if err != nil {
+	if err := st.AppendTaskEvent(ctx, id, domain.EventSyncPing, domain.ActorUser, nil); err != nil {
 		return err
 	}
-	pr := t.Priority
-	_, err = st.Update(ctx, id, store.UpdateTaskInput{Priority: &pr}, domain.ActorUser)
-	if err != nil {
-		return err
-	}
-	hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: t.ID})
+	hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: id})
 	return nil
 }
 

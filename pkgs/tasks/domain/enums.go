@@ -39,6 +39,8 @@ const (
 	EventApprovalGranted       EventType = "approval_granted"
 	EventTaskCompleted         EventType = "task_completed"
 	EventTaskFailed            EventType = "task_failed"
+	// EventSyncPing is written by the SSE dev ticker (T2A_SSE_TEST) so the audit timeline reflects live checks.
+	EventSyncPing EventType = "sync_ping"
 )
 
 type Actor string

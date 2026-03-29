@@ -261,6 +261,32 @@ func TestStore_ListTaskEvents_not_found_task_still_empty_id(t *testing.T) {
 	}
 }
 
+func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventSyncPing, domain.ActorUser, nil); err != nil {
+		t.Fatal(err)
+	}
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("want 2 events, got %d", len(evs))
+	}
+	if evs[1].Type != domain.EventSyncPing {
+		t.Fatalf("want sync_ping, got %q", evs[1].Type)
+	}
+	err = s.AppendTaskEvent(ctx, "00000000-0000-0000-0000-000000000099", domain.EventSyncPing, domain.ActorUser, nil)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("got %v want ErrNotFound", err)
+	}
+}
+
 func TestStore_Update_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()

@@ -42,7 +42,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**. For synthetic SSE during UI development, set **`T2A_SSE_TEST=1`**: a **background ticker** every **3s** (override with **`T2A_SSE_TEST_INTERVAL`**, or **`0`** to disable) lists **all** tasks via **`store.List`** and runs **`store.Update`** + **`task_updated`** for **each** (same path as **`PATCH /tasks`**). No extra HTTP routes (see *Server-Sent Events* in **`docs/DESIGN.md`**).
+With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**. For synthetic SSE during UI development, set **`T2A_SSE_TEST=1`**: a **background ticker** every **3s** (override with **`T2A_SSE_TEST_INTERVAL`**, or **`0`** to disable) lists **all** tasks via **`store.List`**, appends a **`sync_ping`** audit event per task, and publishes **`task_updated`**. No extra HTTP routes (see *Server-Sent Events* in **`docs/DESIGN.md`**).
 
 **Windows PowerShell:** use **`curl.exe`** and single-quoted JSON:
 

@@ -42,7 +42,7 @@ SSE carries **`type` + `id`** only; rows come from **`GET /tasks`**.
 
 ## Dev vs production
 
-**Dev:** browser → Vite → proxies **`/tasks`**, **`/events`**, **`/repo`** → **`taskapi`**. **`VITE_TASKAPI_ORIGIN`** in **`web/vite.config.ts`** picks the API target (default **`http://127.0.0.1:8080`**).
+**Dev:** browser → Vite → proxies **`/tasks`**, **`/events`**, **`/repo`** → **`taskapi`**. **`VITE_TASKAPI_ORIGIN`** in **`web/vite.config.ts`** picks the API target (default **`http://127.0.0.1:8080`**). Full-page loads to **`/tasks/{id}`** must still serve the SPA: the dev proxy **bypasses** to **`index.html`** when **`Accept`** includes **`text/html`** (so refresh on a task detail URL does not return raw JSON from **`GET /tasks/{id}`**).
 
 **Prod:** **`npm run build`** → **`web/dist/`**; serve so **`/tasks`**, **`/events`**, **`/repo`** match the API origin (or gateway).
 

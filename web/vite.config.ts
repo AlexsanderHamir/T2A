@@ -37,7 +37,17 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/tasks": { target: api, changeOrigin: true },
+      // Document navigations to /tasks/:id send Accept: text/html; serve the SPA instead of proxying to taskapi.
+      "/tasks": {
+        target: api,
+        changeOrigin: true,
+        bypass(req) {
+          const accept = req.headers.accept ?? "";
+          if (accept.includes("text/html")) {
+            return "/index.html";
+          }
+        },
+      },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
     },
