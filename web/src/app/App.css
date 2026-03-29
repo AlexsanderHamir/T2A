@@ -1305,9 +1305,28 @@ th {
   padding: 0.65rem 0.85rem;
   cursor: pointer;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--link);
   user-select: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease,
+    text-decoration-color 0.12s ease;
+}
+
+.task-detail-prompt-summary:hover {
+  color: var(--brand-hover);
+  background: var(--brand-muted);
+  text-decoration: underline;
+  text-decoration-color: rgb(79 70 229 / 35%);
+  text-underline-offset: 0.2em;
+}
+
+.task-detail-prompt-summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .task-detail-prompt-summary::-webkit-details-marker {
@@ -1320,7 +1339,8 @@ th {
 
 .task-detail-prompt-details[open] .task-detail-prompt-summary {
   border-bottom: 1px solid var(--border-hairline);
-  color: var(--text-secondary);
+  /* Keep link color when open so “Hide” matches “Show”; hover still applies. */
+  color: var(--link);
 }
 
 .task-detail-prompt-details:not([open]) .task-detail-prompt-summary-close-label {
@@ -1335,8 +1355,14 @@ th {
   flex-shrink: 0;
   font-size: 0.65rem;
   line-height: 1;
-  color: rgb(var(--slate-shadow) / 45%);
-  transition: transform 0.15s ease;
+  color: rgb(79 70 229 / 55%);
+  transition:
+    transform 0.15s ease,
+    color 0.12s ease;
+}
+
+.task-detail-prompt-summary:hover .task-detail-prompt-summary-chevron {
+  color: var(--brand-hover);
 }
 
 .task-detail-prompt-details[open] .task-detail-prompt-summary-chevron {
