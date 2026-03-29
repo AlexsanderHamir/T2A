@@ -489,39 +489,54 @@ th {
   letter-spacing: -0.02em;
 }
 
-.cell-title-link {
+/* Task list table — matches dashboard mock: blue title + light arrow, soft hover; white bordered Edit; pill badges */
+.task-list-table tbody tr.task-list-row {
+  transition: background 0.15s ease;
+}
+
+.task-list-table tbody tr.task-list-row:hover {
+  background: rgb(0 0 0 / 3.5%);
+}
+
+.task-list-table .cell-title-link {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.3rem;
   max-width: 100%;
+  padding: 0.2rem 0.45rem 0.2rem 0.4rem;
+  margin: -0.2rem -0.45rem -0.2rem -0.4rem;
   color: var(--accent);
   font-weight: 500;
-  text-decoration: underline;
-  text-decoration-color: rgb(0 113 227 / 42%);
-  text-underline-offset: 0.18em;
+  text-decoration: none;
   border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.cell-title-link:hover {
-  color: rgb(0 64 170);
-  text-decoration-color: rgb(0 64 170 / 70%);
+.task-list-table .cell-title-link:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-.cell-title-text {
+.task-list-table .cell-title-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
-.cell-title-open-hint {
+.task-list-table .cell-title-open-hint {
   flex-shrink: 0;
-  font-size: 0.82em;
-  font-weight: 600;
-  opacity: 0.88;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: rgb(0 113 227 / 48%);
+  line-height: 1;
 }
 
-.cell-title-link:focus-visible {
+.task-list-table .cell-title-link:hover .cell-title-open-hint {
+  color: rgb(0 113 227 / 72%);
+}
+
+.task-list-table .cell-title-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -538,11 +553,13 @@ th {
 .cell-pill--muted {
   background: rgb(0 0 0 / 5%);
   color: var(--text-secondary);
+  border: 1px solid rgb(0 0 0 / 6%);
 }
 
 .cell-pill--priority {
   background: rgb(0 113 227 / 8%);
-  color: rgb(0 80 160);
+  color: var(--accent);
+  border: 1px solid rgb(0 113 227 / 14%);
 }
 
 .actions {
@@ -555,6 +572,25 @@ th {
   padding: 0.35rem 0.75rem;
   font-size: 0.8125rem;
   border-radius: var(--radius-full);
+}
+
+.task-list-table .actions .btn-table.secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-soft);
+  box-shadow: none;
+}
+
+.task-list-table .actions .btn-table.secondary:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: rgb(0 0 0 / 12%);
+  transform: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+
+.task-list-table .actions .btn-table.danger:not(:disabled):hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgb(215 0 21 / 28%);
 }
 
 .muted {

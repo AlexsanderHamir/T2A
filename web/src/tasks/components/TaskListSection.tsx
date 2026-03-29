@@ -129,7 +129,7 @@ export function TaskListSection({
             </div>
           </div>
           <div className="table-wrap task-list-table-wrap">
-            <table aria-busy={refreshing}>
+            <table className="task-list-table" aria-busy={refreshing}>
               <thead>
                 <tr>
                   <th scope="col">Title</th>
@@ -158,7 +158,7 @@ export function TaskListSection({
                       t.initial_prompt,
                     );
                     return (
-                      <tr key={t.id}>
+                      <tr key={t.id} className="task-list-row">
                         <td className="cell-title">
                           <Link
                             to={`/tasks/${t.id}`}
