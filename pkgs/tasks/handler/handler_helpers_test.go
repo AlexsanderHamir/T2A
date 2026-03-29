@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -109,6 +111,15 @@ func TestDecodeJSON_trailing_garbage_after_object(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+}
+
+func TestLogRequestFailure_warnAndError(t *testing.T) {
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	logRequestFailure("test.op", errors.New("client"), http.StatusBadRequest)
+	logRequestFailure("test.op", errors.New("server"), http.StatusInternalServerError)
 }
 
 func TestActorFromRequest(t *testing.T) {

@@ -187,13 +187,15 @@ func decodeJSON(r io.Reader, dst any) error {
 func writeJSON(w http.ResponseWriter, op string, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
 		slog.Error("response encode failed", "cmd", httpLogCmd, "operation", op, "err", err)
 	}
 }
 
 func writeError(w http.ResponseWriter, op string, err error, code int) {
-	slog.Error("request failed", "cmd", httpLogCmd, "operation", op, "err", err)
+	logRequestFailure(op, err, code)
 	http.Error(w, http.StatusText(code), code)
 }
 
@@ -208,6 +210,15 @@ func writeStoreError(w http.ResponseWriter, op string, err error) {
 		msg = "bad request"
 		code = http.StatusBadRequest
 	}
-	slog.Error("request failed", "cmd", httpLogCmd, "operation", op, "err", err)
+	logRequestFailure(op, err, code)
 	http.Error(w, msg, code)
+}
+
+func logRequestFailure(op string, err error, httpStatus int) {
+	attrs := []any{"cmd", httpLogCmd, "operation", op, "http_status", httpStatus, "err", err}
+	if httpStatus >= 500 {
+		slog.Error("request failed", attrs...)
+		return
+	}
+	slog.Warn("request failed", attrs...)
 }
