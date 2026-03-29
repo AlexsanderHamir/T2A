@@ -112,18 +112,15 @@ describe("TaskListSection", () => {
     expect(screen.getByText("Low ready")).toBeInTheDocument();
     expect(screen.getByText("High done")).toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByLabelText(/^status$/i),
-      "ready",
-    );
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(screen.getByRole("option", { name: /^ready$/i }));
     expect(screen.getByText("Low ready")).toBeInTheDocument();
     expect(screen.queryByText("High done")).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/^status$/i), "all");
-    await user.selectOptions(
-      screen.getByLabelText(/^priority$/i),
-      "high",
-    );
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(screen.getByRole("option", { name: /^all$/i }));
+    await user.click(screen.getByRole("combobox", { name: /^priority$/i }));
+    await user.click(screen.getByRole("option", { name: /^high$/i }));
     expect(screen.queryByText("Low ready")).not.toBeInTheDocument();
     expect(screen.getByText("High done")).toBeInTheDocument();
   });
@@ -188,7 +185,8 @@ describe("TaskListSection", () => {
         onRequestDelete={vi.fn()}
       />,
     );
-    await user.selectOptions(screen.getByLabelText(/^status$/i), "failed");
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(screen.getByRole("option", { name: /^failed$/i }));
     expect(
       screen.getByText("No tasks match these filters."),
     ).toBeInTheDocument();

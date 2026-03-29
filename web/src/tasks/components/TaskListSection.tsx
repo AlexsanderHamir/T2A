@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
+import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
 import {
   PRIORITIES,
   STATUSES,
@@ -52,6 +53,30 @@ export function TaskListSection({
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [titleSearch, setTitleSearch] = useState("");
 
+  const statusSelectOptions: CustomSelectOption[] = useMemo(
+    () => [
+      { value: "all", label: "All" },
+      ...STATUSES.map((s) => ({
+        value: s,
+        label: s,
+        pillClass: statusPillClass(s),
+      })),
+    ],
+    [],
+  );
+
+  const prioritySelectOptions: CustomSelectOption[] = useMemo(
+    () => [
+      { value: "all", label: "All" },
+      ...PRIORITIES.map((p) => ({
+        value: p,
+        label: p,
+        pillClass: priorityPillClass(p),
+      })),
+    ],
+    [],
+  );
+
   const filteredTasks = useMemo(() => {
     const q = titleSearch.trim().toLowerCase();
     return tasks.filter((t) => {
@@ -83,41 +108,27 @@ export function TaskListSection({
             role="search"
             aria-label="Filter tasks"
           >
-            <div className="field task-list-filter-field">
-              <label htmlFor="task-list-filter-status">Status</label>
-              <select
-                className="select-native"
+            <div className="task-list-filter-field">
+              <CustomSelect
                 id="task-list-filter-status"
+                label="Status"
+                compact
+                listboxName="Filter by status"
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as StatusFilter)
-                }
-              >
-                <option value="all">All</option>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                options={statusSelectOptions}
+                onChange={(v) => setStatusFilter(v as StatusFilter)}
+              />
             </div>
-            <div className="field task-list-filter-field">
-              <label htmlFor="task-list-filter-priority">Priority</label>
-              <select
-                className="select-native"
+            <div className="task-list-filter-field">
+              <CustomSelect
                 id="task-list-filter-priority"
+                label="Priority"
+                compact
+                listboxName="Filter by priority"
                 value={priorityFilter}
-                onChange={(e) =>
-                  setPriorityFilter(e.target.value as PriorityFilter)
-                }
-              >
-                <option value="all">All</option>
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
+                options={prioritySelectOptions}
+                onChange={(v) => setPriorityFilter(v as PriorityFilter)}
+              />
             </div>
             <div className="field grow task-list-search-field">
               <label htmlFor="task-list-search-title">Search titles</label>
