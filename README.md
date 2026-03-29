@@ -76,7 +76,7 @@ Production: build static assets; serve `dist` same-origin as the API or behind a
 
 ## For developers
 
-Orientation (repo map, test commands, pitfalls): [AGENTS.md](AGENTS.md). PR checklist and API sync: [CONTRIBUTING.md](CONTRIBUTING.md). Common dev issues: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+Orientation (repo map, test commands, pitfalls): [AGENTS.md](AGENTS.md). PR checklist and API sync: [CONTRIBUTING.md](CONTRIBUTING.md). Extending the stack (domain → store → handler → web): [docs/DESIGN.md](docs/DESIGN.md) (Extensibility) and `.cursor/rules/13-extensibility.mdc`. Common dev issues: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ```bash
 go doc -all ./pkgs/tasks/...

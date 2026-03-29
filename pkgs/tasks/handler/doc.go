@@ -1,5 +1,9 @@
 // Package handler exposes REST JSON CRUD for tasks backed by a store.Store (pkgs/tasks/store).
 //
+// Mutating routes should follow: decode and validate the request, call the store, map errors
+// to HTTP status, then call notifyChange after a successful write. Keep domain rules in
+// store/domain, not in HTTP adapters (see docs/DESIGN.md "Extensibility").
+//
 // # Routes (Go 1.22 patterns on the returned mux)
 //
 //   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with

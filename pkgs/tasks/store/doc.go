@@ -1,6 +1,10 @@
 // Package store provides GORM-backed persistence for domain.Task and domain.TaskEvent
 // (pkgs/tasks/domain), including an append-only audit log on create and field changes.
 //
+// Prefer adding behavior as named use-case methods (small input structs, one transaction,
+// explicit audit events) rather than ad hoc SQL from callers. The handler should stay thin;
+// see docs/DESIGN.md "Extensibility" and .cursor/rules/13-extensibility.mdc.
+//
 // List applies a maximum page size: limit ≤ 0 becomes 50; limit > 200 is capped at 200;
 // negative offset becomes 0.
 //

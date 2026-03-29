@@ -14,4 +14,4 @@ Before non-trivial edits:
 3. Env template: `.env.example` → copy to `.env` (never commit secrets).
 4. Finish with `scripts/check.ps1` or `./scripts/check.sh` from the repo root (same bar as CI).
 
-JSON from `/tasks` and related routes must pass through `web/src/api/parseTaskApi.ts` on the client; see `11-api-contracts.mdc` when changing shapes. Prose style for README and `docs/*.md`: `12-documentation-style.mdc`.
+JSON from `/tasks` and related routes must pass through `web/src/api/parseTaskApi.ts` on the client; see `11-api-contracts.mdc` when changing shapes. New features: `13-extensibility.mdc` and `docs/DESIGN.md` (Extensibility). Prose style for README and `docs/*.md`: `12-documentation-style.mdc`.

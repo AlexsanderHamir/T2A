@@ -321,6 +321,17 @@ Audit: append-only `task_events` for typed changes. Event type strings are `doma
 
 Schema: `postgres.Migrate` runs GORM `AutoMigrate` for `domain.Task` and `domain.TaskEvent` only. There are no checked-in versioned SQL migrations or down migrations.
 
+## Extensibility
+
+Use a vertical slice so new behavior stays testable and reviewable:
+
+1. `domain` — Add or adjust types, enums, and validation; no database or HTTP imports.
+2. `store` — Add use-case methods (clear inputs, transactions, audit rows as needed). Map errors to `domain.ErrNotFound` and `domain.ErrInvalidInput` only; do not log inside the store.
+3. `handler` — Decode and validate HTTP bodies, call the store, translate errors to status codes, then call `notifyChange` after successful writes so SSE subscribers refetch. Keep business rules out of the handler when they belong in store or domain.
+4. Optional `web/` — Extend `web/src/types/` and `web/src/api/` (`parseTaskApi` and related parsers); then UI under `web/src/tasks/`. Do not add raw `fetch` calls in components for task APIs.
+
+Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For a full checklist aimed at agents, see `.cursor/rules/13-extensibility.mdc`.
+
 ## Technical choices
 
 
@@ -372,7 +383,7 @@ Optional Vite + React app under `web/` uses `/tasks`, `/events`, and `/repo` as 
 | [Root README.md](../README.md) | Run commands, dev scripts, `curl` examples. |
 | [WEB.md](./WEB.md)             | `web/` SPA only.                            |
 | `pkgs/tasks/handler/doc.go`      | Routes next to code.                            |
-| `pkgs/tasks/store/doc.go`        | Store behavior.                                 |
+| `pkgs/tasks/store/doc.go`        | Store behavior and extensibility notes.           |
 | `pkgs/repo`                      | `REPO_ROOT`, `go doc`.                      |
 | `cmd/taskapi/doc.go`             | Flags and wiring.                               |
 
