@@ -10,7 +10,9 @@
 //   -env string     path to .env (default: <repo-root>/.env)
 //   -migrate        run GORM AutoMigrate before serving
 //
-// Structured logs go to stderr. SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout.
+// Structured logs go to stderr. SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout, then the database pool is closed.
+//
+// The HTTP server sets read header/read/idle timeouts and a max header size; WriteTimeout is left unset so GET /events (SSE) can stay open.
 //
 // REST contract: see package github.com/AlexsanderHamir/T2A/pkgs/tasks/handler and domain types
 // in github.com/AlexsanderHamir/T2A/pkgs/tasks/domain.

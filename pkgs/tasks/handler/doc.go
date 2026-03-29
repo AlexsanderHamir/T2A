@@ -22,5 +22,6 @@
 // store.UpdateTaskInput.
 //
 // Errors: domain.ErrNotFound → 404 "not found", domain.ErrInvalidInput → 400 "bad request";
-// other store errors → 500. Response bodies are plain text, not JSON.
+// other store errors → 500. Response bodies are plain text, not JSON. Failures are logged once
+// at the handler with structured fields (including http_status); 4xx → Warn, 5xx → Error.
 package handler

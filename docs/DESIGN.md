@@ -101,10 +101,10 @@ flowchart TB
 ## Startup flow (`taskapi`)
 
 1. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
-2. `postgres.Open` — GORM connection to Postgres.
+2. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
 3. Optional `-migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent`.
 4. `store.NewStore`, `handler.NewSSEHub`, `handler.NewHandler(store, hub)` — one hub per process.
-5. `http.Server` on `-port` (default 8080), graceful shutdown on SIGINT/SIGTERM (10s timeout).
+5. `http.Server` on `-port` (default **8080**): **`ReadHeaderTimeout`** and **`ReadTimeout`** bound slow clients; **`IdleTimeout`** caps idle keep-alive; **`MaxHeaderBytes`** caps request headers (~1 MiB). **`WriteTimeout` is not set** so long-lived **`GET /events`** streams are not cut off. Graceful shutdown on SIGINT/SIGTERM (**10s** timeout), then **`Close`** on the SQL pool.
 
 ## REST API — coverage
 
@@ -122,7 +122,7 @@ Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for at
 
 JSON: request bodies reject unknown fields and reject trailing data after the top-level value. Successful task bodies use `domain.Task` with `json` tags (snake_case keys).
 
-Errors: 404 with plain text `not found`, 400 with `bad request`, 500 with `internal server error`. There is no JSON error envelope today.
+Errors: 404 with plain text `not found`, 400 with `bad request`, 500 with `internal server error`. There is no JSON error envelope today. Structured logs at the handler use **`operation`** and **`http_status`**; client errors (4xx) are logged at **Warn**, server errors (5xx) at **Error**.
 
 ## Server-Sent Events (`GET /events`)
 
@@ -178,7 +178,7 @@ Audit: append-only `task_events` for typed changes. Event type strings are `doma
 1. The SSE hub is in RAM and scoped to one process. Multiple `taskapi` replicas do not share subscribers; load balancers can split `/events` from the instance that handles writes.
 2. SSE delivery is best-effort: each subscriber has a bounded buffer (32); slow clients may drop events. For guaranteed history, use the database and `task_events`.
 3. No authentication or authorization in this module; `X-Actor` is labeling, not identity proof.
-4. No rate limiting or explicit request body size limits beyond normal JSON handling and validation.
+4. No rate limiting or a dedicated max **body** size; request **headers** are capped via **`MaxHeaderBytes`**, and **read timeouts** bound how long the server waits for the request (including body). Very large JSON bodies are not explicitly rejected beyond memory and timeout behavior.
 5. Error responses are plain text, not a structured JSON error type.
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
 7. **No `/health` or `/readiness` HTTP routes** — use port open checks, `dbcheck`, or an outer proxy health model.
