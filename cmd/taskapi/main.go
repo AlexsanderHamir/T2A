@@ -81,7 +81,6 @@ func main() {
 	}
 	api := handler.WithRecovery(handler.NewHandler(taskStore, hub, rep))
 	mux := http.NewServeMux()
-	handler.RegisterSSETestRoutes(mux, taskStore, hub, handler.SSETestEnabled())
 	if handler.SSETestEnabled() {
 		if d := resolveSSETestTickerInterval(); d >= time.Second {
 			handler.RunSSETestTicker(taskStore, hub, d)
@@ -131,8 +130,8 @@ func main() {
 	}
 }
 
-// resolveSSETestTickerInterval returns how often to publish task_updated for the first list task.
-// Default is 3s when T2A_SSE_TEST_INTERVAL is unset. Set to 0 to disable the ticker (dev routes and create-time events still apply).
+// resolveSSETestTickerInterval returns how often the SSE dev ticker runs store.List + store.Update per task.
+// Default is 3s when T2A_SSE_TEST_INTERVAL is unset. Set to 0 to disable the ticker.
 func resolveSSETestTickerInterval() time.Duration {
 	raw := strings.TrimSpace(os.Getenv(sseTestIntervalEnv))
 	if raw == "" {

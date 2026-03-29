@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
+
+const sseTestListPage = 200 // store.List maximum page size
 
 // persistTaskUpdatedSSE applies a no-op priority update via the same store.Update path as PATCH /tasks
 // (transaction, row lock, Save), then publishes task_updated on the hub — matching real mutations.
@@ -34,11 +37,25 @@ func persistTaskUpdatedSSE(ctx context.Context, st *store.Store, hub *SSEHub, id
 	return nil
 }
 
-// pickFirstTaskID returns the first task id in list order (id ASC), or false if none.
-func pickFirstTaskID(ctx context.Context, st *store.Store) (id string, ok bool) {
-	rows, err := st.List(ctx, 1, 0)
-	if err != nil || len(rows) == 0 {
-		return "", false
+// persistAllTasksForSSETest walks every task using store.List (id ASC, paginated), same data as GET /tasks.
+func persistAllTasksForSSETest(ctx context.Context, st *store.Store, hub *SSEHub) {
+	if st == nil || hub == nil {
+		return
 	}
-	return rows[0].ID, true
+	for offset := 0; ; offset += sseTestListPage {
+		rows, err := st.List(ctx, sseTestListPage, offset)
+		if err != nil {
+			slog.Debug("sse dev ticker list failed", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick_list", "err", err)
+			return
+		}
+		for i := range rows {
+			if err := persistTaskUpdatedSSE(ctx, st, hub, rows[i].ID); err != nil {
+				slog.Debug("sse dev ticker task skipped", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick_task",
+					"task_id", rows[i].ID, "err", err)
+			}
+		}
+		if len(rows) < sseTestListPage {
+			return
+		}
+	}
 }

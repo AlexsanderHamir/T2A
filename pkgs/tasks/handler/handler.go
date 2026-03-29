@@ -108,13 +108,6 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskCreated, t.ID)
-	if SSETestEnabled() && h.hub != nil {
-		if firstID, ok := pickFirstTaskID(r.Context(), h.store); ok {
-			if err := persistTaskUpdatedSSE(r.Context(), h.store, h.hub, firstID); err != nil {
-				slog.Warn("sse test extra update after create failed", "cmd", httpLogCmd, "operation", "tasks.sse_test.create_extra", "err", err)
-			}
-		}
-	}
 	writeJSON(w, op, http.StatusCreated, t)
 }
 

@@ -13,9 +13,8 @@
 //   - GET    /repo/search     — optional; JSON paths (q=); 503 if REPO_ROOT unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
-// Dev-only (not mounted on the returned handler; register separately on the parent mux when
-// T2A_SSE_TEST=1): GET /dev/sse/ping, POST /dev/sse/publish — task_updated uses store.Update (same
-// as PATCH) then SSE; task_created/task_deleted on publish are SSE-only; see DESIGN.md.
+// Dev-only: when taskapi sets T2A_SSE_TEST=1, a background ticker runs store.List + store.Update per task
+// then SSE (see DESIGN.md). No extra HTTP routes.
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
 //

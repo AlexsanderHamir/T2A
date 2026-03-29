@@ -298,21 +298,14 @@ Wire format:
 | Successful `DELETE /tasks/{id}` | `task_deleted` |
 
 
-### Dev-only: synthetic SSE (`T2A_SSE_TEST=1`)
+### Dev-only: SSE “cron” (`T2A_SSE_TEST=1`)
 
-For local UI work, `**taskapi**` can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
+For local UI work, `**taskapi**` can start a **background ticker** (no extra HTTP routes). Set `**T2A_SSE_TEST=1`** (never enable in production without intent). Every **`3s`** by default (override with `**T2A_SSE_TEST_INTERVAL**`, or `**0**` to disable the ticker), the process:
 
-Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). A background ticker every **`3s`** (unless `**T2A_SSE_TEST_INTERVAL**` overrides, or `**0**` disables the ticker) runs the **same persistence path as `PATCH /tasks`**: a no-op priority update on the **first task** in list order (`id ASC`), then **`task_updated`** on the SSE hub. If there are no tasks, ticks are skipped.
+1. Pages through **`store.List`** with limit **200** and increasing offset — same ordering as **`GET /tasks`** (`id ASC`).
+2. For **each** task row, runs **`store.Update`** with the same **priority** as the current row (no-op field change, same transaction path as **`PATCH /tasks`**), then publishes **`task_updated`** on the SSE hub.
 
-When test mode is on, each successful `**POST /tasks**` still emits the normal `**task_created**` for the new row, then **also** performs that same **`store.Update` + `task_updated`** for the **first task in list order** (same ordering as `GET /tasks`: `id ASC`). If the list is empty after create, the extra step is skipped.
-
-| Method | Path               | Behavior                                                                                                                                                                           |
-| ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/dev/sse/ping`    | **`task_updated`**: `store.Update` (no-op priority) then SSE, same as `PATCH`. Query `**id**` or first list task. **404** if no tasks / missing task. **204** on success.             |
-| `POST` | `/dev/sse/publish` | **`task_updated`**: same as ping. **`task_created`** / **`task_deleted`**: SSE **only** (no DB write — use real `POST`/`DELETE /tasks` for persistence). **404** if id required and no tasks. |
-
-
-Vite dev server proxies `**/dev`** to `**taskapi**` (see `**web/vite.config.ts**`) so you can open `**http://localhost:5173/dev/sse/ping**` or `**curl -X POST http://127.0.0.1:8080/dev/sse/publish ...**` against the API directly.
+There are **no** extra dev-only HTTP paths; only normal REST + **`GET /events`** apply.
 
 Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative.
 
