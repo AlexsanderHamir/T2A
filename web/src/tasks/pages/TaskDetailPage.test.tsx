@@ -114,4 +114,52 @@ describe("TaskDetailPage", () => {
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveClass("task-detail-prompt-empty");
   });
+
+  it("lists updates newest first by seq", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t3") {
+        return Response.json({
+          id: "t3",
+          title: "Timeline order",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+        });
+      }
+      if (url === "/tasks/t3/events") {
+        return Response.json({
+          task_id: "t3",
+          events: [
+            {
+              seq: 1,
+              at: "2026-01-01T12:00:00.000Z",
+              type: "task_created",
+              by: "user",
+              data: {},
+            },
+            {
+              seq: 2,
+              at: "2026-01-02T12:00:00.000Z",
+              type: "sync_ping",
+              by: "user",
+              data: {},
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/t3", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^timeline order$/i }),
+    ).toBeInTheDocument();
+
+    const items = await screen.findAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent(/live sync check/i);
+    expect(items[1]).toHaveTextContent(/task created/i);
+  });
 });

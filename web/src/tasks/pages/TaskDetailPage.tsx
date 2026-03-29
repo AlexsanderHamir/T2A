@@ -85,6 +85,7 @@ export function TaskDetailPage({ app }: Props) {
   const task = taskQuery.data;
   const events = eventsQuery.data?.events ?? [];
   const attention = userAttention(task, events);
+  const timelineEvents = [...events].sort((a, b) => b.seq - a.seq);
 
   return (
     <section className="panel task-detail-panel">
@@ -191,7 +192,7 @@ export function TaskDetailPage({ app }: Props) {
           <p className="muted">No audit events yet.</p>
         ) : (
           <ol className="task-timeline">
-            {events.map((ev) => (
+            {timelineEvents.map((ev) => (
               <li key={ev.seq} className="task-timeline-item">
                 <div className="task-timeline-head">
                   <time dateTime={ev.at}>
