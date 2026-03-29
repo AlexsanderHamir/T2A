@@ -20,6 +20,16 @@ import (
 
 const cmdName = "taskapi"
 
+// Server timeouts: WriteTimeout is left unset so long-lived SSE streams are not cut off.
+// ReadHeaderTimeout mitigates slowloris; IdleTimeout limits idle keep-alive connections.
+const (
+	shutdownTimeout     = 10 * time.Second
+	readHeaderTimeout   = 10 * time.Second
+	readTimeout         = 60 * time.Second
+	idleTimeout         = 120 * time.Second
+	maxRequestHeaders   = 1 << 20
+)
+
 func main() {
 	port := flag.String("port", "8080", "HTTP listen port")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
@@ -65,7 +75,11 @@ func main() {
 	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", ln.Addr().String(), "url", baseURL)
 
 	srv := &http.Server{
-		Handler: mux,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		IdleTimeout:       idleTimeout,
+		MaxHeaderBytes:    maxRequestHeaders,
 	}
 
 	go func() {
@@ -79,10 +93,16 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown", "cmd", cmdName, "operation", "taskapi.shutdown", "err", err)
+		os.Exit(1)
+	}
+	if sqlDB, err := db.DB(); err != nil {
+		slog.Error("database close skipped", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
+	} else if err := sqlDB.Close(); err != nil {
+		slog.Error("database close", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
 		os.Exit(1)
 	}
 }
