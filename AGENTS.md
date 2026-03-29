@@ -7,10 +7,12 @@ Use this file as the **first pass** before editing code. Long-form contracts liv
 | Order | Doc | Why |
 |------|-----|-----|
 | 1 | **[README.md](README.md)** | Install, run **`taskapi`** / **`dbcheck`**, **`web/`** npm commands, dev scripts. |
-| 2 | **[docs/DESIGN.md](docs/DESIGN.md)** | HTTP routes, SSE, env vars (`DATABASE_URL`, `REPO_ROOT`), persistence, limitations. |
-| 3 | **[docs/WEB.md](docs/WEB.md)** | **`web/src`** layout, React Query + SSE, **`parseTaskApi`**, Vitest. |
+| 2 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | PR checklist, **`.env.example`**, API/doc sync pointers. |
+| 3 | **[docs/DESIGN.md](docs/DESIGN.md)** | HTTP routes, SSE, env vars (`DATABASE_URL`, `REPO_ROOT`), persistence, limitations. |
+| 4 | **[docs/WEB.md](docs/WEB.md)** | **`web/src`** layout, React Query + SSE, **`parseTaskApi`**, Vitest. |
+| 5 | **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** | Common dev failures (Vite proxy, SSE, **`REPO_ROOT`**). |
 
-**Cursor:** numbered rules in **`.cursor/rules/`** — **`01`–`08`**, **`09-local-verification`** + **`09-security-baseline`** (always-on bar), **`10-web-ui`** for **`web/`**. **`00-full-rules-pass.mdc`** defines **scope** (full repo vs Go-only vs web-only vs audit-only), **phases**, and the **completion report**. **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**.
+**Cursor:** **`99-repo-primer.mdc`** (always-on), **`01`–`08`**, **`11-api-contracts`** (HTTP/JSON sync), **`09-local-verification`** + **`09-security-baseline`**, **`10-web-ui`** for **`web/`**. **`00-full-rules-pass.mdc`** defines **scope** (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), **phases**, and the **completion report**. **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**. CI runs **`scripts/check.sh`** on push/PR (**`.github/workflows/ci.yml`**).
 
 ## Repository map
 

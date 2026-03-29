@@ -20,7 +20,7 @@ Applies only to **`web/`**. Backend rules remain governed by their own files. Be
 3. **Split UI into components and files.** Whenever it improves clarity, **extract** forms, tables, panels, hooks, and repeated chunks into **their own components** (and usually **their own files**). Prefer **`src/tasks/`** (feature) vs **`src/shared/`** (cross-feature) vs **`src/app/`** (shell). Avoid **large monolith files**—if a file approaches **~200 lines** or combines several distinct screens/flows, **refactor** with **one primary component per file** unless helpers are trivial and tightly coupled. Do not keep growing **`App.tsx`** when pieces can stand alone.
 4. **Centralize API access.** Keep HTTP calls and JSON typing in **`src/api/`** (e.g. **`tasks.ts`**, **`repo.ts`**, barrel **`index.ts`**) and shared shapes in **`src/types/`** (import **`@/types`**). Do not place raw or untyped `fetch` calls inside components for app API access.
 5. **Handle failures visibly.** For user-triggered actions, do not swallow errors. Show a toast, inline error, or banner, and log when appropriate.
-6. **Preserve accessibility.** Interactive elements must be keyboard accessible. Form controls must have an associated label or `aria-label`. Loading and error states must not rely on color alone.
+6. **Preserve accessibility.** Interactive elements must be keyboard accessible. Form controls must have an associated label or `aria-label`. Loading and error states must not rely on color alone. In tests, prefer **`getByRole`** / **`getByLabelText`**; use **`getByTestId`** only when semantic queries cannot target the element.
 7. **Keep styling maintainable.** Prefer **`App.css`** or colocated CSS modules. Avoid inline styles except for rare, isolated cases.
 
 ## Test stack

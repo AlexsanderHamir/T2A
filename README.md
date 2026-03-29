@@ -4,12 +4,12 @@
 
 Go implementation: **`github.com/AlexsanderHamir/T2A`**.
 
-**Documentation:** **[`docs/README.md`](docs/README.md)** (what to read first) · **[`docs/DESIGN.md`](docs/DESIGN.md)** ( **`taskapi`**, HTTP, SSE, DB) · **[`docs/WEB.md`](docs/WEB.md)** (optional **`web/`** SPA). **AI / contributor map:** **[`AGENTS.md`](AGENTS.md)**.
+**Documentation:** **[`docs/README.md`](docs/README.md)** (what to read first) · **[`docs/DESIGN.md`](docs/DESIGN.md)** ( **`taskapi`**, HTTP, SSE, DB) · **[`docs/WEB.md`](docs/WEB.md)** (optional **`web/`** SPA) · **[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)**. **Contributing / PRs:** **[`CONTRIBUTING.md`](CONTRIBUTING.md)**. **AI / contributor map:** **[`AGENTS.md`](AGENTS.md)**.
 
 ## Prerequisites
 
 - **Go** 1.25+
-- **Postgres** and a repo-root **`.env`** (gitignored) with **`DATABASE_URL`**
+- **Postgres** and a repo-root **`.env`** (gitignored) with **`DATABASE_URL`** — copy from **[`.env.example`](.env.example)**
 
 ## Build and test
 
@@ -76,7 +76,7 @@ Opens Vite’s URL (often **`http://localhost:5173`**). Dev server **proxies** *
 
 ## For developers
 
-**Orientation (repo map, test commands, pitfalls):** **[`AGENTS.md`](AGENTS.md)**.
+**Orientation (repo map, test commands, pitfalls):** **[`AGENTS.md`](AGENTS.md)**. **PR checklist and API sync:** **[`CONTRIBUTING.md`](CONTRIBUTING.md)**. **Common dev issues:** **[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)**.
 
 ```bash
 go doc -all ./pkgs/tasks/...

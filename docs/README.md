@@ -7,9 +7,11 @@ Long-form design and contracts live here; the root **`README.md`** stays command
 | Doc | Use it for |
 |-----|------------|
 | **[../AGENTS.md](../AGENTS.md)** | Short map for **humans and coding agents**: where code lives, what to run before finishing, link-out to rules. |
+| **[../CONTRIBUTING.md](../CONTRIBUTING.md)** | PR checklist, **`.env.example`**, API/client sync with **`parseTaskApi`**. |
 | **[../README.md](../README.md)** | Prerequisites, build/test, run **`dbcheck`** / **`taskapi`**, dev scripts, npm commands for **`web/`**. |
 | **[DESIGN.md](./DESIGN.md)** | **`taskapi`**: HTTP + SSE, env vars, **`REPO_ROOT`** / **`/repo`**, persistence, limits, Mermaid for the server. |
 | **[WEB.md](./WEB.md)** | **`web/`** SPA: React Query, SSE invalidation, **`parseTaskApi`**, **`web/src`** layout, tests. |
+| **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** | Dev-only: Vite **`/tasks`** refresh, SSE dev mode, **`REPO_ROOT`**, CI/local check failures. |
 
 **Go:** route lists and behavior next to code — **`go doc`** on **`pkgs/tasks/...`**, **`pkgs/repo`**, **`internal/envload`**, **`cmd/taskapi`**, **`cmd/dbcheck`**.
 

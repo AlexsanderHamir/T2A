@@ -13,20 +13,21 @@ When this file is referenced, run a **structured pass** against **`.cursor/rules
 
 | User intent | Apply | Skip or lighten |
 |-------------|--------|-------------------|
-| **Full repo** (default) | **`01` → `07`**, **`09`** (both files), **`10`** | — |
-| **Backend / Go only** | **`01` → `07`**, **`09`** | **`10-web-ui`** unless `web/` was touched |
-| **Frontend / `web/` only** | **`10`**, **`09-local-verification`** (and **`09-security`** for secrets in client config) | Deep **`01`–`07`** on Go only if Go files changed |
+| **Full repo** (default) | **`01` → `07`**, **`11-api-contracts`**, **`09`** (both files), **`10`** | — |
+| **Frontend then backend** (explicit user order) | **`10`**, **`09-local`**, **`09-security`**, then **`01` → `07`**, **`11`**, **`09`** | Same verification step at the end |
+| **Backend / Go only** | **`01` → `07`**, **`11`**, **`09`** | **`10-web-ui`** unless `web/` was touched |
+| **Frontend / `web/` only** | **`10`**, **`09-local-verification`** (and **`09-security`** for secrets in client config) | Deep **`01`–`07`** / **`11`** on Go only if Go files changed |
 | **Audit / review, no commit** | Read and fix per rules; **do not** run **`08`** | Say explicitly: “audit-only; no commit.” |
 
-If unclear, ask once: **full repo** vs **Go-only** vs **web-only**, and whether to **commit and push** at the end.
+If unclear, ask once: **full repo** vs **Go-only** vs **web-only**, **frontend-then-backend** vs default order, and whether to **commit and push** at the end.
 
 ## Phases
 
 1. **Orient** — Skim **`AGENTS.md`** (repo map, commands). List **`.cursor/rules/`**, sort by numeric prefix, skip **`00-*`** when *applying* (this file is the playbook, not a style rule).
-2. **Substantive rules** — In order **`01` → `07`**, then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit).
+2. **Substantive rules** — In order **`01` → `07`**, then **`11-api-contracts`** (read the checklist when changing HTTP/SSE/JSON boundaries; on a full pass, skim to avoid drift), then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit). **`99-repo-primer`** is always-on context only, not a separate pass step.
 3. **Verify** — Once fixes for this pass are done, run the **full bar** once:
    - **`scripts/check.ps1`** (Windows) or **`scripts/check.sh`** (Unix) from repo root, **or** the equivalent: **`gofmt`** check / **`go fmt`**, **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`** (see **`09-local-verification.mdc`**).
-   - Optional: for material changes under **`pkgs/`** / **`internal/`**, run coverage per **`06-testing.mdc`** and close obvious gaps.
+   - **Recommended:** for meaningful behavior changes under **`pkgs/`** / **`internal/`**, run scoped coverage per **`06-testing.mdc`** and close obvious gaps (or note why not).
 4. **Publish (rule `08`)** — Only if there are changes to commit **and** the user did not ask for audit-only:
    - Apply **`08-atomic-commits`**: atomic commits, then **`git push`** (or set upstream), unless push is impossible—report outcome.
 5. **Nothing to do** — If the tree is clean and no rule required edits, say so briefly (no fake commits).
