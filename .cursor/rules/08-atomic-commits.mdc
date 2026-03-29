@@ -2,6 +2,7 @@
 description: >-
   When the user asks to commit code. Invariants: 1 commit = 1 revertible concern;
   no unrelated staged changes; commit message must describe a single concern.
+  After committing, push to the remote unless the user opts out or push is impossible.
 alwaysApply: false
 ---
 
@@ -14,6 +15,7 @@ alwaysApply: false
 1. **Atomicity:** one commit touches only one logical concern.
 2. **Revertibility:** reverting the commit should not remove unrelated behavior.
 3. **Hygiene:** build and relevant tests pass at `HEAD` before committing.
+4. **Publish:** after one or more atomic commits land on the current branch, **push** them to **`origin`** (or the configured remote) so work is backed up and visible. Use `git push` (or `git push -u origin <branch>` when upstream is not set yet). If the user explicitly says not to push, or push fails (auth, network, non-fast-forward), stop, report the error, and do not rewrite history without instruction.
 
 ## Commit rule
 
@@ -45,3 +47,4 @@ Examples:
 - [ ] Commit message describes that concern clearly
 - [ ] Build passes
 - [ ] Relevant tests pass
+- [ ] Commits are **pushed** (or push failure / skip reason is reported to the user)

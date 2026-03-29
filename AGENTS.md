@@ -41,7 +41,7 @@ Default tests must **not** require real Postgres, real outbound network, or a ru
 
 - **JSON at the boundary:** Web treats responses as **`unknown`** until **`parseTaskApi`** validates; keep that pipeline when adding fields.
 - **Same-origin in prod:** **`taskapi`** does not add CORS; dev uses Vite proxy (**`web/vite.config.ts`**).
-- **Atomic commits:** **`.cursor/rules/08-atomic-commits.mdc`** — one logical concern per commit, conventional message style.
+- **Atomic commits:** **`.cursor/rules/08-atomic-commits.mdc`** — one logical concern per commit, conventional message style; **push** after committing unless the user opts out or push is not possible.
 - **Docs:** When you change flags, routes, or env vars, update **`docs/DESIGN.md`** (and **`docs/WEB.md`** / root **`README.md`** if user-facing commands change); see **`docs/README.md`** “Where to put updates”.
 
 ## Quick pitfalls

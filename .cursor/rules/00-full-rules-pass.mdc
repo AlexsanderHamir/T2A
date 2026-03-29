@@ -27,6 +27,7 @@ When this file is referenced, execute a full repo pass against `.cursor/rules/` 
    - run the full verification bar: **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`**, or **`scripts/check.ps1`** / **`scripts/check.sh`** from repo root
    - apply the atomic commits rule
    - create atomic commits
+   - **`git push`** (or set upstream if needed), unless the user asked not to push or push fails—then report the outcome
 7. If there is nothing to change or commit, state that clearly.
 
 ## Constraints
