@@ -47,3 +47,6 @@ export const PRIORITIES: Priority[] = [
   "high",
   "critical",
 ];
+
+/** New tasks start here; status is not user-selectable in the UI. */
+export const DEFAULT_NEW_TASK_STATUS: Status = "ready";

@@ -1,4 +1,10 @@
-import type { Priority, Status, Task, TaskListResponse } from "@/types";
+import {
+  DEFAULT_NEW_TASK_STATUS,
+  type Priority,
+  type Status,
+  type Task,
+  type TaskListResponse,
+} from "@/types";
 import { parseTask, parseTaskListResponse } from "./parseTaskApi";
 import { jsonHeaders, readError } from "./shared";
 
@@ -33,7 +39,7 @@ export async function createTask(input: {
     body: JSON.stringify({
       title: input.title,
       initial_prompt: input.initial_prompt ?? "",
-      status: input.status ?? "",
+      status: input.status ?? DEFAULT_NEW_TASK_STATUS,
       priority: input.priority ?? "",
       ...(input.id ? { id: input.id } : {}),
     }),

@@ -112,6 +112,29 @@ describe("createTask", () => {
       status: "running",
     });
   });
+
+  it("defaults status to ready when omitted", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "x",
+          title: "A",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await createTask({ title: "A" });
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      title: "A",
+      status: "ready",
+    });
+  });
 });
 
 describe("patchTask", () => {

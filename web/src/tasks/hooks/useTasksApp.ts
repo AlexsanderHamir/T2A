@@ -7,7 +7,12 @@ import {
   patchTask,
 } from "../../api";
 import { taskQueryKeys } from "../queryKeys";
-import type { Priority, Status, Task } from "@/types";
+import {
+  DEFAULT_NEW_TASK_STATUS,
+  type Priority,
+  type Status,
+  type Task,
+} from "@/types";
 import { useTaskEventStream } from "./useTaskEventStream";
 
 function errorMessage(e: unknown): string {
@@ -127,7 +132,7 @@ export function useTasksApp() {
     createMutation.mutate({
       title: newTitle.trim(),
       initial_prompt: newPrompt,
-      status: "ready",
+      status: DEFAULT_NEW_TASK_STATUS,
       priority: newPriority,
     });
   }
