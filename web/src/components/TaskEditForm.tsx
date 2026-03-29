@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import type { Priority, Status } from "../types";
 import { PrioritySelect } from "./PrioritySelect";
+import { RichPromptEditor } from "./RichPromptEditor";
 import { StatusSelect } from "./StatusSelect";
 
 type Props = {
@@ -60,12 +61,17 @@ export function TaskEditForm({
             onChange={onPriorityChange}
           />
         </div>
-        <div className="field grow stack-tight">
-          <label htmlFor="task-edit-prompt">Initial prompt</label>
-          <textarea
+        <div className="field grow stack-tight prompt-field-full">
+          <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">
+            Initial prompt
+          </label>
+          <RichPromptEditor
+            key={taskId}
             id="task-edit-prompt"
             value={prompt}
-            onChange={(ev) => onPromptChange(ev.target.value)}
+            onChange={onPromptChange}
+            disabled={saving}
+            placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
           />
         </div>
         <div className="row stack-row-actions">

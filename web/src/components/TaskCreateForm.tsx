@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import type { Priority, Status } from "../types";
 import { PrioritySelect } from "./PrioritySelect";
+import { RichPromptEditor } from "./RichPromptEditor";
 import { StatusSelect } from "./StatusSelect";
 
 type Props = {
@@ -57,13 +58,17 @@ export function TaskCreateForm({
             Create
           </button>
         </div>
-        <div className="field grow stack-tight">
-          <label htmlFor="task-new-prompt">Initial prompt</label>
-          <textarea
+        <div className="field grow stack-tight prompt-field-full">
+          <label id="task-new-prompt-label" htmlFor="task-new-prompt">
+            Initial prompt
+          </label>
+          <RichPromptEditor
+            key="create-prompt"
             id="task-new-prompt"
             value={prompt}
-            onChange={(ev) => onPromptChange(ev.target.value)}
-            placeholder="Optional context for an agent…"
+            onChange={onPromptChange}
+            disabled={saving}
+            placeholder="Optional context for an agent… Use the toolbar for headings and bold. Type @ to pick a file from the repo."
           />
         </div>
       </form>

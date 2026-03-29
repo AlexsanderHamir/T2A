@@ -36,6 +36,12 @@ describe("App", () => {
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
       }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -78,6 +84,12 @@ describe("App", () => {
           limit: 200,
           offset: 0,
         });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
       }
       if (url === "/tasks" && init?.method === "POST") {
         created = true;

@@ -1,3 +1,4 @@
+import { previewTextFromPrompt } from "../promptFormat";
 import type { Task } from "../types";
 
 type Props = {
@@ -46,14 +47,16 @@ export function TaskListSection({
             </tr>
           </thead>
           <tbody>
-            {tasks.map((t) => (
-              <tr key={t.id}>
+            {tasks.map((t) => {
+              const promptPreview = previewTextFromPrompt(t.initial_prompt);
+              return (
+                <tr key={t.id}>
                 <td>{t.title}</td>
                 <td>{t.status}</td>
                 <td>{t.priority}</td>
                 <td>
-                  <div className="prompt-preview" title={t.initial_prompt}>
-                    {t.initial_prompt || "—"}
+                  <div className="prompt-preview" title={promptPreview}>
+                    {promptPreview || "—"}
                   </div>
                 </td>
                 <td>
@@ -76,8 +79,9 @@ export function TaskListSection({
                     </button>
                   </div>
                 </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

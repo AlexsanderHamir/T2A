@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       "/tasks": { target: api, changeOrigin: true },
       "/events": { target: api, changeOrigin: true },
+      "/repo": { target: api, changeOrigin: true },
     },
   },
   test: {
