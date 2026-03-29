@@ -10,7 +10,7 @@ Use this file as the **first pass** before editing code. Long-form contracts liv
 | 2 | **[docs/DESIGN.md](docs/DESIGN.md)** | HTTP routes, SSE, env vars (`DATABASE_URL`, `REPO_ROOT`), persistence, limitations. |
 | 3 | **[docs/WEB.md](docs/WEB.md)** | **`web/src`** layout, React Query + SSE, **`parseTaskApi`**, Vitest. |
 
-**Cursor:** numbered rules in **`.cursor/rules/`** — **`01`–`08`**, **`09-local-verification`** + **`09-security-baseline`** (always-on bar), **`10-web-ui`** for **`web/`**. **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**.
+**Cursor:** numbered rules in **`.cursor/rules/`** — **`01`–`08`**, **`09-local-verification`** + **`09-security-baseline`** (always-on bar), **`10-web-ui`** for **`web/`**. **`00-full-rules-pass.mdc`** defines **scope** (full repo vs Go-only vs web-only vs audit-only), **phases**, and the **completion report**. **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**.
 
 ## Repository map
 
