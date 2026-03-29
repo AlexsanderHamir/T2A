@@ -10,7 +10,7 @@ Canonical description of the optional **Vite + React + TypeScript** SPA. Server 
 
 ## Stack
 
-Vite 5, React 18, TypeScript strict, TanStack Query (**`queryClient.ts`**), TipTap (**`RichPromptEditor`**), **`fetch`** only in **`api.ts`**, Vitest + Testing Library (**`fetch`** / **`EventSource`** mocked in tests).
+Vite 5, React 18, TypeScript strict, TanStack Query (**`queryClient.ts`**), TipTap (**`RichPromptEditor`**), **`fetch`** only under **`src/api/`** (import **`@/api`** or **`../api`**), Vitest + Testing Library (**`fetch`** / **`EventSource`** mocked in tests).
 
 ## SPA in the system
 
@@ -19,7 +19,7 @@ flowchart TB
   subgraph spa["web/ SPA"]
     UI[Components + useTasksApp]
     RQ[React Query]
-    API[api.ts + parseTaskApi]
+    API[api/ tasks + repo]
     ES[EventSource /events]
     UI --> RQ
     RQ --> API
@@ -59,7 +59,7 @@ flowchart LR
 
 ## React Query + SSE
 
-- **Query key:** **`taskQueryKeys.list()`** → **`GET /tasks`** (limit 200 in **`api.ts`**).
+- **Query key:** **`taskQueryKeys.list()`** in **`tasks/queryKeys.ts`** → **`GET /tasks`** (limit 200 in **`api/tasks.ts`**).
 - **Loading:** **`loading`** = no cached list yet; **`listRefreshing`** = background refetch (mutations, invalidation, focus, SSE); **`saving`** = mutation in flight (not background list fetch).
 - **SSE:** each **`data:`** line schedules debounced invalidation → refetch list; **`parseTaskApi`** runs on the response.
 
@@ -81,27 +81,21 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| **`main.tsx`** | **`QueryClientProvider`**. |
-| **`App.tsx`** | **`useTasksApp`** + presentational components. |
-| **`queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev **`QueryCache`/`MutationCache` `onError`**. |
-| **`taskQueryKeys.ts`** | Stable keys (e.g. **`['tasks','list']`**). |
-| **`api.ts`** | **`fetch`** for **`/tasks`** and **`/repo`**-related calls. |
-| **`parseTaskApi.ts`** | **`parseTask`**, **`parseTaskListResponse`** from **`unknown`**. |
-| **`types.ts`** | Types aligned with REST JSON. |
-| **`hooks/useTasksApp.ts`** | Forms, dialogs, query + mutations. |
-| **`hooks/useTaskEventStream.ts`** | **`EventSource`**, debounced invalidation. |
-| **`components/`** | Forms, table, **`RichPromptEditor`** (TipTap), dialogs, **`ErrorBanner`**, **`StreamStatusHint`**, selects. |
-| **`extensions/`** | **`repoFileSuggestion`** (`@` + **`/repo/search`**). |
-| **`promptFormat.ts`** | HTML vs legacy plain text, preview stripping for the task table. |
+| **`app/`** | **`main.tsx`** (entry, **`QueryClientProvider`**), **`App.tsx`**, **`App.css`**, **`App.test.tsx`**. |
+| **`lib/queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev cache **`onError`**. |
+| **`types/`** | Shared task domain types (**`task.ts`**, barrel **`index.ts`**); imported as **`@/types`**. |
+| **`tasks/`** | Task feature: **`queryKeys.ts`** (React Query keys), **`hooks/`**, **`components/`**, **`extensions/`** (e.g. **`repoFileSuggestion`**), **`promptFormat.ts`**. |
+| **`shared/`** | Cross-feature components and helpers (e.g. **`ErrorBanner`**). |
+| **`api/`** | HTTP + JSON parsing: **`index.ts`** re-exports **`tasks.ts`**, **`repo.ts`**, **`parseTaskApi.ts`**, **`shared.ts`**. |
 | **`test/`** | Vitest setup, **`EventSource`** stub, **`requestUrl`**. |
 
 ## JSON boundary
 
-Responses are **`unknown`** until **`parseTaskApi`** runs; bad shapes fail with tests in **`parseTaskApi.test.ts`** and **`api.test.ts`**.
+Responses are **`unknown`** until **`parseTaskApi`** runs; bad shapes fail with tests in **`api/parseTaskApi.test.ts`** and **`api/tasks.test.ts`**.
 
 ## Testing
 
-**`npm test`** / **`npm run build`** from **`web/`** after meaningful UI or **`api.ts`** changes (see **`.cursor/rules/10-web-ui.mdc`**). No real network in default tests.
+**`npm test`** / **`npm run build`** from **`web/`** after meaningful UI or **`src/api/`** changes (see **`.cursor/rules/10-web-ui.mdc`**). No real network in default tests.
 
 ## Client limitations
 
