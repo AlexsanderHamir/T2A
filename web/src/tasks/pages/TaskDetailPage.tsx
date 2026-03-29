@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listTaskEvents } from "@/api";
-import type { TaskEventType } from "@/types";
 import { promptHasVisibleContent } from "../promptFormat";
 import { userAttention } from "../taskAttention";
-import { eventTypeLabel } from "../taskEventLabels";
+import { TaskUpdatesTimeline } from "../components/TaskUpdatesTimeline";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -178,67 +177,13 @@ export function TaskDetailPage({ app }: Props) {
         )}
       </div>
 
-      <div className="task-detail-timeline">
-        <h3 className="task-detail-subheading">Updates</h3>
-        {eventsQuery.isPending ? (
-          <p className="muted">Loading history…</p>
-        ) : eventsQuery.isError ? (
-          <p className="err-inline" role="alert">
-            {eventsQuery.error instanceof Error
-              ? eventsQuery.error.message
-              : "Could not load updates."}
-          </p>
-        ) : events.length === 0 ? (
-          <p className="muted">No audit events yet.</p>
-        ) : (
-          <ol className="task-timeline">
-            {timelineEvents.map((ev) => (
-              <li key={ev.seq} className="task-timeline-item">
-                <div className="task-timeline-head">
-                  <time dateTime={ev.at}>
-                    {new Date(ev.at).toLocaleString()}
-                  </time>
-                  <span className="task-timeline-type">
-                    {eventTypeLabel(ev.type)}
-                  </span>
-                  <span className="task-timeline-by">{ev.by}</span>
-                </div>
-                <EventDataPreview data={ev.data} eventType={ev.type} />
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+      <TaskUpdatesTimeline
+        isPending={eventsQuery.isPending}
+        isError={eventsQuery.isError}
+        error={eventsQuery.error}
+        timelineEvents={timelineEvents}
+        isEmpty={events.length === 0}
+      />
     </section>
-  );
-}
-
-function EventDataPreview({
-  data,
-  eventType,
-}: {
-  data: Record<string, unknown>;
-  eventType: TaskEventType;
-}) {
-  const keys = Object.keys(data);
-  if (keys.length === 0) return null;
-  if (
-    eventType === "status_changed" ||
-    eventType === "priority_changed" ||
-    eventType === "message_added" ||
-    eventType === "prompt_appended"
-  ) {
-    const from = data.from;
-    const to = data.to;
-    if (typeof from === "string" && typeof to === "string") {
-      return (
-        <pre className="task-timeline-data">
-          {from} → {to}
-        </pre>
-      );
-    }
-  }
-  return (
-    <pre className="task-timeline-data">{JSON.stringify(data, null, 2)}</pre>
   );
 }
