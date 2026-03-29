@@ -135,18 +135,24 @@ func writeError(w http.ResponseWriter, op string, err error, code int) {
 	writeJSONError(w, op, code, msg)
 }
 
-func writeStoreError(w http.ResponseWriter, op string, err error) {
-	code := http.StatusInternalServerError
+// storeErrHTTPResponse maps store/domain errors to an HTTP status and JSON error body message.
+func storeErrHTTPResponse(err error) (code int, msg string) {
+	code = http.StatusInternalServerError
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		code = http.StatusNotFound
 	case errors.Is(err, domain.ErrInvalidInput):
 		code = http.StatusBadRequest
 	}
-	msg := storeErrorClientMessage(err)
+	msg = storeErrorClientMessage(err)
 	if code == http.StatusInternalServerError {
 		msg = "internal server error"
 	}
+	return code, msg
+}
+
+func writeStoreError(w http.ResponseWriter, op string, err error) {
+	code, msg := storeErrHTTPResponse(err)
 	logRequestFailure(op, err, code)
 	writeJSONError(w, op, code, msg)
 }

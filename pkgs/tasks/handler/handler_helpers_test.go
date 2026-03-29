@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -63,6 +64,33 @@ func TestDecodeJSON_rejectsTrailingJSON(t *testing.T) {
 	}
 	if !errors.Is(err, domain.ErrInvalidInput) && !strings.Contains(err.Error(), "trailing") {
 		t.Fatalf("unexpected err: %v", err)
+	}
+}
+
+func TestStoreErrHTTPResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		wantCode int
+		wantMsg  string
+	}{
+		{name: "not_found", err: domain.ErrNotFound, wantCode: http.StatusNotFound, wantMsg: "not found"},
+		{name: "invalid_input_plain", err: domain.ErrInvalidInput, wantCode: http.StatusBadRequest, wantMsg: "bad request"},
+		{
+			name:     "invalid_input_detail",
+			err:      fmt.Errorf("%w: empty id", domain.ErrInvalidInput),
+			wantCode: http.StatusBadRequest,
+			wantMsg:  "empty id",
+		},
+		{name: "internal", err: errors.New("db unavailable"), wantCode: http.StatusInternalServerError, wantMsg: "internal server error"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, msg := storeErrHTTPResponse(tt.err)
+			if code != tt.wantCode || msg != tt.wantMsg {
+				t.Fatalf("code=%d msg=%q want code=%d msg=%q", code, msg, tt.wantCode, tt.wantMsg)
+			}
+		})
 	}
 }
 
