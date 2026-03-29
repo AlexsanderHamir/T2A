@@ -72,4 +72,77 @@ describe("TaskListSection", () => {
     await user.click(screen.getByRole("button", { name: /^delete$/i }));
     expect(onRequestDelete).toHaveBeenCalledWith(task);
   });
+
+  it("filters rows by status and priority", async () => {
+    const user = userEvent.setup();
+    const tasks = [
+      {
+        id: "1",
+        title: "Low ready",
+        initial_prompt: "",
+        status: "ready" as const,
+        priority: "low" as const,
+      },
+      {
+        id: "2",
+        title: "High done",
+        initial_prompt: "",
+        status: "done" as const,
+        priority: "high" as const,
+      },
+    ];
+    render(
+      <TaskListSection
+        tasks={tasks}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Low ready")).toBeInTheDocument();
+    expect(screen.getByText("High done")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText(/^status$/i),
+      "ready",
+    );
+    expect(screen.getByText("Low ready")).toBeInTheDocument();
+    expect(screen.queryByText("High done")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/^status$/i), "all");
+    await user.selectOptions(
+      screen.getByLabelText(/^priority$/i),
+      "high",
+    );
+    expect(screen.queryByText("Low ready")).not.toBeInTheDocument();
+    expect(screen.getByText("High done")).toBeInTheDocument();
+  });
+
+  it("shows copy when no tasks match filters", async () => {
+    const user = userEvent.setup();
+    render(
+      <TaskListSection
+        tasks={[
+          {
+            id: "1",
+            title: "Only ready",
+            initial_prompt: "",
+            status: "ready" as const,
+            priority: "medium" as const,
+          },
+        ]}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText(/^status$/i), "failed");
+    expect(
+      screen.getByText("No tasks match these filters."),
+    ).toBeInTheDocument();
+  });
 });
