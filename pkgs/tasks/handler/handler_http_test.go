@@ -108,6 +108,38 @@ func TestHTTP_get_not_found(t *testing.T) {
 	if res.StatusCode != http.StatusNotFound {
 		t.Fatalf("status %d", res.StatusCode)
 	}
+	var errBody struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&errBody); err != nil {
+		t.Fatal(err)
+	}
+	if errBody.Error != "not found" {
+		t.Fatalf("error body %q", errBody.Error)
+	}
+}
+
+func TestHTTP_health(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var body struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Status != "ok" {
+		t.Fatalf("status field %q", body.Status)
+	}
 }
 
 func TestHTTP_patch_and_delete(t *testing.T) {

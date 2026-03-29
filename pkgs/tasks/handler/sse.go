@@ -77,13 +77,13 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.sse"
 	if h.hub == nil {
-		http.Error(w, "event stream unavailable", http.StatusServiceUnavailable)
+		writeJSONError(w, op, http.StatusServiceUnavailable, "event stream unavailable")
 		return
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		slog.Error("streaming unsupported", "cmd", httpLogCmd, "operation", op, "err", errors.New("response writer is not an http.Flusher"))
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		writeJSONError(w, op, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")

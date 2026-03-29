@@ -29,6 +29,7 @@ type Handler struct {
 func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	h := &Handler{store: s, hub: hub, repo: rep}
 	m := http.NewServeMux()
+	m.Handle("GET /health", http.HandlerFunc(health))
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
@@ -59,6 +60,11 @@ type listResponse struct {
 	Tasks  []domain.Task `json:"tasks"`
 	Limit  int           `json:"limit"`
 	Offset int           `json:"offset"`
+}
+
+func health(w http.ResponseWriter, r *http.Request) {
+	const op = "health"
+	writeJSON(w, op, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -201,8 +207,13 @@ func decodeJSON(r io.Reader, dst any) error {
 	return fmt.Errorf("%w: json trailing data", domain.ErrInvalidInput)
 }
 
+func setJSONHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+}
+
 func writeJSON(w http.ResponseWriter, op string, code int, v any) {
-	w.Header().Set("Content-Type", "application/json")
+	setJSONHeaders(w)
 	w.WriteHeader(code)
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
@@ -211,24 +222,69 @@ func writeJSON(w http.ResponseWriter, op string, code int, v any) {
 	}
 }
 
+func userFacingJSONError(err error) string {
+	s := err.Error()
+	if strings.HasPrefix(s, "json decode: ") {
+		return strings.TrimPrefix(s, "json decode: ")
+	}
+	if errors.Is(err, domain.ErrInvalidInput) {
+		return "request body must contain a single JSON value"
+	}
+	if strings.HasPrefix(s, "json trailing data:") {
+		return "request body must contain a single JSON value"
+	}
+	return s
+}
+
+func storeErrorClientMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
+		return "not found"
+	case errors.Is(err, domain.ErrInvalidInput):
+		if d := invalidInputDetail(err); d != "" {
+			return d
+		}
+		return "bad request"
+	default:
+		return "internal server error"
+	}
+}
+
+func invalidInputDetail(err error) string {
+	s := err.Error()
+	const mark = "tasks: invalid input: "
+	if i := strings.Index(s, mark); i >= 0 {
+		return strings.TrimSpace(s[i+len(mark):])
+	}
+	return ""
+}
+
 func writeError(w http.ResponseWriter, op string, err error, code int) {
 	logRequestFailure(op, err, code)
-	http.Error(w, http.StatusText(code), code)
+	msg := http.StatusText(code)
+	if code == http.StatusBadRequest {
+		msg = userFacingJSONError(err)
+		if msg == "" {
+			msg = "bad request"
+		}
+	}
+	writeJSONError(w, op, code, msg)
 }
 
 func writeStoreError(w http.ResponseWriter, op string, err error) {
-	msg := "internal server error"
 	code := http.StatusInternalServerError
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
-		msg = "not found"
 		code = http.StatusNotFound
 	case errors.Is(err, domain.ErrInvalidInput):
-		msg = "bad request"
 		code = http.StatusBadRequest
 	}
+	msg := storeErrorClientMessage(err)
+	if code == http.StatusInternalServerError {
+		msg = "internal server error"
+	}
 	logRequestFailure(op, err, code)
-	http.Error(w, msg, code)
+	writeJSONError(w, op, code, msg)
 }
 
 func logRequestFailure(op string, err error, httpStatus int) {

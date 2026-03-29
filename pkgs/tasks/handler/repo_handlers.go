@@ -27,7 +27,7 @@ type jsonErrorBody struct {
 }
 
 func writeJSONError(w http.ResponseWriter, op string, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
+	setJSONHeaders(w)
 	w.WriteHeader(code)
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)

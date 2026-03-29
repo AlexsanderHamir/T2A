@@ -74,8 +74,9 @@ func main() {
 		rep = r
 		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
 	}
+	api := handler.WithRecovery(handler.NewHandler(taskStore, hub, rep))
 	mux := http.NewServeMux()
-	mux.Handle("/", handler.NewHandler(taskStore, hub, rep))
+	mux.Handle("/", api)
 
 	ln, err := net.Listen("tcp", net.JoinHostPort("", *port))
 	if err != nil {
