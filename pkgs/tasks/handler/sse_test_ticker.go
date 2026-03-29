@@ -17,9 +17,9 @@ func SSETestEnabled() bool {
 	return strings.TrimSpace(os.Getenv(sseTestEnvVar)) == "1"
 }
 
-// RunSSETestTicker runs a background loop: on each tick, lists all tasks via store.List (same as GET /tasks
-// pagination, max 200 per page) and for each row runs persistTaskUpdatedSSE (same path as PATCH /tasks) then SSE.
-// No extra HTTP routes. Call only when SSETestEnabled(); interval must be >= 1s.
+// RunSSETestTicker runs a background loop: on each tick, pages store.List (limit 200, same as GET /tasks) and
+// for each task runs persistTaskUpdatedSSE (AppendTaskEvent sync_ping + hub task_updated). No extra HTTP routes.
+// Call only when SSETestEnabled(); interval must be >= 1s.
 func RunSSETestTicker(st *store.Store, hub *SSEHub, every time.Duration) {
 	if st == nil || hub == nil || every < time.Second {
 		return
