@@ -1,11 +1,10 @@
 import type { FormEvent } from "react";
-import type { Priority, Status } from "../types";
+import type { Priority, Status } from "@/types";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
 import { StatusSelect } from "./StatusSelect";
 
 type Props = {
-  taskId: string;
   title: string;
   prompt: string;
   status: Status;
@@ -16,11 +15,9 @@ type Props = {
   onStatusChange: (s: Status) => void;
   onPriorityChange: (p: Priority) => void;
   onSubmit: (e: FormEvent) => void;
-  onCancel: () => void;
 };
 
-export function TaskEditForm({
-  taskId,
+export function TaskCreateForm({
   title,
   prompt,
   status,
@@ -31,61 +28,48 @@ export function TaskEditForm({
   onStatusChange,
   onPriorityChange,
   onSubmit,
-  onCancel,
 }: Props) {
   return (
     <section className="panel">
-      <h2>Edit task</h2>
-      <form onSubmit={(e) => void onSubmit(e)}>
-        <p className="muted stack-tight-zero">
-          <code>{taskId}</code>
-        </p>
+      <h2>New task</h2>
+      <form onSubmit={onSubmit}>
         <div className="row">
           <div className="field grow">
-            <label htmlFor="task-edit-title">Title</label>
+            <label htmlFor="task-new-title">Title</label>
             <input
-              id="task-edit-title"
+              id="task-new-title"
               value={title}
               onChange={(ev) => onTitleChange(ev.target.value)}
+              placeholder="What should get done?"
               required
             />
           </div>
           <StatusSelect
-            id="task-edit-status"
+            id="task-new-status"
             value={status}
             onChange={onStatusChange}
           />
           <PrioritySelect
-            id="task-edit-priority"
+            id="task-new-priority"
             value={priority}
             onChange={onPriorityChange}
           />
+          <button type="submit" disabled={saving}>
+            Create
+          </button>
         </div>
         <div className="field grow stack-tight prompt-field-full">
-          <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">
+          <label id="task-new-prompt-label" htmlFor="task-new-prompt">
             Initial prompt
           </label>
           <RichPromptEditor
-            key={taskId}
-            id="task-edit-prompt"
+            key="create-prompt"
+            id="task-new-prompt"
             value={prompt}
             onChange={onPromptChange}
             disabled={saving}
-            placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
+            placeholder="Optional context for an agent… Use the toolbar for headings and bold. Type @ to pick a file from the repo."
           />
-        </div>
-        <div className="row stack-row-actions">
-          <button type="submit" disabled={saving}>
-            Save
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={saving}
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
         </div>
       </form>
     </section>

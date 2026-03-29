@@ -1,5 +1,4 @@
-import type { Priority } from "../types";
-import { PRIORITIES } from "../types";
+import { PRIORITIES, type Priority } from "@/types";
 
 type Props = {
   id: string;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTask, deleteTask, listTasks, patchTask } from "./api";
+import { createTask, deleteTask, listTasks, patchTask } from "./index";
 
 describe("listTasks", () => {
   afterEach(() => {

@@ -1,5 +1,4 @@
-import type { Status } from "../types";
-import { STATUSES } from "../types";
+import { STATUSES, type Status } from "@/types";
 
 type Props = {
   id: string;

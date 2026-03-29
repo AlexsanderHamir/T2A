@@ -3,8 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { stubEventSource } from "./test/browserMocks";
-import { requestUrl } from "./test/requestUrl";
+import { stubEventSource } from "../test/browserMocks";
+import { requestUrl } from "../test/requestUrl";
 
 function renderApp() {
   const queryClient = new QueryClient({

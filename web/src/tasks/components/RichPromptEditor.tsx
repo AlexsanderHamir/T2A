@@ -7,7 +7,7 @@ import {
   RepoFileSuggestion,
   type RepoFileSuggestionOptions,
 } from "../extensions/repoFileSuggestion";
-import { validateRepoRange } from "../api";
+import { validateRepoRange } from "../../api";
 import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,

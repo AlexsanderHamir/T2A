@@ -8,7 +8,7 @@ import { ReactRenderer } from "@tiptap/react";
 import type { Instance as TippyInstance } from "tippy.js";
 import tippy from "tippy.js";
 import { PluginKey } from "@tiptap/pm/state";
-import { searchRepoFiles } from "../api";
+import { searchRepoFiles } from "../../api";
 
 export type RepoSuggestionItem = { path: string };
 

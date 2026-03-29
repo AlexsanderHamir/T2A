@@ -5,9 +5,9 @@ import {
   deleteTask as apiDelete,
   listTasks,
   patchTask,
-} from "../api";
-import { taskQueryKeys } from "../taskQueryKeys";
-import type { Priority, Status, Task } from "../types";
+} from "../../api";
+import { taskQueryKeys } from "../queryKeys";
+import type { Priority, Status, Task } from "@/types";
 import { useTaskEventStream } from "./useTaskEventStream";
 
 function errorMessage(e: unknown): string {

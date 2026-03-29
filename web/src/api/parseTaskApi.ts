@@ -1,4 +1,11 @@
-import { PRIORITIES, STATUSES, type Priority, type Status, type Task, type TaskListResponse } from "./types";
+import {
+  PRIORITIES,
+  STATUSES,
+  type Priority,
+  type Status,
+  type Task,
+  type TaskListResponse,
+} from "@/types";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);

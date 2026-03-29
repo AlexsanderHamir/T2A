@@ -1,11 +1,40 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Dev: browser talks to Vite; /tasks and /events proxy to taskapi (avoids CORS).
 const api = process.env.VITE_TASKAPI_ORIGIN ?? "http://127.0.0.1:8080";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("@tanstack/react-query")) return "rq";
+          if (
+            id.includes("@tiptap") ||
+            id.includes("prosemirror") ||
+            id.includes("tippy.js")
+          ) {
+            return "editor";
+          }
+          if (id.includes("react-dom") || id.includes("/react/")) {
+            return "react";
+          }
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       "/tasks": { target: api, changeOrigin: true },

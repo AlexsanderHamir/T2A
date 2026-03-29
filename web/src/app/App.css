@@ -3,6 +3,21 @@
   line-height: 1.45;
   color: #0f172a;
   background: #f1f5f9;
+  color-scheme: light;
+}
+
+.app-header {
+  margin-bottom: 0.25rem;
+}
+
+/* Keyboard focus — visible ring without changing mouse clicks */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.rich-prompt-editor .ProseMirror:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 * {
