@@ -49,6 +49,17 @@ h1 {
   color: #991b1b;
 }
 
+.badge.sync {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.sync-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: #0369a1;
+}
+
 .err {
   background: #fef2f2;
   color: #b91c1c;

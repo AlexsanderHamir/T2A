@@ -2,14 +2,14 @@ import { useEffect, useRef } from "react";
 
 type Props = {
   taskTitle: string;
-  busy: boolean;
+  saving: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
 export function DeleteConfirmDialog({
   taskTitle,
-  busy,
+  saving,
   onCancel,
   onConfirm,
 }: Props) {
@@ -43,7 +43,7 @@ export function DeleteConfirmDialog({
           ref={cancelRef}
           type="button"
           className="secondary"
-          disabled={busy}
+          disabled={saving}
           onClick={onCancel}
         >
           Cancel
@@ -51,7 +51,7 @@ export function DeleteConfirmDialog({
         <button
           type="button"
           className="danger"
-          disabled={busy}
+          disabled={saving}
           onClick={() => void onConfirm()}
         >
           Delete

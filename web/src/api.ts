@@ -1,3 +1,4 @@
+import { parseTask, parseTaskListResponse } from "./parseTaskApi";
 import type { Priority, Status, Task, TaskListResponse } from "./types";
 
 const jsonHeaders = {
@@ -13,14 +14,19 @@ async function readError(res: Response): Promise<string> {
 export async function listTasks(
   limit = 200,
   offset = 0,
+  options?: { signal?: AbortSignal },
 ): Promise<TaskListResponse> {
   const q = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
-  const res = await fetch(`/tasks?${q}`, { headers: { Accept: "application/json" } });
+  const res = await fetch(`/tasks?${q}`, {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
   if (!res.ok) throw new Error(await readError(res));
-  return res.json() as Promise<TaskListResponse>;
+  const raw: unknown = await res.json();
+  return parseTaskListResponse(raw);
 }
 
 export async function createTask(input: {
@@ -42,7 +48,8 @@ export async function createTask(input: {
     }),
   });
   if (!res.ok) throw new Error(await readError(res));
-  return res.json() as Promise<Task>;
+  const raw: unknown = await res.json();
+  return parseTask(raw);
 }
 
 export async function patchTask(
@@ -65,7 +72,8 @@ export async function patchTask(
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await readError(res));
-  return res.json() as Promise<Task>;
+  const raw: unknown = await res.json();
+  return parseTask(raw);
 }
 
 export async function deleteTask(id: string): Promise<void> {

@@ -13,7 +13,10 @@ export default function App() {
   return (
     <div className="app">
       <h1>Tasks</h1>
-      <StreamStatusHint connected={app.sseLive} />
+      <StreamStatusHint
+        connected={app.sseLive}
+        listSyncing={app.listRefreshing}
+      />
       {app.error ? <ErrorBanner message={app.error} /> : null}
 
       <TaskCreateForm
@@ -21,7 +24,7 @@ export default function App() {
         prompt={app.newPrompt}
         status={app.newStatus}
         priority={app.newPriority}
-        busy={app.busy}
+        saving={app.saving}
         onTitleChange={app.setNewTitle}
         onPromptChange={app.setNewPrompt}
         onStatusChange={app.setNewStatus}
@@ -32,7 +35,8 @@ export default function App() {
       <TaskListSection
         tasks={app.tasks}
         loading={app.loading}
-        busy={app.busy}
+        refreshing={app.listRefreshing}
+        saving={app.saving}
         onEdit={app.openEdit}
         onRequestDelete={app.requestDelete}
       />
@@ -40,7 +44,7 @@ export default function App() {
       {app.deleteTarget ? (
         <DeleteConfirmDialog
           taskTitle={app.deleteTarget.title}
-          busy={app.busy}
+          saving={app.saving}
           onCancel={app.cancelDelete}
           onConfirm={() => void app.confirmDelete()}
         />
@@ -53,7 +57,7 @@ export default function App() {
           prompt={app.editPrompt}
           status={app.editStatus}
           priority={app.editPriority}
-          busy={app.busy}
+          saving={app.saving}
           onTitleChange={app.setEditTitle}
           onPromptChange={app.setEditPrompt}
           onStatusChange={app.setEditStatus}

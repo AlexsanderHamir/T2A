@@ -38,11 +38,39 @@ describe("listTasks", () => {
     );
   });
 
+  it("forwards AbortSignal to fetch when provided", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ tasks: [], limit: 200, offset: 0 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const ac = new AbortController();
+    await listTasks(200, 0, { signal: ac.signal });
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/tasks\?/),
+      expect.objectContaining({
+        headers: { Accept: "application/json" },
+        signal: ac.signal,
+      }),
+    );
+  });
+
   it("throws with response body on error", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("bad request", { status: 400 }),
     );
     await expect(listTasks()).rejects.toThrow("bad request");
+  });
+
+  it("rejects JSON that is not a task list envelope", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ tasks: "bad" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await expect(listTasks()).rejects.toThrow(/array/);
   });
 });
 

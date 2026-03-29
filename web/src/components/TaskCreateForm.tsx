@@ -8,7 +8,7 @@ type Props = {
   prompt: string;
   status: Status;
   priority: Priority;
-  busy: boolean;
+  saving: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onStatusChange: (s: Status) => void;
@@ -21,7 +21,7 @@ export function TaskCreateForm({
   prompt,
   status,
   priority,
-  busy,
+  saving,
   onTitleChange,
   onPromptChange,
   onStatusChange,
@@ -53,7 +53,7 @@ export function TaskCreateForm({
             value={priority}
             onChange={onPriorityChange}
           />
-          <button type="submit" disabled={busy}>
+          <button type="submit" disabled={saving}>
             Create
           </button>
         </div>

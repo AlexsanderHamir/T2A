@@ -9,7 +9,8 @@ describe("TaskListSection", () => {
       <TaskListSection
         tasks={[]}
         loading
-        busy={false}
+        refreshing={false}
+        saving={false}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -17,12 +18,27 @@ describe("TaskListSection", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Loading…");
   });
 
+  it("shows syncing status when refreshing", () => {
+    render(
+      <TaskListSection
+        tasks={[]}
+        loading={false}
+        refreshing
+        saving={false}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Syncing with server…")).toBeInTheDocument();
+  });
+
   it("shows empty copy when not loading and no tasks", () => {
     render(
       <TaskListSection
         tasks={[]}
         loading={false}
-        busy={false}
+        refreshing={false}
+        saving={false}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -45,7 +61,8 @@ describe("TaskListSection", () => {
       <TaskListSection
         tasks={[task]}
         loading={false}
-        busy={false}
+        refreshing={false}
+        saving={false}
         onEdit={onEdit}
         onRequestDelete={onRequestDelete}
       />,

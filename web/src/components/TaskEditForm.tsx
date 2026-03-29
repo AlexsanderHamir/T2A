@@ -9,7 +9,7 @@ type Props = {
   prompt: string;
   status: Status;
   priority: Priority;
-  busy: boolean;
+  saving: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onStatusChange: (s: Status) => void;
@@ -24,7 +24,7 @@ export function TaskEditForm({
   prompt,
   status,
   priority,
-  busy,
+  saving,
   onTitleChange,
   onPromptChange,
   onStatusChange,
@@ -69,13 +69,13 @@ export function TaskEditForm({
           />
         </div>
         <div className="row stack-row-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" disabled={saving}>
             Save
           </button>
           <button
             type="button"
             className="secondary"
-            disabled={busy}
+            disabled={saving}
             onClick={onCancel}
           >
             Cancel

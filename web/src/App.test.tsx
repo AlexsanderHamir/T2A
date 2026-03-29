@@ -1,9 +1,24 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { stubEventSource } from "./test/browserMocks";
 import { requestUrl } from "./test/requestUrl";
+
+function renderApp() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>,
+  );
+}
 
 describe("App", () => {
   beforeEach(() => {
@@ -24,7 +39,7 @@ describe("App", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(<App />);
+    renderApp();
     expect(
       await screen.findByRole("heading", { name: /^tasks$/i }),
     ).toBeInTheDocument();
@@ -34,7 +49,7 @@ describe("App", () => {
   it("shows an alert when the initial list request fails", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
 
-    render(<App />);
+    renderApp();
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("network down");
@@ -80,7 +95,7 @@ describe("App", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(<App />);
+    renderApp();
     await screen.findByText("No tasks yet.");
 
     await user.type(screen.getByLabelText(/^title$/i), "Ship fix");
