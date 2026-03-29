@@ -20,6 +20,10 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+const (
+	sseTestIntervalEnv = "T2A_SSE_TEST_INTERVAL"
+)
+
 const cmdName = "taskapi"
 
 // Server timeouts: WriteTimeout is left unset so long-lived SSE streams are not cut off.
@@ -76,6 +80,14 @@ func main() {
 	}
 	api := handler.WithRecovery(handler.NewHandler(taskStore, hub, rep))
 	mux := http.NewServeMux()
+	handler.RegisterSSETestRoutes(mux, taskStore, hub, handler.SSETestEnabled())
+	if handler.SSETestEnabled() {
+		if d, err := time.ParseDuration(strings.TrimSpace(os.Getenv(sseTestIntervalEnv))); err == nil && d >= time.Second {
+			handler.RunSSETestTicker(taskStore, hub, d)
+		} else if err != nil && strings.TrimSpace(os.Getenv(sseTestIntervalEnv)) != "" {
+			slog.Warn("invalid sse test interval ignored", "cmd", cmdName, "operation", "taskapi.sse_test", "err", err)
+		}
+	}
 	mux.Handle("/", api)
 
 	ln, err := net.Listen("tcp", net.JoinHostPort("", *port))

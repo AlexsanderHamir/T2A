@@ -297,6 +297,18 @@ Wire format:
 | Successful `PATCH /tasks/{id}`  | `task_updated` |
 | Successful `DELETE /tasks/{id}` | `task_deleted` |
 
+### Dev-only: synthetic SSE (`T2A_SSE_TEST=1`)
+
+For local UI work, **`taskapi`** can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
+
+Set **`T2A_SSE_TEST=1`** in the environment (never enable in production without intent). Optional **`T2A_SSE_TEST_INTERVAL`**: a Go duration string (e.g. `3s`, `5s`) — when valid and **≥ 1s**, a background ticker publishes **`task_updated`** on that interval using the first task id in the list (or a fixed placeholder if the list is empty).
+
+| Method | Path | Behavior |
+|--------|------|----------|
+| `GET` | `/dev/sse/ping` | Publishes one **`task_updated`**. Query **`id`** overrides the task id; otherwise first list task or placeholder. **204** empty body. |
+| `POST` | `/dev/sse/publish` | JSON `{"type":"<task_created or task_updated or task_deleted>","id":"..."}`. Omit **`type`** → **`task_updated`**. Omit **`id`** → same id resolution as ping. **204** empty body. |
+
+Vite dev server proxies **`/dev`** to **`taskapi`** (see **`web/vite.config.ts`**) so you can open **`http://localhost:5173/dev/sse/ping`** or **`curl -X POST http://127.0.0.1:8080/dev/sse/publish ...`** against the API directly.
 
 Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative.
 

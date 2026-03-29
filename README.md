@@ -42,7 +42,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**.
+With **`taskapi`** on **`http://127.0.0.1:8080`** by default: REST at **`/tasks`**, SSE at **`/events`** — details in **`docs/DESIGN.md`**. For synthetic SSE during UI development, set **`T2A_SSE_TEST=1`** (optional **`T2A_SSE_TEST_INTERVAL=5s`**) and use **`GET /dev/sse/ping`** or **`POST /dev/sse/publish`** (documented under *Server-Sent Events* in **`docs/DESIGN.md`**).
 
 **Windows PowerShell:** use **`curl.exe`** and single-quoted JSON:
 
@@ -62,7 +62,7 @@ npm test
 npm run dev
 ```
 
-Opens Vite’s URL (often **`http://localhost:5173`**). Dev server **proxies** **`/tasks`**, **`/events`**, **`/repo`** to **`taskapi`** (**`web/vite.config.ts`**). **`VITE_TASKAPI_ORIGIN`** overrides the proxy target if the API is not **`http://127.0.0.1:8080`**.
+Opens Vite’s URL (often **`http://localhost:5173`**). Dev server **proxies** **`/tasks`**, **`/events`**, **`/repo`**, **`/dev`** to **`taskapi`** (**`web/vite.config.ts`**). **`VITE_TASKAPI_ORIGIN`** overrides the proxy target if the API is not **`http://127.0.0.1:8080`**.
 
 | Command | Purpose |
 |---------|---------|

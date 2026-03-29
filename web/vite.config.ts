@@ -40,6 +40,7 @@ export default defineConfig({
       "/tasks": { target: api, changeOrigin: true },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
+      "/dev": { target: api, changeOrigin: true },
     },
   },
   test: {

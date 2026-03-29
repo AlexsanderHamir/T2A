@@ -13,6 +13,9 @@
 //   - GET    /repo/search     — optional; JSON paths (q=); 503 if REPO_ROOT unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
+// Dev-only (not mounted on the returned handler; register separately on the parent mux when
+// T2A_SSE_TEST=1): GET /dev/sse/ping, POST /dev/sse/publish — synthetic SSE hub events; see DESIGN.md.
+//
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
 //
 // JSON bodies disallow unknown fields; trailing data after the top-level value is rejected.
