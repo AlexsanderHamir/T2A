@@ -60,7 +60,7 @@ flowchart LR
 ## React Query + SSE
 
 - **Query key:** **`taskQueryKeys.list()`** in **`tasks/queryKeys.ts`** → **`GET /tasks`** (limit 200 in **`api/tasks.ts`**).
-- **Loading:** **`loading`** = no cached list yet; **`listRefreshing`** = background refetch (mutations, invalidation, focus, SSE); **`saving`** = mutation in flight (not background list fetch).
+- **Loading:** **`loading`** = no cached list yet; **`listRefreshing`** = background refetch (mutations, invalidation, focus, SSE); **`saving`** = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. **`createPending`** / modal **`busy`** show spinners during mutations without that delay.
 - **SSE:** each **`data:`** line schedules debounced invalidation → refetch list; **`parseTaskApi`** runs on the response.
 
 ```mermaid
@@ -83,6 +83,7 @@ sequenceDiagram
 |------|------|
 | **`app/`** | **`main.tsx`** (entry, **`QueryClientProvider`**), **`App.tsx`**, **`App.css`**, **`App.test.tsx`**. |
 | **`lib/queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev cache **`onError`**. |
+| **`lib/useDelayedTrue.ts`** | Delays showing loading/sync status so very short fetches do not flash unreadable lines; **`smoothTransitions={false}`** on **`TaskListSection`** / **`StreamStatusHint`** for tests. |
 | **`types/`** | Shared task domain types (**`task.ts`**, barrel **`index.ts`**); imported as **`@/types`**. |
 | **`tasks/`** | Task feature: **`queryKeys.ts`** (React Query keys), **`hooks/`**, **`components/`**, **`extensions/`** (e.g. **`repoFileSuggestion`**), **`promptFormat.ts`**. |
 | **`shared/`** | Cross-feature components and helpers (e.g. **`ErrorBanner`**). |
