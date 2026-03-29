@@ -52,7 +52,7 @@ curl.exe -N http://127.0.0.1:8080/events
 
 ## Web UI (optional)
 
-A **Vite + React + TypeScript** SPA in **`web/`** implements task **create, list, edit, and delete** against the same **`/tasks`** API as scripts and agents. It opens **`GET /events`** (SSE) so the table **refreshes when tasks change** elsewhere, without reloading the page. **Delete** uses an **in-app confirmation** (not the browser’s `window.confirm`) so focus and typing keep working in embedded or Chromium-based hosts.
+A **Vite + React + TypeScript** SPA in **`web/`** implements task **create, list, edit, and delete** against the same **`/tasks`** API as scripts and agents. **TanStack Query** holds server state (deduplication, cancellation, refetch on focus), **`GET /events`** (SSE) **invalidates** the list on a short debounce so bursts of events do not each trigger a full refetch, and **Delete** uses an **in-app confirmation** (not the browser’s `window.confirm`) so focus and typing keep working in embedded or Chromium-based hosts.
 
 ### Dev flow (browser → Vite → `taskapi`)
 
@@ -100,8 +100,12 @@ Open the URL Vite prints (usually **`http://localhost:5173`**). In dev, **`/task
 | Path | Role |
 |------|------|
 | **`App.tsx`** | Root layout; wires **`useTasksApp`** to presentational components. |
-| **`hooks/useTasksApp.ts`** | Task list state, **`EventSource`** subscription, **`refresh`**, and create / update / delete handlers. |
+| **`hooks/useTasksApp.ts`** | Form and dialog state, React Query **mutations** for create / update / delete, and composed list query. |
+| **`hooks/useTaskEventStream.ts`** | **`EventSource`** on **`/events`**, debounced **`invalidateQueries`** for the task list. |
+| **`queryClient.ts`** | Shared **QueryClient** defaults (stale time, retries, dev-only error logging). |
+| **`taskQueryKeys.ts`** | Stable **query key** factory for the task list. |
 | **`api.ts`** | Typed **`fetch`** wrappers for **`/tasks`** (and errors). |
+| **`parseTaskApi.ts`** | Runtime checks on JSON from **`/tasks`** before the UI uses it. |
 | **`types.ts`** | JSON-aligned TypeScript types. |
 | **`components/`** | **`TaskCreateForm`**, **`TaskListSection`**, **`TaskEditForm`**, **`DeleteConfirmDialog`**, shared **`StatusSelect`** / **`PrioritySelect`**, **`ErrorBanner`**, **`StreamStatusHint`**. |
 | **`test/`** | Vitest **`setup`** (RTL **`cleanup`**), **`EventSource`** stub, **`requestUrl`** helper for mocks. |
