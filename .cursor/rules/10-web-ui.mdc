@@ -11,7 +11,7 @@ alwaysApply: false
 
 ## Scope
 
-Applies only to **`web/`**. Backend rules remain governed by their own files.
+Applies only to **`web/`**. Backend rules remain governed by their own files. Before finishing, follow **`09-local-verification.mdc`** (and **`09-security-baseline.mdc`** for secrets in client-visible config).
 
 ## Standards
 

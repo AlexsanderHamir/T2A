@@ -1,0 +1,45 @@
+---
+description: >-
+  Mandatory local checks before finishing a change: gofmt, go vet, go test, and
+  web npm test/build when web/src or web config changes. Prefer scripts/check.
+alwaysApply: true
+---
+
+# Local verification (before “done”)
+
+**Scope:** Go module + optional **`web/`** SPA. Aligns with **`06-testing.mdc`** and **`10-web-ui.mdc`**.
+
+## Agent obligation
+
+Before you **finish** a task (stop work, hand off, or say “done”):
+
+1. **Format Go** — changed **`*.go`** files must be **`gofmt`**-clean. From repo root: `gofmt -w` on touched files, or run **`go fmt ./...`** if you touched many packages.
+2. **Static check** — `go vet ./...` (from repo root).
+3. **Tests** — `go test ./... -count=1` (from repo root).
+4. **`web/`** — if you changed **`web/src`**, **`web/package.json`**, **`web/vite.config.ts`**, **`web/tsconfig*.json`**, or **`web/index.html`**:  
+   `cd web && npm test -- --run && npm run build`
+
+Do **not** report success if **`go vet`** or **`go test`** failed.
+
+## One-shot script (preferred)
+
+From repo root:
+
+| OS | Command |
+|----|---------|
+| Windows | **`.\scripts\check.ps1`** |
+| Unix | **`./scripts/check.sh`** |
+
+Use this when you want the same bar as a full pass without typing each step.
+
+## When something is intentionally skipped
+
+- **Integration / Docker / real Postgres** — only behind **`//go:build integration`**; never required for default **`go test ./...`** (see **`06-testing.mdc`**).
+- **Web build** — if the change is docs-only or Go-only with **no** `web/` edits, you do not need **`npm run build`**.
+
+## Checklist
+
+- [ ] **`gofmt`** / **`go fmt`** applied to edited Go code
+- [ ] **`go vet ./...`** passes
+- [ ] **`go test ./... -count=1`** passes
+- [ ] If **`web/`** behavior or tooling changed: **`npm test`** and **`npm run build`** in **`web/`**

@@ -8,7 +8,7 @@ alwaysApply: true
 
 # Testing (unit, cross-component, coverage)
 
-**Scope:** Go code in this module. For **`web/`** (Vite/React), use **`10-web-ui.mdc`** (`npm test` in `web/`).
+**Scope:** Go code in this module. For **`web/`** (Vite/React), use **`10-web-ui.mdc`** (`npm test` in `web/`). The minimum bar before finishing any change is in **`09-local-verification.mdc`** (`go vet`, **`gofmt`**, **`go test`**).
 
 ## Agent obligation
 

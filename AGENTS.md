@@ -10,7 +10,7 @@ Use this file as the **first pass** before editing code. Long-form contracts liv
 | 2 | **[docs/DESIGN.md](docs/DESIGN.md)** | HTTP routes, SSE, env vars (`DATABASE_URL`, `REPO_ROOT`), persistence, limitations. |
 | 3 | **[docs/WEB.md](docs/WEB.md)** | **`web/src`** layout, React Query + SSE, **`parseTaskApi`**, Vitest. |
 
-**Cursor:** numbered rules in **`.cursor/rules/`** (`01`–`07`, `10` for `web/`). **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**.
+**Cursor:** numbered rules in **`.cursor/rules/`** — **`01`–`08`**, **`09-local-verification`** + **`09-security-baseline`** (always-on bar), **`10-web-ui`** for **`web/`**. **`06-testing.mdc`** defines **`go test`** expectations; **`10-web-ui.mdc`** defines **`npm test`** for **`web/`**.
 
 ## Repository map
 
@@ -30,8 +30,9 @@ API **contracts** (paths, query params, JSON shapes) are authoritative in **`doc
 
 | Change | Command |
 |--------|---------|
-| Go production code or tests | `go test ./... -count=1` (from repo root) |
-| Meaningful **`web/`** change | `cd web && npm test` and usually `npm run build` |
+| **Full bar (recommended)** | From repo root: **`.\scripts\check.ps1`** (Windows) or **`./scripts/check.sh`** (Unix). Go-only fast path: set **`CHECK_SKIP_WEB=1`** (bash) or **`$env:CHECK_SKIP_WEB='1'`** (PowerShell) to skip **`web/`** steps. |
+| Go production code or tests | `go vet ./...`, then `go test ./... -count=1` (from repo root); format touched **`*.go`** with **`gofmt`** or **`go fmt`**. |
+| Meaningful **`web/`** change | `cd web && npm test -- --run && npm run build` |
 | Coverage / quality (Go libs) | See **`.cursor/rules/06-testing.mdc`** (`coverprofile` on **`pkgs/...`** **`internal/...`**) |
 
 Default tests must **not** require real Postgres, real outbound network, or a running **`taskapi`** (see **`06-testing.mdc`** and **`10-web-ui.mdc`**).

@@ -14,7 +14,7 @@ When this file is referenced, execute a full repo pass against `.cursor/rules/` 
 
 1. List `.cursor/rules/` and sort files by numeric prefix.
 2. Skip this file (`00-*`) during rule application.
-3. Apply substantive standards in numeric order **`01` → `07`**, then **`10`** (web UI under `web/`). Treat **`08-atomic-commits`** as the final step only (committing), not as a middle “audit” pass—see step 5–6.
+3. Apply substantive standards in numeric order **`01` → `07`**, then **`09`** (local verification + security baseline), then **`10`** (web UI under `web/`). Treat **`08-atomic-commits`** as the final step only (committing), not as a middle “audit” pass—see step 5–6.
 4. For each rule:
    - read and understand the rule
    - inspect the repo for violations or missing work
@@ -24,7 +24,7 @@ When this file is referenced, execute a full repo pass against `.cursor/rules/` 
    - while applying earlier rules, plan commit boundaries only
    - do not commit yet unless the user explicitly asks
 6. After all substantive rules are complete:
-   - run the full test/build command
+   - run the full verification bar: **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`**, or **`scripts/check.ps1`** / **`scripts/check.sh`** from repo root
    - apply the atomic commits rule
    - create atomic commits
 7. If there is nothing to change or commit, state that clearly.

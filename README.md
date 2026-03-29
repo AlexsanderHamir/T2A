@@ -18,6 +18,8 @@ go build ./...
 go test ./...
 ```
 
+Full local verification (**`gofmt`** check, **`go vet`**, **`go test`**, **`web/`** test + build): **`.\scripts\check.ps1`** (Windows) or **`./scripts/check.sh`** (Unix). To run only Go steps: set **`CHECK_SKIP_WEB=1`** (see **`AGENTS.md`**).
+
 ## Run
 
 ```bash
