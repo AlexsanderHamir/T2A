@@ -3,6 +3,7 @@ import type { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RepoFileMention } from "../extensions/repoFileMention";
 import {
   RepoFileSuggestion,
   type RepoFileSuggestionOptions,
@@ -160,6 +161,7 @@ export function RichPromptEditor({
       Placeholder.configure({
         placeholder: placeholder ?? "",
       }),
+      RepoFileMention,
       RepoFileSuggestion.configure(repoOpts),
     ],
     [placeholder, repoOpts],
@@ -201,8 +203,14 @@ export function RichPromptEditor({
   const insertPathOnly = () => {
     if (!editor || !pendingInsert) return;
     const { insertAt, path } = pendingInsert;
-    const token = `@${path} `;
-    editor.chain().focus().insertContentAt(insertAt, token).run();
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(insertAt, [
+        { type: "repoFileMention", attrs: { path } },
+        { type: "text", text: " " },
+      ])
+      .run();
     setPendingInsert(null);
   };
 
@@ -221,7 +229,13 @@ export function RichPromptEditor({
       editor
         .chain()
         .focus()
-        .insertContentAt(insertAt, `@${path}(${a}-${b}) `)
+        .insertContentAt(insertAt, [
+          {
+            type: "repoFileMention",
+            attrs: { path, lineStart: a, lineEnd: b },
+          },
+          { type: "text", text: " " },
+        ])
         .run();
       setPendingInsert(null);
       return;
@@ -236,7 +250,13 @@ export function RichPromptEditor({
     editor
       .chain()
       .focus()
-      .insertContentAt(insertAt, `@${path}(${a}-${b}) `)
+      .insertContentAt(insertAt, [
+        {
+          type: "repoFileMention",
+          attrs: { path, lineStart: a, lineEnd: b },
+        },
+        { type: "text", text: " " },
+      ])
       .run();
     setPendingInsert(null);
   };
