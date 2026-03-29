@@ -1,19 +1,16 @@
 import type { FormEvent } from "react";
-import type { Priority, Status } from "@/types";
+import type { Priority } from "@/types";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
-import { StatusSelect } from "./StatusSelect";
 
 type Props = {
   taskId: string;
   title: string;
   prompt: string;
-  status: Status;
   priority: Priority;
   saving: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
-  onStatusChange: (s: Status) => void;
   onPriorityChange: (p: Priority) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -23,12 +20,10 @@ export function TaskEditForm({
   taskId,
   title,
   prompt,
-  status,
   priority,
   saving,
   onTitleChange,
   onPromptChange,
-  onStatusChange,
   onPriorityChange,
   onSubmit,
   onCancel,
@@ -50,11 +45,6 @@ export function TaskEditForm({
               required
             />
           </div>
-          <StatusSelect
-            id="task-edit-status"
-            value={status}
-            onChange={onStatusChange}
-          />
           <PrioritySelect
             id="task-edit-priority"
             value={priority}

@@ -20,13 +20,11 @@ export function useTasksApp() {
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
-  const [newStatus, setNewStatus] = useState<Status>("ready");
   const [newPriority, setNewPriority] = useState<Priority>("medium");
 
   const [editing, setEditing] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
-  const [editStatus, setEditStatus] = useState<Status>("ready");
   const [editPriority, setEditPriority] = useState<Priority>("medium");
 
   /** In-app delete confirmation (avoids `window.confirm`, which breaks input focus in some browsers). */
@@ -60,7 +58,6 @@ export function useTasksApp() {
     onSuccess: async () => {
       setNewTitle("");
       setNewPrompt("");
-      setNewStatus("ready");
       setNewPriority("medium");
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
     },
@@ -129,7 +126,7 @@ export function useTasksApp() {
     createMutation.mutate({
       title: newTitle.trim(),
       initial_prompt: newPrompt,
-      status: newStatus,
+      status: "ready",
       priority: newPriority,
     });
   }
@@ -138,7 +135,6 @@ export function useTasksApp() {
     setEditing(t);
     setEditTitle(t.title);
     setEditPrompt(t.initial_prompt);
-    setEditStatus(t.status);
     setEditPriority(t.priority);
     setEditTitleRequiredError(null);
   }
@@ -160,7 +156,7 @@ export function useTasksApp() {
       id: editing.id,
       title: editTitle.trim(),
       initial_prompt: editPrompt,
-      status: editStatus,
+      status: editing.status,
       priority: editPriority,
     });
   }
@@ -191,8 +187,6 @@ export function useTasksApp() {
     setNewTitle,
     newPrompt,
     setNewPrompt,
-    newStatus,
-    setNewStatus,
     newPriority,
     setNewPriority,
     submitCreate,
@@ -201,8 +195,6 @@ export function useTasksApp() {
     setEditTitle,
     editPrompt,
     setEditPrompt,
-    editStatus,
-    setEditStatus,
     editPriority,
     setEditPriority,
     openEdit,

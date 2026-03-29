@@ -25,12 +25,10 @@ export default function App() {
         <TaskCreateForm
           title={app.newTitle}
           prompt={app.newPrompt}
-          status={app.newStatus}
           priority={app.newPriority}
           saving={app.saving}
           onTitleChange={app.setNewTitle}
           onPromptChange={app.setNewPrompt}
-          onStatusChange={app.setNewStatus}
           onPriorityChange={app.setNewPriority}
           onSubmit={(e) => void app.submitCreate(e)}
         />
@@ -58,12 +56,10 @@ export default function App() {
             taskId={app.editing.id}
             title={app.editTitle}
             prompt={app.editPrompt}
-            status={app.editStatus}
             priority={app.editPriority}
             saving={app.saving}
             onTitleChange={app.setEditTitle}
             onPromptChange={app.setEditPrompt}
-            onStatusChange={app.setEditStatus}
             onPriorityChange={app.setEditPriority}
             onSubmit={(e) => void app.submitEdit(e)}
             onCancel={app.closeEdit}
