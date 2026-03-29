@@ -1,16 +1,16 @@
 # Browser client (`web/`)
 
-Canonical description of the optional **Vite + React + TypeScript** SPA. Server contracts (**`/tasks`**, **`/events`**, **`/repo`**) are in **`docs/DESIGN.md`**. **Where this doc sits in the tree:** **`docs/README.md`**.
+Canonical description of the optional Vite + React + TypeScript SPA. Server contracts (`/tasks`, `/events`, `/repo`) are in [docs/DESIGN.md](./DESIGN.md). Where this doc sits in the tree: [docs/README.md](./README.md).
 
 ## Scope
 
-**Does:** CRUD UI for **`/tasks`**; **TanStack Query** for list + mutations; **`EventSource('/events')`** with **400ms** debounced **`invalidateQueries`**; **`parseTaskApi`** on JSON before use; **TipTap** rich prompt (bold, headings, lists, code) with **`initial_prompt`** stored as **HTML**; **`@`** file mentions via **`/repo`** when **`REPO_ROOT`** is set (see **DESIGN**). If **`REPO_ROOT`** is unset, typing **`@`** shows a hint that no repo is configured for search.
+Does: CRUD UI for `/tasks`; TanStack Query for list + mutations; `EventSource('/events')` with 400ms debounced `invalidateQueries`; `parseTaskApi` on JSON before use; TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
 
-**Does not:** Auth; serving **`dist`** from **`taskapi`**; CORS in Go (use same origin or a gateway — **DESIGN**, limitations).
+Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — DESIGN, limitations).
 
 ## Stack
 
-Vite 5, React 18, TypeScript strict, TanStack Query (**`queryClient.ts`**), TipTap (**`RichPromptEditor`**, **`RichPromptMenuBar`**, **`MentionRangePanel`**), **`fetch`** only under **`src/api/`** (import **`@/api`** or **`../api`**), Vitest + Testing Library (**`fetch`** / **`EventSource`** mocked in tests).
+Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (`RichPromptEditor`, `RichPromptMenuBar`, `MentionRangePanel`), `fetch` only under `src/api/` (import `@/api` or `../api`), Vitest + Testing Library (`fetch` / `EventSource` mocked in tests).
 
 ## SPA in the system
 
@@ -38,15 +38,15 @@ flowchart TB
   Hub -.->|SSE| ES
 ```
 
-SSE carries **`type` + `id`** only; rows come from **`GET /tasks`**.
+SSE carries `type` + `id` only; rows come from `GET /tasks`.
 
 ## Dev vs production
 
-**Dev:** browser → Vite → proxies **`/tasks`**, **`/events`**, **`/repo`** → **`taskapi`**. **`VITE_TASKAPI_ORIGIN`** in **`web/vite.config.ts`** picks the API target (default **`http://127.0.0.1:8080`**). Full-page loads to **`/tasks/{id}`** must still serve the SPA: the dev proxy **bypasses** to **`index.html`** when **`Accept`** includes **`text/html`** (so refresh on a task detail URL does not return raw JSON from **`GET /tasks/{id}`**).
+Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
 
-**Prod:** **`npm run build`** → **`web/dist/`**; serve so **`/tasks`**, **`/events`**, **`/repo`** match the API origin (or gateway).
+Prod: `npm run build` → `web/dist/`; serve so `/tasks`, `/events`, `/repo` match the API origin (or gateway).
 
-**Mermaid (dev path):**
+Mermaid (dev path):
 
 ```mermaid
 flowchart LR
@@ -59,9 +59,9 @@ flowchart LR
 
 ## React Query + SSE
 
-- **Query key:** **`taskQueryKeys.list()`** in **`tasks/queryKeys.ts`** → **`GET /tasks`** (limit 200 in **`api/tasks.ts`**).
-- **Loading:** **`loading`** = no cached list yet; **`listRefreshing`** = background refetch (mutations, invalidation, focus, SSE); **`saving`** = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. **`createPending`** / modal **`busy`** show spinners during mutations without that delay.
-- **SSE:** each **`data:`** line schedules debounced invalidation → refetch list; **`parseTaskApi`** runs on the response.
+- Query key: `taskQueryKeys.list()` in `tasks/queryKeys.ts` → `GET /tasks` (limit 200 in `api/tasks.ts`).
+- Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. `createPending` / modal `busy` show spinners during mutations without that delay.
+- SSE: each `data:` line schedules debounced invalidation → refetch list; `parseTaskApi` runs on the response.
 
 ```mermaid
 sequenceDiagram
@@ -81,22 +81,22 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| **`app/`** | **`main.tsx`** (entry, **`BrowserRouter`**, **`QueryClientProvider`**), **`App.tsx`** (routes: `/`, **`/tasks/:taskId`**), **`App.css`**, **`App.test.tsx`**. |
-| **`lib/queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev cache **`onError`**. |
-| **`lib/useDelayedTrue.ts`** | Delays showing loading/sync status so very short fetches do not flash unreadable lines; **`smoothTransitions={false}`** on **`TaskListSection`** / **`StreamStatusHint`** for tests. |
-| **`types/`** | Shared task domain types (**`task.ts`**, barrel **`index.ts`**); imported as **`@/types`**. |
-| **`tasks/`** | Task feature: **`queryKeys.ts`**, **`hooks/`**, **`components/`**, **`pages/`** (**`TaskHome`**, **`TaskDetailPage`** + **`TaskUpdatesTimeline`** — collapsible **initial prompt** by default, audit timeline from **`GET /tasks/{id}/events`**, **newest-first** by **`seq`** in the UI), **`extensions/`**, **`promptFormat.ts`**, **`taskAttention.ts`**, **`taskEventLabels.ts`**. |
-| **`shared/`** | Cross-feature components and helpers (e.g. **`ErrorBanner`**). |
-| **`api/`** | HTTP + JSON parsing: **`index.ts`** re-exports **`tasks.ts`**, **`repo.ts`**, **`parseTaskApi.ts`**, **`shared.ts`**. |
-| **`test/`** | Vitest setup, **`EventSource`** stub, **`requestUrl`**. |
+| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`), `App.css`, `App.test.tsx`. |
+| `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
+| `lib/useDelayedTrue.ts` | Delays showing loading/sync status so very short fetches do not flash unreadable lines; `smoothTransitions={false}` on `TaskListSection` / `StreamStatusHint` for tests. |
+| `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
+| `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage` + `TaskUpdatesTimeline` — collapsible initial prompt by default, audit timeline from `GET /tasks/{id}/events`, newest-first by `seq` in the UI), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
+| `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
+| `api/` | HTTP + JSON parsing: `index.ts` re-exports `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
+| `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |
 
 ## JSON boundary
 
-Responses are **`unknown`** until **`parseTaskApi`** runs; bad shapes fail with tests in **`api/parseTaskApi.test.ts`** and **`api/tasks.test.ts`**.
+Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in `api/parseTaskApi.test.ts` and `api/tasks.test.ts`.
 
 ## Testing
 
-**`npm test`** / **`npm run build`** from **`web/`** after meaningful UI or **`src/api/`** changes (see **`.cursor/rules/10-web-ui.mdc`**). No real network in default tests.
+`npm test` / `npm run build` from `web/` after meaningful UI or `src/api/` changes (see `.cursor/rules/10-web-ui.mdc`). No real network in default tests.
 
 ## Client limitations
 
