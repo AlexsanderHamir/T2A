@@ -7,9 +7,9 @@
 //
 // Flags (see also -h):
 //
-//   -port string    listen port (default "8080")
-//   -env string     path to .env (default: <repo-root>/.env)
-//   -migrate        run GORM AutoMigrate before serving
+//	-port string    listen port (default "8080")
+//	-env string     path to .env (default: <repo-root>/.env)
+//	-migrate        run GORM AutoMigrate before serving
 //
 // Structured logs go to stderr. SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout, then the database pool is closed.
 //

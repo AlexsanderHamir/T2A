@@ -19,8 +19,8 @@ type TaskEvent struct {
 	Seq    int64     `gorm:"primaryKey;check:chk_task_events_seq,seq > 0"`
 	At     time.Time `gorm:"not null;index:task_events_task_id_at,priority:2"`
 	// Avoid GORM CHECK tags on columns named type/by; validate with EventType and Actor in Go instead.
-	Type EventType `gorm:"column:type;not null;index:task_events_task_id_type,priority:2"`
-	By   Actor     `gorm:"column:by;not null"`
+	Type EventType      `gorm:"column:type;not null;index:task_events_task_id_type,priority:2"`
+	By   Actor          `gorm:"column:by;not null"`
 	Data datatypes.JSON `gorm:"column:data_json;type:jsonb;not null;default:'{}'"`
 
 	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`

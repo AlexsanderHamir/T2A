@@ -42,10 +42,10 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 }
 
 type taskCreateJSON struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	InitialPrompt string         `json:"initial_prompt"`
-	Status        domain.Status  `json:"status"`
+	ID            string          `json:"id"`
+	Title         string          `json:"title"`
+	InitialPrompt string          `json:"initial_prompt"`
+	Status        domain.Status   `json:"status"`
 	Priority      domain.Priority `json:"priority"`
 }
 

@@ -110,4 +110,3 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, op, http.StatusOK, repoValidateRangeResponse{OK: true, LineCount: n})
 }
-

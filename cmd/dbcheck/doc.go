@@ -7,8 +7,8 @@
 //
 // Flags (see also -h):
 //
-//   -env string     path to .env (default: <repo-root>/.env)
-//   -migrate        run GORM AutoMigrate after connecting
+//	-env string     path to .env (default: <repo-root>/.env)
+//	-migrate        run GORM AutoMigrate after connecting
 //
 // On success it logs and exits 0; on failure it logs and exits 1. Schema migration uses
 // postgres.Migrate (pkgs/tasks/postgres), same tables as taskapi -migrate.
