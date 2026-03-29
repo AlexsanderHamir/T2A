@@ -44,7 +44,7 @@ func TestSSEHub_Publish_nonBlockingSlowConsumer(t *testing.T) {
 
 func TestHTTP_SSE_receivesEventAfterCreate(t *testing.T) {
 	db := testdb.OpenSQLite(t)
-	h := NewHandler(store.NewStore(db), NewSSEHub())
+	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 

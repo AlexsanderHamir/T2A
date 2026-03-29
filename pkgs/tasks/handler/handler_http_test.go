@@ -6,9 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -18,7 +21,18 @@ import (
 func newTaskTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	db := testdb.OpenSQLite(t)
-	h := NewHandler(store.NewStore(db), NewSSEHub())
+	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
+	return httptest.NewServer(h)
+}
+
+func newTaskTestServerWithRepo(t *testing.T, repoDir string) *httptest.Server {
+	t.Helper()
+	db := testdb.OpenSQLite(t)
+	r, err := repo.OpenRoot(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHandler(store.NewStore(db), NewSSEHub(), r)
 	return httptest.NewServer(h)
 }
 
@@ -368,5 +382,55 @@ func TestHTTP_method_not_allowed_routes_only_registered_verbs(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusMethodNotAllowed {
 		t.Fatalf("PUT /tasks: status %d want %d", res.StatusCode, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "note.txt")
+	if err := os.WriteFile(p, []byte("a\nb\nc\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/search?q=note")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("search status %d", res.StatusCode)
+	}
+	var searchPayload struct {
+		Paths []string `json:"paths"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&searchPayload); err != nil {
+		t.Fatal(err)
+	}
+	if len(searchPayload.Paths) != 1 || searchPayload.Paths[0] != "note.txt" {
+		t.Fatalf("paths %#v", searchPayload.Paths)
+	}
+
+	res2, err := http.Post(srv.URL+"/tasks", "application/json",
+		strings.NewReader(`{"title":"t","initial_prompt":"@nope.txt"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusBadRequest {
+		b, _ := io.ReadAll(res2.Body)
+		t.Fatalf("create status %d body %s", res2.StatusCode, b)
+	}
+
+	res3, err := http.Post(srv.URL+"/tasks", "application/json",
+		strings.NewReader(`{"title":"t2","initial_prompt":"@note.txt(1-2)"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res3.Body.Close()
+	if res3.StatusCode != http.StatusCreated {
+		b, _ := io.ReadAll(res3.Body)
+		t.Fatalf("create valid mention status %d body %s", res3.StatusCode, b)
 	}
 }

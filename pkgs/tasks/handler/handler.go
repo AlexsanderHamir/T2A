@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -20,11 +21,13 @@ const httpLogCmd = "taskapi"
 type Handler struct {
 	store *store.Store
 	hub   *SSEHub
+	repo  *repo.Root
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
-func NewHandler(s *store.Store, hub *SSEHub) http.Handler {
-	h := &Handler{store: s, hub: hub}
+// rep is optional: when nil, /repo routes return 503 and initial_prompt is not validated for file mentions.
+func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
+	h := &Handler{store: s, hub: hub, repo: rep}
 	m := http.NewServeMux()
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
@@ -32,6 +35,8 @@ func NewHandler(s *store.Store, hub *SSEHub) http.Handler {
 	m.Handle("GET /tasks/{id}", http.HandlerFunc(h.get))
 	m.Handle("PATCH /tasks/{id}", http.HandlerFunc(h.patch))
 	m.Handle("DELETE /tasks/{id}", http.HandlerFunc(h.delete))
+	m.Handle("GET /repo/search", http.HandlerFunc(h.repoSearch))
+	m.Handle("GET /repo/validate-range", http.HandlerFunc(h.repoValidateRange))
 	return m
 }
 
@@ -62,6 +67,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(r.Body, &body); err != nil {
 		writeError(w, op, err, http.StatusBadRequest)
 		return
+	}
+	if h.repo != nil {
+		if err := h.repo.ValidatePromptMentions(body.InitialPrompt); err != nil {
+			writeJSONError(w, op, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 	by := actorFromRequest(r)
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
@@ -118,6 +129,12 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		InitialPrompt: body.InitialPrompt,
 		Status:        body.Status,
 		Priority:      body.Priority,
+	}
+	if h.repo != nil && body.InitialPrompt != nil {
+		if err := h.repo.ValidatePromptMentions(*body.InitialPrompt); err != nil {
+			writeJSONError(w, op, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 	by := actorFromRequest(r)
 	t, err := h.store.Update(r.Context(), id, in, by)

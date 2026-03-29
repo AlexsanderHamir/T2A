@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -62,8 +64,18 @@ func main() {
 
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
+	var rep *repo.Root
+	if root := strings.TrimSpace(os.Getenv("REPO_ROOT")); root != "" {
+		r, err := repo.OpenRoot(root)
+		if err != nil {
+			slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.repo_root", "err", err)
+			os.Exit(1)
+		}
+		rep = r
+		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
+	}
 	mux := http.NewServeMux()
-	mux.Handle("/", handler.NewHandler(taskStore, hub))
+	mux.Handle("/", handler.NewHandler(taskStore, hub, rep))
 
 	ln, err := net.Listen("tcp", net.JoinHostPort("", *port))
 	if err != nil {
