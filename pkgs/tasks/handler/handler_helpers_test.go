@@ -66,41 +66,36 @@ func TestDecodeJSON_rejectsTrailingJSON(t *testing.T) {
 	}
 }
 
-func TestParseListParams_defaults(t *testing.T) {
-	limit, offset, err := parseListParams(url.Values{})
-	if err != nil {
-		t.Fatal(err)
+func TestParseListParams(t *testing.T) {
+	tests := []struct {
+		name       string
+		q          url.Values
+		wantLimit  int
+		wantOffset int
+		wantErr    bool
+	}{
+		{name: "defaults", q: url.Values{}, wantLimit: 50, wantOffset: 0},
+		{name: "limit_200_offset_3", q: url.Values{"limit": {"200"}, "offset": {"3"}}, wantLimit: 200, wantOffset: 3},
+		{name: "limit_nan", q: url.Values{"limit": {"nope"}}, wantErr: true},
+		{name: "limit_201", q: url.Values{"limit": {"201"}}, wantErr: true},
+		{name: "offset_negative", q: url.Values{"offset": {"-1"}}, wantErr: true},
 	}
-	if limit != 50 || offset != 0 {
-		t.Fatalf("limit=%d offset=%d", limit, offset)
-	}
-}
-
-func TestParseListParams_invalidLimit(t *testing.T) {
-	_, _, err := parseListParams(url.Values{"limit": {"nope"}})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	_, _, err = parseListParams(url.Values{"limit": {"201"}})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestParseListParams_invalidOffset(t *testing.T) {
-	_, _, err := parseListParams(url.Values{"offset": {"-1"}})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestParseListParams_limit_200_ok(t *testing.T) {
-	limit, offset, err := parseListParams(url.Values{"limit": {"200"}, "offset": {"3"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if limit != 200 || offset != 3 {
-		t.Fatalf("limit=%d offset=%d", limit, offset)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			limit, offset, err := parseListParams(tt.q)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if limit != tt.wantLimit || offset != tt.wantOffset {
+				t.Fatalf("limit=%d offset=%d want limit=%d offset=%d", limit, offset, tt.wantLimit, tt.wantOffset)
+			}
+		})
 	}
 }
 
