@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	sseTestIntervalEnv = "T2A_SSE_TEST_INTERVAL"
+	sseTestIntervalEnv     = "T2A_SSE_TEST_INTERVAL"
+	sseTestDefaultInterval = 3 * time.Second
 )
 
 const cmdName = "taskapi"
@@ -82,10 +83,8 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterSSETestRoutes(mux, taskStore, hub, handler.SSETestEnabled())
 	if handler.SSETestEnabled() {
-		if d, err := time.ParseDuration(strings.TrimSpace(os.Getenv(sseTestIntervalEnv))); err == nil && d >= time.Second {
+		if d := resolveSSETestTickerInterval(); d >= time.Second {
 			handler.RunSSETestTicker(taskStore, hub, d)
-		} else if err != nil && strings.TrimSpace(os.Getenv(sseTestIntervalEnv)) != "" {
-			slog.Warn("invalid sse test interval ignored", "cmd", cmdName, "operation", "taskapi.sse_test", "err", err)
 		}
 	}
 	mux.Handle("/", api)
@@ -130,4 +129,28 @@ func main() {
 		slog.Error("database close", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
 		os.Exit(1)
 	}
+}
+
+// resolveSSETestTickerInterval returns how often to publish task_updated for the first list task.
+// Default is 3s when T2A_SSE_TEST_INTERVAL is unset. Set to 0 to disable the ticker (dev routes and create-time events still apply).
+func resolveSSETestTickerInterval() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(sseTestIntervalEnv))
+	if raw == "" {
+		return sseTestDefaultInterval
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		slog.Warn("invalid T2A_SSE_TEST_INTERVAL, using default", "cmd", cmdName, "operation", "taskapi.sse_test",
+			"default", sseTestDefaultInterval.String(), "err", err)
+		return sseTestDefaultInterval
+	}
+	if d == 0 {
+		return 0
+	}
+	if d < time.Second {
+		slog.Warn("T2A_SSE_TEST_INTERVAL below 1s, using default", "cmd", cmdName, "operation", "taskapi.sse_test",
+			"default", sseTestDefaultInterval.String(), "value", raw)
+		return sseTestDefaultInterval
+	}
+	return d
 }

@@ -302,7 +302,7 @@ Wire format:
 
 For local UI work, `**taskapi**` can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
 
-Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). Optional `**T2A_SSE_TEST_INTERVAL**`: a Go duration string (e.g. `3s`, `5s`) — when valid and **≥ 1s**, a background ticker publishes `**task_updated`** on that interval using the first task id in the list (or a fixed placeholder if the list is empty).
+Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). A background ticker then publishes `**task_updated`** every **`3s`** for the **first task** in list order (`id ASC`, same as `GET /tasks`), or a fixed placeholder if the list is empty — unless you override `**T2A_SSE_TEST_INTERVAL**` with another Go duration (e.g. `5s`; must be **≥ 1s**). Set `**T2A_SSE_TEST_INTERVAL=0`** to turn off the ticker only (dev routes and create-time extra events still run).
 
 When test mode is on, each successful `**POST /tasks**` still emits the normal `**task_created**` for the new row, then **also** emits **`task_updated`** for the **first task in list order** (same ordering as `GET /tasks`: `id ASC`), so the UI can exercise extra refetches against a stable “first row” without calling `**/dev/**` by hand.
 
