@@ -6,6 +6,7 @@
 //     type task_created | task_updated | task_deleted and id (UUID)
 //   - POST   /tasks           — create; 201 + JSON task
 //   - GET    /tasks           — list; query limit (0–200, default 50), offset (≥ 0, default 0)
+//   - GET    /tasks/{id}/events — 200 + JSON { task_id, events[] } (seq, at, type, by, data); 404 if task missing
 //   - GET    /tasks/{id}      — 200 + task
 //   - PATCH  /tasks/{id}      — partial update; 200 + task
 //   - DELETE /tasks/{id}      — 204, no body

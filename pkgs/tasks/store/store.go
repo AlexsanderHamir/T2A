@@ -98,6 +98,23 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 	return &t, nil
 }
 
+// ListTaskEvents returns audit events for a task in ascending sequence order.
+func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.TaskEvent, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	var events []domain.TaskEvent
+	err := s.db.WithContext(ctx).
+		Where("task_id = ?", taskID).
+		Order("seq ASC").
+		Find(&events).Error
+	if err != nil {
+		return nil, fmt.Errorf("list task events: %w", err)
+	}
+	return events, nil
+}
+
 func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
 	if limit <= 0 {
 		limit = 50

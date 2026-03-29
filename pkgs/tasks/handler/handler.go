@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -33,6 +34,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
+	m.Handle("GET /tasks/{id}/events", http.HandlerFunc(h.taskEvents))
 	m.Handle("GET /tasks/{id}", http.HandlerFunc(h.get))
 	m.Handle("PATCH /tasks/{id}", http.HandlerFunc(h.patch))
 	m.Handle("DELETE /tasks/{id}", http.HandlerFunc(h.delete))
@@ -60,6 +62,19 @@ type listResponse struct {
 	Tasks  []domain.Task `json:"tasks"`
 	Limit  int           `json:"limit"`
 	Offset int           `json:"offset"`
+}
+
+type taskEventLine struct {
+	Seq  int64            `json:"seq"`
+	At   time.Time        `json:"at"`
+	Type domain.EventType `json:"type"`
+	By   domain.Actor     `json:"by"`
+	Data json.RawMessage  `json:"data"`
+}
+
+type taskEventsResponse struct {
+	TaskID string          `json:"task_id"`
+	Events []taskEventLine `json:"events"`
 }
 
 func health(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +109,35 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	h.notifyChange(TaskCreated, t.ID)
 	writeJSON(w, op, http.StatusCreated, t)
+}
+
+func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
+	const op = "tasks.events"
+	id := strings.TrimSpace(r.PathValue("id"))
+	if _, err := h.store.Get(r.Context(), id); err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	evs, err := h.store.ListTaskEvents(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	out := make([]taskEventLine, 0, len(evs))
+	for _, e := range evs {
+		data := json.RawMessage(e.Data)
+		if len(data) == 0 {
+			data = json.RawMessage(`{}`)
+		}
+		out = append(out, taskEventLine{
+			Seq:  e.Seq,
+			At:   e.At,
+			Type: e.Type,
+			By:   e.By,
+			Data: data,
+		})
+	}
+	writeJSON(w, op, http.StatusOK, taskEventsResponse{TaskID: id, Events: out})
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {

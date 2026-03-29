@@ -36,6 +36,52 @@ func newTaskTestServerWithRepo(t *testing.T, repoDir string) *httptest.Server {
 	return httptest.NewServer(h)
 }
 
+func TestHTTP_get_task_events(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+
+	res2, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusOK {
+		t.Fatalf("events status %d", res2.StatusCode)
+	}
+	var payload struct {
+		TaskID string `json:"task_id"`
+		Events []struct {
+			Seq  int64  `json:"seq"`
+			Type string `json:"type"`
+		} `json:"events"`
+	}
+	if err := json.NewDecoder(res2.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.TaskID != created.ID || len(payload.Events) < 1 || payload.Events[0].Type != string(domain.EventTaskCreated) {
+		t.Fatalf("payload %#v", payload)
+	}
+}
+
 func TestHTTP_create_and_list(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

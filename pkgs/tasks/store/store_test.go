@@ -227,6 +227,40 @@ func TestStore_events_recorded_for_create_and_title_change(t *testing.T) {
 	}
 }
 
+func TestStore_ListTaskEvents_ordered_and_empty(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Type != domain.EventTaskCreated {
+		t.Fatalf("events %#v", evs)
+	}
+	if _, err := s.Update(ctx, tsk.ID, UpdateTaskInput{Title: strPtr("b")}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	evs2, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs2) != 2 || evs2[0].Seq >= evs2[1].Seq {
+		t.Fatalf("seq order %#v", evs2)
+	}
+}
+
+func TestStore_ListTaskEvents_not_found_task_still_empty_id(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	_, err := s.ListTaskEvents(context.Background(), "")
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
 func TestStore_Update_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
