@@ -1,19 +1,38 @@
-/* Editorial palette + Stripe-like craft: layered light, slate-tinted depth, calm motion */
+/* Harmonized system: slate neutrals, indigo navigation/focus, emerald positive, rose destructive */
 
 :root {
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
-  --ink: #0a0a0a;
-  --ink-soft: #1c1c1f;
-  /* Cool-warm balance: avoids flat “dead gray” */
-  --bg-page: #eef0f4;
-  --bg-elevated: #ffffff;
-  --bg-subtle: #f6f6f8;
+  /* Neutrals — single slate family (no mixed grays) */
   --slate-shadow: 15 23 42;
+  --text-primary: #0f172a;
+  --text-secondary: rgb(71 85 105 / 88%);
+  --text-tertiary: rgb(100 116 139 / 72%);
+  --bg-page: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f8fafc;
+
+  /* Brand / navigation — indigo (pairs with type + mesh; black reserved for primary CTAs) */
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-deep: #3730a3;
+  --brand-muted: rgb(79 70 229 / 10%);
+  --brand-mesh: rgb(79 70 229 / 7%);
+  --brand-focus: rgb(79 70 229 / 28%);
+  --link: #4338ca;
+  --link-hover: #3730a3;
+  --surface-hover: var(--brand-muted);
+  --surface-press: rgb(79 70 229 / 14%);
+  --focus-ring: var(--brand-focus);
+
+  /* Primary actions — near-black (weight separate from indigo links) */
+  --ink: #0c0a09;
+  --ink-soft: #1c1917;
+
   --border-hairline: rgb(var(--slate-shadow) / 7%);
-  --border-soft: rgb(var(--slate-shadow) / 10%);
+  --border-soft: rgb(var(--slate-shadow) / 11%);
   --shadow-sm: 0 1px 2px rgb(var(--slate-shadow) / 5%),
     0 2px 10px rgb(var(--slate-shadow) / 4%);
   --shadow-md: 0 4px 12px rgb(var(--slate-shadow) / 5%),
@@ -26,24 +45,17 @@
   --radius-lg: 22px;
   --radius-full: 980px;
 
-  --text-primary: #111827;
-  --text-secondary: rgb(55 55 58 / 78%);
-  --text-tertiary: rgb(55 55 58 / 48%);
+  /* Semantic — emerald + rose (matched saturation, calm UI) */
+  --success: #047857;
+  --success-bright: #059669;
+  --success-soft: rgb(16 185 129 / 12%);
+  --success-border: rgb(16 185 129 / 22%);
+  --success-mesh: rgb(16 185 129 / 6%);
 
-  /* Interactive text/links — ink, not blue */
-  --link: #171717;
-  --surface-hover: rgb(0 0 0 / 6%);
-  --surface-press: rgb(0 0 0 / 9%);
-  --focus-ring: rgb(var(--slate-shadow) / 16%);
-
-  --danger: #c81e1e;
-  --danger-deep: #9f1515;
-  --danger-bright: #e02424;
-  --danger-soft: rgb(200 30 30 / 9%);
-  --success: #15803d;
-  --success-bright: #16a34a;
-  --success-soft: rgb(22 163 74 / 12%);
-  --success-mesh: rgb(22 163 74 / 6%);
+  --danger: #be123c;
+  --danger-deep: #9f1239;
+  --danger-bright: #e11d48;
+  --danger-soft: rgb(225 29 72 / 10%);
 
   font-family: var(--font-sans);
   line-height: 1.47059;
@@ -73,16 +85,16 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--bg-page);
-  /* Luminous mesh: soft highlights + trace saturation (Stripe-style, restrained) */
+  /* Mesh uses same indigo + emerald tokens as the rest of the UI */
   background-image: radial-gradient(
       ellipse 100% 60% at 50% -18%,
       rgb(255 255 255 / 94%),
       transparent 55%
     ),
-    radial-gradient(ellipse 50% 45% at 100% 0%, rgb(99 102 241 / 5%), transparent 50%),
-    radial-gradient(ellipse 45% 40% at 0% 100%, rgb(22 163 74 / 5%), transparent 52%),
+    radial-gradient(ellipse 50% 45% at 100% 0%, var(--brand-mesh), transparent 50%),
+    radial-gradient(ellipse 45% 40% at 0% 100%, var(--success-mesh), transparent 52%),
     radial-gradient(ellipse 55% 45% at 92% 92%, rgb(var(--slate-shadow) / 4%), transparent 55%),
-    linear-gradient(165deg, #e8eaef 0%, #eef0f4 38%, #f2f3f7 100%);
+    linear-gradient(165deg, #e2e8f0 0%, #f1f5f9 40%, #f8fafc 100%);
   background-attachment: fixed;
 }
 
@@ -183,7 +195,7 @@ textarea:focus-visible,
 .stream-pill--ok {
   color: var(--success);
   background: var(--success-soft);
-  border-color: rgb(22 163 74 / 22%);
+  border-color: var(--success-border);
 }
 
 .stream-pill--warn {
@@ -319,13 +331,13 @@ textarea:focus-visible,
 }
 
 .err {
-  background: linear-gradient(180deg, rgb(255 245 245) 0%, rgb(255 252 252) 100%);
-  color: #9f1a2b;
+  background: linear-gradient(180deg, rgb(255 241 242) 0%, rgb(255 252 252) 100%);
+  color: var(--danger-deep);
   padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1.25rem;
   font-size: 0.9375rem;
-  border: 1px solid rgb(215 0 21 / 15%);
+  border: 1px solid rgb(225 29 72 / 18%);
   box-shadow: var(--shadow-sm);
 }
 
@@ -570,7 +582,7 @@ th {
 
 .task-list-table .cell-title-link:hover {
   background: var(--surface-hover);
-  color: var(--ink);
+  color: var(--link-hover);
 }
 
 .task-list-table .cell-title-text {
@@ -584,16 +596,16 @@ th {
   flex-shrink: 0;
   font-size: 0.85em;
   font-weight: 500;
-  color: rgb(0 0 0 / 38%);
+  color: rgb(79 70 229 / 45%);
   line-height: 1;
 }
 
 .task-list-table .cell-title-link:hover .cell-title-open-hint {
-  color: rgb(0 0 0 / 55%);
+  color: rgb(79 70 229 / 72%);
 }
 
 .task-list-table .cell-title-link:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -879,7 +891,7 @@ th {
 }
 
 .rich-prompt-wrap .tiptap:focus-within {
-  border-color: rgb(22 101 52 / 32%);
+  border-color: rgb(5 150 105 / 35%);
   box-shadow: 0 0 0 3px var(--success-soft);
   outline: none;
 }
@@ -929,8 +941,8 @@ th {
   font-weight: 500;
   line-height: 1.35;
   color: var(--text-primary);
-  background: linear-gradient(180deg, rgb(250 250 250) 0%, rgb(244 244 245) 100%);
-  border: 1px solid rgb(0 0 0 / 11%);
+  background: linear-gradient(180deg, rgb(250 250 252) 0%, rgb(244 244 248) 100%);
+  border: 1px solid rgb(79 70 229 / 14%);
   box-shadow: 0 1px 0 rgb(0 0 0 / 4%);
   white-space: nowrap;
 }
@@ -941,7 +953,7 @@ th {
   width: 0.65rem;
   height: 0.65rem;
   opacity: 0.88;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23111827' d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z'/%3E%3C/svg%3E")
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234f46e5' d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z'/%3E%3C/svg%3E")
     center / contain no-repeat;
 }
 
@@ -1020,8 +1032,8 @@ th {
 .modal-spinner {
   width: 2.25rem;
   height: 2.25rem;
-  border: 3px solid rgb(0 0 0 / 10%);
-  border-top-color: var(--ink);
+  border: 3px solid rgb(var(--slate-shadow) / 10%);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: modal-spinner-rotate 0.65s linear infinite;
 }
@@ -1029,7 +1041,7 @@ th {
 @media (prefers-reduced-motion: reduce) {
   .modal-spinner {
     animation: none;
-    border: 3px solid var(--ink);
+    border: 3px solid var(--brand);
     opacity: 0.9;
   }
 }
@@ -1046,6 +1058,7 @@ th {
 }
 
 .task-detail-back:hover {
+  color: var(--brand-hover);
   text-decoration: underline;
 }
 
