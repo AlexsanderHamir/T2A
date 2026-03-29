@@ -808,6 +808,11 @@ th {
   font-size: 0.9375rem;
 }
 
+/* Extra scroll room below the table so short lists still allow page scroll (e.g. long filter dropdowns). */
+.task-list-content {
+  padding-bottom: min(14rem, 42vh);
+}
+
 .task-list-filters {
   display: flex;
   flex-wrap: wrap;
