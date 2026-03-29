@@ -85,7 +85,7 @@ sequenceDiagram
 | **`lib/queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev cache **`onError`**. |
 | **`lib/useDelayedTrue.ts`** | Delays showing loading/sync status so very short fetches do not flash unreadable lines; **`smoothTransitions={false}`** on **`TaskListSection`** / **`StreamStatusHint`** for tests. |
 | **`types/`** | Shared task domain types (**`task.ts`**, barrel **`index.ts`**); imported as **`@/types`**. |
-| **`tasks/`** | Task feature: **`queryKeys.ts`**, **`hooks/`**, **`components/`**, **`pages/`** (**`TaskHome`**, **`TaskDetailPage`** — timeline from **`GET /tasks/{id}/events`**), **`extensions/`**, **`promptFormat.ts`**, **`taskAttention.ts`**, **`taskEventLabels.ts`**. |
+| **`tasks/`** | Task feature: **`queryKeys.ts`**, **`hooks/`**, **`components/`**, **`pages/`** (**`TaskHome`**, **`TaskDetailPage`** — collapsible **initial prompt** by default, audit timeline from **`GET /tasks/{id}/events`**), **`extensions/`**, **`promptFormat.ts`**, **`taskAttention.ts`**, **`taskEventLabels.ts`**. |
 | **`shared/`** | Cross-feature components and helpers (e.g. **`ErrorBanner`**). |
 | **`api/`** | HTTP + JSON parsing: **`index.ts`** re-exports **`tasks.ts`**, **`repo.ts`**, **`parseTaskApi.ts`**, **`shared.ts`**. |
 | **`test/`** | Vitest setup, **`EventSource`** stub, **`requestUrl`**. |

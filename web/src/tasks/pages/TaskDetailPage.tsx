@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listTaskEvents } from "@/api";
 import type { TaskEventType } from "@/types";
+import { promptHasVisibleContent } from "../promptFormat";
 import { userAttention } from "../taskAttention";
 import { eventTypeLabel } from "../taskEventLabels";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
@@ -142,11 +143,38 @@ export function TaskDetailPage({ app }: Props) {
       </div>
 
       <div className="task-detail-prompt">
-        <h3 className="task-detail-subheading">Initial prompt</h3>
-        <div
-          className="task-detail-prompt-body"
-          dangerouslySetInnerHTML={{ __html: task.initial_prompt || "—" }}
-        />
+        <h3 className="task-detail-subheading" id="task-detail-prompt-heading">
+          Initial prompt
+        </h3>
+        {!promptHasVisibleContent(task.initial_prompt) ? (
+          <p
+            className="muted task-detail-prompt-empty"
+            aria-labelledby="task-detail-prompt-heading"
+          >
+            —
+          </p>
+        ) : (
+          <details className="task-detail-prompt-details">
+            <summary className="task-detail-prompt-summary">
+              <span className="task-detail-prompt-summary-open-label">
+                Show full initial prompt
+              </span>
+              <span className="task-detail-prompt-summary-close-label">
+                Hide initial prompt
+              </span>
+              <span
+                className="task-detail-prompt-summary-chevron"
+                aria-hidden="true"
+              >
+                ▾
+              </span>
+            </summary>
+            <div
+              className="task-detail-prompt-body"
+              dangerouslySetInnerHTML={{ __html: task.initial_prompt }}
+            />
+          </details>
+        )}
       </div>
 
       <div className="task-detail-timeline">

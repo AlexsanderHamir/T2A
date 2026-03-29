@@ -3,6 +3,7 @@ import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
   previewTextFromPrompt,
+  promptHasVisibleContent,
 } from "./promptFormat";
 
 describe("promptFormat", () => {
@@ -20,5 +21,12 @@ describe("promptFormat", () => {
       "hello world",
     );
     expect(previewTextFromPrompt("plain")).toBe("plain");
+  });
+
+  it("detects visible prompt content", () => {
+    expect(promptHasVisibleContent("")).toBe(false);
+    expect(promptHasVisibleContent("   ")).toBe(false);
+    expect(promptHasVisibleContent("<p></p>")).toBe(false);
+    expect(promptHasVisibleContent("<p>hi</p>")).toBe(true);
   });
 });

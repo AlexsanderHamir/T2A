@@ -31,3 +31,8 @@ export function previewTextFromPrompt(s: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** True if the stored prompt has any visible text (after stripping markup). */
+export function promptHasVisibleContent(s: string): boolean {
+  return previewTextFromPrompt(s).length > 0;
+}

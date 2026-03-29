@@ -1286,7 +1286,71 @@ th {
   margin-bottom: 1.5rem;
 }
 
+.task-detail-prompt-empty {
+  margin: 0;
+}
+
+.task-detail-prompt-details {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 1.5%);
+}
+
+.task-detail-prompt-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--link);
+  user-select: none;
+}
+
+.task-detail-prompt-summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-detail-prompt-summary::marker {
+  content: "";
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary {
+  border-bottom: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+}
+
+.task-detail-prompt-details:not([open]) .task-detail-prompt-summary-close-label {
+  display: none;
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary-open-label {
+  display: none;
+}
+
+.task-detail-prompt-summary-chevron {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  line-height: 1;
+  color: rgb(var(--slate-shadow) / 45%);
+  transition: transform 0.15s ease;
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-detail-prompt-summary-chevron {
+    transition: none;
+  }
+}
+
 .task-detail-prompt-body {
+  padding: 0.85rem 0.85rem 1rem;
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--text-secondary);
