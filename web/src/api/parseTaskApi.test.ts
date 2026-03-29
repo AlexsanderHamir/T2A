@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseTask, parseTaskListResponse } from "./parseTaskApi";
+import {
+  parseTask,
+  parseTaskEventsResponse,
+  parseTaskListResponse,
+} from "./parseTaskApi";
 
 const validTask = {
   id: "a1",
@@ -51,5 +55,36 @@ describe("parseTaskListResponse", () => {
     expect(() =>
       parseTaskListResponse({ tasks: {}, limit: 0, offset: 0 }),
     ).toThrow(/array/);
+  });
+});
+
+describe("parseTaskEventsResponse", () => {
+  it("parses events envelope", () => {
+    const at = "2026-01-01T12:00:00Z";
+    expect(
+      parseTaskEventsResponse({
+        task_id: "tid",
+        events: [
+          {
+            seq: 1,
+            at,
+            type: "task_created",
+            by: "user",
+            data: {},
+          },
+        ],
+      }),
+    ).toEqual({
+      task_id: "tid",
+      events: [
+        {
+          seq: 1,
+          at,
+          type: "task_created",
+          by: "user",
+          data: {},
+        },
+      ],
+    });
   });
 });

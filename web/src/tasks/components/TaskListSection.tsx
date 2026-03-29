@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import {
@@ -158,7 +159,14 @@ export function TaskListSection({
                     );
                     return (
                       <tr key={t.id}>
-                        <td className="cell-title">{t.title}</td>
+                        <td className="cell-title">
+                          <Link
+                            to={`/tasks/${t.id}`}
+                            className="cell-title-link"
+                          >
+                            {t.title}
+                          </Link>
+                        </td>
                         <td>
                           <span className="cell-pill cell-pill--muted">
                             {t.status}

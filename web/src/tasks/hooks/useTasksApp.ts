@@ -64,7 +64,7 @@ export function useTasksApp() {
       setNewTitle("");
       setNewPrompt("");
       setNewPriority("medium");
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
     },
   });
 
@@ -84,7 +84,7 @@ export function useTasksApp() {
       }),
     onSuccess: async () => {
       setEditing(null);
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
     },
   });
 
@@ -192,6 +192,7 @@ export function useTasksApp() {
     createPending,
     patchPending,
     deletePending,
+    deleteMutation,
     error,
     sseLive,
     newTitle,

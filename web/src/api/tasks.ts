@@ -3,10 +3,41 @@ import {
   type Priority,
   type Status,
   type Task,
+  type TaskEventsResponse,
   type TaskListResponse,
 } from "@/types";
-import { parseTask, parseTaskListResponse } from "./parseTaskApi";
+import {
+  parseTask,
+  parseTaskEventsResponse,
+  parseTaskListResponse,
+} from "./parseTaskApi";
 import { jsonHeaders, readError } from "./shared";
+
+export async function getTask(
+  id: string,
+  options?: { signal?: AbortSignal },
+): Promise<Task> {
+  const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTask(raw);
+}
+
+export async function listTaskEvents(
+  id: string,
+  options?: { signal?: AbortSignal },
+): Promise<TaskEventsResponse> {
+  const res = await fetch(`/tasks/${encodeURIComponent(id)}/events`, {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskEventsResponse(raw);
+}
 
 export async function listTasks(
   limit = 200,

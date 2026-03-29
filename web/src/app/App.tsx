@@ -1,15 +1,14 @@
+import { Outlet, Route, Routes } from "react-router-dom";
 import { DeleteConfirmDialog } from "../tasks/components/DeleteConfirmDialog";
 import { StreamStatusHint } from "../tasks/components/StreamStatusHint";
-import { TaskCreateForm } from "../tasks/components/TaskCreateForm";
 import { TaskEditForm } from "../tasks/components/TaskEditForm";
-import { TaskListSection } from "../tasks/components/TaskListSection";
 import { useTasksApp } from "../tasks/hooks/useTasksApp";
+import { TaskDetailPage } from "../tasks/pages/TaskDetailPage";
+import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import "./App.css";
 
-export default function App() {
-  const app = useTasksApp();
-
+function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   return (
     <div className="app">
       <header className="app-header">
@@ -25,26 +24,7 @@ export default function App() {
       {app.error ? <ErrorBanner message={app.error} /> : null}
 
       <main>
-        <TaskCreateForm
-          title={app.newTitle}
-          prompt={app.newPrompt}
-          priority={app.newPriority}
-          saving={app.saving}
-          createPending={app.createPending}
-          onTitleChange={app.setNewTitle}
-          onPromptChange={app.setNewPrompt}
-          onPriorityChange={app.setNewPriority}
-          onSubmit={(e) => void app.submitCreate(e)}
-        />
-
-        <TaskListSection
-          tasks={app.tasks}
-          loading={app.loading}
-          refreshing={app.listRefreshing}
-          saving={app.saving}
-          onEdit={app.openEdit}
-          onRequestDelete={app.requestDelete}
-        />
+        <Outlet />
 
         {app.deleteTarget ? (
           <DeleteConfirmDialog
@@ -73,5 +53,18 @@ export default function App() {
         ) : null}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  const app = useTasksApp();
+
+  return (
+    <Routes>
+      <Route path="/" element={<AppShell app={app} />}>
+        <Route index element={<TaskHome app={app} />} />
+        <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
+      </Route>
+    </Routes>
   );
 }

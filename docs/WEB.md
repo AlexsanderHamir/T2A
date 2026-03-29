@@ -73,7 +73,7 @@ sequenceDiagram
   H->>ES: SSE data line
   ES->>Hook: onmessage
   Hook->>Hook: debounce 400ms
-  Hook->>QC: invalidateQueries list
+  Hook->>QC: invalidateQueries tasks (list + open task detail)
   QC->>H: GET /tasks
 ```
 
@@ -81,11 +81,11 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| **`app/`** | **`main.tsx`** (entry, **`QueryClientProvider`**), **`App.tsx`**, **`App.css`**, **`App.test.tsx`**. |
+| **`app/`** | **`main.tsx`** (entry, **`BrowserRouter`**, **`QueryClientProvider`**), **`App.tsx`** (routes: `/`, **`/tasks/:taskId`**), **`App.css`**, **`App.test.tsx`**. |
 | **`lib/queryClient.ts`** | Defaults: stale time, **`gcTime`**, retries, **`refetchOnWindowFocus`**, dev cache **`onError`**. |
 | **`lib/useDelayedTrue.ts`** | Delays showing loading/sync status so very short fetches do not flash unreadable lines; **`smoothTransitions={false}`** on **`TaskListSection`** / **`StreamStatusHint`** for tests. |
 | **`types/`** | Shared task domain types (**`task.ts`**, barrel **`index.ts`**); imported as **`@/types`**. |
-| **`tasks/`** | Task feature: **`queryKeys.ts`** (React Query keys), **`hooks/`**, **`components/`**, **`extensions/`** (e.g. **`repoFileSuggestion`**), **`promptFormat.ts`**. |
+| **`tasks/`** | Task feature: **`queryKeys.ts`**, **`hooks/`**, **`components/`**, **`pages/`** (**`TaskHome`**, **`TaskDetailPage`** — timeline from **`GET /tasks/{id}/events`**), **`extensions/`**, **`promptFormat.ts`**, **`taskAttention.ts`**, **`taskEventLabels.ts`**. |
 | **`shared/`** | Cross-feature components and helpers (e.g. **`ErrorBanner`**). |
 | **`api/`** | HTTP + JSON parsing: **`index.ts`** re-exports **`tasks.ts`**, **`repo.ts`**, **`parseTaskApi.ts`**, **`shared.ts`**. |
 | **`test/`** | Vitest setup, **`EventSource`** stub, **`requestUrl`**. |

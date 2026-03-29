@@ -15,7 +15,7 @@ export function useTaskEventStream(): boolean {
     }
     sseDebounceRef.current = setTimeout(() => {
       sseDebounceRef.current = undefined;
-      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
     }, SSE_INVALIDATE_MS);
   }, [queryClient]);
 

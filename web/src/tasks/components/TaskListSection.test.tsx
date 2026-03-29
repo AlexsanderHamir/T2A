@@ -1,11 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { TaskListSection } from "./TaskListSection";
 
+function renderWithRouter(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe("TaskListSection", () => {
   it("shows loading status", () => {
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={[]}
         loading
@@ -20,7 +26,7 @@ describe("TaskListSection", () => {
   });
 
   it("shows syncing status when refreshing", () => {
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={[]}
         loading={false}
@@ -35,7 +41,7 @@ describe("TaskListSection", () => {
   });
 
   it("shows empty copy when not loading and no tasks", () => {
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={[]}
         loading={false}
@@ -59,7 +65,7 @@ describe("TaskListSection", () => {
       status: "ready" as const,
       priority: "medium" as const,
     };
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={[task]}
         loading={false}
@@ -93,7 +99,7 @@ describe("TaskListSection", () => {
         priority: "high" as const,
       },
     ];
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={tasks}
         loading={false}
@@ -140,7 +146,7 @@ describe("TaskListSection", () => {
         priority: "medium" as const,
       },
     ];
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={tasks}
         loading={false}
@@ -164,7 +170,7 @@ describe("TaskListSection", () => {
 
   it("shows copy when no tasks match filters", async () => {
     const user = userEvent.setup();
-    render(
+    renderWithRouter(
       <TaskListSection
         tasks={[
           {
