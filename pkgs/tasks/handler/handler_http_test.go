@@ -466,3 +466,66 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 		t.Fatalf("create valid mention status %d body %s", res3.StatusCode, b)
 	}
 }
+
+func TestHTTP_repo_validate_range_ok(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "note.txt")
+	if err := os.WriteFile(p, []byte("line1\nline2\nline3\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/validate-range?path=note.txt&start=1&end=2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var payload struct {
+		OK        bool `json:"ok"`
+		LineCount int  `json:"line_count"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.OK || payload.LineCount != 3 {
+		t.Fatalf("ok=%v line_count=%d", payload.OK, payload.LineCount)
+	}
+}
+
+func TestHTTP_repo_validate_range_missing_params(t *testing.T) {
+	dir := t.TempDir()
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/validate-range")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(p, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/validate-range?path=a.txt&start=nope&end=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
