@@ -120,6 +120,8 @@ func parseTaskChangeType(s string) (TaskChangeType, bool) {
 	}
 }
 
+// pickTestTaskID returns the first task id in list order (id ASC, same as GET /tasks).
+// Used by dev routes, the optional ticker, and POST /tasks when T2A_SSE_TEST=1.
 func pickTestTaskID(ctx context.Context, st *store.Store) string {
 	rows, err := st.List(ctx, 1, 0)
 	if err != nil || len(rows) == 0 {

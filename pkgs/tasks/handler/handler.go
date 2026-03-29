@@ -108,6 +108,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskCreated, t.ID)
+	if SSETestEnabled() && h.hub != nil {
+		firstID := pickTestTaskID(r.Context(), h.store)
+		h.hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: firstID})
+	}
 	writeJSON(w, op, http.StatusCreated, t)
 }
 

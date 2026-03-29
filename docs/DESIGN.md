@@ -149,8 +149,8 @@ flowchart TB
 1. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
 2. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
 3. Optional `-migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent`.
-4. `store.NewStore`, `handler.NewSSEHub`, optional `**repo.OpenRoot(REPO_ROOT)`** when the env var is non-empty, then `**handler.NewHandler(store, hub, rep)**` — `rep` may be **nil** when `**REPO_ROOT`** is unset (no repo routes beyond **503**).
-5. `http.Server` on `-port` (default **8080**): `**ReadHeaderTimeout`** and `**ReadTimeout**` bound slow clients; `**IdleTimeout**` caps idle keep-alive; `**MaxHeaderBytes**` caps request headers (~1 MiB). `**WriteTimeout` is not set** so long-lived `**GET /events`** streams are not cut off.
+4. `store.NewStore`, `handler.NewSSEHub`, optional `**repo.OpenRoot(REPO_ROOT)`** when the env var is non-empty, then `**handler.NewHandler(store, hub, rep)`** — `rep` may be **nil** when `**REPO_ROOT`** is unset (no repo routes beyond **503**).
+5. `http.Server` on `-port` (default **8080**): `**ReadHeaderTimeout`** and `**ReadTimeout`** bound slow clients; `**IdleTimeout**` caps idle keep-alive; `**MaxHeaderBytes**` caps request headers (~1 MiB). `**WriteTimeout` is not set** so long-lived `**GET /events`** streams are not cut off.
 
 ### Graceful shutdown
 
@@ -180,7 +180,7 @@ sequenceDiagram
 | `REPO_ROOT`    | No                         | Absolute path to a directory on the **machine running `taskapi`**. When non-empty and valid, enables `[/repo` routes](#optional-workspace-repo-repo_root) and validates `**initial_prompt**` `**@**` file mentions on `**POST/PATCH /tasks**`. When empty, repo routes respond with **503** JSON and prompts are not validated for mentions. |
 
 
-`dbcheck` uses the same `**.env`** discovery for `**DATABASE_URL**` only; it does not use `**REPO_ROOT**`.
+`dbcheck` uses the same `**.env`** discovery for `**DATABASE_URL`** only; it does not use `**REPO_ROOT**`.
 
 ## REST API — task and event routes
 
@@ -189,14 +189,14 @@ The mux is mounted at `**/**` (no `/api` prefix). Registered families: **tasks**
 ### Task resource (`/tasks`)
 
 
-| Capability     | Method / path        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| -------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create task    | `POST /tasks`        | Title required after trim; optional `id` (else UUID); default status `ready`, priority `medium`.                                                                                                                                                                                                                                                                                                                                                        |
-| List tasks     | `GET /tasks`         | Query `limit` (0–200, default 50), `offset` (≥ 0). **Non-positive `limit` is coerced to 50** in the store (so `limit=0` means the default page size, not “zero rows”). Results are ordered by `**id ASC`** (lexicographic string order, not creation time unless IDs happen to sort that way).                                                                                                                                                          |
-| Get one task   | `GET /tasks/{id}`    | Empty or whitespace `id` → 400.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Task audit log | `GET /tasks/{id}/events` | Append-only `task_events` for that task (seq ascending): `seq`, `at`, `type`, `by` (`user` \| `agent`), `data` (JSON object). **404** if the task does not exist.                                                                                                                                                                                                                                                                                     |
-| Partial update | `PATCH /tasks/{id}`  | At least one optional field must decode to a **non-nil** pointer (omitted key and JSON `null` both leave that field unchanged and do not count). To set `initial_prompt` to empty, send `""`. Title cannot be cleared (empty string after trim is rejected). When `**REPO_ROOT`** is configured, `**initial_prompt**` is checked for `**@**` file mentions (see [repo](#optional-workspace-repo-repo_root)). See store for validation and audit events. |
-| Delete task    | `DELETE /tasks/{id}` | 204, empty body. Empty `id` → 400.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Capability     | Method / path            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create task    | `POST /tasks`            | Title required after trim; optional `id` (else UUID); default status `ready`, priority `medium`.                                                                                                                                                                                                                                                                                                                                                        |
+| List tasks     | `GET /tasks`             | Query `limit` (0–200, default 50), `offset` (≥ 0). **Non-positive `limit` is coerced to 50** in the store (so `limit=0` means the default page size, not “zero rows”). Results are ordered by `**id ASC`** (lexicographic string order, not creation time unless IDs happen to sort that way).                                                                                                                                                          |
+| Get one task   | `GET /tasks/{id}`        | Empty or whitespace `id` → 400.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Task audit log | `GET /tasks/{id}/events` | Append-only `task_events` for that task (seq ascending): `seq`, `at`, `type`, `by` (`user` | `agent`), `data` (JSON object). **404** if the task does not exist.                                                                                                                                                                                                                                                                                        |
+| Partial update | `PATCH /tasks/{id}`      | At least one optional field must decode to a **non-nil** pointer (omitted key and JSON `null` both leave that field unchanged and do not count). To set `initial_prompt` to empty, send `""`. Title cannot be cleared (empty string after trim is rejected). When `**REPO_ROOT`** is configured, `**initial_prompt`** is checked for `**@**` file mentions (see [repo](#optional-workspace-repo-repo_root)). See store for validation and audit events. |
+| Delete task    | `DELETE /tasks/{id}`     | 204, empty body. Empty `id` → 400.                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 
 Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for attribution. It is not an authentication mechanism.
@@ -219,7 +219,7 @@ Structured logs at the handler use `**operation**` and `**http_status**`; client
 
 ## Optional workspace repo (`REPO_ROOT`)
 
-When `**REPO_ROOT`** is set at startup, `taskapi` wires `**pkgs/repo**` into the handler. This supports the optional **web** UI feature: type `**@`** in `**initial_prompt**` to pick files under that root and optional line ranges.
+When `**REPO_ROOT`** is set at startup, `taskapi` wires `**pkgs/repo`** into the handler. This supports the optional **web** UI feature: type `**@`** in `**initial_prompt`** to pick files under that root and optional line ranges.
 
 ### `GET /repo/search`
 
@@ -244,7 +244,7 @@ When `**REPO_ROOT`** is set at startup, `taskapi` wires `**pkgs/repo**` into the
 
 - **200** JSON: `{ "ok": true/false, "line_count"?: number, "warning"?: string }` — used to warn about invalid ranges without always returning non-200.
 
-`**POST /tasks` / `PATCH /tasks/{id}`:** when `**rep`** is non-nil, `**initial_prompt**` is passed through `**repo.ValidatePromptMentions**` so unresolved paths or bad ranges fail with `**domain.ErrInvalidInput**` → **400** plain text (same as other task validation errors).
+`**POST /tasks` / `PATCH /tasks/{id}`:** when `**rep`** is non-nil, `**initial_prompt`** is passed through `**repo.ValidatePromptMentions**` so unresolved paths or bad ranges fail with `**domain.ErrInvalidInput**` → **400** plain text (same as other task validation errors).
 
 ```mermaid
 sequenceDiagram
@@ -297,18 +297,23 @@ Wire format:
 | Successful `PATCH /tasks/{id}`  | `task_updated` |
 | Successful `DELETE /tasks/{id}` | `task_deleted` |
 
+
 ### Dev-only: synthetic SSE (`T2A_SSE_TEST=1`)
 
-For local UI work, **`taskapi`** can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
+For local UI work, `**taskapi**` can expose helpers that inject the **same** JSON line into the SSE hub as real mutations (clients still refetch via REST).
 
-Set **`T2A_SSE_TEST=1`** in the environment (never enable in production without intent). Optional **`T2A_SSE_TEST_INTERVAL`**: a Go duration string (e.g. `3s`, `5s`) — when valid and **≥ 1s**, a background ticker publishes **`task_updated`** on that interval using the first task id in the list (or a fixed placeholder if the list is empty).
+Set `**T2A_SSE_TEST=1`** in the environment (never enable in production without intent). Optional `**T2A_SSE_TEST_INTERVAL**`: a Go duration string (e.g. `3s`, `5s`) — when valid and **≥ 1s**, a background ticker publishes `**task_updated`** on that interval using the first task id in the list (or a fixed placeholder if the list is empty).
 
-| Method | Path | Behavior |
-|--------|------|----------|
-| `GET` | `/dev/sse/ping` | Publishes one **`task_updated`**. Query **`id`** overrides the task id; otherwise first list task or placeholder. **204** empty body. |
-| `POST` | `/dev/sse/publish` | JSON `{"type":"<task_created or task_updated or task_deleted>","id":"..."}`. Omit **`type`** → **`task_updated`**. Omit **`id`** → same id resolution as ping. **204** empty body. |
+When test mode is on, each successful `**POST /tasks**` still emits the normal `**task_created**` for the new row, then **also** emits **`task_updated`** for the **first task in list order** (same ordering as `GET /tasks`: `id ASC`), so the UI can exercise extra refetches against a stable “first row” without calling `**/dev/**` by hand.
 
-Vite dev server proxies **`/dev`** to **`taskapi`** (see **`web/vite.config.ts`**) so you can open **`http://localhost:5173/dev/sse/ping`** or **`curl -X POST http://127.0.0.1:8080/dev/sse/publish ...`** against the API directly.
+
+| Method | Path               | Behavior                                                                                                                                                                           |
+| ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/dev/sse/ping`    | Publishes one `**task_updated**`. Query `**id**` overrides the task id; otherwise first list task or placeholder. **204** empty body.                                              |
+| `POST` | `/dev/sse/publish` | JSON `{"type":"<task_created or task_updated or task_deleted>","id":"..."}`. Omit `**type`** → `**task_updated**`. Omit `**id**` → same id resolution as ping. **204** empty body. |
+
+
+Vite dev server proxies `**/dev`** to `**taskapi**` (see `**web/vite.config.ts**`) so you can open `**http://localhost:5173/dev/sse/ping**` or `**curl -X POST http://127.0.0.1:8080/dev/sse/publish ...**` against the API directly.
 
 Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative.
 
@@ -364,7 +369,7 @@ Audit: append-only `task_events` for typed changes. Event type strings are `doma
 
 ## Optional browser client (`web/`)
 
-Optional **Vite + React** app under `**web/`** uses `**/tasks**`, `**/events**`, and `**/repo**` as documented here. SPA-specific details: `**[WEB.md](./WEB.md)**`. Commands and `**npm**` scripts: root `**README.md**`.
+Optional **Vite + React** app under `**web/`** uses `**/tasks`**, `**/events**`, and `**/repo**` as documented here. SPA-specific details: `**[WEB.md](./WEB.md)**`. Commands and `**npm**` scripts: root `**README.md**`.
 
 ## Related references
 
