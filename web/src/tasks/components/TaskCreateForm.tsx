@@ -8,6 +8,8 @@ type Props = {
   prompt: string;
   priority: Priority;
   saving: boolean;
+  /** True while POST /tasks is in flight (spinner overlay). */
+  createPending: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
@@ -19,13 +21,26 @@ export function TaskCreateForm({
   prompt,
   priority,
   saving,
+  createPending,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
   onSubmit,
 }: Props) {
   return (
-    <section className="panel">
+    <section
+      className={`panel${createPending ? " panel--busy" : ""}`}
+      aria-busy={createPending}
+    >
+      {createPending ? (
+        <div className="modal-busy-overlay" aria-live="polite">
+          <div
+            className="modal-spinner"
+            role="status"
+            aria-label="Creating task…"
+          />
+        </div>
+      ) : null}
       <h2>New task</h2>
       <form onSubmit={onSubmit}>
         <div className="row">

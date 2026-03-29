@@ -286,6 +286,10 @@ textarea:focus-visible,
   box-shadow: var(--shadow-sm);
 }
 
+.panel.panel--busy {
+  position: relative;
+}
+
 .panel h2 {
   font-size: 1.0625rem;
   font-weight: 600;

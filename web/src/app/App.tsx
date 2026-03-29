@@ -30,6 +30,7 @@ export default function App() {
           prompt={app.newPrompt}
           priority={app.newPriority}
           saving={app.saving}
+          createPending={app.createPending}
           onTitleChange={app.setNewTitle}
           onPromptChange={app.setNewPrompt}
           onPriorityChange={app.setNewPriority}

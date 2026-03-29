@@ -180,6 +180,7 @@ export function useTasksApp() {
     deleteMutation.mutate(deleteTarget.id);
   }
 
+  const createPending = createMutation.isPending;
   const patchPending = patchMutation.isPending;
   const deletePending = deleteMutation.isPending;
 
@@ -188,6 +189,7 @@ export function useTasksApp() {
     loading,
     listRefreshing,
     saving,
+    createPending,
     patchPending,
     deletePending,
     error,
