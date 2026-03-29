@@ -11,6 +11,7 @@ describe("DeleteConfirmDialog", () => {
       <DeleteConfirmDialog
         taskTitle="My task"
         saving={false}
+        deletePending={false}
         onCancel={onCancel}
         onConfirm={vi.fn()}
       />,
@@ -26,6 +27,7 @@ describe("DeleteConfirmDialog", () => {
       <DeleteConfirmDialog
         taskTitle="X"
         saving={false}
+        deletePending={false}
         onCancel={onCancel}
         onConfirm={vi.fn()}
       />,

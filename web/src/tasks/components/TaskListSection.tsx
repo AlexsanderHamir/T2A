@@ -34,56 +34,64 @@ export function TaskListSection({
           Loading…
         </p>
       ) : tasks.length === 0 ? (
-        <p className="muted">No tasks yet.</p>
+        <p className="muted empty-state">No tasks yet.</p>
       ) : (
-        <table aria-busy={refreshing}>
-          <thead>
-            <tr>
-              <th scope="col">Title</th>
-              <th scope="col">Status</th>
-              <th scope="col">Priority</th>
-              <th scope="col">Prompt</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((t) => {
-              const promptPreview = previewTextFromPrompt(t.initial_prompt);
-              return (
-                <tr key={t.id}>
-                <td>{t.title}</td>
-                <td>{t.status}</td>
-                <td>{t.priority}</td>
-                <td>
-                  <div className="prompt-preview" title={promptPreview}>
-                    {promptPreview || "—"}
-                  </div>
-                </td>
-                <td>
-                  <div className="actions">
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => onEdit(t)}
-                      disabled={saving}
-                    >
-                      Edit
-                    </button>
-                      <button
-                      type="button"
-                      className="danger"
-                      onClick={() => onRequestDelete(t)}
-                      disabled={saving}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table aria-busy={refreshing}>
+            <thead>
+              <tr>
+                <th scope="col">Title</th>
+                <th scope="col">Status</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Prompt</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map((t) => {
+                const promptPreview = previewTextFromPrompt(t.initial_prompt);
+                return (
+                  <tr key={t.id}>
+                    <td className="cell-title">{t.title}</td>
+                    <td>
+                      <span className="cell-pill cell-pill--muted">{t.status}</span>
+                    </td>
+                    <td>
+                      <span className="cell-pill cell-pill--priority">
+                        {t.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="prompt-preview" title={promptPreview}>
+                        {promptPreview || "—"}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="actions">
+                        <button
+                          type="button"
+                          className="secondary btn-table"
+                          onClick={() => onEdit(t)}
+                          disabled={saving}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="danger btn-table"
+                          onClick={() => onRequestDelete(t)}
+                          disabled={saving}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

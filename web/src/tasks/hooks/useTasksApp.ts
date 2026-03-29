@@ -86,6 +86,7 @@ export function useTasksApp() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiDelete(id),
     onSuccess: async (_, deletedId) => {
+      setDeleteTarget(null);
       setEditing((prev) => (prev?.id === deletedId ? null : prev));
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
     },
@@ -169,18 +170,21 @@ export function useTasksApp() {
     setDeleteTarget(null);
   }, []);
 
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!deleteTarget) return;
-    const { id } = deleteTarget;
-    setDeleteTarget(null);
-    deleteMutation.mutate(id);
+    deleteMutation.mutate(deleteTarget.id);
   }
+
+  const patchPending = patchMutation.isPending;
+  const deletePending = deleteMutation.isPending;
 
   return {
     tasks,
     loading,
     listRefreshing,
     saving,
+    patchPending,
+    deletePending,
     error,
     sseLive,
     newTitle,

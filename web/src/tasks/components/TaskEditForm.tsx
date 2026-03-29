@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { Priority } from "@/types";
+import { Modal } from "../../shared/Modal";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
 
@@ -9,6 +10,7 @@ type Props = {
   prompt: string;
   priority: Priority;
   saving: boolean;
+  patchPending: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
@@ -22,6 +24,7 @@ export function TaskEditForm({
   prompt,
   priority,
   saving,
+  patchPending,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
@@ -29,55 +32,62 @@ export function TaskEditForm({
   onCancel,
 }: Props) {
   return (
-    <section className="panel">
-      <h2>Edit task</h2>
-      <form onSubmit={(e) => void onSubmit(e)}>
-        <p className="muted stack-tight-zero">
-          <code>{taskId}</code>
-        </p>
-        <div className="row">
-          <div className="field grow">
-            <label htmlFor="task-edit-title">Title</label>
-            <input
-              id="task-edit-title"
-              value={title}
-              onChange={(ev) => onTitleChange(ev.target.value)}
-              required
+    <Modal
+      onClose={onCancel}
+      labelledBy="edit-dialog-title"
+      size="wide"
+      busy={patchPending}
+    >
+      <section className="panel modal-sheet modal-sheet--edit">
+        <h2 id="edit-dialog-title">Edit task</h2>
+        <form onSubmit={(e) => void onSubmit(e)}>
+          <p className="muted stack-tight-zero">
+            <code>{taskId}</code>
+          </p>
+          <div className="row">
+            <div className="field grow">
+              <label htmlFor="task-edit-title">Title</label>
+              <input
+                id="task-edit-title"
+                value={title}
+                onChange={(ev) => onTitleChange(ev.target.value)}
+                required
+              />
+            </div>
+            <PrioritySelect
+              id="task-edit-priority"
+              value={priority}
+              onChange={onPriorityChange}
             />
           </div>
-          <PrioritySelect
-            id="task-edit-priority"
-            value={priority}
-            onChange={onPriorityChange}
-          />
-        </div>
-        <div className="field grow stack-tight prompt-field-full">
-          <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">
-            Initial prompt
-          </label>
-          <RichPromptEditor
-            key={taskId}
-            id="task-edit-prompt"
-            value={prompt}
-            onChange={onPromptChange}
-            disabled={saving}
-            placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
-          />
-        </div>
-        <div className="row stack-row-actions">
-          <button type="submit" disabled={saving}>
-            Save
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={saving}
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </section>
+          <div className="field grow stack-tight prompt-field-full">
+            <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">
+              Initial prompt
+            </label>
+            <RichPromptEditor
+              key={taskId}
+              id="task-edit-prompt"
+              value={prompt}
+              onChange={onPromptChange}
+              disabled={saving}
+              placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
+            />
+          </div>
+          <div className="row stack-row-actions">
+            <button type="submit" disabled={saving}>
+              Save
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={saving}
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </section>
+    </Modal>
   );
 }

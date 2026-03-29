@@ -13,7 +13,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Tasks</h1>
+        <div className="app-header-top">
+          <h1 className="app-title">Tasks</h1>
+          <p className="app-tagline">Capture work. Ship with clarity.</p>
+        </div>
         <StreamStatusHint
           connected={app.sseLive}
           listSyncing={app.listRefreshing}
@@ -46,6 +49,7 @@ export default function App() {
           <DeleteConfirmDialog
             taskTitle={app.deleteTarget.title}
             saving={app.saving}
+            deletePending={app.deletePending}
             onCancel={app.cancelDelete}
             onConfirm={() => void app.confirmDelete()}
           />
@@ -58,6 +62,7 @@ export default function App() {
             prompt={app.editPrompt}
             priority={app.editPriority}
             saving={app.saving}
+            patchPending={app.patchPending}
             onTitleChange={app.setEditTitle}
             onPromptChange={app.setEditPrompt}
             onPriorityChange={app.setEditPriority}
