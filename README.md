@@ -42,7 +42,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-With `taskapi` on `http://127.0.0.1:8080` by default: REST at `/tasks`, SSE at `/events` — details in [docs/DESIGN.md](docs/DESIGN.md). For synthetic SSE during UI development, set `T2A_SSE_TEST=1`: a background ticker every 3s (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable) lists all tasks via `store.List`, applies a cyclic `status_changed` update per task (same audit trail as `PATCH`, actor `agent`), and publishes `task_updated`. No extra HTTP routes (see Server-Sent Events in [docs/DESIGN.md](docs/DESIGN.md)).
+With `taskapi` on `http://127.0.0.1:8080` by default: REST at `/tasks`, SSE at `/events` — details in [docs/DESIGN.md](docs/DESIGN.md). For synthetic SSE during UI development, set `T2A_SSE_TEST=1`: a background ticker every 3s (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable) lists all tasks via `store.List`, appends a rotated `task_events` row per task (cycles through every `EventType`, actor `agent`, sample payloads), and publishes `task_updated`. Task fields are unchanged; only the audit log grows. No extra HTTP routes (see Server-Sent Events in [docs/DESIGN.md](docs/DESIGN.md)).
 
 Windows PowerShell: use `curl.exe` and single-quoted JSON:
 

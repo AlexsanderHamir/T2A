@@ -130,7 +130,7 @@ func main() {
 	}
 }
 
-// resolveSSETestTickerInterval returns how often the SSE dev ticker runs store.List + store.Update per task.
+// resolveSSETestTickerInterval returns how often the SSE dev ticker runs store.List + AppendTaskEvent per task.
 // Default is 3s when T2A_SSE_TEST_INTERVAL is unset. Set to 0 to disable the ticker.
 func resolveSSETestTickerInterval() time.Duration {
 	raw := strings.TrimSpace(os.Getenv(sseTestIntervalEnv))

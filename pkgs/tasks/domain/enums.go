@@ -39,7 +39,7 @@ const (
 	EventApprovalGranted       EventType = "approval_granted"
 	EventTaskCompleted         EventType = "task_completed"
 	EventTaskFailed            EventType = "task_failed"
-	// EventSyncPing is reserved for tests or manual append; the SSE dev ticker (T2A_SSE_TEST) uses real status_changed updates instead.
+	// EventSyncPing is included in the dev ticker rotation (T2A_SSE_TEST) alongside every other EventType.
 	EventSyncPing EventType = "sync_ping"
 )
 

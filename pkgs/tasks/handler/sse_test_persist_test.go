@@ -11,6 +11,44 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+func TestSseTestEventCycle_exhaustive(t *testing.T) {
+	want := map[domain.EventType]struct{}{
+		domain.EventTaskCreated:           {},
+		domain.EventStatusChanged:         {},
+		domain.EventPriorityChanged:       {},
+		domain.EventPromptAppended:        {},
+		domain.EventContextAdded:          {},
+		domain.EventConstraintAdded:       {},
+		domain.EventSuccessCriterionAdded: {},
+		domain.EventNonGoalAdded:          {},
+		domain.EventPlanAdded:             {},
+		domain.EventSubtaskAdded:          {},
+		domain.EventMessageAdded:          {},
+		domain.EventArtifactAdded:         {},
+		domain.EventApprovalRequested:     {},
+		domain.EventApprovalGranted:       {},
+		domain.EventTaskCompleted:         {},
+		domain.EventTaskFailed:            {},
+		domain.EventSyncPing:              {},
+	}
+	if len(sseTestEventCycle) != len(want) {
+		t.Fatalf("sseTestEventCycle len %d want %d", len(sseTestEventCycle), len(want))
+	}
+	seen := make(map[domain.EventType]int)
+	for _, e := range sseTestEventCycle {
+		seen[e]++
+		delete(want, e)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing event types in cycle: %v", want)
+	}
+	for e, n := range seen {
+		if n != 1 {
+			t.Fatalf("duplicate %q count %d", e, n)
+		}
+	}
+}
+
 func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
@@ -55,25 +93,26 @@ func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 		}
 	}
 
-	// Same code path as PATCH: cyclic ready → running, status_changed by agent.
+	// One task_created from Create; first dev append uses len(events)==1 → cycle[1].
+
 	for _, id := range []string{a.ID, b.ID} {
 		tsk, err := st.Get(ctx, id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if tsk.Status != domain.StatusRunning {
-			t.Fatalf("task %s status = %q want running", id, tsk.Status)
+		if tsk.Status != domain.StatusReady {
+			t.Fatalf("task %s status = %q want ready (ticker does not patch task row)", id, tsk.Status)
 		}
 		evs, err := st.ListTaskEvents(ctx, id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(evs) < 2 {
-			t.Fatalf("task %s: want >= 2 events, got %d", id, len(evs))
+		if len(evs) != 2 {
+			t.Fatalf("task %s: want 2 events, got %d", id, len(evs))
 		}
 		last := evs[len(evs)-1]
-		if last.Type != domain.EventStatusChanged {
-			t.Fatalf("task %s: last event type = %q want status_changed", id, last.Type)
+		if last.Type != sseTestEventCycle[1] {
+			t.Fatalf("task %s: last event type = %q want %q", id, last.Type, sseTestEventCycle[1])
 		}
 		if last.By != domain.ActorAgent {
 			t.Fatalf("task %s: last event by = %q want agent", id, last.By)
@@ -81,24 +120,12 @@ func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 	}
 }
 
-func TestNextStatusForDevTicker(t *testing.T) {
-	tests := []struct {
-		cur  domain.Status
-		want domain.Status
-	}{
-		{domain.StatusReady, domain.StatusRunning},
-		{domain.StatusRunning, domain.StatusBlocked},
-		{domain.StatusBlocked, domain.StatusReview},
-		{domain.StatusReview, domain.StatusDone},
-		{domain.StatusDone, domain.StatusFailed},
-		{domain.StatusFailed, domain.StatusReady},
+func TestDevTickerNextEventType(t *testing.T) {
+	if n := len(sseTestEventCycle); n < 3 {
+		t.Fatalf("cycle too short: %d", n)
 	}
-	for _, tt := range tests {
-		if got := nextStatusForDevTicker(tt.cur); got != tt.want {
-			t.Fatalf("next(%q) = %q want %q", tt.cur, got, tt.want)
-		}
-	}
-	if got := nextStatusForDevTicker("weird"); got != domain.StatusReady {
-		t.Fatalf("next(unknown) = %q want ready", got)
+	evs := make([]domain.TaskEvent, 2)
+	if got := devTickerNextEventType(evs); got != sseTestEventCycle[2%len(sseTestEventCycle)] {
+		t.Fatalf("len=2: got %q want %q", got, sseTestEventCycle[2])
 	}
 }
