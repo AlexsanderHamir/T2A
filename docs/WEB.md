@@ -59,7 +59,7 @@ flowchart LR
 
 ## React Query + SSE
 
-- Query key: `taskQueryKeys.list()` in `tasks/queryKeys.ts` → `GET /tasks` (limit 200 in `api/tasks.ts`).
+- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` (`tasks/paging.ts` page sizes); `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
 - Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. `createPending` / modal `busy` show spinners during mutations without that delay.
 - SSE: each `data:` line schedules debounced invalidation → refetch list; `parseTaskApi` runs on the response.
 
@@ -81,11 +81,11 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`), `App.css`, `App.test.tsx`. |
+| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`), `App.css`, `App.test.tsx`. |
 | `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
 | `lib/useDelayedTrue.ts` | Delays showing loading/sync status so very short fetches do not flash unreadable lines; `smoothTransitions={false}` on `TaskListSection` / `StreamStatusHint` for tests. |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
-| `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage` + `TaskUpdatesTimeline` — collapsible initial prompt by default, audit timeline from `GET /tasks/{id}/events`, newest-first by `seq`, each row shows the canonical `type` in a colored pill; human text from `taskEventLabels.ts` is `title` / `aria-label` only), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
+| `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage`, `TaskEventDetailPage` + `TaskUpdatesTimeline` — timeline rows link to per-event detail; collapsible initial prompt by default; audit data from `GET /tasks/{id}/events` / `GET /tasks/{id}/events/{seq}`; human text from `taskEventLabels.ts` is `title` / `aria-label` only), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
 | `api/` | HTTP + JSON parsing: `index.ts` re-exports `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
 | `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |

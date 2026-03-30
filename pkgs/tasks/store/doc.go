@@ -9,6 +9,7 @@
 // negative offset becomes 0.
 //
 // Create records EventTaskCreated; Update appends events when title, prompt, status, or
-// priority actually change. ListTaskEvents returns audit rows for a task in sequence order.
+// priority actually change. ListTaskEvents returns all audit rows in ascending seq order;
+// ListTaskEventsPageCursor returns a descending-seq keyset page with total and navigation flags.
 // Sentinel errors are domain.ErrNotFound and domain.ErrInvalidInput; the store does not log.
 package store

@@ -261,6 +261,143 @@ func TestStore_ListTaskEvents_not_found_task_still_empty_id(t *testing.T) {
 	}
 }
 
+func TestStore_GetTaskEvent_returns_row_and_not_found(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("want 1 event, got %d", len(evs))
+	}
+	got, err := s.GetTaskEvent(ctx, tsk.ID, evs[0].Seq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Type != domain.EventTaskCreated || got.Seq != evs[0].Seq {
+		t.Fatalf("got %#v", got)
+	}
+	_, err = s.GetTaskEvent(ctx, tsk.ID, 999)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("missing seq: got %v want ErrNotFound", err)
+	}
+}
+
+func TestStore_GetTaskEvent_rejects_empty_id_and_bad_seq(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	_, err := s.GetTaskEvent(context.Background(), "  ", 1)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("empty id: got %v want ErrInvalidInput", err)
+	}
+	_, err = s.GetTaskEvent(context.Background(), "00000000-0000-0000-0000-000000000001", 0)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("seq 0: got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_ListTaskEventsPageCursor_keyset_order_and_flags(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventSyncPing, domain.ActorUser, nil); err != nil {
+		t.Fatal(err)
+	}
+	head, err := s.ListTaskEventsPageCursor(ctx, tsk.ID, 1, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head.Total != 2 {
+		t.Fatalf("total %d want 2", head.Total)
+	}
+	if len(head.Events) != 1 || head.Events[0].Type != domain.EventSyncPing {
+		t.Fatalf("head page: %#v", head.Events)
+	}
+	if !head.HasMoreOlder || head.HasMoreNewer {
+		t.Fatalf("head flags newer=%v older=%v", head.HasMoreNewer, head.HasMoreOlder)
+	}
+	if head.RangeStart != 1 || head.RangeEnd != 1 {
+		t.Fatalf("range %d-%d", head.RangeStart, head.RangeEnd)
+	}
+	before := head.Events[0].Seq
+	older, err := s.ListTaskEventsPageCursor(ctx, tsk.ID, 10, &before, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if older.Total != 2 || len(older.Events) != 1 || older.Events[0].Type != domain.EventTaskCreated {
+		t.Fatalf("before cursor: %#v", older.Events)
+	}
+	if !older.HasMoreNewer || older.HasMoreOlder {
+		t.Fatalf("older page flags newer=%v older=%v", older.HasMoreNewer, older.HasMoreOlder)
+	}
+	minSeq := older.Events[0].Seq
+	newer, err := s.ListTaskEventsPageCursor(ctx, tsk.ID, 10, nil, &minSeq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(newer.Events) != 1 || newer.Events[0].Type != domain.EventSyncPing {
+		t.Fatalf("after cursor: %#v", newer.Events)
+	}
+}
+
+func TestStore_ListTaskEventsPageCursor_rejects_both_cursors(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := int64(2)
+	after := int64(1)
+	_, err = s.ListTaskEventsPageCursor(ctx, tsk.ID, 10, &before, &after)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_ApprovalPending_respects_order(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err := s.ApprovalPending(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending {
+		t.Fatal("want no approval before events")
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventApprovalRequested, domain.ActorUser, nil); err != nil {
+		t.Fatal(err)
+	}
+	pending, err = s.ApprovalPending(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !pending {
+		t.Fatal("want pending after request")
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventApprovalGranted, domain.ActorUser, nil); err != nil {
+		t.Fatal(err)
+	}
+	pending, err = s.ApprovalPending(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending {
+		t.Fatal("want cleared after grant")
+	}
+}
+
 func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -43,8 +44,24 @@ type taskEventLine struct {
 }
 
 type taskEventsResponse struct {
-	TaskID string          `json:"task_id"`
-	Events []taskEventLine `json:"events"`
+	TaskID          string          `json:"task_id"`
+	Events          []taskEventLine `json:"events"`
+	Limit           *int            `json:"limit,omitempty"`
+	Total           *int64          `json:"total,omitempty"`
+	RangeStart      *int64          `json:"range_start,omitempty"`
+	RangeEnd        *int64          `json:"range_end,omitempty"`
+	HasMoreNewer    bool            `json:"has_more_newer"`
+	HasMoreOlder    bool            `json:"has_more_older"`
+	ApprovalPending bool            `json:"approval_pending"`
+}
+
+type taskEventDetailResponse struct {
+	TaskID string           `json:"task_id"`
+	Seq    int64            `json:"seq"`
+	At     time.Time        `json:"at"`
+	Type   domain.EventType `json:"type"`
+	By     domain.Actor     `json:"by"`
+	Data   json.RawMessage  `json:"data"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -76,18 +93,35 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, op, http.StatusCreated, t)
 }
 
-func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
-	const op = "tasks.events"
+func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "tasks.event"
 	id := strings.TrimSpace(r.PathValue("id"))
-	if _, err := h.store.Get(r.Context(), id); err != nil {
-		writeStoreError(w, op, err)
+	seqStr := strings.TrimSpace(r.PathValue("seq"))
+	seq, err := strconv.ParseInt(seqStr, 10, 64)
+	if err != nil || seq < 1 {
+		writeError(w, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
 		return
 	}
-	evs, err := h.store.ListTaskEvents(r.Context(), id)
+	ev, err := h.store.GetTaskEvent(r.Context(), id, seq)
 	if err != nil {
 		writeStoreError(w, op, err)
 		return
 	}
+	data := json.RawMessage(ev.Data)
+	if len(data) == 0 {
+		data = json.RawMessage(`{}`)
+	}
+	writeJSON(w, op, http.StatusOK, taskEventDetailResponse{
+		TaskID: id,
+		Seq:    ev.Seq,
+		At:     ev.At,
+		Type:   ev.Type,
+		By:     ev.By,
+		Data:   data,
+	})
+}
+
+func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
 	out := make([]taskEventLine, 0, len(evs))
 	for _, e := range evs {
 		data := json.RawMessage(e.Data)
@@ -102,7 +136,90 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 			Data: data,
 		})
 	}
-	writeJSON(w, op, http.StatusOK, taskEventsResponse{TaskID: id, Events: out})
+	return out
+}
+
+func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
+	const op = "tasks.events"
+	id := strings.TrimSpace(r.PathValue("id"))
+	if _, err := h.store.Get(r.Context(), id); err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	pending, err := h.store.ApprovalPending(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	q := r.URL.Query()
+	if q.Get("offset") != "" {
+		writeStoreError(w, op, fmt.Errorf("%w: offset is not supported for task events; use before_seq or after_seq", domain.ErrInvalidInput))
+		return
+	}
+	if q.Get("limit") == "" && q.Get("before_seq") == "" && q.Get("after_seq") == "" {
+		evs, err := h.store.ListTaskEvents(r.Context(), id)
+		if err != nil {
+			writeStoreError(w, op, err)
+			return
+		}
+		writeJSON(w, op, http.StatusOK, taskEventsResponse{
+			TaskID:          id,
+			Events:          taskEventLines(evs),
+			ApprovalPending: pending,
+		})
+		return
+	}
+	beforeStr := strings.TrimSpace(q.Get("before_seq"))
+	afterStr := strings.TrimSpace(q.Get("after_seq"))
+	if beforeStr != "" && afterStr != "" {
+		writeError(w, op, errors.New("before_seq and after_seq cannot both be set"), http.StatusBadRequest)
+		return
+	}
+	limit, err := parseTaskEventsLimit(q)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	var beforeSeq, afterSeq *int64
+	if beforeStr != "" {
+		n, err := strconv.ParseInt(beforeStr, 10, 64)
+		if err != nil || n < 1 {
+			writeError(w, op, errors.New("before_seq must be a positive integer"), http.StatusBadRequest)
+			return
+		}
+		beforeSeq = &n
+	}
+	if afterStr != "" {
+		n, err := strconv.ParseInt(afterStr, 10, 64)
+		if err != nil || n < 1 {
+			writeError(w, op, errors.New("after_seq must be a positive integer"), http.StatusBadRequest)
+			return
+		}
+		afterSeq = &n
+	}
+	page, err := h.store.ListTaskEventsPageCursor(r.Context(), id, limit, beforeSeq, afterSeq)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	lim := limit
+	tot := page.Total
+	resp := taskEventsResponse{
+		TaskID:          id,
+		Events:          taskEventLines(page.Events),
+		Limit:           &lim,
+		Total:           &tot,
+		HasMoreNewer:    page.HasMoreNewer,
+		HasMoreOlder:    page.HasMoreOlder,
+		ApprovalPending: pending,
+	}
+	if len(page.Events) > 0 {
+		rs := page.RangeStart
+		re := page.RangeEnd
+		resp.RangeStart = &rs
+		resp.RangeEnd = &re
+	}
+	writeJSON(w, op, http.StatusOK, resp)
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
@@ -170,6 +287,24 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 	h.notifyChange(TaskDeleted, id)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func parseTaskEventsLimit(q url.Values) (limit int, err error) {
+	limit = 50
+	if v := q.Get("limit"); v != "" {
+		n, e := strconv.Atoi(v)
+		if e != nil || n < 0 || n > 200 {
+			return 0, fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
+		}
+		limit = n
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	return limit, nil
 }
 
 func parseListParams(q url.Values) (limit, offset int, err error) {
