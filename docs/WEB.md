@@ -85,7 +85,7 @@ sequenceDiagram
 | `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
 | `lib/useDelayedTrue.ts` | Delays showing loading/sync status so very short fetches do not flash unreadable lines; `smoothTransitions={false}` on `TaskListSection` / `StreamStatusHint` for tests. |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
-| `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage` + `TaskUpdatesTimeline` — collapsible initial prompt by default, audit timeline from `GET /tasks/{id}/events`, newest-first by `seq`, each row shows a human label from `taskEventLabels.ts` plus the canonical `type` string e.g. `status_changed`), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
+| `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage` + `TaskUpdatesTimeline` — collapsible initial prompt by default, audit timeline from `GET /tasks/{id}/events`, newest-first by `seq`, each row shows the canonical `type` in a colored pill; human text from `taskEventLabels.ts` is `title` / `aria-label` only), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
 | `api/` | HTTP + JSON parsing: `index.ts` re-exports `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
 | `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |

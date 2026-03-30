@@ -1417,35 +1417,119 @@ th {
   font-variant-numeric: tabular-nums;
 }
 
-.task-timeline-type {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem;
-  max-width: 100%;
-}
-
-.task-timeline-type-label {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.task-timeline-type-sep {
-  color: var(--text-tertiary);
-  font-weight: 500;
-  user-select: none;
-}
-
-.task-timeline-type-id {
+/* One pill per TaskEventType; distinct hues for quick scanning */
+.task-timeline-type-pill {
   font-size: 0.6875rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
   letter-spacing: 0.02em;
-  padding: 0.1rem 0.35rem;
-  border-radius: var(--radius-sm);
-  background: rgb(0 0 0 / 4%);
-  border: 1px solid var(--border-hairline);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.task-timeline-type-pill[data-event-type="task_created"] {
+  background: hsl(214 72% 92%);
+  color: hsl(222 55% 30%);
+  border-color: hsl(214 45% 82%);
+}
+
+.task-timeline-type-pill[data-event-type="status_changed"] {
+  background: hsl(188 55% 90%);
+  color: hsl(192 60% 26%);
+  border-color: hsl(188 40% 78%);
+}
+
+.task-timeline-type-pill[data-event-type="priority_changed"] {
+  background: hsl(265 55% 92%);
+  color: hsl(268 50% 32%);
+  border-color: hsl(265 40% 82%);
+}
+
+.task-timeline-type-pill[data-event-type="prompt_appended"] {
+  background: hsl(152 45% 90%);
+  color: hsl(158 55% 24%);
+  border-color: hsl(152 35% 78%);
+}
+
+.task-timeline-type-pill[data-event-type="context_added"] {
+  background: hsl(199 70% 91%);
+  color: hsl(201 65% 28%);
+  border-color: hsl(199 50% 80%);
+}
+
+.task-timeline-type-pill[data-event-type="constraint_added"] {
+  background: hsl(32 90% 90%);
+  color: hsl(28 75% 28%);
+  border-color: hsl(32 60% 80%);
+}
+
+.task-timeline-type-pill[data-event-type="success_criterion_added"] {
+  background: hsl(88 50% 88%);
+  color: hsl(92 45% 22%);
+  border-color: hsl(88 38% 76%);
+}
+
+.task-timeline-type-pill[data-event-type="non_goal_added"] {
+  background: hsl(25 40% 90%);
+  color: hsl(20 35% 30%);
+  border-color: hsl(25 30% 80%);
+}
+
+.task-timeline-type-pill[data-event-type="plan_added"] {
+  background: hsl(239 58% 92%);
+  color: hsl(243 48% 34%);
+  border-color: hsl(239 42% 82%);
+}
+
+.task-timeline-type-pill[data-event-type="subtask_added"] {
+  background: hsl(330 55% 92%);
+  color: hsl(328 50% 32%);
+  border-color: hsl(330 40% 82%);
+}
+
+.task-timeline-type-pill[data-event-type="message_added"] {
+  background: hsl(204 75% 91%);
+  color: hsl(208 62% 30%);
+  border-color: hsl(204 55% 80%);
+}
+
+.task-timeline-type-pill[data-event-type="artifact_added"] {
+  background: hsl(43 85% 90%);
+  color: hsl(38 70% 26%);
+  border-color: hsl(43 65% 78%);
+}
+
+.task-timeline-type-pill[data-event-type="approval_requested"] {
+  background: hsl(48 92% 88%);
+  color: hsl(42 75% 26%);
+  border-color: hsl(48 70% 76%);
+}
+
+.task-timeline-type-pill[data-event-type="approval_granted"] {
+  background: hsl(162 48% 88%);
+  color: hsl(166 55% 24%);
+  border-color: hsl(162 38% 76%);
+}
+
+.task-timeline-type-pill[data-event-type="task_completed"] {
+  background: hsl(142 45% 88%);
+  color: hsl(145 50% 22%);
+  border-color: hsl(142 35% 74%);
+}
+
+.task-timeline-type-pill[data-event-type="task_failed"] {
+  background: hsl(0 72% 93%);
+  color: hsl(350 55% 32%);
+  border-color: hsl(0 50% 84%);
+}
+
+.task-timeline-type-pill[data-event-type="sync_ping"] {
+  background: hsl(220 14% 91%);
+  color: hsl(220 12% 34%);
+  border-color: hsl(220 12% 82%);
 }
 
 .task-timeline-by {

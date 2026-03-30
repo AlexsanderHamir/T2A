@@ -35,17 +35,15 @@ describe("TaskUpdatesTimeline", () => {
       "task-detail-updates-heading",
     );
     const items = screen.getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent(/live sync check/i);
-    expect(items[0].querySelector("code.task-timeline-type-id")).toHaveTextContent(
-      "sync_ping",
-    );
-    expect(items[1]).toHaveTextContent(/task created/i);
-    expect(items[1].querySelector("code.task-timeline-type-id")).toHaveTextContent(
-      "task_created",
-    );
+    const pill0 = items[0].querySelector("code.task-timeline-type-pill");
+    const pill1 = items[1].querySelector("code.task-timeline-type-pill");
+    expect(pill0).toHaveTextContent("sync_ping");
+    expect(pill0).toHaveAttribute("data-event-type", "sync_ping");
+    expect(pill1).toHaveTextContent("task_created");
+    expect(pill1).toHaveAttribute("data-event-type", "task_created");
   });
 
-  it("shows canonical event type slug beside label for status_changed", () => {
+  it("shows type pill and payload for status_changed", () => {
     render(
       <TaskUpdatesTimeline
         isPending={false}
@@ -64,10 +62,9 @@ describe("TaskUpdatesTimeline", () => {
       />,
     );
     const item = screen.getByRole("listitem");
-    expect(item).toHaveTextContent(/status changed/i);
-    expect(item.querySelector("code.task-timeline-type-id")).toHaveTextContent(
-      "status_changed",
-    );
+    const pill = item.querySelector("code.task-timeline-type-pill");
+    expect(pill).toHaveTextContent("status_changed");
+    expect(pill).toHaveAttribute("aria-label", "Status changed, status_changed");
     expect(item).toHaveTextContent(/ready/);
     expect(item).toHaveTextContent(/running/);
   });
