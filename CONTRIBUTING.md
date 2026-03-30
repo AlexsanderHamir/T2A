@@ -40,11 +40,11 @@ See `.cursor/rules/11-api-contracts.mdc` for a compact checklist.
 
 ## Adding features (layering)
 
-Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-extensibility.mdc`. Human summary: `docs/DESIGN.md` (section Extensibility).
+Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-tasks-stack-extensibility.mdc`. Human summary: `docs/DESIGN.md` (section Extensibility).
 
 ## Cursor / AI rules
 
-Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), and extensibility (`13-extensibility.mdc`). `00-full-rules-pass.mdc` describes how to run a full pass when asked.
+Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), and tasks stack extensibility (`13-tasks-stack-extensibility.mdc`). `00-full-rules-pass.mdc` describes how to run a full pass when asked.
 
 ## Stuck?
 

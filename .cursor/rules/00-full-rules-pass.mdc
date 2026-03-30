@@ -13,9 +13,9 @@ When this file is referenced, run a **structured pass** against **`.cursor/rules
 
 | User intent | Apply | Skip or lighten |
 |-------------|--------|-------------------|
-| **Full repo** (default) | **`01` → `07`**, **`11-api-contracts`**, **`13-extensibility`** (read when adding or extending product behavior), **`09`** (both files), **`10`** | — |
+| **Full repo** (default) | **`01` → `07`**, **`11-api-contracts`**, **`13-tasks-stack-extensibility`** (tasks API / `pkgs/tasks` / related `web/src` + `DESIGN.md`), **`09`** (both files), **`10`** | — |
 | **Frontend then backend** (explicit user order) | **`10`**, **`09-local`**, **`09-security`**, then **`01` → `07`**, **`11`**, **`09`** | Same verification step at the end |
-| **Backend / Go only** | **`01` → `07`**, **`11`**, **`13`** (when changing tasks API or store surface), **`09`** | **`10-web-ui`** unless `web/` was touched |
+| **Backend / Go only** | **`01` → `07`**, **`11`**, **`13-tasks-stack-extensibility`** (when changing tasks API or store surface), **`09`** | **`10-web-ui`** unless `web/` was touched |
 | **Frontend / `web/` only** | **`10`**, **`09-local-verification`** (and **`09-security`** for secrets in client config) | Deep **`01`–`07`** / **`11`** on Go only if Go files changed |
 | **Audit / review, no commit** | Read and fix per rules; **do not** run **`08`** | Say explicitly: “audit-only; no commit.” |
 
@@ -24,7 +24,7 @@ If unclear, ask once: **full repo** vs **Go-only** vs **web-only**, **frontend-t
 ## Phases
 
 1. **Orient** — Skim **`AGENTS.md`** (repo map, commands). List **`.cursor/rules/`**, sort by numeric prefix, skip **`00-*`** when *applying* (this file is the playbook, not a style rule).
-2. **Substantive rules** — In order **`01` → `07`**, then **`11-api-contracts`** (read the checklist when changing HTTP/SSE/JSON boundaries; on a full pass, skim to avoid drift), then **`13-extensibility`** when adding routes, store methods, audit types, or cross-stack features (skip for trivial fixes). Then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. When editing root or `docs/*.md` prose, also apply **`12-documentation-style`**. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit). **`99-repo-primer`** is always-on context only, not a separate pass step.
+2. **Substantive rules** — In order **`01` → `07`**, then **`11-api-contracts`** (read the checklist when changing HTTP/SSE/JSON boundaries; on a full pass, skim to avoid drift), then **`13-tasks-stack-extensibility`** when changing the tasks stack (routes, store, domain, audit/SSE, or task UI that hits the API; skip for trivial fixes). Then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. When editing root or `docs/*.md` prose, also apply **`12-documentation-style`**. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit). **`99-repo-primer`** is always-on context only, not a separate pass step.
 3. **Verify** — Once fixes for this pass are done, run the **full bar** once:
    - **`scripts/check.ps1`** (Windows) or **`scripts/check.sh`** (Unix) from repo root, **or** the equivalent: **`gofmt`** check / **`go fmt`**, **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`** (see **`09-local-verification.mdc`**).
    - **Recommended:** for meaningful behavior changes under **`pkgs/`** / **`internal/`**, run scoped coverage per **`06-testing.mdc`** and close obvious gaps (or note why not).
@@ -37,7 +37,7 @@ If unclear, ask once: **full repo** vs **Go-only** vs **web-only**, **frontend-t
 - Do not skip substantive rules unless **clearly not applicable** to the chosen scope.
 - Do not move on with **failing** verification (`go vet`, `go test`, or `web/` build when in scope).
 - **Batch commits at the end** of the pass per **`08`**; do not mix unrelated concerns in one commit.
-- **Contradiction guard:** “Do not commit before the end” means **do not commit mid-pass** while applying substantive rules (**`01`–`07`**, **`11`**, **`13`**, **`09`**, **`10`**, **`12`** as applicable); the **end** of the pass is after verification, when **`08`** applies—unless the user chose **audit-only**.
+- **Contradiction guard:** “Do not commit before the end” means **do not commit mid-pass** while applying substantive rules (**`01`–`07`**, **`11`**, **`13-tasks-stack-extensibility`**, **`09`**, **`10`**, **`12`** as applicable); the **end** of the pass is after verification, when **`08`** applies—unless the user chose **audit-only**.
 
 ## Completion report (brief)
 

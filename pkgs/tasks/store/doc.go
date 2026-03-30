@@ -3,7 +3,7 @@
 //
 // Prefer adding behavior as named use-case methods (small input structs, one transaction,
 // explicit audit events) rather than ad hoc SQL from callers. The handler should stay thin;
-// see docs/DESIGN.md "Extensibility" and .cursor/rules/13-extensibility.mdc.
+// see docs/DESIGN.md "Extensibility" and .cursor/rules/13-tasks-stack-extensibility.mdc.
 //
 // List applies a maximum page size: limit ≤ 0 becomes 50; limit > 200 is capped at 200;
 // negative offset becomes 0.

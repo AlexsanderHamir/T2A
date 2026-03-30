@@ -12,7 +12,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 4 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 5 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |
 
-Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-extensibility` (layering for new features), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. `00-full-rules-pass.mdc` defines scope (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), phases, and the completion report. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
+Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-tasks-stack-extensibility` (tasks API layering), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. `00-full-rules-pass.mdc` defines scope (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), phases, and the completion report. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
 
 ## Repository map
 
@@ -41,7 +41,7 @@ Default tests must not require real Postgres, real outbound network, or a runnin
 
 ## Conventions worth remembering
 
-- New features: follow `docs/DESIGN.md` section Extensibility (domain → store → handler → optional `web/`). Rule `.cursor/rules/13-extensibility.mdc` expands the same slice for agents.
+- New tasks API features: follow `docs/DESIGN.md` section Extensibility (domain → store → handler → optional `web/`). Rule `.cursor/rules/13-tasks-stack-extensibility.mdc` expands the same slice for agents.
 - JSON at the boundary: Web treats responses as `unknown` until `parseTaskApi` validates; keep that pipeline when adding fields.
 - Same-origin in prod: `taskapi` does not add CORS; dev uses Vite proxy (`web/vite.config.ts`).
 - Atomic commits: `.cursor/rules/08-atomic-commits.mdc` — one logical concern per commit, conventional message style; push after committing unless the user opts out or push is not possible.

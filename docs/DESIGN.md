@@ -350,7 +350,7 @@ sequenceDiagram
   H-->>C: 200 JSON task
 ```
 
-Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For a full checklist aimed at agents, see `.cursor/rules/13-extensibility.mdc`.
+Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For a full checklist aimed at agents, see `.cursor/rules/13-tasks-stack-extensibility.mdc`.
 
 ## Technical choices
 

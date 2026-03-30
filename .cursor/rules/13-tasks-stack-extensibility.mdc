@@ -1,14 +1,17 @@
 ---
 description: >-
-  How to add features without tangling layers: domain → store use-cases → thin
-  handler → web api/parseTaskApi. Complements 11-api-contracts.
-globs: pkgs/tasks/**/*.go, web/src/**/*.{ts,tsx}, docs/DESIGN.md
+  Tasks API vertical slice only: domain → store → handler → taskapi → web
+  types/api/tasks UI. Auto-attached to pkgs/tasks Go, web/src TS/TSX, and
+  docs/DESIGN.md. Complements 11-api-contracts.
+globs: pkgs/tasks/**/*.go, web/src/**/*.ts, web/src/**/*.tsx, docs/DESIGN.md
 alwaysApply: false
 ---
 
-# Extensibility (features and refactors)
+# Tasks stack extensibility
 
-**When to apply:** new REST/SSE behavior, new store capabilities, new audit event types, or meaningful UI flows that touch the API.
+**Scope:** `/tasks` REST/SSE, `pkgs/tasks/*`, and the client code that consumes those APIs (`web/src/api`, `web/src/types`, `web/src/tasks`). Not a generic rule for other packages (e.g. `pkgs/repo`).
+
+**When to apply:** new or changed task routes, store use-cases, domain types, audit/SSE behavior, or task UI flows that touch the API.
 
 ## Backend vertical slice
 
