@@ -184,10 +184,10 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 		t.Fatalf("patch %d %s", resOK.StatusCode, tBody)
 	}
 	var one struct {
-		Seq             int64      `json:"seq"`
-		UserResponse    *string    `json:"user_response"`
-		UserResponseAt  *time.Time `json:"user_response_at"`
-		ResponseThread  []struct {
+		Seq            int64      `json:"seq"`
+		UserResponse   *string    `json:"user_response"`
+		UserResponseAt *time.Time `json:"user_response_at"`
+		ResponseThread []struct {
 			By   string `json:"by"`
 			Body string `json:"body"`
 		} `json:"response_thread"`
@@ -212,9 +212,9 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	defer resList.Body.Close()
 	var listPayload struct {
 		Events []struct {
-			Seq             int64   `json:"seq"`
-			UserResponse    *string `json:"user_response"`
-			ResponseThread  []struct {
+			Seq            int64   `json:"seq"`
+			UserResponse   *string `json:"user_response"`
+			ResponseThread []struct {
 				By   string `json:"by"`
 				Body string `json:"body"`
 			} `json:"response_thread"`

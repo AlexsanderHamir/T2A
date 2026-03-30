@@ -36,14 +36,14 @@ type listResponse struct {
 }
 
 type taskEventLine struct {
-	Seq              int64                        `json:"seq"`
-	At               time.Time                    `json:"at"`
-	Type             domain.EventType             `json:"type"`
-	By               domain.Actor                 `json:"by"`
-	Data             json.RawMessage              `json:"data"`
-	UserResponse     *string                      `json:"user_response,omitempty"`
-	UserResponseAt   *time.Time                   `json:"user_response_at,omitempty"`
-	ResponseThread   []domain.ResponseThreadEntry `json:"response_thread,omitempty"`
+	Seq            int64                        `json:"seq"`
+	At             time.Time                    `json:"at"`
+	Type           domain.EventType             `json:"type"`
+	By             domain.Actor                 `json:"by"`
+	Data           json.RawMessage              `json:"data"`
+	UserResponse   *string                      `json:"user_response,omitempty"`
+	UserResponseAt *time.Time                   `json:"user_response_at,omitempty"`
+	ResponseThread []domain.ResponseThreadEntry `json:"response_thread,omitempty"`
 }
 
 type taskEventsResponse struct {
