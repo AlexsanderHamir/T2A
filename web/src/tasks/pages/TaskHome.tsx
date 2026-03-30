@@ -26,6 +26,12 @@ export function TaskHome({ app }: Props) {
         loading={app.loading}
         refreshing={app.listRefreshing}
         saving={app.saving}
+        listPage={app.taskListPage}
+        listPageSize={app.taskListPageSize}
+        onListPageChange={app.setTaskListPage}
+        onListFiltersChange={app.resetTaskListPage}
+        hasNextPage={app.hasNextTaskPage}
+        hasPrevPage={app.hasPrevTaskPage}
         onEdit={app.openEdit}
         onRequestDelete={app.requestDelete}
       />

@@ -3,11 +3,13 @@ import {
   type Priority,
   type Status,
   type Task,
+  type TaskEventDetail,
   type TaskEventsResponse,
   type TaskListResponse,
 } from "@/types";
 import {
   parseTask,
+  parseTaskEventDetail,
   parseTaskEventsResponse,
   parseTaskListResponse,
 } from "./parseTaskApi";
@@ -28,15 +30,50 @@ export async function getTask(
 
 export async function listTaskEvents(
   id: string,
-  options?: { signal?: AbortSignal },
+  options?: {
+    signal?: AbortSignal;
+    limit?: number;
+    beforeSeq?: number;
+    afterSeq?: number;
+  },
 ): Promise<TaskEventsResponse> {
-  const res = await fetch(`/tasks/${encodeURIComponent(id)}/events`, {
+  const q = new URLSearchParams();
+  if (options?.limit !== undefined) q.set("limit", String(options.limit));
+  if (options?.beforeSeq !== undefined) {
+    q.set("before_seq", String(options.beforeSeq));
+  }
+  if (options?.afterSeq !== undefined) {
+    q.set("after_seq", String(options.afterSeq));
+  }
+  const qs = q.toString();
+  const path =
+    qs === ""
+      ? `/tasks/${encodeURIComponent(id)}/events`
+      : `/tasks/${encodeURIComponent(id)}/events?${qs}`;
+  const res = await fetch(path, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
   return parseTaskEventsResponse(raw);
+}
+
+export async function getTaskEvent(
+  taskId: string,
+  seq: number,
+  options?: { signal?: AbortSignal },
+): Promise<TaskEventDetail> {
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
+    {
+      headers: { Accept: "application/json" },
+      signal: options?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskEventDetail(raw);
 }
 
 export async function listTasks(

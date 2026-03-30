@@ -1403,6 +1403,20 @@ th {
   background: var(--bg-elevated);
 }
 
+a.task-timeline-item-hit {
+  display: block;
+  margin: -0.75rem -0.85rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+  outline-offset: 2px;
+}
+
+.task-timeline-item:has(> a.task-timeline-item-hit:hover) {
+  border-color: hsl(220 14% 78%);
+}
+
 .task-timeline-head {
   display: flex;
   flex-wrap: wrap;
@@ -1549,6 +1563,81 @@ th {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-x: auto;
+}
+
+.task-event-detail-back-task {
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.task-event-detail-header {
+  margin-bottom: 1rem;
+}
+
+.task-event-detail-task-id {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+}
+
+.task-event-detail-task-id code {
+  font-size: 0.8125rem;
+}
+
+.task-event-detail-dl {
+  margin: 0 0 1.25rem;
+  display: grid;
+  gap: 0.65rem 1rem;
+}
+
+.task-event-detail-dl > div {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.task-event-detail-dl dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.task-event-detail-dl dd {
+  margin: 0;
+}
+
+.task-event-detail-data-block {
+  margin-top: 0.5rem;
+}
+
+.task-event-detail-data-pre {
+  max-height: min(28rem, 55vh);
+  overflow: auto;
+}
+
+.task-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-pager-summary {
+  font-size: 0.8125rem;
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 8rem;
+}
+
+.task-pager-btn {
+  min-width: 5.5rem;
 }
 
 .err-inline {

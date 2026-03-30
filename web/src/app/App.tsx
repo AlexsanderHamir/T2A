@@ -4,6 +4,7 @@ import { StreamStatusHint } from "../tasks/components/StreamStatusHint";
 import { TaskEditForm } from "../tasks/components/TaskEditForm";
 import { useTasksApp } from "../tasks/hooks/useTasksApp";
 import { TaskDetailPage } from "../tasks/pages/TaskDetailPage";
+import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import "./App.css";
@@ -63,6 +64,10 @@ export default function App() {
     <Routes>
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
+        <Route
+          path="tasks/:taskId/events/:eventSeq"
+          element={<TaskEventDetailPage />}
+        />
         <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
       </Route>
     </Routes>

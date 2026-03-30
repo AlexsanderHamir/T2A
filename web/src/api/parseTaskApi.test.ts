@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseTask,
+  parseTaskEventDetail,
   parseTaskEventsResponse,
   parseTaskListResponse,
 } from "./parseTaskApi";
@@ -85,6 +86,75 @@ describe("parseTaskEventsResponse", () => {
           data: {},
         },
       ],
+      approval_pending: false,
+      has_more_newer: false,
+      has_more_older: false,
+    });
+  });
+
+  it("parses keyset-paged envelope", () => {
+    const at = "2026-01-01T12:00:00Z";
+    expect(
+      parseTaskEventsResponse({
+        task_id: "tid",
+        limit: 20,
+        total: 45,
+        range_start: 21,
+        range_end: 40,
+        has_more_newer: true,
+        has_more_older: true,
+        approval_pending: true,
+        events: [
+          {
+            seq: 3,
+            at,
+            type: "sync_ping",
+            by: "user",
+            data: {},
+          },
+        ],
+      }),
+    ).toEqual({
+      task_id: "tid",
+      limit: 20,
+      total: 45,
+      range_start: 21,
+      range_end: 40,
+      has_more_newer: true,
+      has_more_older: true,
+      approval_pending: true,
+      events: [
+        {
+          seq: 3,
+          at,
+          type: "sync_ping",
+          by: "user",
+          data: {},
+        },
+      ],
+    });
+  });
+});
+
+describe("parseTaskEventDetail", () => {
+  it("parses GET /tasks/{id}/events/{seq} envelope", () => {
+    const at = "2026-01-02T15:30:00.000Z";
+    expect(
+      parseTaskEventDetail({
+        task_id: "tid",
+        seq: 4,
+        at,
+        type: "approval_requested",
+        by: "agent",
+        data: { reason: "review" },
+      }),
+    ).toEqual({
+      task_id: "tid",
+      seq: 4,
+      at,
+      type: "approval_requested",
+      by: "agent",
+      data: { reason: "review" },
     });
   });
 });

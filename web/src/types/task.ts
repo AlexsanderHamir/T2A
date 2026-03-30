@@ -86,4 +86,20 @@ export type TaskEvent = {
 export type TaskEventsResponse = {
   task_id: string;
   events: TaskEvent[];
+  /** From server when using paged `GET /tasks/{id}/events`; omitted on legacy full list. */
+  limit?: number;
+  total?: number;
+  /** 1-based inclusive ranks in newest-first ordering (paged responses). */
+  range_start?: number;
+  range_end?: number;
+  /** False when omitted in JSON (unpaged full list). */
+  has_more_newer?: boolean;
+  has_more_older?: boolean;
+  /** Latest approval request still open (server-computed; not limited to the current page). */
+  approval_pending: boolean;
+};
+
+/** Single row from `GET /tasks/{id}/events/{seq}` (same shape as one list element plus `task_id`). */
+export type TaskEventDetail = TaskEvent & {
+  task_id: string;
 };

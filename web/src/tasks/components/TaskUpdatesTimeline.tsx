@@ -1,4 +1,5 @@
 import type { TaskEvent, TaskEventType } from "@/types";
+import { Link } from "react-router-dom";
 import { eventTypeLabel } from "../taskEventLabels";
 
 export type TaskUpdatesTimelineProps = {
@@ -9,6 +10,8 @@ export type TaskUpdatesTimelineProps = {
   timelineEvents: TaskEvent[];
   /** True when the API returned no events (not loading). */
   isEmpty: boolean;
+  /** When set, each row links to `/tasks/{id}/events/{seq}`. */
+  taskIdForLinks?: string;
 };
 
 export function TaskUpdatesTimeline({
@@ -17,6 +20,7 @@ export function TaskUpdatesTimeline({
   error,
   timelineEvents,
   isEmpty,
+  taskIdForLinks,
 }: TaskUpdatesTimelineProps) {
   return (
     <div className="task-detail-timeline">
@@ -36,25 +40,41 @@ export function TaskUpdatesTimeline({
           className="task-timeline"
           aria-labelledby="task-detail-updates-heading"
         >
-          {timelineEvents.map((ev) => (
-            <li key={ev.seq} className="task-timeline-item">
-              <div className="task-timeline-head">
-                <time dateTime={ev.at}>
-                  {new Date(ev.at).toLocaleString()}
-                </time>
-                <code
-                  className="task-timeline-type-pill"
-                  data-event-type={ev.type}
-                  title={eventTypeLabel(ev.type)}
-                  aria-label={`${eventTypeLabel(ev.type)}, ${ev.type}`}
-                >
-                  {ev.type}
-                </code>
-                <span className="task-timeline-by">{ev.by}</span>
-              </div>
-              <EventDataPreview data={ev.data} eventType={ev.type} />
-            </li>
-          ))}
+          {timelineEvents.map((ev) => {
+            const headAndData = (
+              <>
+                <div className="task-timeline-head">
+                  <time dateTime={ev.at}>
+                    {new Date(ev.at).toLocaleString()}
+                  </time>
+                  <code
+                    className="task-timeline-type-pill"
+                    data-event-type={ev.type}
+                    title={eventTypeLabel(ev.type)}
+                    aria-label={`${eventTypeLabel(ev.type)}, ${ev.type}`}
+                  >
+                    {ev.type}
+                  </code>
+                  <span className="task-timeline-by">{ev.by}</span>
+                </div>
+                <EventDataPreview data={ev.data} eventType={ev.type} />
+              </>
+            );
+            return (
+              <li key={ev.seq} className="task-timeline-item">
+                {taskIdForLinks ? (
+                  <Link
+                    className="task-timeline-item-hit"
+                    to={`/tasks/${encodeURIComponent(taskIdForLinks)}/events/${ev.seq}`}
+                  >
+                    {headAndData}
+                  </Link>
+                ) : (
+                  headAndData
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>

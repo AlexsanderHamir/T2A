@@ -1,12 +1,15 @@
-import type { Task, TaskEvent } from "@/types";
+import type { Task } from "@/types";
 
-/** Whether the human should act soon, from status and recent audit events. */
-export function userAttention(task: Task, events: TaskEvent[]): {
+/** Whether the human should act soon, from task status and server `approval_pending` on events. */
+export function userAttention(
+  task: Task,
+  meta: { approvalPending: boolean },
+): {
   show: boolean;
   headline: string;
   body: string;
 } {
-  if (approvalPending(events)) {
+  if (meta.approvalPending) {
     return {
       show: true,
       headline: "Approval requested",
@@ -35,13 +38,4 @@ export function userAttention(task: Task, events: TaskEvent[]): {
     default:
       return { show: false, headline: "", body: "" };
   }
-}
-
-function approvalPending(events: TaskEvent[]): boolean {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const t = events[i].type;
-    if (t === "approval_granted") return false;
-    if (t === "approval_requested") return true;
-  }
-  return false;
 }

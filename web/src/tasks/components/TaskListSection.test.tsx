@@ -9,6 +9,15 @@ function renderWithRouter(ui: ReactElement) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
+const listPagerDefaults = {
+  listPage: 0,
+  listPageSize: 20,
+  onListPageChange: vi.fn(),
+  onListFiltersChange: vi.fn(),
+  hasNextPage: false,
+  hasPrevPage: false,
+};
+
 describe("TaskListSection", () => {
   it("shows loading status", () => {
     renderWithRouter(
@@ -18,6 +27,7 @@ describe("TaskListSection", () => {
         refreshing={false}
         saving={false}
         smoothTransitions={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -33,6 +43,7 @@ describe("TaskListSection", () => {
         refreshing
         saving={false}
         smoothTransitions={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -47,6 +58,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing={false}
         saving={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -71,6 +83,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing={false}
         saving={false}
+        {...listPagerDefaults}
         onEdit={onEdit}
         onRequestDelete={onRequestDelete}
       />,
@@ -105,6 +118,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing={false}
         saving={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -149,6 +163,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing={false}
         saving={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -181,6 +196,7 @@ describe("TaskListSection", () => {
         loading={false}
         refreshing={false}
         saving={false}
+        {...listPagerDefaults}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -190,5 +206,42 @@ describe("TaskListSection", () => {
     expect(
       screen.getByText("No tasks match these filters."),
     ).toBeInTheDocument();
+  });
+
+  it("shows list pager when another server page may exist", async () => {
+    const user = userEvent.setup();
+    const onListPageChange = vi.fn();
+    const task = {
+      id: "1",
+      title: "One",
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "medium" as const,
+    };
+    const filler = Array.from({ length: 19 }, (_, i) => ({
+      id: `x${i}`,
+      title: `T${i}`,
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "medium" as const,
+    }));
+    renderWithRouter(
+      <TaskListSection
+        tasks={[task, ...filler]}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        listPage={0}
+        listPageSize={20}
+        onListPageChange={onListPageChange}
+        onListFiltersChange={vi.fn()}
+        hasNextPage
+        hasPrevPage={false}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /^next$/i }));
+    expect(onListPageChange).toHaveBeenCalledWith(1);
   });
 });

@@ -6,6 +6,7 @@ import {
   listTasks,
   patchTask,
 } from "../../api";
+import { TASK_LIST_PAGE_SIZE } from "../paging";
 import { taskQueryKeys } from "../queryKeys";
 import {
   DEFAULT_NEW_TASK_STATUS,
@@ -43,10 +44,21 @@ export function useTasksApp() {
     string | null
   >(null);
 
+  const [taskListPage, setTaskListPage] = useState(0);
+
   const tasksQuery = useQuery({
-    queryKey: taskQueryKeys.list(),
-    queryFn: ({ signal }) => listTasks(200, 0, { signal }),
+    queryKey: taskQueryKeys.list(taskListPage),
+    queryFn: ({ signal }) =>
+      listTasks(
+        TASK_LIST_PAGE_SIZE,
+        taskListPage * TASK_LIST_PAGE_SIZE,
+        { signal },
+      ),
   });
+
+  const resetTaskListPage = useCallback(() => {
+    setTaskListPage(0);
+  }, []);
 
   const tasks = tasksQuery.data?.tasks ?? [];
   const loading = tasksQuery.isPending;
@@ -93,7 +105,7 @@ export function useTasksApp() {
     onSuccess: async (_, deletedId) => {
       setDeleteTarget(null);
       setEditing((prev) => (prev?.id === deletedId ? null : prev));
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.list() });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
     },
   });
 
@@ -184,6 +196,15 @@ export function useTasksApp() {
   const patchPending = patchMutation.isPending;
   const deletePending = deleteMutation.isPending;
 
+  useEffect(() => {
+    if (!tasksQuery.isPending && tasks.length === 0 && taskListPage > 0) {
+      setTaskListPage(0);
+    }
+  }, [tasksQuery.isPending, tasks.length, taskListPage]);
+
+  const hasNextTaskPage = tasks.length === TASK_LIST_PAGE_SIZE;
+  const hasPrevTaskPage = taskListPage > 0;
+
   return {
     tasks,
     loading,
@@ -216,5 +237,11 @@ export function useTasksApp() {
     requestDelete,
     cancelDelete,
     confirmDelete,
+    taskListPage,
+    setTaskListPage,
+    resetTaskListPage,
+    taskListPageSize: TASK_LIST_PAGE_SIZE,
+    hasNextTaskPage,
+    hasPrevTaskPage,
   };
 }

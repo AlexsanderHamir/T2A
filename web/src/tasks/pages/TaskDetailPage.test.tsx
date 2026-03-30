@@ -61,8 +61,16 @@ describe("TaskDetailPage", () => {
           priority: "critical",
         });
       }
-      if (url === "/tasks/t1/events") {
-        return Response.json({ task_id: "t1", events: [] });
+      if (url.startsWith("/tasks/t1/events")) {
+        return Response.json({
+          task_id: "t1",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
       }
       return new Response("not found", { status: 404 });
     });
@@ -98,8 +106,16 @@ describe("TaskDetailPage", () => {
           priority: "medium",
         });
       }
-      if (url === "/tasks/t2/events") {
-        return Response.json({ task_id: "t2", events: [] });
+      if (url.startsWith("/tasks/t2/events")) {
+        return Response.json({
+          task_id: "t2",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
       }
       return new Response("not found", { status: 404 });
     });
@@ -127,21 +143,28 @@ describe("TaskDetailPage", () => {
           priority: "medium",
         });
       }
-      if (url === "/tasks/t3/events") {
+      if (url.startsWith("/tasks/t3/events")) {
         return Response.json({
           task_id: "t3",
+          limit: 20,
+          total: 2,
+          range_start: 1,
+          range_end: 2,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
           events: [
-            {
-              seq: 1,
-              at: "2026-01-01T12:00:00.000Z",
-              type: "task_created",
-              by: "user",
-              data: {},
-            },
             {
               seq: 2,
               at: "2026-01-02T12:00:00.000Z",
               type: "sync_ping",
+              by: "user",
+              data: {},
+            },
+            {
+              seq: 1,
+              at: "2026-01-01T12:00:00.000Z",
+              type: "task_created",
               by: "user",
               data: {},
             },
@@ -159,7 +182,11 @@ describe("TaskDetailPage", () => {
 
     const items = await screen.findAllByRole("listitem");
     expect(items).toHaveLength(2);
-    expect(items[0]).toHaveTextContent(/live sync check/i);
-    expect(items[1]).toHaveTextContent(/task created/i);
+    expect(items[0]).toHaveTextContent(/sync_ping/i);
+    expect(items[1]).toHaveTextContent(/task_created/i);
+    expect(items[0].querySelector("code.task-timeline-type-pill")).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(/live sync check/i),
+    );
   });
 });

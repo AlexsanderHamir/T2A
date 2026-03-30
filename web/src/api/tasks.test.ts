@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTask, deleteTask, listTasks, patchTask } from "./index";
+import {
+  createTask,
+  deleteTask,
+  getTaskEvent,
+  listTasks,
+  patchTask,
+} from "./index";
 
 describe("listTasks", () => {
   afterEach(() => {
@@ -166,6 +172,37 @@ describe("patchTask", () => {
       title: "B",
       status: "done",
     });
+  });
+});
+
+describe("getTaskEvent", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("GETs /tasks/{id}/events/{seq} and parses body", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          task_id: "t-1",
+          seq: 2,
+          at: "2026-01-01T12:00:00.000Z",
+          type: "task_created",
+          by: "user",
+          data: {},
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const out = await getTaskEvent("t-1", 2);
+    expect(out.task_id).toBe("t-1");
+    expect(out.seq).toBe(2);
+
+    expect(spy).toHaveBeenCalledWith(
+      "/tasks/t-1/events/2",
+      expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
   });
 });
 

@@ -6,6 +6,7 @@ import {
   type Status,
   type Task,
   type TaskEvent,
+  type TaskEventDetail,
   type TaskEventType,
   type TaskEventsResponse,
   type TaskListResponse,
@@ -94,6 +95,20 @@ function parseEventData(v: unknown): Record<string, unknown> {
   return v as Record<string, unknown>;
 }
 
+function parseTaskEventRecord(item: Record<string, unknown>): TaskEvent {
+  const at = parseString(item.at, "at");
+  if (Number.isNaN(Date.parse(at))) {
+    throw new Error("at must be a parseable date");
+  }
+  return {
+    seq: parseFiniteNumber(item.seq, "seq"),
+    at,
+    type: parseEventType(item.type),
+    by: parseActor(item.by),
+    data: parseEventData("data" in item ? item.data : {}),
+  };
+}
+
 /** Validates GET /tasks/{id}/events JSON. */
 export function parseTaskEventsResponse(value: unknown): TaskEventsResponse {
   if (!isRecord(value)) {
@@ -109,23 +124,48 @@ export function parseTaskEventsResponse(value: unknown): TaskEventsResponse {
       if (!isRecord(item)) {
         throw new Error("event must be an object");
       }
-      const at = parseString(item.at, "at");
-      if (Number.isNaN(Date.parse(at))) {
-        throw new Error("at must be a parseable date");
-      }
-      return {
-        seq: parseFiniteNumber(item.seq, "seq"),
-        at,
-        type: parseEventType(item.type),
-        by: parseActor(item.by),
-        data: parseEventData("data" in item ? item.data : {}),
-      };
+      return parseTaskEventRecord(item);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       throw new Error(`Invalid API response: events[${i}]: ${msg}`);
     }
   });
-  return { task_id: taskID, events };
+  const approval_pending = value.approval_pending === true;
+  const out: TaskEventsResponse = {
+    task_id: taskID,
+    events,
+    approval_pending,
+    has_more_newer: value.has_more_newer === true,
+    has_more_older: value.has_more_older === true,
+  };
+  if ("limit" in value && value.limit !== undefined) {
+    out.limit = parseFiniteNumber(value.limit, "limit");
+  }
+  if ("total" in value && value.total !== undefined) {
+    out.total = parseFiniteNumber(value.total, "total");
+  }
+  if ("range_start" in value && value.range_start !== undefined) {
+    out.range_start = parseFiniteNumber(value.range_start, "range_start");
+  }
+  if ("range_end" in value && value.range_end !== undefined) {
+    out.range_end = parseFiniteNumber(value.range_end, "range_end");
+  }
+  return out;
+}
+
+/** Validates GET /tasks/{id}/events/{seq} JSON. */
+export function parseTaskEventDetail(value: unknown): TaskEventDetail {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: event detail must be an object");
+  }
+  const task_id = parseNonEmptyString(value.task_id, "task_id");
+  try {
+    const { seq, at, type, by, data } = parseTaskEventRecord(value);
+    return { task_id, seq, at, type, by, data };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Invalid API response: event detail: ${msg}`);
+  }
 }
 
 /** Validates a single task object from POST/PATCH responses. */

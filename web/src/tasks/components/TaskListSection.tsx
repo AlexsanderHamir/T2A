@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
+import { TaskPager } from "./TaskPager";
 import {
   PRIORITIES,
   STATUSES,
@@ -19,6 +20,14 @@ type Props = {
   refreshing: boolean;
   /** A create/update/delete request is in flight. */
   saving: boolean;
+  /** Zero-based server list page (see `GET /tasks` offset). */
+  listPage: number;
+  listPageSize: number;
+  onListPageChange: (page: number) => void;
+  /** Reset to first server page when filters change. */
+  onListFiltersChange: () => void;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
   /**
    * When true (default), status lines wait briefly before appearing so fast
    * requests do not flash unreadable text. Set false in tests.
@@ -40,6 +49,12 @@ export function TaskListSection({
   loading,
   refreshing,
   saving,
+  listPage,
+  listPageSize,
+  onListPageChange,
+  onListFiltersChange,
+  hasNextPage,
+  hasPrevPage,
   smoothTransitions = true,
   onEdit,
   onRequestDelete,
@@ -87,6 +102,18 @@ export function TaskListSection({
       return true;
     });
   }, [tasks, statusFilter, priorityFilter, titleSearch]);
+
+  const skipFiltersResetOnMount = useRef(true);
+  useEffect(() => {
+    if (skipFiltersResetOnMount.current) {
+      skipFiltersResetOnMount.current = false;
+      return;
+    }
+    onListFiltersChange();
+  }, [statusFilter, priorityFilter, titleSearch, onListFiltersChange]);
+
+  const showTaskPager =
+    !loading && (hasPrevPage || hasNextPage || tasks.length === listPageSize);
 
   return (
     <section className="panel">
@@ -230,6 +257,24 @@ export function TaskListSection({
               </tbody>
             </table>
           </div>
+          {showTaskPager ? (
+            <TaskPager
+              navLabel="Task list pages"
+              summary={
+                tasks.length === 0
+                  ? `Page ${listPage + 1} (no tasks on this page)`
+                  : (() => {
+                      const start = listPage * listPageSize + 1;
+                      const end = listPage * listPageSize + tasks.length;
+                      return `${start}–${end}${hasNextPage ? "+" : ""}`;
+                    })()
+              }
+              onPrev={() => onListPageChange(listPage - 1)}
+              onNext={() => onListPageChange(listPage + 1)}
+              disablePrev={!hasPrevPage}
+              disableNext={!hasNextPage}
+            />
+          ) : null}
         </div>
       ) : null}
     </section>

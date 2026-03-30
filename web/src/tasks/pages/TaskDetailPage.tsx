@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listTaskEvents } from "@/api";
+import { TaskPager } from "../components/TaskPager";
 import { promptHasVisibleContent } from "../promptFormat";
+import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { TaskUpdatesTimeline } from "../components/TaskUpdatesTimeline";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
-import { taskQueryKeys } from "../queryKeys";
+import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {
@@ -18,8 +20,16 @@ export function TaskDetailPage({ app }: Props) {
   const navigate = useNavigate();
   const navigatedAfterDelete = useRef(false);
 
+  const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({
+    k: "head",
+  });
+
   useEffect(() => {
     navigatedAfterDelete.current = false;
+  }, [taskId]);
+
+  useEffect(() => {
+    setEventsCursor({ k: "head" });
   }, [taskId]);
 
   const taskQuery = useQuery({
@@ -29,8 +39,18 @@ export function TaskDetailPage({ app }: Props) {
   });
 
   const eventsQuery = useQuery({
-    queryKey: taskQueryKeys.events(taskId),
-    queryFn: ({ signal }) => listTaskEvents(taskId, { signal }),
+    queryKey: taskQueryKeys.events(taskId, eventsCursor),
+    queryFn: ({ signal }) => {
+      const opts: {
+        signal?: AbortSignal;
+        limit: number;
+        beforeSeq?: number;
+        afterSeq?: number;
+      } = { signal, limit: TASK_EVENTS_PAGE_SIZE };
+      if (eventsCursor.k === "before") opts.beforeSeq = eventsCursor.seq;
+      if (eventsCursor.k === "after") opts.afterSeq = eventsCursor.seq;
+      return listTaskEvents(taskId, opts);
+    },
     enabled: Boolean(taskId) && taskQuery.isSuccess,
   });
 
@@ -83,8 +103,12 @@ export function TaskDetailPage({ app }: Props) {
 
   const task = taskQuery.data;
   const events = eventsQuery.data?.events ?? [];
-  const attention = userAttention(task, events);
-  const timelineEvents = [...events].sort((a, b) => b.seq - a.seq);
+  const eventsTotal = eventsQuery.data?.total ?? 0;
+  const attention = userAttention(task, {
+    approvalPending: eventsQuery.data?.approval_pending ?? false,
+  });
+  /** API returns newest first when paged. */
+  const timelineEvents = events;
 
   return (
     <section className="panel task-detail-panel">
@@ -182,8 +206,44 @@ export function TaskDetailPage({ app }: Props) {
         isError={eventsQuery.isError}
         error={eventsQuery.error}
         timelineEvents={timelineEvents}
-        isEmpty={events.length === 0}
+        isEmpty={
+          !eventsQuery.isPending &&
+          !eventsQuery.isError &&
+          events.length === 0 &&
+          eventsTotal === 0
+        }
+        taskIdForLinks={taskId}
       />
+
+      {!eventsQuery.isPending &&
+      !eventsQuery.isError &&
+      eventsTotal > 0 &&
+      (eventsQuery.data?.has_more_newer ||
+        eventsQuery.data?.has_more_older) ? (
+        <TaskPager
+          navLabel="Update history pages"
+          summary={
+            eventsQuery.data?.range_start !== undefined &&
+            eventsQuery.data?.range_end !== undefined
+              ? `${eventsQuery.data.range_start}–${eventsQuery.data.range_end} of ${eventsTotal}`
+              : events.length === 0
+                ? "No rows on this page"
+                : "—"
+          }
+          onPrev={() => {
+            if (events.length === 0) return;
+            const maxSeq = Math.max(...events.map((e) => e.seq));
+            setEventsCursor({ k: "after", seq: maxSeq });
+          }}
+          onNext={() => {
+            if (events.length === 0) return;
+            const minSeq = Math.min(...events.map((e) => e.seq));
+            setEventsCursor({ k: "before", seq: minSeq });
+          }}
+          disablePrev={eventsQuery.data?.has_more_newer !== true}
+          disableNext={eventsQuery.data?.has_more_older !== true}
+        />
+      ) : null}
     </section>
   );
 }
