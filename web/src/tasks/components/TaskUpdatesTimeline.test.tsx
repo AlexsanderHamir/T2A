@@ -36,7 +36,40 @@ describe("TaskUpdatesTimeline", () => {
     );
     const items = screen.getAllByRole("listitem");
     expect(items[0]).toHaveTextContent(/live sync check/i);
+    expect(items[0].querySelector("code.task-timeline-type-id")).toHaveTextContent(
+      "sync_ping",
+    );
     expect(items[1]).toHaveTextContent(/task created/i);
+    expect(items[1].querySelector("code.task-timeline-type-id")).toHaveTextContent(
+      "task_created",
+    );
+  });
+
+  it("shows canonical event type slug beside label for status_changed", () => {
+    render(
+      <TaskUpdatesTimeline
+        isPending={false}
+        isError={false}
+        error={null}
+        isEmpty={false}
+        timelineEvents={[
+          {
+            seq: 1,
+            at: "2026-01-01T12:00:00.000Z",
+            type: "status_changed",
+            by: "agent",
+            data: { from: "ready", to: "running" },
+          },
+        ]}
+      />,
+    );
+    const item = screen.getByRole("listitem");
+    expect(item).toHaveTextContent(/status changed/i);
+    expect(item.querySelector("code.task-timeline-type-id")).toHaveTextContent(
+      "status_changed",
+    );
+    expect(item).toHaveTextContent(/ready/);
+    expect(item).toHaveTextContent(/running/);
   });
 
   it("shows loading and empty states", () => {

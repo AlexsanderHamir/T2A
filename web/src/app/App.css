@@ -1418,8 +1418,34 @@ th {
 }
 
 .task-timeline-type {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.task-timeline-type-label {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.task-timeline-type-sep {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  user-select: none;
+}
+
+.task-timeline-type-id {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 4%);
+  border: 1px solid var(--border-hairline);
 }
 
 .task-timeline-by {

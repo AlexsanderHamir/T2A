@@ -43,7 +43,13 @@ export function TaskUpdatesTimeline({
                   {new Date(ev.at).toLocaleString()}
                 </time>
                 <span className="task-timeline-type">
-                  {eventTypeLabel(ev.type)}
+                  <span className="task-timeline-type-label">
+                    {eventTypeLabel(ev.type)}
+                  </span>
+                  <span className="task-timeline-type-sep" aria-hidden>
+                    ·
+                  </span>
+                  <code className="task-timeline-type-id">{ev.type}</code>
                 </span>
                 <span className="task-timeline-by">{ev.by}</span>
               </div>
