@@ -94,6 +94,44 @@ describe("TaskUpdatesTimeline", () => {
     expect(screen.getByText(/no audit events yet/i)).toBeInTheDocument();
   });
 
+  it("splits into Needs your input and Other activity when both kinds are present", () => {
+    render(
+      <MemoryRouter>
+        <TaskUpdatesTimeline
+          isPending={false}
+          isError={false}
+          error={null}
+          isEmpty={false}
+          timelineEvents={[
+            {
+              seq: 2,
+              at: "2026-01-02T12:00:00.000Z",
+              type: "sync_ping",
+              by: "user",
+              data: {},
+            },
+            {
+              seq: 1,
+              at: "2026-01-01T12:00:00.000Z",
+              type: "approval_requested",
+              by: "agent",
+              data: {},
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: /^needs your input$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^other activity$/i }),
+    ).toBeInTheDocument();
+    const lists = screen.getAllByRole("list");
+    expect(lists).toHaveLength(2);
+  });
+
   it("links each row when taskIdForLinks is set", () => {
     render(
       <MemoryRouter>

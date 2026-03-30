@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getTaskEvent } from "@/api";
 import { eventTypeLabel } from "../taskEventLabels";
+import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { taskQueryKeys } from "../queryKeys";
 
 export function TaskEventDetailPage() {
@@ -88,6 +89,17 @@ export function TaskEventDetailPage() {
 
       <header className="task-event-detail-header">
         <h2 className="task-detail-title">Event #{ev.seq}</h2>
+        <p
+          className="task-event-detail-stance"
+          role="status"
+          data-stance={
+            eventTypeNeedsUserInput(ev.type) ? "needs-user" : "informational"
+          }
+        >
+          {eventTypeNeedsUserInput(ev.type)
+            ? "Needs your input"
+            : "Informational"}
+        </p>
         <p className="muted task-event-detail-task-id">
           Task <code>{ev.task_id}</code>
         </p>

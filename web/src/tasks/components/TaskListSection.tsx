@@ -12,6 +12,7 @@ import {
   type Status,
   type Task,
 } from "@/types";
+import { statusNeedsUserInput } from "../taskStatusNeedsUser";
 
 type Props = {
   tasks: Task[];
@@ -68,17 +69,25 @@ export function TaskListSection({
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [titleSearch, setTitleSearch] = useState("");
 
-  const statusSelectOptions: CustomSelectOption[] = useMemo(
-    () => [
+  const statusSelectOptions: CustomSelectOption[] = useMemo(() => {
+    const needsUser = STATUSES.filter((s) => statusNeedsUserInput(s));
+    const other = STATUSES.filter((s) => !statusNeedsUserInput(s));
+    return [
       { value: "all", label: "All" },
-      ...STATUSES.map((s) => ({
+      { type: "header", label: "Needs your input" },
+      ...needsUser.map((s) => ({
         value: s,
         label: s,
         pillClass: statusPillClass(s),
       })),
-    ],
-    [],
-  );
+      { type: "header", label: "Other activity" },
+      ...other.map((s) => ({
+        value: s,
+        label: s,
+        pillClass: statusPillClass(s),
+      })),
+    ];
+  }, []);
 
   const prioritySelectOptions: CustomSelectOption[] = useMemo(
     () => [
@@ -216,7 +225,14 @@ export function TaskListSection({
                           </Link>
                         </td>
                         <td>
-                          <span className={statusPillClass(t.status)}>
+                          <span
+                            className={statusPillClass(t.status)}
+                            data-needs-user={
+                              statusNeedsUserInput(t.status)
+                                ? "true"
+                                : undefined
+                            }
+                          >
                             {t.status}
                           </span>
                         </td>

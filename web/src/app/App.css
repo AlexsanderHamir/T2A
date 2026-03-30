@@ -506,6 +506,17 @@ button.custom-select-trigger:focus-visible {
   overflow-y: auto;
 }
 
+.custom-select-option-header {
+  padding: 0.35rem 0.35rem 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  cursor: default;
+  pointer-events: none;
+}
+
 .custom-select-option {
   padding: 0.2rem;
   border-radius: var(--radius-sm);
@@ -1387,6 +1398,25 @@ th {
   margin: 0;
 }
 
+.task-timeline-split {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.task-timeline-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.task-timeline-section--needs-user .task-timeline-section-title {
+  color: var(--text-secondary);
+}
+
 .task-timeline {
   margin: 0;
   padding: 0;
@@ -1572,6 +1602,18 @@ a.task-timeline-item-hit {
 
 .task-event-detail-header {
   margin-bottom: 1rem;
+}
+
+.task-event-detail-stance {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.task-event-detail-stance[data-stance="informational"] {
+  font-weight: 500;
+  color: var(--text-tertiary);
 }
 
 .task-event-detail-task-id {

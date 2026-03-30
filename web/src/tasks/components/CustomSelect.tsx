@@ -10,12 +10,53 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-export type CustomSelectOption = {
-  value: string;
-  label: string;
-  /** When set, option shows a colored pill (same system as table badges). */
-  pillClass?: string;
-};
+export type CustomSelectOption =
+  | { type: "header"; label: string }
+  | { value: string; label: string; pillClass?: string };
+
+export function isCustomSelectHeader(
+  o: CustomSelectOption,
+): o is { type: "header"; label: string } {
+  return "type" in o && o.type === "header";
+}
+
+function firstSelectableIndex(opts: CustomSelectOption[]): number {
+  const i = opts.findIndex((o) => !isCustomSelectHeader(o));
+  return i >= 0 ? i : 0;
+}
+
+function lastSelectableIndex(opts: CustomSelectOption[]): number {
+  for (let i = opts.length - 1; i >= 0; i--) {
+    if (!isCustomSelectHeader(opts[i])) return i;
+  }
+  return 0;
+}
+
+function nextSelectable(
+  opts: CustomSelectOption[],
+  from: number,
+): number {
+  for (let i = from + 1; i < opts.length; i++) {
+    if (!isCustomSelectHeader(opts[i])) return i;
+  }
+  for (let i = 0; i < opts.length; i++) {
+    if (!isCustomSelectHeader(opts[i])) return i;
+  }
+  return from;
+}
+
+function prevSelectable(
+  opts: CustomSelectOption[],
+  from: number,
+): number {
+  for (let i = from - 1; i >= 0; i--) {
+    if (!isCustomSelectHeader(opts[i])) return i;
+  }
+  for (let i = opts.length - 1; i >= 0; i--) {
+    if (!isCustomSelectHeader(opts[i])) return i;
+  }
+  return from;
+}
 
 type Props = {
   id: string;
@@ -52,10 +93,22 @@ export function CustomSelect({
 
   const optionId = useCallback((v: string) => `${id}-opt-${v}`, [id]);
 
-  const current = useMemo(
-    () => options.find((o) => o.value === value) ?? options[0],
-    [options, value],
-  );
+  const current = useMemo((): {
+    value: string;
+    label: string;
+    pillClass?: string;
+  } => {
+    const sel = options.find(
+      (o): o is { value: string; label: string; pillClass?: string } =>
+        !isCustomSelectHeader(o) && o.value === value,
+    );
+    if (sel) return sel;
+    const first = options.find(
+      (o): o is { value: string; label: string; pillClass?: string } =>
+        !isCustomSelectHeader(o),
+    );
+    return first ?? { value: "", label: "" };
+  }, [options, value]);
 
   const updatePosition = useCallback(() => {
     const el = buttonRef.current;
@@ -81,8 +134,10 @@ export function CustomSelect({
 
   useEffect(() => {
     if (!open) return;
-    const i = options.findIndex((o) => o.value === value);
-    setHighlight(i >= 0 ? i : 0);
+    const i = options.findIndex(
+      (o) => !isCustomSelectHeader(o) && o.value === value,
+    );
+    setHighlight(i >= 0 ? i : firstSelectableIndex(options));
   }, [open, value, options]);
 
   useEffect(() => {
@@ -114,8 +169,6 @@ export function CustomSelect({
     if (open) listRef.current?.focus();
   }, [open]);
 
-  const n = options.length;
-
   const pick = useCallback(
     (v: string) => {
       onChange(v);
@@ -129,38 +182,41 @@ export function CustomSelect({
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!open) setOpen(true);
-      else setHighlight((h) => (h + 1) % n);
+      else setHighlight((h) => nextSelectable(options, h));
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
       if (!open) setOpen(true);
-      else setHighlight((h) => (h - 1 + n) % n);
+      else setHighlight((h) => prevSelectable(options, h));
       return;
     }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      if (open) pick(options[highlight].value);
-      else setOpen(true);
+      if (open) {
+        const o = options[highlight];
+        if (!isCustomSelectHeader(o)) pick(o.value);
+      } else setOpen(true);
     }
   };
 
   const onListKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlight((h) => (h + 1) % n);
+      setHighlight((h) => nextSelectable(options, h));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlight((h) => (h - 1 + n) % n);
+      setHighlight((h) => prevSelectable(options, h));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      pick(options[highlight].value);
+      const o = options[highlight];
+      if (!isCustomSelectHeader(o)) pick(o.value);
     } else if (e.key === "Home") {
       e.preventDefault();
-      setHighlight(0);
+      setHighlight(firstSelectableIndex(options));
     } else if (e.key === "End") {
       e.preventDefault();
-      setHighlight(n - 1);
+      setHighlight(lastSelectableIndex(options));
     } else if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);
@@ -169,6 +225,8 @@ export function CustomSelect({
   };
 
   const highlighted = options[highlight];
+  const highlightedOption =
+    highlighted && !isCustomSelectHeader(highlighted) ? highlighted : null;
 
   const dropdown =
     open && pos ? (
@@ -178,7 +236,9 @@ export function CustomSelect({
         role="listbox"
         tabIndex={-1}
         aria-label={lb}
-        aria-activedescendant={optionId(highlighted.value)}
+        aria-activedescendant={
+          highlightedOption ? optionId(highlightedOption.value) : undefined
+        }
         className="custom-select-dropdown"
         style={{
           position: "fixed",
@@ -189,32 +249,42 @@ export function CustomSelect({
         }}
         onKeyDown={onListKeyDown}
       >
-        {options.map((o, i) => (
-          <li
-            key={o.value}
-            id={optionId(o.value)}
-            role="option"
-            aria-selected={o.value === value}
-            className={
-              i === highlight
-                ? "custom-select-option custom-select-option--highlight"
-                : "custom-select-option"
-            }
-            onMouseEnter={() => setHighlight(i)}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => pick(o.value)}
-          >
-            {o.pillClass ? (
-              <span
-                className={`custom-select-option-pill ${o.pillClass}`}
-              >
-                {o.label}
-              </span>
-            ) : (
-              <span className="custom-select-option-neutral">{o.label}</span>
-            )}
-          </li>
-        ))}
+        {options.map((o, i) =>
+          isCustomSelectHeader(o) ? (
+            <li
+              key={`header-${i}-${o.label}`}
+              role="presentation"
+              className="custom-select-option-header"
+            >
+              {o.label}
+            </li>
+          ) : (
+            <li
+              key={o.value}
+              id={optionId(o.value)}
+              role="option"
+              aria-selected={o.value === value}
+              className={
+                i === highlight
+                  ? "custom-select-option custom-select-option--highlight"
+                  : "custom-select-option"
+              }
+              onMouseEnter={() => setHighlight(i)}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(o.value)}
+            >
+              {o.pillClass ? (
+                <span
+                  className={`custom-select-option-pill ${o.pillClass}`}
+                >
+                  {o.label}
+                </span>
+              ) : (
+                <span className="custom-select-option-neutral">{o.label}</span>
+              )}
+            </li>
+          ),
+        )}
       </ul>
     ) : null;
 

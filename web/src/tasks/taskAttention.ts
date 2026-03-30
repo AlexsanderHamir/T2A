@@ -1,6 +1,9 @@
 import type { Task } from "@/types";
 
-/** Whether the human should act soon, from task status and server `approval_pending` on events. */
+/**
+ * Whether the human should act soon, from task status and server `approval_pending` on events.
+ * Status cases that set `show: true` match `statusNeedsUserInput` in `taskStatusNeedsUser.ts`.
+ */
 export function userAttention(
   task: Task,
   meta: { approvalPending: boolean },

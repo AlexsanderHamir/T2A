@@ -6,6 +6,7 @@ import { TaskPager } from "../components/TaskPager";
 import { promptHasVisibleContent } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
+import { statusNeedsUserInput } from "../taskStatusNeedsUser";
 import { TaskUpdatesTimeline } from "../components/TaskUpdatesTimeline";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
@@ -120,8 +121,26 @@ export function TaskDetailPage({ app }: Props) {
 
       <header className="task-detail-header">
         <h2 className="task-detail-title">{task.title}</h2>
+        <p
+          className="task-event-detail-stance"
+          role="status"
+          data-stance={
+            statusNeedsUserInput(task.status) ? "needs-user" : "informational"
+          }
+        >
+          {statusNeedsUserInput(task.status)
+            ? "Needs your input"
+            : "Informational"}
+        </p>
         <div className="task-detail-meta">
-          <span className={statusPillClass(task.status)}>{task.status}</span>
+          <span
+            className={statusPillClass(task.status)}
+            data-needs-user={
+              statusNeedsUserInput(task.status) ? "true" : undefined
+            }
+          >
+            {task.status}
+          </span>
           <span className={priorityPillClass(task.priority)}>
             {task.priority}
           </span>

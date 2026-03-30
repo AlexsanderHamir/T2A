@@ -78,6 +78,8 @@ describe("TaskDetailPage", () => {
     renderDetail("/tasks/t1", mockApp());
 
     expect(await screen.findByRole("heading", { name: /^testing$/i })).toBeInTheDocument();
+    const stance = await screen.findByText("Informational");
+    expect(stance).toHaveAttribute("data-stance", "informational");
     expect(await screen.findByText(/no audit events yet/i)).toBeInTheDocument();
 
     const details = document.querySelector(".task-detail-prompt-details");
@@ -129,6 +131,41 @@ describe("TaskDetailPage", () => {
     const empty = screen.getByText("—");
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveClass("task-detail-prompt-empty");
+  });
+
+  it("shows status stance when the task status needs user input", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/tb") {
+        return Response.json({
+          id: "tb",
+          title: "Blocked task",
+          initial_prompt: "",
+          status: "blocked",
+          priority: "medium",
+        });
+      }
+      if (url.startsWith("/tasks/tb/events")) {
+        return Response.json({
+          task_id: "tb",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/tb", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^blocked task$/i }),
+    ).toBeInTheDocument();
+    const stance = await screen.findByText("Needs your input");
+    expect(stance).toHaveAttribute("data-stance", "needs-user");
   });
 
   it("lists updates newest first by seq", async () => {

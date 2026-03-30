@@ -139,6 +139,25 @@ describe("TaskListSection", () => {
     expect(screen.getByText("High done")).toBeInTheDocument();
   });
 
+  it("shows status filter section labels for needs-user vs other", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(
+      <TaskListSection
+        tasks={[]}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        smoothTransitions={false}
+        {...listPagerDefaults}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    expect(screen.getByText("Needs your input")).toBeInTheDocument();
+    expect(screen.getByText("Other activity")).toBeInTheDocument();
+  });
+
   it("filters rows by title search", async () => {
     const user = userEvent.setup();
     const tasks = [
