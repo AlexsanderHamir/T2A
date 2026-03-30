@@ -154,7 +154,7 @@ describe("TaskListSection", () => {
       />,
     );
     await user.click(screen.getByRole("combobox", { name: /^status$/i }));
-    expect(screen.getByText("Needs your input")).toBeInTheDocument();
+    expect(screen.getByText("Agent needs input")).toBeInTheDocument();
     expect(screen.getByText("Other activity")).toBeInTheDocument();
   });
 

@@ -23,5 +23,12 @@ type TaskEvent struct {
 	By   Actor          `gorm:"column:by;not null"`
 	Data datatypes.JSON `gorm:"column:data_json;type:jsonb;not null;default:'{}'"`
 
+	// UserResponse is optional human-supplied text for event types that accept input (see EventTypeAcceptsUserResponse).
+	UserResponse *string `gorm:"column:user_response;type:text"`
+	// UserResponseAt is set when UserResponse is written or updated (UTC).
+	UserResponseAt *time.Time `gorm:"column:user_response_at"`
+	// ResponseThread is an ordered JSON array of ResponseThreadEntry (user ↔ agent messages).
+	ResponseThread datatypes.JSON `gorm:"column:response_thread_json;type:jsonb"`
+
 	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }

@@ -94,7 +94,7 @@ describe("TaskUpdatesTimeline", () => {
     expect(screen.getByText(/no audit events yet/i)).toBeInTheDocument();
   });
 
-  it("splits into Needs your input and Other activity when both kinds are present", () => {
+  it("uses one list for mixed events and marks needs-user rows", () => {
     render(
       <MemoryRouter>
         <TaskUpdatesTimeline
@@ -102,18 +102,26 @@ describe("TaskUpdatesTimeline", () => {
           isError={false}
           error={null}
           isEmpty={false}
+          taskIdForLinks="t1"
           timelineEvents={[
             {
-              seq: 2,
-              at: "2026-01-02T12:00:00.000Z",
+              seq: 3,
+              at: "2026-01-03T12:00:00.000Z",
               type: "sync_ping",
               by: "user",
               data: {},
             },
             {
+              seq: 2,
+              at: "2026-01-02T12:00:00.000Z",
+              type: "approval_requested",
+              by: "agent",
+              data: {},
+            },
+            {
               seq: 1,
               at: "2026-01-01T12:00:00.000Z",
-              type: "approval_requested",
+              type: "task_failed",
               by: "agent",
               data: {},
             },
@@ -122,14 +130,62 @@ describe("TaskUpdatesTimeline", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getAllByRole("list")).toHaveLength(1);
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    expect(items[0]).not.toHaveAttribute("data-needs-user");
+    expect(items[1]).toHaveAttribute("data-needs-user", "true");
+    expect(items[1]).toHaveClass("task-timeline-item--needs-user");
+    expect(items[2]).toHaveAttribute("data-needs-user", "true");
+    const approvalLink = screen.getByRole("link", {
+      name: /approval requested — needs your input/i,
+    });
+    expect(approvalLink).toHaveAttribute("href", "/tasks/t1/events/2");
+    expect(screen.getAllByText(/^Needs your input$/)).toHaveLength(2);
+  });
+
+  it("shows thread and hides needs-input hint when user replied last", () => {
+    render(
+      <MemoryRouter>
+        <TaskUpdatesTimeline
+          isPending={false}
+          isError={false}
+          error={null}
+          isEmpty={false}
+          taskIdForLinks="t1"
+          timelineEvents={[
+            {
+              seq: 2,
+              at: "2026-01-02T12:00:00.000Z",
+              type: "approval_requested",
+              by: "agent",
+              data: {},
+              response_thread: [
+                {
+                  at: "2026-01-02T12:00:00.000Z",
+                  by: "agent",
+                  body: "Please confirm",
+                },
+                {
+                  at: "2026-01-02T12:05:00.000Z",
+                  by: "user",
+                  body: "Confirmed",
+                },
+              ],
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/^Conversation$/)).toBeInTheDocument();
+    expect(screen.getByText("Confirmed")).toBeInTheDocument();
+    expect(screen.queryByText(/^Needs your input$/)).toBeNull();
     expect(
-      screen.getByRole("heading", { name: /^needs your input$/i }),
+      screen.getByRole("link", {
+        name: /approval requested — waiting on agent/i,
+      }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: /^other activity$/i }),
-    ).toBeInTheDocument();
-    const lists = screen.getAllByRole("list");
-    expect(lists).toHaveLength(2);
   });
 
   it("links each row when taskIdForLinks is set", () => {

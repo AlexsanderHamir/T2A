@@ -5,6 +5,7 @@ import {
   getTaskEvent,
   listTasks,
   patchTask,
+  patchTaskEventUserResponse,
 } from "./index";
 
 describe("listTasks", () => {
@@ -202,6 +203,42 @@ describe("getTaskEvent", () => {
     expect(spy).toHaveBeenCalledWith(
       "/tasks/t-1/events/2",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
+  });
+});
+
+describe("patchTaskEventUserResponse", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("PATCHes user_response and parses event detail", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          task_id: "t-1",
+          seq: 3,
+          at: "2026-01-01T12:00:00.000Z",
+          type: "approval_requested",
+          by: "agent",
+          data: {},
+          user_response: "OK",
+          user_response_at: "2026-01-01T12:05:00.000Z",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const out = await patchTaskEventUserResponse("t-1", 3, "OK");
+    expect(out.user_response).toBe("OK");
+    expect(out.user_response_at).toBe("2026-01-01T12:05:00.000Z");
+
+    expect(spy).toHaveBeenCalledWith(
+      "/tasks/t-1/events/3",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ user_response: "OK" }),
+      }),
     );
   });
 });

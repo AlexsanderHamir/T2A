@@ -129,7 +129,7 @@ export function TaskDetailPage({ app }: Props) {
           }
         >
           {statusNeedsUserInput(task.status)
-            ? "Needs your input"
+            ? "Agent needs input"
             : "Informational"}
         </p>
         <div className="task-detail-meta">
@@ -158,10 +158,10 @@ export function TaskDetailPage({ app }: Props) {
         </div>
       ) : (
         <div className="task-detail-ok" role="status">
-          <strong>No action required from you right now.</strong>
+          <strong>No agent is waiting on you for this task right now.</strong>
           <p className="muted">
-            Follow the timeline below for updates. You will see a highlighted
-            notice when input or approval is needed.
+            Follow the timeline for updates. We highlight when an agent needs
+            input or approval.
           </p>
         </div>
       )}

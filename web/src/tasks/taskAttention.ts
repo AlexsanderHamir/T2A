@@ -1,7 +1,7 @@
 import type { Task } from "@/types";
 
 /**
- * Whether the human should act soon, from task status and server `approval_pending` on events.
+ * Whether agents are waiting on a person soon, from task status and server `approval_pending` on events.
  * Status cases that set `show: true` match `statusNeedsUserInput` in `taskStatusNeedsUser.ts`.
  */
 export function userAttention(
@@ -16,27 +16,27 @@ export function userAttention(
     return {
       show: true,
       headline: "Approval requested",
-      body: "Someone asked for your approval on this task. Review the timeline below.",
+      body: "The agent is asking for approval on this task. Review the timeline below.",
     };
   }
   switch (task.status) {
     case "review":
       return {
         show: true,
-        headline: "Your input may be needed",
+        headline: "Agent may need your review",
         body: "This task is in review. Check the prompt and updates below.",
       };
     case "blocked":
       return {
         show: true,
         headline: "Blocked",
-        body: "Progress is blocked. Review context and unblock or adjust the task.",
+        body: "The agent is blocked. Review context and unblock or adjust the task.",
       };
     case "failed":
       return {
         show: true,
         headline: "Task failed",
-        body: "Review what happened and decide whether to retry or change scope.",
+        body: "The agent reported a failure. Review what happened and decide whether to retry or change scope.",
       };
     default:
       return { show: false, headline: "", body: "" };

@@ -24,7 +24,7 @@ Full local verification (`gofmt`, `go vet`, `go test`, `web/` test + build): `.\
 
 ```bash
 go run ./cmd/dbcheck    # DB check; add -migrate to apply schema
-go run ./cmd/taskapi    # HTTP server; -h for -port, -env, -migrate
+go run ./cmd/taskapi    # HTTP server; -h for -port, -env (runs AutoMigrate on startup)
 ```
 
 ### API + web together

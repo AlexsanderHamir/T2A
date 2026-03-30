@@ -74,7 +74,7 @@ export function TaskListSection({
     const other = STATUSES.filter((s) => !statusNeedsUserInput(s));
     return [
       { value: "all", label: "All" },
-      { type: "header", label: "Needs your input" },
+      { type: "header", label: "Agent needs input" },
       ...needsUser.map((s) => ({
         value: s,
         label: s,

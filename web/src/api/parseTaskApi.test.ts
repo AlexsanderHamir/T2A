@@ -92,6 +92,42 @@ describe("parseTaskEventsResponse", () => {
     });
   });
 
+  it("parses optional user_response on events", () => {
+    const at = "2026-01-01T12:00:00Z";
+    expect(
+      parseTaskEventsResponse({
+        task_id: "tid",
+        events: [
+          {
+            seq: 2,
+            at,
+            type: "approval_requested",
+            by: "agent",
+            data: {},
+            user_response: "Approved",
+          },
+        ],
+        approval_pending: false,
+      }),
+    ).toEqual({
+      task_id: "tid",
+      events: [
+        {
+          seq: 2,
+          at,
+          type: "approval_requested",
+          by: "agent",
+          data: {},
+          user_response: "Approved",
+          response_thread: [{ at, by: "user", body: "Approved" }],
+        },
+      ],
+      approval_pending: false,
+      has_more_newer: false,
+      has_more_older: false,
+    });
+  });
+
   it("parses keyset-paged envelope", () => {
     const at = "2026-01-01T12:00:00Z";
     expect(
@@ -155,6 +191,35 @@ describe("parseTaskEventDetail", () => {
       type: "approval_requested",
       by: "agent",
       data: { reason: "review" },
+    });
+  });
+
+  it("parses user_response on event detail", () => {
+    const at = "2026-01-02T15:30:00.000Z";
+    const user_response_at = "2026-01-02T16:00:00.000Z";
+    expect(
+      parseTaskEventDetail({
+        task_id: "tid",
+        seq: 4,
+        at,
+        type: "task_failed",
+        by: "agent",
+        data: {},
+        user_response: "Retry scheduled",
+        user_response_at,
+      }),
+    ).toEqual({
+      task_id: "tid",
+      seq: 4,
+      at,
+      type: "task_failed",
+      by: "agent",
+      data: {},
+      user_response: "Retry scheduled",
+      user_response_at,
+      response_thread: [
+        { at: user_response_at, by: "user", body: "Retry scheduled" },
+      ],
     });
   });
 });

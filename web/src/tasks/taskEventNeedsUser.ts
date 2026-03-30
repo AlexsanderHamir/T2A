@@ -1,11 +1,11 @@
 import type { TaskEventType } from "@/types";
 
 /**
- * Event types where the human should typically act, review, or respond soon.
+ * Event types where an agent typically needs input, review, or a reply from a person soon.
  * Everything else is informational (state changes, completed outcomes, or FYI).
  *
- * | Type | Needs user? | Notes |
- * |------|-------------|--------|
+ * | Type | Agent needs input? | Notes |
+ * |------|--------------------|--------|
  * | task_created | no | Task exists; no response required from this row alone |
  * | status_changed, priority_changed | no | State updates; status is classified separately (`taskStatusNeedsUser.ts`) |
  * | prompt_appended | no | Prompt edits; follow in context |
@@ -19,14 +19,15 @@ import type { TaskEventType } from "@/types";
  * | task_failed | **yes** | Failure should be reviewed (aligns with `failed` status) |
  * | sync_ping | no | Dev / connectivity check |
  *
- * Extend `NEEDS_USER_INPUT` when new `EventType` values require a user response.
+ * Extend `NEEDS_USER_INPUT` when new `EventType` values require a person to respond to the agent.
+ * The task timeline highlights these rows (see `TaskUpdatesTimeline` + `App.css`).
  */
 const NEEDS_USER_INPUT: ReadonlySet<TaskEventType> = new Set([
   "approval_requested",
   "task_failed",
 ]);
 
-/** True when this audit event type expects something from the user. */
+/** True when this audit event type means an agent is waiting on a person. */
 export function eventTypeNeedsUserInput(type: TaskEventType): boolean {
   return NEEDS_USER_INPUT.has(type);
 }

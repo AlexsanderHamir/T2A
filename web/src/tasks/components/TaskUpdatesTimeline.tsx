@@ -1,8 +1,8 @@
-import { useMemo } from "react";
 import type { TaskEvent, TaskEventType } from "@/types";
 import { Link } from "react-router-dom";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
+import { awaitingUserReply } from "../taskEventThread";
 
 export type TaskUpdatesTimelineProps = {
   isPending: boolean;
@@ -24,18 +24,6 @@ export function TaskUpdatesTimeline({
   isEmpty,
   taskIdForLinks,
 }: TaskUpdatesTimelineProps) {
-  const { needsUser, other } = useMemo(() => {
-    const needsUser: TaskEvent[] = [];
-    const other: TaskEvent[] = [];
-    for (const ev of timelineEvents) {
-      (eventTypeNeedsUserInput(ev.type) ? needsUser : other).push(ev);
-    }
-    return { needsUser, other };
-  }, [timelineEvents]);
-
-  const splitIntoTwo =
-    needsUser.length > 0 && other.length > 0;
-
   return (
     <div className="task-detail-timeline">
       <h3 className="task-detail-subheading" id="task-detail-updates-heading">
@@ -49,44 +37,6 @@ export function TaskUpdatesTimeline({
         </p>
       ) : isEmpty ? (
         <p className="muted">No audit events yet.</p>
-      ) : splitIntoTwo ? (
-        <div
-          className="task-timeline-split"
-          aria-labelledby="task-detail-updates-heading"
-        >
-          <section
-            className="task-timeline-section task-timeline-section--needs-user"
-            aria-labelledby="task-timeline-needs-user-heading"
-          >
-            <h4
-              className="task-timeline-section-title"
-              id="task-timeline-needs-user-heading"
-            >
-              Needs your input
-            </h4>
-            <TimelineEventList
-              events={needsUser}
-              taskIdForLinks={taskIdForLinks}
-              ariaLabelledBy="task-timeline-needs-user-heading"
-            />
-          </section>
-          <section
-            className="task-timeline-section"
-            aria-labelledby="task-timeline-other-heading"
-          >
-            <h4
-              className="task-timeline-section-title"
-              id="task-timeline-other-heading"
-            >
-              Other activity
-            </h4>
-            <TimelineEventList
-              events={other}
-              taskIdForLinks={taskIdForLinks}
-              ariaLabelledBy="task-timeline-other-heading"
-            />
-          </section>
-        </div>
       ) : (
         <TimelineEventList
           events={timelineEvents}
@@ -115,6 +65,7 @@ function TimelineEventList({
         : { "aria-label": "Audit events" })}
     >
       {events.map((ev) => {
+        const needsUser = eventTypeNeedsUserInput(ev.type);
         const headAndData = (
           <>
             <div className="task-timeline-head">
@@ -124,25 +75,97 @@ function TimelineEventList({
               <code
                 className="task-timeline-type-pill"
                 data-event-type={ev.type}
-                data-needs-user={
-                  eventTypeNeedsUserInput(ev.type) ? "true" : undefined
-                }
+                data-needs-user={needsUser ? "true" : undefined}
                 title={eventTypeLabel(ev.type)}
                 aria-label={`${eventTypeLabel(ev.type)}, ${ev.type}`}
               >
                 {ev.type}
               </code>
               <span className="task-timeline-by">{ev.by}</span>
+              {needsUser && awaitingUserReply(ev) ? (
+                <span className="task-timeline-needs-user-hint">
+                  Needs your input
+                </span>
+              ) : null}
             </div>
             <EventDataPreview data={ev.data} eventType={ev.type} />
+            {ev.response_thread && ev.response_thread.length > 0 ? (
+              <div
+                className="task-timeline-thread"
+                data-event-response="sent"
+              >
+                <div className="task-timeline-user-response-head">
+                  <span className="task-timeline-user-response-label">
+                    Conversation
+                  </span>
+                </div>
+                <ul className="task-timeline-thread-list">
+                  {ev.response_thread.map((m, i) => (
+                    <li
+                      key={`${m.at}-${i}`}
+                      className={`task-timeline-thread-msg task-timeline-thread-msg--${m.by}`}
+                    >
+                      <span className="task-timeline-thread-msg-meta">
+                        <strong>
+                          {m.by === "agent" ? "Agent" : "You"}
+                        </strong>
+                        <time dateTime={m.at}>
+                          {new Date(m.at).toLocaleString()}
+                        </time>
+                      </span>
+                      <span className="task-timeline-thread-msg-body">
+                        {m.body}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : ev.user_response ? (
+              <div
+                className="task-timeline-user-response"
+                data-event-response="sent"
+              >
+                <div className="task-timeline-user-response-head">
+                  <span className="task-timeline-user-response-label">
+                    Reply to agent
+                  </span>
+                  {ev.user_response_at ? (
+                    <time
+                      className="task-timeline-user-response-at"
+                      dateTime={ev.user_response_at}
+                    >
+                      {new Date(ev.user_response_at).toLocaleString()}
+                    </time>
+                  ) : null}
+                </div>
+                <span className="task-timeline-user-response-body">
+                  {ev.user_response}
+                </span>
+              </div>
+            ) : null}
           </>
         );
         return (
-          <li key={ev.seq} className="task-timeline-item">
+          <li
+            key={ev.seq}
+            className={
+              needsUser
+                ? "task-timeline-item task-timeline-item--needs-user"
+                : "task-timeline-item"
+            }
+            data-needs-user={needsUser ? "true" : undefined}
+          >
             {taskIdForLinks ? (
               <Link
                 className="task-timeline-item-hit"
                 to={`/tasks/${encodeURIComponent(taskIdForLinks)}/events/${ev.seq}`}
+                aria-label={
+                  needsUser
+                    ? awaitingUserReply(ev)
+                      ? `${eventTypeLabel(ev.type)} — needs your input`
+                      : `${eventTypeLabel(ev.type)} — waiting on agent`
+                    : undefined
+                }
               >
                 {headAndData}
               </Link>

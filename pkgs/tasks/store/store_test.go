@@ -300,6 +300,61 @@ func TestStore_GetTaskEvent_rejects_empty_id_and_bad_seq(t *testing.T) {
 	}
 }
 
+func TestStore_AppendTaskEventResponseMessage(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	err = s.AppendTaskEventResponseMessage(ctx, tsk.ID, 2, " yes ", domain.Actor("system"))
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("invalid actor: got %v", err)
+	}
+	err = s.AppendTaskEventResponseMessage(ctx, tsk.ID, 2, "   ", domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("empty text: got %v", err)
+	}
+	err = s.AppendTaskEventResponseMessage(ctx, tsk.ID, 1, "nope", domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("wrong type seq 1: got %v", err)
+	}
+	if err := s.AppendTaskEventResponseMessage(ctx, tsk.ID, 2, "Approved", domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetTaskEvent(ctx, tsk.ID, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UserResponse == nil || *got.UserResponse != "Approved" {
+		t.Fatalf("got %#v", got.UserResponse)
+	}
+	if got.UserResponseAt == nil {
+		t.Fatal("expected UserResponseAt to be set")
+	}
+	th := ThreadEntriesForDisplay(got)
+	if len(th) != 1 || th[0].By != domain.ActorUser || th[0].Body != "Approved" {
+		t.Fatalf("thread %#v", th)
+	}
+	if err := s.AppendTaskEventResponseMessage(ctx, tsk.ID, 2, "Thanks", domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+	got2, err := s.GetTaskEvent(ctx, tsk.ID, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	th2 := ThreadEntriesForDisplay(got2)
+	if len(th2) != 2 {
+		t.Fatalf("want 2 thread entries, got %#v", th2)
+	}
+	if th2[1].By != domain.ActorAgent || th2[1].Body != "Thanks" {
+		t.Fatalf("second entry %#v", th2[1])
+	}
+}
+
 func TestStore_ListTaskEventsPageCursor_keyset_order_and_flags(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()

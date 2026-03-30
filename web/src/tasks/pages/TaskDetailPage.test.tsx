@@ -164,7 +164,7 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /^blocked task$/i }),
     ).toBeInTheDocument();
-    const stance = await screen.findByText("Needs your input");
+    const stance = await screen.findByText("Agent needs input");
     expect(stance).toHaveAttribute("data-stance", "needs-user");
   });
 

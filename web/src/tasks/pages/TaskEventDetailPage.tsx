@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getTaskEvent } from "@/api";
+import { getTaskEvent, patchTaskEventUserResponse } from "@/api";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
+import { awaitingUserReply } from "../taskEventThread";
 import { taskQueryKeys } from "../queryKeys";
 
 export function TaskEventDetailPage() {
+  const qc = useQueryClient();
   const { taskId = "", eventSeq: eventSeqParam = "" } = useParams<{
     taskId: string;
     eventSeq: string;
@@ -13,10 +16,24 @@ export function TaskEventDetailPage() {
   const eventSeq = Number.parseInt(eventSeqParam, 10);
   const seqValid = Number.isFinite(eventSeq) && eventSeq >= 1;
 
+  const [draft, setDraft] = useState("");
+
   const q = useQuery({
     queryKey: taskQueryKeys.eventDetail(taskId, eventSeq),
     queryFn: ({ signal }) => getTaskEvent(taskId, eventSeq, { signal }),
     enabled: Boolean(taskId) && seqValid,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (text: string) =>
+      patchTaskEventUserResponse(taskId, eventSeq, text),
+    onSuccess: (updated) => {
+      qc.setQueryData(taskQueryKeys.eventDetail(taskId, eventSeq), updated);
+      void qc.invalidateQueries({
+        queryKey: [...taskQueryKeys.all, "detail", taskId],
+      });
+      setDraft("");
+    },
   });
 
   if (!taskId) {
@@ -72,6 +89,8 @@ export function TaskEventDetailPage() {
 
   const ev = q.data;
   const dataJson = JSON.stringify(ev.data, null, 2);
+  const needsInput = eventTypeNeedsUserInput(ev.type);
+  const awaitingUser = needsInput && awaitingUserReply(ev);
 
   return (
     <section className="panel task-detail-panel task-event-detail-panel">
@@ -93,11 +112,14 @@ export function TaskEventDetailPage() {
           className="task-event-detail-stance"
           role="status"
           data-stance={
-            eventTypeNeedsUserInput(ev.type) ? "needs-user" : "informational"
+            needsInput ? "needs-user" : "informational"
           }
+          data-awaiting-response={awaitingUser ? "true" : undefined}
         >
-          {eventTypeNeedsUserInput(ev.type)
-            ? "Needs your input"
+          {needsInput
+            ? awaitingUser
+              ? "Agent needs input"
+              : "You replied — waiting on agent"
             : "Informational"}
         </p>
         <p className="muted task-event-detail-task-id">
@@ -112,6 +134,7 @@ export function TaskEventDetailPage() {
             <code
               className="task-timeline-type-pill"
               data-event-type={ev.type}
+              data-needs-user={needsInput ? "true" : undefined}
               title={eventTypeLabel(ev.type)}
             >
               {ev.type}
@@ -130,12 +153,96 @@ export function TaskEventDetailPage() {
         </div>
       </dl>
 
+      {needsInput ? (
+        <div className="task-event-detail-response-block">
+          <h3 className="task-detail-subheading" id="task-event-response-heading">
+            Add a message
+          </h3>
+          <p className="muted task-event-detail-thread-hint">
+            Each send appends to this conversation and appears on the task timeline.
+          </p>
+          {saveMutation.isError ? (
+            <p className="err-inline" role="alert">
+              {saveMutation.error instanceof Error
+                ? saveMutation.error.message
+                : "Could not send message."}
+            </p>
+          ) : null}
+          <textarea
+            id="task-event-user-response"
+            className="task-event-detail-response-field"
+            rows={5}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={saveMutation.isPending}
+            aria-labelledby="task-event-response-heading"
+            placeholder="Type a message and send. It is stored on this event and shown on the task timeline."
+          />
+          <div className="task-event-detail-response-actions">
+            <button
+              type="button"
+              onClick={() => {
+                const t = draft.trim();
+                if (t) saveMutation.mutate(t);
+              }}
+              disabled={saveMutation.isPending || !draft.trim()}
+            >
+              {saveMutation.isPending ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="task-event-detail-data-block">
         <h3 className="task-detail-subheading">Data (JSON)</h3>
         <pre className="task-timeline-data task-event-detail-data-pre">
           {dataJson}
         </pre>
       </div>
+
+      {ev.response_thread && ev.response_thread.length > 0 ? (
+        <div
+          className="task-event-detail-thread"
+          role="log"
+          aria-label="Conversation on this event"
+        >
+          <h3 className="task-detail-subheading" id="task-event-thread-heading">
+            Conversation
+          </h3>
+          <ul
+            className="task-event-detail-thread-list"
+            aria-labelledby="task-event-thread-heading"
+          >
+            {ev.response_thread.map((m, i) => (
+              <li
+                key={`${m.at}-${i}`}
+                className={`task-event-detail-thread-item task-event-detail-thread-item--${m.by}`}
+              >
+                <article className="task-event-detail-thread-bubble">
+                  <header className="task-event-detail-thread-meta">
+                    <span className="task-event-detail-thread-by">
+                      {m.by === "agent" ? "Agent" : "You"}
+                    </span>
+                    <span
+                      className="task-event-detail-thread-meta-sep"
+                      aria-hidden="true"
+                    >
+                      ·
+                    </span>
+                    <time
+                      className="task-event-detail-thread-time"
+                      dateTime={m.at}
+                    >
+                      {new Date(m.at).toLocaleString()}
+                    </time>
+                  </header>
+                  <p className="task-event-detail-thread-body">{m.body}</p>
+                </article>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

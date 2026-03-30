@@ -40,7 +40,6 @@ const (
 func main() {
 	port := flag.String("port", "8080", "HTTP listen port")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
-	migrate := flag.Bool("migrate", false, "run GORM AutoMigrate before serving")
 	flag.Parse()
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
@@ -59,13 +58,11 @@ func main() {
 	}
 
 	ctx := context.Background()
-	if *migrate {
-		if err := postgres.Migrate(ctx, db); err != nil {
-			slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate", "err", err)
-			os.Exit(1)
-		}
-		slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate")
+	if err := postgres.Migrate(ctx, db); err != nil {
+		slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate", "err", err)
+		os.Exit(1)
 	}
+	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate")
 
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()

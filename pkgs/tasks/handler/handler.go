@@ -34,6 +34,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
 	m.Handle("GET /tasks/{id}/events/{seq}", http.HandlerFunc(h.taskEvent))
+	m.Handle("PATCH /tasks/{id}/events/{seq}", http.HandlerFunc(h.patchTaskEventUserResponse))
 	m.Handle("GET /tasks/{id}/events", http.HandlerFunc(h.taskEvents))
 	m.Handle("GET /tasks/{id}", http.HandlerFunc(h.get))
 	m.Handle("PATCH /tasks/{id}", http.HandlerFunc(h.patch))

@@ -76,6 +76,29 @@ export async function getTaskEvent(
   return parseTaskEventDetail(raw);
 }
 
+export async function patchTaskEventUserResponse(
+  taskId: string,
+  seq: number,
+  userResponse: string,
+  options?: { actor?: "user" | "agent" },
+): Promise<TaskEventDetail> {
+  const headers: Record<string, string> = { ...jsonHeaders };
+  if (options?.actor === "agent") {
+    headers["X-Actor"] = "agent";
+  }
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ user_response: userResponse }),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskEventDetail(raw);
+}
+
 export async function listTasks(
   limit = 200,
   offset = 0,

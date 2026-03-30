@@ -36,11 +36,14 @@ type listResponse struct {
 }
 
 type taskEventLine struct {
-	Seq  int64            `json:"seq"`
-	At   time.Time        `json:"at"`
-	Type domain.EventType `json:"type"`
-	By   domain.Actor     `json:"by"`
-	Data json.RawMessage  `json:"data"`
+	Seq              int64                        `json:"seq"`
+	At               time.Time                    `json:"at"`
+	Type             domain.EventType             `json:"type"`
+	By               domain.Actor                 `json:"by"`
+	Data             json.RawMessage              `json:"data"`
+	UserResponse     *string                      `json:"user_response,omitempty"`
+	UserResponseAt   *time.Time                   `json:"user_response_at,omitempty"`
+	ResponseThread   []domain.ResponseThreadEntry `json:"response_thread,omitempty"`
 }
 
 type taskEventsResponse struct {
@@ -56,12 +59,19 @@ type taskEventsResponse struct {
 }
 
 type taskEventDetailResponse struct {
-	TaskID string           `json:"task_id"`
-	Seq    int64            `json:"seq"`
-	At     time.Time        `json:"at"`
-	Type   domain.EventType `json:"type"`
-	By     domain.Actor     `json:"by"`
-	Data   json.RawMessage  `json:"data"`
+	TaskID         string                       `json:"task_id"`
+	Seq            int64                        `json:"seq"`
+	At             time.Time                    `json:"at"`
+	Type           domain.EventType             `json:"type"`
+	By             domain.Actor                 `json:"by"`
+	Data           json.RawMessage              `json:"data"`
+	UserResponse   *string                      `json:"user_response,omitempty"`
+	UserResponseAt *time.Time                   `json:"user_response_at,omitempty"`
+	ResponseThread []domain.ResponseThreadEntry `json:"response_thread,omitempty"`
+}
+
+type taskEventUserResponseJSON struct {
+	UserResponse string `json:"user_response"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -107,18 +117,28 @@ func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, op, err)
 		return
 	}
+	writeJSON(w, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
+}
+
+func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDetailResponse {
 	data := json.RawMessage(ev.Data)
 	if len(data) == 0 {
 		data = json.RawMessage(`{}`)
 	}
-	writeJSON(w, op, http.StatusOK, taskEventDetailResponse{
-		TaskID: id,
-		Seq:    ev.Seq,
-		At:     ev.At,
-		Type:   ev.Type,
-		By:     ev.By,
-		Data:   data,
-	})
+	resp := taskEventDetailResponse{
+		TaskID:         taskID,
+		Seq:            ev.Seq,
+		At:             ev.At,
+		Type:           ev.Type,
+		By:             ev.By,
+		Data:           data,
+		UserResponse:   ev.UserResponse,
+		UserResponseAt: ev.UserResponseAt,
+	}
+	if th := store.ThreadEntriesForDisplay(ev); len(th) > 0 {
+		resp.ResponseThread = th
+	}
+	return resp
 }
 
 func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
@@ -128,13 +148,19 @@ func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
 		if len(data) == 0 {
 			data = json.RawMessage(`{}`)
 		}
-		out = append(out, taskEventLine{
-			Seq:  e.Seq,
-			At:   e.At,
-			Type: e.Type,
-			By:   e.By,
-			Data: data,
-		})
+		line := taskEventLine{
+			Seq:            e.Seq,
+			At:             e.At,
+			Type:           e.Type,
+			By:             e.By,
+			Data:           data,
+			UserResponse:   e.UserResponse,
+			UserResponseAt: e.UserResponseAt,
+		}
+		if th := store.ThreadEntriesForDisplay(&e); len(th) > 0 {
+			line.ResponseThread = th
+		}
+		out = append(out, line)
 	}
 	return out
 }
@@ -220,6 +246,34 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 		resp.RangeEnd = &re
 	}
 	writeJSON(w, op, http.StatusOK, resp)
+}
+
+func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Request) {
+	const op = "tasks.event.user_response"
+	id := strings.TrimSpace(r.PathValue("id"))
+	seqStr := strings.TrimSpace(r.PathValue("seq"))
+	seq, err := strconv.ParseInt(seqStr, 10, 64)
+	if err != nil || seq < 1 {
+		writeError(w, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
+		return
+	}
+	var body taskEventUserResponseJSON
+	if err := decodeJSON(r.Body, &body); err != nil {
+		writeError(w, op, err, http.StatusBadRequest)
+		return
+	}
+	by := actorFromRequest(r)
+	if err := h.store.AppendTaskEventResponseMessage(r.Context(), id, seq, body.UserResponse, by); err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	ev, err := h.store.GetTaskEvent(r.Context(), id, seq)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	h.notifyChange(TaskUpdated, id)
+	writeJSON(w, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {

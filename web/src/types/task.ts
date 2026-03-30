@@ -74,6 +74,14 @@ export const TASK_EVENT_TYPES = [
 
 export type TaskEventType = (typeof TASK_EVENT_TYPES)[number];
 
+/** One message in the user ↔ agent thread on an event (`response_thread` in API). */
+export type TaskEventResponseEntry = {
+  /** ISO 8601 from API */
+  at: string;
+  by: "user" | "agent";
+  body: string;
+};
+
 export type TaskEvent = {
   seq: number;
   /** ISO 8601 from API */
@@ -81,6 +89,12 @@ export type TaskEvent = {
   type: TaskEventType;
   by: "user" | "agent";
   data: Record<string, unknown>;
+  /** Human-submitted text for event types that accept input (`PATCH .../events/{seq}`). */
+  user_response?: string;
+  /** ISO 8601 when `user_response` was last saved; omitted for legacy rows. */
+  user_response_at?: string;
+  /** Ordered messages on this event (user and agent); legacy rows may be synthesized server-side. */
+  response_thread?: TaskEventResponseEntry[];
 };
 
 export type TaskEventsResponse = {

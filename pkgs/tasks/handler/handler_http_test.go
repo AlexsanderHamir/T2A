@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -24,6 +26,14 @@ func newTaskTestServer(t *testing.T) *httptest.Server {
 	db := testdb.OpenSQLite(t)
 	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
 	return httptest.NewServer(h)
+}
+
+func newTaskTestServerWithStore(t *testing.T) (*httptest.Server, *store.Store) {
+	t.Helper()
+	db := testdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	h := NewHandler(st, NewSSEHub(), nil)
+	return httptest.NewServer(h), st
 }
 
 func newTaskTestServerWithRepo(t *testing.T, repoDir string) *httptest.Server {
@@ -80,6 +90,148 @@ func TestHTTP_get_task_events(t *testing.T) {
 	}
 	if payload.TaskID != created.ID || len(payload.Events) < 1 || payload.Events[0].Type != string(domain.EventTaskCreated) {
 		t.Fatalf("payload %#v", payload)
+	}
+}
+
+func TestHTTP_patch_task_event_user_response(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AppendTaskEvent(ctx, created.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	reqBadType, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/1", strings.NewReader(`{"user_response":"x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqBadType.Header.Set("Content-Type", "application/json")
+	resBadType, err := http.DefaultClient.Do(reqBadType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cerr := resBadType.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if resBadType.StatusCode != http.StatusBadRequest {
+		t.Fatalf("wrong event type want 400, got %d", resBadType.StatusCode)
+	}
+
+	reqAgent, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/2", strings.NewReader(`{"user_response":"Please confirm"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqAgent.Header.Set("Content-Type", "application/json")
+	reqAgent.Header.Set("X-Actor", "agent")
+	resAgent, err := http.DefaultClient.Do(reqAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentBody, err := io.ReadAll(resAgent.Body)
+	if cerr := resAgent.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resAgent.StatusCode != http.StatusOK {
+		t.Fatalf("agent patch want 200, got %d %s", resAgent.StatusCode, agentBody)
+	}
+	var agentOut struct {
+		ResponseThread []struct {
+			By   string `json:"by"`
+			Body string `json:"body"`
+		} `json:"response_thread"`
+	}
+	if err := json.Unmarshal(agentBody, &agentOut); err != nil {
+		t.Fatal(err)
+	}
+	if len(agentOut.ResponseThread) != 1 || agentOut.ResponseThread[0].By != "agent" || agentOut.ResponseThread[0].Body != "Please confirm" {
+		t.Fatalf("agent thread %#v", agentOut.ResponseThread)
+	}
+
+	reqOK, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/2", strings.NewReader(`{"user_response":"LGTM"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqOK.Header.Set("Content-Type", "application/json")
+	resOK, err := http.DefaultClient.Do(reqOK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resOK.Body.Close()
+	if resOK.StatusCode != http.StatusOK {
+		tBody, _ := io.ReadAll(resOK.Body)
+		t.Fatalf("patch %d %s", resOK.StatusCode, tBody)
+	}
+	var one struct {
+		Seq             int64      `json:"seq"`
+		UserResponse    *string    `json:"user_response"`
+		UserResponseAt  *time.Time `json:"user_response_at"`
+		ResponseThread  []struct {
+			By   string `json:"by"`
+			Body string `json:"body"`
+		} `json:"response_thread"`
+	}
+	if err := json.NewDecoder(resOK.Body).Decode(&one); err != nil {
+		t.Fatal(err)
+	}
+	if one.Seq != 2 || one.UserResponse == nil || *one.UserResponse != "LGTM" {
+		t.Fatalf("payload %#v", one)
+	}
+	if one.UserResponseAt == nil {
+		t.Fatal("expected user_response_at on PATCH response")
+	}
+	if len(one.ResponseThread) != 2 {
+		t.Fatalf("want 2 thread entries, got %#v", one.ResponseThread)
+	}
+
+	resList, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resList.Body.Close()
+	var listPayload struct {
+		Events []struct {
+			Seq             int64   `json:"seq"`
+			UserResponse    *string `json:"user_response"`
+			ResponseThread  []struct {
+				By   string `json:"by"`
+				Body string `json:"body"`
+			} `json:"response_thread"`
+		} `json:"events"`
+	}
+	if err := json.NewDecoder(resList.Body).Decode(&listPayload); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, e := range listPayload.Events {
+		if e.Seq == 2 && e.UserResponse != nil && *e.UserResponse == "LGTM" && len(e.ResponseThread) == 2 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("list missing user_response or thread: %#v", listPayload.Events)
 	}
 }
 
