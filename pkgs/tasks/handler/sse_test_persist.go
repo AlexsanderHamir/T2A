@@ -14,7 +14,9 @@ const sseTestListPage = 200 // store.List maximum page size
 
 // sseTestEventCycle is the full set of domain.EventType values used by the dev ticker, in display order.
 // Keep in sync with pkgs/tasks/domain/enums.go (every EventType exactly once).
+// Index 0 is chosen when len(events)%len==0 (e.g. 17th append); index 1 is the first tick after task_created.
 var sseTestEventCycle = []domain.EventType{
+	domain.EventTaskCreated,
 	domain.EventStatusChanged,
 	domain.EventPriorityChanged,
 	domain.EventPromptAppended,
@@ -31,7 +33,6 @@ var sseTestEventCycle = []domain.EventType{
 	domain.EventTaskCompleted,
 	domain.EventTaskFailed,
 	domain.EventSyncPing,
-	domain.EventTaskCreated,
 }
 
 func sseTestEventPayload(typ domain.EventType) ([]byte, error) {
