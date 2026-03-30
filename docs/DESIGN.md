@@ -305,7 +305,7 @@ Wire format:
 For local UI work, `taskapi` can start a background ticker (no extra HTTP routes). Set `T2A_SSE_TEST=1` (never enable in production without intent). Every 3s by default (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable the ticker), the process:
 
 1. Pages through `store.List` with limit 200 and increasing offset — same ordering as `GET /tasks` (`id ASC`).
-2. For each task row, appends a `sync_ping` row to `task_events` via `store.AppendTaskEvent` (visible on `GET /tasks/{id}/events`), then publishes `task_updated` on the SSE hub.
+2. For each task row, calls `store.Update` with the next status in a fixed cycle (`ready` → `running` → `blocked` → `review` → `done` → `failed` → `ready`) and actor `agent`, producing the same `status_changed` audit row and JSON `data` shape as a normal `PATCH` (visible on `GET /tasks/{id}/events`), then publishes `task_updated` on the SSE hub.
 
 There are no extra dev-only HTTP paths; only normal REST + `GET /events` apply.
 

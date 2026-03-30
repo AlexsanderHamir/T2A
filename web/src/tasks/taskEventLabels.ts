@@ -17,7 +17,7 @@ const LABELS: Record<TaskEventType, string> = {
   approval_granted: "Approval granted",
   task_completed: "Task completed",
   task_failed: "Task failed",
-  sync_ping: "Live sync check (dev)",
+  sync_ping: "Live sync check (legacy dev ping)",
 };
 
 export function eventTypeLabel(type: TaskEventType): string {

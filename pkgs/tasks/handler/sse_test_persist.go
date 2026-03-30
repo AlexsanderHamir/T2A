@@ -3,9 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -13,20 +11,40 @@ import (
 
 const sseTestListPage = 200 // store.List maximum page size
 
-// persistTaskUpdatedSSE appends a sync_ping audit row (same persistence as real timeline entries), then
-// publishes task_updated on the hub so clients refetch list and GET /tasks/{id}/events.
-func persistTaskUpdatedSSE(ctx context.Context, st *store.Store, hub *SSEHub, id string) error {
-	if st == nil || hub == nil {
-		return errors.New("store or hub nil")
+// nextStatusForDevTicker returns the next status in a fixed cycle so each tick produces a real
+// status_changed audit row (same as PATCH) instead of a synthetic sync_ping.
+func nextStatusForDevTicker(cur domain.Status) domain.Status {
+	switch cur {
+	case domain.StatusReady:
+		return domain.StatusRunning
+	case domain.StatusRunning:
+		return domain.StatusBlocked
+	case domain.StatusBlocked:
+		return domain.StatusReview
+	case domain.StatusReview:
+		return domain.StatusDone
+	case domain.StatusDone:
+		return domain.StatusFailed
+	case domain.StatusFailed:
+		return domain.StatusReady
+	default:
+		return domain.StatusReady
 	}
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return fmt.Errorf("task id: %w", domain.ErrInvalidInput)
+}
+
+// persistDevTickerTaskUpdate applies one dev-only status transition via store.Update (ActorAgent),
+// emitting the same status_changed event + task row change as a normal API patch, then publishes
+// task_updated on the hub.
+func persistDevTickerTaskUpdate(ctx context.Context, st *store.Store, hub *SSEHub, t *domain.Task) error {
+	if st == nil || hub == nil || t == nil {
+		return errors.New("store, hub, or task nil")
 	}
-	if err := st.AppendTaskEvent(ctx, id, domain.EventSyncPing, domain.ActorUser, nil); err != nil {
+	next := nextStatusForDevTicker(t.Status)
+	_, err := st.Update(ctx, t.ID, store.UpdateTaskInput{Status: &next}, domain.ActorAgent)
+	if err != nil {
 		return err
 	}
-	hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: id})
+	hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: t.ID})
 	return nil
 }
 
@@ -42,7 +60,7 @@ func persistAllTasksForSSETest(ctx context.Context, st *store.Store, hub *SSEHub
 			return
 		}
 		for i := range rows {
-			if err := persistTaskUpdatedSSE(ctx, st, hub, rows[i].ID); err != nil {
+			if err := persistDevTickerTaskUpdate(ctx, st, hub, &rows[i]); err != nil {
 				slog.Debug("sse dev ticker task skipped", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick_task",
 					"task_id", rows[i].ID, "err", err)
 			}

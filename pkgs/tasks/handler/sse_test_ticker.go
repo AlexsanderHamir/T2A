@@ -18,7 +18,7 @@ func SSETestEnabled() bool {
 }
 
 // RunSSETestTicker runs a background loop: on each tick, pages store.List (limit 200, same as GET /tasks) and
-// for each task runs persistTaskUpdatedSSE (AppendTaskEvent sync_ping + hub task_updated). No extra HTTP routes.
+// for each task runs persistDevTickerTaskUpdate (store.Update cyclic status as ActorAgent + hub task_updated).
 // Call only when SSETestEnabled(); interval must be >= 1s.
 func RunSSETestTicker(st *store.Store, hub *SSEHub, every time.Duration) {
 	if st == nil || hub == nil || every < time.Second {
