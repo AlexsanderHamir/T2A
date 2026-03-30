@@ -12,7 +12,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 4 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 5 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |
 
-Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-tasks-stack-extensibility` (tasks API layering), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. `00-full-rules-pass.mdc` defines scope (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), phases, and the completion report. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
+Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-tasks-stack-extensibility` (tasks API layering), `14-repo-workspace-extensibility` (`REPO_ROOT` / `/repo` / `pkgs/repo`), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. `00-full-rules-pass.mdc` defines scope (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), phases, and the completion report. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
 
 ## Repository map
 

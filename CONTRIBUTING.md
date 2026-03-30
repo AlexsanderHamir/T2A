@@ -44,7 +44,7 @@ Prefer a vertical slice: `domain` types and validation → `store` use-case meth
 
 ## Cursor / AI rules
 
-Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), and tasks stack extensibility (`13-tasks-stack-extensibility.mdc`). `00-full-rules-pass.mdc` describes how to run a full pass when asked.
+Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), tasks stack extensibility (`13-tasks-stack-extensibility.mdc`), and workspace repo extensibility (`14-repo-workspace-extensibility.mdc`). `00-full-rules-pass.mdc` describes how to run a full pass when asked.
 
 ## Stuck?
 

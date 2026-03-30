@@ -221,6 +221,8 @@ Structured logs at the handler use `operation` and `http_status`; client errors 
 
 When `REPO_ROOT` is set at startup, `taskapi` wires `pkgs/repo` into the handler. This supports the optional web UI feature: type `@` in `initial_prompt` to pick files under that root and optional line ranges.
 
+Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensibility.mdc`.
+
 ### `GET /repo/search`
 
 
@@ -350,7 +352,7 @@ sequenceDiagram
   H-->>C: 200 JSON task
 ```
 
-Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For a full checklist aimed at agents, see `.cursor/rules/13-tasks-stack-extensibility.mdc`.
+Changing JSON shapes, routes, or SSE payload types also requires updating `docs/DESIGN.md` and the client parsers in lockstep; see `.cursor/rules/11-api-contracts.mdc`. For agent checklists: tasks stack — `.cursor/rules/13-tasks-stack-extensibility.mdc`; workspace repo (`REPO_ROOT`, `/repo/*`, `pkgs/repo`) — `.cursor/rules/14-repo-workspace-extensibility.mdc`.
 
 ## Technical choices
 

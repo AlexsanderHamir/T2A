@@ -9,7 +9,7 @@ alwaysApply: false
 
 # Tasks stack extensibility
 
-**Scope:** `/tasks` REST/SSE, `pkgs/tasks/*`, and the client code that consumes those APIs (`web/src/api`, `web/src/types`, `web/src/tasks`). Not a generic rule for other packages (e.g. `pkgs/repo`).
+**Scope:** `/tasks` REST/SSE, `pkgs/tasks/*`, and the client code that consumes those APIs (`web/src/api`, `web/src/types`, `web/src/tasks`). Optional workspace repo (`REPO_ROOT`, `/repo/*`, `pkgs/repo`, @-mention file UI): **`14-repo-workspace-extensibility.mdc`**.
 
 **When to apply:** new or changed task routes, store use-cases, domain types, audit/SSE behavior, or task UI flows that touch the API.
 
