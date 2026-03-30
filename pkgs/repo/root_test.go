@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -23,6 +24,9 @@ func TestOpenRoot_and_Resolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if r.Abs() != dir {
+		t.Fatalf("Abs = %q want %q", r.Abs(), dir)
+	}
 	abs, err := r.Resolve("pkg/x.go")
 	if err != nil {
 		t.Fatal(err)
@@ -37,6 +41,74 @@ func TestOpenRoot_and_Resolve(t *testing.T) {
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("expected ErrInvalidInput, got %v", err)
 	}
+}
+
+func TestRoot_Search(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	mustMk := func(rel string) {
+		t.Helper()
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mustMk("src/app.go")
+	mustMk("lib/extra_foo.txt")
+	mustMk(".git/HEAD")
+	mustMk("node_modules/pkg/index.js")
+	mustMk("vendor/v/mod.go")
+
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("empty query lists tracked files skips special dirs", func(t *testing.T) {
+		paths, err := r.Search("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range paths {
+			for _, prefix := range []string{".git/", "node_modules/", "vendor/"} {
+				if strings.HasPrefix(p, prefix) || strings.Contains(p, "/"+prefix) {
+					t.Fatalf("unexpected path under skipped dir: %q in %v", p, paths)
+				}
+			}
+		}
+		got := make(map[string]bool)
+		for _, p := range paths {
+			got[p] = true
+		}
+		for _, want := range []string{"src/app.go", "lib/extra_foo.txt"} {
+			if !got[want] {
+				t.Fatalf("missing %q in %v", want, paths)
+			}
+		}
+	})
+
+	t.Run("substring case insensitive", func(t *testing.T) {
+		paths, err := r.Search("FOO")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(paths) != 1 || paths[0] != "lib/extra_foo.txt" {
+			t.Fatalf("paths = %v want [lib/extra_foo.txt]", paths)
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		paths, err := r.Search("zzznonexistent")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(paths) != 0 {
+			t.Fatalf("paths = %v want []", paths)
+		}
+	})
 }
 
 func TestLineCount_and_ValidateRange(t *testing.T) {
