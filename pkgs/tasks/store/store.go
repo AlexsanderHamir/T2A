@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -21,18 +22,28 @@ func NewStore(db *gorm.DB) *Store {
 }
 
 type CreateTaskInput struct {
-	ID            string
-	Title         string
-	InitialPrompt string
-	Status        domain.Status
-	Priority      domain.Priority
+	ID               string
+	Title            string
+	InitialPrompt    string
+	Status           domain.Status
+	Priority         domain.Priority
+	ParentID         *string
+	ChecklistInherit bool
+}
+
+// ParentFieldPatch updates parent_id when non-nil. Clear true means set parent to null.
+type ParentFieldPatch struct {
+	Clear bool
+	ID    string
 }
 
 type UpdateTaskInput struct {
-	Title         *string
-	InitialPrompt *string
-	Status        *domain.Status
-	Priority      *domain.Priority
+	Title            *string
+	InitialPrompt    *string
+	Status           *domain.Status
+	Priority         *domain.Priority
+	Parent           *ParentFieldPatch
+	ChecklistInherit *bool
 }
 
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
@@ -62,19 +73,63 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 		id = uuid.NewString()
 	}
 
+	parentID := in.ParentID
+	if parentID != nil {
+		p := strings.TrimSpace(*parentID)
+		if p == "" {
+			parentID = nil
+		} else {
+			parentID = &p
+		}
+	}
+	if in.ChecklistInherit && (parentID == nil || *parentID == "") {
+		return nil, fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
+	}
+
 	t := &domain.Task{
-		ID:            id,
-		Title:         title,
-		InitialPrompt: in.InitialPrompt,
-		Status:        st,
-		Priority:      pr,
+		ID:               id,
+		Title:            title,
+		InitialPrompt:    in.InitialPrompt,
+		Status:           st,
+		Priority:         pr,
+		ParentID:         parentID,
+		ChecklistInherit: in.ChecklistInherit,
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if parentID != nil {
+			var n int64
+			if err := tx.Model(&domain.Task{}).Where("id = ?", *parentID).Count(&n).Error; err != nil {
+				return fmt.Errorf("parent lookup: %w", err)
+			}
+			if n == 0 {
+				return fmt.Errorf("%w: parent not found", domain.ErrInvalidInput)
+			}
+		}
 		if err := tx.Create(t).Error; err != nil {
 			return fmt.Errorf("insert task: %w", err)
 		}
-		return appendEvent(tx, t.ID, 1, domain.EventTaskCreated, by, nil)
+		seq := int64(1)
+		if err := appendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
+			return err
+		}
+		seq++
+		if parentID != nil {
+			b, err := json.Marshal(map[string]string{"parent_id": *parentID})
+			if err != nil {
+				return err
+			}
+			if err := appendEvent(tx, t.ID, seq, domain.EventSubtaskAdded, by, b); err != nil {
+				return err
+			}
+			seq++
+		}
+		if st == domain.StatusDone {
+			if err := validateCanMarkDoneTx(tx, t.ID); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
@@ -115,28 +170,6 @@ func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.Tas
 	return events, nil
 }
 
-func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > 200 {
-		limit = 200
-	}
-	if offset < 0 {
-		offset = 0
-	}
-	var out []domain.Task
-	err := s.db.WithContext(ctx).
-		Order("id ASC").
-		Limit(limit).
-		Offset(offset).
-		Find(&out).Error
-	if err != nil {
-		return nil, fmt.Errorf("list tasks: %w", err)
-	}
-	return out, nil
-}
-
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
 	if err := validateActor(by); err != nil {
 		return nil, err
@@ -145,7 +178,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.Parent == nil && in.ChecklistInherit == nil {
 		return nil, fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 
@@ -186,6 +219,13 @@ func (s *Store) Delete(ctx context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	var childCount int64
+	if err := s.db.WithContext(ctx).Model(&domain.Task{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
+		return fmt.Errorf("delete task: %w", err)
+	}
+	if childCount > 0 {
+		return fmt.Errorf("%w: delete subtasks first", domain.ErrInvalidInput)
 	}
 	res := s.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Task{})
 	if res.Error != nil {

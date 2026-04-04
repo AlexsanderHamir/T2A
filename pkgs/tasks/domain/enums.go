@@ -33,6 +33,8 @@ const (
 	EventNonGoalAdded          EventType = "non_goal_added"
 	EventPlanAdded             EventType = "plan_added"
 	EventSubtaskAdded          EventType = "subtask_added"
+	EventChecklistItemAdded    EventType = "checklist_item_added"
+	EventChecklistItemToggled  EventType = "checklist_item_toggled"
 	EventMessageAdded          EventType = "message_added"
 	EventArtifactAdded         EventType = "artifact_added"
 	EventApprovalRequested     EventType = "approval_requested"
