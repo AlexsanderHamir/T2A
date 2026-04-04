@@ -34,8 +34,12 @@ func TestOpenTaskAPILogFile_createsFileUnderDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), `"msg":"probe"`) {
-		t.Fatalf("expected JSON log line with probe, got %q", string(raw))
+	s := string(raw)
+	if !strings.Contains(s, "taskapi.openTaskAPILogFile") {
+		t.Fatalf("expected open trace in jsonl, got %q", s)
+	}
+	if !strings.Contains(s, `"msg":"probe"`) {
+		t.Fatalf("expected JSON log line with probe, got %q", s)
 	}
 }
 

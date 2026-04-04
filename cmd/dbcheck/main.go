@@ -23,6 +23,7 @@ type options struct {
 }
 
 func parseFlags() options {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.parseFlags")
 	var o options
 	flag.BoolVar(&o.migrate, "migrate", false, "run GORM AutoMigrate after connecting")
 	flag.StringVar(&o.envPath, "env", "", "path to .env (default: <repo-root>/.env)")
@@ -31,6 +32,7 @@ func parseFlags() options {
 }
 
 func loadRepoDotenv(o options) error {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.loadRepoDotenv")
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getwd: %w", err)
@@ -70,6 +72,7 @@ func run(o options) error {
 }
 
 func migrateIfRequested(ctx context.Context, db *gorm.DB, want bool) error {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.migrateIfRequested")
 	if !want {
 		return nil
 	}

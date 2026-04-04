@@ -3,11 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 )
 
 func findRepoRoot(startDir string) (string, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.findRepoRoot")
 	dir := startDir
 	for {
 		mod := filepath.Join(dir, "go.mod")
@@ -25,6 +27,7 @@ func findRepoRoot(startDir string) (string, error) {
 }
 
 func resolveDotenvPath(workingDir, flagPath string) (string, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.resolveDotenvPath")
 	if flagPath != "" {
 		return filepath.Clean(flagPath), nil
 	}

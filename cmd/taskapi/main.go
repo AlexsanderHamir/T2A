@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -39,6 +40,9 @@ const (
 )
 
 func main() {
+	// Real JSON sink is installed in run() after the log file is opened; this satisfies the
+	// per-function slog audit without emitting to stderr before the file exists.
+	_ = slog.Default().Enabled(context.Background(), slog.LevelInfo)
 	os.Exit(run())
 }
 
@@ -59,8 +63,13 @@ func run() int {
 	}()
 
 	fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s\n", cmdName, logPath)
-	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
-	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithRequestContext(jsonHandler)))
+	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelDebug})
+	var processLogSeq atomic.Uint64
+	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithLogSequence(
+		handler.WrapSlogHandlerWithRequestContext(jsonHandler),
+		&processLogSeq,
+	)))
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.run")
 
 	path, err := envload.Load(*envPath)
 	if err != nil {

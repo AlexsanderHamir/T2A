@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,5 +34,8 @@ func openTaskAPILogFile(dirFlag string) (*os.File, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("open log file: %w", err)
 	}
+	// Log with a JSON handler on this file so the line lands in the same jsonl before slog.SetDefault in run().
+	early := slog.New(slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	early.Debug("trace", "cmd", cmdName, "operation", "taskapi.openTaskAPILogFile", "path", path)
 	return f, path, nil
 }

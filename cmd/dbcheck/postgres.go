@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
@@ -10,6 +11,7 @@ import (
 )
 
 func connectAndPing(ctx context.Context, dsn string) (*gorm.DB, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.connectAndPing")
 	db, err := postgres.Open(dsn, &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
 	})
