@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/devsim"
 	"github.com/AlexsanderHamir/T2A/internal/envload"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"

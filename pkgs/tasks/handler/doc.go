@@ -24,7 +24,7 @@
 //   - GET    /repo/search     — optional; JSON paths (q=); 503 if REPO_ROOT unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
-// Dev-only: when taskapi sets T2A_SSE_TEST=1, internal/devsim runs a background ticker (store.ListFlat + AppendTaskEvent,
+// Dev-only: when taskapi sets T2A_SSE_TEST=1, pkgs/tasks/devsim runs a background ticker (store.ListFlat + AppendTaskEvent,
 // rotates all EventType, ActorAgent) per task then notifies the SSE hub (see DESIGN.md). No extra HTTP routes.
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.

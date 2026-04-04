@@ -11,7 +11,7 @@ import (
 )
 
 // ApplyDevTaskRowMirror updates the task row to reflect a synthetic audit event without
-// appending further audit rows. For development simulation only (see internal/devsim).
+// appending further audit rows. For development simulation only (see pkgs/tasks/devsim).
 func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ domain.EventType, data []byte) error {
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

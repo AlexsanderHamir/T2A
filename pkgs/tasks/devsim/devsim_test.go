@@ -1,17 +1,16 @@
-package handler
+package devsim
 
 import (
 	"context"
 	"encoding/json"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-func TestDevSim_EventCycle_exhaustive(t *testing.T) {
+func TestEventCycle_exhaustive(t *testing.T) {
 	want := map[domain.EventType]struct{}{
 		domain.EventTaskCreated:           {},
 		domain.EventStatusChanged:         {},
@@ -33,11 +32,11 @@ func TestDevSim_EventCycle_exhaustive(t *testing.T) {
 		domain.EventTaskFailed:            {},
 		domain.EventSyncPing:              {},
 	}
-	if len(devsim.EventCycle) != len(want) {
-		t.Fatalf("EventCycle len %d want %d", len(devsim.EventCycle), len(want))
+	if len(EventCycle) != len(want) {
+		t.Fatalf("EventCycle len %d want %d", len(EventCycle), len(want))
 	}
 	seen := make(map[domain.EventType]int)
-	for _, e := range devsim.EventCycle {
+	for _, e := range EventCycle {
 		seen[e]++
 		delete(want, e)
 	}
@@ -51,7 +50,7 @@ func TestDevSim_EventCycle_exhaustive(t *testing.T) {
 	}
 }
 
-func TestDevSim_PersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
+func TestPersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -64,19 +63,19 @@ func TestDevSim_PersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var lines []devsim.ChangeKind
-	publish := func(k devsim.ChangeKind, id string) {
+	var lines []ChangeKind
+	publish := func(k ChangeKind, id string) {
 		lines = append(lines, k)
 		_ = id
 	}
 
-	devsim.PersistAllTasks(ctx, st, devsim.Options{}, publish)
+	PersistAllTasks(ctx, st, Options{}, publish)
 
 	if len(lines) != 2 {
 		t.Fatalf("want 2 publish calls, got %d (%v)", len(lines), lines)
 	}
 	for _, k := range lines {
-		if k != devsim.ChangeUpdated {
+		if k != ChangeUpdated {
 			t.Fatalf("want ChangeUpdated, got %v", k)
 		}
 	}
@@ -96,8 +95,8 @@ func TestDevSim_PersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 			t.Fatalf("task %s: want 2 events, got %d", id, len(evs))
 		}
 		last := evs[len(evs)-1]
-		if last.Type != devsim.EventCycle[1] {
-			t.Fatalf("task %s: last event type = %q want %q", id, last.Type, devsim.EventCycle[1])
+		if last.Type != EventCycle[1] {
+			t.Fatalf("task %s: last event type = %q want %q", id, last.Type, EventCycle[1])
 		}
 		if last.By != domain.ActorAgent {
 			t.Fatalf("task %s: last event by = %q want agent", id, last.By)
@@ -105,7 +104,7 @@ func TestDevSim_PersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 	}
 }
 
-func TestDevSim_PersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
+func TestPersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -113,13 +112,13 @@ func TestDevSim_PersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	devsim.PersistAllTasks(ctx, st, devsim.Options{EventsPerTick: 3}, func(devsim.ChangeKind, string) { n++ })
+	PersistAllTasks(ctx, st, Options{EventsPerTick: 3}, func(ChangeKind, string) { n++ })
 	if n != 3 {
 		t.Fatalf("want 3 publishes, got %d", n)
 	}
 }
 
-func TestDevSim_PersistAllTasks_syncRow_updatesStatus(t *testing.T) {
+func TestPersistAllTasks_syncRow_updatesStatus(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -127,7 +126,7 @@ func TestDevSim_PersistAllTasks_syncRow_updatesStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	devsim.PersistAllTasks(ctx, st, devsim.Options{SyncTaskRow: true}, func(devsim.ChangeKind, string) {})
+	PersistAllTasks(ctx, st, Options{SyncTaskRow: true}, func(ChangeKind, string) {})
 	got, err := st.Get(ctx, tsk.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -137,7 +136,7 @@ func TestDevSim_PersistAllTasks_syncRow_updatesStatus(t *testing.T) {
 	}
 }
 
-func TestDevSim_userResponse_appendsThread(t *testing.T) {
+func TestPersistAllTasks_userResponse_appendsThread(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -151,16 +150,16 @@ func TestDevSim_userResponse_appendsThread(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if devsimNextTypeFromCount(n) == domain.EventApprovalRequested {
+		if nextEventTypeFromCount(n) == domain.EventApprovalRequested {
 			reached = true
 			break
 		}
-		devsim.PersistAllTasks(ctx, st, devsim.Options{}, func(devsim.ChangeKind, string) {})
+		PersistAllTasks(ctx, st, Options{}, func(ChangeKind, string) {})
 	}
 	if !reached {
 		t.Fatal("did not reach approval_requested in event cycle")
 	}
-	devsim.PersistAllTasks(ctx, st, devsim.Options{UserResponse: true}, func(devsim.ChangeKind, string) {})
+	PersistAllTasks(ctx, st, Options{UserResponse: true}, func(ChangeKind, string) {})
 	evs, err := st.ListTaskEvents(ctx, tsk.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -178,17 +177,7 @@ func TestDevSim_userResponse_appendsThread(t *testing.T) {
 	}
 }
 
-// devsimNextTypeFromCount mirrors internal/devsim.nextEventTypeFromCount for tests.
-func devsimNextTypeFromCount(n int64) domain.EventType {
-	if len(devsim.EventCycle) == 0 {
-		return domain.EventSyncPing
-	}
-	idx := int(n % int64(len(devsim.EventCycle)))
-	return devsim.EventCycle[idx]
-}
-
-func TestDevSim_SamplePayload_JSON(t *testing.T) {
-	// Exercise sample JSON shape via one persisted event (status_changed payload).
+func TestSamplePayload_JSON(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -197,7 +186,7 @@ func TestDevSim_SamplePayload_JSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	var saw bool
-	devsim.PersistAllTasks(ctx, st, devsim.Options{}, func(devsim.ChangeKind, string) { saw = true })
+	PersistAllTasks(ctx, st, Options{}, func(ChangeKind, string) { saw = true })
 	if !saw {
 		t.Fatal("expected publish")
 	}
