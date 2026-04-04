@@ -12,7 +12,7 @@ From production logs (and future metrics if we add them), we want to answer:
 2. **What code path ran?** Stable `operation` values and route/method on the access line.
 3. **Background work** (dev ticker, etc.) is clearly **not** tied to a request id so we do not confuse it with user traffic.
 
-**Volume:** `taskapi` writes JSON lines at a configurable **minimum level**: **`-loglevel`** or **`T2A_LOG_LEVEL`** (`debug`, `info`, `warn`, `error`; default **`info`** for lighter production logs). Set **`debug`** for full trace lines. At **`info`**, `slog.Debug` records are dropped; `Info`+ still go to the file. See **`docs/DESIGN.md`** (startup flow and env table).
+**Volume:** `taskapi` writes JSON lines at a configurable **minimum level**: **`-loglevel`** or **`T2A_LOG_LEVEL`** (`debug`, `info`, `warn`, `error`; default **`info`** for lighter production logs). Set **`debug`** for full trace lines. At **`info`**, `slog.Debug` records are dropped; `Info`+ still go to the file. **`-disable-logging`** or **`T2A_DISABLE_LOGGING`** (`1`/`true`/`yes`/`on`) skips the file and emits **only `slog.Error`** to stderr. See **`docs/DESIGN.md`** (startup flow and env table).
 
 ### Codebase (static “at least one log per function”)
 

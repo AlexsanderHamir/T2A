@@ -58,3 +58,27 @@ func Load(envFileOverride string) (path string, err error) {
 	}
 	return path, nil
 }
+
+// OverloadDotenvIfPresent runs godotenv.Overload on the resolved .env path when the file exists.
+// It does not require DATABASE_URL. If the file is missing, it succeeds without changing the environment.
+// Callers use this before full Load when variables from .env must be visible early (for example taskapi logging flags).
+func OverloadDotenvIfPresent(envFileOverride string) (resolvedPath string, err error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("getwd: %w", err)
+	}
+	path, err := resolveDotenvPath(wd, envFileOverride)
+	if err != nil {
+		return "", err
+	}
+	if _, statErr := os.Stat(path); statErr != nil {
+		if errors.Is(statErr, os.ErrNotExist) {
+			return path, nil
+		}
+		return path, statErr
+	}
+	if err := godotenv.Overload(path); err != nil {
+		return path, fmt.Errorf("godotenv overload %q: %w", path, err)
+	}
+	return path, nil
+}

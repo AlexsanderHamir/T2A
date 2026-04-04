@@ -11,6 +11,7 @@
 //	-env string      path to .env (default: <repo-root>/.env)
 //	-logdir string   directory for JSON log files (default: T2A_LOG_DIR env or ./logs)
 //	-loglevel string minimum level for the JSON log file: debug, info, warn, error (default: T2A_LOG_LEVEL env or info)
+//	-disable-logging  no JSON log file; only slog.Error to stderr (default: T2A_DISABLE_LOGGING=1|true|yes|on)
 //
 // Each process start creates a new file named taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl (local time) under
 // the log directory; records are JSON objects, one per line (slog JSON handler). One line is printed to

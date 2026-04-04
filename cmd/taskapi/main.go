@@ -51,7 +51,13 @@ func run() int {
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
 	logDir := flag.String("logdir", "", "directory for JSON log files (default: T2A_LOG_DIR or ./logs)")
 	logLevelFlag := flag.String("loglevel", "", "minimum log level for JSON file: debug, info, warn, error (default: T2A_LOG_LEVEL or info)")
+	disableLoggingFlag := flag.Bool("disable-logging", false, "no log file; only errors to stderr (default: T2A_DISABLE_LOGGING)")
 	flag.Parse()
+
+	if _, err := envload.OverloadDotenvIfPresent(*envPath); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: preload .env: %v\n", cmdName, err)
+		return 1
+	}
 
 	minLevel, err := resolveTaskAPILogLevel(*logLevelFlag)
 	if err != nil {
@@ -59,21 +65,36 @@ func run() int {
 		return 1
 	}
 
-	logFile, logPath, err := openTaskAPILogFile(*logDir, minLevel)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, err)
-		return 1
+	minimized := taskAPILoggingMinimized(*disableLoggingFlag)
+	var logFile *os.File
+	var logPath string
+	if !minimized {
+		var openErr error
+		logFile, logPath, openErr = openTaskAPILogFile(*logDir, minLevel)
+		if openErr != nil {
+			fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, openErr)
+			return 1
+		}
 	}
 	defer func() {
+		if logFile == nil {
+			return
+		}
 		_ = logFile.Sync()
 		_ = logFile.Close()
 	}()
 
-	fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s (min level %s)\n", cmdName, logPath, minLevel.String())
-	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: minLevel})
+	var baseHandler slog.Handler
+	if minimized {
+		fmt.Fprintf(os.Stderr, "%s: logging minimized (no log file; errors only to stderr); set by -disable-logging or %s\n", cmdName, disableLoggingEnv)
+		baseHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})
+	} else {
+		fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s (min level %s)\n", cmdName, logPath, minLevel.String())
+		baseHandler = slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: minLevel})
+	}
 	var processLogSeq atomic.Uint64
 	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithLogSequence(
-		handler.WrapSlogHandlerWithRequestContext(jsonHandler),
+		handler.WrapSlogHandlerWithRequestContext(baseHandler),
 		&processLogSeq,
 	)))
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.run")

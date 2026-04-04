@@ -47,6 +47,58 @@ func TestLoad_emptyDATABASE_URL_afterFile(t *testing.T) {
 	}
 }
 
+func TestOverloadDotenvIfPresent_loadsWithoutDATABASE_URL(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module envload_early_test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("T2A_DISABLE_LOGGING=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(old)
+	})
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("T2A_DISABLE_LOGGING", "")
+	p, err := OverloadDotenvIfPresent("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(root, ".env"); p != want {
+		t.Fatalf("path %q want %q", p, want)
+	}
+	if os.Getenv("T2A_DISABLE_LOGGING") != "1" {
+		t.Fatalf("expected T2A_DISABLE_LOGGING from .env")
+	}
+}
+
+func TestOverloadDotenvIfPresent_missingFile_ok(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module envload_early_missing\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(old)
+	})
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	_, err = OverloadDotenvIfPresent("")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLoad_resolveFromRepoRoot(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module envload_root_test\n"), 0o600); err != nil {
