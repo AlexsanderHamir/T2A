@@ -12,6 +12,7 @@ const validTask = {
   initial_prompt: "",
   status: "ready",
   priority: "medium",
+  checklist_inherit: false,
 };
 
 describe("parseTask", () => {
@@ -39,6 +40,48 @@ describe("parseTask", () => {
   it("rejects non-object", () => {
     expect(() => parseTask(null)).toThrow(/object/);
   });
+
+  it("parses nested children and checklist_inherit", () => {
+    expect(
+      parseTask({
+        id: "root",
+        title: "R",
+        initial_prompt: "",
+        status: "ready",
+        priority: "medium",
+        checklist_inherit: false,
+        children: [
+          {
+            id: "c1",
+            title: "C",
+            initial_prompt: "",
+            status: "running",
+            priority: "low",
+            checklist_inherit: true,
+            parent_id: "root",
+          },
+        ],
+      }),
+    ).toEqual({
+      id: "root",
+      title: "R",
+      initial_prompt: "",
+      status: "ready",
+      priority: "medium",
+      checklist_inherit: false,
+      children: [
+        {
+          id: "c1",
+          title: "C",
+          initial_prompt: "",
+          status: "running",
+          priority: "low",
+          checklist_inherit: true,
+          parent_id: "root",
+        },
+      ],
+    });
+  });
 });
 
 describe("parseTaskListResponse", () => {
@@ -56,6 +99,16 @@ describe("parseTaskListResponse", () => {
     expect(() =>
       parseTaskListResponse({ tasks: {}, limit: 0, offset: 0 }),
     ).toThrow(/array/);
+  });
+
+  it("treats null tasks as empty array (legacy Go nil slice JSON)", () => {
+    expect(
+      parseTaskListResponse({
+        tasks: null,
+        limit: 50,
+        offset: 0,
+      }),
+    ).toEqual({ tasks: [], limit: 50, offset: 0 });
   });
 });
 

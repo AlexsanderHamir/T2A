@@ -85,7 +85,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		}
 	}
 
-	out, err := s.List(ctx, 2, 0)
+	out, err := s.ListFlat(ctx, 2, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("page1 len %d", len(out))
 	}
 
-	out2, err := s.List(ctx, 2, 2)
+	out2, err := s.ListFlat(ctx, 2, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("page2 len %d", len(out2))
 	}
 
-	all, err := s.List(ctx, 0, 0)
+	all, err := s.ListFlat(ctx, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("limit 0 normalized len %d", len(all))
 	}
 
-	capped, err := s.List(ctx, 500, 0)
+	capped, err := s.ListFlat(ctx, 500, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +534,7 @@ func TestNewStore_roundTrip(t *testing.T) {
 func TestStore_List_empty_table(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
-	got, err := s.List(context.Background(), 10, 0)
+	got, err := s.ListFlat(context.Background(), 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,5 +557,87 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	err = db.Where("task_id = ?", tsk.ID).First(&domain.TaskEvent{}).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("expected events removed, got err=%v", err)
+	}
+}
+
+func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	_, err = s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := domain.StatusDone
+	_, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	_, err = s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Delete(ctx, parent.ID)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_ListRootForest_empty_nonNilSlice(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	got, err := s.ListRootForest(context.Background(), 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil {
+		t.Fatal("want empty non-nil slice so JSON encodes as [] not null")
+	}
+	if len(got) != 0 {
+		t.Fatalf("len %d", len(got))
+	}
+}
+
+func TestStore_ListRootForest_nested(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	ctx := context.Background()
+	p, err := s.Create(ctx, CreateTaskInput{Title: "root"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := p.ID
+	_, err = s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forest, err := s.ListRootForest(ctx, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(forest) != 1 {
+		t.Fatalf("roots %d", len(forest))
+	}
+	if len(forest[0].Children) != 1 {
+		t.Fatalf("children %d", len(forest[0].Children))
+	}
+	if forest[0].Children[0].Title != "kid" {
+		t.Fatalf("child title %q", forest[0].Children[0].Title)
 	}
 }
