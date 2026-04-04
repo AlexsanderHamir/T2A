@@ -3,6 +3,7 @@ package envload
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func findRepoRoot(startDir string) (string, error) {
+	slog.Debug("trace", "operation", "envload.findRepoRoot")
 	dir := startDir
 	for {
 		mod := filepath.Join(dir, "go.mod")
@@ -27,6 +29,7 @@ func findRepoRoot(startDir string) (string, error) {
 }
 
 func resolveDotenvPath(workingDir, flagPath string) (string, error) {
+	slog.Debug("trace", "operation", "envload.resolveDotenvPath")
 	if flagPath != "" {
 		return filepath.Clean(flagPath), nil
 	}
@@ -38,6 +41,7 @@ func resolveDotenvPath(workingDir, flagPath string) (string, error) {
 }
 
 func Load(envFileOverride string) (path string, err error) {
+	slog.Debug("trace", "operation", "envload.Load")
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getwd: %w", err)
