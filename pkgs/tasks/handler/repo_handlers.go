@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -22,66 +21,57 @@ type repoValidateRangeResponse struct {
 	Warning   string `json:"warning,omitempty"`
 }
 
-type jsonErrorBody struct {
-	Error string `json:"error"`
-}
-
-func writeJSONError(w http.ResponseWriter, op string, code int, msg string) {
-	setJSONHeaders(w)
-	w.WriteHeader(code)
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(jsonErrorBody{Error: msg}); err != nil {
-		slog.Error("response encode failed", "cmd", httpLogCmd, "operation", op, "err", err)
-	}
-}
-
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
+	r = withCallRoot(r, op)
+	debugHTTPRequest(r, op, "search_q", truncateRunes(r.URL.Query().Get("q"), maxHTTPLogTitleRunes))
 	if r.Method != http.MethodGet {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
 	if h.repo == nil {
-		writeJSONError(w, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
+		writeJSONError(w, r, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
 		return
 	}
 	q := r.URL.Query().Get("q")
 	paths, err := h.repo.Search(q)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "err", err)
-		writeJSONError(w, op, http.StatusInternalServerError, "search failed")
+		writeJSONError(w, r, op, http.StatusInternalServerError, "search failed")
 		return
 	}
-	writeJSON(w, op, http.StatusOK, repoSearchResponse{Paths: paths})
+	writeJSON(w, r, op, http.StatusOK, repoSearchResponse{Paths: paths})
 }
 
 func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.repoValidateRange")
 	const op = "repo.validate_range"
+	r = withCallRoot(r, op)
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	startStr := strings.TrimSpace(r.URL.Query().Get("start"))
+	endStr := strings.TrimSpace(r.URL.Query().Get("end"))
+	debugHTTPRequest(r, op, "validate_path", path, "validate_start", startStr, "validate_end", endStr)
 	if r.Method != http.MethodGet {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
 	if h.repo == nil {
-		writeJSONError(w, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
+		writeJSONError(w, r, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
 		return
 	}
-	path := strings.TrimSpace(r.URL.Query().Get("path"))
-	startStr := strings.TrimSpace(r.URL.Query().Get("start"))
-	endStr := strings.TrimSpace(r.URL.Query().Get("end"))
 	if path == "" || startStr == "" || endStr == "" {
-		writeJSONError(w, op, http.StatusBadRequest, "path, start, and end query parameters are required")
+		writeJSONError(w, r, op, http.StatusBadRequest, "path, start, and end query parameters are required")
 		return
 	}
 	start, err1 := strconv.Atoi(startStr)
 	end, err2 := strconv.Atoi(endStr)
 	if err1 != nil || err2 != nil {
-		writeJSONError(w, op, http.StatusBadRequest, "start and end must be integers")
+		writeJSONError(w, r, op, http.StatusBadRequest, "start and end must be integers")
 		return
 	}
 	abs, err := h.repo.Resolve(path)
 	if err != nil {
-		writeJSON(w, op, http.StatusOK, repoValidateRangeResponse{
+		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:      false,
 			Warning: err.Error(),
 		})
@@ -89,7 +79,7 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 	}
 	n, err := repo.LineCount(abs)
 	if err != nil {
-		writeJSON(w, op, http.StatusOK, repoValidateRangeResponse{
+		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:      false,
 			Warning: err.Error(),
 		})
@@ -101,12 +91,12 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 			msg = strings.TrimPrefix(msg, domain.ErrInvalidInput.Error())
 			msg = strings.TrimPrefix(msg, ": ")
 		}
-		writeJSON(w, op, http.StatusOK, repoValidateRangeResponse{
+		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:        false,
 			LineCount: n,
 			Warning:   msg,
 		})
 		return
 	}
-	writeJSON(w, op, http.StatusOK, repoValidateRangeResponse{OK: true, LineCount: n})
+	writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{OK: true, LineCount: n})
 }

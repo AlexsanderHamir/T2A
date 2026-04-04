@@ -32,12 +32,14 @@ type SSEHub struct {
 
 // NewSSEHub returns a hub with no subscribers. It is safe for concurrent use.
 func NewSSEHub() *SSEHub {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.NewSSEHub")
 	return &SSEHub{subs: make(map[chan string]struct{})}
 }
 
 // Subscribe registers a subscriber. The returned channel receives JSON lines;
 // cancel removes the subscriber and must be called when the HTTP request ends.
 func (h *SSEHub) Subscribe() (<-chan string, func()) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.SSEHub.Subscribe")
 	ch := make(chan string, 32)
 	h.mu.Lock()
 	h.subs[ch] = struct{}{}
@@ -80,14 +82,16 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 
 func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.sse"
+	r = withCallRoot(r, op)
+	debugHTTPRequest(r, op, "sse_accept", "text/event-stream")
 	if h.hub == nil {
-		writeJSONError(w, op, http.StatusServiceUnavailable, "event stream unavailable")
+		writeJSONError(w, r, op, http.StatusServiceUnavailable, "event stream unavailable")
 		return
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		slog.Error("streaming unsupported", "cmd", httpLogCmd, "operation", op, "err", errors.New("response writer is not an http.Flusher"))
-		writeJSONError(w, op, http.StatusInternalServerError, "streaming unsupported")
+		writeJSONError(w, r, op, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -131,6 +135,7 @@ func logSSEWriteError(r *http.Request, op string, err error) {
 }
 
 func (h *Handler) notifyChange(typ TaskChangeType, id string) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.notifyChange", "change_type", typ)
 	if h.hub == nil || id == "" {
 		return
 	}

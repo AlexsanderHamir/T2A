@@ -22,7 +22,7 @@ func TestDecodeJSON_taskCreate_fixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got taskCreateJSON
-	if err := decodeJSON(strings.NewReader(string(b)), &got); err != nil {
+	if err := decodeJSON(context.Background(), strings.NewReader(string(b)), &got); err != nil {
 		t.Fatal(err)
 	}
 	if got.Title != "Example from testdata" {
@@ -39,7 +39,7 @@ func TestDecodeJSON_taskPatch_fixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got taskPatchJSON
-	if err := decodeJSON(strings.NewReader(string(b)), &got); err != nil {
+	if err := decodeJSON(context.Background(), strings.NewReader(string(b)), &got); err != nil {
 		t.Fatal(err)
 	}
 	if got.Status == nil || *got.Status != domain.StatusRunning {
@@ -50,7 +50,7 @@ func TestDecodeJSON_taskPatch_fixture(t *testing.T) {
 func TestDecodeJSON_rejectsUnknownField(t *testing.T) {
 	const raw = `{"title":"x","initial_prompt":"","nope":1}`
 	var got taskCreateJSON
-	err := decodeJSON(strings.NewReader(raw), &got)
+	err := decodeJSON(context.Background(), strings.NewReader(raw), &got)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -59,7 +59,7 @@ func TestDecodeJSON_rejectsUnknownField(t *testing.T) {
 func TestDecodeJSON_rejectsTrailingJSON(t *testing.T) {
 	const raw = `{"title":"x","initial_prompt":""}{}`
 	var got taskCreateJSON
-	err := decodeJSON(strings.NewReader(raw), &got)
+	err := decodeJSON(context.Background(), strings.NewReader(raw), &got)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -87,7 +87,7 @@ func TestStoreErrHTTPResponse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			code, msg := storeErrHTTPResponse(tt.err)
+			code, msg := storeErrHTTPResponse(context.Background(), tt.err)
 			if code != tt.wantCode || msg != tt.wantMsg {
 				t.Fatalf("code=%d msg=%q want code=%d msg=%q", code, msg, tt.wantCode, tt.wantMsg)
 			}
@@ -111,7 +111,7 @@ func TestParseListParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			limit, offset, err := parseListParams(tt.q)
+			limit, offset, err := parseListParams(context.Background(), tt.q)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -131,7 +131,7 @@ func TestParseListParams(t *testing.T) {
 func TestDecodeJSON_trailing_garbage_after_object(t *testing.T) {
 	const raw = `{"title":"x","initial_prompt":""}junk`
 	var got taskCreateJSON
-	err := decodeJSON(strings.NewReader(raw), &got)
+	err := decodeJSON(context.Background(), strings.NewReader(raw), &got)
 	if err == nil {
 		t.Fatal("expected error")
 	}

@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -79,19 +81,23 @@ type taskEventUserResponseJSON struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.create")
 	const op = "tasks.create"
+	r = withCallRoot(r, op)
 	var body taskCreateJSON
-	if err := decodeJSON(r.Body, &body); err != nil {
+	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
+		debugHTTPRequest(r, op, "json_decode_failed", true)
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
+	by := actorFromRequest(r)
+	debugHTTPRequest(r, op, taskCreateInputFields(&body, string(by))...)
 	if h.repo != nil {
 		if err := h.repo.ValidatePromptMentions(body.InitialPrompt); err != nil {
-			writeJSONError(w, op, http.StatusBadRequest, err.Error())
+			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
 			return
 		}
 	}
-	by := actorFromRequest(r)
 	inherit := false
 	if body.ChecklistInherit != nil {
 		inherit = *body.ChecklistInherit
@@ -115,27 +121,32 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskCreated, t.ID)
-	writeJSON(w, op, http.StatusCreated, tree)
+	writeJSON(w, r, op, http.StatusCreated, tree)
 }
 
 func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvent")
 	const op = "tasks.event"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
+		debugHTTPRequest(r, op, "task_id", id, "seq_param", seqStr, "seq_parse_failed", true)
 		writeError(w, r, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
 		return
 	}
+	debugHTTPRequest(r, op, "task_id", id, "seq", seq)
 	ev, err := h.store.GetTaskEvent(r.Context(), id, seq)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
+	writeJSON(w, r, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
 }
 
 func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDetailResponse {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.taskEventDetailFromDomain")
 	data := json.RawMessage(ev.Data)
 	if len(data) == 0 {
 		data = json.RawMessage(`{}`)
@@ -157,6 +168,7 @@ func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDet
 }
 
 func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.taskEventLines")
 	out := make([]taskEventLine, 0, len(evs))
 	for _, e := range evs {
 		data := json.RawMessage(e.Data)
@@ -181,8 +193,11 @@ func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
 }
 
 func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvents")
 	const op = "tasks.events"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
+	debugHTTPRequest(r, op, "task_id", id)
 	if _, err := h.store.Get(r.Context(), id); err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -203,7 +218,7 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 			writeStoreError(w, r, op, err)
 			return
 		}
-		writeJSON(w, op, http.StatusOK, taskEventsResponse{
+		writeJSON(w, r, op, http.StatusOK, taskEventsResponse{
 			TaskID:          id,
 			Events:          taskEventLines(evs),
 			ApprovalPending: pending,
@@ -216,7 +231,7 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("before_seq and after_seq cannot both be set"), http.StatusBadRequest)
 		return
 	}
-	limit, err := parseTaskEventsLimit(q)
+	limit, err := parseTaskEventsLimit(r.Context(), q)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -260,23 +275,31 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 		resp.RangeStart = &rs
 		resp.RangeEnd = &re
 	}
-	writeJSON(w, op, http.StatusOK, resp)
+	writeJSON(w, r, op, http.StatusOK, resp)
 }
 
 func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchTaskEventUserResponse")
 	const op = "tasks.event.user_response"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
+		debugHTTPRequest(r, op, "task_id", id, "seq_param", seqStr, "seq_parse_failed", true)
 		writeError(w, r, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
 		return
 	}
 	var body taskEventUserResponseJSON
-	if err := decodeJSON(r.Body, &body); err != nil {
+	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
+		debugHTTPRequest(r, op, "task_id", id, "seq", seq, "json_decode_failed", true)
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
+	debugHTTPRequest(r, op, "task_id", id, "seq", seq,
+		"user_response_len", len(body.UserResponse),
+		"user_response_preview", truncateRunes(body.UserResponse, maxHTTPLogTextRunes),
+	)
 	by := actorFromRequest(r)
 	if err := h.store.AppendTaskEventResponseMessage(r.Context(), id, seq, body.UserResponse, by); err != nil {
 		writeStoreError(w, r, op, err)
@@ -288,43 +311,54 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
-	writeJSON(w, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
+	writeJSON(w, r, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.get")
 	const op = "tasks.get"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
+	debugHTTPRequest(r, op, "task_id", id)
 	t, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, op, http.StatusOK, t)
+	writeJSON(w, r, op, http.StatusOK, t)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.list")
 	const op = "tasks.list"
-	limit, offset, err := parseListParams(r.URL.Query())
+	r = withCallRoot(r, op)
+	limit, offset, err := parseListParams(r.Context(), r.URL.Query())
 	if err != nil {
+		debugHTTPRequest(r, op, "list_params_invalid", true)
 		writeStoreError(w, r, op, err)
 		return
 	}
+	debugHTTPRequest(r, op, "limit", limit, "offset", offset)
 	tasks, err := h.store.ListRootForest(r.Context(), limit, offset)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset})
+	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset})
 }
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patch")
 	const op = "tasks.patch"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
 	var body taskPatchJSON
-	if err := decodeJSON(r.Body, &body); err != nil {
+	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
+		debugHTTPRequest(r, op, "task_id", id, "json_decode_failed", true)
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
+	debugHTTPRequest(r, op, append(append([]any{}, "task_id", id), taskPatchInputFields(&body)...)...)
 	in := store.UpdateTaskInput{
 		Title:            body.Title,
 		InitialPrompt:    body.InitialPrompt,
@@ -341,7 +375,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.repo != nil && body.InitialPrompt != nil {
 		if err := h.repo.ValidatePromptMentions(*body.InitialPrompt); err != nil {
-			writeJSONError(w, op, http.StatusBadRequest, err.Error())
+			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
 			return
 		}
 	}
@@ -356,21 +390,32 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
-	writeJSON(w, op, http.StatusOK, tree)
+	writeJSON(w, r, op, http.StatusOK, tree)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.delete")
 	const op = "tasks.delete"
+	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
+	debugHTTPRequest(r, op, "task_id", id)
 	if err := h.store.Delete(r.Context(), id); err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskDeleted, id)
+	debugHTTPOut(r.Context(), op, http.StatusNoContent, "task_id", id, "response_empty", true)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func parseTaskEventsLimit(q url.Values) (limit int, err error) {
+func parseTaskEventsLimit(ctx context.Context, q url.Values) (limit int, err error) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseTaskEventsLimit")
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx = PushCall(ctx, "parseTaskEventsLimit")
+	helperDebugIn(ctx, "parseTaskEventsLimit", "limit_q", q.Get("limit"), "before_seq_q", q.Get("before_seq"), "after_seq_q", q.Get("after_seq"))
+	defer func() { helperDebugOut(ctx, "parseTaskEventsLimit", "limit", limit, "err", err) }()
 	limit = 50
 	if v := q.Get("limit"); v != "" {
 		n, e := strconv.Atoi(v)
@@ -388,7 +433,14 @@ func parseTaskEventsLimit(q url.Values) (limit int, err error) {
 	return limit, nil
 }
 
-func parseListParams(q url.Values) (limit, offset int, err error) {
+func parseListParams(ctx context.Context, q url.Values) (limit, offset int, err error) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseListParams")
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx = PushCall(ctx, "parseListParams")
+	helperDebugIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"))
+	defer func() { helperDebugOut(ctx, "parseListParams", "limit", limit, "offset", offset, "err", err) }()
 	limit = 50
 	offset = 0
 	if v := q.Get("limit"); v != "" {

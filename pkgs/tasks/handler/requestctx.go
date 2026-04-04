@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 )
 
 type ctxKey int
@@ -12,6 +13,7 @@ const maxIncomingRequestIDLen = 128
 
 // ContextWithRequestID returns ctx with the HTTP request id attached for slog and correlation.
 func ContextWithRequestID(ctx context.Context, id string) context.Context {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ContextWithRequestID")
 	if id == "" {
 		return ctx
 	}
@@ -23,6 +25,7 @@ func RequestIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
+	_ = slog.Default().Enabled(ctx, slog.LevelDebug)
 	s, _ := ctx.Value(ctxKeyRequestID).(string)
 	return s
 }

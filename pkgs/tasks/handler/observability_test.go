@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -48,7 +49,9 @@ func TestWithAccessLog_echoesXRequestIDAndLogsAccess(t *testing.T) {
 	var buf bytes.Buffer
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
-	slog.SetDefault(slog.New(WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))))
+	var processSeq atomic.Uint64
+	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if RequestIDFromContext(r.Context()) == "" {
@@ -102,6 +105,15 @@ func TestWithAccessLog_echoesXRequestIDAndLogsAccess(t *testing.T) {
 	}
 	if int(access["status"].(float64)) != http.StatusTeapot {
 		t.Fatalf("status: %v", access["status"])
+	}
+	if access["obs_category"] != "http_access" {
+		t.Fatalf("obs_category: %v", access["obs_category"])
+	}
+	if access["log_seq_scope"] != "request" {
+		t.Fatalf("log_seq_scope: %v", access["log_seq_scope"])
+	}
+	if int(access["log_seq"].(float64)) != 1 {
+		t.Fatalf("log_seq: %v", access["log_seq"])
 	}
 }
 
@@ -266,5 +278,77 @@ func TestLogSSEWriteError_skipsWhenRequestContextCanceled(t *testing.T) {
 
 	if strings.TrimSpace(buf.String()) != "" {
 		t.Fatalf("expected no log, got %q", buf.String())
+	}
+}
+
+func TestWrapSlogHandlerWithLogSequence_nilReturnsNil(t *testing.T) {
+	var p atomic.Uint64
+	if WrapSlogHandlerWithLogSequence(nil, &p) != nil {
+		t.Fatal("want nil")
+	}
+}
+
+func TestWrapSlogHandlerWithLogSequence_requestScopeMonotonic(t *testing.T) {
+	var buf bytes.Buffer
+	var processSeq atomic.Uint64
+	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	h := WrapSlogHandlerWithLogSequence(base, &processSeq)
+	lg := slog.New(h)
+	ctx := ContextWithRequestID(ContextWithLogSeq(context.Background()), "seq-rid")
+	lg.Log(ctx, slog.LevelInfo, "a")
+	lg.Log(ctx, slog.LevelInfo, "b")
+
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines: %d %q", len(lines), buf.String())
+	}
+	var first, second map[string]any
+	_ = json.Unmarshal([]byte(lines[0]), &first)
+	_ = json.Unmarshal([]byte(lines[1]), &second)
+	if int(first["log_seq"].(float64)) != 1 || int(second["log_seq"].(float64)) != 2 {
+		t.Fatalf("log_seq: %v %v", first["log_seq"], second["log_seq"])
+	}
+	if first["log_seq_scope"] != "request" || second["log_seq_scope"] != "request" {
+		t.Fatalf("scope: %v %v", first["log_seq_scope"], second["log_seq_scope"])
+	}
+}
+
+func TestWrapSlogHandlerWithLogSequence_processFallbackWhenNoRequestCounter(t *testing.T) {
+	var buf bytes.Buffer
+	var processSeq atomic.Uint64
+	h := WrapSlogHandlerWithLogSequence(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}), &processSeq)
+	slog.New(h).Log(context.Background(), slog.LevelInfo, "startup")
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatal(err)
+	}
+	if int(line["log_seq"].(float64)) != 1 {
+		t.Fatalf("log_seq: %v", line["log_seq"])
+	}
+	if line["log_seq_scope"] != "process" {
+		t.Fatalf("log_seq_scope: %v", line["log_seq_scope"])
+	}
+}
+
+func TestWrapSlogHandlerWithLogSequence_outerSeqInnerRequestIDMatchesTaskapi(t *testing.T) {
+	var buf bytes.Buffer
+	var processSeq atomic.Uint64
+	jsonH := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
+	inner := WrapSlogHandlerWithRequestContext(jsonH)
+	outer := WrapSlogHandlerWithLogSequence(inner, &processSeq)
+	lg := slog.New(outer)
+	ctx := ContextWithRequestID(ContextWithLogSeq(context.Background()), "wrap-rid")
+	lg.Log(ctx, slog.LevelInfo, "probe")
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatal(err)
+	}
+	if line["request_id"] != "wrap-rid" {
+		t.Fatalf("request_id: %v", line["request_id"])
+	}
+	if line["log_seq_scope"] != "request" {
+		t.Fatalf("log_seq_scope: %v", line["log_seq_scope"])
 	}
 }

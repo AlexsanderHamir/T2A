@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 )
 
@@ -15,6 +16,7 @@ type patchParentField struct {
 }
 
 func (p *patchParentField) UnmarshalJSON(b []byte) error {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.patchParentField.UnmarshalJSON")
 	b = bytes.TrimSpace(b)
 	if len(b) == 0 {
 		return nil
