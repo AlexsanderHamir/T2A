@@ -8,3 +8,4 @@ taskapi-dev
 taskapi-dev.exe
 /handler
 /handler.exe
+logs/

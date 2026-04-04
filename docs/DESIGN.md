@@ -146,15 +146,16 @@ Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not 
 
 ## Startup flow (`taskapi`)
 
-1. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
-2. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
-3. `postgres.Migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent` on every startup (keeps schema aligned with models).
-4. `store.NewStore`, `handler.NewSSEHub`, optional `repo.OpenRoot(REPO_ROOT)` when the env var is non-empty, then `handler.NewHandler(store, hub, rep)` — `rep` may be nil when `REPO_ROOT` is unset (no repo routes beyond 503).
-5. `http.Server` on `-port` (default 8080): `ReadHeaderTimeout` and `ReadTimeout` bound slow clients; `IdleTimeout` caps idle keep-alive; `MaxHeaderBytes` caps request headers (~1 MiB). `WriteTimeout` is not set so long-lived `GET /events` streams are not cut off.
+1. **Log file** — create the log directory (`-logdir`, else `T2A_LOG_DIR`, else `./logs` under the process working directory), then open a new file `taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl` (local time). Default `slog` output is JSON, one object per line, written only to that file. A single line is printed to **stderr** with the absolute log path so operators know where to read logs.
+2. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
+3. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
+4. `postgres.Migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent` on every startup (keeps schema aligned with models).
+5. `store.NewStore`, `handler.NewSSEHub`, optional `repo.OpenRoot(REPO_ROOT)` when the env var is non-empty, then `handler.NewHandler(store, hub, rep)` — `rep` may be nil when `REPO_ROOT` is unset (no repo routes beyond 503).
+6. `http.Server` on `-port` (default 8080): `ReadHeaderTimeout` and `ReadTimeout` bound slow clients; `IdleTimeout` caps idle keep-alive; `MaxHeaderBytes` caps request headers (~1 MiB). `WriteTimeout` is not set so long-lived `GET /events` streams are not cut off.
 
 ### Graceful shutdown
 
-On SIGINT / SIGTERM, `taskapi` calls `http.Server.Shutdown` with a 10s deadline, then `Close` on the SQL pool.
+On SIGINT / SIGTERM, `taskapi` calls `http.Server.Shutdown` with a 10s deadline, then `Close` on the SQL pool, then syncs and closes the log file.
 
 ```mermaid
 sequenceDiagram
@@ -178,6 +179,7 @@ sequenceDiagram
 | -------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL` | Yes (after `envload.Load`) | Postgres connection string for GORM.                                                                                                                                                                                                                                                                                                         |
 | `REPO_ROOT`    | No                         | Absolute path to a directory on the machine running `taskapi`. When non-empty and valid, enables [`/repo` routes](#optional-workspace-repo-repo_root) and validates `initial_prompt` `@` file mentions on `POST /tasks` and `PATCH /tasks/{id}`. When empty, repo routes respond with 503 JSON and prompts are not validated for mentions. |
+| `T2A_LOG_DIR`  | No                         | Default directory for `taskapi` JSON log files when `-logdir` is not set. If both are empty, `./logs` (relative to the process working directory) is used.                                                                                                                                                                                                                                                |
 
 
 `dbcheck` uses the same `.env` discovery for `DATABASE_URL` only; it does not use `REPO_ROOT`.
@@ -223,7 +225,7 @@ flowchart TD
 
 
 
-Structured logs at the handler use `operation` and `http_status`; client errors (4xx) are logged at Warn, server errors (5xx) at Error.
+Structured logs at the handler use `operation` and `http_status`; client errors (4xx) are logged at Warn, server errors (5xx) at Error. Process-wide `slog` records go to the per-run JSON-lines file under the configured log directory (not to stderr, except the startup path line).
 
 ## Optional workspace repo (`REPO_ROOT`)
 
