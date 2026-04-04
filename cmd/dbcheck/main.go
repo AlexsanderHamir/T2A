@@ -49,6 +49,7 @@ func run(o options) error {
 	if err := loadRepoDotenv(o); err != nil {
 		return fmt.Errorf("env setup: %w", err)
 	}
+	slog.Info("dbcheck starting", "cmd", cmdName, "operation", "dbcheck.start", "migrate", o.migrate)
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()

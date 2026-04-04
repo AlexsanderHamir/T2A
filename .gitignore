@@ -2,6 +2,8 @@
 coverage.out
 coverage*.out
 coverage
+coverage-handler
+coverage-pg
 node_modules/
 web/dist/
 taskapi-dev

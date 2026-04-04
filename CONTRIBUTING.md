@@ -30,6 +30,8 @@ Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
 **Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`).
 
+**Observability:** When you change HTTP middleware, correlation, or logging shape, follow [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md). Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
+
 ## Changing APIs or JSON
 
 When you change REST paths, query params, response shapes, SSE payload types, or audit event types:

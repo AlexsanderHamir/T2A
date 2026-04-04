@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -133,5 +134,137 @@ func TestRequestIDFromContext_empty(t *testing.T) {
 	}
 	if RequestIDFromContext(context.Background()) != "" {
 		t.Fatal("background")
+	}
+}
+
+func TestContextWithRequestID_emptyLeavesContextUnchanged(t *testing.T) {
+	base := context.Background()
+	if got := ContextWithRequestID(base, ""); got != base {
+		t.Fatal("empty id should return ctx unchanged")
+	}
+}
+
+func TestWrapSlogHandlerWithRequestContext_nilReturnsNil(t *testing.T) {
+	if WrapSlogHandlerWithRequestContext(nil) != nil {
+		t.Fatal("want nil")
+	}
+}
+
+func TestWrapSlogHandlerWithRequestContext_WithAttrsStillAddsRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	h := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, nil))
+	lg := slog.New(h).With("scope", "obs-test")
+	ctx := ContextWithRequestID(context.Background(), "rid-attrs")
+	lg.Log(ctx, slog.LevelInfo, "msg")
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatal(err)
+	}
+	if line["request_id"] != "rid-attrs" {
+		t.Fatalf("request_id %v", line["request_id"])
+	}
+	if line["scope"] != "obs-test" {
+		t.Fatalf("scope %v", line["scope"])
+	}
+}
+
+func TestWrapSlogHandlerWithRequestContext_WithGroupStillAddsRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	h := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, nil))
+	lg := slog.New(h).WithGroup("g").With("k", "v")
+	ctx := ContextWithRequestID(context.Background(), "rid-grp")
+	lg.Log(ctx, slog.LevelInfo, "inside")
+
+	// JSON nesting for WithGroup varies by slog version; correlation must still appear.
+	if !strings.Contains(buf.String(), `"request_id":"rid-grp"`) {
+		t.Fatalf("missing request_id in %q", buf.String())
+	}
+}
+
+func TestWithAccessLog_FlushDelegatesToUnderlyingFlusher(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	slog.SetDefault(slog.New(WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, nil))))
+
+	rec := httptest.NewRecorder()
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f, ok := w.(http.Flusher)
+		if !ok {
+			t.Fatal("access log wrapper should expose http.Flusher")
+		}
+		w.WriteHeader(http.StatusOK)
+		f.Flush()
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/stream", nil)
+	WithAccessLog(inner).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
+
+func TestWithAccessLog_truncatesLongXRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	slog.SetDefault(slog.New(WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))))
+
+	long := strings.Repeat("x", maxIncomingRequestIDLen+40)
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("X-Request-ID", long)
+	WithAccessLog(inner).ServeHTTP(rec, req)
+
+	echo := rec.Header().Get("X-Request-ID")
+	if len(echo) != maxIncomingRequestIDLen {
+		t.Fatalf("echo len %d want %d", len(echo), maxIncomingRequestIDLen)
+	}
+	if echo != strings.Repeat("x", maxIncomingRequestIDLen) {
+		t.Fatal("truncation should preserve prefix")
+	}
+}
+
+func TestLogSSEWriteError_logsWhenClientContextActive(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	slog.SetDefault(slog.New(WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))))
+
+	r := httptest.NewRequest(http.MethodGet, "/events", nil)
+	r = r.WithContext(ContextWithRequestID(r.Context(), "sse-rid"))
+	logSSEWriteError(r, "tasks.sse", errors.New("simulated write failure"))
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatal(err)
+	}
+	if line["msg"] != "sse write failed" {
+		t.Fatalf("msg %v", line["msg"])
+	}
+	if line["request_id"] != "sse-rid" {
+		t.Fatalf("request_id %v", line["request_id"])
+	}
+}
+
+func TestLogSSEWriteError_skipsWhenRequestContextCanceled(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	r := httptest.NewRequest(http.MethodGet, "/events", nil)
+	r = r.WithContext(ctx)
+	logSSEWriteError(r, "tasks.sse", errors.New("would log if not canceled"))
+
+	if strings.TrimSpace(buf.String()) != "" {
+		t.Fatalf("expected no log, got %q", buf.String())
 	}
 }
