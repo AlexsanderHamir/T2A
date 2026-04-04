@@ -59,7 +59,8 @@ func run() int {
 	}()
 
 	fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s\n", cmdName, logPath)
-	slog.SetDefault(slog.New(slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithRequestContext(jsonHandler)))
 
 	path, err := envload.Load(*envPath)
 	if err != nil {
@@ -68,7 +69,10 @@ func run() int {
 	}
 	slog.Info("env loaded", "cmd", cmdName, "operation", "taskapi.startup", "path", path)
 
-	db, err := postgres.Open(os.Getenv("DATABASE_URL"), nil)
+	db, err := postgres.Open(
+		os.Getenv("DATABASE_URL"),
+		postgres.ConfigWithSlogLogger(slog.Default()),
+	)
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.db", "err", err)
 		return 1
@@ -93,7 +97,7 @@ func run() int {
 		rep = r
 		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
 	}
-	api := handler.WithRecovery(handler.NewHandler(taskStore, hub, rep))
+	api := handler.WithRecovery(handler.WithAccessLog(handler.NewHandler(taskStore, hub, rep)))
 	mux := http.NewServeMux()
 	if devsim.Enabled() {
 		if d := resolveSSETestTickerInterval(); d >= time.Second {

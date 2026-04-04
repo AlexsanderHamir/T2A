@@ -6,10 +6,13 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 func connectAndPing(ctx context.Context, dsn string) (*gorm.DB, error) {
-	db, err := postgres.Open(dsn, nil)
+	db, err := postgres.Open(dsn, &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("postgres.Open: %w", err)
 	}

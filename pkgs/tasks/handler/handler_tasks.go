@@ -82,7 +82,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.create"
 	var body taskCreateJSON
 	if err := decodeJSON(r.Body, &body); err != nil {
-		writeError(w, op, err, http.StatusBadRequest)
+		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
 	if h.repo != nil {
@@ -106,12 +106,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		ChecklistInherit: inherit,
 	}, by)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	tree, err := h.store.GetTaskTree(r.Context(), t.ID)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskCreated, t.ID)
@@ -124,12 +124,12 @@ func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
-		writeError(w, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
+		writeError(w, r, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
 		return
 	}
 	ev, err := h.store.GetTaskEvent(r.Context(), id, seq)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	writeJSON(w, op, http.StatusOK, taskEventDetailFromDomain(ev, id))
@@ -184,23 +184,23 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.events"
 	id := strings.TrimSpace(r.PathValue("id"))
 	if _, err := h.store.Get(r.Context(), id); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	pending, err := h.store.ApprovalPending(r.Context(), id)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	q := r.URL.Query()
 	if q.Get("offset") != "" {
-		writeStoreError(w, op, fmt.Errorf("%w: offset is not supported for task events; use before_seq or after_seq", domain.ErrInvalidInput))
+		writeStoreError(w, r, op, fmt.Errorf("%w: offset is not supported for task events; use before_seq or after_seq", domain.ErrInvalidInput))
 		return
 	}
 	if q.Get("limit") == "" && q.Get("before_seq") == "" && q.Get("after_seq") == "" {
 		evs, err := h.store.ListTaskEvents(r.Context(), id)
 		if err != nil {
-			writeStoreError(w, op, err)
+			writeStoreError(w, r, op, err)
 			return
 		}
 		writeJSON(w, op, http.StatusOK, taskEventsResponse{
@@ -213,19 +213,19 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 	beforeStr := strings.TrimSpace(q.Get("before_seq"))
 	afterStr := strings.TrimSpace(q.Get("after_seq"))
 	if beforeStr != "" && afterStr != "" {
-		writeError(w, op, errors.New("before_seq and after_seq cannot both be set"), http.StatusBadRequest)
+		writeError(w, r, op, errors.New("before_seq and after_seq cannot both be set"), http.StatusBadRequest)
 		return
 	}
 	limit, err := parseTaskEventsLimit(q)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	var beforeSeq, afterSeq *int64
 	if beforeStr != "" {
 		n, err := strconv.ParseInt(beforeStr, 10, 64)
 		if err != nil || n < 1 {
-			writeError(w, op, errors.New("before_seq must be a positive integer"), http.StatusBadRequest)
+			writeError(w, r, op, errors.New("before_seq must be a positive integer"), http.StatusBadRequest)
 			return
 		}
 		beforeSeq = &n
@@ -233,14 +233,14 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 	if afterStr != "" {
 		n, err := strconv.ParseInt(afterStr, 10, 64)
 		if err != nil || n < 1 {
-			writeError(w, op, errors.New("after_seq must be a positive integer"), http.StatusBadRequest)
+			writeError(w, r, op, errors.New("after_seq must be a positive integer"), http.StatusBadRequest)
 			return
 		}
 		afterSeq = &n
 	}
 	page, err := h.store.ListTaskEventsPageCursor(r.Context(), id, limit, beforeSeq, afterSeq)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	lim := limit
@@ -269,22 +269,22 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
-		writeError(w, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
+		writeError(w, r, op, errors.New("seq must be a positive integer"), http.StatusBadRequest)
 		return
 	}
 	var body taskEventUserResponseJSON
 	if err := decodeJSON(r.Body, &body); err != nil {
-		writeError(w, op, err, http.StatusBadRequest)
+		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
 	by := actorFromRequest(r)
 	if err := h.store.AppendTaskEventResponseMessage(r.Context(), id, seq, body.UserResponse, by); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	ev, err := h.store.GetTaskEvent(r.Context(), id, seq)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
@@ -296,7 +296,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	t, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	writeJSON(w, op, http.StatusOK, t)
@@ -306,12 +306,12 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.list"
 	limit, offset, err := parseListParams(r.URL.Query())
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	tasks, err := h.store.ListRootForest(r.Context(), limit, offset)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	writeJSON(w, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset})
@@ -322,7 +322,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	var body taskPatchJSON
 	if err := decodeJSON(r.Body, &body); err != nil {
-		writeError(w, op, err, http.StatusBadRequest)
+		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
 	in := store.UpdateTaskInput{
@@ -347,12 +347,12 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	by := actorFromRequest(r)
 	if _, err := h.store.Update(r.Context(), id, in, by); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	tree, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
@@ -363,7 +363,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.delete"
 	id := strings.TrimSpace(r.PathValue("id"))
 	if err := h.store.Delete(r.Context(), id); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskDeleted, id)

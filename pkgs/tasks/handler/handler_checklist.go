@@ -24,7 +24,7 @@ func (h *Handler) getChecklist(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	items, err := h.store.ListChecklistForSubject(r.Context(), id)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	writeJSON(w, op, http.StatusOK, checklistListResponse{Items: items})
@@ -35,13 +35,13 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	var body checklistItemCreateJSON
 	if err := decodeJSON(r.Body, &body); err != nil {
-		writeError(w, op, err, http.StatusBadRequest)
+		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
 	by := actorFromRequest(r)
 	it, err := h.store.AddChecklistItem(r.Context(), id, body.Text, by)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
@@ -54,18 +54,18 @@ func (h *Handler) patchChecklistItemDone(w http.ResponseWriter, r *http.Request)
 	itemID := strings.TrimSpace(r.PathValue("itemId"))
 	var body checklistItemDoneJSON
 	if err := decodeJSON(r.Body, &body); err != nil {
-		writeError(w, op, err, http.StatusBadRequest)
+		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
 	by := actorFromRequest(r)
 	if err := h.store.SetChecklistItemDone(r.Context(), taskID, itemID, body.Done, by); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskUpdated, taskID)
 	items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
 	if err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	writeJSON(w, op, http.StatusOK, checklistListResponse{Items: items})
@@ -76,7 +76,7 @@ func (h *Handler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	itemID := strings.TrimSpace(r.PathValue("itemId"))
 	if err := h.store.DeleteChecklistItem(r.Context(), id, itemID); err != nil {
-		writeStoreError(w, op, err)
+		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskUpdated, id)

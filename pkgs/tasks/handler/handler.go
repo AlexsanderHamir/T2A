@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -129,8 +130,8 @@ func invalidInputDetail(err error) string {
 	return ""
 }
 
-func writeError(w http.ResponseWriter, op string, err error, code int) {
-	logRequestFailure(op, err, code)
+func writeError(w http.ResponseWriter, r *http.Request, op string, err error, code int) {
+	logRequestFailure(requestCtx(r), op, err, code)
 	msg := http.StatusText(code)
 	if code == http.StatusBadRequest {
 		msg = userFacingJSONError(err)
@@ -157,17 +158,24 @@ func storeErrHTTPResponse(err error) (code int, msg string) {
 	return code, msg
 }
 
-func writeStoreError(w http.ResponseWriter, op string, err error) {
+func writeStoreError(w http.ResponseWriter, r *http.Request, op string, err error) {
 	code, msg := storeErrHTTPResponse(err)
-	logRequestFailure(op, err, code)
+	logRequestFailure(requestCtx(r), op, err, code)
 	writeJSONError(w, op, code, msg)
 }
 
-func logRequestFailure(op string, err error, httpStatus int) {
+func requestCtx(r *http.Request) context.Context {
+	if r == nil {
+		return context.Background()
+	}
+	return r.Context()
+}
+
+func logRequestFailure(ctx context.Context, op string, err error, httpStatus int) {
 	attrs := []any{"cmd", httpLogCmd, "operation", op, "http_status", httpStatus, "err", err}
 	if httpStatus >= 500 {
-		slog.Error("request failed", attrs...)
+		slog.Log(ctx, slog.LevelError, "request failed", attrs...)
 		return
 	}
-	slog.Warn("request failed", attrs...)
+	slog.Log(ctx, slog.LevelWarn, "request failed", attrs...)
 }

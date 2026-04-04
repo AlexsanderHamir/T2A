@@ -13,8 +13,9 @@
 //
 // Each process start creates a new file named taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl (local time) under
 // the log directory; records are JSON objects, one per line (slog JSON handler). One line is printed to
-// stderr with the log file path. SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout, then the
-// database pool is closed and the log file is synced and closed.
+// stderr with the log file path. GORM SQL traces (duration, rows, parameterized SQL) use the same sink.
+// SIGINT/SIGTERM trigger graceful shutdown with a 10s timeout, then the database pool is closed and the
+// log file is synced and closed.
 //
 // The HTTP server sets read header/read/idle timeouts and a max header size; WriteTimeout is left unset so GET /events (SSE) can stay open.
 //

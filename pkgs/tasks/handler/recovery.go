@@ -11,7 +11,8 @@ func WithRecovery(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				slog.Error("panic in handler", "cmd", httpLogCmd, "operation", "http.recover", "panic", rec, "stack", debug.Stack())
+				slog.Log(r.Context(), slog.LevelError, "panic in handler",
+					"cmd", httpLogCmd, "operation", "http.recover", "panic", rec, "stack", debug.Stack())
 				writeJSONError(w, "http.recover", http.StatusInternalServerError, "internal server error")
 			}
 		}()

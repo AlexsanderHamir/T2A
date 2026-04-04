@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -141,8 +142,8 @@ func TestLogRequestFailure_warnAndError(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
-	logRequestFailure("test.op", errors.New("client"), http.StatusBadRequest)
-	logRequestFailure("test.op", errors.New("server"), http.StatusInternalServerError)
+	logRequestFailure(context.Background(), "test.op", errors.New("client"), http.StatusBadRequest)
+	logRequestFailure(context.Background(), "test.op", errors.New("server"), http.StatusInternalServerError)
 }
 
 func TestActorFromRequest(t *testing.T) {

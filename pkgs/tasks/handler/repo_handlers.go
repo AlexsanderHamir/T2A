@@ -39,7 +39,7 @@ func writeJSONError(w http.ResponseWriter, op string, code int, msg string) {
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	if r.Method != http.MethodGet {
-		writeError(w, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
+		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
 	if h.repo == nil {
@@ -49,7 +49,7 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	paths, err := h.repo.Search(q)
 	if err != nil {
-		slog.Error("repo operation failed", "cmd", httpLogCmd, "operation", op, "err", err)
+		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "err", err)
 		writeJSONError(w, op, http.StatusInternalServerError, "search failed")
 		return
 	}
@@ -59,7 +59,7 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.validate_range"
 	if r.Method != http.MethodGet {
-		writeError(w, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
+		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
 	if h.repo == nil {

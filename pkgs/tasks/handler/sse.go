@@ -72,6 +72,10 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 		default:
 		}
 	}
+	if len(out) > 0 {
+		slog.Debug("sse fanout", "cmd", httpLogCmd, "operation", "tasks.sse.publish",
+			"event_type", ev.Type, "task_id", ev.ID, "subscribers", len(out))
+	}
 }
 
 func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +127,7 @@ func logSSEWriteError(r *http.Request, op string, err error) {
 	if err == nil || r.Context().Err() != nil {
 		return
 	}
-	slog.Warn("sse write failed", "cmd", httpLogCmd, "operation", op, "err", err)
+	slog.Log(r.Context(), slog.LevelWarn, "sse write failed", "cmd", httpLogCmd, "operation", op, "err", err)
 }
 
 func (h *Handler) notifyChange(typ TaskChangeType, id string) {
