@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -10,6 +11,7 @@ import (
 )
 
 func wouldCreateParentCycle(tx *gorm.DB, taskID, newParent string) (bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.wouldCreateParentCycle")
 	cur := strings.TrimSpace(newParent)
 	seen := make(map[string]bool)
 	for cur != "" {
@@ -36,6 +38,7 @@ func wouldCreateParentCycle(tx *gorm.DB, taskID, newParent string) (bool, error)
 }
 
 func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateTaskInput, by domain.Actor, seq int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTaskPatches")
 	if in.Title != nil {
 		v := strings.TrimSpace(*in.Title)
 		if v == "" {

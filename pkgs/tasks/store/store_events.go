@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -11,6 +12,7 @@ import (
 )
 
 func nextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.nextEventSeq")
 	var max int64
 	err := tx.Raw(`SELECT COALESCE(MAX(seq), 0) FROM task_events WHERE task_id = ?`, taskID).Scan(&max).Error
 	if err != nil {
@@ -20,6 +22,7 @@ func nextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 }
 
 func appendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by domain.Actor, data []byte) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.appendEvent")
 	if data == nil {
 		data = []byte("{}")
 	}
@@ -38,6 +41,7 @@ func appendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by
 }
 
 func eventPairJSON(from, to string) ([]byte, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.eventPairJSON")
 	b, err := json.Marshal(map[string]string{"from": from, "to": to})
 	if err != nil {
 		return nil, fmt.Errorf("marshal event payload: %w", err)

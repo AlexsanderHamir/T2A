@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -27,6 +28,7 @@ type TaskEventsPage struct {
 //
 // Limit is coerced: ≤0 becomes 50; >200 capped at 200. beforeSeq and afterSeq must not both be set.
 func (s *Store) ListTaskEventsPageCursor(ctx context.Context, taskID string, limit int, beforeSeq, afterSeq *int64) (*TaskEventsPage, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskEventsPageCursor")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -94,6 +96,7 @@ func (s *Store) ListTaskEventsPageCursor(ctx context.Context, taskID string, lim
 // ApprovalPending reports whether an approval is outstanding: among approval-related
 // events, the latest by seq decides — granted clears pending, requested sets it.
 func (s *Store) ApprovalPending(ctx context.Context, taskID string) (bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApprovalPending")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return false, fmt.Errorf("%w: id", domain.ErrInvalidInput)

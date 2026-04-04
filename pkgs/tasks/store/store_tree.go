@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -11,6 +12,7 @@ import (
 
 // ListFlat returns tasks ordered by id with limit/offset over all rows (no tree).
 func (s *Store) ListFlat(ctx context.Context, limit, offset int) ([]domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -34,11 +36,13 @@ func (s *Store) ListFlat(ctx context.Context, limit, offset int) ([]domain.Task,
 
 // List is an alias for ListFlat (all tasks, id ASC, limit/offset). Prefer ListFlat in new code.
 func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.List")
 	return s.ListFlat(ctx, limit, offset)
 }
 
 // ListRootForest pages root tasks (parent_id IS NULL) and attaches each full descendant subtree.
 func (s *Store) ListRootForest(ctx context.Context, limit, offset int) ([]TaskNode, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForest")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -70,6 +74,7 @@ func (s *Store) ListRootForest(ctx context.Context, limit, offset int) ([]TaskNo
 
 // GetTaskTree returns one task and every descendant nested under it.
 func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskTree")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return TaskNode{}, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -94,6 +99,7 @@ func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
 }
 
 func (s *Store) loadTasksForForest(ctx context.Context, seeds []domain.Task) (map[string]domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.loadTasksForForest")
 	all := make(map[string]domain.Task)
 	for _, t := range seeds {
 		all[t.ID] = t
@@ -120,6 +126,7 @@ func (s *Store) loadTasksForForest(ctx context.Context, seeds []domain.Task) (ma
 }
 
 func buildForest(roots []domain.Task, byID map[string]domain.Task) []TaskNode {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildForest")
 	childrenOf := make(map[string][]domain.Task)
 	for _, t := range byID {
 		if t.ParentID == nil || *t.ParentID == "" {
@@ -147,6 +154,7 @@ func buildForest(roots []domain.Task, byID map[string]domain.Task) []TaskNode {
 }
 
 func buildNode(t domain.Task, childrenOf map[string][]domain.Task) TaskNode {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildNode")
 	kids := childrenOf[t.ID]
 	ch := make([]TaskNode, 0, len(kids))
 	for _, c := range kids {

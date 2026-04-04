@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -13,6 +14,7 @@ import (
 // ApplyDevTaskRowMirror updates the task row to reflect a synthetic audit event without
 // appending further audit rows. For development simulation only (see pkgs/tasks/devsim).
 func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ domain.EventType, data []byte) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApplyDevTaskRowMirror")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -93,6 +95,7 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 }
 
 func pairFromJSON(data []byte) (map[string]string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.pairFromJSON")
 	var m map[string]string
 	if len(data) == 0 || string(data) == "null" {
 		return m, nil

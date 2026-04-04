@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -12,6 +13,7 @@ import (
 
 // GetTaskEvent returns one task_events row by composite key, or ErrNotFound.
 func (s *Store) GetTaskEvent(ctx context.Context, taskID string, seq int64) (*domain.TaskEvent, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskEvent")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)

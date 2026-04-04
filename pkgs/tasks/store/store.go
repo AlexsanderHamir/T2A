@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -13,11 +14,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+const storeLogCmd = "taskapi"
+
 type Store struct {
 	db *gorm.DB
 }
 
 func NewStore(db *gorm.DB) *Store {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.NewStore")
 	return &Store{db: db}
 }
 
@@ -47,6 +51,7 @@ type UpdateTaskInput struct {
 }
 
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Create")
 	if err := validateActor(by); err != nil {
 		return nil, err
 	}
@@ -138,6 +143,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 }
 
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -155,6 +161,7 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 
 // ListTaskEvents returns audit events for a task in ascending sequence order.
 func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.TaskEvent, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskEvents")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -172,6 +179,7 @@ func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.Tas
 
 // TaskEventCount returns how many audit rows exist for the task.
 func (s *Store) TaskEventCount(ctx context.Context, taskID string) (int64, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskEventCount")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -186,6 +194,7 @@ func (s *Store) TaskEventCount(ctx context.Context, taskID string) (int64, error
 
 // LastEventSeq returns the highest seq for the task, or 0 when there are no events.
 func (s *Store) LastEventSeq(ctx context.Context, taskID string) (int64, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.LastEventSeq")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -202,6 +211,7 @@ func (s *Store) LastEventSeq(ctx context.Context, taskID string) (int64, error) 
 }
 
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
 	if err := validateActor(by); err != nil {
 		return nil, err
 	}
@@ -247,6 +257,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 }
 
 func (s *Store) Delete(ctx context.Context, id string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -269,6 +280,7 @@ func (s *Store) Delete(ctx context.Context, id string) error {
 }
 
 func validStatus(s domain.Status) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validStatus")
 	switch s {
 	case domain.StatusReady, domain.StatusRunning, domain.StatusBlocked, domain.StatusReview, domain.StatusDone, domain.StatusFailed:
 		return true
@@ -278,6 +290,7 @@ func validStatus(s domain.Status) bool {
 }
 
 func validPriority(p domain.Priority) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validPriority")
 	switch p {
 	case domain.PriorityLow, domain.PriorityMedium, domain.PriorityHigh, domain.PriorityCritical:
 		return true
@@ -287,6 +300,7 @@ func validPriority(p domain.Priority) bool {
 }
 
 func validateActor(a domain.Actor) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validateActor")
 	switch a {
 	case domain.ActorUser, domain.ActorAgent:
 		return nil

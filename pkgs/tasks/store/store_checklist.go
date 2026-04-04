@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -24,10 +25,12 @@ type ChecklistItemView struct {
 
 // DefinitionSourceTaskID returns the task id that owns checklist item definitions for id.
 func (s *Store) DefinitionSourceTaskID(ctx context.Context, taskID string) (string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DefinitionSourceTaskID")
 	return definitionSourceTaskIDTx(s.db.WithContext(ctx), taskID)
 }
 
 func definitionSourceTaskIDTx(tx *gorm.DB, taskID string) (string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.definitionSourceTaskIDTx")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -58,6 +61,7 @@ func definitionSourceTaskIDTx(tx *gorm.DB, taskID string) (string, error) {
 
 // ListChecklistForSubject returns definition items for taskID with done flags for that same task.
 func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]ChecklistItemView, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListChecklistForSubject")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -109,6 +113,7 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 }
 
 func txLoadTask(tx *gorm.DB, id string) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.txLoadTask")
 	var t domain.Task
 	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -121,6 +126,7 @@ func txLoadTask(tx *gorm.DB, id string) (*domain.Task, error) {
 
 // AddChecklistItem appends a definition row; task must exist and not use checklist_inherit.
 func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
 	if err := validateActor(by); err != nil {
 		return nil, err
 	}
@@ -174,6 +180,7 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 
 // DeleteChecklistItem removes a definition row owned by taskID.
 func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteChecklistItem")
 	taskID = strings.TrimSpace(taskID)
 	itemID = strings.TrimSpace(itemID)
 	if taskID == "" || itemID == "" {
@@ -206,6 +213,7 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string) 
 
 // SetChecklistItemDone sets or clears completion for subjectTaskID on an item from its definition source.
 func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
 	if err := validateActor(by); err != nil {
 		return err
 	}
@@ -261,6 +269,7 @@ func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID 
 }
 
 func checklistItemsForDefinitionTx(tx *gorm.DB, defTaskID string) ([]domain.TaskChecklistItem, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.checklistItemsForDefinitionTx")
 	var items []domain.TaskChecklistItem
 	if err := tx.Where("task_id = ?", defTaskID).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
 		return nil, err
@@ -269,6 +278,7 @@ func checklistItemsForDefinitionTx(tx *gorm.DB, defTaskID string) ([]domain.Task
 }
 
 func validateChecklistCompleteTx(tx *gorm.DB, subjectTaskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validateChecklistCompleteTx")
 	defID, err := definitionSourceTaskIDTx(tx, subjectTaskID)
 	if err != nil {
 		return err
@@ -295,6 +305,7 @@ func validateChecklistCompleteTx(tx *gorm.DB, subjectTaskID string) error {
 }
 
 func validateDescendantsDoneTx(tx *gorm.DB, taskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validateDescendantsDoneTx")
 	queue := []string{taskID}
 	for len(queue) > 0 {
 		var children []domain.Task
@@ -313,6 +324,7 @@ func validateDescendantsDoneTx(tx *gorm.DB, taskID string) error {
 }
 
 func validateCanMarkDoneTx(tx *gorm.DB, taskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validateCanMarkDoneTx")
 	if err := validateDescendantsDoneTx(tx, taskID); err != nil {
 		return err
 	}
@@ -320,6 +332,7 @@ func validateCanMarkDoneTx(tx *gorm.DB, taskID string) error {
 }
 
 func deleteOwnedChecklistItemsTx(tx *gorm.DB, taskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.deleteOwnedChecklistItemsTx")
 	var ids []string
 	if err := tx.Model(&domain.TaskChecklistItem{}).Where("task_id = ?", taskID).Pluck("id", &ids).Error; err != nil {
 		return fmt.Errorf("list checklist items: %w", err)

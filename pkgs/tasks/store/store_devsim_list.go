@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -10,6 +11,7 @@ import (
 
 // ListDevsimTasks returns tasks whose id matches a SQL LIKE pattern (dev simulation only).
 func (s *Store) ListDevsimTasks(ctx context.Context, idLikePattern string) ([]domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDevsimTasks")
 	p := strings.TrimSpace(idLikePattern)
 	if p == "" {
 		return nil, fmt.Errorf("%w: pattern", domain.ErrInvalidInput)

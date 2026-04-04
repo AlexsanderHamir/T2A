@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -12,6 +13,7 @@ import (
 
 // AppendTaskEvent appends one task_events row if the task exists.
 func (s *Store) AppendTaskEvent(ctx context.Context, taskID string, typ domain.EventType, by domain.Actor, data []byte) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendTaskEvent")
 	if err := validateActor(by); err != nil {
 		return err
 	}
