@@ -23,6 +23,7 @@ export function TaskHome({ app }: Props) {
 
       <TaskListSection
         tasks={app.tasks}
+        rootTasksOnPage={app.rootTasksOnPage}
         loading={app.loading}
         refreshing={app.listRefreshing}
         saving={app.saving}

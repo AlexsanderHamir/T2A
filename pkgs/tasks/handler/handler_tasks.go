@@ -15,24 +15,28 @@ import (
 )
 
 type taskCreateJSON struct {
-	ID            string          `json:"id"`
-	Title         string          `json:"title"`
-	InitialPrompt string          `json:"initial_prompt"`
-	Status        domain.Status   `json:"status"`
-	Priority      domain.Priority `json:"priority"`
+	ID               string          `json:"id"`
+	Title            string          `json:"title"`
+	InitialPrompt    string          `json:"initial_prompt"`
+	Status           domain.Status   `json:"status"`
+	Priority         domain.Priority `json:"priority"`
+	ParentID         *string         `json:"parent_id"`
+	ChecklistInherit *bool           `json:"checklist_inherit"`
 }
 
 type taskPatchJSON struct {
-	Title         *string          `json:"title"`
-	InitialPrompt *string          `json:"initial_prompt"`
-	Status        *domain.Status   `json:"status"`
-	Priority      *domain.Priority `json:"priority"`
+	Title            *string          `json:"title"`
+	InitialPrompt    *string          `json:"initial_prompt"`
+	Status           *domain.Status   `json:"status"`
+	Priority         *domain.Priority `json:"priority"`
+	ParentID         patchParentField `json:"parent_id"`
+	ChecklistInherit *bool            `json:"checklist_inherit"`
 }
 
 type listResponse struct {
-	Tasks  []domain.Task `json:"tasks"`
-	Limit  int           `json:"limit"`
-	Offset int           `json:"offset"`
+	Tasks  []store.TaskNode `json:"tasks"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
 }
 
 type taskEventLine struct {
@@ -88,19 +92,30 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	by := actorFromRequest(r)
+	inherit := false
+	if body.ChecklistInherit != nil {
+		inherit = *body.ChecklistInherit
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
-		ID:            body.ID,
-		Title:         body.Title,
-		InitialPrompt: body.InitialPrompt,
-		Status:        body.Status,
-		Priority:      body.Priority,
+		ID:               body.ID,
+		Title:            body.Title,
+		InitialPrompt:    body.InitialPrompt,
+		Status:           body.Status,
+		Priority:         body.Priority,
+		ParentID:         body.ParentID,
+		ChecklistInherit: inherit,
 	}, by)
 	if err != nil {
 		writeStoreError(w, op, err)
 		return
 	}
+	tree, err := h.store.GetTaskTree(r.Context(), t.ID)
+	if err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
 	h.notifyChange(TaskCreated, t.ID)
-	writeJSON(w, op, http.StatusCreated, t)
+	writeJSON(w, op, http.StatusCreated, tree)
 }
 
 func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
@@ -279,7 +294,7 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.get"
 	id := strings.TrimSpace(r.PathValue("id"))
-	t, err := h.store.Get(r.Context(), id)
+	t, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, op, err)
 		return
@@ -294,7 +309,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, op, err)
 		return
 	}
-	tasks, err := h.store.List(r.Context(), limit, offset)
+	tasks, err := h.store.ListRootForest(r.Context(), limit, offset)
 	if err != nil {
 		writeStoreError(w, op, err)
 		return
@@ -311,10 +326,18 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := store.UpdateTaskInput{
-		Title:         body.Title,
-		InitialPrompt: body.InitialPrompt,
-		Status:        body.Status,
-		Priority:      body.Priority,
+		Title:            body.Title,
+		InitialPrompt:    body.InitialPrompt,
+		Status:           body.Status,
+		Priority:         body.Priority,
+		ChecklistInherit: body.ChecklistInherit,
+	}
+	if body.ParentID.Defined {
+		if body.ParentID.Clear {
+			in.Parent = &store.ParentFieldPatch{Clear: true}
+		} else {
+			in.Parent = &store.ParentFieldPatch{ID: body.ParentID.SetID}
+		}
 	}
 	if h.repo != nil && body.InitialPrompt != nil {
 		if err := h.repo.ValidatePromptMentions(*body.InitialPrompt); err != nil {
@@ -323,13 +346,17 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	by := actorFromRequest(r)
-	t, err := h.store.Update(r.Context(), id, in, by)
+	if _, err := h.store.Update(r.Context(), id, in, by); err != nil {
+		writeStoreError(w, op, err)
+		return
+	}
+	tree, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, op, err)
 		return
 	}
-	h.notifyChange(TaskUpdated, t.ID)
-	writeJSON(w, op, http.StatusOK, t)
+	h.notifyChange(TaskUpdated, id)
+	writeJSON(w, op, http.StatusOK, tree)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {

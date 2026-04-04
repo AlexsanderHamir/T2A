@@ -43,11 +43,16 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
             title={app.editTitle}
             prompt={app.editPrompt}
             priority={app.editPriority}
+            status={app.editStatus}
+            checklistInherit={app.editChecklistInherit}
+            canInheritChecklist={Boolean(app.editing.parent_id)}
             saving={app.saving}
             patchPending={app.patchPending}
             onTitleChange={app.setEditTitle}
             onPromptChange={app.setEditPrompt}
             onPriorityChange={app.setEditPriority}
+            onStatusChange={app.setEditStatus}
+            onChecklistInheritChange={app.setEditChecklistInherit}
             onSubmit={(e) => void app.submitEdit(e)}
             onCancel={app.closeEdit}
           />

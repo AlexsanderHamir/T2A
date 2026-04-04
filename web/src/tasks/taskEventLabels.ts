@@ -11,6 +11,8 @@ const LABELS: Record<TaskEventType, string> = {
   non_goal_added: "Non-goal added",
   plan_added: "Plan added",
   subtask_added: "Subtask added",
+  checklist_item_added: "Checklist item added",
+  checklist_item_toggled: "Checklist item updated",
   message_added: "Title or message updated",
   artifact_added: "Artifact added",
   approval_requested: "Approval requested",

@@ -1284,6 +1284,74 @@ th {
   margin-bottom: 1.25rem;
 }
 
+.panel-inset {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 2%);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  margin-top: 0.2rem;
+}
+
+.task-subtasks-tree {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.task-subtasks-tree.nested {
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+}
+
+.task-subtask-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-width: 28rem;
+}
+
+.task-checklist-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.task-checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.task-checklist-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn-inline {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.modal-sheet .checkbox-field {
+  margin-bottom: 0.5rem;
+}
+
 .task-detail-subheading {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;
@@ -1527,6 +1595,13 @@ a.task-timeline-item-hit {
   background: hsl(330 55% 92%);
   color: hsl(328 50% 32%);
   border-color: hsl(330 40% 82%);
+}
+
+.task-timeline-type-pill[data-event-type="checklist_item_added"],
+.task-timeline-type-pill[data-event-type="checklist_item_toggled"] {
+  background: hsl(200 45% 90%);
+  color: hsl(205 50% 28%);
+  border-color: hsl(200 38% 78%);
 }
 
 .task-timeline-type-pill[data-event-type="message_added"] {

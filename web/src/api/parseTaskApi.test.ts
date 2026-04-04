@@ -12,6 +12,7 @@ const validTask = {
   initial_prompt: "",
   status: "ready",
   priority: "medium",
+  checklist_inherit: false,
 };
 
 describe("parseTask", () => {
@@ -38,6 +39,48 @@ describe("parseTask", () => {
 
   it("rejects non-object", () => {
     expect(() => parseTask(null)).toThrow(/object/);
+  });
+
+  it("parses nested children and checklist_inherit", () => {
+    expect(
+      parseTask({
+        id: "root",
+        title: "R",
+        initial_prompt: "",
+        status: "ready",
+        priority: "medium",
+        checklist_inherit: false,
+        children: [
+          {
+            id: "c1",
+            title: "C",
+            initial_prompt: "",
+            status: "running",
+            priority: "low",
+            checklist_inherit: true,
+            parent_id: "root",
+          },
+        ],
+      }),
+    ).toEqual({
+      id: "root",
+      title: "R",
+      initial_prompt: "",
+      status: "ready",
+      priority: "medium",
+      checklist_inherit: false,
+      children: [
+        {
+          id: "c1",
+          title: "C",
+          initial_prompt: "",
+          status: "running",
+          priority: "low",
+          checklist_inherit: true,
+          parent_id: "root",
+        },
+      ],
+    });
   });
 });
 

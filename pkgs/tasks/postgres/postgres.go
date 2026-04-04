@@ -50,7 +50,12 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 
 // Migrate runs AutoMigrate for domain.Task and domain.TaskEvent (works with any GORM dialector, e.g. tests on SQLite).
 func Migrate(ctx context.Context, db *gorm.DB) error {
-	if err := db.WithContext(ctx).AutoMigrate(&domain.Task{}, &domain.TaskEvent{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(
+		&domain.Task{},
+		&domain.TaskEvent{},
+		&domain.TaskChecklistItem{},
+		&domain.TaskChecklistCompletion{},
+	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}
 	return nil

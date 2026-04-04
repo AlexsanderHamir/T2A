@@ -12,7 +12,7 @@ Fix: Use a current `web/vite.config.ts` (it bypasses the proxy when `Accept` inc
 
 Cause: Without the dev ticker, `task_updated` SSE only fires after real writes. The timeline rows come from `GET /tasks/{id}/events`, not from parsing SSE bodies.
 
-Fix: For synthetic activity in dev, set `T2A_SSE_TEST=1` in `.env` and restart `taskapi` (see [docs/DESIGN.md](./DESIGN.md)). Ensure React Query refetches (the app invalidates on SSE `onmessage`).
+Fix: For synthetic activity in dev, set `T2A_SSE_TEST=1` in `.env` and restart `taskapi` (see [docs/DESIGN.md](./DESIGN.md)). Use `T2A_SSE_TEST_EVENTS_PER_TICK` for faster timeline churn, `T2A_SSE_TEST_SYNC_ROW=1` so task headers match synthetic audit rows, and `T2A_SSE_TEST_LIFECYCLE=1` for `task_created` / `task_deleted` hints. Ensure React Query refetches (the app invalidates on SSE `onmessage`).
 
 ## `No repository is configured for file search` in the rich prompt
 

@@ -14,6 +14,12 @@ export type Task = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
+  /** Present when this task is nested under another (GET /tasks tree). */
+  parent_id?: string;
+  /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
+  checklist_inherit: boolean;
+  /** Nested subtasks from GET /tasks or GET /tasks/{id} (tree). */
+  children?: Task[];
 };
 
 export type TaskListResponse = {
@@ -63,6 +69,8 @@ export const TASK_EVENT_TYPES = [
   "non_goal_added",
   "plan_added",
   "subtask_added",
+  "checklist_item_added",
+  "checklist_item_toggled",
   "message_added",
   "artifact_added",
   "approval_requested",
@@ -116,4 +124,16 @@ export type TaskEventsResponse = {
 /** Single row from `GET /tasks/{id}/events/{seq}` (same shape as one list element plus `task_id`). */
 export type TaskEventDetail = TaskEvent & {
   task_id: string;
+};
+
+/** One checklist row from GET /tasks/{id}/checklist. */
+export type TaskChecklistItemView = {
+  id: string;
+  sort_order: number;
+  text: string;
+  done: boolean;
+};
+
+export type TaskChecklistResponse = {
+  items: TaskChecklistItemView[];
 };

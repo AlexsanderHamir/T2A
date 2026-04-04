@@ -81,8 +81,18 @@ func main() {
 	mux := http.NewServeMux()
 	if devsim.Enabled() {
 		if d := resolveSSETestTickerInterval(); d >= time.Second {
-			devsim.RunTicker(taskStore, d, func(id string) {
-				hub.Publish(handler.TaskChangeEvent{Type: handler.TaskUpdated, ID: id})
+			opts := devsim.LoadOptions()
+			devsim.RunTicker(taskStore, d, opts, func(kind devsim.ChangeKind, id string) {
+				var typ handler.TaskChangeType
+				switch kind {
+				case devsim.ChangeCreated:
+					typ = handler.TaskCreated
+				case devsim.ChangeDeleted:
+					typ = handler.TaskDeleted
+				default:
+					typ = handler.TaskUpdated
+				}
+				hub.Publish(handler.TaskChangeEvent{Type: typ, ID: id})
 			})
 		}
 	}

@@ -59,7 +59,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "<p>Secret long body text</p>",
           status: "ready",
           priority: "critical",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t1/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t1/events")) {
         return Response.json({
@@ -106,7 +110,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t2/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t2/events")) {
         return Response.json({
@@ -143,7 +151,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "blocked",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/tb/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/tb/events")) {
         return Response.json({
@@ -178,7 +190,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t3/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t3/events")) {
         return Response.json({

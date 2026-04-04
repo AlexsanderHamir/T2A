@@ -5,6 +5,8 @@ import {
   type Priority,
   type Status,
   type Task,
+  type TaskChecklistItemView,
+  type TaskChecklistResponse,
   type TaskEvent,
   type TaskEventDetail,
   type TaskEventResponseEntry,
@@ -260,7 +262,20 @@ export function parseTaskEventDetail(value: unknown): TaskEventDetail {
   }
 }
 
-/** Validates a single task object from POST/PATCH responses. */
+function parseChecklistInherit(v: unknown): boolean {
+  return v === true;
+}
+
+function parseOptionalParentId(
+  value: unknown,
+  field: string,
+): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const s = parseString(value, field);
+  return s.trim() === "" ? undefined : s;
+}
+
+/** Validates a single task object from POST/PATCH responses (recursive `children`). */
 export function parseTask(value: unknown): Task {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: task must be an object");
@@ -269,11 +284,54 @@ export function parseTask(value: unknown): Task {
     value.initial_prompt === undefined
       ? ""
       : parseString(value.initial_prompt, "initial_prompt");
-  return {
+  const base: Task = {
     id: parseNonEmptyString(value.id, "id"),
     title: parseString(value.title, "title"),
     initial_prompt: initial,
     status: parseStatus(value.status),
     priority: parsePriority(value.priority),
+    checklist_inherit: parseChecklistInherit(value.checklist_inherit),
   };
+  const pid = parseOptionalParentId(value.parent_id, "parent_id");
+  if (pid !== undefined) {
+    base.parent_id = pid;
+  }
+  const rawChildren = value.children;
+  if (rawChildren !== undefined) {
+    if (!Array.isArray(rawChildren)) {
+      throw new Error("Invalid API response: children must be an array");
+    }
+    base.children = rawChildren.map((item, i) => {
+      try {
+        return parseTask(item);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Invalid API response: children[${i}]: ${msg}`);
+      }
+    });
+  }
+  return base;
+}
+
+/** Validates GET /tasks/{id}/checklist JSON. */
+export function parseTaskChecklistResponse(value: unknown): TaskChecklistResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: checklist payload must be an object");
+  }
+  const raw = value.items;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: items must be an array");
+  }
+  const items: TaskChecklistItemView[] = raw.map((row, i) => {
+    if (!isRecord(row)) {
+      throw new Error(`Invalid API response: items[${i}] must be an object`);
+    }
+    return {
+      id: parseNonEmptyString(row.id, "id"),
+      sort_order: parseFiniteNumber(row.sort_order, "sort_order"),
+      text: parseString(row.text, "text"),
+      done: row.done === true,
+    };
+  });
+  return { items };
 }

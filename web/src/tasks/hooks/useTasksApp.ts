@@ -6,6 +6,7 @@ import {
   listTasks,
   patchTask,
 } from "../../api";
+import { flattenTaskTree } from "../flattenTaskTree";
 import { TASK_LIST_PAGE_SIZE } from "../paging";
 import { taskQueryKeys } from "../queryKeys";
 import {
@@ -32,6 +33,8 @@ export function useTasksApp() {
   const [editTitle, setEditTitle] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [editPriority, setEditPriority] = useState<Priority>("medium");
+  const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
+  const [editChecklistInherit, setEditChecklistInherit] = useState(false);
 
   /** In-app delete confirmation (avoids `window.confirm`, which breaks input focus in some browsers). */
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -60,7 +63,11 @@ export function useTasksApp() {
     setTaskListPage(0);
   }, []);
 
-  const tasks = tasksQuery.data?.tasks ?? [];
+  const rootTaskTrees = tasksQuery.data?.tasks ?? [];
+  const tasks = useMemo(
+    () => flattenTaskTree(rootTaskTrees),
+    [rootTaskTrees],
+  );
   const loading = tasksQuery.isPending;
   const listRefreshing =
     tasksQuery.isFetching && !tasksQuery.isPending;
@@ -87,12 +94,14 @@ export function useTasksApp() {
       initial_prompt: string;
       status: Status;
       priority: Priority;
+      checklist_inherit: boolean;
     }) =>
       patchTask(args.id, {
         title: args.title,
         initial_prompt: args.initial_prompt,
         status: args.status,
         priority: args.priority,
+        checklist_inherit: args.checklist_inherit,
       }),
     onSuccess: async () => {
       setEditing(null);
@@ -154,6 +163,8 @@ export function useTasksApp() {
     setEditTitle(t.title);
     setEditPrompt(t.initial_prompt);
     setEditPriority(t.priority);
+    setEditStatus(t.status);
+    setEditChecklistInherit(t.checklist_inherit === true);
     setEditTitleRequiredError(null);
   }
 
@@ -174,8 +185,9 @@ export function useTasksApp() {
       id: editing.id,
       title: editTitle.trim(),
       initial_prompt: editPrompt,
-      status: editing.status,
+      status: editStatus,
       priority: editPriority,
+      checklist_inherit: editChecklistInherit,
     });
   }
 
@@ -197,16 +209,17 @@ export function useTasksApp() {
   const deletePending = deleteMutation.isPending;
 
   useEffect(() => {
-    if (!tasksQuery.isPending && tasks.length === 0 && taskListPage > 0) {
+    if (!tasksQuery.isPending && rootTaskTrees.length === 0 && taskListPage > 0) {
       setTaskListPage(0);
     }
-  }, [tasksQuery.isPending, tasks.length, taskListPage]);
+  }, [tasksQuery.isPending, rootTaskTrees.length, taskListPage]);
 
-  const hasNextTaskPage = tasks.length === TASK_LIST_PAGE_SIZE;
+  const hasNextTaskPage = rootTaskTrees.length === TASK_LIST_PAGE_SIZE;
   const hasPrevTaskPage = taskListPage > 0;
 
   return {
     tasks,
+    rootTasksOnPage: rootTaskTrees.length,
     loading,
     listRefreshing,
     saving,
@@ -230,6 +243,10 @@ export function useTasksApp() {
     setEditPrompt,
     editPriority,
     setEditPriority,
+    editStatus,
+    setEditStatus,
+    editChecklistInherit,
+    setEditChecklistInherit,
     openEdit,
     closeEdit,
     submitEdit,

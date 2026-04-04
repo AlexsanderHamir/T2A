@@ -82,6 +82,7 @@ describe("App", () => {
               initial_prompt: "",
               status: "ready",
               priority: "medium",
+              checklist_inherit: false,
             },
           ],
           limit: 200,
@@ -103,6 +104,7 @@ describe("App", () => {
             initial_prompt: "",
             status: "ready",
             priority: "medium",
+            checklist_inherit: false,
           }),
           { status: 201, headers: { "Content-Type": "application/json" } },
         );

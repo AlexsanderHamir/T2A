@@ -3,12 +3,14 @@ import {
   type Priority,
   type Status,
   type Task,
+  type TaskChecklistResponse,
   type TaskEventDetail,
   type TaskEventsResponse,
   type TaskListResponse,
 } from "@/types";
 import {
   parseTask,
+  parseTaskChecklistResponse,
   parseTaskEventDetail,
   parseTaskEventsResponse,
   parseTaskListResponse,
@@ -123,6 +125,8 @@ export async function createTask(input: {
   status?: Status;
   priority?: Priority;
   id?: string;
+  parent_id?: string;
+  checklist_inherit?: boolean;
 }): Promise<Task> {
   const res = await fetch("/tasks", {
     method: "POST",
@@ -133,6 +137,10 @@ export async function createTask(input: {
       status: input.status ?? DEFAULT_NEW_TASK_STATUS,
       priority: input.priority ?? "",
       ...(input.id ? { id: input.id } : {}),
+      ...(input.parent_id ? { parent_id: input.parent_id } : {}),
+      ...(input.checklist_inherit === true
+        ? { checklist_inherit: true }
+        : {}),
     }),
   });
   if (!res.ok) throw new Error(await readError(res));
@@ -147,6 +155,8 @@ export async function patchTask(
     initial_prompt?: string;
     status?: Status;
     priority?: Priority;
+    parent_id?: string | null;
+    checklist_inherit?: boolean;
   },
 ): Promise<Task> {
   const body: Record<string, unknown> = {};
@@ -154,6 +164,10 @@ export async function patchTask(
   if (patch.initial_prompt !== undefined) body.initial_prompt = patch.initial_prompt;
   if (patch.status !== undefined) body.status = patch.status;
   if (patch.priority !== undefined) body.priority = patch.priority;
+  if (patch.parent_id !== undefined) body.parent_id = patch.parent_id;
+  if (patch.checklist_inherit !== undefined) {
+    body.checklist_inherit = patch.checklist_inherit;
+  }
   const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: jsonHeaders,
@@ -168,5 +182,75 @@ export async function deleteTask(id: string): Promise<void> {
   const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+  if (!res.ok) throw new Error(await readError(res));
+}
+
+export async function listChecklist(
+  taskId: string,
+  options?: { signal?: AbortSignal },
+): Promise<TaskChecklistResponse> {
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/checklist`,
+    {
+      headers: { Accept: "application/json" },
+      signal: options?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskChecklistResponse(raw);
+}
+
+export async function addChecklistItem(
+  taskId: string,
+  text: string,
+  options?: { actor?: "user" | "agent" },
+): Promise<void> {
+  const headers: Record<string, string> = { ...jsonHeaders };
+  if (options?.actor === "agent") {
+    headers["X-Actor"] = "agent";
+  }
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/checklist/items`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ text }),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+}
+
+export async function patchChecklistItemDone(
+  taskId: string,
+  itemId: string,
+  done: boolean,
+  options?: { actor?: "user" | "agent" },
+): Promise<TaskChecklistResponse> {
+  const headers: Record<string, string> = { ...jsonHeaders };
+  if (options?.actor === "agent") {
+    headers["X-Actor"] = "agent";
+  }
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ done }),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskChecklistResponse(raw);
+}
+
+export async function deleteChecklistItem(
+  taskId: string,
+  itemId: string,
+): Promise<void> {
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    { method: "DELETE" },
+  );
   if (!res.ok) throw new Error(await readError(res));
 }

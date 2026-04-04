@@ -4,7 +4,7 @@ Canonical description of the optional Vite + React + TypeScript SPA. Server cont
 
 ## Scope
 
-Does: CRUD UI for `/tasks`; TanStack Query for list + mutations; `EventSource('/events')` with 400ms debounced `invalidateQueries`; `parseTaskApi` on JSON before use; TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
+Does: CRUD UI for `/tasks` (including nested subtasks in the list and on task detail); TanStack Query for list + mutations; checklist CRUD via `GET/PATCH/POST/DELETE` under `/tasks/{id}/checklist` (see DESIGN); `EventSource('/events')` with 400ms debounced `invalidateQueries`; `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
 
 Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — DESIGN, limitations).
 
@@ -59,7 +59,7 @@ flowchart LR
 
 ## React Query + SSE
 
-- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` (`tasks/paging.ts` page sizes); `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
+- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` over **root** tasks (`tasks/paging.ts` page sizes); list rows are flattened from nested `children` for the table. `taskQueryKeys.checklist(taskId)` → `GET /tasks/{id}/checklist`. `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
 - Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. `createPending` / modal `busy` show spinners during mutations without that delay.
 - SSE: each `data:` line schedules debounced invalidation → refetch list; `parseTaskApi` runs on the response.
 
