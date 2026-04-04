@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"context"
+	"log/slog"
 	"time"
 
 	"gorm.io/datatypes"
@@ -24,7 +26,12 @@ type TaskChecklistItem struct {
 	Text      string `json:"text" gorm:"not null;type:text"`
 }
 
-func (TaskChecklistItem) TableName() string { return "task_checklist_items" }
+func (TaskChecklistItem) TableName() string {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskChecklistItem.TableName")
+	}
+	return "task_checklist_items"
+}
 
 // TaskChecklistCompletion records that subject TaskID satisfied checklist item ItemID.
 type TaskChecklistCompletion struct {
@@ -34,7 +41,12 @@ type TaskChecklistCompletion struct {
 	By     Actor     `json:"by" gorm:"column:done_by;not null"`
 }
 
-func (TaskChecklistCompletion) TableName() string { return "task_checklist_completions" }
+func (TaskChecklistCompletion) TableName() string {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskChecklistCompletion.TableName")
+	}
+	return "task_checklist_completions"
+}
 
 type TaskEvent struct {
 	TaskID string    `gorm:"primaryKey;index:task_events_task_id_at,priority:1;index:task_events_task_id_type,priority:1"`
