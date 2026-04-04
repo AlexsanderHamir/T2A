@@ -180,6 +180,66 @@ describe("TaskDetailPage", () => {
     expect(stance).toHaveAttribute("data-stance", "needs-user");
   });
 
+  it("shows done criteria as read-only with progress counts", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/tc") {
+        return Response.json({
+          id: "tc",
+          title: "Checklist task",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/tc/checklist") {
+        return Response.json({
+          items: [
+            {
+              id: "i1",
+              sort_order: 0,
+              text: "First",
+              done: true,
+            },
+            {
+              id: "i2",
+              sort_order: 1,
+              text: "Second",
+              done: false,
+            },
+          ],
+        });
+      }
+      if (url.startsWith("/tasks/tc/events")) {
+        return Response.json({
+          task_id: "tc",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/tc", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^checklist task$/i }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("status", {
+        name: /checklist progress: 1 of 2 requirements satisfied/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByText("First")).toBeInTheDocument();
+    expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
   it("lists updates newest first by seq", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
@@ -233,7 +293,8 @@ describe("TaskDetailPage", () => {
       await screen.findByRole("heading", { name: /^timeline order$/i }),
     ).toBeInTheDocument();
 
-    const items = await screen.findAllByRole("listitem");
+    const timeline = await screen.findByRole("list", { name: /^updates$/i });
+    const items = within(timeline).getAllByRole("listitem");
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent(/sync_ping/i);
     expect(items[1]).toHaveTextContent(/task_created/i);

@@ -221,6 +221,7 @@ export async function addChecklistItem(
   if (!res.ok) throw new Error(await readError(res));
 }
 
+/** Agent integrations only: the API rejects this call unless `actor: "agent"` (X-Actor header). */
 export async function patchChecklistItemDone(
   taskId: string,
   itemId: string,

@@ -1610,12 +1610,19 @@ th {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-top: 1rem;
+  margin-top: 1.1rem;
   margin-bottom: 0;
 }
 
+/* Avoid a heavy horizontal rule sitting directly under the action row (spacing + no top border on next section). */
+.task-detail-actions + .task-detail-section {
+  border-top: none;
+  padding-top: 1.5rem;
+}
+
+/* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
 .task-detail-btn-edit {
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -1623,17 +1630,16 @@ th {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset;
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .task-detail-btn-edit:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 14%);
+  border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset,
-    0 1px 3px rgb(var(--slate-shadow) / 6%);
+  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
 .task-detail-btn-edit:focus-visible {
@@ -1643,23 +1649,21 @@ th {
 }
 
 .task-detail-btn-delete {
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
   color: #fff;
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   border: 1px solid rgb(159 18 57 / 35%);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 12%) inset,
-    0 1px 2px rgb(180 30 30 / 18%);
+  box-shadow: 0 1px 2px rgb(180 30 30 / 15%);
   transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
 
 .task-detail-btn-delete:not(:disabled):hover {
   filter: brightness(1.04);
   transform: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 14%) inset,
-    0 2px 6px rgb(180 30 30 / 22%);
+  box-shadow: 0 2px 8px rgb(180 30 30 / 20%);
 }
 
 .task-detail-btn-delete:focus-visible {
@@ -1714,8 +1718,22 @@ th {
   margin-bottom: 0;
 }
 
-.task-detail-add-subtask-btn {
-  border-radius: 6px;
+.task-detail-checklist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-detail-checklist-head .task-detail-section-heading {
+  margin-bottom: 0;
+}
+
+.task-detail-add-subtask-btn,
+.task-detail-add-checklist-btn {
+  border-radius: 10px;
   padding: 0.45rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -1723,27 +1741,29 @@ th {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset;
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.task-detail-add-subtask-btn:not(:disabled):hover {
+.task-detail-add-subtask-btn:not(:disabled):hover,
+.task-detail-add-checklist-btn:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 14%);
+  border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset,
-    0 1px 3px rgb(var(--slate-shadow) / 6%);
+  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
-.task-detail-add-subtask-btn:focus-visible {
+.task-detail-add-subtask-btn:focus-visible,
+.task-detail-add-checklist-btn:focus-visible {
   outline: none;
   border-color: rgb(79 70 229 / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
-.task-detail-add-subtask-btn:disabled {
+.task-detail-add-subtask-btn:disabled,
+.task-detail-add-checklist-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -1820,24 +1840,23 @@ th {
 }
 
 .task-detail-checklist-add-btn {
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 0.5rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset;
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .task-detail-checklist-add-btn:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 14%);
+  border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset,
-    0 1px 3px rgb(var(--slate-shadow) / 6%);
+  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
 .task-detail-checklist-add-btn:focus-visible {
@@ -1925,43 +1944,253 @@ th {
   margin-top: 0.2rem;
 }
 
-.task-subtasks-tree {
-  margin: 0.25rem 0 0.75rem;
-  padding-left: 1.25rem;
+.task-subtasks-empty {
+  max-width: 32rem;
+  line-height: 1.5;
 }
 
-.task-subtasks-tree.nested {
-  margin-top: 0.35rem;
-  margin-bottom: 0;
+.task-subtasks-empty-accent {
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
-.task-checklist-add-form {
+.task-subtasks-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.task-subtasks-list--nested {
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid rgb(var(--slate-shadow) / 8%);
+  gap: 0.4rem;
+}
+
+.task-subtasks-item {
+  margin: 0;
+}
+
+.task-subtasks-item-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem 0.75rem;
-  align-items: flex-end;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.task-subtasks-item-row:hover {
+  border-color: rgb(var(--slate-shadow) / 12%);
+  box-shadow: 0 2px 8px rgb(var(--slate-shadow) / 5%);
+}
+
+.task-subtasks-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.task-subtasks-link:hover {
+  color: var(--link);
+}
+
+.task-subtasks-link:focus-visible {
+  outline: none;
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.task-subtasks-status {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--text-tertiary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(var(--slate-shadow) / 5%);
 }
 
 .task-checklist-list {
   list-style: none;
-  margin: 0 0 0.75rem;
+  margin: 0;
   padding: 0;
 }
 
-.task-checklist-row {
+.task-checklist-intro {
+  margin: 0 0 0.85rem;
+  max-width: 40rem;
+}
+
+.task-checklist-intro-lead {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.task-checklist-intro-lead strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.task-checklist-progress {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.task-checklist-progress-strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-checklist-surface {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  overflow: hidden;
+}
+
+.task-checklist-surface-pad {
+  margin: 0;
+  padding: 0.85rem 1rem;
+}
+
+.task-checklist-list--grouped {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-elevated);
+}
+
+.task-checklist-list--grouped.task-checklist-list--empty .task-checklist-empty-row {
+  border-bottom: none;
+}
+
+.task-checklist-empty-row {
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+}
+
+.task-checklist-list--grouped .task-checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border-hairline);
+  margin: 0;
+}
+
+.task-checklist-list--grouped .task-checklist-row:last-child {
+  border-bottom: none;
+}
+
+.task-checklist-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.task-checklist-status {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.18rem;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  box-sizing: border-box;
+  border: 2px solid rgb(var(--slate-shadow) / 22%);
+  color: transparent;
+  user-select: none;
+}
+
+.task-checklist-status--pending {
+  background: var(--bg-elevated);
+}
+
+.task-checklist-status--done {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
+.task-checklist-text {
+  color: var(--text-primary);
+}
+
+/* Plain text label in create/compose checklist rows (not the detail read-only row). */
+.task-checklist-label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.task-checklist-empty-cta {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.task-checklist-criterion-modal-sheet h2 {
+  margin-bottom: 0.35rem;
+}
+
+.task-checklist-criterion-modal-lead {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  max-width: 28rem;
+}
+
+.task-checklist-criterion-modal-actions {
+  margin-top: 0.35rem;
+  justify-content: flex-end;
+}
+
+.task-subtask-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-width: 28rem;
+}
+
+/* Checklist lists outside the task detail grouped surface (create flow, compose). */
+.task-checklist-list:not(.task-checklist-list--grouped) {
+  margin-bottom: 0.75rem;
+}
+
+.task-checklist-list:not(.task-checklist-list--grouped) .task-checklist-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--border-hairline);
-}
-
-.task-checklist-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
 }
 
 .btn-inline {
@@ -1991,54 +2220,6 @@ th {
 
 .checkbox-label input {
   margin-top: 0.2rem;
-}
-
-.task-subtasks-tree {
-  margin: 0.25rem 0 0.75rem;
-  padding-left: 1.25rem;
-}
-
-.task-subtasks-tree.nested {
-  margin-top: 0.35rem;
-  margin-bottom: 0;
-}
-
-.task-subtask-add-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  max-width: 28rem;
-}
-
-.task-checklist-list {
-  list-style: none;
-  margin: 0 0 0.75rem;
-  padding: 0;
-}
-
-.task-checklist-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.35rem 0;
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.task-checklist-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.btn-inline {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
-}
-
-.modal-sheet .checkbox-field {
-  margin-bottom: 0.5rem;
 }
 
 .task-detail-subheading {

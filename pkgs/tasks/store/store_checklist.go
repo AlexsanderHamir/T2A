@@ -212,10 +212,14 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string) 
 }
 
 // SetChecklistItemDone sets or clears completion for subjectTaskID on an item from its definition source.
+// Only [domain.ActorAgent] may change completion; the human user records criteria (POST) but does not toggle done.
 func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
 	if err := validateActor(by); err != nil {
 		return err
+	}
+	if by != domain.ActorAgent {
+		return fmt.Errorf("%w: only the agent may mark checklist items done or undone", domain.ErrInvalidInput)
 	}
 	subjectTaskID = strings.TrimSpace(subjectTaskID)
 	itemID = strings.TrimSpace(itemID)

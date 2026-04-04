@@ -14,9 +14,9 @@ import {
   getTask,
   listChecklist,
   listTaskEvents,
-  patchChecklistItemDone,
 } from "@/api";
 import type { Priority, Task } from "@/types";
+import { ChecklistCriterionModal } from "../components/ChecklistCriterionModal";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { TaskPager } from "../components/TaskPager";
 import { promptHasVisibleContent } from "../promptFormat";
@@ -42,20 +42,30 @@ function SubtaskTree({
   if (!nodes.length) {
     if (nested) return null;
     return (
-      <p className="muted" id="task-subtasks-empty">
-        No subtasks yet.
+      <p className="muted task-subtasks-empty" id="task-subtasks-empty">
+        No subtasks yet. Use{" "}
+        <span className="task-subtasks-empty-accent">Add subtask</span> to break work into
+        smaller steps.
       </p>
     );
   }
   return (
     <ul
-      className={nested ? "task-subtasks-tree nested" : "task-subtasks-tree"}
+      className={
+        nested
+          ? "task-subtasks-list task-subtasks-list--nested"
+          : "task-subtasks-list"
+      }
       aria-labelledby={nested ? undefined : "task-subtasks-heading"}
     >
       {nodes.map((c) => (
-        <li key={c.id}>
-          <Link to={`/tasks/${c.id}`}>{c.title}</Link>
-          <span className="muted"> ({c.status})</span>
+        <li key={c.id} className="task-subtasks-item">
+          <div className="task-subtasks-item-row">
+            <Link className="task-subtasks-link" to={`/tasks/${c.id}`}>
+              {c.title}
+            </Link>
+            <span className="task-subtasks-status">{c.status}</span>
+          </div>
           <SubtaskTree nodes={c.children ?? []} nested />
         </li>
       ))}
@@ -77,6 +87,7 @@ export function TaskDetailPage({ app }: Props) {
   );
   const [subtaskInherit, setSubtaskInherit] = useState(false);
   const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState("");
 
   const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({
@@ -110,9 +121,21 @@ export function TaskDetailPage({ app }: Props) {
     setSubtaskModalOpen(true);
   }, [resetSubtaskForm]);
 
+  const closeChecklistModal = useCallback(() => {
+    setChecklistModalOpen(false);
+    setNewChecklistText("");
+  }, []);
+
+  const openChecklistModal = useCallback(() => {
+    setNewChecklistText("");
+    setChecklistModalOpen(true);
+  }, []);
+
   useEffect(() => {
     setSubtaskModalOpen(false);
     resetSubtaskForm();
+    setChecklistModalOpen(false);
+    setNewChecklistText("");
   }, [taskId, resetSubtaskForm]);
 
   const taskQuery = useQuery({
@@ -201,21 +224,11 @@ export function TaskDetailPage({ app }: Props) {
     ],
   );
 
-  const toggleChecklistMutation = useMutation({
-    mutationFn: (args: { itemId: string; done: boolean }) =>
-      patchChecklistItemDone(taskId, args.itemId, args.done),
-    onSuccess: (data) => {
-      queryClient.setQueryData(taskQueryKeys.checklist(taskId), data);
-      void queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.listRoot(),
-      });
-    },
-  });
-
   const addChecklistMutation = useMutation({
     mutationFn: (text: string) => addChecklistItem(taskId, text),
     onSuccess: async () => {
       setNewChecklistText("");
+      setChecklistModalOpen(false);
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.checklist(taskId),
       });
@@ -224,6 +237,16 @@ export function TaskDetailPage({ app }: Props) {
       });
     },
   });
+
+  const submitNewChecklistCriterion = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      const t = newChecklistText.trim();
+      if (!t || addChecklistMutation.isPending) return;
+      addChecklistMutation.mutate(t);
+    },
+    [newChecklistText, addChecklistMutation.mutate, addChecklistMutation.isPending],
+  );
 
   const deleteChecklistMutation = useMutation({
     mutationFn: (itemId: string) => deleteChecklistItem(taskId, itemId),
@@ -298,6 +321,9 @@ export function TaskDetailPage({ app }: Props) {
   }
 
   const task = taskQuery.data;
+  const checklistItems = checklistQuery.data?.items ?? [];
+  const checklistDoneCount = checklistItems.filter((i) => i.done).length;
+  const checklistTotal = checklistItems.length;
   const events = eventsQuery.data?.events ?? [];
   const eventsTotal = eventsQuery.data?.total ?? 0;
   const attention = userAttention(task, {
@@ -420,91 +446,127 @@ export function TaskDetailPage({ app }: Props) {
       </div>
 
       <div className="task-detail-section" id="task-detail-checklist">
-        <h3 className="task-detail-section-heading" id="task-checklist-heading">
-          Done criteria
-        </h3>
-        {!task.checklist_inherit ? (
-          <p className="task-detail-section-hint">
-            Every item must be complete before you can mark this task done.
-          </p>
-        ) : null}
-        {task.checklist_inherit ? (
-          <p className="muted" role="status">
-            This task inherits checklist items from an ancestor. Complete them
-            here for this task; definitions are owned upstream.
-          </p>
-        ) : null}
-        {checklistQuery.isError ? (
-          <p className="err-inline" role="alert">
-            {checklistQuery.error instanceof Error
-              ? checklistQuery.error.message
-              : "Could not load checklist."}
-          </p>
-        ) : checklistQuery.isPending ? (
-          <p className="muted">Loading checklist…</p>
-        ) : (
-          <ul
-            className="task-checklist-list"
-            aria-labelledby="task-checklist-heading"
-          >
-            {checklistQuery.data?.items.map((item) => (
-              <li key={item.id} className="task-checklist-row">
-                <label className="task-checklist-label">
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    disabled={toggleChecklistMutation.isPending}
-                    onChange={(ev) => {
-                      toggleChecklistMutation.mutate({
-                        itemId: item.id,
-                        done: ev.target.checked,
-                      });
-                    }}
-                  />
-                  <span>{item.text}</span>
-                </label>
-                {!task.checklist_inherit ? (
-                  <button
-                    type="button"
-                    className="task-detail-checklist-remove"
-                    disabled={deleteChecklistMutation.isPending}
-                    onClick={() => deleteChecklistMutation.mutate(item.id)}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-        {!task.checklist_inherit ? (
-          <form
-            className="task-checklist-add-form"
-            onSubmit={(e: FormEvent) => {
-              e.preventDefault();
-              const t = newChecklistText.trim();
-              if (!t || addChecklistMutation.isPending) return;
-              addChecklistMutation.mutate(t);
-            }}
-          >
-            <div className="field grow">
-              <label htmlFor="task-new-checklist">Add criterion</label>
-              <input
-                id="task-new-checklist"
-                value={newChecklistText}
-                onChange={(ev) => setNewChecklistText(ev.target.value)}
-                placeholder="Describe what must be true to mark done"
-                disabled={addChecklistMutation.isPending}
-              />
-            </div>
+        <div className="task-detail-checklist-head">
+          <h3 className="task-detail-section-heading" id="task-checklist-heading">
+            Done criteria
+          </h3>
+          {!task.checklist_inherit ? (
             <button
-              type="submit"
-              className="task-detail-checklist-add-btn"
-              disabled={!newChecklistText.trim() || addChecklistMutation.isPending}
+              type="button"
+              className="task-detail-add-checklist-btn"
+              onClick={openChecklistModal}
+              disabled={app.saving}
             >
-              Add
+              Add criterion
             </button>
-          </form>
+          ) : null}
+        </div>
+        <div className="task-checklist-intro">
+          {!task.checklist_inherit ? (
+            <p className="task-checklist-intro-lead">
+              List what must be true before this task can be marked done. An
+              agent marks each item satisfied as they finish the work; you can
+              track progress below. The task cannot be marked done until every
+              item is complete.
+            </p>
+          ) : (
+            <p className="task-checklist-intro-lead muted" role="status">
+              Inherited from an ancestor — the agent completes these for{" "}
+              <strong>this</strong> task; wording is owned upstream.
+            </p>
+          )}
+          {!checklistQuery.isPending &&
+          !checklistQuery.isError &&
+          checklistTotal > 0 ? (
+            <p
+              className="task-checklist-progress muted"
+              role="status"
+              aria-label={
+                checklistTotal === 1
+                  ? `Checklist progress: ${checklistDoneCount} of 1 requirement satisfied`
+                  : `Checklist progress: ${checklistDoneCount} of ${checklistTotal} requirements satisfied`
+              }
+            >
+              <strong className="task-checklist-progress-strong">
+                {checklistDoneCount} of {checklistTotal}
+              </strong>{" "}
+              {checklistTotal === 1
+                ? "requirement satisfied"
+                : "requirements satisfied"}
+            </p>
+          ) : null}
+        </div>
+        <div
+          className="task-checklist-surface"
+          aria-labelledby="task-checklist-heading"
+        >
+          {checklistQuery.isError ? (
+            <p className="err-inline task-checklist-surface-pad" role="alert">
+              {checklistQuery.error instanceof Error
+                ? checklistQuery.error.message
+                : "Could not load checklist."}
+            </p>
+          ) : checklistQuery.isPending ? (
+            <p className="muted task-checklist-surface-pad">Loading checklist…</p>
+          ) : (
+            <ul
+              className={
+                (checklistQuery.data?.items.length ?? 0) > 0
+                  ? "task-checklist-list task-checklist-list--grouped"
+                  : "task-checklist-list task-checklist-list--grouped task-checklist-list--empty"
+              }
+            >
+              {(checklistQuery.data?.items.length ?? 0) === 0 ? (
+                <li className="task-checklist-empty-row">
+                  <span className="muted">
+                    No criteria yet. Use{" "}
+                    <strong className="task-checklist-empty-cta">Add criterion</strong>{" "}
+                    to add one.
+                  </span>
+                </li>
+              ) : null}
+              {checklistQuery.data?.items.map((item) => (
+                <li key={item.id} className="task-checklist-row">
+                  <div className="task-checklist-row-main">
+                    <span
+                      className={
+                        item.done
+                          ? "task-checklist-status task-checklist-status--done"
+                          : "task-checklist-status task-checklist-status--pending"
+                      }
+                      role="img"
+                      aria-label={
+                        item.done ? "Satisfied" : "Not satisfied yet"
+                      }
+                    >
+                      {item.done ? "✓" : null}
+                    </span>
+                    <span className="task-checklist-text">{item.text}</span>
+                  </div>
+                  {!task.checklist_inherit ? (
+                    <button
+                      type="button"
+                      className="task-detail-checklist-remove"
+                      disabled={deleteChecklistMutation.isPending}
+                      onClick={() => deleteChecklistMutation.mutate(item.id)}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {checklistModalOpen && !task.checklist_inherit ? (
+          <ChecklistCriterionModal
+            pending={addChecklistMutation.isPending}
+            saving={app.saving}
+            onClose={closeChecklistModal}
+            text={newChecklistText}
+            onTextChange={setNewChecklistText}
+            onSubmit={submitNewChecklistCriterion}
+          />
         ) : null}
       </div>
 
