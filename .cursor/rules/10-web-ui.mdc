@@ -38,9 +38,12 @@ Do not introduce **Enzyme**. Do not rely on snapshot-only tests as the primary t
 
 When adding or modifying **UI in `web/src`** or **client-side logic** such as **`api.ts`**:
 
-1. Run **`npm test`** from **`web/`** and ensure it passes.
-2. Add or update tests that would fail on regression.
-3. For significant changes affecting types, imports, or bundling, also run **`npm run build`**.
+1. **TDD (default):** For a **bug**, add or change a Vitest/Testing Library test that **fails** first, then fix code until green. For a **feature**, add tests that encode the new UX or API-client behavior and **run expecting failure**, then implement.
+2. Run **`npm test`** from **`web/`** and ensure it passes.
+3. Add or update tests that would fail on regression (if not already done in step 1).
+4. For significant changes affecting types, imports, or bundling, also run **`npm run build`**.
+
+Pure styling/copy tweaks with no behavior change: run existing tests; new tests optional unless they lock something fragile.
 
 A change is not complete if behavior changed but tests were not updated, unless a short justification is added explaining why no test is appropriate.
 

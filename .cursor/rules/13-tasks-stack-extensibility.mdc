@@ -1,9 +1,9 @@
 ---
 description: >-
   Tasks API vertical slice only: domain → store → handler → taskapi → web
-  types/api/tasks UI. Auto-attached to pkgs/tasks Go, web/src TS/TSX, and
-  docs/DESIGN.md. Complements 11-api-contracts.
-globs: pkgs/tasks/**/*.go, web/src/**/*.ts, web/src/**/*.tsx, docs/DESIGN.md
+  types/api/tasks UI. Auto-attached to pkgs/tasks Go, cmd/taskapi, web/src
+  TS/TSX, and docs/DESIGN.md. Complements 11-api-contracts.
+globs: pkgs/tasks/**/*.go, cmd/taskapi/**/*.go, web/src/**/*.ts, web/src/**/*.tsx, docs/DESIGN.md
 alwaysApply: false
 ---
 

@@ -1,7 +1,8 @@
 ---
 description: >-
   Execute a full Cursor rules pass when referenced: apply 01–07, 09, 10 by scope,
-  verify with scripts/check or equivalent, then 08 (commit + push) when appropriate.
+  plus 11–15 when applicable; verify with scripts/check or equivalent (skip Go/npm
+  for docs-and-rules-only); then 08 (commit + push) when appropriate.
 alwaysApply: false
 ---
 
@@ -9,41 +10,51 @@ alwaysApply: false
 
 When this file is referenced, run a **structured pass** against **`.cursor/rules/`** (numeric order), then **verify**, then **commit/push** only when the user’s intent allows it.
 
+## Default scope (deterministic)
+
+1. If the user names a scope, use it.
+2. Otherwise **default to full repo** (same row as **Full repo** below).
+3. Narrow only when **all** touched paths fit a narrower row (e.g. only `*.go` / `go.mod` / `go.sum` → **Backend / Go only**; only `web/src/**`, `web/package.json`, `web/vite.config.ts`, `web/tsconfig*.json`, `web/index.html` → **Frontend / `web/` only**).
+4. **Docs-and-rules-only** applies when **every** changed path either ends with **`.md`** or matches **`.cursor/rules/**/*.mdc`**. Then use that row for **verification**; still apply **`12-documentation-style`** when editing root or `docs/*.md` prose.
+
+If scope is **ambiguous** (e.g. user says “small fix” but edits span Go and web), ask **once** for: full vs Go-only vs web-only, frontend-then-backend or not, commit/push or audit-only.
+
 ## Scope (infer from the user)
 
 | User intent | Apply | Skip or lighten |
 |-------------|--------|-------------------|
-| **Full repo** (default) | **`01` → `07`**, **`11-api-contracts`**, **`13-tasks-stack-extensibility`** (tasks API / `pkgs/tasks` / related `web/src` + `DESIGN.md`), **`14-repo-workspace-extensibility`** (`REPO_ROOT` / `pkgs/repo` / `/repo` / mention extensions), **`09`** (both files), **`10`** | — |
+| **Full repo** (default) | **`01` → `07`**, **`11-api-contracts`**, **`13-tasks-stack-extensibility`** (tasks API / `pkgs/tasks` / related `web/src` + `DESIGN.md`), **`14-repo-workspace-extensibility`** (`REPO_ROOT` / `pkgs/repo` / `/repo` / mention extensions), **`15-database-schema`** when domain models / postgres / `dbcheck` / SQLite test schema change, **`09`** (both files), **`10`** | — |
+| **Docs-and-rules-only** | **`12-documentation-style`** when editing root or `docs/*.md` prose; light **`09-security-baseline`** (no secrets in examples) | **Skip:** **`01`–`07`**, **`10`**, **`11`**, **`13`**, **`14`**, **`15`** — by definition the diff is only **`.md`** files and **`.cursor/rules/**/*.mdc`**, so no Go or `web/src` paths changed. **Verification:** none of `go vet`, `go test`, `npm test`, or `npm run build`. |
 | **Frontend then backend** (explicit user order) | **`10`**, **`09-local`**, **`09-security`**, then **`01` → `07`**, **`11`**, **`13-tasks-stack-extensibility`** / **`14-repo-workspace-extensibility`** if the matching stack changed, **`09`** | Same verification step at the end |
-| **Backend / Go only** | **`01` → `07`**, **`11`**, **`13-tasks-stack-extensibility`** (tasks API / store), **`14-repo-workspace-extensibility`** (when changing `pkgs/repo` or `/repo` handlers), **`09`** | **`10-web-ui`** unless `web/` was touched |
+| **Backend / Go only** | **`01` → `07`**, **`11`**, **`13-tasks-stack-extensibility`** (tasks API / store), **`14-repo-workspace-extensibility`** (when changing `pkgs/repo` or `/repo` handlers), **`15-database-schema`** when schema-related Go changes, **`09`** | **`10-web-ui`** unless `web/` was touched |
 | **Frontend / `web/` only** | **`10`**, **`09-local-verification`** (and **`09-security`** for secrets in client config) | Deep **`01`–`07`** / **`11`** on Go only if Go files changed |
 | **Audit / review, no commit** | Read and fix per rules; **do not** run **`08`** | Say explicitly: “audit-only; no commit.” |
-
-If unclear, ask once: **full repo** vs **Go-only** vs **web-only**, **frontend-then-backend** vs default order, and whether to **commit and push** at the end.
 
 ## Phases
 
 1. **Orient** — Skim **`AGENTS.md`** (repo map, commands). List **`.cursor/rules/`**, sort by numeric prefix, skip **`00-*`** when *applying* (this file is the playbook, not a style rule).
-2. **Substantive rules** — In order **`01` → `07`**, then **`11-api-contracts`** (read the checklist when changing HTTP/SSE/JSON boundaries; on a full pass, skim to avoid drift), then **`13-tasks-stack-extensibility`** when changing the tasks stack (routes, store, domain, audit/SSE, or task UI that hits the API; skip for trivial fixes), then **`14-repo-workspace-extensibility`** when changing the workspace repo slice (`pkgs/repo`, `/repo/*`, `web/src/api/repo.ts`, mention extensions, or `REPO_ROOT` docs; skip for trivial fixes). Then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. When editing root or `docs/*.md` prose, also apply **`12-documentation-style`**. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit). **`99-repo-primer`** is always-on context only, not a separate pass step.
-3. **Verify** — Once fixes for this pass are done, run the **full bar** once:
-   - **`scripts/check.ps1`** (Windows) or **`scripts/check.sh`** (Unix) from repo root, **or** the equivalent: **`gofmt`** check / **`go fmt`**, **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`** (see **`09-local-verification.mdc`**).
+2. **Test-first (when implementing or fixing behavior)** — Follow **`06-testing.mdc`** (Go) and **`10-web-ui.mdc`** (`web/`): **red** (failing test) → **green** (minimal fix) → **refactor**. Skip for **docs-and-rules-only** and for purely non-behavior edits (see **`06-testing.mdc`** table).
+3. **Substantive rules** — In order **`01` → `07`**, then **`11-api-contracts`** (read the checklist when changing HTTP/SSE/JSON boundaries; on a full pass, skim to avoid drift), then **`13-tasks-stack-extensibility`** when changing the tasks stack (routes, store, domain, audit/SSE, or task UI that hits the API; skip for trivial fixes), then **`14-repo-workspace-extensibility`** when changing the workspace repo slice (`pkgs/repo`, `/repo/*`, `web/src/api/repo.ts`, mention extensions, or `REPO_ROOT` docs; skip for trivial fixes), then **`15-database-schema`** when changing GORM models, `pkgs/tasks/postgres`, SQLite test schema, or `cmd/dbcheck` migrate behavior. Then **`09-security-baseline`** (light scan: secrets, unsafe logs), then **`09-local-verification`** (reminder: **`gofmt`**, **`go vet`**, tests), then **`10`** when `web/` is in scope. When editing root or `docs/*.md` prose, also apply **`12-documentation-style`**. For each: read → inspect → fix → run **targeted** tests for what you changed (do not run the full bar after every single edit). **`99-repo-primer`** is always-on context only, not a separate pass step. **Docs-and-rules-only** scope: skip **`01`–`07`**, **`10`**, **`11`**, **`13`**, **`14`**, **`15`**; run **`12`** (when editing root or `docs/*.md` prose) and light **`09-security-baseline`** only.
+4. **Verify** — Once fixes for this pass are done:
+   - **Docs-and-rules-only** scope: **no** `go vet`, `go test`, or `web/` npm steps (confirm every path is `.md` or `.cursor/rules/**/*.mdc`).
+   - **Otherwise** run the **full bar** once: **`scripts/check.ps1`** (Windows) or **`scripts/check.sh`** (Unix) from repo root, **or** the equivalent: **`gofmt`** check / **`go fmt`**, **`go vet ./...`**, **`go test ./... -count=1`**, and (if `web/` changed) **`npm test`** + **`npm run build`** in **`web/`** (see **`09-local-verification.mdc`**).
    - **Recommended:** for meaningful behavior changes under **`pkgs/`** / **`internal/`**, run scoped coverage per **`06-testing.mdc`** and close obvious gaps (or note why not).
-4. **Publish (rule `08`)** — Only if there are changes to commit **and** the user did not ask for audit-only:
+5. **Publish (rule `08`)** — Only if there are changes to commit **and** the user did not ask for audit-only:
    - Apply **`08-atomic-commits`**: atomic commits, then **`git push`** (or set upstream), unless push is impossible—report outcome.
-5. **Nothing to do** — If the tree is clean and no rule required edits, say so briefly (no fake commits).
+6. **Nothing to do** — If the tree is clean and no rule required edits, say so briefly (no fake commits).
 
 ## Constraints
 
 - Do not skip substantive rules unless **clearly not applicable** to the chosen scope.
 - Do not move on with **failing** verification (`go vet`, `go test`, or `web/` build when in scope).
 - **Batch commits at the end** of the pass per **`08`**; do not mix unrelated concerns in one commit.
-- **Contradiction guard:** “Do not commit before the end” means **do not commit mid-pass** while applying substantive rules (**`01`–`07`**, **`11`**, **`13-tasks-stack-extensibility`**, **`14-repo-workspace-extensibility`**, **`09`**, **`10`**, **`12`** as applicable); the **end** of the pass is after verification, when **`08`** applies—unless the user chose **audit-only**.
+- **Contradiction guard:** “Do not commit before the end” means **do not commit mid-pass** while applying substantive rules (**`01`–`07`**, **`11`**, **`13-tasks-stack-extensibility`**, **`14-repo-workspace-extensibility`**, **`15-database-schema`**, **`09`**, **`10`**, **`12`** as applicable); the **end** of the pass is after verification, when **`08`** applies—unless the user chose **audit-only**.
 
 ## Completion report (brief)
 
 When finishing, state:
 
-- **Scope** used (full / Go / web / audit-only).
+- **Scope** used (full / Go / web / docs-and-rules-only / audit-only).
 - **Rules** that drove changes (by number or name).
 - **Verification** command(s) run and pass/fail.
 - **Commits / push**: hashes or branch update, or “none (clean / audit-only).”

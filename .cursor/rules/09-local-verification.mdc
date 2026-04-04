@@ -35,7 +35,8 @@ Use this when you want the same bar as a full pass without typing each step.
 ## When something is intentionally skipped
 
 - **Integration / Docker / real Postgres** — only behind **`//go:build integration`**; never required for default **`go test ./...`** (see **`06-testing.mdc`**).
-- **Web build** — if the change is docs-only or Go-only with **no** `web/` edits, you do not need **`npm run build`**.
+- **Web build** — if the change is Go-only with **no** `web/` edits, you do not need **`npm run build`**.
+- **Docs-and-rules-only** — If **every** file you changed ends with **`.md`** or is under **`.cursor/rules/`** with extension **`.mdc`**, you do **not** run **`go fmt`**, **`go vet`**, **`go test`**, **`npm test`**, or **`npm run build`**. If **any** path is **`*.go`**, **`web/src/**`**, **`web/package.json`**, **`web/vite.config.ts`**, **`web/tsconfig*.json`**, **`web/index.html`**, **`go.mod`**, or **`go.sum`**, use the full verification list above instead. See **`00-full-rules-pass.mdc`** (docs-and-rules-only scope).
 
 ## Checklist
 

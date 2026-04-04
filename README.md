@@ -4,7 +4,7 @@ T2A delegates many tasks to agents while keeping humans and automation aligned: 
 
 Go module: `github.com/AlexsanderHamir/T2A`.
 
-Documentation: [docs/README.md](docs/README.md) (what to read first) · [docs/DESIGN.md](docs/DESIGN.md) (`taskapi`, HTTP, SSE, DB) · [docs/WEB.md](docs/WEB.md) (optional `web/` SPA) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). AI and contributor map: [AGENTS.md](AGENTS.md).
+Documentation: [docs/README.md](docs/README.md) (what to read first) · [docs/DESIGN.md](docs/DESIGN.md) (`taskapi`, HTTP, SSE, DB) · [docs/WEB.md](docs/WEB.md) (optional `web/` SPA) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). AI and contributor map: [AGENTS.md](AGENTS.md). Large Cursor-assisted edits: @-mention `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING.md).
 
 ## Prerequisites
 

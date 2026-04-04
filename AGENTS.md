@@ -12,7 +12,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 4 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 5 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |
 
-Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-tasks-stack-extensibility` (tasks API layering), `14-repo-workspace-extensibility` (`REPO_ROOT` / `/repo` / `pkgs/repo`), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. `00-full-rules-pass.mdc` defines scope (full repo vs Go-only vs web-only vs frontend-then-backend vs audit-only), phases, and the completion report. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
+Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/JSON sync), `13-tasks-stack-extensibility` (tasks API layering), `14-repo-workspace-extensibility` (`REPO_ROOT` / `/repo` / `pkgs/repo`), `15-database-schema` (GORM models / migrate path), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. **`00-full-rules-pass.mdc`** defines scope (default **full repo** unless paths or user intent narrow it; **docs-and-rules-only** skips Go/npm checks), phases, and the completion report—**@-mention that file in Cursor** for large or cross-cutting agent work so the structured pass runs. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. Test failure triage: `docs/TROUBLESHOOTING.md` (**Local checks and agent test failures**). CI runs `scripts/check.sh` on push/PR (`.github/workflows/ci.yml`).
 
 ## Repository map
 
@@ -39,6 +39,8 @@ API contracts (paths, query params, JSON shapes) are authoritative in `docs/DESI
 | Coverage / quality (Go libs) | See `.cursor/rules/06-testing.mdc` (`coverprofile` on `pkgs/...` `internal/...`) |
 
 Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see `06-testing.mdc` and `10-web-ui.mdc`).
+
+**TDD default for agents:** For bugs and features, add or adjust a **failing** test first, then implement until green (`06-testing.mdc` for Go, `10-web-ui.mdc` for `web/`). See `00-full-rules-pass.mdc` phase **2** when running a full pass.
 
 ## Conventions worth remembering
 

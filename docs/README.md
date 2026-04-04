@@ -21,6 +21,7 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 |--------|--------|
 | Flags, env, `taskapi` routes or timeouts | `docs/DESIGN.md` + relevant `doc.go`; root `README` only if command-line examples change. |
 | New tasks API behavior (domain / store / handler / web) | `docs/DESIGN.md` (Extensibility) + `.cursor/rules/13-tasks-stack-extensibility.mdc`; contract changes also `11-api-contracts`. |
+| Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/DESIGN.md` (persistence) + `.cursor/rules/15-database-schema.mdc`. |
 | `REPO_ROOT`, `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/DESIGN.md` (Optional workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; contract changes also `11-api-contracts`. |
 | `web/` only (components, hooks, no API contract change) | `docs/WEB.md`; root `README` only if npm scripts or env vars for Vite change. |
 | `dbcheck` | Root `README` + `cmd/dbcheck` doc if flags change. |

@@ -1,0 +1,27 @@
+---
+description: >-
+  GORM task schema: domain models, postgres open/migrate, dbcheck -migrate,
+  SQLite test schema. Keep DESIGN persistence in sync.
+globs: pkgs/tasks/domain/**/*.go, pkgs/tasks/postgres/**/*.go, pkgs/tasks/internal/testdb/**/*.go, cmd/dbcheck/**/*.go, docs/DESIGN.md
+alwaysApply: false
+---
+
+# Database schema (GORM AutoMigrate)
+
+**Scope:** Task tables and columns implied by **`pkgs/tasks/domain`** models, **`pkgs/tasks/postgres`** (open + migrate), **`pkgs/tasks/internal/testdb`** (SQLite for default tests), and **`cmd/dbcheck`** (`-migrate`). This repo does not use checked-in SQL migration files; schema changes flow through GORM models + AutoMigrate.
+
+**When to apply:** Add/change/remove fields on persisted task types, indexes, or migration entrypoints (`taskapi` startup migrate, `dbcheck -migrate`).
+
+## Checklist
+
+1. **`pkgs/tasks/domain`** — Model tags and types match intended Postgres and SQLite behavior; avoid breaking existing deployments without a deliberate plan (renames/column drops may need operational notes in **`docs/DESIGN.md`**).
+2. **`pkgs/tasks/postgres`** — `AutoMigrate` still covers all models that production uses; errors are surfaced clearly.
+3. **`pkgs/tasks/internal/testdb`** — In-memory SQLite tests reflect the same schema expectations as production models (or document intentional differences).
+4. **`docs/DESIGN.md`** — Persistence / limitations sections mention new columns, constraints, or operational steps if operators must act.
+5. **Tests** — Extend store or cross-component tests when behavior or constraints change; default **`go test ./...`** stays free of real Postgres (see **`06-testing.mdc`**).
+6. **API / JSON** — If persisted fields are exposed on REST or SSE, also follow **`11-api-contracts.mdc`** and **`13-tasks-stack-extensibility.mdc`**.
+
+## Avoid
+
+- Relying on real **`DATABASE_URL`** in default unit tests.
+- Changing schema without considering existing rows (nullability, defaults, destructive renames).

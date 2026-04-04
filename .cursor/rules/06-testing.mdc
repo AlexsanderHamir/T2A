@@ -1,14 +1,26 @@
 ---
 description: >-
-  Go testing standard: unit and cross-component tests, isolation (no external
-  network/DB in default runs), coverage discipline. When changing code or
-  answering test health: run go test with coverage, scan gaps, add missing tests.
+  Go testing standard: TDD-oriented workflow for agents, unit and cross-component
+  tests, isolation (no external network/DB in default runs), coverage discipline.
 alwaysApply: true
 ---
 
 # Testing (unit, cross-component, coverage)
 
 **Scope:** Go code in this module. For **`web/`** (Vite/React), use **`10-web-ui.mdc`** (`npm test` in `web/`). The minimum bar before finishing any change is in **`09-local-verification.mdc`** (`go vet`, **`gofmt`**, **`go test`**).
+
+## TDD workflow (default for agents)
+
+Use **test-first** loops so progress is observable and regressions are pinned.
+
+| Situation | Order |
+|-----------|--------|
+| **Bug** | (1) **Red** — add or adjust a test that **fails** and reproduces the bug (smallest case). (2) **Green** — fix production code until the test passes. (3) **Refactor** — only if needed; keep tests green. |
+| **Feature / behavior change** | (1) **Red** — write the test(s) that describe the new or changed **observable** behavior (handler status/body, store outcome, domain validation, etc.) and run them **expecting failure**. (2) **Green** — implement the slice under test. (3) **Refactor** — clean up with tests still passing. |
+| **Purely non-behavior edits** | Comments-only, `gofmt`, renames with **no** semantic change — run existing **`go test`**; new tests not required. |
+| **Exploratory spike** | If the user asks for a throwaway spike, you may prototype first; before calling the task **done**, add the tests (bug/feature path above) and remove or narrow throwaway code unless the user keeps it. |
+
+Prefer the **lowest layer** that can express the behavior (`domain` → `store` → `handler` / `httptest`) without skipping layers that would leave a hole. Cross-cutting contract changes still need **`11-api-contracts.mdc`** alignment (e.g. `parseTaskApi`).
 
 ## Agent obligation
 
@@ -78,6 +90,7 @@ Cross-component tests are still **not** “external”: no outbound internet, no
 
 ## Checklist
 
+- [ ] For bugs and new behavior: **failing test existed before** the production fix (or immediately alongside in the same commit series), then went green.
 - [ ] `go test ./...` passes.
 - [ ] Coverage was run when code or tests changed materially; gaps addressed or explained.
 - [ ] Tests would fail on the regression they guard.
