@@ -12,6 +12,7 @@ import (
 // (typically slog.Default() after taskapi attaches the JSON log handler).
 // ParameterizedQueries keeps bound values out of log lines; slow statements log at Warn.
 func ConfigWithSlogLogger(lg *slog.Logger) *gorm.Config {
+	slog.Debug("trace", "operation", "postgres.ConfigWithSlogLogger")
 	if lg == nil {
 		return nil
 	}

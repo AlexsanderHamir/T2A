@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ const (
 )
 
 func configureSQLPool(sqldb *sql.DB) {
+	slog.Debug("trace", "operation", "postgres.configureSQLPool")
 	sqldb.SetMaxOpenConns(defaultMaxOpenConns)
 	sqldb.SetMaxIdleConns(defaultMaxIdleConns)
 	sqldb.SetConnMaxLifetime(defaultConnMaxLifetime)
@@ -29,6 +31,7 @@ func configureSQLPool(sqldb *sql.DB) {
 
 // Open returns a GORM DB connected to PostgreSQL using the given DSN.
 func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
+	slog.Debug("trace", "operation", "postgres.Open")
 	dsn = strings.TrimSpace(dsn)
 	if dsn == "" {
 		return nil, fmt.Errorf("postgres open: %w", errEmptyDSN)
@@ -50,6 +53,7 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 
 // Migrate runs AutoMigrate for domain.Task and domain.TaskEvent (works with any GORM dialector, e.g. tests on SQLite).
 func Migrate(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.Migrate")
 	if err := db.WithContext(ctx).AutoMigrate(
 		&domain.Task{},
 		&domain.TaskEvent{},
