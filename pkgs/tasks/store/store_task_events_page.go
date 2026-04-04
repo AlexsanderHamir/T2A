@@ -2,10 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"gorm.io/gorm"
 )
 
 // TaskEventsPage is one window of audit events (newest first) plus stable paging metadata.
@@ -89,29 +91,32 @@ func (s *Store) ListTaskEventsPageCursor(ctx context.Context, taskID string, lim
 	return out, nil
 }
 
-// ApprovalPending reports whether an approval is outstanding: walking newest approval-related
-// events first, the latest decisive row is approval_requested, not approval_granted.
+// ApprovalPending reports whether an approval is outstanding: among approval-related
+// events, the latest by seq decides — granted clears pending, requested sets it.
 func (s *Store) ApprovalPending(ctx context.Context, taskID string) (bool, error) {
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return false, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	types := []domain.EventType{domain.EventApprovalRequested, domain.EventApprovalGranted}
-	var events []domain.TaskEvent
+	var row domain.TaskEvent
 	err := s.db.WithContext(ctx).
 		Where("task_id = ? AND type IN ?", taskID, types).
-		Order("seq ASC").
-		Find(&events).Error
+		Order("seq DESC").
+		Limit(1).
+		First(&row).Error
 	if err != nil {
-		return false, fmt.Errorf("list approval events: %w", err)
-	}
-	for i := len(events) - 1; i >= 0; i-- {
-		switch events[i].Type {
-		case domain.EventApprovalGranted:
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
-		case domain.EventApprovalRequested:
-			return true, nil
 		}
+		return false, fmt.Errorf("approval pending lookup: %w", err)
 	}
-	return false, nil
+	switch row.Type {
+	case domain.EventApprovalGranted:
+		return false, nil
+	case domain.EventApprovalRequested:
+		return true, nil
+	default:
+		return false, nil
+	}
 }

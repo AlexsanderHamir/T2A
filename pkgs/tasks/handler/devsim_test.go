@@ -147,11 +147,11 @@ func TestDevSim_userResponse_appendsThread(t *testing.T) {
 	}
 	reached := false
 	for range 200 {
-		evs, err := st.ListTaskEvents(ctx, tsk.ID)
+		n, err := st.TaskEventCount(ctx, tsk.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if devsimNextType(evs) == domain.EventApprovalRequested {
+		if devsimNextTypeFromCount(n) == domain.EventApprovalRequested {
 			reached = true
 			break
 		}
@@ -178,12 +178,12 @@ func TestDevSim_userResponse_appendsThread(t *testing.T) {
 	}
 }
 
-// devsimNextType mirrors internal/devsim.nextEventType for test setup (package-private).
-func devsimNextType(evs []domain.TaskEvent) domain.EventType {
+// devsimNextTypeFromCount mirrors internal/devsim.nextEventTypeFromCount for tests.
+func devsimNextTypeFromCount(n int64) domain.EventType {
 	if len(devsim.EventCycle) == 0 {
 		return domain.EventSyncPing
 	}
-	idx := len(evs) % len(devsim.EventCycle)
+	idx := int(n % int64(len(devsim.EventCycle)))
 	return devsim.EventCycle[idx]
 }
 

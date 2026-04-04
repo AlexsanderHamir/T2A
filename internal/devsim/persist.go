@@ -88,11 +88,11 @@ func samplePayload(typ domain.EventType) ([]byte, error) {
 	}
 }
 
-func nextEventType(evs []domain.TaskEvent) domain.EventType {
+func nextEventTypeFromCount(n int64) domain.EventType {
 	if len(EventCycle) == 0 {
 		return domain.EventSyncPing
 	}
-	idx := len(evs) % len(EventCycle)
+	idx := int(n % int64(len(EventCycle)))
 	return EventCycle[idx]
 }
 
@@ -103,11 +103,11 @@ func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, op
 	if publish == nil {
 		return errors.New("publish nil")
 	}
-	evs, err := st.ListTaskEvents(ctx, t.ID)
+	n, err := st.TaskEventCount(ctx, t.ID)
 	if err != nil {
 		return err
 	}
-	typ := nextEventType(evs)
+	typ := nextEventTypeFromCount(n)
 	payload, err := samplePayload(typ)
 	if err != nil {
 		return err
@@ -122,14 +122,13 @@ func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, op
 		}
 	}
 	if opts.UserResponse && domain.EventTypeAcceptsUserResponse(typ) {
-		evs2, err := st.ListTaskEvents(ctx, t.ID)
+		seq, err := st.LastEventSeq(ctx, t.ID)
 		if err != nil {
 			return err
 		}
-		if len(evs2) == 0 {
+		if seq < 1 {
 			return errors.New("no events after append")
 		}
-		seq := evs2[len(evs2)-1].Seq
 		msg := "Synthetic user reply (devsim)."
 		if typ == domain.EventTaskFailed {
 			msg = "Synthetic triage note (devsim)."

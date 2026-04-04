@@ -253,6 +253,59 @@ func TestStore_ListTaskEvents_ordered_and_empty(t *testing.T) {
 	}
 }
 
+func TestStore_TaskEventCount_and_LastEventSeq(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.TaskEventCount(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("count %d want 1", n)
+	}
+	last, err := s.LastEventSeq(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last < 1 {
+		t.Fatalf("last seq %d want >= 1", last)
+	}
+	if _, err := s.Update(ctx, tsk.ID, UpdateTaskInput{Title: strPtr("b")}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	n2, err := s.TaskEventCount(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n2 != 2 {
+		t.Fatalf("count %d want 2", n2)
+	}
+	last2, err := s.LastEventSeq(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last2 <= last {
+		t.Fatalf("last2 %d should exceed last %d", last2, last)
+	}
+}
+
+func TestStore_TaskEventCount_LastEventSeq_invalid_id(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	_, err := s.TaskEventCount(ctx, "")
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("TaskEventCount empty id: got %v", err)
+	}
+	_, err = s.LastEventSeq(ctx, "  ")
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("LastEventSeq empty id: got %v", err)
+	}
+}
+
 func TestStore_ListTaskEvents_not_found_task_still_empty_id(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	_, err := s.ListTaskEvents(context.Background(), "")

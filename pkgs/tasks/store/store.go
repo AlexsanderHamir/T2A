@@ -170,6 +170,37 @@ func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.Tas
 	return events, nil
 }
 
+// TaskEventCount returns how many audit rows exist for the task.
+func (s *Store) TaskEventCount(ctx context.Context, taskID string) (int64, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	var n int64
+	err := s.db.WithContext(ctx).Model(&domain.TaskEvent{}).Where("task_id = ?", taskID).Count(&n).Error
+	if err != nil {
+		return 0, fmt.Errorf("count task events: %w", err)
+	}
+	return n, nil
+}
+
+// LastEventSeq returns the highest seq for the task, or 0 when there are no events.
+func (s *Store) LastEventSeq(ctx context.Context, taskID string) (int64, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	var maxSeq int64
+	err := s.db.WithContext(ctx).Model(&domain.TaskEvent{}).
+		Where("task_id = ?", taskID).
+		Select("COALESCE(MAX(seq), 0)").
+		Scan(&maxSeq).Error
+	if err != nil {
+		return 0, fmt.Errorf("last event seq: %w", err)
+	}
+	return maxSeq, nil
+}
+
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
 	if err := validateActor(by); err != nil {
 		return nil, err
