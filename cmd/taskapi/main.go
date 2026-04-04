@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/devsim"
 	"github.com/AlexsanderHamir/T2A/internal/envload"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
@@ -78,9 +79,11 @@ func main() {
 	}
 	api := handler.WithRecovery(handler.NewHandler(taskStore, hub, rep))
 	mux := http.NewServeMux()
-	if handler.SSETestEnabled() {
+	if devsim.Enabled() {
 		if d := resolveSSETestTickerInterval(); d >= time.Second {
-			handler.RunSSETestTicker(taskStore, hub, d)
+			devsim.RunTicker(taskStore, d, func(id string) {
+				hub.Publish(handler.TaskChangeEvent{Type: handler.TaskUpdated, ID: id})
+			})
 		}
 	}
 	mux.Handle("/", api)

@@ -1,4 +1,4 @@
-package handler
+package devsim
 
 import (
 	"context"
@@ -10,12 +10,14 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-const sseTestListPage = 200 // store.List maximum page size
+const listPage = 200 // store.List maximum page size
 
-// sseTestEventCycle is the full set of domain.EventType values used by the dev ticker, in display order.
+const logCmd = "taskapi"
+
+// EventCycle is the full set of domain.EventType values used by the dev ticker, in display order.
 // Keep in sync with pkgs/tasks/domain/enums.go (every EventType exactly once).
 // Index 0 is chosen when len(events)%len==0 (e.g. 17th append); index 1 is the first tick after task_created.
-var sseTestEventCycle = []domain.EventType{
+var EventCycle = []domain.EventType{
 	domain.EventTaskCreated,
 	domain.EventStatusChanged,
 	domain.EventPriorityChanged,
@@ -35,7 +37,7 @@ var sseTestEventCycle = []domain.EventType{
 	domain.EventSyncPing,
 }
 
-func sseTestEventPayload(typ domain.EventType) ([]byte, error) {
+func samplePayload(typ domain.EventType) ([]byte, error) {
 	switch typ {
 	case domain.EventStatusChanged:
 		return json.Marshal(map[string]string{"from": "ready", "to": "running"})
@@ -50,56 +52,59 @@ func sseTestEventPayload(typ domain.EventType) ([]byte, error) {
 	}
 }
 
-// devTickerNextEventType picks the next event type from sseTestEventCycle using the current event count
+// nextEventType picks the next event type from EventCycle using the current event count
 // so each append advances through all allowed types without package-global state (tests stay deterministic).
-func devTickerNextEventType(evs []domain.TaskEvent) domain.EventType {
-	if len(sseTestEventCycle) == 0 {
+func nextEventType(evs []domain.TaskEvent) domain.EventType {
+	if len(EventCycle) == 0 {
 		return domain.EventSyncPing
 	}
-	idx := len(evs) % len(sseTestEventCycle)
-	return sseTestEventCycle[idx]
+	idx := len(evs) % len(EventCycle)
+	return EventCycle[idx]
 }
 
-// persistDevTickerSampleEvent appends the next rotated audit event (ActorAgent) via store.AppendTaskEvent,
-// then publishes task_updated. Does not mutate the task row—only the audit log.
-func persistDevTickerSampleEvent(ctx context.Context, st *store.Store, hub *SSEHub, t *domain.Task) error {
-	if st == nil || hub == nil || t == nil {
-		return errors.New("store, hub, or task nil")
+// persistSampleEvent appends the next rotated audit event (ActorAgent) via store.AppendTaskEvent,
+// then calls publish with the task id. Does not mutate the task row—only the audit log.
+func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, publish func(taskID string)) error {
+	if st == nil || t == nil {
+		return errors.New("store or task nil")
 	}
 	evs, err := st.ListTaskEvents(ctx, t.ID)
 	if err != nil {
 		return err
 	}
-	typ := devTickerNextEventType(evs)
-	payload, err := sseTestEventPayload(typ)
+	typ := nextEventType(evs)
+	payload, err := samplePayload(typ)
 	if err != nil {
 		return err
 	}
 	if err := st.AppendTaskEvent(ctx, t.ID, typ, domain.ActorAgent, payload); err != nil {
 		return err
 	}
-	hub.Publish(TaskChangeEvent{Type: TaskUpdated, ID: t.ID})
+	if publish != nil {
+		publish(t.ID)
+	}
 	return nil
 }
 
-// persistAllTasksForSSETest walks every task using store.List (id ASC, paginated), same data as GET /tasks.
-func persistAllTasksForSSETest(ctx context.Context, st *store.Store, hub *SSEHub) {
-	if st == nil || hub == nil {
+// PersistAllTasks walks every task using store.List (id ASC, paginated), same data as GET /tasks.
+// For each task it appends one sample audit event and invokes publish after each successful append.
+func PersistAllTasks(ctx context.Context, st *store.Store, publish func(taskID string)) {
+	if st == nil {
 		return
 	}
-	for offset := 0; ; offset += sseTestListPage {
-		rows, err := st.List(ctx, sseTestListPage, offset)
+	for offset := 0; ; offset += listPage {
+		rows, err := st.List(ctx, listPage, offset)
 		if err != nil {
-			slog.Debug("sse dev ticker list failed", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick_list", "err", err)
+			slog.Debug("sse dev ticker list failed", "cmd", logCmd, "operation", "devsim.tick_list", "err", err)
 			return
 		}
 		for i := range rows {
-			if err := persistDevTickerSampleEvent(ctx, st, hub, &rows[i]); err != nil {
-				slog.Debug("sse dev ticker task skipped", "cmd", httpLogCmd, "operation", "tasks.sse_test.tick_task",
+			if err := persistSampleEvent(ctx, st, &rows[i], publish); err != nil {
+				slog.Debug("sse dev ticker task skipped", "cmd", logCmd, "operation", "devsim.tick_task",
 					"task_id", rows[i].ID, "err", err)
 			}
 		}
-		if len(rows) < sseTestListPage {
+		if len(rows) < listPage {
 			return
 		}
 	}

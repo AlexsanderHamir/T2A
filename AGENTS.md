@@ -23,6 +23,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
+| Dev UI simulation | `internal/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit events + SSE hints (`cmd/taskapi` wires `store` + hub). |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. |
 | Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. |
 

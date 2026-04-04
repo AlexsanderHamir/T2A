@@ -307,7 +307,7 @@ Wire format:
 For local UI work, `taskapi` can start a background ticker (no extra HTTP routes). Set `T2A_SSE_TEST=1` (never enable in production without intent). Every 3s by default (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable the ticker), the process:
 
 1. Pages through `store.List` with limit 200 and increasing offset — same ordering as `GET /tasks` (`id ASC`).
-2. For each task row, calls `store.AppendTaskEvent` with actor `agent` and the next `domain.EventType` in a fixed rotation that includes **every** event type once per cycle (order in `pkgs/tasks/handler/sse_test_persist.go`). The next type is chosen from `len(task_events) mod len(cycle)` so successive ticks walk through all types. Sample JSON `data` is attached (including `from`/`to` for status, priority, prompt, and message events). The task row itself is **not** updated—only the audit log—then `task_updated` is published on the SSE hub.
+2. For each task row, calls `store.AppendTaskEvent` with actor `agent` and the next `domain.EventType` in a fixed rotation that includes every event type once per cycle (order: `internal/devsim` `EventCycle`). The next type is chosen from `len(task_events) mod len(cycle)` so successive ticks walk through all types. Sample JSON `data` is attached (including `from`/`to` for status, priority, prompt, and message events). The task row itself is not updated—only the audit log—then `task_updated` is published on the SSE hub.
 
 There are no extra dev-only HTTP paths; only normal REST + `GET /events` apply.
 

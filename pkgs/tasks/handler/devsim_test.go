@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-func TestSseTestEventCycle_exhaustive(t *testing.T) {
+func TestDevSim_EventCycle_exhaustive(t *testing.T) {
 	want := map[domain.EventType]struct{}{
 		domain.EventTaskCreated:           {},
 		domain.EventStatusChanged:         {},
@@ -31,11 +31,11 @@ func TestSseTestEventCycle_exhaustive(t *testing.T) {
 		domain.EventTaskFailed:            {},
 		domain.EventSyncPing:              {},
 	}
-	if len(sseTestEventCycle) != len(want) {
-		t.Fatalf("sseTestEventCycle len %d want %d", len(sseTestEventCycle), len(want))
+	if len(devsim.EventCycle) != len(want) {
+		t.Fatalf("EventCycle len %d want %d", len(devsim.EventCycle), len(want))
 	}
 	seen := make(map[domain.EventType]int)
-	for _, e := range sseTestEventCycle {
+	for _, e := range devsim.EventCycle {
 		seen[e]++
 		delete(want, e)
 	}
@@ -49,7 +49,7 @@ func TestSseTestEventCycle_exhaustive(t *testing.T) {
 	}
 }
 
-func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
+func TestDevSim_PersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
@@ -62,38 +62,21 @@ func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hub := NewSSEHub()
-	ch, cancel := hub.Subscribe()
-	defer cancel()
+	var lines []string
+	publish := func(id string) { lines = append(lines, id) }
 
-	persistAllTasksForSSETest(ctx, st, hub)
+	devsim.PersistAllTasks(ctx, st, publish)
 
-	want := map[string]bool{a.ID: false, b.ID: false}
-	for range want {
-		select {
-		case line := <-ch:
-			var ev TaskChangeEvent
-			if err := json.Unmarshal([]byte(line), &ev); err != nil {
-				t.Fatal(err)
-			}
-			if ev.Type != TaskUpdated {
-				t.Fatalf("want task_updated, got %q", ev.Type)
-			}
-			if _, ok := want[ev.ID]; !ok {
-				t.Fatalf("unexpected id %q", ev.ID)
-			}
-			want[ev.ID] = true
-		case <-time.After(3 * time.Second):
-			t.Fatal("timeout waiting for hub events")
-		}
+	if len(lines) != 2 {
+		t.Fatalf("want 2 publish calls, got %d (%v)", len(lines), lines)
 	}
-	for id, seen := range want {
-		if !seen {
-			t.Fatalf("missing event for %s", id)
-		}
+	counts := map[string]int{}
+	for _, id := range lines {
+		counts[id]++
 	}
-
-	// One task_created from Create; first dev append uses len(events)==1 → cycle[1].
+	if counts[a.ID] != 1 || counts[b.ID] != 1 {
+		t.Fatalf("want one publish per task, got %+v", counts)
+	}
 
 	for _, id := range []string{a.ID, b.ID} {
 		tsk, err := st.Get(ctx, id)
@@ -111,8 +94,8 @@ func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 			t.Fatalf("task %s: want 2 events, got %d", id, len(evs))
 		}
 		last := evs[len(evs)-1]
-		if last.Type != sseTestEventCycle[1] {
-			t.Fatalf("task %s: last event type = %q want %q", id, last.Type, sseTestEventCycle[1])
+		if last.Type != devsim.EventCycle[1] {
+			t.Fatalf("task %s: last event type = %q want %q", id, last.Type, devsim.EventCycle[1])
 		}
 		if last.By != domain.ActorAgent {
 			t.Fatalf("task %s: last event by = %q want agent", id, last.By)
@@ -120,12 +103,36 @@ func TestPersistAllTasksForSSETest_emitsOneSSEPerTask(t *testing.T) {
 	}
 }
 
-func TestDevTickerNextEventType(t *testing.T) {
-	if n := len(sseTestEventCycle); n < 3 {
-		t.Fatalf("cycle too short: %d", n)
+func TestDevSim_SamplePayload_JSON(t *testing.T) {
+	// Exercise sample JSON shape via one persisted event (status_changed payload).
+	db := testdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	ctx := context.Background()
+	task, err := st.Create(ctx, store.CreateTaskInput{Title: "x"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
 	}
-	evs := make([]domain.TaskEvent, 2)
-	if got := devTickerNextEventType(evs); got != sseTestEventCycle[2%len(sseTestEventCycle)] {
-		t.Fatalf("len=2: got %q want %q", got, sseTestEventCycle[2])
+	var saw bool
+	devsim.PersistAllTasks(ctx, st, func(string) { saw = true })
+	if !saw {
+		t.Fatal("expected publish")
+	}
+	evs, err := st.ListTaskEvents(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("want 2 events, got %d", len(evs))
+	}
+	last := evs[len(evs)-1]
+	if last.Type != domain.EventStatusChanged {
+		t.Fatalf("last type %q want %q", last.Type, domain.EventStatusChanged)
+	}
+	var m map[string]string
+	if err := json.Unmarshal(last.Data, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["from"] != "ready" || m["to"] != "running" {
+		t.Fatalf("got %+v", m)
 	}
 }
