@@ -40,6 +40,7 @@ var EventCycle = []domain.EventType{
 }
 
 func samplePayload(typ domain.EventType) ([]byte, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.samplePayload", "type", typ)
 	switch typ {
 	case domain.EventStatusChanged:
 		return json.Marshal(map[string]string{"from": "ready", "to": "running"})
@@ -89,6 +90,7 @@ func samplePayload(typ domain.EventType) ([]byte, error) {
 }
 
 func nextEventTypeFromCount(n int64) domain.EventType {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.nextEventTypeFromCount")
 	if len(EventCycle) == 0 {
 		return domain.EventSyncPing
 	}

@@ -1,6 +1,7 @@
 package devsim
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ type Options struct {
 
 // LoadOptions reads dev simulation tuning from the environment (safe to call when T2A_SSE_TEST is off).
 func LoadOptions() Options {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.LoadOptions")
 	o := Options{
 		EventsPerTick:       1,
 		LifecycleEveryTicks: 5,
@@ -61,5 +63,6 @@ func LoadOptions() Options {
 }
 
 func envOne(key string) bool {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.envOne", "key", key)
 	return strings.TrimSpace(os.Getenv(key)) == "1"
 }

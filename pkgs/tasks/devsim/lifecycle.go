@@ -14,6 +14,7 @@ const devsimTaskIDPrefix = "t2a-devsim-"
 
 // RunLifecycleOnce either creates a prefixed dev task or deletes one (no children), then calls publish.
 func RunLifecycleOnce(ctx context.Context, st *store.Store, publish func(ChangeKind, string)) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.RunLifecycleOnce")
 	if st == nil || publish == nil {
 		return
 	}
