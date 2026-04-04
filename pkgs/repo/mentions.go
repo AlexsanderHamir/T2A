@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"log/slog"
 	"strconv"
 	"strings"
 )
@@ -17,6 +18,7 @@ type Mention struct {
 
 // ParseFileMentions extracts @-mentions. Paths may not contain whitespace; range uses (start-end).
 func ParseFileMentions(s string) []Mention {
+	slog.Debug("trace", "operation", "repo.ParseFileMentions")
 	var out []Mention
 	i := 0
 outer:

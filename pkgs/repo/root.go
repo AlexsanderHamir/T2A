@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,7 @@ type Root struct {
 
 // OpenRoot returns a Root for dir, or ErrInvalidInput if missing or not a directory.
 func OpenRoot(dir string) (*Root, error) {
+	slog.Debug("trace", "operation", "repo.OpenRoot")
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return nil, fmt.Errorf("%w: REPO_ROOT is empty", domain.ErrInvalidInput)
@@ -42,10 +44,14 @@ func OpenRoot(dir string) (*Root, error) {
 }
 
 // Abs returns the absolute root path.
-func (r *Root) Abs() string { return r.abs }
+func (r *Root) Abs() string {
+	slog.Debug("trace", "operation", "repo.Root.Abs")
+	return r.abs
+}
 
 // Resolve returns an absolute path for a repo-relative path (slashes or OS separators).
 func (r *Root) Resolve(rel string) (string, error) {
+	slog.Debug("trace", "operation", "repo.Root.Resolve")
 	rel = strings.TrimSpace(rel)
 	rel = filepath.ToSlash(rel)
 	rel = strings.TrimPrefix(rel, "/")
@@ -64,6 +70,7 @@ func (r *Root) Resolve(rel string) (string, error) {
 
 // Search returns up to maxSearchResults file paths relative to root matching query (substring, case-insensitive).
 func (r *Root) Search(query string) ([]string, error) {
+	slog.Debug("trace", "operation", "repo.Root.Search")
 	q := strings.ToLower(strings.TrimSpace(query))
 	var out []string
 	err := filepath.WalkDir(r.abs, func(path string, d fs.DirEntry, err error) error {
@@ -98,6 +105,7 @@ func (r *Root) Search(query string) ([]string, error) {
 
 // LineCount returns the number of lines in a file (newline-separated).
 func LineCount(absPath string) (int, error) {
+	slog.Debug("trace", "operation", "repo.LineCount")
 	fi, err := os.Stat(absPath)
 	if err != nil {
 		return 0, err
@@ -124,6 +132,7 @@ func LineCount(absPath string) (int, error) {
 
 // ValidateRange returns nil if start..end are valid 1-based inclusive line numbers for the file.
 func ValidateRange(absPath string, start, end int) error {
+	slog.Debug("trace", "operation", "repo.ValidateRange")
 	if start < 1 || end < 1 {
 		return fmt.Errorf("%w: line numbers must be >= 1", domain.ErrInvalidInput)
 	}
@@ -142,6 +151,7 @@ func ValidateRange(absPath string, start, end int) error {
 
 // ValidatePromptMentions checks every parsed mention against the repo root.
 func (r *Root) ValidatePromptMentions(prompt string) error {
+	slog.Debug("trace", "operation", "repo.Root.ValidatePromptMentions")
 	for _, m := range ParseFileMentions(prompt) {
 		abs, err := r.Resolve(m.Path)
 		if err != nil {
