@@ -12,7 +12,8 @@ import (
 // openTaskAPILogFile creates the log directory if needed and opens a new JSON-lines log file
 // named with the current local date and time. dirFlag takes precedence over T2A_LOG_DIR;
 // when both are empty, "logs" (relative to the process working directory) is used.
-func openTaskAPILogFile(dirFlag string) (*os.File, string, error) {
+// minLevel is the minimum slog level written to this file (e.g. slog.LevelInfo hides Debug).
+func openTaskAPILogFile(dirFlag string, minLevel slog.Level) (*os.File, string, error) {
 	dir := strings.TrimSpace(dirFlag)
 	if dir == "" {
 		dir = strings.TrimSpace(os.Getenv("T2A_LOG_DIR"))
@@ -35,7 +36,7 @@ func openTaskAPILogFile(dirFlag string) (*os.File, string, error) {
 		return nil, "", fmt.Errorf("open log file: %w", err)
 	}
 	// Log with a JSON handler on this file so the line lands in the same jsonl before slog.SetDefault in run().
-	early := slog.New(slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	early := slog.New(slog.NewJSONHandler(f, &slog.HandlerOptions{Level: minLevel}))
 	early.Debug("trace", "cmd", cmdName, "operation", "taskapi.openTaskAPILogFile", "path", path)
 	return f, path, nil
 }

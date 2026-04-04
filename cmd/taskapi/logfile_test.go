@@ -11,7 +11,7 @@ import (
 func TestOpenTaskAPILogFile_createsFileUnderDir(t *testing.T) {
 	t.Setenv("T2A_LOG_DIR", "")
 	base := t.TempDir()
-	f, path, err := openTaskAPILogFile(base)
+	f, path, err := openTaskAPILogFile(base, slog.LevelDebug)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,11 +43,30 @@ func TestOpenTaskAPILogFile_createsFileUnderDir(t *testing.T) {
 	}
 }
 
+func TestOpenTaskAPILogFile_skipsBootstrapDebugWhenMinInfo(t *testing.T) {
+	t.Setenv("T2A_LOG_DIR", "")
+	base := t.TempDir()
+	f, path, err := openTaskAPILogFile(base, slog.LevelInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "taskapi.openTaskAPILogFile") {
+		t.Fatalf("bootstrap debug should be suppressed at info level, got %q", string(raw))
+	}
+}
+
 func TestOpenTaskAPILogFile_prefersFlagOverEnv(t *testing.T) {
 	flagDir := t.TempDir()
 	envDir := t.TempDir()
 	t.Setenv("T2A_LOG_DIR", envDir)
-	f, path, err := openTaskAPILogFile(flagDir)
+	f, path, err := openTaskAPILogFile(flagDir, slog.LevelDebug)
 	if err != nil {
 		t.Fatal(err)
 	}

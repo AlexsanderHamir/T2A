@@ -24,7 +24,7 @@ Full local verification (`gofmt`, `go vet`, `go test`, `web/` test + build): `.\
 
 ```bash
 go run ./cmd/dbcheck    # DB check; add -migrate to apply schema
-go run ./cmd/taskapi    # HTTP server; -h for -port, -env, -logdir (runs AutoMigrate on startup; JSON logs under ./logs or T2A_LOG_DIR)
+go run ./cmd/taskapi    # HTTP server; -h for -port, -env, -logdir, -loglevel (JSON logs default min level info; T2A_LOG_LEVEL=debug for full trace)
 ```
 
 ### API + web together

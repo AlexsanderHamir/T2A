@@ -10,6 +10,7 @@
 //	-port string     listen port (default "8080")
 //	-env string      path to .env (default: <repo-root>/.env)
 //	-logdir string   directory for JSON log files (default: T2A_LOG_DIR env or ./logs)
+//	-loglevel string minimum level for the JSON log file: debug, info, warn, error (default: T2A_LOG_LEVEL env or info)
 //
 // Each process start creates a new file named taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl (local time) under
 // the log directory; records are JSON objects, one per line (slog JSON handler). One line is printed to

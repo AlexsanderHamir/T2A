@@ -50,9 +50,16 @@ func run() int {
 	port := flag.String("port", "8080", "HTTP listen port")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
 	logDir := flag.String("logdir", "", "directory for JSON log files (default: T2A_LOG_DIR or ./logs)")
+	logLevelFlag := flag.String("loglevel", "", "minimum log level for JSON file: debug, info, warn, error (default: T2A_LOG_LEVEL or info)")
 	flag.Parse()
 
-	logFile, logPath, err := openTaskAPILogFile(*logDir)
+	minLevel, err := resolveTaskAPILogLevel(*logLevelFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, err)
+		return 1
+	}
+
+	logFile, logPath, err := openTaskAPILogFile(*logDir, minLevel)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, err)
 		return 1
@@ -62,8 +69,8 @@ func run() int {
 		_ = logFile.Close()
 	}()
 
-	fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s\n", cmdName, logPath)
-	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: slog.LevelDebug})
+	fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s (min level %s)\n", cmdName, logPath, minLevel.String())
+	jsonHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: minLevel})
 	var processLogSeq atomic.Uint64
 	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithLogSequence(
 		handler.WrapSlogHandlerWithRequestContext(jsonHandler),
@@ -203,4 +210,29 @@ func resolveSSETestTickerInterval() time.Duration {
 		return sseTestDefaultInterval
 	}
 	return d
+}
+
+// resolveTaskAPILogLevel returns the minimum slog level for the JSON log file.
+// If flagLevel is non-empty after TrimSpace, it wins; otherwise T2A_LOG_LEVEL is used.
+// When both are empty, the default is info (no Debug trace lines; lighter for production).
+func resolveTaskAPILogLevel(flagLevel string) (slog.Level, error) {
+	s := strings.TrimSpace(flagLevel)
+	if s == "" {
+		s = strings.TrimSpace(os.Getenv("T2A_LOG_LEVEL"))
+	}
+	if s == "" {
+		return slog.LevelInfo, nil
+	}
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn", "warning":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, fmt.Errorf("invalid -loglevel / T2A_LOG_LEVEL %q (want debug, info, warn, error)", s)
+	}
 }

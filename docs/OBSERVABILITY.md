@@ -12,6 +12,8 @@ From production logs (and future metrics if we add them), we want to answer:
 2. **What code path ran?** Stable `operation` values and route/method on the access line.
 3. **Background work** (dev ticker, etc.) is clearly **not** tied to a request id so we do not confuse it with user traffic.
 
+**Volume:** `taskapi` writes JSON lines at a configurable **minimum level**: **`-loglevel`** or **`T2A_LOG_LEVEL`** (`debug`, `info`, `warn`, `error`; default **`info`** for lighter production logs). Set **`debug`** for full trace lines. At **`info`**, `slog.Debug` records are dropped; `Info`+ still go to the file. See **`docs/DESIGN.md`** (startup flow and env table).
+
 ### Codebase (static “at least one log per function”)
 
 **Target:** every **named** function or method in production `.go` files (excluding generated sources) should contain **at least one type-resolved call** into **`log/slog`** in its body. Using **`slog.LevelDebug`** is fine for noisy or trivial paths.
