@@ -34,6 +34,8 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 |--------|----------------|----------|
 | **Structured logs** | Primary signal: JSON lines per process run | `slog` with stable keys; errors include `err`; no secrets (see security baseline rule). |
 | **Request correlation** | Tie access line, handler errors, and GORM SQL | `request_id` on the request context; echoed as `X-Request-ID` when the client sends it. |
+| **Log order** | Sort JSONL within a request or the process | `log_seq` (monotonic) with `log_seq_scope` `request` (access middleware) or `process` (startup, `/health`, background). |
+| **Line kind** | Filter JSONL in tools | `obs_category`: `http_access`, `http_io`, `helper_io`. |
 | **Access line** | One completion record per HTTP request (except `GET /health`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |
 | **SQL traces** | DB latency and shape | GORM → same `slog` sink; parameterized SQL; slow threshold per GORM config. |
 | **Metrics** | Rates, histograms, SLO dashboards | Not built into `taskapi` yet; add deliberately (e.g. Prometheus) when we need SLIs beyond logs. |
@@ -49,6 +51,7 @@ When you add or materially change behavior, use this list (copy into a PR descri
 - [ ] **Failures:** Use `writeError` / `writeStoreError` (or `slog.Log(r.Context(), …)`) so client/server errors keep correlation.
 - [ ] **SSE:** Long streams still get one access line at the end; publish path uses `slog` appropriately (see `tasks.sse.publish` at Debug when subscribers exist).
 - [ ] **Operations:** New code paths use a stable, grep-friendly `operation` string (existing pattern: `tasks.*`, `repo.*`, `http.*`).
+- [ ] **IO visibility:** At Debug, `http.io` lines record `phase` `in`/`out`, handler `operation`, `call_path`, and safe input/output summaries; helpers emit `helper.io` with `function` and the same `call_path` (see `calllog.go`, `docs/DESIGN.md`). Use `RunObserved` when a helper should log explicit input/output key/value pairs. New routes: `withCallRoot(r, op)` first; pass `r.Context()` into helpers that support `PushCall`—avoid secrets and unbounded payloads.
 
 ### Background work (`pkgs/tasks/devsim`, tickers, etc.)
 
