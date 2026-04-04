@@ -25,8 +25,8 @@ export function TaskUpdatesTimeline({
   taskIdForLinks,
 }: TaskUpdatesTimelineProps) {
   return (
-    <div className="task-detail-timeline">
-      <h3 className="task-detail-subheading" id="task-detail-updates-heading">
+    <div className="task-detail-section task-detail-timeline">
+      <h3 className="task-detail-section-heading" id="task-detail-updates-heading">
         Updates
       </h3>
       {isPending ? (

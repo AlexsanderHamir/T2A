@@ -245,7 +245,8 @@ export function CustomSelect({
           top: pos.top,
           left: pos.left,
           width: Math.max(pos.width, compact ? 10 * 16 : 12 * 16),
-          zIndex: 12_000,
+          /* Above .modal-root (11k) and .modal-root--nested (12050); list is portaled to body. */
+          zIndex: 13000,
         }}
         onKeyDown={onListKeyDown}
       >

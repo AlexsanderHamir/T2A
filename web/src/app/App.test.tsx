@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
+
+async function openNewTaskModal(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /^new task$/i }));
+  return screen.findByRole("dialog");
+}
 
 function renderApp() {
   const queryClient = new QueryClient({
@@ -82,6 +87,7 @@ describe("App", () => {
               initial_prompt: "",
               status: "ready",
               priority: "medium",
+              checklist_inherit: false,
             },
           ],
           limit: 200,
@@ -103,6 +109,302 @@ describe("App", () => {
             initial_prompt: "",
             status: "ready",
             priority: "medium",
+            checklist_inherit: false,
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet.");
+
+    const dialog = await openNewTaskModal(user);
+    await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
+    await user.click(
+      within(dialog).getByRole("button", { name: /^create$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /ship fix/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a top-level task with checklist criteria added after create", async () => {
+    const user = userEvent.setup();
+    let created = false;
+    const checklistPosts: string[] = [];
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        if (!created) {
+          return Response.json({ tasks: [], limit: 200, offset: 0 });
+        }
+        return Response.json({
+          tasks: [
+            {
+              id: "t1",
+              title: "With criteria",
+              initial_prompt: "",
+              status: "ready",
+              priority: "medium",
+              checklist_inherit: false,
+            },
+          ],
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      if (url === "/tasks" && init?.method === "POST") {
+        created = true;
+        return new Response(
+          JSON.stringify({
+            id: "t1",
+            title: "With criteria",
+            initial_prompt: "",
+            status: "ready",
+            priority: "medium",
+            checklist_inherit: false,
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
+        const body = init?.body != null ? String(init.body) : "";
+        checklistPosts.push(body);
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet.");
+
+    const dialog = await openNewTaskModal(user);
+    await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
+    await user.type(
+      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      "Tests pass",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /^create$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /with criteria/i }),
+    ).toBeInTheDocument();
+    expect(checklistPosts).toHaveLength(1);
+    expect(checklistPosts[0]).toContain("Tests pass");
+  });
+
+  it("creates a subtask from home with checklist criteria added after create", async () => {
+    const user = userEvent.setup();
+    let created = false;
+    const checklistPosts: string[] = [];
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        if (!created) {
+          return Response.json({
+            tasks: [
+              {
+                id: "p1",
+                title: "Check parent",
+                initial_prompt: "",
+                status: "ready",
+                priority: "medium",
+                checklist_inherit: false,
+              },
+            ],
+            limit: 200,
+            offset: 0,
+          });
+        }
+        return Response.json({
+          tasks: [
+            {
+              id: "p1",
+              title: "Check parent",
+              initial_prompt: "",
+              status: "ready",
+              priority: "medium",
+              checklist_inherit: false,
+              children: [
+                {
+                  id: "t1",
+                  title: "With criteria",
+                  initial_prompt: "",
+                  status: "ready",
+                  priority: "medium",
+                  checklist_inherit: false,
+                },
+              ],
+            },
+          ],
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      if (url === "/tasks" && init?.method === "POST") {
+        created = true;
+        return new Response(
+          JSON.stringify({
+            id: "t1",
+            title: "With criteria",
+            initial_prompt: "",
+            status: "ready",
+            priority: "medium",
+            checklist_inherit: false,
+            parent_id: "p1",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
+        const body = init?.body != null ? String(init.body) : "";
+        checklistPosts.push(body);
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    expect(await screen.findByText("Check parent")).toBeInTheDocument();
+
+    const dialog = await openNewTaskModal(user);
+    const parentSelect = within(dialog).getByLabelText(/^parent task$/i);
+    await waitFor(() => {
+      expect(
+        within(parentSelect).getByRole("option", { name: "Check parent" }),
+      ).toBeInTheDocument();
+    });
+    await user.selectOptions(parentSelect, "p1");
+    expect(
+      await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
+    ).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
+    await user.type(
+      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      "Tests pass",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /^add subtask$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /with criteria/i }),
+    ).toBeInTheDocument();
+    expect(checklistPosts).toHaveLength(1);
+    expect(checklistPosts[0]).toContain("Tests pass");
+  });
+
+  it("creates a task with subtasks after the parent task", async () => {
+    const user = userEvent.setup();
+    let postCount = 0;
+    const taskPosts: Array<Record<string, unknown>> = [];
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        if (postCount === 0) {
+          return Response.json({ tasks: [], limit: 200, offset: 0 });
+        }
+        return Response.json({
+          tasks: [
+            {
+              id: "parent",
+              title: "Epic",
+              initial_prompt: "",
+              status: "ready",
+              priority: "medium",
+              checklist_inherit: false,
+              children: [
+                {
+                  id: "c1",
+                  title: "Step one",
+                  initial_prompt: "",
+                  status: "ready",
+                  priority: "medium",
+                  checklist_inherit: false,
+                },
+                {
+                  id: "c2",
+                  title: "Step two",
+                  initial_prompt: "",
+                  status: "ready",
+                  priority: "medium",
+                  checklist_inherit: false,
+                },
+              ],
+            },
+          ],
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      if (url === "/tasks" && init?.method === "POST") {
+        postCount++;
+        const body =
+          init?.body != null && typeof init.body === "string"
+            ? (JSON.parse(init.body) as Record<string, unknown>)
+            : {};
+        taskPosts.push(body);
+        if (postCount === 1) {
+          return new Response(
+            JSON.stringify({
+              id: "parent",
+              title: body.title,
+              initial_prompt: body.initial_prompt ?? "",
+              status: body.status ?? "ready",
+              priority: body.priority ?? "medium",
+              checklist_inherit: false,
+            }),
+            { status: 201, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const id = postCount === 2 ? "c1" : "c2";
+        return new Response(
+          JSON.stringify({
+            id,
+            title: body.title,
+            initial_prompt: "",
+            status: body.status ?? "ready",
+            priority: body.priority ?? "medium",
+            checklist_inherit: false,
+            parent_id: body.parent_id,
           }),
           { status: 201, headers: { "Content-Type": "application/json" } },
         );
@@ -113,9 +415,158 @@ describe("App", () => {
     renderApp();
     await screen.findByText("No tasks yet.");
 
-    await user.type(screen.getByLabelText(/^title$/i), "Ship fix");
-    await user.click(screen.getByRole("button", { name: /^create$/i }));
+    const outer = await openNewTaskModal(user);
+    await user.type(within(outer).getByLabelText(/^title$/i), "Epic");
 
-    expect(await screen.findByText("Ship fix")).toBeInTheDocument();
+    await user.click(
+      within(outer).getByRole("button", { name: /open form to add a subtask/i }),
+    );
+    let dialogs = screen.getAllByRole("dialog");
+    expect(dialogs.length).toBe(2);
+    let nested = dialogs[1];
+    await user.type(within(nested).getByLabelText(/^title$/i), "Step one");
+    await user.click(
+      within(nested).getByRole("button", { name: /^add subtask$/i }),
+    );
+    await waitFor(() => {
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    });
+
+    await user.click(
+      within(outer).getByRole("button", { name: /open form to add a subtask/i }),
+    );
+    dialogs = screen.getAllByRole("dialog");
+    expect(dialogs.length).toBe(2);
+    nested = dialogs[1];
+    await user.type(within(nested).getByLabelText(/^title$/i), "Step two");
+    await user.click(
+      within(nested).getByRole("button", { name: /^add subtask$/i }),
+    );
+    await waitFor(() => {
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    });
+
+    await user.click(
+      within(outer).getByRole("button", { name: /^create$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /epic/i }),
+    ).toBeInTheDocument();
+    expect(taskPosts).toHaveLength(3);
+    expect(taskPosts[0].title).toBe("Epic");
+    expect(taskPosts[0].parent_id).toBeUndefined();
+    expect(taskPosts[1].parent_id).toBe("parent");
+    expect(taskPosts[1].title).toBe("Step one");
+    expect(taskPosts[2].parent_id).toBe("parent");
+    expect(taskPosts[2].title).toBe("Step two");
+  });
+
+  it("creates a subtask from home when parent task is selected", async () => {
+    const user = userEvent.setup();
+    let created = false;
+    let postBody: Record<string, unknown> | null = null;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        if (!created) {
+          return Response.json({
+            tasks: [
+              {
+                id: "parent",
+                title: "Parent task",
+                initial_prompt: "",
+                status: "ready",
+                priority: "medium",
+                checklist_inherit: false,
+              },
+            ],
+            limit: 200,
+            offset: 0,
+          });
+        }
+        return Response.json({
+          tasks: [
+            {
+              id: "parent",
+              title: "Parent task",
+              initial_prompt: "",
+              status: "ready",
+              priority: "medium",
+              checklist_inherit: false,
+              children: [
+                {
+                  id: "child",
+                  title: "Child sub",
+                  initial_prompt: "",
+                  status: "ready",
+                  priority: "medium",
+                  checklist_inherit: false,
+                },
+              ],
+            },
+          ],
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      if (url === "/tasks" && init?.method === "POST") {
+        created = true;
+        postBody =
+          init?.body != null && typeof init.body === "string"
+            ? JSON.parse(init.body)
+            : {};
+        return new Response(
+          JSON.stringify({
+            id: "child",
+            title: "Child sub",
+            initial_prompt: "",
+            status: "ready",
+            priority: "medium",
+            checklist_inherit: false,
+            parent_id: "parent",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    expect(await screen.findByText("Parent task")).toBeInTheDocument();
+
+    const dialog = await openNewTaskModal(user);
+    const parentSelect = within(dialog).getByLabelText(/^parent task$/i);
+    await waitFor(() => {
+      expect(
+        within(parentSelect).getByRole("option", { name: "Parent task" }),
+      ).toBeInTheDocument();
+    });
+    await user.selectOptions(parentSelect, "parent");
+    expect(
+      await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
+    ).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText(/^title$/i), "Child sub");
+    await user.click(
+      within(dialog).getByRole("button", { name: /^add subtask$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /child sub/i }),
+    ).toBeInTheDocument();
+    expect(postBody).not.toBeNull();
+    const posted = postBody as unknown as {
+      parent_id?: unknown;
+      title?: unknown;
+    };
+    expect(posted.parent_id).toBe("parent");
+    expect(posted.title).toBe("Child sub");
   });
 });

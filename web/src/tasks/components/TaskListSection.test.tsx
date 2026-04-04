@@ -16,6 +16,7 @@ const listPagerDefaults = {
   onListFiltersChange: vi.fn(),
   hasNextPage: false,
   hasPrevPage: false,
+  rootTasksOnPage: 0,
 };
 
 describe("TaskListSection", () => {
@@ -76,6 +77,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      checklist_inherit: false as const,
+      depth: 0,
     };
     renderWithRouter(
       <TaskListSection
@@ -84,6 +87,7 @@ describe("TaskListSection", () => {
         refreshing={false}
         saving={false}
         {...listPagerDefaults}
+        rootTasksOnPage={1}
         onEdit={onEdit}
         onRequestDelete={onRequestDelete}
       />,
@@ -103,6 +107,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "low" as const,
+        checklist_inherit: false as const,
+        depth: 0,
       },
       {
         id: "2",
@@ -110,6 +116,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "done" as const,
         priority: "high" as const,
+        checklist_inherit: false as const,
+        depth: 0,
       },
     ];
     renderWithRouter(
@@ -119,6 +127,7 @@ describe("TaskListSection", () => {
         refreshing={false}
         saving={false}
         {...listPagerDefaults}
+        rootTasksOnPage={2}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -167,6 +176,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
+        checklist_inherit: false as const,
+        depth: 0,
       },
       {
         id: "2",
@@ -174,6 +185,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
+        checklist_inherit: false as const,
+        depth: 0,
       },
     ];
     renderWithRouter(
@@ -183,6 +196,7 @@ describe("TaskListSection", () => {
         refreshing={false}
         saving={false}
         {...listPagerDefaults}
+        rootTasksOnPage={2}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -210,12 +224,15 @@ describe("TaskListSection", () => {
             initial_prompt: "",
             status: "ready" as const,
             priority: "medium" as const,
+            checklist_inherit: false as const,
+            depth: 0,
           },
         ]}
         loading={false}
         refreshing={false}
         saving={false}
         {...listPagerDefaults}
+        rootTasksOnPage={1}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,
@@ -236,6 +253,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      checklist_inherit: false as const,
+      depth: 0,
     };
     const filler = Array.from({ length: 19 }, (_, i) => ({
       id: `x${i}`,
@@ -243,6 +262,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      checklist_inherit: false as const,
+      depth: 0,
     }));
     renderWithRouter(
       <TaskListSection
@@ -256,6 +277,7 @@ describe("TaskListSection", () => {
         onListFiltersChange={vi.fn()}
         hasNextPage
         hasPrevPage={false}
+        rootTasksOnPage={20}
         onEdit={vi.fn()}
         onRequestDelete={vi.fn()}
       />,

@@ -12,10 +12,13 @@ import {
   type Status,
   type Task,
 } from "@/types";
+import type { TaskWithDepth } from "../flattenTaskTree";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
 
 type Props = {
-  tasks: Task[];
+  tasks: TaskWithDepth[];
+  /** Root tasks returned for this list page (for pager copy; rows may include nested subtasks). */
+  rootTasksOnPage: number;
   loading: boolean;
   /** Background refetch in progress (list still visible). */
   refreshing: boolean;
@@ -47,6 +50,7 @@ const SYNC_STATUS_DELAY_MS = 180;
 
 export function TaskListSection({
   tasks,
+  rootTasksOnPage,
   loading,
   refreshing,
   saving,
@@ -214,7 +218,16 @@ export function TaskListSection({
                             to={`/tasks/${t.id}`}
                             className="cell-title-link"
                             aria-label={`Open task details: ${t.title}`}
+                            style={{
+                              paddingLeft:
+                                t.depth > 0 ? 8 + t.depth * 14 : undefined,
+                            }}
                           >
+                            {t.depth > 0 ? (
+                              <span className="task-subtask-marker" aria-hidden>
+                                └{" "}
+                              </span>
+                            ) : null}
                             <span className="cell-title-text">{t.title}</span>
                             <span
                               className="cell-title-open-hint"
@@ -281,7 +294,7 @@ export function TaskListSection({
                   ? `Page ${listPage + 1} (no tasks on this page)`
                   : (() => {
                       const start = listPage * listPageSize + 1;
-                      const end = listPage * listPageSize + tasks.length;
+                      const end = listPage * listPageSize + rootTasksOnPage;
                       return `${start}–${end}${hasNextPage ? "+" : ""}`;
                     })()
               }

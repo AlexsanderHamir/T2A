@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,7 +59,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "<p>Secret long body text</p>",
           status: "ready",
           priority: "critical",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t1/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t1/events")) {
         return Response.json({
@@ -106,7 +110,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t2/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t2/events")) {
         return Response.json({
@@ -143,7 +151,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "blocked",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/tb/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/tb/events")) {
         return Response.json({
@@ -178,7 +190,11 @@ describe("TaskDetailPage", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          checklist_inherit: false,
         });
+      }
+      if (url === "/tasks/t3/checklist") {
+        return Response.json({ items: [] });
       }
       if (url.startsWith("/tasks/t3/events")) {
         return Response.json({
@@ -225,5 +241,103 @@ describe("TaskDetailPage", () => {
       "aria-label",
       expect.stringMatching(/live sync check/i),
     );
+  });
+
+  it("creates a subtask with checklist items after POST /tasks", async () => {
+    const user = userEvent.setup();
+    const checklistPosts: string[] = [];
+    let subtaskCreated = false;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      const method = init?.method ?? "GET";
+      if (url === "/tasks/parent" && method === "GET") {
+        return Response.json({
+          id: "parent",
+          title: "Parent",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+          children: subtaskCreated
+            ? [
+                {
+                  id: "child",
+                  title: "Child",
+                  initial_prompt: "<p></p>",
+                  status: "ready",
+                  priority: "high",
+                  checklist_inherit: false,
+                },
+              ]
+            : [],
+        });
+      }
+      if (url === "/tasks/parent/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/parent/events")) {
+        return Response.json({
+          task_id: "parent",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      if (url === "/tasks" && method === "POST") {
+        const body =
+          init?.body != null && typeof init.body === "string"
+            ? JSON.parse(init.body)
+            : {};
+        expect(body.parent_id).toBe("parent");
+        expect(body.title).toBe("Child");
+        subtaskCreated = true;
+        return new Response(
+          JSON.stringify({
+            id: "child",
+            title: "Child",
+            initial_prompt: "<p></p>",
+            status: "ready",
+            priority: "high",
+            checklist_inherit: false,
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/tasks/child/checklist/items" && method === "POST") {
+        checklistPosts.push(
+          init?.body != null ? String(init.body) : "",
+        );
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/parent", mockApp());
+
+    expect(await screen.findByRole("heading", { name: /^parent$/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^add subtask$/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/^title$/i), "Child");
+    await user.type(
+      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      "Criterion A",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /^add subtask$/i }),
+    );
+
+    expect(await screen.findByText("Child")).toBeInTheDocument();
+    expect(checklistPosts).toHaveLength(1);
+    expect(checklistPosts[0]).toContain("Criterion A");
   });
 });

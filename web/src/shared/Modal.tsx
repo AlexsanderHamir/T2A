@@ -10,6 +10,12 @@ type Props = {
   size?: "default" | "wide";
   /** Shows a blocking spinner overlay; backdrop and Escape are disabled. */
   busy?: boolean;
+  /** `aria-label` on the busy spinner (screen readers). */
+  busyLabel?: string;
+  /** When false, nested modals avoid fighting the parent on `document.body` scroll lock. */
+  lockBodyScroll?: boolean;
+  /** Higher stacking when opened above another modal. */
+  stack?: "default" | "nested";
 };
 
 export function Modal({
@@ -18,14 +24,18 @@ export function Modal({
   labelledBy,
   size = "default",
   busy = false,
+  busyLabel = "Saving…",
+  lockBodyScroll = true,
+  stack = "default",
 }: Props) {
   useEffect(() => {
+    if (!lockBodyScroll) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, []);
+  }, [lockBodyScroll]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,8 +45,11 @@ export function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, busy]);
 
+  const rootClass =
+    stack === "nested" ? "modal-root modal-root--nested" : "modal-root";
+
   return createPortal(
-    <div className="modal-root">
+    <div className={rootClass}>
       <div
         className="modal-backdrop"
         aria-hidden="true"
@@ -59,7 +72,7 @@ export function Modal({
             <div
               className="modal-spinner"
               role="status"
-              aria-label="Saving…"
+              aria-label={busyLabel}
             />
           </div>
         ) : null}

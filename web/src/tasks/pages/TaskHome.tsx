@@ -1,4 +1,4 @@
-import { TaskCreateForm } from "../components/TaskCreateForm";
+import { TaskCreateModal } from "../components/TaskCreateModal";
 import { TaskListSection } from "../components/TaskListSection";
 import { useTasksApp } from "../hooks/useTasksApp";
 
@@ -9,20 +9,49 @@ type Props = {
 export function TaskHome({ app }: Props) {
   return (
     <>
-      <TaskCreateForm
-        title={app.newTitle}
-        prompt={app.newPrompt}
-        priority={app.newPriority}
-        saving={app.saving}
-        createPending={app.createPending}
-        onTitleChange={app.setNewTitle}
-        onPromptChange={app.setNewPrompt}
-        onPriorityChange={app.setNewPriority}
-        onSubmit={(e) => void app.submitCreate(e)}
-      />
+      <div className="task-home-toolbar">
+        <button
+          type="button"
+          className="task-home-new-task-btn"
+          onClick={app.openCreateModal}
+          disabled={app.createModalOpen}
+        >
+          New task
+        </button>
+      </div>
+
+      {app.createModalOpen ? (
+        <TaskCreateModal
+          pending={app.createPending}
+          saving={app.saving}
+          onClose={app.closeCreateModal}
+          title={app.newTitle}
+          prompt={app.newPrompt}
+          priority={app.newPriority}
+          checklistDraft={app.newChecklistDraft}
+          checklistItems={app.newChecklistItems}
+          parentOptions={app.tasks}
+          parentId={app.newParentId}
+          checklistInherit={app.newChecklistInherit}
+          onTitleChange={app.setNewTitle}
+          onPromptChange={app.setNewPrompt}
+          onPriorityChange={app.setNewPriority}
+          onChecklistDraftChange={app.setNewChecklistDraft}
+          onParentIdChange={app.setNewParentId}
+          onChecklistInheritChange={app.setNewChecklistInherit}
+          onAddChecklistRow={app.addNewChecklistRow}
+          onRemoveChecklistRow={app.removeNewChecklistRow}
+          pendingSubtasks={app.pendingSubtasks}
+          onAddPendingSubtask={app.addPendingSubtask}
+          onUpdatePendingSubtask={app.updatePendingSubtask}
+          onRemovePendingSubtask={app.removePendingSubtask}
+          onSubmit={(e) => void app.submitCreate(e)}
+        />
+      ) : null}
 
       <TaskListSection
         tasks={app.tasks}
+        rootTasksOnPage={app.rootTasksOnPage}
         loading={app.loading}
         refreshing={app.listRefreshing}
         saving={app.saving}

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Priority } from "@/types";
+import { STATUSES, type Priority, type Status } from "@/types";
 import { Modal } from "../../shared/Modal";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
@@ -9,11 +9,17 @@ type Props = {
   title: string;
   prompt: string;
   priority: Priority;
+  status: Status;
+  checklistInherit: boolean;
+  /** When false, the inherit checkbox is disabled (task has no parent). */
+  canInheritChecklist: boolean;
   saving: boolean;
   patchPending: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
+  onStatusChange: (s: Status) => void;
+  onChecklistInheritChange: (v: boolean) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
 };
@@ -23,11 +29,16 @@ export function TaskEditForm({
   title,
   prompt,
   priority,
+  status,
+  checklistInherit,
+  canInheritChecklist,
   saving,
   patchPending,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
+  onStatusChange,
+  onChecklistInheritChange,
   onSubmit,
   onCancel,
 }: Props) {
@@ -59,6 +70,38 @@ export function TaskEditForm({
               value={priority}
               onChange={onPriorityChange}
             />
+          </div>
+          <div className="field grow">
+            <label htmlFor="task-edit-status">Status</label>
+            <select
+              id="task-edit-status"
+              value={status}
+              onChange={(ev) => onStatusChange(ev.target.value as Status)}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field grow stack-tight checkbox-field">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={checklistInherit}
+                disabled={!canInheritChecklist || saving}
+                onChange={(ev) => onChecklistInheritChange(ev.target.checked)}
+              />
+              <span>
+                Use parent&apos;s checklist (inherit completion criteria)
+              </span>
+            </label>
+            {!canInheritChecklist ? (
+              <p className="muted stack-tight-zero">
+                Only tasks with a parent can inherit its checklist.
+              </p>
+            ) : null}
           </div>
           <div className="field grow stack-tight prompt-field-full">
             <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">

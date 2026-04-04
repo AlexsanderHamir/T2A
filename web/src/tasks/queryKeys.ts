@@ -10,6 +10,8 @@ export const taskQueryKeys = {
   listRoot: () => [...taskQueryKeys.all, "list"] as const,
   list: (page: number) => [...taskQueryKeys.listRoot(), page] as const,
   detail: (id: string) => [...taskQueryKeys.all, "detail", id] as const,
+  checklist: (id: string) =>
+    [...taskQueryKeys.all, "detail", id, "checklist"] as const,
   events: (id: string, cursor: TaskEventsCursorKey) => {
     if (cursor.k === "head") {
       return [...taskQueryKeys.all, "detail", id, "events", "head"] as const;

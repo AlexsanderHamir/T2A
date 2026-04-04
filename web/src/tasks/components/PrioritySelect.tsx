@@ -7,9 +7,11 @@ type Props = {
   id: string;
   value: Priority;
   onChange: (p: Priority) => void;
+  /** Narrow trigger for dense rows (e.g. create form). */
+  compact?: boolean;
 };
 
-export function PrioritySelect({ id, value, onChange }: Props) {
+export function PrioritySelect({ id, value, onChange, compact }: Props) {
   const options: CustomSelectOption[] = useMemo(
     () =>
       PRIORITIES.map((p) => ({
@@ -27,6 +29,7 @@ export function PrioritySelect({ id, value, onChange }: Props) {
       value={value}
       options={options}
       listboxName="Priority"
+      compact={compact}
       onChange={(v) => onChange(v as Priority)}
     />
   );

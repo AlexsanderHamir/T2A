@@ -1,7 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getTask, listTaskEvents } from "@/api";
+import {
+  addChecklistItem,
+  createTask,
+  deleteChecklistItem,
+  getTask,
+  listChecklist,
+  listTaskEvents,
+  patchChecklistItemDone,
+} from "@/api";
+import type { Priority, Task } from "@/types";
+import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { TaskPager } from "../components/TaskPager";
 import { promptHasVisibleContent } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
@@ -16,10 +32,52 @@ type Props = {
   app: ReturnType<typeof useTasksApp>;
 };
 
+function SubtaskTree({
+  nodes,
+  nested = false,
+}: {
+  nodes: Task[];
+  nested?: boolean;
+}) {
+  if (!nodes.length) {
+    if (nested) return null;
+    return (
+      <p className="muted" id="task-subtasks-empty">
+        No subtasks yet.
+      </p>
+    );
+  }
+  return (
+    <ul
+      className={nested ? "task-subtasks-tree nested" : "task-subtasks-tree"}
+      aria-labelledby={nested ? undefined : "task-subtasks-heading"}
+    >
+      {nodes.map((c) => (
+        <li key={c.id}>
+          <Link to={`/tasks/${c.id}`}>{c.title}</Link>
+          <span className="muted"> ({c.status})</span>
+          <SubtaskTree nodes={c.children ?? []} nested />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function TaskDetailPage({ app }: Props) {
   const { taskId = "" } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const navigatedAfterDelete = useRef(false);
+  const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [subtaskPrompt, setSubtaskPrompt] = useState("");
+  const [subtaskPriority, setSubtaskPriority] = useState<Priority>("medium");
+  const [subtaskChecklistDraft, setSubtaskChecklistDraft] = useState("");
+  const [subtaskChecklistItems, setSubtaskChecklistItems] = useState<string[]>(
+    [],
+  );
+  const [subtaskInherit, setSubtaskInherit] = useState(false);
+  const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
+  const [newChecklistText, setNewChecklistText] = useState("");
 
   const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({
     k: "head",
@@ -33,10 +91,147 @@ export function TaskDetailPage({ app }: Props) {
     setEventsCursor({ k: "head" });
   }, [taskId]);
 
+  const resetSubtaskForm = useCallback(() => {
+    setSubtaskTitle("");
+    setSubtaskPrompt("");
+    setSubtaskPriority("medium");
+    setSubtaskChecklistDraft("");
+    setSubtaskChecklistItems([]);
+    setSubtaskInherit(false);
+  }, []);
+
+  const closeSubtaskModal = useCallback(() => {
+    setSubtaskModalOpen(false);
+    resetSubtaskForm();
+  }, [resetSubtaskForm]);
+
+  const openSubtaskModal = useCallback(() => {
+    resetSubtaskForm();
+    setSubtaskModalOpen(true);
+  }, [resetSubtaskForm]);
+
+  useEffect(() => {
+    setSubtaskModalOpen(false);
+    resetSubtaskForm();
+  }, [taskId, resetSubtaskForm]);
+
   const taskQuery = useQuery({
     queryKey: taskQueryKeys.detail(taskId),
     queryFn: ({ signal }) => getTask(taskId, { signal }),
     enabled: Boolean(taskId),
+  });
+
+  const checklistQuery = useQuery({
+    queryKey: taskQueryKeys.checklist(taskId),
+    queryFn: ({ signal }) => listChecklist(taskId, { signal }),
+    enabled: Boolean(taskId) && taskQuery.isSuccess,
+  });
+
+  useEffect(() => {
+    if (!subtaskInherit) return;
+    setSubtaskChecklistDraft("");
+    setSubtaskChecklistItems([]);
+  }, [subtaskInherit]);
+
+  const addSubtaskChecklistRow = useCallback(() => {
+    const t = subtaskChecklistDraft.trim();
+    if (!t) return;
+    setSubtaskChecklistItems((prev) => [...prev, t]);
+    setSubtaskChecklistDraft("");
+  }, [subtaskChecklistDraft]);
+
+  const removeSubtaskChecklistRow = useCallback((index: number) => {
+    setSubtaskChecklistItems((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const createSubtaskMutation = useMutation({
+    mutationFn: async (input: {
+      title: string;
+      initial_prompt: string;
+      priority: Priority;
+      checklist_inherit: boolean;
+      checklistItems: string[];
+    }) => {
+      const child = await createTask({
+        title: input.title,
+        initial_prompt: input.initial_prompt,
+        priority: input.priority,
+        parent_id: taskId,
+        checklist_inherit: input.checklist_inherit,
+      });
+      if (!input.checklist_inherit) {
+        for (const raw of input.checklistItems) {
+          const text = raw.trim();
+          if (text) {
+            await addChecklistItem(child.id, text);
+          }
+        }
+      }
+      return child;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.detail(taskId),
+      });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+      closeSubtaskModal();
+    },
+  });
+
+  const submitNewSubtask = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      if (!subtaskTitle.trim() || createSubtaskMutation.isPending) return;
+      createSubtaskMutation.mutate({
+        title: subtaskTitle.trim(),
+        initial_prompt: subtaskPrompt,
+        priority: subtaskPriority,
+        checklist_inherit: subtaskInherit,
+        checklistItems: subtaskInherit ? [] : subtaskChecklistItems,
+      });
+    },
+    [
+      subtaskTitle,
+      subtaskPrompt,
+      subtaskPriority,
+      subtaskInherit,
+      subtaskChecklistItems,
+      createSubtaskMutation.mutate,
+      createSubtaskMutation.isPending,
+    ],
+  );
+
+  const toggleChecklistMutation = useMutation({
+    mutationFn: (args: { itemId: string; done: boolean }) =>
+      patchChecklistItemDone(taskId, args.itemId, args.done),
+    onSuccess: (data) => {
+      queryClient.setQueryData(taskQueryKeys.checklist(taskId), data);
+      void queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.listRoot(),
+      });
+    },
+  });
+
+  const addChecklistMutation = useMutation({
+    mutationFn: (text: string) => addChecklistItem(taskId, text),
+    onSuccess: async () => {
+      setNewChecklistText("");
+      await queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.checklist(taskId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.detail(taskId),
+      });
+    },
+  });
+
+  const deleteChecklistMutation = useMutation({
+    mutationFn: (itemId: string) => deleteChecklistItem(taskId, itemId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.checklist(taskId),
+      });
+    },
   });
 
   const eventsQuery = useQuery({
@@ -169,7 +364,7 @@ export function TaskDetailPage({ app }: Props) {
       <div className="task-detail-actions">
         <button
           type="button"
-          className="secondary"
+          className="task-detail-btn-edit"
           onClick={() => app.openEdit(task)}
           disabled={app.saving}
         >
@@ -177,7 +372,7 @@ export function TaskDetailPage({ app }: Props) {
         </button>
         <button
           type="button"
-          className="danger"
+          className="task-detail-btn-delete"
           onClick={() => app.requestDelete(task)}
           disabled={app.saving}
         >
@@ -185,8 +380,136 @@ export function TaskDetailPage({ app }: Props) {
         </button>
       </div>
 
-      <div className="task-detail-prompt">
-        <h3 className="task-detail-subheading" id="task-detail-prompt-heading">
+      <div className="task-detail-section" id="task-detail-subtasks">
+        <div className="task-detail-subtasks-head">
+          <h3 className="task-detail-section-heading" id="task-subtasks-heading">
+            Subtasks
+          </h3>
+          <button
+            type="button"
+            className="task-detail-add-subtask-btn"
+            onClick={openSubtaskModal}
+            disabled={app.saving}
+          >
+            Add subtask
+          </button>
+        </div>
+        <SubtaskTree nodes={task.children ?? []} />
+        {subtaskModalOpen ? (
+          <SubtaskCreateModal
+            taskId={taskId}
+            pending={createSubtaskMutation.isPending}
+            saving={app.saving}
+            onClose={closeSubtaskModal}
+            title={subtaskTitle}
+            prompt={subtaskPrompt}
+            priority={subtaskPriority}
+            checklistDraft={subtaskChecklistDraft}
+            checklistItems={subtaskChecklistItems}
+            checklistInherit={subtaskInherit}
+            onTitleChange={setSubtaskTitle}
+            onPromptChange={setSubtaskPrompt}
+            onPriorityChange={setSubtaskPriority}
+            onChecklistDraftChange={setSubtaskChecklistDraft}
+            onAddChecklistRow={addSubtaskChecklistRow}
+            onRemoveChecklistRow={removeSubtaskChecklistRow}
+            onChecklistInheritChange={setSubtaskInherit}
+            onSubmit={submitNewSubtask}
+          />
+        ) : null}
+      </div>
+
+      <div className="task-detail-section" id="task-detail-checklist">
+        <h3 className="task-detail-section-heading" id="task-checklist-heading">
+          Done criteria
+        </h3>
+        {!task.checklist_inherit ? (
+          <p className="task-detail-section-hint">
+            Every item must be complete before you can mark this task done.
+          </p>
+        ) : null}
+        {task.checklist_inherit ? (
+          <p className="muted" role="status">
+            This task inherits checklist items from an ancestor. Complete them
+            here for this task; definitions are owned upstream.
+          </p>
+        ) : null}
+        {checklistQuery.isError ? (
+          <p className="err-inline" role="alert">
+            {checklistQuery.error instanceof Error
+              ? checklistQuery.error.message
+              : "Could not load checklist."}
+          </p>
+        ) : checklistQuery.isPending ? (
+          <p className="muted">Loading checklist…</p>
+        ) : (
+          <ul
+            className="task-checklist-list"
+            aria-labelledby="task-checklist-heading"
+          >
+            {checklistQuery.data?.items.map((item) => (
+              <li key={item.id} className="task-checklist-row">
+                <label className="task-checklist-label">
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    disabled={toggleChecklistMutation.isPending}
+                    onChange={(ev) => {
+                      toggleChecklistMutation.mutate({
+                        itemId: item.id,
+                        done: ev.target.checked,
+                      });
+                    }}
+                  />
+                  <span>{item.text}</span>
+                </label>
+                {!task.checklist_inherit ? (
+                  <button
+                    type="button"
+                    className="task-detail-checklist-remove"
+                    disabled={deleteChecklistMutation.isPending}
+                    onClick={() => deleteChecklistMutation.mutate(item.id)}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {!task.checklist_inherit ? (
+          <form
+            className="task-checklist-add-form"
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              const t = newChecklistText.trim();
+              if (!t || addChecklistMutation.isPending) return;
+              addChecklistMutation.mutate(t);
+            }}
+          >
+            <div className="field grow">
+              <label htmlFor="task-new-checklist">Add criterion</label>
+              <input
+                id="task-new-checklist"
+                value={newChecklistText}
+                onChange={(ev) => setNewChecklistText(ev.target.value)}
+                placeholder="Describe what must be true to mark done"
+                disabled={addChecklistMutation.isPending}
+              />
+            </div>
+            <button
+              type="submit"
+              className="task-detail-checklist-add-btn"
+              disabled={!newChecklistText.trim() || addChecklistMutation.isPending}
+            >
+              Add
+            </button>
+          </form>
+        ) : null}
+      </div>
+
+      <div className="task-detail-section task-detail-prompt">
+        <h3 className="task-detail-section-heading" id="task-detail-prompt-heading">
           Initial prompt
         </h3>
         {!promptHasVisibleContent(task.initial_prompt) ? (
