@@ -8,7 +8,7 @@ import {
   patchTask,
 } from "../../api";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
-import { flattenTaskTree } from "../flattenTaskTree";
+import { flattenTaskTree, flattenTaskTreeRoots } from "../flattenTaskTree";
 import { TASK_LIST_PAGE_SIZE } from "../paging";
 import { taskQueryKeys } from "../queryKeys";
 import {
@@ -17,7 +17,12 @@ import {
   type Status,
   type Task,
 } from "@/types";
+import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { useTaskEventStream } from "./useTaskEventStream";
+
+/** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
+const LIST_REFRESH_SHOW_MS = 380;
+const LIST_REFRESH_HIDE_MS = 520;
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -77,6 +82,10 @@ export function useTasksApp() {
 
   const rootTaskTrees = tasksQuery.data?.tasks ?? [];
   const tasks = useMemo(
+    () => flattenTaskTreeRoots(rootTaskTrees),
+    [rootTaskTrees],
+  );
+  const parentPickerTasks = useMemo(
     () => flattenTaskTree(rootTaskTrees),
     [rootTaskTrees],
   );
@@ -115,8 +124,13 @@ export function useTasksApp() {
   }, [resetNewTaskForm]);
 
   const loading = tasksQuery.isPending;
-  const listRefreshing =
+  const rawListRefreshing =
     tasksQuery.isFetching && !tasksQuery.isPending;
+  const listRefreshing = useHysteresisBoolean(
+    rawListRefreshing,
+    LIST_REFRESH_SHOW_MS,
+    LIST_REFRESH_HIDE_MS,
+  );
 
   const createMutation = useMutation({
     mutationFn: async (input: {
@@ -341,6 +355,7 @@ export function useTasksApp() {
 
   return {
     tasks,
+    parentPickerTasks,
     rootTasksOnPage: rootTaskTrees.length,
     loading,
     listRefreshing,

@@ -333,7 +333,7 @@ For local UI work, `taskapi` can start a background ticker (no extra HTTP routes
 
 There are no extra dev-only HTTP paths; only normal REST + `GET /events` apply.
 
-Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative.
+Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative. The SPA debounces bursts, then invalidates cached **list** queries and only **detail** subtrees for task ids present on the `data` lines (falling back to invalidating all task queries if no id could be parsed), so open pages for unrelated tasks are not refetched on every event.
 
 ## Persistence and audit (`store`)
 

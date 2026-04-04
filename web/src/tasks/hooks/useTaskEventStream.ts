@@ -1,38 +1,80 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { taskQueryKeys } from "../queryKeys";
+import { collectTaskIdFromSSEData } from "../sseInvalidate";
 
 const SSE_INVALIDATE_MS = 400;
+
+/** Wait this long after an error before showing disconnected (browser may reconnect). */
+const SSE_DISCONNECT_UI_MS = 900;
 
 export function useTaskEventStream(): boolean {
   const queryClient = useQueryClient();
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const disconnectUiRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const pendingIdsRef = useRef<Set<string>>(new Set());
   const [sseLive, setSseLive] = useState(false);
 
-  const scheduleInvalidateFromStream = useCallback(() => {
-    if (sseDebounceRef.current !== undefined) {
-      clearTimeout(sseDebounceRef.current);
-    }
-    sseDebounceRef.current = setTimeout(() => {
-      sseDebounceRef.current = undefined;
+  const flushStreamInvalidation = useCallback(() => {
+    const ids = [...pendingIdsRef.current];
+    pendingIdsRef.current.clear();
+    if (ids.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-    }, SSE_INVALIDATE_MS);
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+    for (const id of ids) {
+      void queryClient.invalidateQueries({
+        queryKey: [...taskQueryKeys.all, "detail", id],
+      });
+    }
   }, [queryClient]);
+
+  const scheduleInvalidateFromStream = useCallback(
+    (data: string) => {
+      collectTaskIdFromSSEData(data, pendingIdsRef.current);
+      if (sseDebounceRef.current !== undefined) {
+        clearTimeout(sseDebounceRef.current);
+      }
+      sseDebounceRef.current = setTimeout(() => {
+        sseDebounceRef.current = undefined;
+        flushStreamInvalidation();
+      }, SSE_INVALIDATE_MS);
+    },
+    [flushStreamInvalidation],
+  );
 
   useEffect(() => {
     const es = new EventSource("/events");
-    es.onopen = () => setSseLive(true);
-    es.onmessage = () => {
-      scheduleInvalidateFromStream();
+    const clearDisconnectUi = () => {
+      if (disconnectUiRef.current !== undefined) {
+        clearTimeout(disconnectUiRef.current);
+        disconnectUiRef.current = undefined;
+      }
+    };
+    es.onopen = () => {
+      clearDisconnectUi();
+      setSseLive(true);
+    };
+    es.onmessage = (ev) => {
+      scheduleInvalidateFromStream(String(ev.data ?? ""));
     };
     es.onerror = () => {
-      setSseLive(false);
+      clearDisconnectUi();
+      disconnectUiRef.current = setTimeout(() => {
+        disconnectUiRef.current = undefined;
+        if (es.readyState !== EventSource.OPEN) {
+          setSseLive(false);
+        }
+      }, SSE_DISCONNECT_UI_MS);
     };
     return () => {
+      clearDisconnectUi();
       if (sseDebounceRef.current !== undefined) {
         clearTimeout(sseDebounceRef.current);
         sseDebounceRef.current = undefined;
       }
+      pendingIdsRef.current.clear();
       es.close();
       setSseLive(false);
     };

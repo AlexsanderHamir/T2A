@@ -19,7 +19,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         </div>
         <StreamStatusHint
           connected={app.sseLive}
-          listSyncing={app.listRefreshing}
+          listSyncing={app.sseLive ? false : app.listRefreshing}
         />
       </header>
       {app.error ? <ErrorBanner message={app.error} /> : null}

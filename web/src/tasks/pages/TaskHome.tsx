@@ -30,7 +30,7 @@ export function TaskHome({ app }: Props) {
           priority={app.newPriority}
           checklistDraft={app.newChecklistDraft}
           checklistItems={app.newChecklistItems}
-          parentOptions={app.tasks}
+          parentOptions={app.parentPickerTasks}
           parentId={app.newParentId}
           checklistInherit={app.newChecklistInherit}
           onTitleChange={app.setNewTitle}
@@ -55,6 +55,7 @@ export function TaskHome({ app }: Props) {
         loading={app.loading}
         refreshing={app.listRefreshing}
         saving={app.saving}
+        hideBackgroundRefreshHint={app.sseLive}
         listPage={app.taskListPage}
         listPageSize={app.taskListPageSize}
         onListPageChange={app.setTaskListPage}

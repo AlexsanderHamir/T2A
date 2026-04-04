@@ -319,8 +319,9 @@ describe("App", () => {
     );
 
     expect(
-      await screen.findByRole("link", { name: /with criteria/i }),
+      await screen.findByRole("link", { name: /check parent/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /with criteria/i })).toBeNull();
     expect(checklistPosts).toHaveLength(1);
     expect(checklistPosts[0]).toContain("Tests pass");
   });
@@ -559,8 +560,9 @@ describe("App", () => {
     );
 
     expect(
-      await screen.findByRole("link", { name: /child sub/i }),
+      await screen.findByRole("link", { name: /parent task/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /child sub/i })).toBeNull();
     expect(postBody).not.toBeNull();
     const posted = postBody as unknown as {
       parent_id?: unknown;

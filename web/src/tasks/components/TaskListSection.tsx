@@ -24,6 +24,11 @@ type Props = {
   refreshing: boolean;
   /** A create/update/delete request is in flight. */
   saving: boolean;
+  /**
+   * When true, hide the background “Syncing with server…” line (e.g. live SSE
+   * already drives refetches; avoids duplicate status with the header).
+   */
+  hideBackgroundRefreshHint?: boolean;
   /** Zero-based server list page (see `GET /tasks` offset). */
   listPage: number;
   listPageSize: number;
@@ -33,8 +38,8 @@ type Props = {
   hasNextPage: boolean;
   hasPrevPage: boolean;
   /**
-   * When true (default), status lines wait briefly before appearing so fast
-   * requests do not flash unreadable text. Set false in tests.
+   * When true (default), the loading line waits briefly before appearing. Set false in tests.
+   * List “syncing” is smoothed in `useTasksApp` (hysteresis on refetch).
    */
   smoothTransitions?: boolean;
   onEdit: (t: Task) => void;
@@ -46,7 +51,6 @@ type StatusFilter = "all" | Status;
 type PriorityFilter = "all" | Priority;
 
 const LOADING_STATUS_DELAY_MS = 220;
-const SYNC_STATUS_DELAY_MS = 180;
 
 export function TaskListSection({
   tasks,
@@ -54,6 +58,7 @@ export function TaskListSection({
   loading,
   refreshing,
   saving,
+  hideBackgroundRefreshHint = false,
   listPage,
   listPageSize,
   onListPageChange,
@@ -65,9 +70,7 @@ export function TaskListSection({
   onRequestDelete,
 }: Props) {
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
-  const syncDelayMs = smoothTransitions ? SYNC_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
-  const showSyncLine = useDelayedTrue(refreshing && !loading, syncDelayMs);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
@@ -131,7 +134,7 @@ export function TaskListSection({
   return (
     <section className="panel">
       <h2>All tasks</h2>
-      {refreshing && !loading && showSyncLine ? (
+      {refreshing && !loading && !hideBackgroundRefreshHint ? (
         <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…
         </p>

@@ -4,7 +4,7 @@ Canonical description of the optional Vite + React + TypeScript SPA. Server cont
 
 ## Scope
 
-Does: CRUD UI for `/tasks` (including nested subtasks in the list and on task detail); TanStack Query for list + mutations; checklist CRUD via `GET/PATCH/POST/DELETE` under `/tasks/{id}/checklist` (see DESIGN); `EventSource('/events')` with 400ms debounced `invalidateQueries`; `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
+Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist CRUD via `GET/PATCH/POST/DELETE` under `/tasks/{id}/checklist` (see DESIGN); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
 
 Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — DESIGN, limitations).
 
@@ -59,9 +59,9 @@ flowchart LR
 
 ## React Query + SSE
 
-- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` over **root** tasks (`tasks/paging.ts` page sizes); list rows are flattened from nested `children` for the table. `taskQueryKeys.checklist(taskId)` → `GET /tasks/{id}/checklist`. `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
-- Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). Status copy (“Loading…”, “Syncing…”) waits briefly before appearing; the task list panel fades in when data is ready. `createPending` / modal `busy` show spinners during mutations without that delay.
-- SSE: each `data:` line schedules debounced invalidation → refetch list; `parseTaskApi` runs on the response.
+- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` over **root** tasks (`tasks/paging.ts` page sizes); the home table shows those roots only (`flattenTaskTreeRoots`), while `flattenTaskTree` still drives the create-modal parent dropdown. `taskQueryKeys.checklist(taskId)` → `GET /tasks/{id}/checklist`. `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
+- Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). The header shows **Connected** while `EventSource` is open and does not toggle a second “syncing” pill for background refetch; if the stream is down, **Syncing…** can appear while the list refetches. The “Syncing with server…” line under **All tasks** is hidden while SSE is live (same reason). `createPending` / modal `busy` show spinners during mutations.
+- SSE: each `data:` line contributes task ids to a debounced batch → invalidate list page(s) and only detail/checklist/events caches for those ids (not every open task). `parseTaskApi` runs on REST responses. Server dev mode `T2A_SSE_TEST` emits synthetic events about every 3s by default, so refetches can still be frequent for the home list when many tasks change.
 
 ```mermaid
 sequenceDiagram
@@ -83,7 +83,9 @@ sequenceDiagram
 |------|------|
 | `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`), `App.css`, `App.test.tsx`. |
 | `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
-| `lib/useDelayedTrue.ts` | Delays showing loading/sync status so very short fetches do not flash unreadable lines; `smoothTransitions={false}` on `TaskListSection` / `StreamStatusHint` for tests. |
+| `lib/useDelayedTrue.ts` | Delays showing the task list loading line; `smoothTransitions={false}` on `TaskListSection` in tests. |
+| `lib/useHysteresisBoolean.ts` | Hides flicker from brief React Query refetches: `useTasksApp` drives “syncing” for the list + header after sustained `isFetching`. |
+| `tasks/sseInvalidate.ts` | Collects task ids from SSE `data` lines for targeted `invalidateQueries` (list root + per-id detail prefix). |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
 | `tasks/` | Task feature: `queryKeys.ts`, `hooks/`, `components/`, `pages/` (`TaskHome`, `TaskDetailPage`, `TaskEventDetailPage` + `TaskUpdatesTimeline` — single chronological list; rows link to per-event detail; needs-user event types (`taskEventNeedsUser.ts`) get distinct row styling and link `aria-label`; collapsible initial prompt by default; audit data from `GET /tasks/{id}/events` / `GET /tasks/{id}/events/{seq}`; optional `user_response` on events; needs-user types use `PATCH /tasks/{id}/events/{seq}` via `patchTaskEventUserResponse` in `api/tasks.ts`; human text from `taskEventLabels.ts` is `title` / `aria-label` only; `taskStatusNeedsUser.ts` classifies task `status` for list filter grouping, `data-needs-user` on status pills, task detail stance), `extensions/`, `promptFormat.ts`, `taskAttention.ts`, `taskEventLabels.ts`. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |

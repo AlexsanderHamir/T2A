@@ -160,9 +160,9 @@ export function TaskCreateModal({
                 ) : (
                   <>
                     Leave as top-level for a root task (full form below).
-                    Choose a parent to create a <strong>subtask</strong> under
-                    an existing row. Tasks listed match the table below,
-                    including nested rows.
+                    Choose a parent to create a <strong>subtask</strong>. The
+                    list includes subtasks so you can nest under any task on
+                    this page (the home table shows top-level tasks only).
                   </>
                 )}
               </p>
