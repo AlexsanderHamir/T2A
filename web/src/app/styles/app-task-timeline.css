@@ -185,7 +185,7 @@ a.task-timeline-item-hit {
 .task-timeline-by {
   text-transform: capitalize;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .task-timeline-needs-user-hint {
@@ -397,7 +397,7 @@ a.task-timeline-item-hit {
 }
 
 .task-event-detail-response-sent-at {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
@@ -529,7 +529,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-dl dt {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: var(--data-caps-text-transform);
   letter-spacing: var(--data-caps-letter-spacing);

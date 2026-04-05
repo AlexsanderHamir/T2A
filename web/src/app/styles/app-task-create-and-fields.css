@@ -22,7 +22,7 @@
 
 .task-create-header h2 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.028em;
   line-height: 1.2;

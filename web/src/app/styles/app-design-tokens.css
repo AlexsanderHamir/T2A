@@ -75,6 +75,8 @@
   --text-md: 1rem;
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
+  /* Between xl and 2xl — dense app page titles (task detail, etc.) */
+  --text-title-app: 1.35rem;
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
