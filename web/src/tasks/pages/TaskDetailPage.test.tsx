@@ -540,6 +540,7 @@ describe("TaskDetailPage", () => {
             : {};
         expect(body.parent_id).toBe("parent");
         expect(body.title).toBe("Child");
+        expect(body.priority).toBe("high");
         subtaskCreated = true;
         return new Response(
           JSON.stringify({
@@ -570,6 +571,10 @@ describe("TaskDetailPage", () => {
 
     const dialog = await screen.findByRole("dialog");
     await user.type(within(dialog).getByLabelText(/^title$/i), "Child");
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /^priority$/i }),
+    );
+    await user.click(screen.getByRole("option", { name: /^high$/i }));
     await user.type(
       within(dialog).getByPlaceholderText(/describe what must be true/i),
       "Criterion A",

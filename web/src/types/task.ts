@@ -8,6 +8,9 @@ export type Status =
 
 export type Priority = "low" | "medium" | "high" | "critical";
 
+/** Empty string means no selection yet (create / draft forms). */
+export type PriorityChoice = Priority | "";
+
 export type Task = {
   id: string;
   title: string;

@@ -102,7 +102,12 @@ describe("createTask", () => {
       ),
     );
 
-    await createTask({ title: "A", initial_prompt: "p", status: "running" });
+    await createTask({
+      title: "A",
+      initial_prompt: "p",
+      status: "running",
+      priority: "medium",
+    });
 
     expect(spy).toHaveBeenCalledWith(
       "/tasks",
@@ -119,6 +124,7 @@ describe("createTask", () => {
       title: "A",
       initial_prompt: "p",
       status: "running",
+      priority: "medium",
     });
   });
 
@@ -137,12 +143,13 @@ describe("createTask", () => {
       ),
     );
 
-    await createTask({ title: "A" });
+    await createTask({ title: "A", priority: "high" });
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toMatchObject({
       title: "A",
       status: "ready",
+      priority: "high",
     });
   });
 });

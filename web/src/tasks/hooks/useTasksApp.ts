@@ -14,6 +14,7 @@ import { taskQueryKeys } from "../queryKeys";
 import {
   DEFAULT_NEW_TASK_STATUS,
   type Priority,
+  type PriorityChoice,
   type Status,
   type Task,
 } from "@/types";
@@ -34,7 +35,7 @@ export function useTasksApp() {
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
-  const [newPriority, setNewPriority] = useState<Priority>("medium");
+  const [newPriority, setNewPriority] = useState<PriorityChoice>("");
   const [newChecklistDraft, setNewChecklistDraft] = useState("");
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   /** Child tasks (full draft) created after the parent task on the home flow. */
@@ -106,7 +107,7 @@ export function useTasksApp() {
   const resetNewTaskForm = useCallback(() => {
     setNewTitle("");
     setNewPrompt("");
-    setNewPriority("medium");
+    setNewPriority("");
     setNewChecklistDraft("");
     setNewChecklistItems([]);
     setPendingSubtasks([]);
@@ -255,7 +256,7 @@ export function useTasksApp() {
 
   function submitCreate(e: FormEvent) {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || !newPriority) return;
     const parentId = newParentId.trim();
     createMutation.mutate({
       title: newTitle.trim(),

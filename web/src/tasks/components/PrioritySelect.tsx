@@ -1,16 +1,21 @@
 import { useMemo } from "react";
-import { PRIORITIES, type Priority } from "@/types";
+import { PRIORITIES, type PriorityChoice } from "@/types";
 import type { FieldRequirement } from "@/shared/FieldLabel";
 import { priorityPillClass } from "../taskPillClasses";
 import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
 
 type Props = {
   id: string;
-  value: Priority;
-  onChange: (p: Priority) => void;
+  value: PriorityChoice;
+  onChange: (p: PriorityChoice) => void;
   /** Narrow trigger for dense rows (e.g. create form). */
   compact?: boolean;
   requirement?: FieldRequirement;
+  /**
+   * When true, first option is “Choose priority…` (value "").
+   * Set false when editing an existing task (priority always set).
+   */
+  allowUnset?: boolean;
 };
 
 export function PrioritySelect({
@@ -18,17 +23,18 @@ export function PrioritySelect({
   value,
   onChange,
   compact,
-  requirement = "optional",
+  requirement = "required",
+  allowUnset = true,
 }: Props) {
-  const options: CustomSelectOption[] = useMemo(
-    () =>
-      PRIORITIES.map((p) => ({
-        value: p,
-        label: p,
-        pillClass: priorityPillClass(p),
-      })),
-    [],
-  );
+  const options: CustomSelectOption[] = useMemo(() => {
+    const levels: CustomSelectOption[] = PRIORITIES.map((p) => ({
+      value: p,
+      label: p,
+      pillClass: priorityPillClass(p),
+    }));
+    if (!allowUnset) return levels;
+    return [{ value: "", label: "Choose priority…" }, ...levels];
+  }, [allowUnset]);
 
   return (
     <CustomSelect
@@ -39,7 +45,7 @@ export function PrioritySelect({
       listboxName="Priority"
       compact={compact}
       requirement={requirement}
-      onChange={(v) => onChange(v as Priority)}
+      onChange={(v) => onChange(v as PriorityChoice)}
     />
   );
 }

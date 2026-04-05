@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Priority } from "@/types";
+import type { PriorityChoice } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { TaskComposeFields } from "./TaskComposeFields";
@@ -11,13 +11,13 @@ type Props = {
   onClose: () => void;
   title: string;
   prompt: string;
-  priority: Priority;
+  priority: PriorityChoice;
   checklistDraft: string;
   checklistItems: string[];
   checklistInherit: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
-  onPriorityChange: (p: Priority) => void;
+  onPriorityChange: (p: PriorityChoice) => void;
   onChecklistDraftChange: (v: string) => void;
   onAddChecklistRow: () => void;
   onRemoveChecklistRow: (index: number) => void;
@@ -102,7 +102,7 @@ export function SubtaskCreateModal({
             <button
               type="submit"
               className="task-create-submit"
-              disabled={!title.trim() || disabled}
+              disabled={!title.trim() || !priority || disabled}
             >
               Add subtask
             </button>

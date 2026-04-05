@@ -123,7 +123,7 @@ export async function createTask(input: {
   title: string;
   initial_prompt?: string;
   status?: Status;
-  priority?: Priority;
+  priority: Priority;
   id?: string;
   parent_id?: string;
   checklist_inherit?: boolean;
@@ -135,7 +135,7 @@ export async function createTask(input: {
       title: input.title,
       initial_prompt: input.initial_prompt ?? "",
       status: input.status ?? DEFAULT_NEW_TASK_STATUS,
-      priority: input.priority ?? "",
+      priority: input.priority,
       ...(input.id ? { id: input.id } : {}),
       ...(input.parent_id ? { parent_id: input.parent_id } : {}),
       ...(input.checklist_inherit === true

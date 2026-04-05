@@ -16,7 +16,7 @@ import {
   listTaskEvents,
   patchChecklistItemText,
 } from "@/api";
-import type { Priority } from "@/types";
+import type { Priority, PriorityChoice } from "@/types";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
 import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
@@ -41,7 +41,7 @@ export function TaskDetailPage({ app }: Props) {
   const navigatedAfterDelete = useRef(false);
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskPrompt, setSubtaskPrompt] = useState("");
-  const [subtaskPriority, setSubtaskPriority] = useState<Priority>("medium");
+  const [subtaskPriority, setSubtaskPriority] = useState<PriorityChoice>("");
   const [subtaskChecklistDraft, setSubtaskChecklistDraft] = useState("");
   const [subtaskChecklistItems, setSubtaskChecklistItems] = useState<string[]>(
     [],
@@ -71,7 +71,7 @@ export function TaskDetailPage({ app }: Props) {
   const resetSubtaskForm = useCallback(() => {
     setSubtaskTitle("");
     setSubtaskPrompt("");
-    setSubtaskPriority("medium");
+    setSubtaskPriority("");
     setSubtaskChecklistDraft("");
     setSubtaskChecklistItems([]);
     setSubtaskInherit(false);
@@ -190,7 +190,13 @@ export function TaskDetailPage({ app }: Props) {
   const submitNewSubtask = useCallback(
     (e: FormEvent) => {
       e.preventDefault();
-      if (!subtaskTitle.trim() || createSubtaskMutation.isPending) return;
+      if (
+        !subtaskTitle.trim() ||
+        !subtaskPriority ||
+        createSubtaskMutation.isPending
+      ) {
+        return;
+      }
       createSubtaskMutation.mutate({
         title: subtaskTitle.trim(),
         initial_prompt: subtaskPrompt,

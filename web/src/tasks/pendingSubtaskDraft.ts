@@ -8,13 +8,3 @@ export type PendingSubtaskDraft = {
   checklistItems: string[];
   checklist_inherit: boolean;
 };
-
-export function emptyPendingSubtaskDraft(): PendingSubtaskDraft {
-  return {
-    title: "",
-    initial_prompt: "",
-    priority: "medium",
-    checklistItems: [],
-    checklist_inherit: false,
-  };
-}

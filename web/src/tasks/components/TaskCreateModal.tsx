@@ -1,5 +1,5 @@
 import { useCallback, useState, type FormEvent } from "react";
-import type { Priority } from "@/types";
+import type { PriorityChoice } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
@@ -13,7 +13,7 @@ type Props = {
   onClose: () => void;
   title: string;
   prompt: string;
-  priority: Priority;
+  priority: PriorityChoice;
   checklistDraft: string;
   checklistItems: string[];
   parentOptions: TaskWithDepth[];
@@ -21,7 +21,7 @@ type Props = {
   checklistInherit: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
-  onPriorityChange: (p: Priority) => void;
+  onPriorityChange: (p: PriorityChoice) => void;
   onChecklistDraftChange: (v: string) => void;
   onParentIdChange: (id: string) => void;
   onChecklistInheritChange: (v: boolean) => void;
@@ -279,7 +279,7 @@ export function TaskCreateModal({
               <button
                 type="submit"
                 className="task-create-submit"
-                disabled={!title.trim() || disabled}
+                disabled={!title.trim() || !priority || disabled}
               >
                 {hasParent ? "Add subtask" : "Create"}
               </button>

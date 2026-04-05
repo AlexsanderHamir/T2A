@@ -1,4 +1,4 @@
-import type { Priority } from "@/types";
+import type { PriorityChoice } from "@/types";
 import {
   FieldLabel,
   FieldRequirementBadge,
@@ -11,7 +11,7 @@ export type TaskComposeFieldsProps = {
   idsPrefix: string;
   title: string;
   prompt: string;
-  priority: Priority;
+  priority: PriorityChoice;
   checklistDraft: string;
   checklistItems: string[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
@@ -19,7 +19,7 @@ export type TaskComposeFieldsProps = {
   disabled: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
-  onPriorityChange: (p: Priority) => void;
+  onPriorityChange: (p: PriorityChoice) => void;
   onChecklistDraftChange: (v: string) => void;
   onAddChecklistRow: () => void;
   onRemoveChecklistRow: (index: number) => void;

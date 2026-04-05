@@ -12,6 +12,20 @@ async function openNewTaskModal(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("dialog");
 }
 
+async function choosePriorityInDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  level: "low" | "medium" | "high" | "critical" = "medium",
+) {
+  const combo = within(dialog).getByRole("combobox", {
+    name: /^priority$/i,
+  });
+  await user.click(combo);
+  await user.click(
+    screen.getByRole("option", { name: new RegExp(`^${level}$`, "i") }),
+  );
+}
+
 function renderApp() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -125,6 +139,7 @@ describe("App", () => {
 
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
+    await choosePriorityInDialog(user, dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^create$/i }),
     );
@@ -193,6 +208,7 @@ describe("App", () => {
 
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
+    await choosePriorityInDialog(user, dialog);
     await user.type(
       within(dialog).getByPlaceholderText(/describe what must be true/i),
       "Tests pass",
@@ -306,6 +322,7 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
+    await choosePriorityInDialog(user, dialog);
     await user.type(
       within(dialog).getByPlaceholderText(/describe what must be true/i),
       "Tests pass",
@@ -418,6 +435,7 @@ describe("App", () => {
 
     const outer = await openNewTaskModal(user);
     await user.type(within(outer).getByLabelText(/^title$/i), "Epic");
+    await choosePriorityInDialog(user, outer);
 
     await user.click(
       within(outer).getByRole("button", { name: /open form to add a subtask/i }),
@@ -426,6 +444,7 @@ describe("App", () => {
     expect(dialogs.length).toBe(2);
     let nested = dialogs[1];
     await user.type(within(nested).getByLabelText(/^title$/i), "Step one");
+    await choosePriorityInDialog(user, nested);
     await user.click(
       within(nested).getByRole("button", { name: /^add subtask$/i }),
     );
@@ -440,6 +459,7 @@ describe("App", () => {
     expect(dialogs.length).toBe(2);
     nested = dialogs[1];
     await user.type(within(nested).getByLabelText(/^title$/i), "Step two");
+    await choosePriorityInDialog(user, nested);
     await user.click(
       within(nested).getByRole("button", { name: /^add subtask$/i }),
     );
@@ -555,6 +575,7 @@ describe("App", () => {
       await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
     ).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/^title$/i), "Child sub");
+    await choosePriorityInDialog(user, dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^add subtask$/i }),
     );

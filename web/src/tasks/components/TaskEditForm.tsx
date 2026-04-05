@@ -72,7 +72,10 @@ export function TaskEditForm({
             <PrioritySelect
               id="task-edit-priority"
               value={priority}
-              onChange={onPriorityChange}
+              allowUnset={false}
+              onChange={(p) => {
+                if (p !== "") onPriorityChange(p);
+              }}
             />
           </div>
           <div className="field grow">

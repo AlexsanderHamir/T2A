@@ -1,11 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Priority } from "@/types";
+import type { PriorityChoice } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
-import {
-  emptyPendingSubtaskDraft,
-  type PendingSubtaskDraft,
-} from "../pendingSubtaskDraft";
+import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { TaskComposeFields } from "./TaskComposeFields";
 
 type Props = {
@@ -23,20 +20,27 @@ export function NestedSubtaskDraftModal({
 }: Props) {
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [priority, setPriority] = useState<Priority>("medium");
+  const [priority, setPriority] = useState<PriorityChoice>("");
   const [checklistDraft, setChecklistDraft] = useState("");
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [checklistInherit, setChecklistInherit] = useState(false);
 
   useEffect(() => {
-    const base = initialDraft ?? emptyPendingSubtaskDraft();
-    setTitle(base.title);
-    setPrompt(base.initial_prompt);
-    setPriority(base.priority);
-    setChecklistInherit(base.checklist_inherit);
-    setChecklistItems(
-      base.checklist_inherit ? [] : [...base.checklistItems],
-    );
+    if (initialDraft) {
+      setTitle(initialDraft.title);
+      setPrompt(initialDraft.initial_prompt);
+      setPriority(initialDraft.priority);
+      setChecklistInherit(initialDraft.checklist_inherit);
+      setChecklistItems(
+        initialDraft.checklist_inherit ? [] : [...initialDraft.checklistItems],
+      );
+    } else {
+      setTitle("");
+      setPrompt("");
+      setPriority("");
+      setChecklistInherit(false);
+      setChecklistItems([]);
+    }
     setChecklistDraft("");
   }, [instanceKey, initialDraft]);
 
@@ -56,7 +60,7 @@ export function NestedSubtaskDraftModal({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !priority) return;
     onSave({
       title: title.trim(),
       initial_prompt: prompt,
@@ -122,7 +126,7 @@ export function NestedSubtaskDraftModal({
             <button
               type="submit"
               className="task-create-submit"
-              disabled={!title.trim()}
+              disabled={!title.trim() || !priority}
             >
               Add subtask
             </button>
