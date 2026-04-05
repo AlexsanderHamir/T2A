@@ -199,7 +199,7 @@ button.task-detail-btn-delete:focus-visible {
 .task-detail-panel input:not([type]) {
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset;
+  box-shadow: var(--shadow-inset-field);
 }
 
 .task-detail-panel input[type="text"]:hover,
@@ -331,8 +331,7 @@ button.task-home-new-task-btn:disabled {
 .task-create-modal-sheet button.custom-select-trigger {
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset,
-    0 1px 0 rgb(255 255 255 / 88%) inset;
+  box-shadow: var(--shadow-inset-field), var(--shadow-inset-lip);
 }
 
 .task-subtask-modal-actions,

@@ -112,6 +112,19 @@
   --surface-press: rgb(var(--brand-rgb) / 16%);
   --focus-ring: var(--brand-focus);
 
+  /* Overlays */
+  --overlay-backdrop: rgb(0 0 0 / 48%);
+
+  /* Form surfaces — inset well + top lip on elevated fields (DS §7) */
+  --shadow-inset-field: inset 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 90%) inset;
+
+  /* Toasts (DS §11) — dimensions until a toast stack ships */
+  --toast-min-width: 20rem;
+  --toast-max-width: 25rem;
+  --toast-padding-y: 0.875rem;
+  --toast-padding-x: 1rem;
+
   /* Primary actions — brand (single clear CTA color) */
   --ink: #0a0a0a;
   --ink-soft: #171717;
@@ -187,6 +200,8 @@
     --shadow-2xl: 0 24px 48px rgb(0 0 0 / 60%);
     --shadow-card: var(--shadow-sm);
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
+    --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);
+    --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 8%) inset;
 
     --brand-muted: rgb(var(--brand-rgb) / 18%);
     --brand-mesh: rgb(var(--brand-rgb) / 10%);

@@ -26,8 +26,8 @@ button.custom-select-trigger {
   border: 1px solid rgb(var(--slate-shadow) / 11%);
   background: var(--bg-elevated);
   color: var(--text-primary);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm);
+  transition: border-color var(--duration-short) var(--ease-out), box-shadow var(--duration-short) var(--ease-out);
 }
 
 button.custom-select-trigger:hover:not(:disabled) {
@@ -36,13 +36,12 @@ button.custom-select-trigger:hover:not(:disabled) {
   background: var(--bg-elevated);
   color: var(--text-primary);
   border-color: rgb(var(--slate-shadow) / 16%);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm),
-    0 4px 14px rgb(var(--slate-shadow) / 6%);
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm), 0 4px 14px rgb(var(--slate-shadow) / 6%);
 }
 
 button.custom-select-trigger:active:not(:disabled) {
   transform: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm);
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm);
 }
 
 button.custom-select-trigger:focus-visible {
