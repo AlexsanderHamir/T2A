@@ -530,13 +530,13 @@ textarea::placeholder {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 17.5rem;
+  max-width: var(--layout-empty-max);
   margin-left: auto;
   margin-right: auto;
 }
 
 .empty-state--compact {
-  max-width: 28rem;
+  max-width: var(--layout-empty-max-compact);
   align-items: flex-start;
   text-align: left;
   margin-left: 0;
@@ -544,7 +544,7 @@ textarea::placeholder {
 }
 
 .empty-state--in-table {
-  max-width: 22rem;
+  max-width: var(--layout-empty-max-in-table);
 }
 
 .empty-state__icon-wrap {
@@ -581,6 +581,7 @@ textarea::placeholder {
 
 .empty-state__description {
   margin: 0;
+  max-width: var(--layout-empty-description-max);
   font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--text-secondary);

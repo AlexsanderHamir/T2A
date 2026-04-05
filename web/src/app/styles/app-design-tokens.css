@@ -136,6 +136,12 @@
   --toast-padding-y: 0.875rem;
   --toast-padding-x: 1rem;
 
+  /* Empty states (DS §11 — icon 48px in components; description max ~280px) */
+  --layout-empty-max: 17.5rem;
+  --layout-empty-max-compact: 28rem;
+  --layout-empty-max-in-table: 22rem;
+  --layout-empty-description-max: 17.5rem;
+
   /* Modal viewport gutter (safe-area aware rules in app-modals.css) */
   --layout-modal-safe-padding: var(--space-4);
 

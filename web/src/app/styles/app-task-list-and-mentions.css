@@ -178,8 +178,8 @@
 
 .empty-state {
   text-align: center;
-  padding: 2rem 1rem;
-  font-size: 0.9375rem;
+  padding: var(--space-8) var(--space-4);
+  font-size: var(--text-base);
 }
 
 /* Extra scroll room below the table so short lists still allow page scroll (e.g. long filter dropdowns). */
