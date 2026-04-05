@@ -83,39 +83,39 @@ export function TaskDetailChecklistSection({
           </button>
         ) : null}
       </div>
-      <div className="task-checklist-intro">
-        {!checklistInherit ? (
-          <p className="task-checklist-intro-lead">
-            The agent checks these off as work progresses. All must be complete
-            before this task can be marked done.
-          </p>
-        ) : (
-          <p className="task-checklist-intro-lead muted" role="status">
-            Inherited for <strong>this</strong> task; criteria are defined
-            upstream.
-          </p>
-        )}
-        {!checklistQuery.isPending &&
+      {checklistInherit ||
+      (!checklistQuery.isPending &&
         !checklistQuery.isError &&
-        totalCount > 0 ? (
-          <p
-            className="task-checklist-progress muted"
-            role="status"
-            aria-label={
-              totalCount === 1
-                ? `Checklist progress: ${doneCount} of 1 requirement satisfied`
-                : `Checklist progress: ${doneCount} of ${totalCount} requirements satisfied`
-            }
-          >
-            <strong className="task-checklist-progress-strong">
-              {doneCount} of {totalCount}
-            </strong>{" "}
-            {totalCount === 1
-              ? "requirement satisfied"
-              : "requirements satisfied"}
-          </p>
-        ) : null}
-      </div>
+        totalCount > 0) ? (
+        <div className="task-checklist-intro">
+          {checklistInherit ? (
+            <p className="task-checklist-intro-lead muted" role="status">
+              Inherited for <strong>this</strong> task; criteria are defined
+              upstream.
+            </p>
+          ) : null}
+          {!checklistQuery.isPending &&
+          !checklistQuery.isError &&
+          totalCount > 0 ? (
+            <p
+              className="task-checklist-progress muted"
+              role="status"
+              aria-label={
+                totalCount === 1
+                  ? `Checklist progress: ${doneCount} of 1 requirement satisfied`
+                  : `Checklist progress: ${doneCount} of ${totalCount} requirements satisfied`
+              }
+            >
+              <strong className="task-checklist-progress-strong">
+                {doneCount} of {totalCount}
+              </strong>{" "}
+              {totalCount === 1
+                ? "requirement satisfied"
+                : "requirements satisfied"}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div
         className="task-detail-checklist-body"
         aria-labelledby="task-checklist-heading"

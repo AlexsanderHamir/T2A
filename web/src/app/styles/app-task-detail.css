@@ -232,6 +232,14 @@ button.task-detail-btn-delete:focus-visible {
   margin-bottom: 0;
 }
 
+.task-detail-subtasks-title-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-detail-subtasks-title-row .task-detail-section-heading {
+  margin: 0;
+}
+
 .task-detail-checklist-head {
   display: flex;
   flex-wrap: wrap;

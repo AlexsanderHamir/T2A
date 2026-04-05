@@ -17,6 +17,7 @@ import {
   patchChecklistItemText,
 } from "@/api";
 import type { Priority, PriorityChoice } from "@/types";
+import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
@@ -443,9 +444,12 @@ export function TaskDetailPage({ app }: Props) {
 
       <div className="task-detail-section" id="task-detail-subtasks">
         <div className="task-detail-subtasks-head">
-          <h3 className="task-detail-section-heading" id="task-subtasks-heading">
-            Subtasks
-          </h3>
+          <div className="field-heading-with-req task-detail-subtasks-title-row">
+            <h3 className="task-detail-section-heading" id="task-subtasks-heading">
+              Subtasks
+            </h3>
+            <FieldRequirementBadge requirement="optional" />
+          </div>
           <button
             type="button"
             className="task-detail-add-subtask-btn"
