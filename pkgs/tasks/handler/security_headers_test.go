@@ -24,6 +24,10 @@ func assertBaselineSecurityHeaders(t *testing.T, h http.Header) {
 	if got := h.Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q want nosniff", got)
 	}
+	wantPP := "camera=(), microphone=(), geolocation=(), payment=()"
+	if got := h.Get("Permissions-Policy"); got != wantPP {
+		t.Errorf("Permissions-Policy = %q want %q", got, wantPP)
+	}
 }
 
 func TestHTTP_health_includes_security_headers(t *testing.T) {

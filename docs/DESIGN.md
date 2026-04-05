@@ -251,7 +251,7 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 
 Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for attribution. It is not an authentication mechanism. Optional `X-Request-ID` (trimmed, max 128 chars): if the client sends it, the same value is echoed on the response and used as `request_id` in logs; otherwise the server assigns a UUID.
 
-Baseline **response** hardening (JSON via `setJSONHeaders`, `GET /events` after the stream is accepted, and **429** rate-limit bodies): `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, and `X-Content-Type-Options: nosniff`. `GET /metrics` (outer mux) is unchanged. A reverse proxy or gateway may add or override security headers for production.
+Baseline **response** hardening (JSON via `setJSONHeaders`, `GET /events` after the stream is accepted, and **429** rate-limit bodies): `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`. `GET /metrics` (outer mux) is unchanged. A reverse proxy or gateway may add or override security headers for production.
 
 JSON: request bodies reject unknown fields and reject trailing data after the top-level value. Successful task list/get/create/patch bodies are task **trees**: each node uses `domain.Task` fields (`id`, `title`, `initial_prompt`, `status`, `priority`, `parent_id`, `checklist_inherit`) plus optional `children` (same shape, nested arbitrarily deep).
 
