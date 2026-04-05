@@ -302,6 +302,54 @@ textarea:focus-visible,
   color: var(--text-secondary);
 }
 
+/* Form labels + section headings: Required / Optional badges */
+.field-label-with-req {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+
+.field-heading-with-req {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.field-req {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  padding: 0.14rem 0.42rem;
+  line-height: 1.2;
+}
+
+.field-req--required {
+  color: var(--danger-deep);
+  background: var(--danger-soft);
+  border: 1px solid rgb(190 18 60 / 18%);
+}
+
+.field-req--optional {
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: rgb(var(--slate-shadow) / 5%);
+  border: 1px solid var(--border-hairline);
+}
+
+.checkbox-label-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
 .sync-hint {
   margin: 0 0 0.65rem;
   font-size: 0.8125rem;

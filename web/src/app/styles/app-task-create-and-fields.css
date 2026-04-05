@@ -178,8 +178,12 @@
   border-top: 1px solid var(--border-hairline);
 }
 
-.task-create-checklist-heading {
+.task-create-checklist-heading-row.field-heading-with-req {
   margin: 0 0 0.35rem;
+}
+
+.task-create-checklist-heading {
+  margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.012em;
@@ -256,8 +260,12 @@
   border-top: 1px solid var(--border-hairline);
 }
 
-.task-create-subtasks-heading {
+.task-create-subtasks-heading-row.field-heading-with-req {
   margin: 0 0 0.35rem;
+}
+
+.task-create-subtasks-heading {
+  margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.012em;

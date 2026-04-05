@@ -1,5 +1,6 @@
 import { useCallback, useState, type FormEvent } from "react";
 import type { Priority } from "@/types";
+import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
@@ -135,7 +136,9 @@ export function TaskCreateModal({
             onSubmit={onSubmit}
           >
             <div className="field grow task-create-parent-field">
-              <label htmlFor="task-new-parent">Parent task</label>
+              <FieldLabel htmlFor="task-new-parent" requirement="optional">
+                Parent task
+              </FieldLabel>
               <select
                 id="task-new-parent"
                 value={parentId}
@@ -196,18 +199,24 @@ export function TaskCreateModal({
                   }
                   disabled={disabled}
                 />
-                <span>Inherit parent&apos;s checklist criteria</span>
+                <span className="checkbox-label-body">
+                  <span>Inherit parent&apos;s checklist criteria</span>
+                  <FieldRequirementBadge requirement="optional" />
+                </span>
               </label>
             ) : null}
 
             {!hasParent ? (
               <div className="task-create-subtasks">
-                <h3
-                  className="task-create-subtasks-heading"
-                  id={subtasksHeadingId}
-                >
-                  Subtasks
-                </h3>
+                <div className="field-heading-with-req task-create-subtasks-heading-row">
+                  <h3
+                    className="task-create-subtasks-heading"
+                    id={subtasksHeadingId}
+                  >
+                    Subtasks
+                  </h3>
+                  <FieldRequirementBadge requirement="optional" />
+                </div>
                 <p className="task-create-subtasks-hint">
                   Optional — use <strong>New subtask</strong> for each child; it
                   opens the same detailed form in a second window. Nothing is

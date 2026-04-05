@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getTaskEvent, patchTaskEventUserResponse } from "@/api";
+import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { awaitingUserReply } from "../taskEventThread";
@@ -155,9 +156,15 @@ export function TaskEventDetailPage() {
 
       {needsInput ? (
         <div className="task-event-detail-response-block">
-          <h3 className="task-detail-subheading" id="task-event-response-heading">
-            Add a message
-          </h3>
+          <div className="field-heading-with-req task-event-response-heading-row">
+            <h3
+              className="task-detail-subheading"
+              id="task-event-response-heading"
+            >
+              Add a message
+            </h3>
+            <FieldRequirementBadge requirement="required" />
+          </div>
           <p className="muted task-event-detail-thread-hint">
             Each send appends to this conversation and appears on the task timeline.
           </p>
@@ -176,6 +183,7 @@ export function TaskEventDetailPage() {
             onChange={(e) => setDraft(e.target.value)}
             disabled={saveMutation.isPending}
             aria-labelledby="task-event-response-heading"
+            aria-required="true"
             placeholder="Type a message and send. It is stored on this event and shown on the task timeline."
           />
           <div className="task-event-detail-response-actions">

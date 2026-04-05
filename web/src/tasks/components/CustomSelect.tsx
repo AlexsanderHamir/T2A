@@ -9,6 +9,10 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  FieldRequirementBadge,
+  type FieldRequirement,
+} from "@/shared/FieldLabel";
 
 export type CustomSelectOption =
   | { type: "header"; label: string }
@@ -68,6 +72,8 @@ type Props = {
   listboxName?: string;
   /** Tighter width for filter toolbar. */
   compact?: boolean;
+  /** Shown next to the field label (default: no badge). */
+  requirement?: FieldRequirement;
 };
 
 export function CustomSelect({
@@ -78,6 +84,7 @@ export function CustomSelect({
   onChange,
   listboxName,
   compact = false,
+  requirement = "none",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -297,7 +304,10 @@ export function CustomSelect({
           : "field field--custom-select"
       }
     >
-      <label htmlFor={id}>{label}</label>
+      <div className="field-label-with-req">
+        <label htmlFor={id}>{label}</label>
+        <FieldRequirementBadge requirement={requirement} />
+      </div>
       <button
         ref={buttonRef}
         type="button"

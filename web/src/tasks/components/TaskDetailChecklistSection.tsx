@@ -1,6 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 import type { TaskChecklistResponse } from "@/types";
+import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
 
 export type TaskDetailChecklistSectionProps = {
@@ -55,9 +56,17 @@ export function TaskDetailChecklistSection({
   return (
     <div className="task-detail-section" id="task-detail-checklist">
       <div className="task-detail-checklist-head">
-        <h3 className="task-detail-section-heading" id="task-checklist-heading">
-          Done criteria
-        </h3>
+        <div className="field-heading-with-req task-detail-checklist-title-row">
+          <h3
+            className="task-detail-section-heading"
+            id="task-checklist-heading"
+          >
+            Done criteria
+          </h3>
+          <FieldRequirementBadge
+            requirement={checklistInherit ? "none" : "optional"}
+          />
+        </div>
         {!checklistInherit ? (
           <button
             type="button"

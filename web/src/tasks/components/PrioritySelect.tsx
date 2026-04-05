@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { PRIORITIES, type Priority } from "@/types";
+import type { FieldRequirement } from "@/shared/FieldLabel";
 import { priorityPillClass } from "../taskPillClasses";
 import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
 
@@ -9,9 +10,16 @@ type Props = {
   onChange: (p: Priority) => void;
   /** Narrow trigger for dense rows (e.g. create form). */
   compact?: boolean;
+  requirement?: FieldRequirement;
 };
 
-export function PrioritySelect({ id, value, onChange, compact }: Props) {
+export function PrioritySelect({
+  id,
+  value,
+  onChange,
+  compact,
+  requirement = "optional",
+}: Props) {
   const options: CustomSelectOption[] = useMemo(
     () =>
       PRIORITIES.map((p) => ({
@@ -30,6 +38,7 @@ export function PrioritySelect({ id, value, onChange, compact }: Props) {
       options={options}
       listboxName="Priority"
       compact={compact}
+      requirement={requirement}
       onChange={(v) => onChange(v as Priority)}
     />
   );

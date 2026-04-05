@@ -1,4 +1,8 @@
 import type { Priority } from "@/types";
+import {
+  FieldLabel,
+  FieldRequirementBadge,
+} from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
 
@@ -50,13 +54,16 @@ export function TaskComposeFields({
     <>
       <div className="task-create-title-row">
         <div className="field grow">
-          <label htmlFor={titleId}>Title</label>
+          <FieldLabel htmlFor={titleId} requirement="required">
+            Title
+          </FieldLabel>
           <input
             id={titleId}
             value={title}
             onChange={(ev) => onTitleChange(ev.target.value)}
             placeholder="What should get done?"
             required
+            aria-required="true"
             disabled={disabled}
           />
         </div>
@@ -69,9 +76,13 @@ export function TaskComposeFields({
       </div>
 
       <div className="field grow stack-tight prompt-field-full task-create-prompt">
-        <label id={`${promptId}-label`} htmlFor={promptId}>
+        <FieldLabel
+          id={`${promptId}-label`}
+          htmlFor={promptId}
+          requirement="optional"
+        >
           Initial prompt
-        </label>
+        </FieldLabel>
         <div className="task-create-editor-shell">
           <RichPromptEditor
             key={editorKey}
@@ -86,12 +97,15 @@ export function TaskComposeFields({
 
       {!hideChecklist ? (
         <div className="task-create-checklist">
-          <h3
-            className="task-create-checklist-heading"
-            id={checklistHeadingId}
-          >
-            Done criteria
-          </h3>
+          <div className="field-heading-with-req task-create-checklist-heading-row">
+            <h3
+              className="task-create-checklist-heading"
+              id={checklistHeadingId}
+            >
+              Done criteria
+            </h3>
+            <FieldRequirementBadge requirement="optional" />
+          </div>
           <p className="task-create-checklist-hint">
             Optional checklist — all items must be complete before the task can
             be marked done.
@@ -118,7 +132,9 @@ export function TaskComposeFields({
           ) : null}
           <div className="task-checklist-add-form task-create-checklist-add">
             <div className="field grow">
-              <label htmlFor={checklistDraftId}>Add criterion</label>
+              <FieldLabel htmlFor={checklistDraftId} requirement="optional">
+                Add criterion
+              </FieldLabel>
               <input
                 id={checklistDraftId}
                 value={checklistDraft}

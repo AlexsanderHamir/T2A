@@ -1,3 +1,5 @@
+import { FieldLabel } from "@/shared/FieldLabel";
+
 export type MentionRangePanelProps = {
   id: string;
   path: string;
@@ -39,7 +41,9 @@ export function MentionRangePanel({
       </p>
       <div className="row mention-range-row">
         <div className="field">
-          <label htmlFor={`${id}-line-start`}>From line</label>
+          <FieldLabel htmlFor={`${id}-line-start`} requirement="optional">
+            From line
+          </FieldLabel>
           <input
             id={`${id}-line-start`}
             type="number"
@@ -50,7 +54,9 @@ export function MentionRangePanel({
           />
         </div>
         <div className="field">
-          <label htmlFor={`${id}-line-end`}>To line</label>
+          <FieldLabel htmlFor={`${id}-line-end`} requirement="optional">
+            To line
+          </FieldLabel>
           <input
             id={`${id}-line-end`}
             type="number"

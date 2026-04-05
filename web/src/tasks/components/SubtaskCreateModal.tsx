@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { Priority } from "@/types";
+import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { TaskComposeFields } from "./TaskComposeFields";
 
@@ -84,7 +85,10 @@ export function SubtaskCreateModal({
               onChange={(ev) => onChecklistInheritChange(ev.target.checked)}
               disabled={disabled}
             />
-            <span>Inherit this task&apos;s checklist criteria</span>
+            <span className="checkbox-label-body">
+              <span>Inherit this task&apos;s checklist criteria</span>
+              <FieldRequirementBadge requirement="optional" />
+            </span>
           </label>
           <div className="row stack-row-actions task-subtask-modal-actions">
             <button

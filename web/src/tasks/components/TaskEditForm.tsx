@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { STATUSES, type Priority, type Status } from "@/types";
+import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
@@ -57,12 +58,15 @@ export function TaskEditForm({
           </p>
           <div className="row">
             <div className="field grow">
-              <label htmlFor="task-edit-title">Title</label>
+              <FieldLabel htmlFor="task-edit-title" requirement="required">
+                Title
+              </FieldLabel>
               <input
                 id="task-edit-title"
                 value={title}
                 onChange={(ev) => onTitleChange(ev.target.value)}
                 required
+                aria-required="true"
               />
             </div>
             <PrioritySelect
@@ -72,8 +76,11 @@ export function TaskEditForm({
             />
           </div>
           <div className="field grow">
-            <label htmlFor="task-edit-status">Status</label>
+            <FieldLabel htmlFor="task-edit-status" requirement="required">
+              Status
+            </FieldLabel>
             <select
+              aria-required="true"
               id="task-edit-status"
               value={status}
               onChange={(ev) => onStatusChange(ev.target.value as Status)}
@@ -93,8 +100,9 @@ export function TaskEditForm({
                 disabled={!canInheritChecklist || saving}
                 onChange={(ev) => onChecklistInheritChange(ev.target.checked)}
               />
-              <span>
-                Use parent&apos;s checklist (inherit completion criteria)
+              <span className="checkbox-label-body">
+                <span>Use parent&apos;s checklist (inherit completion criteria)</span>
+                <FieldRequirementBadge requirement="optional" />
               </span>
             </label>
             {!canInheritChecklist ? (
@@ -104,9 +112,13 @@ export function TaskEditForm({
             ) : null}
           </div>
           <div className="field grow stack-tight prompt-field-full">
-            <label id="task-edit-prompt-label" htmlFor="task-edit-prompt">
+            <FieldLabel
+              id="task-edit-prompt-label"
+              htmlFor="task-edit-prompt"
+              requirement="optional"
+            >
               Initial prompt
-            </label>
+            </FieldLabel>
             <RichPromptEditor
               key={taskId}
               id="task-edit-prompt"

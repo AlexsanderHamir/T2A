@@ -231,6 +231,14 @@
   margin-bottom: 0;
 }
 
+.task-detail-checklist-title-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-detail-checklist-title-row .task-detail-section-heading {
+  margin: 0;
+}
+
 .task-detail-add-subtask-btn,
 .task-detail-add-checklist-btn {
   border-radius: 10px;
@@ -758,6 +766,14 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-tertiary);
+}
+
+.task-event-response-heading-row.field-heading-with-req {
+  margin: 0 0 0.5rem;
+}
+
+.task-event-response-heading-row .task-detail-subheading {
+  margin: 0;
 }
 
 .task-detail-prompt-empty {

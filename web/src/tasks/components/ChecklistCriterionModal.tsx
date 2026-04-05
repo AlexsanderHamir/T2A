@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 
 type Props = {
@@ -54,7 +55,9 @@ export function ChecklistCriterionModal({
           onSubmit={onSubmit}
         >
           <div className="field">
-            <label htmlFor="checklist-criterion-text">Criterion</label>
+            <FieldLabel htmlFor="checklist-criterion-text" requirement="required">
+              Criterion
+            </FieldLabel>
             <input
               id="checklist-criterion-text"
               value={text}
@@ -62,6 +65,8 @@ export function ChecklistCriterionModal({
               placeholder="e.g. All subtasks marked done"
               disabled={disabled}
               autoFocus
+              required
+              aria-required="true"
             />
           </div>
           <div className="row stack-row-actions task-checklist-criterion-modal-actions">
