@@ -210,7 +210,15 @@ textarea::placeholder {
 }
 
 @media (hover: hover) {
-  .app-title-link:hover .app-title {
+  .app-title-link:hover .app-title:not(.app-title--logo) {
+    color: var(--link);
+  }
+
+  .app-title-link:hover .app-title--logo {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    -webkit-text-fill-color: var(--link);
     color: var(--link);
   }
 }
@@ -223,6 +231,33 @@ textarea::placeholder {
   margin: 0;
   color: var(--text-primary);
   font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Product wordmark — brand gradient into primary (DS §2 / §3, matches app chrome) */
+.app-title--logo {
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+  background: linear-gradient(
+    108deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 34%,
+    var(--brand) 48%,
+    var(--brand-hover) 78%,
+    var(--brand-deep) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .app-title--logo {
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    color: var(--text-primary);
+  }
 }
 
 .app-tagline {

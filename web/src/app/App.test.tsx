@@ -54,7 +54,7 @@ describe("App", () => {
     vi.unstubAllGlobals();
   });
 
-  it("exposes Tasks title as home link with aria-current on /", async () => {
+  it("exposes T2A wordmark as home link with aria-current on /", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url.startsWith("/tasks?")) {
@@ -70,13 +70,13 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByRole("heading", { name: /^tasks$/i });
-    const titleLink = screen.getByRole("link", { name: /^tasks$/i });
+    await screen.findByRole("heading", { name: /^t2a$/i });
+    const titleLink = screen.getByRole("link", { name: /^t2a$/i });
     expect(titleLink).toHaveAttribute("href", "/");
     expect(titleLink).toHaveAttribute("aria-current", "page");
   });
 
-  it("navigates home when Tasks title is used from a task route", async () => {
+  it("navigates home when T2A wordmark is used from a task route", async () => {
     const user = userEvent.setup();
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -132,12 +132,12 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^home link task$/i });
-    const titleLink = screen.getByRole("link", { name: /^tasks$/i });
+    const titleLink = screen.getByRole("link", { name: /^t2a$/i });
     expect(titleLink).not.toHaveAttribute("aria-current");
 
     await user.click(titleLink);
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^tasks$/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^t2a$/i })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -201,7 +201,7 @@ describe("App", () => {
     expect(skip).toHaveAttribute("href", "#main-content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
     expect(
-      await screen.findByRole("heading", { name: /^tasks$/i }),
+      await screen.findByRole("heading", { name: /^t2a$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
     await waitFor(() => {

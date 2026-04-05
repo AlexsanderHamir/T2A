@@ -30,7 +30,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 className="app-title-link"
                 {...(homeIsCurrent ? { "aria-current": "page" as const } : {})}
               >
-                <h1 className="app-title">Tasks</h1>
+                <h1 className="app-title app-title--logo">T2A</h1>
               </Link>
             </nav>
             <p className="app-tagline">Capture work. Ship with clarity.</p>
