@@ -184,6 +184,7 @@ sequenceDiagram
 | `T2A_DISABLE_LOGGING` | No                  | When `1`, `true`, `yes`, or `on` (case-insensitive): no JSONL file; only `slog.Error` to stderr. Same as `-disable-logging`. Overrides file logging and `-logdir` / `T2A_LOG_DIR`.                                                                                                                                                                                                                          |
 | `T2A_GORM_SLOW_QUERY_MS` | No               | GORM SQL trace: statements slower than this many milliseconds log at **Warn** (default **200**). Set to **0** to disable the slow-SQL branch (successful queries stay at Info when the GORM log level is Info). Invalid or negative values fall back to **200**.                                                                                                                                                                                                              |
 | `T2A_RATE_LIMIT_PER_MIN` | No               | Per-client-IP HTTP rate limit (token bucket, requests per minute). Default when unset: **120**. **`0`** disables limiting. Invalid or negative values fall back to **120**. Key is the host part of `RemoteAddr` only (forwarded headers are **not** trusted). Exempt: `GET /health`, `/health/live`, `/health/ready`, `/metrics` (defense in depth; `/metrics` is on the outer mux today). Over limit: **`429`** plain text `rate limit exceeded`, header **`Retry-After: 60`**. |
+| `T2A_IDEMPOTENCY_TTL` | No | In-process idempotency cache for mutating requests that send **`Idempotency-Key`**. Go `time.ParseDuration` value (e.g. `24h`, `30m`). Default when unset: **24h**. Invalid or negative values fall back to **24h**. **`0`** disables caching (header ignored). Not shared across replicas. |
 
 
 `dbcheck` uses the same `.env` discovery for `DATABASE_URL` only; it does not use `REPO_ROOT`.
@@ -204,6 +205,10 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 
 All non-exempt routes on the API stack are subject to **`T2A_RATE_LIMIT_PER_MIN`** (see env table). Limits are enforced in-process with `golang.org/x/time/rate`; they are **not** shared across multiple `taskapi` replicas—use a reverse proxy or API gateway for a global budget.
 
+### Idempotency (`Idempotency-Key`)
+
+`POST`, `PATCH`, and `DELETE` may include header **`Idempotency-Key`** (non-empty after trim; stored up to **128** bytes). When **`T2A_IDEMPOTENCY_TTL`** is non-zero (default **24h**), the server caches successful responses (**200**, **201**, **204** only) keyed by **HTTP method**, **URL path**, the trimmed key, and **SHA-256 of the body** for `POST`/`PATCH` (DELETE has no body fingerprint). A repeat request with the same tuple replays the cached status, JSON headers (`Content-Type`, `X-Content-Type-Options`), and body without re-running the handler. Concurrent duplicates share one handler execution (`golang.org/x/sync/singleflight`). **`4xx`/`5xx` responses are not cached** (safe retries). `POST`/`PATCH` with unknown `Content-Length` (chunked transfer), negative length, or a body larger than **1 MiB** skip idempotency (the route runs normally; the key is not used for that request). Empty `Idempotency-Key` leaves behavior unchanged.
+
 ### Prometheus (`GET /metrics`)
 
 `GET /metrics` serves the default registry in Prometheus text format (Go client). It is **not** behind the access-log or HTTP-metrics middleware, so scrapes do not emit `http.access` lines or `taskapi_http_*` series for themselves.
@@ -216,6 +221,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_http_requests_total` | Counter | `method`, `route`, `code` | `route` is the matched mux pattern (e.g. `GET /tasks/{id}`) when set; otherwise **`other`** (limits cardinality on 404s). |
 | `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | Default buckets; health probe paths excluded. |
 | `taskapi_http_rate_limited_total` | Counter | — | Incremented when a request is rejected with **429** (per-IP limit). |
+| `taskapi_http_idempotent_replay_total` | Counter | — | Incremented when a response is served from the idempotency cache (not on singleflight coalescing alone). |
 
 There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.
 
@@ -437,11 +443,11 @@ Changing JSON shapes, routes, or SSE payload types also requires updating `docs/
 11. `POST /tasks` with a client-supplied `id` that already exists fails at the database layer and is surfaced as 500 (not a dedicated 409 conflict response).
 12. No ETag / If-Match on tasks; concurrent edits to the same row last-winner within locking rules (see Persistence).
 13. If JSON encoding of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
+14. **`Idempotency-Key`** is honored only inside a single `taskapi` process (in-memory cache + `singleflight`); multiple replicas or restarts do not share entries. Chunked request bodies skip idempotency for `POST`/`PATCH`.
 
 ## Out of scope (today)
 
 - CORS (assume same origin or a gateway in front).
-- Idempotency keys on `POST`.
 - Outbound webhooks.
 - ETag / conditional GET (possible future optimization; see `UI_TASK.MD`).
 - Versioned SQL migrations and multi-step schema upgrades.

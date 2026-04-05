@@ -4,7 +4,7 @@
 // pkgs/tasks/postgres.Open, runs postgres.Migrate on every startup, constructs handler.NewSSEHub for
 // task change notifications, optionally opens pkgs/repo from REPO_ROOT for GET /repo/* and prompt
 // validation, then mounts handler.NewHandler (REST + GET /events SSE + optional /repo) on / with
-// WithRecovery, WithHTTPMetrics, WithAccessLog, and WithRateLimit; GET /metrics (Prometheus text) is registered separately on the mux.
+// WithRecovery, WithHTTPMetrics, WithAccessLog, WithRateLimit, and WithIdempotency; GET /metrics (Prometheus text) is registered separately on the mux.
 //
 // Flags (see also -h):
 //

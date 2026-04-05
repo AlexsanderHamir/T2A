@@ -2,6 +2,7 @@
 // Wiring and shared HTTP helpers: handler.go. Task routes and DTOs: handler_tasks.go.
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
 // Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/DESIGN.md).
+// Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/DESIGN.md).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): calllog.go — use withCallRoot on each handler, PushCall inside helpers.
 // JSONL order: WrapSlogHandlerWithLogSequence (taskapi outer) + ContextWithLogSeq in access middleware → log_seq, log_seq_scope; RunObserved for explicit helper in/out pairs.
@@ -32,6 +33,10 @@
 // rotates all EventType, ActorAgent) per task then notifies the SSE hub (see DESIGN.md). No extra HTTP routes.
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
+//
+// Optional header Idempotency-Key (non-empty, max 128 bytes after trim): mutating requests with the same
+// method, path, key, and (for POST/PATCH) request body replay the first successful 200/201/204 response
+// for the configured TTL (in-process cache; see DESIGN.md).
 //
 // JSON bodies disallow unknown fields; trailing data after the top-level value is rejected.
 //

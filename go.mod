@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
+	golang.org/x/sync v0.16.0
 	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.35.0
 	gorm.io/datatypes v1.2.7
@@ -36,7 +37,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect

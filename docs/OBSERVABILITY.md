@@ -40,7 +40,7 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 | **Line kind** | Filter JSONL in tools | `obs_category`: `http_access`, `http_io`, `helper_io`. |
 | **Access line** | One completion record per HTTP request (except `GET /health`, `/health/live`, `/health/ready`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |
 | **SQL traces** | DB latency and shape | GORM → same `slog` sink; parameterized SQL; statements slower than **`T2A_GORM_SLOW_QUERY_MS`** (default 200ms, `0` disables) log at **Warn** with elapsed time and SQL in the `trace` group. |
-| **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_requests_total`, `taskapi_http_request_duration_seconds`, `taskapi_http_in_flight`, `taskapi_http_rate_limited_total` (health paths excluded from HTTP latency series). Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Restrict scrapes in production. |
+| **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_requests_total`, `taskapi_http_request_duration_seconds`, `taskapi_http_in_flight`, `taskapi_http_rate_limited_total`, `taskapi_http_idempotent_replay_total` (health paths excluded from HTTP latency series). Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Idempotency cache TTL: **`T2A_IDEMPOTENCY_TTL`**. Restrict scrapes in production. |
 | **Distributed traces** | Span graphs across services | Not in scope for single-process `taskapi` unless we adopt OpenTelemetry later. |
 
 ## Checklist: increasing observability

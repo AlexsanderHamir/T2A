@@ -114,7 +114,7 @@ func run() int {
 	if lim := handler.RateLimitPerMinuteConfigured(); lim > 0 {
 		slog.Info("rate limit enabled", "cmd", cmdName, "operation", "taskapi.rate_limit", "per_ip_per_min", lim)
 	}
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.NewHandler(taskStore, hub, rep)))))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.Handler())
 	if devsim.Enabled() {
