@@ -12,6 +12,8 @@ alwaysApply: false
 
 **When to apply:** Add/change/remove fields on persisted task types, indexes, or migration entrypoints (`taskapi` startup migrate, `dbcheck -migrate`).
 
+**Shared deadlines (keep in sync with `docs/DESIGN.md` — Timeout constants):** `postgres.DefaultMigrateTimeout` (startup + `dbcheck -migrate`), `postgres.DefaultPingTimeout` (`dbcheck` ping), `store.DefaultReadyTimeout` (`GET /health/ready` → `Ready`). HTTP server limits stay in `cmd/taskapi/main.go`.
+
 ## Checklist
 
 1. **`pkgs/tasks/domain`** — Model tags and types match intended Postgres and SQLite behavior; avoid breaking existing deployments without a deliberate plan (renames/column drops may need operational notes in **`docs/DESIGN.md`**).

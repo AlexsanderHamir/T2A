@@ -149,7 +149,7 @@ Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not 
 1. **Logging** — The resolved `.env` file (same rules as `envload.Load`: repo-root `.env` or `-env`) is **overlaid into the process environment first** when it exists, so **`T2A_LOG_DIR`**, **`T2A_LOG_LEVEL`**, and **`T2A_DISABLE_LOGGING`** in `.env` apply before the log file is opened. Full `envload.Load` (including `DATABASE_URL` validation) still runs afterward. If **`-disable-logging`** is set or **`T2A_DISABLE_LOGGING`** is truthy (`1`, `true`, `yes`, `on`, case-insensitive), **no** JSON log file is created; **`slog`** uses a **text** handler on **stderr** at **`Error`** only (no access lines, GORM SQL logs, or `Info` startup lines). Otherwise: create the log directory (`-logdir`, else `T2A_LOG_DIR`, else `./logs` under the process working directory), then open a new file `taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl` (local time). `slog` output is JSON, one object per line, written only to that file. **Minimum level** is controlled by `-loglevel` (if set) else `T2A_LOG_LEVEL`, else **`info`** (records `Info`, `Warn`, and `Error`; omits `Debug` trace noise—lighter default for production). Set **`debug`** for full trace lines (including `taskapi.openTaskAPILogFile` bootstrap, handler/helper `http.io` / `helper.io`, domain trace hooks, and SSE fanout at `Debug`). **`warn`** or **`error`** further reduce volume. After `slog.SetDefault`, the handler wraps the base `slog` handler so records emitted with an HTTP request context get a `request_id` field (from `X-Request-ID` or a generated UUID), correlating access logs, API error lines, and GORM SQL traces for the same request when JSON file logging is enabled. **stderr** notes either minimized mode or the absolute log path and effective minimum level.
 2. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
 3. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
-4. `postgres.Migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent` on every startup (keeps schema aligned with models), using a **120s** context deadline so startup cannot hang indefinitely on a stuck database.
+4. `postgres.Migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent` on every startup (keeps schema aligned with models), under **`postgres.DefaultMigrateTimeout`** (currently **120s**) so startup cannot hang indefinitely on a stuck database.
 5. `store.NewStore`, `handler.NewSSEHub`, optional `repo.OpenRoot(REPO_ROOT)` when the env var is non-empty, then `handler.NewHandler(store, hub, rep)` — `rep` may be nil when `REPO_ROOT` is unset (no repo routes beyond 503). The API mux is wrapped with `handler.WithAccessLog` (request id, one completion line per request) and `handler.WithRecovery` (panic → 500 JSON).
 6. `http.Server` on `-port` (default 8080): `ReadHeaderTimeout` and `ReadTimeout` bound slow clients; `IdleTimeout` caps idle keep-alive; `MaxHeaderBytes` caps request headers (~1 MiB). `WriteTimeout` is not set so long-lived `GET /events` streams are not cut off.
 
@@ -170,7 +170,14 @@ sequenceDiagram
   P->>DB: Close
 ```
 
+### Timeout constants (code)
 
+| Area | Where defined | Purpose |
+| ---- | ------------- | ------- |
+| HTTP server | `cmd/taskapi/main.go` (`shutdownTimeout`, `readHeaderTimeout`, `readTimeout`, `idleTimeout`, `maxRequestHeaders`) | `Server.Shutdown` deadline (10s), slowloris / slow-body bounds, idle keep-alive cap, header size cap. Logged on **`taskapi.http_limits`**. `WriteTimeout` is intentionally unset (SSE). |
+| DB ping (CLI) | `postgres.DefaultPingTimeout` | `dbcheck` **`PingContext`** only (30s). |
+| AutoMigrate | `postgres.DefaultMigrateTimeout` | `taskapi` startup migrate and `dbcheck -migrate` (120s). |
+| Readiness DB probe | `store.DefaultReadyTimeout` | `GET /health/ready` → `(*Store).Ready` (2s). |
 
 ## Environment variables (`taskapi`)
 
