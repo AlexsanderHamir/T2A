@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import type { TaskChecklistResponse } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
+import { TaskChecklistSkeleton } from "./taskLoadingSkeletons";
 
 export type TaskDetailChecklistSectionProps = {
   checklistInherit: boolean;
@@ -122,7 +123,7 @@ export function TaskDetailChecklistSection({
               : "Could not load checklist."}
           </p>
         ) : checklistQuery.isPending ? (
-          <p className="muted task-checklist-surface-pad">Loading checklist…</p>
+          <TaskChecklistSkeleton />
         ) : (
           <ul
             className={

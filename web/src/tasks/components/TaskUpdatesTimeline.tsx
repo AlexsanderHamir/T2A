@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { awaitingUserReply } from "../taskEventThread";
+import { TaskTimelineSkeleton } from "./taskLoadingSkeletons";
 
 export type TaskUpdatesTimelineProps = {
   isPending: boolean;
@@ -30,7 +31,7 @@ export function TaskUpdatesTimeline({
         Updates
       </h3>
       {isPending ? (
-        <p className="muted">Loading history…</p>
+        <TaskTimelineSkeleton />
       ) : isError ? (
         <p className="err-inline" role="alert">
           {error instanceof Error ? error.message : "Could not load updates."}

@@ -25,6 +25,7 @@ import { promptHasVisibleContent } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
+import { TaskDetailPageSkeleton } from "../components/taskLoadingSkeletons";
 import { TaskUpdatesTimeline } from "../components/TaskUpdatesTimeline";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
@@ -329,11 +330,7 @@ export function TaskDetailPage({ app }: Props) {
   }
 
   if (taskQuery.isPending) {
-    return (
-      <p className="muted task-list-phase-msg" role="status">
-        Loading task…
-      </p>
-    );
+    return <TaskDetailPageSkeleton />;
   }
 
   if (taskQuery.isError) {

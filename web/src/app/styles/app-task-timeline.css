@@ -576,3 +576,55 @@ a.task-timeline-item-hit {
   font-size: 0.9375rem;
   margin: 0 0 0.75rem;
 }
+
+/* Updates timeline loading skeleton */
+.task-timeline-skeleton-root {
+  margin-top: 0.35rem;
+}
+
+.task-timeline-skeleton {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.task-timeline-skeleton-item {
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+}
+
+.task-timeline-skeleton-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-block--detail-time {
+  width: 10.5rem;
+  height: 0.8125rem;
+}
+
+.skeleton-block--detail-type-pill {
+  width: 6.75rem;
+  height: 1.35rem;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-block--detail-by {
+  width: 3.75rem;
+  height: 0.8125rem;
+}
+
+.skeleton-block--detail-data {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  max-width: 100%;
+}

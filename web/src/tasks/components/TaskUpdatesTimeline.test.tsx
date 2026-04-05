@@ -80,7 +80,9 @@ describe("TaskUpdatesTimeline", () => {
         timelineEvents={[]}
       />,
     );
-    expect(screen.getByText(/loading history/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: /loading updates/i }),
+    ).toBeInTheDocument();
 
     rerender(
       <TaskUpdatesTimeline

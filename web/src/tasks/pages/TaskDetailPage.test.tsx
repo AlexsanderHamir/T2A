@@ -59,6 +59,22 @@ describe("TaskDetailPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows a loading skeleton while the task query is pending", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t1") {
+        return new Promise<Response>(() => {
+          /* never resolves — keep task detail pending */
+        });
+      }
+      return Promise.resolve(new Response("not found", { status: 404 }));
+    });
+    renderDetail("/tasks/t1", mockApp());
+    expect(
+      screen.getByRole("status", { name: /loading task/i }),
+    ).toBeInTheDocument();
+  });
+
   it("collapses initial prompt by default and expands on demand", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

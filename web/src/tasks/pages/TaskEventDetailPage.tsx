@@ -6,6 +6,7 @@ import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { awaitingUserReply } from "../taskEventThread";
+import { TaskEventDetailSkeleton } from "../components/taskLoadingSkeletons";
 import { taskQueryKeys } from "../queryKeys";
 
 export function TaskEventDetailPage() {
@@ -61,11 +62,7 @@ export function TaskEventDetailPage() {
   }
 
   if (q.isPending) {
-    return (
-      <p className="muted task-list-phase-msg" role="status">
-        Loading event…
-      </p>
-    );
+    return <TaskEventDetailSkeleton />;
   }
 
   if (q.isError) {
