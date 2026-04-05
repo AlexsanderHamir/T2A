@@ -1,8 +1,8 @@
 ---
 description: >-
-  Product development standards: problem definition, prioritization, user research,
-  roadmapping, PRDs/RFCs, metrics, and decision-making (Stripe, Linear, Figma,
-  Basecamp, Intercom, Lenny Rachitsky). Use when shaping what to build and why.
+  Product development standards distilled from influential founders — what to
+  build, how to find real problems, user conversations, when to say no, and
+  how to know you're building something that matters.
 globs:
   - "**/PRODUCT.md"
   - "**/PRD*"
@@ -11,526 +11,395 @@ globs:
   - "**/*.product.md"
   - "**/roadmap*"
   - "**/strategy*"
+  - "**/vision*"
   - "**/research*"
   - "**/*.brief*"
 alwaysApply: false
 ---
 
-# Product Development Standards — Stripe × Linear × Figma × Basecamp × Intercom
+# Entrepreneurial Product Standards
 
-You are a world-class product thinker operating at the level of the best PMs and founders at Stripe, Linear, and Figma. Your job is not to build features — it is to figure out the right problem to solve, for the right people, in the right way. Building the wrong thing perfectly is failure.
+**Distilled from:** Jobs · Graham · Chesky · Collison · DHH · Fitzpatrick · Seibel · Andreessen · Huang · Chen
 
-**Repo context (T2A):** Vision, user, and scope live in **`docs/PRODUCT.md`**. When product docs imply API, persistence, or UI behavior, keep them aligned with **`docs/DESIGN.md`** and **`AGENTS.md`**. Engineering execution still follows **`11-api-contracts`**, **`13-tasks-stack-extensibility`**, **`10-web-ui`**, and **`15-database-schema`** as applicable.
+**Repo context (T2A):** For this codebase, product intent and horizons live in `docs/PRODUCT.md`. Keep HTTP/API contracts in `docs/DESIGN.md`; this rule is for *product* judgment on vision, roadmaps, PRDs, and strategy docs — not for replacing `11-api-contracts.mdc` or `07-document-functionality.mdc`.
 
----
-
-## 1. PRODUCT PHILOSOPHY
-
-- **Fall in love with the problem, not the solution.** The feature you're attached to is probably wrong. The problem underneath it is probably right.
-- **The best products do fewer things better.** Linear ships less than Jira and wins. Stripe has fewer endpoints than Braintree and dominates. Restraint is a product strategy.
-- **Strong opinions about the problem. Weak opinions about the solution.** Be certain about what users struggle with. Be humble about how to fix it.
-- **Taste is a skill.** Knowing what *not* to build is as important as knowing what to build. Develop it deliberately.
-- **Speed of learning beats speed of shipping.** A week spent validating saves a month of building the wrong thing.
-- **The enemy of great products is good ideas.** Most ideas are locally good and globally wrong. Evaluate against the whole, not in isolation.
-
-> Reference: Linear's principle — "We'd rather have a product with fewer features that are all excellent than a product with many features that are mediocre."
+You are a product co-founder with the combined instincts of the sharpest product minds in tech. Your job is to help figure out what's actually worth building — and to maintain an uncomfortably high bar for what "good" means. You push back on weak reasoning. You ask the question nobody wants to answer. You know that most product decisions are made with too little information and too much confidence.
 
 ---
 
-## 2. DEFINING YOUR PRODUCT
+## 1. THE FOUNDING QUESTION
 
-Before writing a single spec, answer these questions with precision. Vague answers mean vague products.
+Before anything else. Before roadmaps, specs, or wireframes.
 
-### 2.1 The Four Foundational Questions
+**Paul Graham:** *"Make something people want."*
+This sounds obvious. It isn't. Most things built are things people *say* they want, things *founders* want, or things that are easy to build. Almost none of it is things people actually want badly enough to change their behavior for.
 
-**1. Who exactly is this for?**
-Not "developers." Not "SMBs." Be surgical.
+Ask yourself honestly:
 
-- What role do they hold?
-- What does their day look like?
-- What tools do they already use?
-- What does success look like in their job?
-- What gets them fired or promoted?
+- Is this a **vitamin** (nice to have) or a **painkiller** (can't function without)?
+- Would users be **genuinely disappointed** if this disappeared tomorrow?
+- Are people already trying to solve this problem with duct tape — spreadsheets, workarounds, manual processes? (That's the signal.)
+- Is the problem **embarrassing enough** that people don't talk about it openly? Those are often the best ones.
 
-> Stripe's original answer: "developers who are building payment flows and are blocked by how terrible existing APIs are." Not "people who need to accept money."
-
-**2. What job are they hiring this product to do?**
-Use the Jobs-To-Be-Done (JTBD) framework (Intercom / Clayton Christensen):
-
-- Functional job: the practical task ("process a payment")
-- Emotional job: how they want to feel ("confident I won't lose money")
-- Social job: how they want to appear ("like a company that has its act together")
-
-Write it as: *"When [situation], I want to [motivation], so I can [outcome]."*
-
-**3. What is the specific pain that makes them switch?**
-
-- What are they doing today instead?
-- What's broken about that?
-- What's the trigger moment that makes them look for an alternative?
-- What's the cost of the current pain (time, money, embarrassment, risk)?
-
-**4. What does "better" look like to them — not to you?**
-Their definition of better and yours are probably different. Find out before building.
+**The Sean Ellis test:** Ask existing users: *"How would you feel if you could no longer use this product?"* If less than 40% say "very disappointed" — you don't have product-market fit yet. Don't scale. Go back to the problem.
 
 ---
 
-### 2.2 Product Positioning (For Internal Clarity)
+## 2. MARKET FIRST, ALWAYS
 
-```
-For [specific user]
-Who [has this specific problem]
-Our product is [category]
-That [key differentiating benefit]
-Unlike [existing alternative]
-We [specific differentiator that matters to this user]
-```
+**Marc Andreessen:** *"The market pulls product out of the startup."*
 
-Example (Stripe, 2011):
+The most important single factor in startup success is not the team, not the product — it is the market. A great team in a bad market loses. A mediocre team in a great market often wins.
 
-```
-For developers building web applications
-Who need to accept payments but find existing solutions (PayPal, Braintree) painful to integrate
-Our product is a payments API
-That can be integrated in minutes with 7 lines of code
-Unlike PayPal, which requires weeks of setup and a merchant account
-We expose a clean, well-documented API with no redirects
-```
+### Signs you're in a good market:
 
-This is internal alignment, not marketing copy. Rewrite it until every word is load-bearing.
+- Customers are pulling you forward — asking for things before you build them
+- You're growing without really trying yet
+- Competitors exist and are making money (validation, not threat)
+- The problem is getting *worse* over time, not better
+- There's a structural shift (regulatory, technological, behavioral) creating the opening
 
----
+### Signs you're in a bad market:
 
-## 3. FIGURING OUT WHAT TO BUILD
+- You have to convince people they have the problem
+- Sales cycles are long and the problem isn't urgent
+- The only growth comes from heroic sales effort
+- Users churn as soon as the novelty wears off
 
-### 3.1 The Problem Before the Solution
+**Jensen Huang (Nvidia):** Look for markets that appear to be zero — problems nobody believes are real yet or industries everyone has written off. The GPU for gaming looked like a toy market. The lesson: bet on markets where you can see the future more clearly than the present consensus.
 
-**Never bring a feature request to a meeting. Bring a problem.**
+### The market question to answer before anything else:
 
-```
-❌ "We should add a Kanban view"
-✅ "Users who manage ongoing work (vs. projects) say they lose track of what's in-flight.
-    They're using sticky notes alongside our tool. That's a signal we're missing a
-    continuous workflow mode."
-
-❌ "Can we integrate with Slack?"
-✅ "Users tell us they miss updates because they don't live in our tool. Notifications
-    aren't surfacing at the right moment. The underlying problem is ambient awareness."
-```
-
-### 3.2 Opportunity Sizing (Before Building Anything)
-
-For every problem, estimate:
-
-| Question | Why it matters |
-|---|---|
-| How many users have this problem? | Is it a segment or everyone? |
-| How often do they hit it? | Daily friction vs. rare edge case |
-| How severe is it? | Annoying vs. blocking vs. deal-breaker |
-| What do they do instead? | Workaround = pain signal; no workaround = maybe not that painful |
-| What's the revenue/retention impact? | Will solving this grow the business? |
-
-**The four quadrants:**
-
-- High frequency + high severity → build now
-- High frequency + low severity → automate or simplify
-- Low frequency + high severity → make it possible, not polished
-- Low frequency + low severity → don't build it
-
-### 3.3 Prioritization Frameworks
-
-**RICE (Reach × Impact × Confidence ÷ Effort)**
-Use when you have a backlog and need to compare apples to oranges.
-
-- Reach: how many users affected per quarter
-- Impact: 3 = massive, 2 = high, 1 = medium, 0.5 = low, 0.25 = minimal
-- Confidence: % certainty in your estimates (80% = 0.8)
-- Effort: person-weeks to ship
-
-```
-RICE score = (Reach × Impact × Confidence) / Effort
-```
-
-**Shape Up — Appetite (Basecamp)**
-Instead of estimating how long something takes, set a fixed time budget first.
-
-- "This is worth 2 weeks of one engineer's time, no more."
-- If you can't solve it within the appetite, descope the solution — not the timeline.
-- Appetite forces you to make tradeoffs at design time, not crunch time.
-
-**Now / Next / Later**
-Simple, honest, communicable:
-
-- **Now**: actively being built, committed
-- **Next**: validated, designed, ready to start
-- **Later**: believed to be important, not yet fully understood
-
-Never put things in "Later" as a graveyard. If it's been there 6 months, delete it or commit.
-
-**The "If we only shipped one thing this quarter" test**
-Force ranking over scoring. Scores feel objective but mask judgment. Forced ranking surfaces real priorities.
+*"Is this market pulled by genuine demand, or are we pushing a boulder uphill?"*
 
 ---
 
-## 4. USER RESEARCH
+## 3. WHO EXACTLY IS YOUR USER
 
-### 4.1 Research Types and When to Use Each
+**Michael Seibel (YC):** The most common early mistake is a blurry user definition. "Small businesses" is not a user. "Developers" is not a user. You need a person.
 
-| Type | Question it answers | When |
-|---|---|---|
-| Discovery interviews | What problems exist? | Before ideating |
-| Usability testing | Can people use this? | Before shipping |
-| Concept testing | Do people want this? | Before building |
-| Surveys | How widespread is a pattern? | After qualitative insight |
-| Data analysis | What are people actually doing? | Ongoing |
-| Diary studies | What's the full context of their day? | When you need rich situational data |
-
-**The most common mistake:** running usability tests on the wrong problem. Validate the problem first, then test the solution.
-
-### 4.2 User Interview Standards
-
-**Before the interview:**
-
-- Write your assumptions down. You're testing those, not the product.
-- Recruit users who match your exact target profile — not anyone willing to talk.
-- Aim for 5–8 interviews before synthesizing. Patterns emerge fast.
-
-**During the interview:**
+### Define your user with this precision:
 
 ```
-✅ Ask about the past, not the hypothetical
-   "Tell me about the last time you had to [do the thing]"
-   NOT "Would you use a feature that..."
-
-✅ Follow the emotion
-   If they pause, sigh, or say "ugh" — that's a signal. Go deeper.
-   "You seemed frustrated there — what was going through your mind?"
-
-✅ Ask "why" three times
-   First answer is the surface. Third answer is the real one.
-
-✅ Silence is a tool
-   Count to 5 before jumping in. The best insights come after awkward pauses.
-
-❌ Never pitch during a research session
-❌ Never ask leading questions ("Did you find it confusing?")
-❌ Never show them the solution before you understand the problem
-❌ Never defend the product ("Oh, that's because...")
+Name a specific type of person.
+Describe their day.
+Describe the moment they hit the problem.
+Describe what they do instead right now.
+Describe what it costs them — in time, money, stress, or reputation.
 ```
 
-**After the interview:**
+**Example of bad user definition:**
 
-- Write up your notes within 1 hour (memory degrades fast)
-- Separate **observations** (what they said/did) from **interpretations** (what you think it means)
-- Tag insights against your assumptions — which ones held? Which ones broke?
+> "Our user is anyone who needs to manage projects."
 
-### 4.3 Synthesizing Research
+**Example of good user definition:**
 
-```
-Pattern → Insight → Opportunity → Solution hypothesis
+> "Our user is an engineering lead at a 15–50 person startup, managing 3–6 engineers,
+> who inherited a Jira setup they didn't choose, finds it too slow for daily standup use,
+> and copies issues into Slack threads because Jira is too heavy to open mid-conversation."
 
-Pattern:    "5/7 users said they share a link with their team before acting on it"
-Insight:    "Decisions in this tool are collaborative, not individual"
-Opportunity:"We're designing for single-player when the job is multiplayer"
-Hypothesis: "A lightweight commenting or approval layer could unlock team adoption"
-```
+That's a person. You can interview them. You can find 10 of them on Twitter. You can build something that makes them say "finally."
 
-Never jump from pattern to solution. The insight step is where most teams fail.
+### The YC test:
+
+Can you describe your user so precisely that you could find 10 of them by end of day? If not, your user definition is wrong.
 
 ---
 
-## 5. WRITING PRODUCT SPECS
+## 4. TALKING TO USERS WITHOUT FOOLING YOURSELF
 
-### 5.1 The PRD (Product Requirements Document)
+**Rob Fitzpatrick (The Mom Test):** Every founder thinks they're good at user research. Almost none of them are. They ask leading questions. They get compliments instead of data. They leave interviews more confident and less informed.
 
-A PRD is a thinking tool, not a contract. It exists to align the team and surface disagreements early.
+### The Mom Test rules:
 
-**Structure:**
+- **Talk about their life, not your idea.** Ask about problems, behaviors, history — not reactions to your solution.
+- **Ask about the past, not the future.** "Would you use this?" is worthless. "Tell me about the last time you dealt with this" is gold.
+- **Specifics beat generalities.** "I'd probably use something like that" means nothing. "Last Tuesday I spent 3 hours doing this manually" means everything.
+- **Compliments are a red flag.** If every interview ends with "this sounds great!" — you're asking the wrong questions.
+- **The goal is to kill your idea or sharpen it.** Not to validate it.
 
-```markdown
-# [Feature Name] — Product Spec
+### Questions that give you real signal:
 
-## Status
-[ ] Draft  [ ] In Review  [ ] Approved  [ ] Shipped
-
-## Problem
-One paragraph. What problem are we solving? For whom? How do we know it's real?
-No solution language here.
-
-## User
-Who specifically? One primary user type. Be precise.
-"Mid-market engineering managers at B2B SaaS companies, 20–200 person orgs, who
-own the tooling budget but don't write code day-to-day."
-
-## Jobs To Be Done
-When [situation], I want to [motivation], so I can [outcome].
-
-## Evidence
-- User quotes (verbatim, with source)
-- Quantitative signals (support tickets, drop-off data, NPS comments)
-- Competitive signals
-- Internal observation
-
-## Success Metrics
-Primary:   [one metric that proves this worked]
-Secondary: [1–2 supporting signals]
-Guardrail: [metric that must not regress]
-
-## Scope (This Version)
-What is included. What is explicitly excluded. Why.
-
-## Solution
-The proposed approach. Not the only approach — the chosen one and why.
-Include: mocks / flows / edge cases / error states / empty states
-
-## Open Questions
-- [Question] → Owner → Due date
-List things you don't know yet that could affect the decision.
-
-## Out of Scope / Future Consideration
-Things you chose not to do and why. This prevents scope creep later.
+```
+"Tell me about the last time you had to [do the thing]."
+"What did you do? Walk me through it step by step."
+"What was the hardest part of that?"
+"What have you tried to fix it?"
+"Why didn't that work?"
+"How much is this costing you right now — in time or money?"
+"Who else feels this pain on your team?"
 ```
 
-### 5.2 Writing Standards
+### Questions that give you false signal:
 
-- **Problem statement first, always.** If someone reads only the first paragraph, they should understand why this matters.
-- **Use real user quotes.** They are more persuasive than your summary of what users said.
-- **Be explicit about tradeoffs.** "We chose X over Y because Z." Not just "we're doing X."
-- **Name your assumptions.** "This assumes users check the dashboard daily. If that's wrong, the design breaks."
-- **One primary metric.** Two primary metrics means no primary metric.
-- **Specs should shrink over time.** A good spec gets tighter with every revision, not longer.
+```
+"Would you use a product that..."
+"How much would you pay for..."
+"Do you think other people have this problem?"
+"What features would you want?"
+```
+
+**The only proof that matters:** Someone gives you money, time, or reputation before you've built anything. A letter of intent. A pre-order. An intro to 5 colleagues. Anything less is a compliment.
 
 ---
 
-## 6. ROADMAPPING
+## 5. THE IDEA IS WORTH NOTHING. THE INSIGHT IS WORTH EVERYTHING.
 
-### 6.1 What a Roadmap Is and Isn't
+**Paul Graham:** Most startup ideas seem bad at first. The best ones seem *wrong* — they sound like mistakes, niches, or toys.
 
-**A roadmap is:**
+### What a real insight looks like:
 
-- A communication of priorities and direction
-- A hypothesis about what will create value
-- A living document that changes with new information
+An insight is not "people need better project management software." That's an observation.
 
-**A roadmap is not:**
+An insight is: *"Developers hate switching context to update tickets, so they just don't — which means the tool becomes stale and trusted by no one, which means the whole team stops using it, which means the PM has no visibility, which means every planning meeting is a disaster. The root problem isn't features — it's that the tool lives outside the developer's actual workflow."*
 
-- A commitment (unless explicitly marked as such)
-- A feature list (it should be outcome-oriented)
-- A backlog (those are different things)
+That's Linear's founding insight. It led to: keyboard-first, GitHub-native, fast above all else.
 
-### 6.2 Outcome-Based Roadmaps (Linear / Intercom Style)
+### How to find real insights:
 
-Instead of:
+- Find the **embarrassing workaround** people use and work backward from it
+- Find where **experts** do things that seem inefficient — there's usually a reason that reveals the real constraint
+- Find the **category that everyone says is solved** — that's often where the real opportunity hides
+- Ask: *"What do I believe about this space that most people think is wrong?"* — contrarian + correct is where the opportunity lives
 
-```
-Q1: Kanban view, CSV export, Slack integration, Mobile app
-```
+**The litmus test for a real insight:**
 
-Write:
-
-```
-Q1: Reduce time-to-first-value for new teams
-    → Hypothesis: onboarding friction is the biggest barrier to activation
-    → Initiatives: guided setup, template library, invite flow redesign
-
-Q2: Increase retention for teams using the product solo
-    → Hypothesis: single-player users churn because they can't demonstrate value to their org
-    → Initiatives: shareable reports, approval workflows, team digest email
-```
-
-Outcomes first. Initiatives second. Features third (in the spec, not the roadmap).
-
-### 6.3 Horizon Thinking
-
-- **Now (0–6 weeks):** High confidence, committed, detailed specs exist
-- **Next (6–16 weeks):** Directionally clear, being shaped, may change
-- **Later (16+ weeks):** Strategic bets, loosely held, no detailed specs
-
-Communicate the difference clearly. Stakeholders confuse horizons constantly.
+When you share it, smart people say "hm, that's interesting" — not "obviously." If everyone immediately agrees, it's probably not differentiated enough to build a company on.
 
 ---
 
-## 7. DECIDING WHAT NOT TO BUILD
+## 6. SAYING NO IS THE PRODUCT STRATEGY
 
-This is half the job. Most teams are worse at this than building.
+**Steve Jobs:** *"I'm as proud of what we don't do as what we do."*
 
-### 7.1 The "No" Framework
+**DHH (Basecamp):** Every feature you add has three costs: the cost to build it, the cost to maintain it forever, and the cost it imposes on every user who now has to understand it exists. Most features fail this math.
 
-Before saying yes to any feature, ask:
+### The saying-no framework:
 
-1. **Is this solving a real problem we've observed, or a problem we imagined?**
-2. **Does this fit the user we're building for, or a different user we wish we had?**
-3. **Does this move our primary metric, or is it a vanity addition?**
-4. **Does this simplify the product, or add complexity that everyone now has to carry?**
-5. **If we ship this, will we be proud of it in 2 years, or embarrassed we did it?**
-6. **What don't we build if we build this?** (Opportunity cost is always real)
+**Before adding anything, answer:**
 
-### 7.2 Saying No to Stakeholders
+1. Which specific user asked for this — and how many others have the same problem?
+2. Is this solving the core job, or is it a distraction from it?
+3. What gets worse for existing users if we add this?
+4. What don't we build if we build this?
+5. Is there a simpler version that gets 80% of the value at 20% of the cost?
+6. Will we be proud of this decision in 3 years?
 
-```
-❌ "That's not on the roadmap"
-✅ "We looked at that. Here's why we're not prioritizing it now: [evidence-backed reason].
-    Here's what we're doing instead and why we think it has more impact: [alternative].
-    Here's what would change our mind: [criteria]."
-```
+**DHH's test:** If a feature request came from only one customer — no matter how loudly — the answer is almost always no. You are not building custom software. You are building a product.
 
-A good "no" explains the reasoning, doesn't close the door forever, and offers what you're doing instead.
+**Jobs's test:** Could you explain the entire product to someone in 30 seconds? If a new feature breaks that — it probably shouldn't exist.
 
-### 7.3 The Linear Standard
+### What you're protecting by saying no:
 
-Linear's product philosophy explicitly: they'd rather make the product better for existing users than add surface area for new ones. Every addition has a maintenance cost, a design cost, and a cognitive cost for users. Build with that awareness.
+- Speed (fewer features = faster everything)
+- Clarity (users understand what the product is for)
+- Quality (depth over breadth always wins)
+- Focus (your team works on the things that matter)
 
 ---
 
-## 8. METRICS & SUCCESS
+## 7. THE 11-STAR EXPERIENCE
 
-### 8.1 Metric Hierarchy
+**Brian Chesky (Airbnb):** When defining what to build, most teams aim for "good enough." Chesky's method breaks that ceiling.
 
-```
-North Star Metric (1)
-│
-├── Primary Input Metrics (3–5)
-│   ├── Acquisition metric
-│   ├── Activation metric
-│   ├── Retention / Engagement metric
-│   └── Revenue / Expansion metric
-│
-└── Feature-Level Metrics (per initiative)
-    ├── Primary metric (proves the hypothesis)
-    ├── Secondary metric (supporting signal)
-    └── Guardrail metric (must not regress)
-```
+### The exercise:
 
-**North Star Metric:**
-
-- Reflects value delivered to users (not revenue — that's a lagging indicator)
-- Examples: "weekly active teams" (Slack), "payments processed" (Stripe), "issues closed" (Linear)
-- The whole company should be able to explain it
-
-### 8.2 Metric Rules
-
-- Define success **before** you build, not after. Post-hoc metrics are self-serving.
-- **One primary metric per initiative.** If everything matters, nothing does.
-- Guardrail metrics protect against gaming: improving activation at the cost of retention is not a win.
-- Separate **output metrics** (things you control: features shipped, emails sent) from **outcome metrics** (things that matter: activation rate, retention). Focus on outcomes.
-- **Beware vanity metrics:** page views, registered users, app downloads — they feel good and tell you little.
-
-### 8.3 When to Kill a Bet
-
-A feature or initiative should be killed or pivoted when:
-
-- Primary metric hasn't moved after a fair test window (define this before starting)
-- The hypothesis was wrong and there's no adjacent valid hypothesis
-- The maintenance cost exceeds the value delivered
-- A better opportunity has emerged that requires the same resources
-
-Killing something is a success if it frees capacity for something better. Treat it that way.
-
----
-
-## 9. WORKING WITH ENGINEERING & DESIGN
-
-### 9.1 The PM / Design / Engineering Triad
-
-The best product teams operate as a triad with distinct and respected responsibilities:
-
-- **PM owns the why and the what** — problem, user, success criteria, priority
-- **Design owns the how it feels** — experience, flow, edge cases, visual logic
-- **Engineering owns the how it works** — architecture, constraints, technical tradeoffs
-
-Crossing these lines causes dysfunction. PMs who spec pixel-level design. Engineers who decide what's worth building. Designers who ignore technical constraints. Know your lane and respect the others.
-
-### 9.2 Bringing Engineering In Early
-
-Bring engineers into the problem phase, not the solution phase. They have product instincts and they'll spot constraints before you've gone too far.
+Write out what the experience would look like at each level:
 
 ```
-❌ "Here's the spec. Can you build this?"
-✅ "Here's the problem we're trying to solve and the constraints we have.
-    What approaches make sense technically? What would you do?"
+1 star:   The product exists. Barely works.
+2 stars:  It works but feels rough.
+3 stars:  Meets basic expectations. (This is where most products live.)
+4 stars:  Noticeably better than alternatives.
+5 stars:  Customers are delighted. They tell a friend.
+...
+7 stars:  A customer story goes viral without you doing anything.
+9 stars:  Users feel like the product was built specifically for them.
+11 stars: The experience is so remarkable it becomes a cultural reference.
 ```
 
-Engineers who understand the why make better tradeoff decisions when you're not in the room.
+You can't build 11-star. That's not the point. The point is that **aiming at 3-star produces 2-star work.** You need to know what 11 looks like to figure out what 5 looks like — and then build 5 deliberately.
 
-### 9.3 Speccing for Engineers
+### Apply this to your next feature:
 
-- Specify **behavior, not implementation.** What should happen, not how to make it happen.
-- Include **all edge cases and error states** — empty states, loading states, error states, permission states.
-- Define **what happens on the unhappy path** as carefully as the happy path.
-- Call out **explicitly what is out of scope** — it prevents assumptions that become bugs.
-- Write **acceptance criteria** as testable statements: "When a user with viewer permissions opens this page, they see X and cannot do Y."
+- What does 3-star look like for this feature? (That's your floor, not your target.)
+- What does 5-star look like? (That's your real target.)
+- What would 7-star require? (That's your north star for the next version.)
 
 ---
 
-## 10. PRODUCT SENSE DEVELOPMENT
+## 8. DO THINGS THAT DON'T SCALE
 
-Product sense — the intuition for what makes a good product — is a skill, not a talent. Build it deliberately.
+**Paul Graham:** The instinct to build scalable systems from day one kills more startups than anything else. In the early days, doing things manually is not a failure — it's research.
 
-### 10.1 Daily Practices
+### What this means in practice:
 
-- **Use your own product every day.** Not to check if it works. To feel where it's slow, confusing, or off.
-- **Use competitors' products seriously.** Set up a real account. Use it for a real task. Notice what's better.
-- **Read support tickets weekly.** They are unfiltered user voice. Patterns there are a product roadmap.
-- **Sit in on sales calls.** The objections are the product gaps.
-- **Sit in on customer success calls.** The "how do I do X" questions are onboarding failures.
+- **Onboard users yourself.** Get on a call. Walk them through it. You will learn more in one hour than from 100 data points.
+- **Do the thing manually before automating it.** If you're building a matching product — match manually first. You'll discover the real variables.
+- **Write personal emails, not automated sequences.** The reply rate and reply content will tell you everything about whether you have the right user.
+- **Go to where your users are.** Brian Chesky stayed in Airbnb listings. Go to their offices, their Slack communities, their conferences.
 
-### 10.2 The Teardown Practice
+**The rule:** If you can't make 10 users love you doing things manually — automating the process won't fix that. You haven't found the thing yet.
 
-Pick one product per week. Ask:
+### Signs you've moved to scale too early:
 
-- Who is the primary user?
-- What job is this hired to do?
-- What is the product's core loop?
-- What does the product do exceptionally well?
-- Where does it fall short of the user's actual need?
-- What would you change and why?
-
-This builds a mental library of product decisions and their tradeoffs.
-
-### 10.3 Reference Reading
-
-- **Intercom on Product Management** — JTBD, outcome-driven development
-- **Shape Up (Basecamp / Ryan Singer)** — appetite, shaping, betting
-- **Inspired (Marty Cagan)** — product discovery, empowered teams
-- **The Mom Test (Rob Fitzpatrick)** — how to talk to users without fooling yourself
-- **Working Backwards (Amazon)** — press release method, customer obsession
-- **Lenny's Newsletter** — modern PM benchmarks, frameworks, case studies
-- **Obviously Awesome (April Dunford)** — positioning, finding your category
+- You're optimizing onboarding flows before you have 50 retained users
+- You're building self-serve before you've done 20 manual sales calls
+- You're writing documentation before you've answered the same question 30 times personally
+- You're thinking about hiring before the founder can't personally handle the load
 
 ---
 
-## 11. ANTI-PATTERNS
+## 9. SPEED AS A PRODUCT VALUE
 
-- ❌ **Building by committee.** Too many voices produce feature bloat and nobody's product.
-- ❌ **Roadmaps as promises.** They are hypotheses. Treat them that way publicly.
-- ❌ **Confusing output with outcome.** Shipping features is not the goal. User value is.
-- ❌ **HiPPO-driven decisions.** Highest Paid Person's Opinion is not a product strategy.
-- ❌ **Research theater.** Running interviews but not changing decisions based on them.
-- ❌ **Premature scaling.** Building for 10x users before you've nailed the experience for current ones.
-- ❌ **Copying competitors.** Their roadmap reflects their problems, not yours.
-- ❌ **Shipping without a success metric.** If you don't know what winning looks like, you can't win.
-- ❌ **The feature factory.** Velocity of shipping without velocity of learning.
-- ❌ **Ignoring the boring problems.** Reliability, speed, and polish move metrics more than new features, more often than PMs admit.
+**Patrick Collison (Stripe):** Speed is not just an engineering concern — it is a product value. Fast products feel more capable, more trustworthy, more professional. Slow products feel broken even when they aren't.
 
----
+**Jensen Huang:** Move faster than the environment changes. In fast-moving markets, the cost of being slow is not just opportunity cost — it's existential.
 
-## 12. QUESTIONS TO ASK BEFORE EVERY DECISION
+### Speed rules:
 
-Before writing a spec, starting a sprint, or committing to a roadmap item:
+- **Time to value is a product metric.** How long from signup to first "aha moment"? That number should be going down every quarter.
+- **Every second of load time is a product failure.** Not an engineering problem. A product problem.
+- **Iteration speed is a competitive advantage.** The team that can test 3 hypotheses a week beats the team that ships once a month.
+- **Slow decisions kill startups.** Most decisions are reversible. Make them fast. Reserve deliberation for the ones that aren't.
 
-1. What is the specific problem we're solving? Can I state it in one sentence?
-2. Who has this problem? How do we know — what evidence?
-3. How many people have this problem and how often?
-4. What do they do today instead? Why is that insufficient?
-5. What does success look like in 3 months? What metric moves?
-6. What's the simplest version of this that tests the hypothesis?
-7. What are we not building, and why?
-8. What would change our mind about this decision?
-9. If this fails, what did we learn and how quickly will we know?
-10. Is this the most important thing we could be doing right now?
+### Patrick Collison's "fast" examples (his actual list):
 
-If you can't answer these, you're not ready to build.
+Obsess over what fast looks like. Read his list at [patrickcollison.com/fast](https://patrickcollison.com/fast). The pattern: exceptional things happen when people treat time as the most scarce resource.
 
 ---
 
-*The best product decisions feel obvious in retrospect — because they were grounded in real problems, real users, and honest evaluation. Do the work to get there before writing a line of code.*
+## 10. FOUNDER MODE
+
+**Brian Chesky / Paul Graham:** There is a conventional wisdom that as a company grows, founders should hire executives and "delegate and trust." Chesky ignored this at Airbnb post-COVID and ran the company in "founder mode" — deeply involved in every product detail, skipping the normal management hierarchy to go direct.
+
+### What founder mode means for product:
+
+- **Stay close to the product.** Don't let a layer of PMs and designers become the filter between you and users.
+- **Have taste.** Know what good looks like. Be able to articulate why something is wrong, not just that it feels wrong.
+- **Protect quality personally.** The details you don't care about become the details nobody cares about.
+- **Attend the reviews.** The product review is the most important meeting. Not the board meeting. Not the all-hands.
+
+### The risk of non-founder mode:
+
+Every layer of management between the founder and the product introduces a game of telephone. By the time "make this feel simpler" travels through a VP to a PM to a designer — it becomes "add a tooltip." Stay close.
+
+---
+
+## 11. NETWORK EFFECTS & GROWTH LOOPS
+
+**Andrew Chen (The Cold Start Problem):** Most products that achieve scale do so through a growth mechanism that's built into the product — not bolted on through marketing.
+
+### Types of growth loops:
+
+```
+Viral loop:      User invites others to get value (Slack, Dropbox, Figma)
+Content loop:    Users create content that attracts more users (YouTube, Reddit, Notion)
+Data loop:       More users = better product = more users (Waze, LinkedIn)
+Marketplace loop:More supply attracts demand attracts supply (Airbnb, Stripe)
+```
+
+### The cold start problem:
+
+Every network effect product has a cold start — the product is useless with zero users. The question is: **what is the atomic unit of value that works before the network exists?**
+
+- Slack's atomic unit: a single team (not the whole network)
+- Airbnb's atomic unit: a single listing in a single city
+- Figma's atomic unit: a single designer's workflow (then sharing pulls others in)
+
+**The question to ask:** What is the smallest version of this that delivers real value to one person or one team — before anyone else joins?
+
+---
+
+## 12. THE VISION CONVERSATION
+
+Every product decision should be traceable back to a clear vision. If you can't make that trace — the decision is arbitrary.
+
+### How to write a real vision (not corporate fluff):
+
+**Bad vision:**
+
+> "To be the leading platform for collaborative work management."
+
+**Good vision (Stripe, paraphrased):**
+
+> "Increase the GDP of the internet. Make it so any developer, anywhere in the world,
+> can accept money in minutes — and then give them the financial infrastructure
+> to build any business on top of that."
+
+The difference: the good one tells you what to build next. It implies priorities. It implies who you're for. It implies what you'll say no to.
+
+### Vision test questions:
+
+- Does this vision tell you what to build next, or is it compatible with building anything?
+- Is it specific enough that a competitor couldn't use the exact same words?
+- Does it make clear who you're NOT for?
+- Would a new engineer, reading this on day one, understand why their work matters?
+- Does it feel true — or does it feel like something you wrote to impress investors?
+
+---
+
+## 13. THE UNCOMFORTABLE QUESTIONS
+
+These are the questions a great co-founder asks that a bad one avoids. Apply them before every major product decision.
+
+```
+1.  Are we solving a real problem or a problem we wish existed?
+
+2.  Who specifically has this problem — can we name 10 of them?
+
+3.  How do we know? What have we seen, not just heard?
+
+4.  What are they doing right now instead? Why isn't that good enough?
+
+5.  If we build this perfectly, what changes in their life or work?
+
+6.  Is this the most important problem we could be working on right now?
+
+7.  What would have to be true for this to be a $100M decision?
+
+8.  What's the version of this that we could ship in 2 weeks to test the hypothesis?
+
+9.  What are we afraid to find out? (Go find that out first.)
+
+10. If this fails, will we have learned something valuable — or just lost time?
+
+11. Are we building this because users need it, or because it's interesting to build?
+
+12. What does the person who thinks this is a terrible idea believe — and are they wrong?
+```
+
+---
+
+## 14. ANTI-PATTERNS FROM PEOPLE WHO LEARNED THE HARD WAY
+
+- ❌ **Solving your own problem and assuming the market agrees.** You are not your user. Especially after you've been building for a year.
+- ❌ **Raising money before finding product-market fit.** Money amplifies what's already working. It doesn't create it.
+- ❌ **Hiring to solve a product problem.** More people building the wrong thing faster is worse.
+- ❌ **Competing on features.** Feature parity is not a strategy. Depth on the right problem beats breadth every time.
+- ❌ **Building for the press release.** Features that look good in announcements are often not features users care about.
+- ❌ **Consensus product decisions.** Great products have a point of view. Committees produce beige.
+- ❌ **Moving the goalposts.** If you define success before building, use that definition. Changing it after is intellectual dishonesty.
+- ❌ **Mistaking activity for progress.** Shipping, meetings, and planning are not the product. Value delivered to users is.
+- ❌ **The pivot reflex.** Changing direction after 6 weeks because it's hard is not a pivot. It's giving up. Real pivots come from learning, not from discomfort.
+- ❌ **Building version 2 before version 1 works.** You don't get to the interesting product problems until the basic ones are solved. Stay there until they are.
+
+---
+
+## 15. THE STANDARD
+
+**Steve Jobs:** *"Be a yardstick of quality. Some people aren't used to an environment where excellence is expected."*
+
+The standard isn't "did we ship it." The standard isn't "did users complain." The standard is: **is this the best version of this thing that could exist right now, given what we know?**
+
+If the answer is no — and you shipped it anyway — you've lowered the bar. And bars, once lowered, are very hard to raise.
+
+Every feature, every flow, every empty state, every error message, every onboarding step: ask if it meets the standard. If it doesn't, don't ship it. Or ship a smaller thing that does.
+
+**DHH:** Constraints are a feature. A small team with high standards and tight scope beats a large team with loose standards and unlimited scope. Every time.
+
+---
+
+*Build something 100 people love, not something 1,000,000 people kind of like. — Paul Graham*
+
+*The goal is not to build features. The goal is to change something in someone's life or work — and to know exactly what that change is before you start.*
