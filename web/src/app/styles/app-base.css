@@ -276,7 +276,7 @@ textarea:focus-visible,
 }
 
 .stream-pill--sync-enter {
-  animation: ui-phase-fade-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: ui-phase-fade-in 0.36s var(--ease-ui) both;
 }
 
 .stream-status-dev {
@@ -424,11 +424,11 @@ textarea:focus-visible,
 }
 
 .task-list-phase-msg {
-  animation: ui-phase-fade-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: ui-phase-fade-in 0.38s var(--ease-ui) both;
 }
 
 .task-list-content--enter {
-  animation: ui-phase-fade-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: ui-phase-fade-in var(--duration-slower) var(--ease-ui) both;
 }
 
 @keyframes ui-phase-fade-in {

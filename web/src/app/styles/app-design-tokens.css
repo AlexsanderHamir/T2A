@@ -13,6 +13,8 @@
   --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
 
   /* Shell + cards: one horizontal inset keeps sticky header text aligned with panel body */
   --layout-gutter-x: var(--space-5);
@@ -28,13 +30,21 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
 
-  /* Motion */
+  /* Motion (see .cursor/rules/16-ui-ux-standards.mdc §8) */
   --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+  /* Shared product curve: phase fades, dense list hovers */
+  --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration-instant: 50ms;
   --duration-fast: 100ms;
   --duration-normal: 150ms;
   --duration-moderate: 250ms;
+  --duration-short: 200ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
 
   /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
   --slate-shadow: 15 23 42;
@@ -69,14 +79,18 @@
   --shadow-sm: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 4%);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 6%), 0 2px 4px -1px rgb(0 0 0 / 4%);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 7%), 0 4px 6px -2px rgb(0 0 0 / 4%);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 8%), 0 10px 10px -5px rgb(0 0 0 / 3%);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 12%);
   /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
   --shadow-card: var(--shadow-sm);
   --shadow-focus: 0 0 0 3px var(--brand-focus);
+  --shadow-inset: inset 0 1px 2px rgb(var(--slate-shadow) / 8%);
 
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 
   /* Semantic */
@@ -120,7 +134,10 @@
     --shadow-sm: 0 1px 3px rgb(0 0 0 / 45%), 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-md: 0 4px 12px rgb(0 0 0 / 45%);
     --shadow-lg: 0 12px 24px rgb(0 0 0 / 50%);
+    --shadow-xl: 0 20px 40px rgb(0 0 0 / 55%);
+    --shadow-2xl: 0 24px 48px rgb(0 0 0 / 60%);
     --shadow-card: var(--shadow-sm);
+    --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
 
     --brand-muted: rgb(var(--brand-rgb) / 18%);
     --brand-mesh: rgb(var(--brand-rgb) / 10%);
