@@ -1,0 +1,814 @@
+---
+description: >-
+  Backend engineering standards inspired by Stripe, AWS, Cloudflare, Linear,
+  and PlanetScale — API design, observability, structured logging, errors, DB
+  patterns, resilience, and service architecture for production systems.
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.py"
+  - "**/*.go"
+  - "**/*.rs"
+  - "**/*.java"
+  - "**/*.rb"
+  - "**/*.sql"
+  - "**/Dockerfile"
+  - "**/docker-compose*.yml"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/*.env*"
+  - "**/migrations/**"
+alwaysApply: true
+---
+
+# Backend Engineering Standards — Stripe × AWS × Cloudflare × Linear
+
+You are a senior backend engineer operating at the level of Stripe, AWS, Cloudflare, or Linear. Every system you design or touch must be observable, resilient, consistent, and boring in the best possible way. Clever is the enemy of reliable. Your code runs in production, under load, at 3am, without you.
+
+**Repo context (T2A):** The server is **Go** (`cmd/taskapi`, `pkgs/tasks`, store/handler layers). Map these standards to **`slog`**, **`context`**, and handler patterns; contracts live in **`docs/DESIGN.md`**. Where repo rules are more specific, they win: **`04-structured-logging.mdc`**, **`03-errors-never-ignore.mdc`**, **`02-validate-runtime-data.mdc`**, **`11-api-contracts.mdc`**, **`15-database-schema.mdc`**, **`09-security-baseline.mdc`**. Examples below in TypeScript/JavaScript are **illustrative** unless you are editing **`web/`** or another JS runtime.
+
+---
+
+## 1. ENGINEERING PHILOSOPHY
+
+- **Boring technology wins.** Choose proven primitives over exciting new ones. PostgreSQL over a trendy NewSQL. Redis over a custom cache. The cost of novelty is paid in incidents.
+- **Explicit over implicit.** Configuration, behavior, failure modes — nothing should be a surprise.
+- **Design for failure.** Every external call fails eventually. Every database goes slow. Every disk fills up. Plan for it.
+- **Observability is not optional.** If you can't see it, you can't debug it. If you can't debug it, you can't trust it.
+- **Make the wrong thing hard.** Use types, constraints, and invariants to make invalid states unrepresentable.
+- **Idempotency by default.** Any operation that can be retried must be safe to retry.
+- **Consistency over availability for money and data.** When in doubt, fail closed.
+
+> Reference: Stripe's engineering culture — reliability, predictability, and customer trust above all else.
+
+---
+
+## 2. OBSERVABILITY & STRUCTURED LOGGING (HIGHEST PRIORITY)
+
+This is the most important section. An unobservable system is an untrustworthy system.
+
+### 2.1 Log Levels — Use Them With Precision
+
+```typescript
+// TRACE — internal flow, hot paths, loop iterations. Disabled in production by default.
+log.trace({ userId, query, params }, "Executing DB query")
+
+// DEBUG — developer-facing context. Enable per-service in prod when investigating.
+log.debug({ orderId, amount, currency }, "Processing payment intent")
+log.debug({ cacheKey, ttl, hit: false }, "Cache miss, falling back to DB")
+log.debug({ jobId, attempt, queue }, "Job dequeued for processing")
+log.debug({ requestId, route, method, bodyBytes }, "Incoming request parsed")
+log.debug({ connectionPool: pool.stats() }, "DB pool state before query")
+
+// INFO — significant business events. Always on. Low volume.
+log.info({ userId, planId, mrr }, "Subscription upgraded")
+log.info({ invoiceId, amount, status: "paid" }, "Invoice payment succeeded")
+log.info({ deployId, version, region }, "Deployment completed")
+
+// WARN — degraded state, non-fatal issues that need attention.
+log.warn({ retries, jobId, error: err.message }, "Job retrying after transient failure")
+log.warn({ cacheHitRate, threshold: 0.8 }, "Cache hit rate below threshold")
+log.warn({ p99Latency, slo: 200 }, "DB query latency approaching SLO breach")
+
+// ERROR — something failed that shouldn't have. Always paged or tracked.
+log.error({ err, requestId, userId, context }, "Payment charge failed unexpectedly")
+log.error({ err, jobId, payload }, "Unrecoverable job failure, moving to DLQ")
+
+// FATAL — process cannot continue. Triggers immediate alert + restart.
+log.fatal({ err, config }, "Failed to connect to database on startup")
+```
+
+### 2.2 Structured Logging Rules
+
+**Every log entry must be structured JSON. Never plain strings in production.**
+
+```typescript
+// ✅ CORRECT — structured, queryable, correlatable
+log.debug({
+  requestId,
+  userId,
+  action:     "charge.create",
+  amount:     5000,
+  currency:   "usd",
+  customerId: "cus_abc123",
+  duration:   142,
+}, "Stripe charge created")
+
+// ❌ WRONG — unqueryable, unsearchable, unfilterable
+console.log(`Created charge for user ${userId} for $50`)
+```
+
+**Standard fields on every log entry:**
+```typescript
+interface LogContext {
+  requestId:   string;       // Trace all logs for a single request
+  traceId?:    string;       // Distributed trace ID (OpenTelemetry)
+  spanId?:     string;       // Current span
+  service:     string;       // Service name ("payments-api")
+  version:     string;       // Deploy version / git SHA
+  env:         string;       // "production" | "staging" | "development"
+  userId?:     string;       // When authenticated
+  orgId?:      string;       // When multi-tenant
+  duration?:   number;       // ms — always log on completion
+  err?:        SerializedError;
+}
+```
+
+**Always log:**
+- Request in + request out (with duration)
+- Every external call (DB, cache, 3rd party API) with duration
+- State transitions (job enqueued → dequeued → completed/failed)
+- Auth decisions (granted/denied with reason)
+- Config values at startup (sanitized — no secrets)
+- Every retry attempt with attempt number and reason
+
+**Never log:**
+- Passwords, tokens, API keys, PII (SSN, full card numbers, full DOB)
+- Raw request bodies unless specifically scrubbed
+- Secrets of any kind — use `[REDACTED]` placeholders
+
+### 2.3 Request Tracing
+
+Every inbound request gets a `requestId`. Propagate it everywhere.
+
+```typescript
+// Middleware — assign and attach
+app.use((req, res, next) => {
+  req.requestId = req.headers["x-request-id"] ?? ulid();
+  res.setHeader("x-request-id", req.requestId);
+  req.log = logger.child({ requestId: req.requestId, route: req.path, method: req.method });
+  next();
+});
+
+// Pass downstream — DB calls, queue jobs, outbound HTTP
+await db.query(sql, params, { requestId: req.requestId });
+await queue.publish("charge.create", payload, { meta: { requestId } });
+await fetch(upstreamUrl, { headers: { "x-request-id": requestId } });
+```
+
+### 2.4 Performance Logging
+
+Log durations for everything that touches I/O:
+
+```typescript
+const t = performance.now();
+const result = await db.query(sql, params);
+const duration = Math.round(performance.now() - t);
+
+log.debug({ sql: sql.slice(0, 120), duration, rows: result.rowCount }, "DB query completed");
+
+if (duration > 100) log.warn({ sql: sql.slice(0, 120), duration }, "Slow query detected");
+```
+
+### 2.5 Metrics
+
+Emit metrics alongside logs. Don't rely on logs alone for alerting.
+
+```typescript
+// Counters
+metrics.increment("api.requests.total",   { route, method, status });
+metrics.increment("payments.charge.total", { currency, status });
+metrics.increment("jobs.processed.total",  { queue, status });
+
+// Histograms
+metrics.histogram("api.request.duration",  duration, { route, method });
+metrics.histogram("db.query.duration",     duration, { table, operation });
+metrics.histogram("cache.operation.duration", duration, { operation, hit });
+
+// Gauges
+metrics.gauge("db.pool.active",    pool.activeCount);
+metrics.gauge("queue.depth",       queue.size, { name: "payments" });
+metrics.gauge("cache.hit_rate",    hitRate);
+```
+
+---
+
+## 3. API DESIGN
+
+### 3.1 REST Principles (Stripe-style)
+
+- Resources are **nouns**, never verbs: `/invoices`, `/customers`, `/charges`
+- Actions that don't map to CRUD use sub-resources: `POST /invoices/:id/pay`, `POST /subscriptions/:id/cancel`
+- Consistent plural resource names always
+- Never expose internal IDs — use prefixed, opaque IDs: `cus_`, `inv_`, `ch_` (Stripe pattern)
+- Version in the URL: `/v1/customers` — never in headers for REST
+
+```
+GET    /v1/customers              → list
+POST   /v1/customers              → create
+GET    /v1/customers/:id          → retrieve
+PATCH  /v1/customers/:id          → update (partial)
+DELETE /v1/customers/:id          → delete
+POST   /v1/customers/:id/archive  → action
+```
+
+### 3.2 Request Validation
+
+Validate at the boundary. Never trust input.
+
+```typescript
+// Zod (TypeScript) — validate and type simultaneously
+const CreateChargeSchema = z.object({
+  amount:      z.number().int().positive().max(99999999), // cents
+  currency:    z.enum(["usd", "eur", "gbp"]),
+  customerId:  z.string().regex(/^cus_[a-zA-Z0-9]+$/),
+  description: z.string().max(500).optional(),
+  metadata:    z.record(z.string()).optional(),
+});
+
+type CreateChargeInput = z.infer<typeof CreateChargeSchema>;
+
+// Always validate before any business logic
+const result = CreateChargeSchema.safeParse(req.body);
+if (!result.success) {
+  log.debug({ errors: result.error.flatten(), body: req.body }, "Request validation failed");
+  return res.status(400).json(formatValidationError(result.error));
+}
+```
+
+### 3.3 Response Shape
+
+Consistent error shape everywhere — Stripe-style:
+
+```typescript
+// Success
+{
+  "id": "ch_abc123",
+  "object": "charge",
+  "amount": 5000,
+  "currency": "usd",
+  "status": "succeeded",
+  "created": 1712345678
+}
+
+// Error
+{
+  "error": {
+    "type":    "invalid_request_error",   // card_error | api_error | rate_limit_error
+    "code":    "amount_too_small",        // machine-readable
+    "message": "Amount must be at least $0.50",  // human-readable
+    "param":   "amount",                  // field that caused it, if applicable
+    "requestId": "req_abc123"             // always include for support
+  }
+}
+```
+
+### 3.4 Pagination
+
+Always paginate list endpoints. Never return unbounded lists.
+
+```typescript
+// Cursor-based (preferred for large datasets — Stripe pattern)
+GET /v1/charges?starting_after=ch_abc&limit=25
+
+{
+  "object": "list",
+  "data": [...],
+  "has_more": true,
+  "url": "/v1/charges"
+}
+
+// Offset-based only for admin/internal tools where jumping to page N matters
+GET /v1/admin/logs?page=3&per_page=50
+```
+
+---
+
+## 4. ERROR HANDLING
+
+### 4.1 Error Taxonomy
+
+```typescript
+// Base — all errors extend this
+class AppError extends Error {
+  constructor(
+    public readonly code:       string,
+    public readonly message:    string,
+    public readonly statusCode: number,
+    public readonly context?:   Record<string, unknown>,
+  ) { super(message); this.name = this.constructor.name; }
+}
+
+// Subtypes
+class ValidationError    extends AppError { /* 400 */ }
+class AuthenticationError extends AppError { /* 401 */ }
+class AuthorizationError  extends AppError { /* 403 */ }
+class NotFoundError       extends AppError { /* 404 */ }
+class ConflictError       extends AppError { /* 409 */ }
+class RateLimitError      extends AppError { /* 429 */ }
+class ExternalServiceError extends AppError { /* 502 */ }
+class InternalError       extends AppError { /* 500 */ }
+```
+
+### 4.2 Error Handling Rules
+
+- **Never swallow errors silently.** Either handle, rethrow, or log + rethrow.
+- **Wrap external errors** (DB, 3rd party) in your own error types — don't leak internal details.
+- **Always include context** in errors: what was being attempted, with what inputs, at what state.
+- **Log errors at the boundary** — not at every layer of the call stack (avoid duplicate logs).
+- **Never expose stack traces to API consumers** in production.
+- Distinguish **operational errors** (expected: user not found, card declined) from **programmer errors** (unexpected: null pointer, type mismatch) — handle them differently.
+
+```typescript
+// Global error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  const requestId = req.requestId;
+
+  if (err instanceof AppError) {
+    // Operational — expected failure path
+    log.debug({ err: serializeError(err), requestId }, "Operational error");
+    return res.status(err.statusCode).json(formatError(err, requestId));
+  }
+
+  // Programmer error — unexpected
+  log.error({ err: serializeError(err), requestId, route: req.path }, "Unhandled error");
+  metrics.increment("api.errors.unhandled", { route: req.path });
+
+  res.status(500).json({
+    error: {
+      type:      "api_error",
+      message:   "An unexpected error occurred",
+      requestId,
+    }
+  });
+});
+```
+
+---
+
+## 5. DATABASE PATTERNS
+
+### 5.1 Query Rules
+
+```typescript
+// ✅ Always parameterize. No exceptions.
+await db.query("SELECT * FROM charges WHERE customer_id = $1 AND status = $2", [customerId, "succeeded"]);
+
+// ❌ Never interpolate. Ever.
+await db.query(`SELECT * FROM charges WHERE customer_id = '${customerId}'`); // SQL injection
+
+// Always log slow queries
+const start = Date.now();
+const result = await db.query(sql, params);
+const duration = Date.now() - start;
+log.debug({ duration, rows: result.rowCount, table }, "Query completed");
+if (duration > 50)  log.warn({ duration, sql: sql.slice(0, 200) }, "Slow query");
+if (duration > 200) metrics.increment("db.slow_queries", { table });
+```
+
+### 5.2 Transactions
+
+```typescript
+// Wrap multi-step mutations in transactions — always
+const client = await pool.connect();
+try {
+  await client.query("BEGIN");
+  log.debug({ userId, planId }, "Beginning subscription upgrade transaction");
+
+  await client.query("UPDATE subscriptions SET plan_id = $1 WHERE id = $2", [planId, subId]);
+  await client.query("INSERT INTO subscription_events ...", [...]);
+  await client.query("UPDATE invoices SET ...", [...]);
+
+  await client.query("COMMIT");
+  log.info({ userId, planId, subId }, "Subscription upgrade committed");
+} catch (err) {
+  await client.query("ROLLBACK");
+  log.error({ err, userId, planId }, "Subscription upgrade rolled back");
+  throw err;
+} finally {
+  client.release();
+}
+```
+
+### 5.3 Migrations
+
+- Migrations are **append-only**. Never edit a committed migration.
+- Every migration must be **reversible** (include `down` migration).
+- Migrations must be **non-blocking**: use `CREATE INDEX CONCURRENTLY`, avoid long locks.
+- Test migrations against a production-sized dataset before deploying.
+- Never rename columns directly — add new column, backfill, switch, drop old.
+- Never change column type directly on large tables — use shadow table pattern.
+
+```sql
+-- ✅ Non-blocking index creation
+CREATE INDEX CONCURRENTLY idx_charges_customer_id ON charges(customer_id);
+
+-- ✅ Safe column addition (backward compatible)
+ALTER TABLE customers ADD COLUMN metadata JSONB DEFAULT '{}' NOT NULL;
+
+-- ❌ Dangerous on large tables
+ALTER TABLE charges ALTER COLUMN amount TYPE BIGINT; -- full table rewrite
+```
+
+### 5.4 Connection Pooling
+
+```typescript
+const pool = new Pool({
+  max:             20,          // max connections
+  idleTimeoutMillis: 30_000,   // close idle connections after 30s
+  connectionTimeoutMillis: 2_000, // fail fast if pool exhausted
+});
+
+// Log pool stats periodically
+setInterval(() => {
+  log.debug({
+    total:   pool.totalCount,
+    idle:    pool.idleCount,
+    waiting: pool.waitingCount,
+  }, "DB pool stats");
+}, 30_000);
+```
+
+---
+
+## 6. IDEMPOTENCY
+
+Every mutating operation must be idempotent where retries are possible.
+
+```typescript
+// Idempotency key pattern (Stripe-style)
+// Client sends unique key → server deduplicates
+
+async function createCharge(input: CreateChargeInput, idempotencyKey: string) {
+  // Check for existing result
+  const cached = await redis.get(`idempotency:${idempotencyKey}`);
+  if (cached) {
+    log.debug({ idempotencyKey }, "Returning cached idempotent response");
+    return JSON.parse(cached);
+  }
+
+  // Execute
+  const charge = await stripe.charges.create(input);
+  log.info({ chargeId: charge.id, idempotencyKey }, "Charge created");
+
+  // Cache result for 24h
+  await redis.setex(`idempotency:${idempotencyKey}`, 86_400, JSON.stringify(charge));
+  return charge;
+}
+```
+
+---
+
+## 7. QUEUE & ASYNC JOBS
+
+### 7.1 Job Design Rules
+
+- Jobs must be **idempotent** — safe to run more than once.
+- Jobs must be **atomic** — complete fully or not at all.
+- Always include **job metadata** in every log: `jobId`, `queue`, `attempt`, `payload` (sanitized).
+- Failed jobs go to a **Dead Letter Queue (DLQ)** — never silently discard.
+- Always set **max retries** and **backoff strategy**.
+- Jobs should be **small and focused** — one job, one responsibility.
+
+```typescript
+async function processPaymentJob(job: Job<PaymentPayload>) {
+  const { jobId, attemptsMade, data } = job;
+  const { invoiceId, customerId, amount } = data;
+
+  log.debug({ jobId, attemptsMade, invoiceId, customerId, amount }, "Payment job started");
+
+  try {
+    const charge = await chargeCustomer({ invoiceId, customerId, amount });
+    log.info({ jobId, invoiceId, chargeId: charge.id }, "Payment job completed");
+    metrics.increment("jobs.payment.success");
+  } catch (err) {
+    log.error({ err, jobId, attemptsMade, invoiceId }, "Payment job failed");
+    metrics.increment("jobs.payment.failure", { attempt: attemptsMade });
+    throw err; // rethrow for retry
+  }
+}
+```
+
+### 7.2 Retry Strategy
+
+```typescript
+// Exponential backoff with jitter — prevents thundering herd
+const retryOptions = {
+  attempts:  5,
+  backoff: {
+    type:  "exponential",
+    delay: 1_000,   // 1s, 2s, 4s, 8s, 16s
+  },
+};
+
+// On final failure — DLQ
+queue.on("failed", (job, err) => {
+  log.error({ err, jobId: job.id, queue: job.queueName, payload: job.data }, "Job moved to DLQ");
+  metrics.increment("jobs.dlq", { queue: job.queueName });
+  alerting.notify("dlq.job.failed", { jobId: job.id, queue: job.queueName });
+});
+```
+
+---
+
+## 8. RESILIENCE PATTERNS
+
+### 8.1 Circuit Breaker
+
+```typescript
+const circuitBreaker = new CircuitBreaker(callStripeAPI, {
+  timeout:             3_000,  // fail if no response in 3s
+  errorThresholdPercentage: 50,  // open after 50% failures
+  resetTimeout:        30_000, // retry after 30s
+});
+
+circuitBreaker.on("open",    () => log.warn({ service: "stripe" }, "Circuit breaker opened"));
+circuitBreaker.on("close",   () => log.info({ service: "stripe" }, "Circuit breaker closed"));
+circuitBreaker.on("halfOpen",() => log.debug({ service: "stripe" }, "Circuit breaker half-open"));
+```
+
+### 8.2 Timeouts
+
+```typescript
+// Always set timeouts on external calls. Never wait forever.
+const response = await fetch(url, {
+  signal: AbortSignal.timeout(5_000), // 5s max
+});
+
+// DB query timeout
+await db.query("SET statement_timeout = '2000'"); // 2s per query
+```
+
+### 8.3 Rate Limiting
+
+```typescript
+// Sliding window rate limiter (Cloudflare / Upstash pattern)
+const rateLimiter = new RateLimiter({
+  redis,
+  prefix:    "rl",
+  limiter:   Ratelimit.slidingWindow(100, "1 m"), // 100 req/min
+});
+
+app.use(async (req, res, next) => {
+  const identifier = req.ip ?? req.headers["cf-connecting-ip"];
+  const { success, limit, remaining, reset } = await rateLimiter.limit(identifier);
+
+  log.debug({ identifier, remaining, limit }, "Rate limit checked");
+
+  res.setHeader("X-RateLimit-Limit",     limit);
+  res.setHeader("X-RateLimit-Remaining", remaining);
+  res.setHeader("X-RateLimit-Reset",     reset);
+
+  if (!success) {
+    log.warn({ identifier, limit }, "Rate limit exceeded");
+    metrics.increment("api.rate_limit.exceeded");
+    return res.status(429).json({ error: { type: "rate_limit_error", message: "Too many requests" } });
+  }
+  next();
+});
+```
+
+---
+
+## 9. SECURITY
+
+### 9.1 Authentication & Authorization
+
+```typescript
+// Always validate tokens at the middleware layer — never in route handlers
+app.use(authenticate); // throws 401 if invalid
+app.use(authorize);    // throws 403 if insufficient permissions
+
+// Row-level security — always scope queries to the authenticated entity
+await db.query(
+  "SELECT * FROM invoices WHERE id = $1 AND org_id = $2",
+  [invoiceId, req.auth.orgId] // never trust the client's orgId claim
+);
+
+log.debug({ userId: req.auth.userId, resource: "invoice", action: "read", invoiceId }, "Authorization check passed");
+```
+
+### 9.2 Secrets Management
+
+```typescript
+// ✅ From environment — never hardcoded
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeKey) {
+  log.fatal({ key: "STRIPE_SECRET_KEY" }, "Required secret not set — cannot start");
+  process.exit(1);
+}
+
+// ✅ Log config at startup — sanitized
+log.info({
+  env:          process.env.NODE_ENV,
+  stripeMode:   stripeKey.startsWith("sk_live") ? "live" : "test",
+  dbHost:       process.env.DB_HOST,
+  redisHost:    process.env.REDIS_HOST,
+}, "Service configuration loaded");
+```
+
+### 9.3 Input Security Rules
+
+- Validate all input types, lengths, ranges at the boundary.
+- Sanitize before storing; escape before rendering.
+- Use allowlists, not blocklists, for enum-type fields.
+- Never use `eval()`, `exec()`, or dynamic SQL string interpolation.
+- Set `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` headers.
+- Enforce HTTPS everywhere; reject HTTP in production.
+
+---
+
+## 10. HEALTH & READINESS
+
+```typescript
+// Liveness — is the process alive?
+app.get("/health/live", (req, res) => {
+  res.json({ status: "ok", timestamp: Date.now() });
+});
+
+// Readiness — is the process ready to serve traffic?
+app.get("/health/ready", async (req, res) => {
+  const checks: Record<string, "ok" | "fail"> = {};
+
+  try {
+    await db.query("SELECT 1");
+    checks.database = "ok";
+  } catch (err) {
+    log.error({ err }, "Readiness check: DB failed");
+    checks.database = "fail";
+  }
+
+  try {
+    await redis.ping();
+    checks.cache = "ok";
+  } catch (err) {
+    log.error({ err }, "Readiness check: Redis failed");
+    checks.cache = "fail";
+  }
+
+  const allOk = Object.values(checks).every(v => v === "ok");
+  log.debug({ checks }, "Readiness check completed");
+
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? "ok" : "degraded",
+    checks,
+    version: process.env.GIT_SHA,
+  });
+});
+```
+
+---
+
+## 11. STARTUP & SHUTDOWN
+
+```typescript
+// Validate config before accepting traffic
+async function bootstrap() {
+  log.info({ version: process.env.GIT_SHA, env: process.env.NODE_ENV }, "Service starting");
+
+  validateEnv(["DATABASE_URL", "REDIS_URL", "STRIPE_SECRET_KEY"]);
+  await db.connect();
+  await redis.connect();
+
+  log.info("All dependencies connected — service ready");
+  server.listen(port, () => log.info({ port }, "HTTP server listening"));
+}
+
+// Graceful shutdown — drain in-flight requests
+async function shutdown(signal: string) {
+  log.info({ signal }, "Shutdown signal received — draining");
+
+  server.close(async () => {
+    await queue.close();       // stop accepting jobs
+    await db.end();            // close DB pool
+    await redis.quit();        // flush redis buffer
+    log.info("Graceful shutdown complete");
+    process.exit(0);
+  });
+
+  // Force exit if drain takes too long
+  setTimeout(() => {
+    log.error("Graceful shutdown timed out — forcing exit");
+    process.exit(1);
+  }, 15_000);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
+```
+
+---
+
+## 12. CACHING STRATEGY
+
+```typescript
+// Cache-aside pattern (most common)
+async function getCustomer(id: string): Promise<Customer> {
+  const cacheKey = `customer:${id}`;
+
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    log.debug({ customerId: id, cacheKey, hit: true }, "Cache hit");
+    metrics.increment("cache.hit", { entity: "customer" });
+    return JSON.parse(cached);
+  }
+
+  log.debug({ customerId: id, cacheKey, hit: false }, "Cache miss — querying DB");
+  metrics.increment("cache.miss", { entity: "customer" });
+
+  const customer = await db.query("SELECT * FROM customers WHERE id = $1", [id]);
+  if (!customer) throw new NotFoundError("customer_not_found", "Customer not found");
+
+  await redis.setex(cacheKey, 300, JSON.stringify(customer)); // 5 min TTL
+  return customer;
+}
+
+// Cache invalidation — explicit on mutation
+async function updateCustomer(id: string, data: UpdateCustomerInput) {
+  const customer = await db.query("UPDATE customers SET ... WHERE id = $1", [id]);
+  await redis.del(`customer:${id}`);
+  log.debug({ customerId: id }, "Customer cache invalidated");
+  return customer;
+}
+```
+
+### Caching Rules
+- Always set a TTL — never cache indefinitely.
+- Cache reads, not writes.
+- Invalidate explicitly on mutation — don't rely on TTL for consistency.
+- Never cache errors or empty results unless intentionally (negative caching).
+- Log every cache hit/miss with key and entity type.
+
+---
+
+## 13. SERVICE ARCHITECTURE RULES
+
+- **Single Responsibility**: one service, one domain. Payments don't own user auth.
+- **Synchronous for reads** (HTTP/REST/gRPC). **Asynchronous for side effects** (queues/events).
+- **Events for fanout** — don't couple services directly for notification-style flows.
+- **Timeouts everywhere** — on HTTP clients, DB queries, queue consumers, cache calls.
+- **Bulkhead isolation** — separate DB pools, Redis connections, and thread pools per domain.
+- **Dead Letter Queues** — every queue has one. Monitor it. Alert on it.
+- **Schema versioning** — event and API schemas are versioned contracts. Breaking changes require a deprecation period.
+- **Never share a database** between services. Each service owns its data.
+
+---
+
+## 14. CODE STYLE RULES
+
+```typescript
+// ✅ Explicit return types on public functions
+async function createCharge(input: CreateChargeInput): Promise<Charge> { }
+
+// ✅ Early returns over nested conditionals
+async function processWebhook(event: WebhookEvent) {
+  if (!isValidSignature(event)) throw new AuthenticationError(...);
+  if (await isDuplicate(event.id)) return; // idempotency
+  if (!isSupportedEventType(event.type)) {
+    log.debug({ eventType: event.type }, "Unsupported webhook type, skipping");
+    return;
+  }
+  // main logic here
+}
+
+// ✅ Avoid magic numbers — use named constants
+const MAX_RETRY_ATTEMPTS  = 5;
+const CACHE_TTL_SECONDS   = 300;
+const CHARGE_TIMEOUT_MS   = 5_000;
+const MAX_INVOICE_AMOUNT  = 99_999_99; // cents
+
+// ✅ Prefer immutability
+const updatedConfig = { ...config, timeout: 5_000 };
+
+// ✅ Use Result types for expected failures (avoid throw for control flow)
+type Result<T, E = AppError> = { ok: true; value: T } | { ok: false; error: E };
+```
+
+---
+
+## 15. DO NOT
+
+- ❌ `console.log` in production — use a structured logger always
+- ❌ Swallow errors with empty `catch {}` blocks
+- ❌ Use `SELECT *` in application queries — select only needed columns
+- ❌ Mutate state without a transaction when multiple tables are involved
+- ❌ Skip input validation because "it comes from our own service"
+- ❌ Use synchronous file I/O (`fs.readFileSync`) in request handlers
+- ❌ Hard-code credentials, secrets, or environment-specific config
+- ❌ Write unbounded queries without `LIMIT`
+- ❌ Deploy without health check endpoints
+- ❌ Use `Date.now()` for unique IDs — use `ulid()` or `uuid()`
+- ❌ Use `any` type in TypeScript — it defeats the type system
+- ❌ Retry without backoff — you will take down your dependencies
+- ❌ Return 200 with an error body — use correct HTTP status codes
+- ❌ Log sensitive data — PII, tokens, passwords, card data
+- ❌ Share DB connection pools across services
+- ❌ Deploy schema migrations and code changes in the same deploy step
+- ❌ Block the event loop with CPU-heavy work — offload to worker threads or a job queue
+
+---
+
+## 16. REFERENCE STANDARDS
+
+- [Stripe API Design](https://stripe.com/docs/api) — the gold standard for REST API design
+- [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/) — operational excellence, reliability, security
+- [Cloudflare Engineering Blog](https://blog.cloudflare.com/) — performance, resilience at edge scale
+- [Linear's Tech Stack](https://linear.app/blog) — fast, opinionated, modern backend practices
+- [PlanetScale Patterns](https://planetscale.com/blog) — database schema patterns, zero-downtime migrations
+- [Google SRE Book](https://sre.google/sre-book/table-of-contents/) — SLOs, error budgets, incident response
+- [OpenTelemetry](https://opentelemetry.io/) — distributed tracing standard
+- [12-Factor App](https://12factor.net/) — configuration, process, disposability
+
+---
+
+*Every system you build will be debugged at 3am by someone who isn't you. Leave the logs. Set the timeouts. Handle the errors. Make it observable.*
