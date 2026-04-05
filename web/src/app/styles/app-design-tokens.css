@@ -342,6 +342,20 @@
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);
     --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 8%) inset;
+    /* Slate chrome tokens: white hairlines + black cast shadows on dark UI (DS §14) */
+    --shadow-chrome-xs: 0 1px 2px rgb(0 0 0 / 52%);
+    --shadow-chrome-xs-soft: 0 1px 2px rgb(0 0 0 / 44%);
+    --shadow-chrome-sm: 0 1px 3px rgb(0 0 0 / 58%);
+    --shadow-chrome-raised: 0 2px 12px rgb(0 0 0 / 55%);
+    --shadow-chrome-float: 0 4px 20px rgb(0 0 0 / 60%);
+    --border-chrome-muted: rgb(255 255 255 / 14%);
+    --border-chrome-soft: rgb(255 255 255 / 18%);
+    --border-chrome-hairline: rgb(255 255 255 / 10%);
+    --border-chrome-tint: rgb(255 255 255 / 12%);
+    --border-chrome-surface: rgb(255 255 255 / 13%);
+    --border-chrome-spinner: rgb(255 255 255 / 18%);
+    --chrome-fill-wash: rgb(255 255 255 / 8%);
+    --chrome-fill-muted: rgb(255 255 255 / 5%);
 
     --brand-muted: rgb(var(--brand-rgb) / 18%);
     --brand-mesh: rgb(var(--brand-rgb) / 10%);
