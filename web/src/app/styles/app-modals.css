@@ -41,7 +41,7 @@
 
 .modal-shell {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-modal-content);
   width: min(100%, 26rem);
   max-height: min(90vh, 880px);
   overflow: auto;

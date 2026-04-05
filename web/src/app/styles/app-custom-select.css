@@ -191,13 +191,13 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.875rem 1rem;
+  padding: var(--table-cell-padding-y) var(--table-cell-padding-x);
   border-bottom: 1px solid var(--border-hairline);
   vertical-align: middle;
 }
 
 tbody tr {
-  transition: background 0.15s ease;
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -222,8 +222,8 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
-  padding-top: 0.5rem;
-  padding-bottom: 0.625rem;
+  padding-top: var(--table-header-padding-y-top);
+  padding-bottom: var(--table-header-padding-y-bottom);
 }
 
 .cell-title {

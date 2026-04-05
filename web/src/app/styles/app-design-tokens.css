@@ -25,6 +25,17 @@
   --layout-max-width: 72rem;
   --layout-gutter-x: var(--space-5);
   --layout-panel-padding-y: var(--space-6);
+  /* Readable line length for marketing / long hints (DS §2 ~60–75ch; ~45rem at 16px) */
+  --layout-readable-max: 45rem;
+
+  /* Data tables — global `table` + task list (DS §10) */
+  --table-cell-padding-x: 1rem;
+  --table-cell-padding-y: 0.875rem;
+  --table-header-padding-y-top: 0.5rem;
+  --table-header-padding-y-bottom: 0.625rem;
+
+  /* Touch targets (DS §13 — 44px minimum) */
+  --touch-target-min: 2.75rem;
 
   /* Breakpoints (px) — use in JS/container queries; not for legacy @media(var()) */
   --bp-xs: 375px;
@@ -76,6 +87,7 @@
   --duration-slow: 350ms;
   --duration-slower: 500ms;
   --duration-toast: 300ms;
+  --duration-skeleton: 1.5s;
 
   /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
   --slate-shadow: 15 23 42;
