@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/google/uuid"
@@ -54,6 +55,10 @@ func (s *Store) Ping(ctx context.Context) error {
 	}
 	return sqlDB.PingContext(ctx)
 }
+
+// DefaultReadyTimeout is the recommended upper bound for [context.Context] passed to (*Store).Ready
+// from HTTP readiness probes (GET /health/ready).
+const DefaultReadyTimeout = 2 * time.Second
 
 // Ready checks Ping plus a trivial SQL round-trip (readiness beyond the pool ping).
 func (s *Store) Ready(ctx context.Context) error {

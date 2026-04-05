@@ -200,7 +200,7 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 | -------- | ------- | -------- |
 | `GET /health` | Backward-compatible liveness | `200` JSON includes `"status":"ok"` and **`version`** (from `runtime/debug.ReadBuildInfo`: release module version, short **`vcs.revision`**, **`devel`**, or **`unknown`**) — does not hit the database. |
 | `GET /health/live` | Explicit liveness | Same JSON shape as `GET /health`. |
-| `GET /health/ready` | Readiness | `200` with `checks`, **`version`** (same rules as liveness), and `"status":"ok"` after pool **`Ping`** plus **`SELECT 1`** (2s deadline), and when **`REPO_ROOT`** is configured `checks.workspace_repo: ok` if that directory still exists. `503` `degraded` if any run check fails (`database` and/or `workspace_repo` set to `fail`; when the DB fails first, `workspace_repo` may be omitted). On **`database`** failure, **`readiness check failed`** at **Warn** includes **`timeout_sec`** **`2`** and **`deadline_exceeded`** when the error chain is **`context.DeadlineExceeded`**. |
+| `GET /health/ready` | Readiness | `200` with `checks`, **`version`** (same rules as liveness), and `"status":"ok"` after pool **`Ping`** plus **`SELECT 1`** (**`store.DefaultReadyTimeout`** / 2s deadline), and when **`REPO_ROOT`** is configured `checks.workspace_repo: ok` if that directory still exists. `503` `degraded` if any run check fails (`database` and/or `workspace_repo` set to `fail`; when the DB fails first, `workspace_repo` may be omitted). On **`database`** failure, **`readiness check failed`** at **Warn** includes **`timeout_sec`** **`2`** and **`deadline_exceeded`** when the error chain is **`context.DeadlineExceeded`**. |
 
 ### Rate limiting
 

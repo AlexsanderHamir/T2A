@@ -12,4 +12,6 @@
 // priority actually change. ListTaskEvents returns all audit rows in ascending seq order;
 // ListTaskEventsPageCursor returns a descending-seq keyset page with total and navigation flags.
 // Sentinel errors are domain.ErrNotFound and domain.ErrInvalidInput; the store does not log.
+//
+// [DefaultReadyTimeout] is the recommended context deadline for (*Store).Ready from GET /health/ready.
 package store

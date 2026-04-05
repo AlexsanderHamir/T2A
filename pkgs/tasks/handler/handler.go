@@ -71,14 +71,12 @@ func writeLiveness(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
-const healthReadyDBTimeout = 2 * time.Second
-
 func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health.ready")
 	const op = "health.ready"
 	r = withCallRoot(r, op)
 	debugHTTPRequest(r, op)
-	ctx, cancel := context.WithTimeout(r.Context(), healthReadyDBTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), store.DefaultReadyTimeout)
 	defer cancel()
 
 	checks := map[string]string{}
@@ -86,7 +84,7 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	if err := h.store.Ready(ctx); err != nil {
 		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err,
 			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded),
-			"timeout_sec", int(healthReadyDBTimeout/time.Second))
+			"timeout_sec", int(store.DefaultReadyTimeout/time.Second))
 		checks["database"] = "fail"
 		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
 			"status":  "degraded",
