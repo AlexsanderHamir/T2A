@@ -174,6 +174,16 @@ func setAPISecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
 }
 
+// WrapPrometheusHandler applies the same baseline response hardening as API routes
+// (see setAPISecurityHeaders) before delegating to the Prometheus registry handler.
+// Scrapers ignore these headers; they help when /metrics is opened in a browser.
+func WrapPrometheusHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		setAPISecurityHeaders(w)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func setJSONHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setJSONHeaders")
 	setAPISecurityHeaders(w)

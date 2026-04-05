@@ -12,4 +12,5 @@ Include affected component (`taskapi`, `web/`, etc.), steps to reproduce, and su
 ## Notes
 
 - `taskapi` serves **plain HTTP**; use TLS at your reverse proxy or gateway in production.
+- **`GET /metrics`** is unauthenticated; protect it at the network or proxy. The handler still sets baseline response hardening headers (same family as the JSON API) so accidental browser loads are slightly safer.
 - Never paste **secrets** (for example `DATABASE_URL`, tokens) into public issues, discussions, or chat logs.

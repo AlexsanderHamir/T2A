@@ -641,7 +641,7 @@ func TestHTTP_metrics_scrape(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	api := WithRecovery(WithHTTPMetrics(WithAccessLog(NewHandler(store.NewStore(db), NewSSEHub(), nil))))
 	mux := http.NewServeMux()
-	mux.Handle("GET /metrics", promhttp.Handler())
+	mux.Handle("GET /metrics", WrapPrometheusHandler(promhttp.Handler()))
 	mux.Handle("/", api)
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -660,6 +660,7 @@ func TestHTTP_metrics_scrape(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status %d", res.StatusCode)
 	}
+	assertBaselineSecurityHeaders(t, res.Header)
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
