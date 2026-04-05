@@ -58,11 +58,11 @@ func TestPersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
-	a, err := st.Create(ctx, store.CreateTaskInput{Title: "a"}, domain.ActorUser)
+	a, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := st.Create(ctx, store.CreateTaskInput{Title: "b"}, domain.ActorUser)
+	b, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "b"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestPersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
-	if _, err := st.Create(ctx, store.CreateTaskInput{Title: "solo"}, domain.ActorUser); err != nil {
+	if _, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "solo"}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	var n int
@@ -126,7 +126,7 @@ func TestPersistAllTasks_syncRow_updatesStatus(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
-	tsk, err := st.Create(ctx, store.CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestPersistAllTasks_userResponse_appendsThread(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
-	tsk, err := st.Create(ctx, store.CreateTaskInput{Title: "t"}, domain.ActorUser)
+	tsk, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestSamplePayload_JSON(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
-	task, err := st.Create(ctx, store.CreateTaskInput{Title: "x"}, domain.ActorUser)
+	task, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

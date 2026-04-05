@@ -34,7 +34,7 @@
 // JSON bodies disallow unknown fields; trailing data after the top-level value is rejected.
 //
 // POST body: id (optional; default new UUID), title (required, non-empty after trim),
-// initial_prompt, status, priority (see domain package for enums; defaults ready / medium),
+// initial_prompt, status, priority (see domain package for enums; defaults ready; priority required),
 // optional parent_id (existing task UUID), optional checklist_inherit (bool; requires parent_id when true).
 //
 // PATCH body: optional title, initial_prompt, status, priority, checklist_inherit, parent_id

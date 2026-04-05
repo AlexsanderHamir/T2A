@@ -15,7 +15,7 @@ func strPtr(s string) *string { return &s }
 
 func TestStore_Create_rejects_empty_title(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
-	_, err := s.Create(context.Background(), CreateTaskInput{Title: "   "}, domain.ActorUser)
+	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "   "}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
@@ -24,7 +24,15 @@ func TestStore_Create_rejects_empty_title(t *testing.T) {
 func TestStore_Create_rejects_invalid_status(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	st := domain.Status("nope")
-	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Status: st}, domain.ActorUser)
+	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok", Status: st}, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_Create_rejects_missing_priority(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok"}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
@@ -41,7 +49,7 @@ func TestStore_Create_rejects_invalid_priority(t *testing.T) {
 
 func TestStore_Create_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
-	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok"}, domain.Actor("system"))
+	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok"}, domain.Actor("system"))
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
@@ -50,7 +58,7 @@ func TestStore_Create_rejects_invalid_actor(t *testing.T) {
 func TestStore_Create_uses_explicit_id(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	id := "custom-id-1"
-	got, err := s.Create(context.Background(), CreateTaskInput{ID: id, Title: "t"}, domain.ActorUser)
+	got, err := s.Create(context.Background(), CreateTaskInput{ID: id, Title: "t", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +88,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 	ctx := context.Background()
 	for i := range 5 {
 		title := string(rune('a' + i))
-		if _, err := s.Create(ctx, CreateTaskInput{Title: title}, domain.ActorUser); err != nil {
+		if _, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: title}, domain.ActorUser); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -121,7 +129,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 func TestStore_Update_rejects_no_fields(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +142,7 @@ func TestStore_Update_rejects_no_fields(t *testing.T) {
 func TestStore_Update_rejects_empty_title_patch(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +155,7 @@ func TestStore_Update_rejects_empty_title_patch(t *testing.T) {
 func TestStore_Update_changes_status_and_prompt(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,10 +203,10 @@ func TestStore_Create_duplicate_primary_key_fails(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
 	id := "dup"
-	if _, err := s.Create(ctx, CreateTaskInput{ID: id, Title: "a"}, domain.ActorUser); err != nil {
+	if _, err := s.Create(ctx, CreateTaskInput{ID: id, Title: "a", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.Create(ctx, CreateTaskInput{ID: id, Title: "b"}, domain.ActorUser)
+	_, err := s.Create(ctx, CreateTaskInput{ID: id, Title: "b", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err == nil {
 		t.Fatal("expected error on duplicate id")
 	}
@@ -211,7 +219,7 @@ func TestStore_events_recorded_for_create_and_title_change(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "first"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "first"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +238,7 @@ func TestStore_events_recorded_for_create_and_title_change(t *testing.T) {
 func TestStore_ListTaskEvents_ordered_and_empty(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +264,7 @@ func TestStore_ListTaskEvents_ordered_and_empty(t *testing.T) {
 func TestStore_TaskEventCount_and_LastEventSeq(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +325,7 @@ func TestStore_ListTaskEvents_not_found_task_still_empty_id(t *testing.T) {
 func TestStore_GetTaskEvent_returns_row_and_not_found(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +364,7 @@ func TestStore_GetTaskEvent_rejects_empty_id_and_bad_seq(t *testing.T) {
 func TestStore_AppendTaskEventResponseMessage(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +419,7 @@ func TestStore_AppendTaskEventResponseMessage(t *testing.T) {
 func TestStore_ListTaskEventsPageCursor_keyset_order_and_flags(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +466,7 @@ func TestStore_ListTaskEventsPageCursor_keyset_order_and_flags(t *testing.T) {
 func TestStore_ListTaskEventsPageCursor_rejects_both_cursors(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -473,7 +481,7 @@ func TestStore_ListTaskEventsPageCursor_rejects_both_cursors(t *testing.T) {
 func TestStore_ApprovalPending_respects_order(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -509,7 +517,7 @@ func TestStore_ApprovalPending_respects_order(t *testing.T) {
 func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "a"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,7 +543,7 @@ func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 func TestStore_Update_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +557,7 @@ func TestStore_Update_rejects_invalid_actor(t *testing.T) {
 func TestStore_Update_rejects_invalid_status_value(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -571,7 +579,7 @@ func TestNewStore_roundTrip(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	in, err := s.Create(ctx, CreateTaskInput{Title: "r"}, domain.ActorUser)
+	in, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "r"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -600,7 +608,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "x"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,12 +625,12 @@ func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	_, err = s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid}, domain.ActorUser)
+	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -637,12 +645,12 @@ func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	_, err = s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid}, domain.ActorUser)
+	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -655,12 +663,12 @@ func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
 func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	child, err := s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,12 +714,12 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	p, err := s.Create(ctx, CreateTaskInput{Title: "root"}, domain.ActorUser)
+	p, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "root"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := p.ID
-	_, err = s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -733,12 +741,12 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	child, err := s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -761,12 +769,12 @@ func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	child, err := s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid, ChecklistInherit: false}, domain.ActorUser)
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid, ChecklistInherit: false}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

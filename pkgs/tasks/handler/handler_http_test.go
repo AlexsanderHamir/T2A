@@ -51,7 +51,7 @@ func TestHTTP_get_task_events(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestHTTP_get_task_event(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +302,7 @@ func TestHTTP_get_task_events_paged_cursor(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"paged"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"paged","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,7 +414,7 @@ func TestHTTP_create_and_list(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestHTTP_create_rejects_unknown_field(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"x","nope":1}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"x","nope":1,"priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,7 +520,7 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +599,7 @@ func TestHTTP_create_rejects_empty_title(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"   "}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"   ","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -613,8 +613,22 @@ func TestHTTP_create_rejects_invalid_status(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	body := `{"title":"ok","status":"not_a_real_status"}`
+	body := `{"title":"ok","status":"not_a_real_status","priority":"medium"}`
 	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_create_rejects_missing_priority(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"ok"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -628,7 +642,7 @@ func TestHTTP_patch_json_null_leaves_field_unchanged(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -647,7 +661,7 @@ func TestHTTP_patch_json_null_leaves_field_unchanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	if created.Priority != domain.PriorityMedium {
-		t.Fatalf("default priority: %s", created.Priority)
+		t.Fatalf("priority: %s", created.Priority)
 	}
 
 	// JSON null must behave like omitted: do not clear status; still apply priority.
@@ -687,7 +701,7 @@ func TestHTTP_patch_rejects_empty_patch(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"x"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"x","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -819,7 +833,7 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 	}
 
 	res2, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"title":"t","initial_prompt":"@nope.txt"}`))
+		strings.NewReader(`{"title":"t","initial_prompt":"@nope.txt","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -830,7 +844,7 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 	}
 
 	res3, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"title":"t2","initial_prompt":"@note.txt(1-2)"}`))
+		strings.NewReader(`{"title":"t2","initial_prompt":"@note.txt(1-2)","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -890,7 +904,7 @@ func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) 
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -953,7 +967,7 @@ func TestHTTP_patch_checklist_item_done_rejects_default_user_actor(t *testing.T)
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -998,7 +1012,7 @@ func TestHTTP_patch_checklist_item_rejects_text_and_done_together(t *testing.T) 
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

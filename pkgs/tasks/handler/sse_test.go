@@ -89,7 +89,7 @@ func TestHTTP_SSE_receivesEventAfterCreate(t *testing.T) {
 	}()
 
 	<-streamReady
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"sse"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"sse","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

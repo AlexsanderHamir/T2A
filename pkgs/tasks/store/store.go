@@ -68,7 +68,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	}
 	pr := in.Priority
 	if pr == "" {
-		pr = domain.PriorityMedium
+		return nil, fmt.Errorf("%w: priority required", domain.ErrInvalidInput)
 	}
 	if !validPriority(pr) {
 		return nil, fmt.Errorf("%w: priority", domain.ErrInvalidInput)

@@ -12,7 +12,7 @@ import (
 func TestStore_ApplyDevTaskRowMirror_status(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Title: "t"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,10 +35,10 @@ func TestStore_ApplyDevTaskRowMirror_status(t *testing.T) {
 func TestStore_ListDevsimTasks_like(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()
-	if _, err := s.Create(ctx, CreateTaskInput{ID: "t2a-devsim-aa", Title: "a"}, domain.ActorUser); err != nil {
+	if _, err := s.Create(ctx, CreateTaskInput{ID: "t2a-devsim-aa", Title: "a", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Create(ctx, CreateTaskInput{ID: "other-id", Title: "b"}, domain.ActorUser); err != nil {
+	if _, err := s.Create(ctx, CreateTaskInput{ID: "other-id", Title: "b", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	got, err := s.ListDevsimTasks(ctx, "t2a-devsim-%")
