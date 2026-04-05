@@ -23,10 +23,15 @@ export function DeleteConfirmDialog({
   }, []);
 
   return (
-    <Modal onClose={onCancel} labelledBy="delete-dialog-title" busy={deletePending}>
+    <Modal
+      onClose={onCancel}
+      labelledBy="delete-dialog-title"
+      describedBy="delete-dialog-description"
+      busy={deletePending}
+    >
       <section className="panel confirm-dialog modal-sheet">
         <h2 id="delete-dialog-title">Delete task?</h2>
-        <p className="muted">
+        <p className="muted" id="delete-dialog-description">
           This cannot be undone. Task: <strong>{taskTitle}</strong>
         </p>
         <div className="row stack-row-actions">

@@ -16,6 +16,11 @@ describe("DeleteConfirmDialog", () => {
         onConfirm={vi.fn()}
       />,
     );
+    expect(
+      screen.getByRole("dialog", {
+        description: /this cannot be undone/i,
+      }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^cancel$/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });

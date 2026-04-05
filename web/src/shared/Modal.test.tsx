@@ -19,6 +19,7 @@ function Harness({
       {open ? (
         <Modal
           labelledBy="t-modal-title"
+          describedBy="t-modal-desc"
           onClose={() => {
             setOpen(false);
             onOpenChange?.(false);
@@ -26,6 +27,9 @@ function Harness({
         >
           <div>
             <h2 id="t-modal-title">Test</h2>
+            <p id="t-modal-desc">
+              Extra context for assistive technology.
+            </p>
             <button type="button">First</button>
             <button type="button">Second</button>
           </div>
@@ -76,6 +80,16 @@ function NestedStackHarness() {
 }
 
 describe("Modal", () => {
+  it("exposes aria-describedby when describedBy is set", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    const dialog = await screen.findByRole("dialog", {
+      description: /extra context for assistive technology/i,
+    });
+    expect(dialog).toHaveAttribute("aria-describedby", "t-modal-desc");
+  });
+
   it("moves focus to the first focusable control when opened", async () => {
     const user = userEvent.setup();
     render(<Harness />);

@@ -47,13 +47,14 @@ export function TaskEditForm({
     <Modal
       onClose={onCancel}
       labelledBy="edit-dialog-title"
+      describedBy="edit-dialog-description"
       size="wide"
       busy={patchPending}
     >
       <section className="panel modal-sheet modal-sheet--edit">
         <h2 id="edit-dialog-title">Edit task</h2>
         <form onSubmit={(e) => void onSubmit(e)}>
-          <p className="muted stack-tight-zero">
+          <p className="muted stack-tight-zero" id="edit-dialog-description">
             <code>{taskId}</code>
           </p>
           <div className="row">

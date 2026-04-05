@@ -24,6 +24,8 @@ type Props = {
   onClose: () => void;
   /** Matches `id` on the dialog heading for `aria-labelledby`. */
   labelledBy: string;
+  /** Optional `id` (or space-separated ids) for supplementary dialog copy, e.g. a lead paragraph. */
+  describedBy?: string;
   /** Wider shell for forms with rich text (default ~narrow confirm). */
   size?: "default" | "wide";
   /** Shows a blocking spinner overlay; backdrop and Escape are disabled. */
@@ -40,6 +42,7 @@ export function Modal({
   children,
   onClose,
   labelledBy,
+  describedBy,
   size = "default",
   busy = false,
   busyLabel = "Saving…",
@@ -147,6 +150,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        {...(describedBy ? { "aria-describedby": describedBy } : {})}
         aria-busy={busy}
         tabIndex={-1}
       >

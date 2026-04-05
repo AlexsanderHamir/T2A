@@ -38,6 +38,7 @@ export function ChecklistCriterionModal({
     <Modal
       onClose={onClose}
       labelledBy={titleId}
+      describedBy="checklist-criterion-modal-description"
       busy={pending}
       busyLabel={busyLabel}
       stack={modalStack}
@@ -47,7 +48,10 @@ export function ChecklistCriterionModal({
         <h2 id={titleId}>
           {mode === "add" ? "New criterion" : "Edit criterion"}
         </h2>
-        <p className="muted task-checklist-criterion-modal-lead">
+        <p
+          className="muted task-checklist-criterion-modal-lead"
+          id="checklist-criterion-modal-description"
+        >
           {mode === "add" ? (
             <>
               Add one clear, testable requirement. You can open this again to
