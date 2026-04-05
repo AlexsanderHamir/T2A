@@ -77,17 +77,36 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	debugHTTPRequest(r, op)
 	ctx, cancel := context.WithTimeout(r.Context(), healthReadyDBTimeout)
 	defer cancel()
-	if err := h.store.Ping(ctx); err != nil {
+
+	checks := map[string]string{}
+
+	if err := h.store.Ready(ctx); err != nil {
 		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err)
+		checks["database"] = "fail"
 		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
 			"status": "degraded",
-			"checks": map[string]string{"database": "fail"},
+			"checks": checks,
 		})
 		return
 	}
+	checks["database"] = "ok"
+
+	if h.repo != nil {
+		if err := h.repo.Ready(); err != nil {
+			slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "workspace_repo", "err", err)
+			checks["workspace_repo"] = "fail"
+			writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
+				"status": "degraded",
+				"checks": checks,
+			})
+			return
+		}
+		checks["workspace_repo"] = "ok"
+	}
+
 	writeJSON(w, r, op, http.StatusOK, map[string]any{
 		"status": "ok",
-		"checks": map[string]string{"database": "ok"},
+		"checks": checks,
 	})
 }
 

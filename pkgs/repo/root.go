@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -47,6 +48,22 @@ func OpenRoot(dir string) (*Root, error) {
 func (r *Root) Abs() string {
 	slog.Debug("trace", "operation", "repo.Root.Abs")
 	return r.abs
+}
+
+// Ready verifies the root directory still exists and is a directory (for HTTP readiness when REPO_ROOT is configured).
+func (r *Root) Ready() error {
+	slog.Debug("trace", "operation", "repo.Root.Ready")
+	if r == nil {
+		return errors.New("repo: nil root")
+	}
+	fi, err := os.Stat(r.abs)
+	if err != nil {
+		return fmt.Errorf("repo root: %w", err)
+	}
+	if !fi.IsDir() {
+		return errors.New("repo root is not a directory")
+	}
+	return nil
 }
 
 // Resolve returns an absolute path for a repo-relative path (slashes or OS separators).

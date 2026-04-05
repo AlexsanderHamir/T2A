@@ -199,7 +199,7 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 | -------- | ------- | -------- |
 | `GET /health` | Backward-compatible liveness | `200` `{"status":"ok"}` — does not hit the database. |
 | `GET /health/live` | Explicit liveness | Same as `GET /health`. |
-| `GET /health/ready` | Readiness | `200` `{"status":"ok","checks":{"database":"ok"}}` after `Ping` on the pool (2s timeout), or `503` `{"status":"degraded","checks":{"database":"fail"}}` if the DB is unreachable. |
+| `GET /health/ready` | Readiness | `200` with `checks.database: ok` after pool **`Ping`** plus **`SELECT 1`** (2s deadline), and when **`REPO_ROOT`** is configured `checks.workspace_repo: ok` if that directory still exists. `503` `degraded` if any run check fails (`database` and/or `workspace_repo` set to `fail`; when the DB fails first, `workspace_repo` may be omitted). |
 
 ### Rate limiting
 
@@ -436,7 +436,7 @@ Changing JSON shapes, routes, or SSE payload types also requires updating `docs/
 4. Per-IP HTTP rate limiting is in-memory per process (`T2A_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`). There is no dedicated max body size; headers are capped via `MaxHeaderBytes`, and read timeouts bound how long the server waits for the request (including body). Very large JSON bodies are not explicitly rejected beyond memory and timeout behavior.
 5. Task CRUD error bodies are plain text, not a structured JSON envelope; `/repo/*` uses JSON errors (see [Optional workspace repo](#optional-workspace-repo-repo_root)).
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
-7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (database ping); `dbcheck` remains useful for CLI and migrations.
+7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (DB ping + trivial SQL, optional workspace directory stat when `REPO_ROOT` is set); `dbcheck` remains useful for CLI and migrations.
 8. `taskapi` serves plain HTTP — TLS is expected at a reverse proxy or load balancer, not inside this binary.
 9. Schema evolution is `AutoMigrate` only — no versioned migration files, rollback story, or drift detection beyond what GORM provides.
 10. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.

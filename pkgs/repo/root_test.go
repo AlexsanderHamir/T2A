@@ -43,6 +43,32 @@ func TestOpenRoot_and_Resolve(t *testing.T) {
 	}
 }
 
+func TestRoot_Ready_ok(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Ready(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRoot_Ready_fails_when_directory_removed(t *testing.T) {
+	dir := t.TempDir()
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Ready(); err == nil {
+		t.Fatal("expected error when root path is gone")
+	}
+}
+
 func TestRoot_Search(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

@@ -840,3 +840,25 @@ func TestStore_Ping_ok(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestStore_Ready_ok(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	if err := s.Ready(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStore_Ready_fails_when_db_closed(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Ready(context.Background()); err == nil {
+		t.Fatal("expected error after close")
+	}
+}
