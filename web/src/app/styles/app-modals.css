@@ -98,7 +98,7 @@
 .modal-spinner {
   width: 2.25rem;
   height: 2.25rem;
-  border: 3px solid rgb(var(--slate-shadow) / 10%);
+  border: 3px solid var(--border-chrome-spinner);
   border-top-color: var(--brand);
   border-radius: 50%;
   animation: modal-spinner-rotate var(--duration-spinner) var(--ease-linear) infinite;

@@ -209,6 +209,20 @@
   --shadow-card: var(--shadow-sm);
   --shadow-focus: 0 0 0 3px var(--brand-focus);
   --shadow-inset: inset 0 1px 2px rgb(var(--slate-shadow) / 8%);
+  /* Slate-tinted chrome on elevated controls (task detail, selects — DS §6) */
+  --shadow-chrome-xs: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  --shadow-chrome-xs-soft: 0 1px 2px rgb(var(--slate-shadow) / 3%);
+  --shadow-chrome-sm: 0 1px 3px rgb(var(--slate-shadow) / 7%);
+  --shadow-chrome-raised: 0 2px 8px rgb(var(--slate-shadow) / 5%);
+  --shadow-chrome-float: 0 4px 14px rgb(var(--slate-shadow) / 6%);
+  --border-chrome-muted: rgb(var(--slate-shadow) / 12%);
+  --border-chrome-soft: rgb(var(--slate-shadow) / 14%);
+  --border-chrome-hairline: rgb(var(--slate-shadow) / 8%);
+  --border-chrome-tint: rgb(var(--slate-shadow) / 9%);
+  --border-chrome-surface: rgb(var(--slate-shadow) / 11%);
+  --border-chrome-spinner: rgb(var(--slate-shadow) / 10%);
+  --chrome-fill-wash: rgb(var(--slate-shadow) / 5%);
+  --chrome-fill-muted: rgb(var(--slate-shadow) / 4%);
 
   --radius-sm: 4px;
   --radius-md: 8px;

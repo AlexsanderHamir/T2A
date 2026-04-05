@@ -70,7 +70,7 @@
     var(--warning-attention-gradient-end) 100%
   );
   border: 1px solid var(--warning-attention-border);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   color: var(--warning-ink);
 }
 
@@ -94,7 +94,7 @@
   margin-bottom: 0;
   background: var(--bg-subtle);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
+  box-shadow: var(--shadow-chrome-xs-soft);
 }
 
 .task-detail-ok strong {
@@ -134,16 +134,16 @@ button.task-detail-btn-edit {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-btn-edit:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 12%);
+  border-color: var(--border-chrome-muted);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
+  box-shadow: var(--shadow-chrome-sm);
 }
 
 button.task-detail-btn-edit:focus-visible {
@@ -208,7 +208,7 @@ button.task-detail-btn-delete:focus-visible {
 
 .task-detail-panel input[type="text"]:hover,
 .task-detail-panel input:not([type]):hover {
-  border-color: rgb(var(--slate-shadow) / 14%);
+  border-color: var(--border-chrome-soft);
 }
 
 .task-detail-subtasks-head {
@@ -255,7 +255,7 @@ button.task-detail-add-checklist-btn {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   cursor: pointer;
   transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
@@ -263,10 +263,10 @@ button.task-detail-add-checklist-btn {
 button.task-detail-add-subtask-btn:not(:disabled):hover,
 button.task-detail-add-checklist-btn:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 12%);
+  border-color: var(--border-chrome-muted);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
+  box-shadow: var(--shadow-chrome-sm);
 }
 
 button.task-detail-add-subtask-btn:focus-visible,
@@ -352,16 +352,16 @@ button.task-detail-checklist-add-btn {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-checklist-add-btn:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 12%);
+  border-color: var(--border-chrome-muted);
   transform: none;
   filter: none;
-  box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
+  box-shadow: var(--shadow-chrome-sm);
 }
 
 button.task-detail-checklist-add-btn:focus-visible {
@@ -434,7 +434,7 @@ button.task-detail-checklist-remove:focus-visible {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   overflow: hidden;
 }
 
@@ -458,7 +458,7 @@ button.task-detail-checklist-remove:focus-visible {
 .task-detail-panel .task-timeline-item {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
+  box-shadow: var(--shadow-chrome-xs-soft);
 }
 
 .panel-inset {
@@ -494,7 +494,7 @@ button.task-detail-checklist-remove:focus-visible {
   margin-top: 0.5rem;
   margin-left: 0.5rem;
   padding-left: 0.65rem;
-  border-left: 2px solid rgb(var(--slate-shadow) / 8%);
+  border-left: 2px solid var(--border-chrome-hairline);
   gap: 0.4rem;
 }
 
@@ -512,13 +512,13 @@ button.task-detail-checklist-remove:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
+  box-shadow: var(--shadow-chrome-xs-soft);
   transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .task-subtasks-item-row:hover {
-  border-color: rgb(var(--slate-shadow) / 12%);
-  box-shadow: 0 2px 8px rgb(var(--slate-shadow) / 5%);
+  border-color: var(--border-chrome-muted);
+  box-shadow: var(--shadow-chrome-raised);
 }
 
 .task-subtasks-link {
@@ -588,7 +588,7 @@ button.task-detail-checklist-remove:focus-visible {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: var(--bg-subtle);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
+  box-shadow: var(--shadow-chrome-xs);
   overflow: hidden;
 }
 
