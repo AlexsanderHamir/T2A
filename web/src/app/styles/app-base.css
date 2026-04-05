@@ -51,6 +51,12 @@ textarea:focus-visible,
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: var(--text-disabled);
+}
+
 /* Text links (buttons covered above; modals portal outside #root) */
 #root a:focus-visible,
 .modal-shell a:focus-visible {

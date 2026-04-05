@@ -7,10 +7,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(1rem, env(safe-area-inset-top))
-    max(1rem, env(safe-area-inset-right))
-    max(1rem, env(safe-area-inset-bottom))
-    max(1rem, env(safe-area-inset-left));
+  padding: max(var(--layout-modal-safe-padding), env(safe-area-inset-top))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-right))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-bottom))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-left));
 }
 
 .modal-root--nested {
@@ -50,6 +50,23 @@
 
 .modal-shell--wide {
   width: min(100%, 52rem);
+}
+
+/* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
+@media (min-width: 768px) {
+  .modal-shell > .panel {
+    margin-bottom: 0;
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .modal-shell > .panel:hover {
+      border-color: transparent;
+      box-shadow: var(--shadow-2xl);
+    }
+  }
 }
 
 .modal-sheet {
@@ -112,7 +129,7 @@
   .modal-root {
     align-items: flex-end;
     justify-content: center;
-    padding-top: 2rem;
+    padding-top: var(--space-8);
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 

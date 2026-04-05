@@ -94,6 +94,8 @@
   --text-primary: #0a0a0a;
   --text-secondary: rgb(75 85 99 / 92%);
   --text-tertiary: rgb(107 114 128 / 78%);
+  --text-disabled: #d1d5db;
+
   --bg-page: #f6f8fa;
   --bg-elevated: #fafafa;
   --bg-subtle: #f0f2f5;
@@ -124,6 +126,9 @@
   --toast-max-width: 25rem;
   --toast-padding-y: 0.875rem;
   --toast-padding-x: 1rem;
+
+  /* Modal viewport gutter (safe-area aware rules in app-modals.css) */
+  --layout-modal-safe-padding: var(--space-4);
 
   /* Primary actions — brand (single clear CTA color) */
   --ink: #0a0a0a;
@@ -185,6 +190,7 @@
     --text-primary: #f5f5f5;
     --text-secondary: rgb(160 160 160 / 92%);
     --text-tertiary: rgb(96 96 96 / 95%);
+    --text-disabled: rgb(82 82 82 / 88%);
     --bg-page: #0a0a0a;
     --bg-elevated: #141414;
     --bg-subtle: #1a1a1a;
