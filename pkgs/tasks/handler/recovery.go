@@ -12,8 +12,14 @@ func WithRecovery(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
+				path := ""
+				if r.URL != nil {
+					path = r.URL.Path
+				}
 				slog.Log(r.Context(), slog.LevelError, "panic in handler",
-					"cmd", httpLogCmd, "operation", "http.recover", "panic", rec, "stack", debug.Stack())
+					"cmd", httpLogCmd, "operation", "http.recover",
+					"method", r.Method, "path", path,
+					"panic", rec, "stack", debug.Stack())
 				writeJSONError(w, r, "http.recover", http.StatusInternalServerError, "internal server error")
 			}
 		}()
