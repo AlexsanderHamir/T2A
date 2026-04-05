@@ -333,15 +333,7 @@ textarea {
 input:hover,
 select:hover,
 textarea:hover {
-  border-color: rgb(0 0 0 / 12%);
-}
-
-@media (prefers-color-scheme: dark) {
-  input:hover,
-  select:hover,
-  textarea:hover {
-    border-color: rgb(255 255 255 / 14%);
-  }
+  border-color: var(--border-interactive-hover);
 }
 
 select {

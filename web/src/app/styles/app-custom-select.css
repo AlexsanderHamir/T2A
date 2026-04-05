@@ -143,15 +143,9 @@ button.secondary {
 
 button.secondary:not(:disabled):hover {
   background: var(--bg-subtle);
-  border-color: rgb(0 0 0 / 18%);
+  border-color: var(--border-interactive-hover);
   box-shadow: none;
   transform: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  button.secondary:not(:disabled):hover {
-    border-color: rgb(255 255 255 / 16%);
-  }
 }
 
 button.danger {
