@@ -12,7 +12,6 @@
 //
 // The first Info line includes a version field (same build metadata as taskapi health JSON).
 //
-// On success it logs and exits 0; on failure it logs and exits 1. Ping uses a 30s deadline;
-// with -migrate, postgres.Migrate (pkgs/tasks/postgres) runs under a separate 120s deadline,
-// same tables and migrate wall clock as taskapi at startup.
+// On success it logs and exits 0; on failure it logs and exits 1. Ping uses postgres.DefaultPingTimeout;
+// with -migrate, postgres.Migrate runs under postgres.DefaultMigrateTimeout (same as taskapi startup).
 package main

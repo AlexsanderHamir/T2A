@@ -14,10 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	dbPingTimeout = 30 * time.Second
-	cmdName       = "dbcheck"
-)
+const cmdName = "dbcheck"
 
 type options struct {
 	migrate bool
@@ -53,7 +50,7 @@ func run(o options) error {
 	if err := loadRepoDotenv(o); err != nil {
 		return fmt.Errorf("env setup: %w", err)
 	}
-	pingSec := int(dbPingTimeout / time.Second)
+	pingSec := int(postgres.DefaultPingTimeout / time.Second)
 	startArgs := []any{
 		"cmd", cmdName, "operation", "dbcheck.start",
 		"version", version.String(), "migrate", o.migrate,
@@ -64,7 +61,7 @@ func run(o options) error {
 	}
 	slog.Info("dbcheck starting", startArgs...)
 
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), dbPingTimeout)
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), postgres.DefaultPingTimeout)
 	defer pingCancel()
 
 	db, err := connectAndPing(pingCtx, os.Getenv("DATABASE_URL"))
@@ -89,7 +86,7 @@ func migrateIfRequested(db *gorm.DB, want bool) error {
 	if !want {
 		return nil
 	}
-	// Dedicated deadline: migrate can exceed pingTimeout; same bound as taskapi startup (postgres.DefaultMigrateTimeout).
+	// Dedicated deadline: migrate can exceed the ping phase (postgres.DefaultPingTimeout); same AutoMigrate bound as taskapi (postgres.DefaultMigrateTimeout).
 	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), postgres.DefaultMigrateTimeout)
 	defer migrateCancel()
 	if err := postgres.Migrate(migrateCtx, db); err != nil {

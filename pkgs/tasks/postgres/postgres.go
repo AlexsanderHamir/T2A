@@ -26,6 +26,10 @@ const (
 // [context.Background] when AutoMigrate is expected to finish quickly.
 const DefaultMigrateTimeout = 2 * time.Minute
 
+// DefaultPingTimeout is the recommended upper bound for the first successful [database/sql.DB.PingContext]
+// from operator CLIs (dbcheck). Long-lived servers may omit an explicit ping or use their own probe policy.
+const DefaultPingTimeout = 30 * time.Second
+
 func configureSQLPool(sqldb *sql.DB) {
 	slog.Debug("trace", "operation", "postgres.configureSQLPool")
 	sqldb.SetMaxOpenConns(defaultMaxOpenConns)

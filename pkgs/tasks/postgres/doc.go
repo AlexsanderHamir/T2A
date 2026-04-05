@@ -8,4 +8,5 @@
 // SQL slower than T2A_GORM_SLOW_QUERY_MS (default 200; 0 disables) is logged at Warn.
 //
 // [DefaultMigrateTimeout] documents the shared AutoMigrate deadline used by taskapi and dbcheck -migrate.
+// [DefaultPingTimeout] documents the dbcheck connectivity ping deadline.
 package postgres
