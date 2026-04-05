@@ -3,6 +3,7 @@
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
 // Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/DESIGN.md).
 // Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/DESIGN.md).
+// Max request body: max_body.go (WithMaxRequestBody; optional T2A_MAX_REQUEST_BODY_BYTES in docs/DESIGN.md).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): calllog.go — use withCallRoot on each handler, PushCall inside helpers.
 // JSONL order: WrapSlogHandlerWithLogSequence (taskapi outer) + ContextWithLogSeq in access middleware → log_seq, log_seq_scope; RunObserved for explicit helper in/out pairs.

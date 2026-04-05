@@ -269,11 +269,17 @@ func invalidInputDetail(err error) string {
 
 func writeError(w http.ResponseWriter, r *http.Request, op string, err error, code int) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.writeError", "http_op", op)
+	var maxErr *http.MaxBytesError
+	if errors.As(err, &maxErr) {
+		code = http.StatusRequestEntityTooLarge
+	}
 	ctxErr := PushCall(requestCtx(r), "writeError")
 	helperDebugIn(ctxErr, "writeError", "http_op", op, "http_status", code, "err", err)
 	logRequestFailure(requestCtx(r), op, err, code)
 	msg := http.StatusText(code)
-	if code == http.StatusBadRequest {
+	if code == http.StatusRequestEntityTooLarge {
+		msg = "request body too large"
+	} else if code == http.StatusBadRequest {
 		msg = userFacingJSONError(err)
 		if msg == "" {
 			msg = "bad request"
