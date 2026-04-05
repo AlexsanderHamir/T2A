@@ -121,7 +121,7 @@
 }
 
 /* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
-.task-detail-btn-edit {
+button.task-detail-btn-edit {
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
@@ -134,7 +134,7 @@
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.task-detail-btn-edit:not(:disabled):hover {
+button.task-detail-btn-edit:not(:disabled):hover {
   background: var(--bg-subtle);
   border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
@@ -142,13 +142,13 @@
   box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
-.task-detail-btn-edit:focus-visible {
+button.task-detail-btn-edit:focus-visible {
   outline: none;
   border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
-.task-detail-btn-delete {
+button.task-detail-btn-delete {
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
@@ -160,13 +160,13 @@
   transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
 
-.task-detail-btn-delete:not(:disabled):hover {
+button.task-detail-btn-delete:not(:disabled):hover {
   filter: brightness(1.04);
   transform: none;
   box-shadow: 0 2px 8px rgb(180 30 30 / 20%);
 }
 
-.task-detail-btn-delete:focus-visible {
+button.task-detail-btn-delete:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgb(225 29 72 / 18%);
 }
@@ -239,8 +239,8 @@
   margin: 0;
 }
 
-.task-detail-add-subtask-btn,
-.task-detail-add-checklist-btn {
+button.task-detail-add-subtask-btn,
+button.task-detail-add-checklist-btn {
   border-radius: var(--radius-md);
   padding: 0.45rem 0.95rem;
   font-weight: 600;
@@ -254,8 +254,8 @@
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.task-detail-add-subtask-btn:not(:disabled):hover,
-.task-detail-add-checklist-btn:not(:disabled):hover {
+button.task-detail-add-subtask-btn:not(:disabled):hover,
+button.task-detail-add-checklist-btn:not(:disabled):hover {
   background: var(--bg-subtle);
   border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
@@ -263,20 +263,20 @@
   box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
-.task-detail-add-subtask-btn:focus-visible,
-.task-detail-add-checklist-btn:focus-visible {
+button.task-detail-add-subtask-btn:focus-visible,
+button.task-detail-add-checklist-btn:focus-visible {
   outline: none;
   border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
-.task-detail-add-subtask-btn:disabled,
-.task-detail-add-checklist-btn:disabled {
+button.task-detail-add-subtask-btn:disabled,
+button.task-detail-add-checklist-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.task-home-new-task-btn {
+button.task-home-new-task-btn {
   border-radius: var(--radius-md);
   min-height: 2.5rem;
   padding: 0.5rem 1.15rem;
@@ -292,24 +292,24 @@
     transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
-.task-home-new-task-btn:not(:disabled):hover {
+button.task-home-new-task-btn:not(:disabled):hover {
   background: var(--brand-hover);
   filter: none;
   transform: none;
   box-shadow: var(--shadow-md);
 }
 
-.task-home-new-task-btn:not(:disabled):active {
+button.task-home-new-task-btn:not(:disabled):active {
   transform: scale(0.98);
   box-shadow: var(--shadow-sm);
 }
 
-.task-home-new-task-btn:focus-visible {
+button.task-home-new-task-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
-.task-home-new-task-btn:disabled {
+button.task-home-new-task-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -339,7 +339,7 @@
   justify-content: flex-end;
 }
 
-.task-detail-checklist-add-btn {
+button.task-detail-checklist-add-btn {
   border-radius: var(--radius-md);
   padding: 0.5rem 0.95rem;
   font-weight: 600;
@@ -351,7 +351,7 @@
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.task-detail-checklist-add-btn:not(:disabled):hover {
+button.task-detail-checklist-add-btn:not(:disabled):hover {
   background: var(--bg-subtle);
   border-color: rgb(var(--slate-shadow) / 12%);
   transform: none;
@@ -359,7 +359,7 @@
   box-shadow: 0 1px 3px rgb(var(--slate-shadow) / 7%);
 }
 
-.task-detail-checklist-add-btn:focus-visible {
+button.task-detail-checklist-add-btn:focus-visible {
   outline: none;
   border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
@@ -373,7 +373,7 @@
   flex-shrink: 0;
 }
 
-.task-detail-checklist-edit {
+button.task-detail-checklist-edit {
   border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
@@ -385,19 +385,19 @@
   box-shadow: none;
 }
 
-.task-detail-checklist-edit:not(:disabled):hover {
+button.task-detail-checklist-edit:not(:disabled):hover {
   background: var(--brand-muted);
   border-color: rgb(var(--brand-rgb) / 18%);
   transform: none;
   filter: none;
 }
 
-.task-detail-checklist-edit:focus-visible {
+button.task-detail-checklist-edit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
-.task-detail-checklist-remove {
+button.task-detail-checklist-remove {
   border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
@@ -409,14 +409,14 @@
   box-shadow: none;
 }
 
-.task-detail-checklist-remove:not(:disabled):hover {
+button.task-detail-checklist-remove:not(:disabled):hover {
   background: var(--danger-soft);
   border-color: rgb(225 29 72 / 18%);
   transform: none;
   filter: none;
 }
 
-.task-detail-checklist-remove:focus-visible {
+button.task-detail-checklist-remove:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgb(225 29 72 / 16%);
 }
