@@ -75,6 +75,9 @@ func run() int {
 		&processLogSeq,
 	)))
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.run")
+	if !minimized {
+		emitTaskAPIFileLoggingConfig(minLevel)
+	}
 
 	path, err := envload.Load(*envPath)
 	if err != nil {
@@ -251,6 +254,14 @@ func resolveSSETestTickerInterval() time.Duration {
 		return sseTestDefaultInterval
 	}
 	return d
+}
+
+// emitTaskAPIFileLoggingConfig logs effective JSON file logging settings (call only when not in minimized logging mode).
+// The record uses minLevel as its severity so it is never filtered out by the configured handler minimum.
+func emitTaskAPIFileLoggingConfig(minLevel slog.Level) {
+	slog.Log(context.Background(), minLevel, "logging config",
+		"cmd", cmdName, "operation", "taskapi.logging",
+		"min_level", minLevel.String(), "json_file", true)
 }
 
 // resolveTaskAPILogLevel returns the minimum slog level for the JSON log file.
