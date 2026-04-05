@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -90,7 +91,8 @@ func migrateIfRequested(ctx context.Context, db *gorm.DB, want bool) error {
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	if err := run(parseFlags()); err != nil {
-		slog.Error("dbcheck failed", "cmd", cmdName, "operation", "run", "err", err)
+		slog.Error("dbcheck failed", "cmd", cmdName, "operation", "dbcheck.failed", "err", err,
+			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded))
 		os.Exit(1)
 	}
 }
