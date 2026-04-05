@@ -53,7 +53,8 @@ func run(o options) error {
 		return fmt.Errorf("env setup: %w", err)
 	}
 	slog.Info("dbcheck starting", "cmd", cmdName, "operation", "dbcheck.start",
-		"version", version.String(), "migrate", o.migrate)
+		"version", version.String(), "migrate", o.migrate,
+		"timeout_sec", int(dbTimeout/time.Second))
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()

@@ -142,7 +142,7 @@ flowchart TB
 
 `dbcheck` runs once: connectivity check, optional migrate, then exit. `taskapi` is the long-lived HTTP server; the SSE hub exists only inside that process.
 
-Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not import that package but follows the same rules: walk from `cwd` to find `go.mod`, default `<repo-root>/.env` or `-env`, `godotenv.Overload`, and a non-empty `DATABASE_URL`. `dbcheck` uses a 30s context deadline around `PingContext`; `taskapi` has no analogous startup ping beyond `gorm.Open`.
+Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not import that package but follows the same rules: walk from `cwd` to find `go.mod`, default `<repo-root>/.env` or `-env`, `godotenv.Overload`, and a non-empty `DATABASE_URL`. `dbcheck` uses a 30s context deadline around `PingContext` and optional migrate; the **`dbcheck.start`** log line includes **`timeout_sec`** with that value. `taskapi` has no analogous startup ping beyond `gorm.Open`.
 
 ## Startup flow (`taskapi`)
 
