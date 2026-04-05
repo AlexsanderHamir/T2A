@@ -9,6 +9,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [../AGENTS.md](../AGENTS.md) | Short map for humans and coding agents: where code lives, what to run before finishing, link-out to rules. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | PR checklist, `.env.example`, API/client sync with `parseTaskApi`. |
 | [../SECURITY.md](../SECURITY.md) | How to report vulnerabilities privately; notes on TLS and secrets. |
+| [../LICENSE](../LICENSE) | MIT license for the repository. |
 | [../README.md](../README.md) | Prerequisites, build/test, run `dbcheck` / `taskapi`, dev scripts, npm commands for `web/`. |
 | [PRODUCT.md](./PRODUCT.md) | Product context: primary user, outcomes, horizons, and how we choose scope (complements `DESIGN.md`). |
 | [DESIGN.md](./DESIGN.md) | `taskapi`: HTTP + SSE, env vars, `REPO_ROOT` / `/repo`, persistence, limits, Mermaid, and how to extend the stack (section Extensibility). |

@@ -84,3 +84,7 @@ go doc -all ./internal/envload ./cmd/taskapi ./cmd/dbcheck
 ```
 
 Web: run `npm test` from `web/`; details in [docs/WEB.md](docs/WEB.md).
+
+## License
+
+[MIT](LICENSE).
