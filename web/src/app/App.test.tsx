@@ -169,6 +169,9 @@ describe("App", () => {
     await waitFor(() => {
       expect(document.title).toBe(DEFAULT_DOCUMENT_TITLE);
     });
+    expect(document.querySelector(".route-announcer")).toHaveTextContent(
+      DEFAULT_DOCUMENT_TITLE,
+    );
   });
 
   it("shows an alert when the initial list request fails", async () => {

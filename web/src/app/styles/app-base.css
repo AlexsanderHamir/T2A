@@ -60,12 +60,26 @@ textarea:focus-visible,
 }
 
 .app {
+  position: relative;
   max-width: min(100%, 72rem);
   margin: 0 auto;
   padding-top: 2.5rem;
   padding-bottom: 4rem;
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+}
+
+/* SPA: mirror document.title for AT after client navigations (WCAG 4.1.3) */
+.route-announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Skip link — first tab stop; visible on focus (DS §13 / WCAG 2.4.1) */

@@ -8,6 +8,7 @@ import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
+import { RouteAnnouncer } from "./RouteAnnouncer";
 import "./App.css";
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
@@ -74,6 +75,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
             />
           ) : null}
         </main>
+        <RouteAnnouncer />
       </div>
     </ModalStackProvider>
   );
