@@ -169,7 +169,7 @@ textarea::placeholder {
     box-shadow var(--duration-normal) var(--ease-out);
 }
 
-@media (prefers-color-scheme: light) {
+@media (hover: hover) and (prefers-color-scheme: light) {
   .app-header--sticky:hover {
     border-color: var(--border-soft);
   }
@@ -663,7 +663,7 @@ textarea::placeholder {
     box-shadow var(--duration-normal) var(--ease-out);
 }
 
-@media (prefers-color-scheme: light) {
+@media (hover: hover) and (prefers-color-scheme: light) {
   .panel:hover {
     border-color: var(--border-soft);
   }
@@ -677,7 +677,7 @@ textarea::placeholder {
   font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-4);
   color: var(--text-primary);
 }
 

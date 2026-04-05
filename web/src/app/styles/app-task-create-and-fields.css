@@ -291,7 +291,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--field-label-to-control-gap);
   min-width: 140px;
 }
 
