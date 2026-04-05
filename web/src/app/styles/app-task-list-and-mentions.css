@@ -79,9 +79,9 @@
 
 /* Status — distinct semantic hues */
 .cell-pill--status-ready {
-  background: rgb(241 245 249);
-  color: rgb(51 65 85);
-  border-color: rgb(226 232 240);
+  background: var(--pill-ready-bg);
+  color: var(--pill-ready-text);
+  border-color: var(--pill-ready-border);
 }
 
 .cell-pill--status-running {
@@ -97,46 +97,46 @@
 }
 
 .cell-pill--status-review {
-  background: rgb(245 243 255);
-  color: rgb(91 33 182);
-  border-color: rgb(221 214 254);
+  background: var(--pill-review-bg);
+  color: var(--pill-review-text);
+  border-color: var(--pill-review-border);
 }
 
 .cell-pill--status-done {
-  background: rgb(236 253 245);
-  color: rgb(4 120 87);
-  border-color: rgb(167 243 208);
+  background: var(--pill-success-fill-bg);
+  color: var(--pill-success-fill-text);
+  border-color: var(--pill-success-fill-border);
 }
 
 .cell-pill--status-failed {
-  background: rgb(255 241 242);
-  color: rgb(190 18 60);
-  border-color: rgb(254 205 211);
+  background: var(--pill-danger-fill-bg);
+  color: var(--pill-danger-fill-text);
+  border-color: var(--pill-danger-fill-border);
 }
 
 /* Priority — escalation (low → critical) */
 .cell-pill--priority-low {
-  background: rgb(248 250 252);
-  color: rgb(100 116 139);
-  border-color: rgb(226 232 240);
+  background: var(--pill-priority-low-bg);
+  color: var(--pill-priority-low-text);
+  border-color: var(--pill-priority-low-border);
 }
 
 .cell-pill--priority-medium {
-  background: rgb(240 249 255);
-  color: rgb(3 105 161);
-  border-color: rgb(186 230 253);
+  background: var(--pill-priority-medium-bg);
+  color: var(--pill-priority-medium-text);
+  border-color: var(--pill-priority-medium-border);
 }
 
 .cell-pill--priority-high {
-  background: rgb(255 247 237);
-  color: rgb(194 65 12);
-  border-color: rgb(254 215 170);
+  background: var(--pill-priority-high-bg);
+  color: var(--pill-priority-high-text);
+  border-color: var(--pill-priority-high-border);
 }
 
 .cell-pill--priority-critical {
-  background: rgb(255 241 242);
-  color: rgb(190 18 60);
-  border-color: rgb(254 205 211);
+  background: var(--pill-danger-fill-bg);
+  color: var(--pill-danger-fill-text);
+  border-color: var(--pill-danger-fill-border);
 }
 
 .actions {

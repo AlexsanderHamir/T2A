@@ -234,6 +234,29 @@
   --info-soft: rgb(59 130 246 / 14%);
   --color-info-subtle: #dbeafe;
 
+  /* Task table status / priority pills (DS §10) */
+  --pill-ready-bg: rgb(241 245 249);
+  --pill-ready-text: rgb(51 65 85);
+  --pill-ready-border: rgb(226 232 240);
+  --pill-review-bg: rgb(245 243 255);
+  --pill-review-text: rgb(91 33 182);
+  --pill-review-border: rgb(221 214 254);
+  --pill-success-fill-bg: rgb(236 253 245);
+  --pill-success-fill-text: rgb(4 120 87);
+  --pill-success-fill-border: rgb(167 243 208);
+  --pill-danger-fill-bg: rgb(255 241 242);
+  --pill-danger-fill-text: rgb(190 18 60);
+  --pill-danger-fill-border: rgb(254 205 211);
+  --pill-priority-low-bg: rgb(248 250 252);
+  --pill-priority-low-text: rgb(100 116 139);
+  --pill-priority-low-border: rgb(226 232 240);
+  --pill-priority-medium-bg: rgb(240 249 255);
+  --pill-priority-medium-text: rgb(3 105 161);
+  --pill-priority-medium-border: rgb(186 230 253);
+  --pill-priority-high-bg: rgb(255 247 237);
+  --pill-priority-high-text: rgb(194 65 12);
+  --pill-priority-high-border: rgb(254 215 170);
+
   font-family: var(--font-sans);
   line-height: 1.5;
   font-size: var(--text-md);
@@ -301,6 +324,27 @@
     --warning-attention-gradient-end: rgb(251 191 36 / 8%);
     --info-soft: rgb(59 130 246 / 22%);
     --color-info-subtle: rgb(30 58 138 / 38%);
+    --pill-ready-bg: rgb(148 163 184 / 14%);
+    --pill-ready-text: rgb(226 232 240);
+    --pill-ready-border: rgb(148 163 184 / 26%);
+    --pill-review-bg: rgb(139 92 246 / 14%);
+    --pill-review-text: rgb(196 181 253);
+    --pill-review-border: rgb(139 92 246 / 30%);
+    --pill-success-fill-bg: rgb(16 185 129 / 14%);
+    --pill-success-fill-text: rgb(110 231 183);
+    --pill-success-fill-border: rgb(52 211 153 / 35%);
+    --pill-danger-fill-bg: rgb(244 63 94 / 14%);
+    --pill-danger-fill-text: rgb(253 164 175);
+    --pill-danger-fill-border: rgb(251 113 133 / 38%);
+    --pill-priority-low-bg: rgb(148 163 184 / 10%);
+    --pill-priority-low-text: rgb(203 213 225);
+    --pill-priority-low-border: rgb(148 163 184 / 22%);
+    --pill-priority-medium-bg: rgb(56 189 248 / 12%);
+    --pill-priority-medium-text: rgb(125 211 252);
+    --pill-priority-medium-border: rgb(56 189 248 / 32%);
+    --pill-priority-high-bg: rgb(251 146 60 / 12%);
+    --pill-priority-high-text: rgb(253 186 116);
+    --pill-priority-high-border: rgb(251 146 60 / 32%);
     --overlay-backdrop: rgb(0 0 0 / 58%);
 
     color-scheme: dark;
