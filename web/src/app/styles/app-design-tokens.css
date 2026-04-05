@@ -315,6 +315,18 @@
     --brand-mesh: rgb(var(--brand-rgb) / 10%);
     --brand-focus: rgb(var(--brand-rgb) / 45%);
     --focus-ring: var(--brand-focus);
+    /* Dark: same RGB, higher alpha so hairlines + tints read on near-black (DS §14) */
+    --brand-border-faint: rgb(var(--brand-rgb) / 22%);
+    --brand-border-subtle: rgb(var(--brand-rgb) / 26%);
+    --brand-border-soft: rgb(var(--brand-rgb) / 30%);
+    --brand-border-cta: rgb(var(--brand-rgb) / 36%);
+    --brand-border-focus: rgb(var(--brand-rgb) / 45%);
+    --brand-border-emphasis: rgb(var(--brand-rgb) / 50%);
+    --brand-text-muted: rgb(var(--brand-rgb) / 55%);
+    --brand-text-strong: rgb(var(--brand-rgb) / 72%);
+    --brand-text-on-surface-hover: rgb(var(--brand-rgb) / 82%);
+    --brand-surface-faint: rgb(var(--brand-rgb) / 10%);
+    --brand-surface-subtle: rgb(var(--brand-rgb) / 14%);
 
     --success-soft: rgb(0 169 110 / 18%);
     --success-border: rgb(0 169 110 / 35%);
