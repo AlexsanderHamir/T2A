@@ -1,5 +1,5 @@
 // Package handler exposes REST JSON CRUD for tasks backed by a store.Store (pkgs/tasks/store).
-// Wiring and shared HTTP helpers: handler.go. Task routes and DTOs: handler_tasks.go.
+// Wiring and shared HTTP helpers: handler.go (setAPISecurityHeaders / setJSONHeaders on JSON, rate limit 429, SSE stream). Task routes and DTOs: handler_tasks.go.
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
 // Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/DESIGN.md).
 // Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/DESIGN.md).

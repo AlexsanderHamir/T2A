@@ -155,10 +155,19 @@ func decodeJSON(ctx context.Context, r io.Reader, dst any) (err error) {
 	return err
 }
 
+// setAPISecurityHeaders sets baseline hardening headers for browser-facing HTTP responses (JSON, SSE, and plain-text errors).
+func setAPISecurityHeaders(w http.ResponseWriter) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setAPISecurityHeaders")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+}
+
 func setJSONHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setJSONHeaders")
+	setAPISecurityHeaders(w)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
 type jsonErrorBody struct {
@@ -279,9 +288,10 @@ func writeError(w http.ResponseWriter, r *http.Request, op string, err error, co
 	helperDebugIn(ctxErr, "writeError", "http_op", op, "http_status", code, "err", err)
 	logRequestFailure(requestCtx(r), op, err, code)
 	msg := http.StatusText(code)
-	if code == http.StatusRequestEntityTooLarge {
+	switch code {
+	case http.StatusRequestEntityTooLarge:
 		msg = "request body too large"
-	} else if code == http.StatusBadRequest {
+	case http.StatusBadRequest:
 		msg = userFacingJSONError(err)
 		if msg == "" {
 			msg = "bad request"

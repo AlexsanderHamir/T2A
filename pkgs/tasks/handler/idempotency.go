@@ -112,10 +112,9 @@ func captureIdempotentResponse(rec *httptest.ResponseRecorder) idempotencyCaptur
 }
 
 func replayIdempotentResponse(w http.ResponseWriter, cap idempotencyCaptured) {
-	for k, vv := range cap.headers {
-		for _, v := range vv {
-			w.Header().Add(k, v)
-		}
+	setAPISecurityHeaders(w)
+	if v := cap.headers.Get("Content-Type"); v != "" {
+		w.Header().Set("Content-Type", v)
 	}
 	w.WriteHeader(cap.status)
 	if len(cap.body) > 0 {

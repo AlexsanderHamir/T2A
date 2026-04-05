@@ -71,6 +71,7 @@ func TestWithRateLimit_429(t *testing.T) {
 	if rec.Header().Get("Retry-After") != "60" {
 		t.Fatalf("Retry-After %q", rec.Header().Get("Retry-After"))
 	}
+	assertBaselineSecurityHeaders(t, rec.Header())
 }
 
 func TestWithRateLimit_disabled(t *testing.T) {

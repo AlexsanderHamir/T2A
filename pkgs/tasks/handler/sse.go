@@ -94,6 +94,7 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
+	setAPISecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")

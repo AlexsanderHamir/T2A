@@ -141,6 +141,7 @@ func WithRateLimit(h http.Handler) http.Handler {
 		if !il.allow(ip) {
 			taskapiHTTPRateLimitedTotal.Inc()
 			slog.Warn("rate limit exceeded", "cmd", httpLogCmd, "operation", "http.rate_limit", "client_ip", ip)
+			setAPISecurityHeaders(w)
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "rate limit exceeded\n", http.StatusTooManyRequests)
 			return

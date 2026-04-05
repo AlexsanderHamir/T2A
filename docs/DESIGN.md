@@ -251,6 +251,8 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 
 Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for attribution. It is not an authentication mechanism. Optional `X-Request-ID` (trimmed, max 128 chars): if the client sends it, the same value is echoed on the response and used as `request_id` in logs; otherwise the server assigns a UUID.
 
+Baseline **response** hardening (JSON via `setJSONHeaders`, `GET /events` after the stream is accepted, and **429** rate-limit bodies): `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, and `X-Content-Type-Options: nosniff`. `GET /metrics` (outer mux) is unchanged. A reverse proxy or gateway may add or override security headers for production.
+
 JSON: request bodies reject unknown fields and reject trailing data after the top-level value. Successful task list/get/create/patch bodies are task **trees**: each node uses `domain.Task` fields (`id`, `title`, `initial_prompt`, `status`, `priority`, `parent_id`, `checklist_inherit`) plus optional `children` (same shape, nested arbitrarily deep).
 
 New audit `type` values include checklist (`checklist_item_added`, `checklist_item_toggled`, `checklist_item_updated`, `checklist_item_removed`), `checklist_inherit_changed`, and the rest of `domain.EventType` (e.g. `subtask_added` on the **parent** when a child task is created with `parent_id`, and `subtask_removed` on the **parent** when that child is deleted, both with payload `child_task_id` and `title`).
