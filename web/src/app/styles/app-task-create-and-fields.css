@@ -126,7 +126,7 @@
   border: none;
   border-radius: 0;
   border-bottom: 1px solid var(--border-hairline);
-  background: linear-gradient(180deg, rgb(248 250 252) 0%, rgb(241 245 249 / 92%) 100%);
+  background: var(--surface-create-editor-gradient);
 }
 
 .task-create-editor-shell .toolbar-btn {

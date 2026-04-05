@@ -47,7 +47,7 @@
 }
 
 .rich-prompt-wrap .tiptap:focus-within {
-  border-color: rgb(5 150 105 / 35%);
+  border-color: var(--success-rich-focus-border);
   box-shadow: 0 0 0 3px var(--success-soft);
   outline: none;
 }

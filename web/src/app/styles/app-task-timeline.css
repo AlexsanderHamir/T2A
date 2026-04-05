@@ -330,7 +330,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-thread-item--user .task-event-detail-thread-bubble {
   border-bottom-right-radius: var(--radius-sm);
-  background: rgb(16 185 129 / 10%);
+  background: var(--success-thread-surface);
   border-color: var(--success-border);
 }
 
@@ -352,11 +352,11 @@ a.task-timeline-item-hit {
 }
 
 .task-event-detail-thread-item--agent .task-event-detail-thread-by {
-  color: var(--brand-deep, #4338ca);
+  color: var(--brand-deep);
 }
 
 .task-event-detail-thread-item--user .task-event-detail-thread-by {
-  color: var(--success, #059669);
+  color: var(--success);
 }
 
 .task-event-detail-thread-meta-sep {
@@ -411,7 +411,7 @@ a.task-timeline-item-hit {
   margin: 0.4rem 0 0;
   padding: 0.45rem 0.55rem;
   border-radius: var(--radius-sm);
-  background: rgb(16 185 129 / 9%);
+  background: var(--success-thread-surface-soft);
   border: 1px solid var(--success-border);
   font-size: var(--text-help);
   line-height: 1.45;
@@ -453,7 +453,7 @@ a.task-timeline-item-hit {
   margin: 0.4rem 0 0;
   padding: 0.45rem 0.55rem;
   border-radius: var(--radius-sm);
-  background: rgb(16 185 129 / 9%);
+  background: var(--success-thread-surface-soft);
   border: 1px solid var(--success-border);
   font-size: var(--text-help);
   line-height: 1.45;

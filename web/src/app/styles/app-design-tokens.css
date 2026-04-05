@@ -119,6 +119,12 @@
   --bg-page: #f6f8fa;
   --bg-elevated: #fafafa;
   --bg-subtle: #f0f2f5;
+  /* Body mesh / idle chrome (DS §3 / §9) */
+  --bg-linear-wash-start: #eef1f4;
+  --bg-linear-wash-end: #fafbfc;
+  --bg-mesh-dark-brand-glow: rgb(30 27 75 / 25%);
+  --bg-mesh-dark-success-glow: rgb(20 83 45 / 12%);
+  --stream-dot-idle: rgb(60 60 67 / 25%);
 
   /* Brand — Stripe-style purple */
   --brand: #635bff;
@@ -232,6 +238,7 @@
   --surface-glass-toolbar: rgb(255 255 255 / 90%);
   --surface-dropdown-panel: linear-gradient(180deg, rgb(255 255 255 / 100%) 0%, rgb(252 252 254 / 100%) 100%);
   --surface-thread-msg-glass: rgb(255 255 255 / 4%);
+  --surface-create-editor-gradient: linear-gradient(180deg, rgb(248 250 252) 0%, rgb(241 245 249 / 92%) 100%);
   --chrome-fill-table-row-hover: rgb(var(--slate-shadow) / 3.5%);
   --chrome-fill-task-row-hover: rgb(var(--slate-shadow) / 4.5%);
   --border-chrome-checklist: rgb(var(--slate-shadow) / 22%);
@@ -252,6 +259,9 @@
   --success-soft: rgb(0 169 110 / 12%);
   --success-border: rgb(0 169 110 / 22%);
   --success-mesh: rgb(0 169 110 / 5%);
+  --success-thread-surface: rgb(16 185 129 / 10%);
+  --success-thread-surface-soft: rgb(16 185 129 / 9%);
+  --success-rich-focus-border: rgb(5 150 105 / 35%);
 
   --danger: #dc2626;
   --danger-deep: #b91c1c;
@@ -268,6 +278,11 @@
   /* Text on error-subtle surfaces; required field badge border (DS §11) */
   --danger-on-subtle-text: var(--danger-deep);
   --danger-badge-border: rgb(190 18 60 / 18%);
+  --danger-delete-border: rgb(159 18 57 / 35%);
+  --shadow-danger-delete-xs: 0 1px 2px rgb(180 30 30 / 15%);
+  --shadow-danger-delete-sm: 0 2px 8px rgb(180 30 30 / 20%);
+  --danger-destructive-border: rgb(215 0 21 / 18%);
+  --shadow-danger-destructive-hover: 0 1px 3px rgb(215 0 21 / 28%);
 
   --color-error-subtle: #fee2e2;
   --color-warning-subtle: #fef3c7;
@@ -330,6 +345,10 @@
     --bg-page: #0a0a0a;
     --bg-elevated: #141414;
     --bg-subtle: #1a1a1a;
+    --stream-dot-idle: rgb(255 255 255 / 22%);
+    --success-thread-surface: rgb(16 185 129 / 16%);
+    --success-thread-surface-soft: rgb(16 185 129 / 12%);
+    --surface-create-editor-gradient: linear-gradient(180deg, rgb(28 28 28) 0%, rgb(22 22 22 / 94%) 100%);
 
     --border-hairline: rgb(255 255 255 / 8%);
     --border-soft: rgb(255 255 255 / 12%);

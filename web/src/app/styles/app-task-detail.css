@@ -159,8 +159,8 @@ button.task-detail-btn-delete {
   font-size: 0.875rem;
   color: var(--text-on-brand);
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
-  border: 1px solid rgb(159 18 57 / 35%);
-  box-shadow: 0 1px 2px rgb(180 30 30 / 15%);
+  border: 1px solid var(--danger-delete-border);
+  box-shadow: var(--shadow-danger-delete-xs);
   transition: filter var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
@@ -169,7 +169,7 @@ button.task-detail-btn-delete:not(:disabled):hover {
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   filter: brightness(1.04);
   transform: none;
-  box-shadow: 0 2px 8px rgb(180 30 30 / 20%);
+  box-shadow: var(--shadow-danger-delete-sm);
 }
 
 button.task-detail-btn-delete:focus-visible {

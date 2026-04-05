@@ -30,14 +30,14 @@ body {
       ),
       radial-gradient(ellipse 48% 42% at 100% 0%, var(--brand-mesh), transparent 48%),
       radial-gradient(ellipse 42% 38% at 0% 100%, var(--success-mesh), transparent 50%),
-      linear-gradient(168deg, #eef1f4 0%, var(--bg-page) 42%, #fafbfc 100%);
+      linear-gradient(168deg, var(--bg-linear-wash-start) 0%, var(--bg-page) 42%, var(--bg-linear-wash-end) 100%);
   }
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-image: radial-gradient(ellipse 80% 50% at 50% 0%, rgb(30 27 75 / 25%), transparent 55%),
-      radial-gradient(ellipse 40% 35% at 100% 100%, rgb(20 83 45 / 12%), transparent 50%);
+    background-image: radial-gradient(ellipse 80% 50% at 50% 0%, var(--bg-mesh-dark-brand-glow), transparent 55%),
+      radial-gradient(ellipse 40% 35% at 100% 100%, var(--bg-mesh-dark-success-glow), transparent 50%);
   }
 }
 
@@ -247,7 +247,7 @@ textarea::placeholder {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgb(60 60 67 / 25%);
+  background: var(--stream-dot-idle);
   flex-shrink: 0;
   transition:
     background var(--duration-moderate) var(--ease-out),
