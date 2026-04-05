@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useModalStackOptional, type ModalEscapeRef } from "./ModalStackContext";
 
 function focusableSelector(): string {
   return [
@@ -45,6 +46,10 @@ export function Modal({
   lockBodyScroll = true,
   stack = "default",
 }: Props) {
+  const modalStack = useModalStackOptional();
+  const escapeRef = useRef({ busy, onClose }) as ModalEscapeRef;
+  escapeRef.current = { busy, onClose };
+
   const rootRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
 
@@ -110,12 +115,17 @@ export function Modal({
   }, [lockBodyScroll]);
 
   useEffect(() => {
+    if (modalStack) {
+      modalStack.register(escapeRef);
+      return () => modalStack.unregister(escapeRef);
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) onClose();
+      if (e.key !== "Escape" || escapeRef.current.busy) return;
+      escapeRef.current.onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, busy]);
+  }, [modalStack]);
 
   const rootClass =
     stack === "nested" ? "modal-root modal-root--nested" : "modal-root";

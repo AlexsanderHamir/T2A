@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { useState } from "react";
 import { Modal } from "./Modal";
+import { ModalStackProvider } from "./ModalStackContext";
 
 function Harness({
   onOpenChange,
@@ -31,6 +32,46 @@ function Harness({
         </Modal>
       ) : null}
     </>
+  );
+}
+
+function NestedStackHarness() {
+  const [outer, setOuter] = useState(false);
+  const [inner, setInner] = useState(false);
+  return (
+    <ModalStackProvider>
+      <button type="button" onClick={() => setOuter(true)}>
+        Open outer
+      </button>
+      {outer ? (
+        <Modal
+          labelledBy="outer-modal-title"
+          onClose={() => {
+            setInner(false);
+            setOuter(false);
+          }}
+        >
+          <div>
+            <h2 id="outer-modal-title">Outer</h2>
+            <button type="button" onClick={() => setInner(true)}>
+              Open inner
+            </button>
+          </div>
+          {inner ? (
+            <Modal
+              labelledBy="inner-modal-title"
+              onClose={() => setInner(false)}
+              stack="nested"
+              lockBodyScroll={false}
+            >
+              <div>
+                <h2 id="inner-modal-title">Inner</h2>
+              </div>
+            </Modal>
+          ) : null}
+        </Modal>
+      ) : null}
+    </ModalStackProvider>
   );
 }
 
@@ -67,6 +108,26 @@ describe("Modal", () => {
     await user.keyboard("{Escape}");
     await waitFor(() => {
       expect(openBtn).toHaveFocus();
+    });
+  });
+
+  it("closes only the top modal on Escape when stacked under ModalStackProvider", async () => {
+    const user = userEvent.setup();
+    render(<NestedStackHarness />);
+    await user.click(screen.getByRole("button", { name: /open outer/i }));
+    await screen.findByRole("heading", { name: /^outer$/i });
+    await user.click(screen.getByRole("button", { name: /open inner/i }));
+    await screen.findByRole("heading", { name: /^inner$/i });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /^inner$/i })).toBeNull();
+    });
+    expect(screen.getByRole("heading", { name: /^outer$/i })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
   });
 });
