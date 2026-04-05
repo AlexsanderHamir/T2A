@@ -246,19 +246,19 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "")
-	if idempotencyTTLConfigured() != defaultIdempotencyTTL {
+	if idempotencyTTLConfigured() != defaultIdempotencyTTL || IdempotencyTTL() != defaultIdempotencyTTL {
 		t.Fatalf("default ttl")
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "0")
-	if idempotencyTTLConfigured() != 0 {
+	if idempotencyTTLConfigured() != 0 || IdempotencyTTL() != 0 {
 		t.Fatalf("zero")
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "30m")
-	if got := idempotencyTTLConfigured(); got != 30*time.Minute {
+	if got := idempotencyTTLConfigured(); got != 30*time.Minute || IdempotencyTTL() != got {
 		t.Fatalf("30m: got %v", got)
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "not-a-duration")
-	if idempotencyTTLConfigured() != defaultIdempotencyTTL {
+	if idempotencyTTLConfigured() != defaultIdempotencyTTL || IdempotencyTTL() != defaultIdempotencyTTL {
 		t.Fatalf("invalid falls back")
 	}
 }

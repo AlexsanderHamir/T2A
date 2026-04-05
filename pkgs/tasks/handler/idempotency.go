@@ -71,6 +71,12 @@ func idempotencyTTLConfigured() time.Duration {
 	return d
 }
 
+// IdempotencyTTL returns the effective in-process idempotency cache TTL from
+// T2A_IDEMPOTENCY_TTL (same as WithIdempotency): default 24h, 0 disables caching.
+func IdempotencyTTL() time.Duration {
+	return idempotencyTTLConfigured()
+}
+
 func idempotencyMutatingMethod(method string) bool {
 	switch method {
 	case http.MethodPost, http.MethodPatch, http.MethodDelete:

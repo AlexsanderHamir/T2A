@@ -127,6 +127,14 @@ func run() int {
 	if mb := handler.MaxRequestBodyBytesConfigured(); mb > 0 {
 		slog.Info("max request body limit enabled", "cmd", cmdName, "operation", "taskapi.max_body", "max_bytes", mb)
 	}
+	idemTTL := handler.IdempotencyTTL()
+	idemSec := int(idemTTL / time.Second)
+	if idemTTL > 0 && idemSec == 0 {
+		idemSec = 1
+	}
+	slog.Info("idempotency config", "cmd", cmdName, "operation", "taskapi.idempotency",
+		"enabled", idemTTL > 0, "ttl_sec", idemSec)
+
 	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.Handler())
@@ -183,7 +191,8 @@ func run() int {
 			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
 			return 1
 		}
-	case <-sig:
+	case s := <-sig:
+		slog.Info("shutdown signal received", "cmd", cmdName, "operation", "taskapi.shutdown", "signal", s.String())
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		shutdownErr := srv.Shutdown(shutdownCtx)
 		cancel()
@@ -191,6 +200,7 @@ func run() int {
 			slog.Error("shutdown", "cmd", cmdName, "operation", "taskapi.shutdown", "err", shutdownErr)
 			return 1
 		}
+		slog.Info("http server drained", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "http_done")
 		if err := <-serveDone; err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", err)
 			return 1
