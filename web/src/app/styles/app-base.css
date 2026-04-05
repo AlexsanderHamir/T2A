@@ -67,7 +67,7 @@ textarea::placeholder {
 .modal-shell a:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus-ring);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .app {
@@ -164,6 +164,15 @@ textarea::placeholder {
   /* Match `.panel` chrome so the shell header reads as the same card family (DS §5 / §6) */
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
+  box-shadow: none;
+  transition: border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+@media (prefers-color-scheme: light) {
+  .app-header--sticky:hover {
+    border-color: var(--border-soft);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -173,7 +182,7 @@ textarea::placeholder {
 }
 
 .app-header-top {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .app-header-site-nav {
