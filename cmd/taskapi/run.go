@@ -112,14 +112,18 @@ func run() int {
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
 	var rep *repo.Root
-	if root := strings.TrimSpace(os.Getenv("REPO_ROOT")); root != "" {
+	root := strings.TrimSpace(os.Getenv("REPO_ROOT"))
+	if root != "" {
 		r, err := repo.OpenRoot(root)
 		if err != nil {
 			slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.repo_root", "err", err)
 			return 1
 		}
 		rep = r
-		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
+		slog.Info("repo root config", "cmd", cmdName, "operation", "taskapi.repo_root",
+			"enabled", true, "path", rep.Abs())
+	} else {
+		slog.Info("repo root config", "cmd", cmdName, "operation", "taskapi.repo_root", "enabled", false)
 	}
 	rlim := handler.RateLimitPerMinuteConfigured()
 	slog.Info("rate limit config", "cmd", cmdName, "operation", "taskapi.rate_limit",
