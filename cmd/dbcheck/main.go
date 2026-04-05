@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	dbTimeout = 30 * time.Second
-	cmdName   = "dbcheck"
+	dbPingTimeout    = 30 * time.Second
+	dbMigrateTimeout = 2 * time.Minute // same wall clock as taskapi startup migrate (cmd/taskapi/run.go)
+	cmdName          = "dbcheck"
 )
 
 type options struct {
@@ -53,21 +54,28 @@ func run(o options) error {
 	if err := loadRepoDotenv(o); err != nil {
 		return fmt.Errorf("env setup: %w", err)
 	}
-	slog.Info("dbcheck starting", "cmd", cmdName, "operation", "dbcheck.start",
+	pingSec := int(dbPingTimeout / time.Second)
+	startArgs := []any{
+		"cmd", cmdName, "operation", "dbcheck.start",
 		"version", version.String(), "migrate", o.migrate,
-		"timeout_sec", int(dbTimeout/time.Second))
+		"ping_timeout_sec", pingSec,
+	}
+	if o.migrate {
+		startArgs = append(startArgs, "migrate_timeout_sec", int(dbMigrateTimeout/time.Second))
+	}
+	slog.Info("dbcheck starting", startArgs...)
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), dbPingTimeout)
+	defer pingCancel()
 
-	db, err := connectAndPing(ctx, os.Getenv("DATABASE_URL"))
+	db, err := connectAndPing(pingCtx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return fmt.Errorf("database: %w", err)
 	}
 	slog.Info("database reachable", "cmd", cmdName, "operation", "ping")
 	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)
 
-	if err := migrateIfRequested(ctx, db, o.migrate); err != nil {
+	if err := migrateIfRequested(db, o.migrate); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
 	if o.migrate {
@@ -77,12 +85,15 @@ func run(o options) error {
 	return nil
 }
 
-func migrateIfRequested(ctx context.Context, db *gorm.DB, want bool) error {
+func migrateIfRequested(db *gorm.DB, want bool) error {
 	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.migrateIfRequested")
 	if !want {
 		return nil
 	}
-	if err := postgres.Migrate(ctx, db); err != nil {
+	// Dedicated deadline: migrate can exceed pingTimeout; match taskapi migrate bound.
+	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), dbMigrateTimeout)
+	defer migrateCancel()
+	if err := postgres.Migrate(migrateCtx, db); err != nil {
 		return fmt.Errorf("postgres.Migrate: %w", err)
 	}
 	return nil

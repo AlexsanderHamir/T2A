@@ -142,7 +142,7 @@ flowchart TB
 
 `dbcheck` runs once: connectivity check, optional migrate, then exit. `taskapi` is the long-lived HTTP server; the SSE hub exists only inside that process.
 
-Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not import that package but follows the same rules: walk from `cwd` to find `go.mod`, default `<repo-root>/.env` or `-env`, `godotenv.Overload`, and a non-empty `DATABASE_URL`. `dbcheck` uses a 30s context deadline around `PingContext` and optional migrate; the **`dbcheck.start`** log line includes **`timeout_sec`** with that value. `taskapi` has no analogous startup ping beyond `gorm.Open`, but **`postgres.Migrate`** runs under a **120s** context deadline; **`migrate ok`** and **`migrate failed`** log **`timeout_sec`** (**`120`**), and **`migrate failed`** includes **`deadline_exceeded`** when that bound is hit.
+Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not import that package but follows the same rules: walk from `cwd` to find `go.mod`, default `<repo-root>/.env` or `-env`, `godotenv.Overload`, and a non-empty `DATABASE_URL`. `dbcheck` uses a **30s** context deadline around **`PingContext`** only. With **`-migrate`**, **`postgres.Migrate`** runs under a separate **120s** deadline (same wall clock as **`taskapi`** startup migrate). The **`dbcheck.start`** line includes **`ping_timeout_sec`** and, when **`-migrate`** is set, **`migrate_timeout_sec`**. `taskapi` has no analogous startup ping beyond `gorm.Open`, but **`postgres.Migrate`** runs under a **120s** context deadline; **`migrate ok`** and **`migrate failed`** log **`timeout_sec`** (**`120`**), and **`migrate failed`** includes **`deadline_exceeded`** when that bound is hit.
 
 ## Startup flow (`taskapi`)
 
