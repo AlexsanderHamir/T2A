@@ -209,12 +209,18 @@ describe("App", () => {
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
     await choosePriorityInDialog(user, dialog);
+    await user.click(
+      within(dialog).getByRole("button", { name: /new criterion/i }),
+    );
+    const criterionDialog = await screen.findByRole("dialog", {
+      name: /new criterion/i,
+    });
     await user.type(
-      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      within(criterionDialog).getByLabelText(/^criterion$/i),
       "Tests pass",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+      within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
     );
 
     await user.click(
@@ -323,12 +329,18 @@ describe("App", () => {
 
     await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
     await choosePriorityInDialog(user, dialog);
+    await user.click(
+      within(dialog).getByRole("button", { name: /new criterion/i }),
+    );
+    const criterionDialog = await screen.findByRole("dialog", {
+      name: /new criterion/i,
+    });
     await user.type(
-      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      within(criterionDialog).getByLabelText(/^criterion$/i),
       "Tests pass",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+      within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
     );
 
     await user.click(

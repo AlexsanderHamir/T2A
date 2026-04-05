@@ -28,7 +28,6 @@ export function TaskHome({ app }: Props) {
           title={app.newTitle}
           prompt={app.newPrompt}
           priority={app.newPriority}
-          checklistDraft={app.newChecklistDraft}
           checklistItems={app.newChecklistItems}
           parentOptions={app.parentPickerTasks}
           parentId={app.newParentId}
@@ -36,10 +35,9 @@ export function TaskHome({ app }: Props) {
           onTitleChange={app.setNewTitle}
           onPromptChange={app.setNewPrompt}
           onPriorityChange={app.setNewPriority}
-          onChecklistDraftChange={app.setNewChecklistDraft}
           onParentIdChange={app.setNewParentId}
           onChecklistInheritChange={app.setNewChecklistInherit}
-          onAddChecklistRow={app.addNewChecklistRow}
+          onAppendChecklistCriterion={app.appendNewChecklistCriterion}
           onRemoveChecklistRow={app.removeNewChecklistRow}
           pendingSubtasks={app.pendingSubtasks}
           onAddPendingSubtask={app.addPendingSubtask}

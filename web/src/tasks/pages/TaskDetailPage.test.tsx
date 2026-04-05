@@ -575,12 +575,18 @@ describe("TaskDetailPage", () => {
       within(dialog).getByRole("combobox", { name: /^priority$/i }),
     );
     await user.click(screen.getByRole("option", { name: /^high$/i }));
+    await user.click(
+      within(dialog).getByRole("button", { name: /new criterion/i }),
+    );
+    const criterionDialog = await screen.findByRole("dialog", {
+      name: /new criterion/i,
+    });
     await user.type(
-      within(dialog).getByPlaceholderText(/describe what must be true/i),
+      within(criterionDialog).getByLabelText(/^criterion$/i),
       "Criterion A",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: /add checklist criterion/i }),
+      within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
     );
 
     await user.click(

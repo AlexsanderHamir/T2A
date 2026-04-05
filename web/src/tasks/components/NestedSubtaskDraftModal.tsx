@@ -21,7 +21,6 @@ export function NestedSubtaskDraftModal({
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [priority, setPriority] = useState<PriorityChoice>("");
-  const [checklistDraft, setChecklistDraft] = useState("");
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [checklistInherit, setChecklistInherit] = useState(false);
 
@@ -41,17 +40,15 @@ export function NestedSubtaskDraftModal({
       setChecklistInherit(false);
       setChecklistItems([]);
     }
-    setChecklistDraft("");
   }, [instanceKey, initialDraft]);
 
   const hideChecklist = checklistInherit;
   const idsPrefix = `nested-sub-${instanceKey}`;
 
-  function addRow() {
-    const t = checklistDraft.trim();
+  function appendCriterion(text: string) {
+    const t = text.trim();
     if (!t) return;
     setChecklistItems((prev) => [...prev, t]);
-    setChecklistDraft("");
   }
 
   function removeRow(index: number) {
@@ -90,15 +87,13 @@ export function NestedSubtaskDraftModal({
             title={title}
             prompt={prompt}
             priority={priority}
-            checklistDraft={checklistDraft}
             checklistItems={checklistItems}
             hideChecklist={hideChecklist}
             disabled={false}
             onTitleChange={setTitle}
             onPromptChange={setPrompt}
             onPriorityChange={setPriority}
-            onChecklistDraftChange={setChecklistDraft}
-            onAddChecklistRow={addRow}
+            onAppendChecklistCriterion={appendCriterion}
             onRemoveChecklistRow={removeRow}
           />
           <label className="checkbox-label task-subtask-inherit">
@@ -109,7 +104,6 @@ export function NestedSubtaskDraftModal({
                 const v = ev.target.checked;
                 setChecklistInherit(v);
                 if (v) {
-                  setChecklistDraft("");
                   setChecklistItems([]);
                 }
               }}

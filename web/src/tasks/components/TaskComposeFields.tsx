@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from "react";
 import type { PriorityChoice } from "@/types";
 import {
   FieldLabel,
@@ -5,6 +6,7 @@ import {
 } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
+import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
 
 export type TaskComposeFieldsProps = {
   /** Prefix for stable `id`s, e.g. `task-new` → `task-new-title`. */
@@ -12,7 +14,6 @@ export type TaskComposeFieldsProps = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  checklistDraft: string;
   checklistItems: string[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
   hideChecklist?: boolean;
@@ -20,8 +21,7 @@ export type TaskComposeFieldsProps = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onChecklistDraftChange: (v: string) => void;
-  onAddChecklistRow: () => void;
+  onAppendChecklistCriterion: (text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   /** Passed to `RichPromptEditor` as `key` so the editor resets when needed. */
   editorKey: string;
@@ -32,15 +32,13 @@ export function TaskComposeFields({
   title,
   prompt,
   priority,
-  checklistDraft,
   checklistItems,
   hideChecklist = false,
   disabled,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
-  onChecklistDraftChange,
-  onAddChecklistRow,
+  onAppendChecklistCriterion,
   onRemoveChecklistRow,
   editorKey,
 }: TaskComposeFieldsProps) {
@@ -48,7 +46,28 @@ export function TaskComposeFields({
   const promptId = `${idsPrefix}-prompt`;
   const priorityId = `${idsPrefix}-priority`;
   const checklistHeadingId = `${idsPrefix}-checklist-heading`;
-  const checklistDraftId = `${idsPrefix}-checklist-draft`;
+
+  const [criterionModalOpen, setCriterionModalOpen] = useState(false);
+  const [criterionModalText, setCriterionModalText] = useState("");
+
+  const openCriterionModal = () => {
+    setCriterionModalText("");
+    setCriterionModalOpen(true);
+  };
+
+  const closeCriterionModal = () => {
+    setCriterionModalOpen(false);
+    setCriterionModalText("");
+  };
+
+  const submitCriterionModal = (e: FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = criterionModalText.trim();
+    if (!t) return;
+    onAppendChecklistCriterion(t);
+    closeCriterionModal();
+  };
 
   return (
     <>
@@ -97,18 +116,30 @@ export function TaskComposeFields({
 
       {!hideChecklist ? (
         <div className="task-create-checklist">
-          <div className="field-heading-with-req task-create-checklist-heading-row">
-            <h3
-              className="task-create-checklist-heading"
-              id={checklistHeadingId}
+          <div className="task-create-checklist-head">
+            <div className="field-heading-with-req task-create-checklist-title-row">
+              <h3
+                className="task-create-checklist-heading"
+                id={checklistHeadingId}
+              >
+                Done criteria
+              </h3>
+              <FieldRequirementBadge requirement="optional" />
+            </div>
+            <button
+              type="button"
+              className="task-detail-add-checklist-btn"
+              disabled={disabled}
+              onClick={openCriterionModal}
             >
-              Done criteria
-            </h3>
-            <FieldRequirementBadge requirement="optional" />
+              New criterion
+            </button>
           </div>
           <p className="task-create-checklist-hint">
             Optional checklist — all items must be complete before the task can
-            be marked done.
+            be marked done. Use <strong>New criterion</strong> for each line; it
+            opens the same short dialog as on the task page. Nothing is saved
+            until you submit this form.
           </p>
           {checklistItems.length > 0 ? (
             <ul
@@ -130,36 +161,21 @@ export function TaskComposeFields({
               ))}
             </ul>
           ) : null}
-          <div className="task-checklist-add-form task-create-checklist-add">
-            <div className="field grow">
-              <FieldLabel htmlFor={checklistDraftId} requirement="optional">
-                Add criterion
-              </FieldLabel>
-              <input
-                id={checklistDraftId}
-                value={checklistDraft}
-                onChange={(ev) => onChecklistDraftChange(ev.target.value)}
-                onKeyDown={(ev) => {
-                  if (ev.key !== "Enter") return;
-                  ev.preventDefault();
-                  if (!checklistDraft.trim() || disabled) return;
-                  onAddChecklistRow();
-                }}
-                placeholder="Describe what must be true to mark done"
-                disabled={disabled}
-              />
-            </div>
-            <button
-              type="button"
-              className="task-create-checklist-add-btn"
-              aria-label="Add checklist criterion"
-              disabled={!checklistDraft.trim() || disabled}
-              onClick={onAddChecklistRow}
-            >
-              Add
-            </button>
-          </div>
         </div>
+      ) : null}
+
+      {criterionModalOpen ? (
+        <ChecklistCriterionModal
+          mode="add"
+          pending={false}
+          saving={false}
+          onClose={closeCriterionModal}
+          text={criterionModalText}
+          onTextChange={setCriterionModalText}
+          onSubmit={submitCriterionModal}
+          modalStack="nested"
+          lockBodyScroll={false}
+        />
       ) : null}
     </>
   );

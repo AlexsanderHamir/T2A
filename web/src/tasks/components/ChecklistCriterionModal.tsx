@@ -10,6 +10,9 @@ type Props = {
   text: string;
   onTextChange: (v: string) => void;
   onSubmit: (e: FormEvent) => void;
+  /** When opened above another dialog (e.g. new-task modal). */
+  modalStack?: "default" | "nested";
+  lockBodyScroll?: boolean;
 };
 
 export function ChecklistCriterionModal({
@@ -20,6 +23,8 @@ export function ChecklistCriterionModal({
   text,
   onTextChange,
   onSubmit,
+  modalStack = "default",
+  lockBodyScroll = true,
 }: Props) {
   const disabled = pending || saving;
   const titleId =
@@ -35,6 +40,8 @@ export function ChecklistCriterionModal({
       labelledBy={titleId}
       busy={pending}
       busyLabel={busyLabel}
+      stack={modalStack}
+      lockBodyScroll={lockBodyScroll}
     >
       <section className="panel modal-sheet task-checklist-criterion-modal-sheet">
         <h2 id={titleId}>
@@ -52,7 +59,10 @@ export function ChecklistCriterionModal({
         </p>
         <form
           className="task-checklist-criterion-modal-form task-create-form"
-          onSubmit={onSubmit}
+          onSubmit={(e) => {
+            e.stopPropagation();
+            onSubmit(e);
+          }}
         >
           <div className="field">
             <FieldLabel htmlFor="checklist-criterion-text" requirement="required">

@@ -36,7 +36,6 @@ export function useTasksApp() {
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
   const [newPriority, setNewPriority] = useState<PriorityChoice>("");
-  const [newChecklistDraft, setNewChecklistDraft] = useState("");
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   /** Child tasks (full draft) created after the parent task on the home flow. */
   const [pendingSubtasks, setPendingSubtasks] = useState<PendingSubtaskDraft[]>(
@@ -100,7 +99,6 @@ export function useTasksApp() {
 
   useEffect(() => {
     if (!newChecklistInherit) return;
-    setNewChecklistDraft("");
     setNewChecklistItems([]);
   }, [newChecklistInherit]);
 
@@ -108,7 +106,6 @@ export function useTasksApp() {
     setNewTitle("");
     setNewPrompt("");
     setNewPriority("");
-    setNewChecklistDraft("");
     setNewChecklistItems([]);
     setPendingSubtasks([]);
     setNewParentId("");
@@ -270,12 +267,11 @@ export function useTasksApp() {
     });
   }
 
-  const addNewChecklistRow = useCallback(() => {
-    const t = newChecklistDraft.trim();
+  const appendNewChecklistCriterion = useCallback((raw: string) => {
+    const t = raw.trim();
     if (!t) return;
     setNewChecklistItems((prev) => [...prev, t]);
-    setNewChecklistDraft("");
-  }, [newChecklistDraft]);
+  }, []);
 
   const removeNewChecklistRow = useCallback((index: number) => {
     setNewChecklistItems((prev) => prev.filter((_, i) => i !== index));
@@ -386,8 +382,6 @@ export function useTasksApp() {
     setNewPrompt,
     newPriority,
     setNewPriority,
-    newChecklistDraft,
-    setNewChecklistDraft,
     newChecklistItems,
     pendingSubtasks,
     addPendingSubtask,
@@ -397,7 +391,7 @@ export function useTasksApp() {
     setNewParentId,
     newChecklistInherit,
     setNewChecklistInherit,
-    addNewChecklistRow,
+    appendNewChecklistCriterion,
     removeNewChecklistRow,
     submitCreate,
     createModalOpen,

@@ -14,7 +14,6 @@ type Props = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  checklistDraft: string;
   checklistItems: string[];
   parentOptions: TaskWithDepth[];
   parentId: string;
@@ -22,10 +21,9 @@ type Props = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onChecklistDraftChange: (v: string) => void;
   onParentIdChange: (id: string) => void;
   onChecklistInheritChange: (v: boolean) => void;
-  onAddChecklistRow: () => void;
+  onAppendChecklistCriterion: (text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   pendingSubtasks: PendingSubtaskDraft[];
   onAddPendingSubtask: (d: PendingSubtaskDraft) => void;
@@ -41,7 +39,6 @@ export function TaskCreateModal({
   title,
   prompt,
   priority,
-  checklistDraft,
   checklistItems,
   parentOptions,
   parentId,
@@ -49,10 +46,9 @@ export function TaskCreateModal({
   onTitleChange,
   onPromptChange,
   onPriorityChange,
-  onChecklistDraftChange,
   onParentIdChange,
   onChecklistInheritChange,
-  onAddChecklistRow,
+  onAppendChecklistCriterion,
   onRemoveChecklistRow,
   pendingSubtasks,
   onAddPendingSubtask,
@@ -177,15 +173,13 @@ export function TaskCreateModal({
               title={title}
               prompt={prompt}
               priority={priority}
-              checklistDraft={checklistDraft}
               checklistItems={checklistItems}
               hideChecklist={hideComposeChecklist}
               disabled={disabled}
               onTitleChange={onTitleChange}
               onPromptChange={onPromptChange}
               onPriorityChange={onPriorityChange}
-              onChecklistDraftChange={onChecklistDraftChange}
-              onAddChecklistRow={onAddChecklistRow}
+              onAppendChecklistCriterion={onAppendChecklistCriterion}
               onRemoveChecklistRow={onRemoveChecklistRow}
             />
 

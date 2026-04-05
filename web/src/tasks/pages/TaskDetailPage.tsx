@@ -42,7 +42,6 @@ export function TaskDetailPage({ app }: Props) {
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskPrompt, setSubtaskPrompt] = useState("");
   const [subtaskPriority, setSubtaskPriority] = useState<PriorityChoice>("");
-  const [subtaskChecklistDraft, setSubtaskChecklistDraft] = useState("");
   const [subtaskChecklistItems, setSubtaskChecklistItems] = useState<string[]>(
     [],
   );
@@ -72,7 +71,6 @@ export function TaskDetailPage({ app }: Props) {
     setSubtaskTitle("");
     setSubtaskPrompt("");
     setSubtaskPriority("");
-    setSubtaskChecklistDraft("");
     setSubtaskChecklistItems([]);
     setSubtaskInherit(false);
   }, []);
@@ -138,16 +136,14 @@ export function TaskDetailPage({ app }: Props) {
 
   useEffect(() => {
     if (!subtaskInherit) return;
-    setSubtaskChecklistDraft("");
     setSubtaskChecklistItems([]);
   }, [subtaskInherit]);
 
-  const addSubtaskChecklistRow = useCallback(() => {
-    const t = subtaskChecklistDraft.trim();
+  const appendSubtaskChecklistCriterion = useCallback((raw: string) => {
+    const t = raw.trim();
     if (!t) return;
     setSubtaskChecklistItems((prev) => [...prev, t]);
-    setSubtaskChecklistDraft("");
-  }, [subtaskChecklistDraft]);
+  }, []);
 
   const removeSubtaskChecklistRow = useCallback((index: number) => {
     setSubtaskChecklistItems((prev) => prev.filter((_, i) => i !== index));
@@ -465,14 +461,12 @@ export function TaskDetailPage({ app }: Props) {
             title={subtaskTitle}
             prompt={subtaskPrompt}
             priority={subtaskPriority}
-            checklistDraft={subtaskChecklistDraft}
             checklistItems={subtaskChecklistItems}
             checklistInherit={subtaskInherit}
             onTitleChange={setSubtaskTitle}
             onPromptChange={setSubtaskPrompt}
             onPriorityChange={setSubtaskPriority}
-            onChecklistDraftChange={setSubtaskChecklistDraft}
-            onAddChecklistRow={addSubtaskChecklistRow}
+            onAppendChecklistCriterion={appendSubtaskChecklistCriterion}
             onRemoveChecklistRow={removeSubtaskChecklistRow}
             onChecklistInheritChange={setSubtaskInherit}
             onSubmit={submitNewSubtask}
