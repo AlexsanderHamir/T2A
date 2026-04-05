@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { useTasksApp } from "../hooks/useTasksApp";
 import { stubEventSource } from "../../test/browserMocks";
 import { requestUrl } from "../../test/requestUrl";
+import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
 import { TaskDetailPage } from "./TaskDetailPage";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
@@ -109,6 +110,7 @@ describe("TaskDetailPage", () => {
     renderDetail("/tasks/t1", mockApp());
 
     expect(await screen.findByRole("heading", { name: /^testing$/i })).toBeInTheDocument();
+    expect(document.title).toBe(`Testing · ${DEFAULT_DOCUMENT_TITLE}`);
     const stance = await screen.findByText("Informational");
     expect(stance).toHaveAttribute("data-stance", "informational");
     expect(await screen.findByText(/no updates yet/i)).toBeInTheDocument();

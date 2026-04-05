@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getTaskEvent, patchTaskEventUserResponse } from "@/api";
+import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
@@ -37,6 +38,16 @@ export function TaskEventDetailPage() {
       setDraft("");
     },
   });
+
+  const eventDocPageTitle = (() => {
+    if (!taskId) return undefined;
+    if (!seqValid) return "Invalid event";
+    if (q.isSuccess && q.data) {
+      return `Event #${q.data.seq}: ${eventTypeLabel(q.data.type)}`;
+    }
+    return undefined;
+  })();
+  useDocumentTitle(eventDocPageTitle);
 
   if (!taskId) {
     return (

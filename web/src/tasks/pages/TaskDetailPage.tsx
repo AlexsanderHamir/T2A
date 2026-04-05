@@ -17,6 +17,7 @@ import {
   patchChecklistItemText,
 } from "@/api";
 import type { Priority, PriorityChoice } from "@/types";
+import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
 import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
@@ -320,6 +321,12 @@ export function TaskDetailPage({ app }: Props) {
     app.deleteMutation.variables,
     navigate,
   ]);
+
+  const taskDocTitle =
+    taskId && taskQuery.isSuccess && taskQuery.data
+      ? taskQuery.data.title.trim() || "Untitled task"
+      : null;
+  useDocumentTitle(taskDocTitle);
 
   if (!taskId) {
     return (

@@ -1,3 +1,4 @@
+import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { TaskCreateModal } from "../components/TaskCreateModal";
 import { TaskListSection } from "../components/TaskListSection";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -7,6 +8,8 @@ type Props = {
 };
 
 export function TaskHome({ app }: Props) {
+  useDocumentTitle(undefined);
+
   return (
     <>
       <div className="task-home-toolbar">

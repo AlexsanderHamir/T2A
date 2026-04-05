@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
 import { requestUrl } from "../../test/requestUrl";
 import { TaskEventDetailPage } from "./TaskEventDetailPage";
 
@@ -49,6 +50,9 @@ describe("TaskEventDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /event #2/i }),
     ).toBeInTheDocument();
+    expect(document.title).toBe(
+      `Event #2: Title or message updated · ${DEFAULT_DOCUMENT_TITLE}`,
+    );
     expect(screen.getByText("t1")).toBeInTheDocument();
     const pill = document.querySelector(
       "code.task-timeline-type-pill[data-event-type='message_added']",

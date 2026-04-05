@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_DOCUMENT_TITLE } from "../shared/useDocumentTitle";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
@@ -161,6 +162,9 @@ describe("App", () => {
       await screen.findByRole("heading", { name: /^tasks$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.title).toBe(DEFAULT_DOCUMENT_TITLE);
+    });
   });
 
   it("shows an alert when the initial list request fails", async () => {
