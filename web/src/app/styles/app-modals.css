@@ -61,7 +61,7 @@
     box-shadow: var(--shadow-2xl);
   }
 
-  @media (prefers-color-scheme: light) {
+  @media (hover: hover) and (prefers-color-scheme: light) {
     .modal-shell > .panel:hover {
       border-color: transparent;
       box-shadow: var(--shadow-2xl);
@@ -141,7 +141,7 @@
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 -8px 32px rgb(0 0 0 / 12%);
+    box-shadow: var(--shadow-modal-sheet);
     animation: modal-sheet-enter var(--duration-moderate) var(--ease-out) both;
   }
 
@@ -185,12 +185,6 @@
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
   .modal-shell {
     animation: none;
-  }
-}
-
-@media (prefers-color-scheme: dark) and (max-width: 767px) {
-  .modal-shell {
-    box-shadow: 0 -8px 36px rgb(0 0 0 / 45%);
   }
 }
 

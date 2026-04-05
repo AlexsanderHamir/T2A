@@ -169,6 +169,8 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 7%), 0 4px 6px -2px rgb(0 0 0 / 4%);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 8%), 0 10px 10px -5px rgb(0 0 0 / 3%);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 12%);
+  /* Mobile modal bottom sheet — upward cast (DS §6 / §12) */
+  --shadow-modal-sheet: 0 -8px 32px rgb(0 0 0 / 12%);
   /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
   --shadow-card: var(--shadow-sm);
   --shadow-focus: 0 0 0 3px var(--brand-focus);
@@ -233,6 +235,7 @@
     --shadow-lg: 0 12px 24px rgb(0 0 0 / 50%);
     --shadow-xl: 0 20px 40px rgb(0 0 0 / 55%);
     --shadow-2xl: 0 24px 48px rgb(0 0 0 / 60%);
+    --shadow-modal-sheet: 0 -8px 36px rgb(0 0 0 / 45%);
     --shadow-card: var(--shadow-sm);
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);
