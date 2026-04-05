@@ -61,10 +61,10 @@ textarea:focus-visible,
 
 .app {
   position: relative;
-  max-width: min(100%, 72rem);
+  max-width: min(100%, var(--layout-max-width));
   margin: 0 auto;
-  padding-top: 2.5rem;
-  padding-bottom: 4rem;
+  padding-top: var(--space-10);
+  padding-bottom: var(--space-16);
   padding-left: max(var(--layout-gutter-x), env(safe-area-inset-left, 0px));
   padding-right: max(var(--layout-gutter-x), env(safe-area-inset-right, 0px));
 }
@@ -139,7 +139,7 @@ textarea:focus-visible,
   position: sticky;
   top: 0;
   z-index: 50;
-  margin-top: -2.5rem;
+  margin-top: calc(-1 * var(--space-10));
   margin-bottom: var(--space-6);
   /* Stay in the same column as `main` / panels — no negative horizontal margin
      (that bled into `.app` padding and made the header wider than content). */
