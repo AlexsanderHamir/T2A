@@ -1,4 +1,4 @@
-/* Design tokens — aligned with .cursor/rules/16-ui-ux-standards.mdc */
+/* Design tokens — aligned with .cursor/rules/16-ui-ux-iteration.mdc */
 
 :root {
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
@@ -86,7 +86,7 @@
   /* Primary buttons, skip link, empty-state CTAs (DS §7) */
   --text-button-tracking: 0.01em;
 
-  /* Motion (see .cursor/rules/16-ui-ux-standards.mdc §8) */
+  /* Motion (see .cursor/rules/16-ui-ux-iteration.mdc §8) */
   --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
