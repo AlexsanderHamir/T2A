@@ -68,6 +68,53 @@ textarea:focus-visible,
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
 }
 
+/* Skip link — first tab stop; visible on focus (DS §13 / WCAG 2.4.1) */
+.skip-link {
+  position: fixed;
+  top: max(0.5rem, env(safe-area-inset-top, 0px));
+  left: max(0.5rem, env(safe-area-inset-left, 0px));
+  z-index: 100001;
+  padding: 0.625rem 1rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  color: #fff;
+  background: var(--brand);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(calc(-100% - 1rem));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--duration-moderate) var(--ease-out),
+    opacity var(--duration-moderate) var(--ease-out);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+  outline: none;
+  box-shadow: var(--shadow-lg), 0 0 0 3px var(--brand-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+#main-content:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
 .app-header {
   margin-bottom: 1.5rem;
 }

@@ -154,6 +154,9 @@ describe("App", () => {
     });
 
     renderApp();
+    const skip = screen.getByRole("link", { name: /^skip to main content$/i });
+    expect(skip).toHaveAttribute("href", "#main-content");
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
     expect(
       await screen.findByRole("heading", { name: /^tasks$/i }),
     ).toBeInTheDocument();

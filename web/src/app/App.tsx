@@ -17,6 +17,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   return (
     <ModalStackProvider>
       <div className="app">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <header className="app-header app-header--sticky">
           <div className="app-header-top">
             <nav className="app-header-site-nav" aria-label="Site">
@@ -37,7 +40,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         </header>
         {app.error ? <ErrorBanner message={app.error} /> : null}
 
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <Outlet />
 
           {app.deleteTarget ? (
