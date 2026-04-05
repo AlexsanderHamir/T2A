@@ -108,6 +108,7 @@ func run() int {
 		"read_header_timeout_sec", int(readHeaderTimeout.Seconds()),
 		"read_timeout_sec", int(readTimeout.Seconds()),
 		"idle_timeout_sec", int(idleTimeout.Seconds()),
+		"write_timeout_disabled", true,
 		"max_header_bytes", maxRequestHeaders,
 		"shutdown_timeout_sec", int(shutdownTimeout.Seconds()),
 	)
