@@ -1,0 +1,89 @@
+
+/* —— Viewport modals (edit / delete) —— */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+}
+
+.modal-root--nested {
+  z-index: 12050;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  /* Uniform full-screen dim (no backdrop-filter on this layer — it can vignette/circle with compositing). */
+  background: rgb(0 0 0 / 46%);
+}
+
+.modal-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 26rem);
+  max-height: min(90vh, 880px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-shell--wide {
+  width: min(100%, 52rem);
+}
+
+.modal-sheet {
+  margin-bottom: 0;
+}
+
+.modal-sheet--edit .rich-prompt-wrap .tiptap {
+  max-height: min(42vh, 22rem);
+}
+
+@keyframes modal-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(255 255 255 / 78%);
+  border-radius: var(--radius-lg);
+  pointer-events: all;
+}
+
+.modal-spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid rgb(var(--slate-shadow) / 10%);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: modal-spinner-rotate 0.65s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-spinner {
+    animation: none;
+    border: 3px solid var(--brand);
+    opacity: 0.9;
+  }
+}
+

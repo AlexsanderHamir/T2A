@@ -8,6 +8,16 @@ import { stubEventSource } from "../../test/browserMocks";
 import { requestUrl } from "../../test/requestUrl";
 import { TaskDetailPage } from "./TaskDetailPage";
 
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 function mockApp(): ReturnType<typeof useTasksApp> {
   return {
     deleteMutation: { isSuccess: false, variables: undefined },
@@ -41,6 +51,7 @@ function renderDetail(
 describe("TaskDetailPage", () => {
   beforeEach(() => {
     stubEventSource();
+    mockNavigate.mockClear();
   });
 
   afterEach(() => {
@@ -240,6 +251,180 @@ describe("TaskDetailPage", () => {
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 
+  it("navigates to parent task after successful delete when parent_id is set", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/sub1") {
+        return Response.json({
+          id: "sub1",
+          title: "Sub",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          parent_id: "par1",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/sub1/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/sub1/events")) {
+        return Response.json({
+          task_id: "sub1",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const app = {
+      ...mockApp(),
+      deleteMutation: {
+        isSuccess: true,
+        variables: { id: "sub1", parent_id: "par1" },
+      },
+    } as unknown as ReturnType<typeof useTasksApp>;
+
+    renderDetail("/tasks/sub1", app);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/par1", { replace: true });
+  });
+
+  it("navigates home after successful delete when task has no parent", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/root1") {
+        return Response.json({
+          id: "root1",
+          title: "Root",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/root1/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/root1/events")) {
+        return Response.json({
+          task_id: "root1",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const app = {
+      ...mockApp(),
+      deleteMutation: {
+        isSuccess: true,
+        variables: { id: "root1" },
+      },
+    } as unknown as ReturnType<typeof useTasksApp>;
+
+    renderDetail("/tasks/root1", app);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true });
+  });
+
+  it("edits a checklist criterion via PATCH text", async () => {
+    const user = userEvent.setup();
+    let patchBody: string | null = null;
+    let checklistText = "Before";
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      const method = init?.method ?? "GET";
+      if (url === "/tasks/te") {
+        return Response.json({
+          id: "te",
+          title: "Edit checklist",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/te/checklist") {
+        return Response.json({
+          items: [
+            {
+              id: "item-1",
+              sort_order: 0,
+              text: checklistText,
+              done: false,
+            },
+          ],
+        });
+      }
+      if (url === "/tasks/te/checklist/items/item-1" && method === "PATCH") {
+        patchBody = (init?.body as string) ?? null;
+        checklistText = "After";
+        return Response.json({
+          items: [
+            {
+              id: "item-1",
+              sort_order: 0,
+              text: "After",
+              done: false,
+            },
+          ],
+        });
+      }
+      if (url.startsWith("/tasks/te/events")) {
+        return Response.json({
+          task_id: "te",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/te", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^edit checklist$/i }),
+    ).toBeInTheDocument();
+
+    expect(await screen.findByText("Before")).toBeInTheDocument();
+
+    const checklistSection = document.querySelector("#task-detail-checklist");
+    expect(checklistSection).not.toBeNull();
+    await user.click(
+      await within(checklistSection as HTMLElement).findByRole("button", {
+        name: /^edit$/i,
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const input = within(dialog).getByLabelText(/^criterion$/i);
+    await user.clear(input);
+    await user.type(input, "After");
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /^save changes$/i }),
+    );
+
+    expect(patchBody).toBe(JSON.stringify({ text: "After" }));
+    expect(await screen.findByText("After")).toBeInTheDocument();
+  });
+
   it("lists updates newest first by seq", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
@@ -398,6 +583,13 @@ describe("TaskDetailPage", () => {
     );
 
     expect(await screen.findByText("Child")).toBeInTheDocument();
+    const childLink = screen.getByRole("link", { name: "Child" });
+    const subtaskRow = childLink.closest(
+      ".task-subtasks-item-row",
+    ) as HTMLElement | null;
+    expect(subtaskRow).not.toBeNull();
+    expect(within(subtaskRow!).getByText("high")).toBeInTheDocument();
+    expect(within(subtaskRow!).getByText("ready")).toBeInTheDocument();
     expect(checklistPosts).toHaveLength(1);
     expect(checklistPosts[0]).toContain("Criterion A");
   });

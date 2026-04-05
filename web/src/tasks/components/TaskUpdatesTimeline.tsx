@@ -204,6 +204,29 @@ function EventDataPreview({
       );
     }
   }
+  if (eventType === "checklist_inherit_changed") {
+    const from = data.from;
+    const to = data.to;
+    if (typeof from === "boolean" && typeof to === "boolean") {
+      return (
+        <pre className="task-timeline-data">
+          {String(from)} → {String(to)}
+        </pre>
+      );
+    }
+  }
+  if (eventType === "checklist_item_removed") {
+    const text = data.text;
+    if (typeof text === "string") {
+      return <pre className="task-timeline-data">{text}</pre>;
+    }
+  }
+  if (eventType === "subtask_added" || eventType === "subtask_removed") {
+    const title = data.title;
+    if (typeof title === "string") {
+      return <pre className="task-timeline-data">{title}</pre>;
+    }
+  }
   return (
     <pre className="task-timeline-data">{JSON.stringify(data, null, 2)}</pre>
   );

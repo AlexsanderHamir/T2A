@@ -57,6 +57,7 @@ export function useTasksApp() {
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     title: string;
+    parent_id?: string;
   } | null>(null);
 
   /** Client-side validation (shown after server errors when applicable). */
@@ -213,8 +214,10 @@ export function useTasksApp() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(id),
-    onSuccess: async (_, deletedId) => {
+    mutationFn: (input: { id: string; parent_id?: string }) =>
+      apiDelete(input.id),
+    onSuccess: async (_, variables) => {
+      const deletedId = variables.id;
       setDeleteTarget(null);
       setEditing((prev) => (prev?.id === deletedId ? null : prev));
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
@@ -328,7 +331,12 @@ export function useTasksApp() {
   }
 
   const requestDelete = useCallback((t: Task) => {
-    setDeleteTarget({ id: t.id, title: t.title });
+    const pid = t.parent_id?.trim();
+    setDeleteTarget({
+      id: t.id,
+      title: t.title,
+      ...(pid ? { parent_id: pid } : {}),
+    });
   }, []);
 
   const cancelDelete = useCallback(() => {
@@ -337,7 +345,12 @@ export function useTasksApp() {
 
   function confirmDelete() {
     if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget.id);
+    deleteMutation.mutate({
+      id: deleteTarget.id,
+      ...(deleteTarget.parent_id
+        ? { parent_id: deleteTarget.parent_id }
+        : {}),
+    });
   }
 
   const createPending = createMutation.isPending;

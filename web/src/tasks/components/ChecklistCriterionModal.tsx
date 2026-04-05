@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { Modal } from "../../shared/Modal";
 
 type Props = {
+  mode: "add" | "edit";
   pending: boolean;
   saving: boolean;
   onClose: () => void;
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function ChecklistCriterionModal({
+  mode,
   pending,
   saving,
   onClose,
@@ -19,19 +21,33 @@ export function ChecklistCriterionModal({
   onSubmit,
 }: Props) {
   const disabled = pending || saving;
+  const titleId =
+    mode === "add"
+      ? "checklist-criterion-modal-title"
+      : "checklist-criterion-edit-modal-title";
+  const busyLabel =
+    mode === "add" ? "Adding criterion…" : "Saving changes…";
 
   return (
     <Modal
       onClose={onClose}
-      labelledBy="checklist-criterion-modal-title"
+      labelledBy={titleId}
       busy={pending}
-      busyLabel="Adding criterion…"
+      busyLabel={busyLabel}
     >
       <section className="panel modal-sheet task-checklist-criterion-modal-sheet">
-        <h2 id="checklist-criterion-modal-title">New criterion</h2>
+        <h2 id={titleId}>
+          {mode === "add" ? "New criterion" : "Edit criterion"}
+        </h2>
         <p className="muted task-checklist-criterion-modal-lead">
-          Add one clear, testable requirement. You can open this again to add
-          more.
+          {mode === "add" ? (
+            <>
+              Add one clear, testable requirement. You can open this again to
+              add more.
+            </>
+          ) : (
+            <>Update the wording for this requirement.</>
+          )}
         </p>
         <form
           className="task-checklist-criterion-modal-form task-create-form"
@@ -62,7 +78,7 @@ export function ChecklistCriterionModal({
               className="task-create-submit"
               disabled={!text.trim() || disabled}
             >
-              Add criterion
+              {mode === "add" ? "Add criterion" : "Save changes"}
             </button>
           </div>
         </form>

@@ -221,6 +221,29 @@ export async function addChecklistItem(
   if (!res.ok) throw new Error(await readError(res));
 }
 
+export async function patchChecklistItemText(
+  taskId: string,
+  itemId: string,
+  text: string,
+  options?: { actor?: "user" | "agent" },
+): Promise<TaskChecklistResponse> {
+  const headers: Record<string, string> = { ...jsonHeaders };
+  if (options?.actor === "agent") {
+    headers["X-Actor"] = "agent";
+  }
+  const res = await fetch(
+    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ text }),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskChecklistResponse(raw);
+}
+
 /** Agent integrations only: the API rejects this call unless `actor: "agent"` (X-Actor header). */
 export async function patchChecklistItemDone(
   taskId: string,
