@@ -109,7 +109,7 @@ textarea {
 button:not(.custom-select-trigger) {
   font: inherit;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--text-button-tracking);
   cursor: pointer;
   border: none;
   border-radius: var(--radius-md);

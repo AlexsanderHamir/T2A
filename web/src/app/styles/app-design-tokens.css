@@ -81,6 +81,8 @@
   --text-5xl: 3rem;
   --text-6xl: 3.75rem;
   --text-7xl: 4.5rem;
+  /* Primary buttons, skip link, empty-state CTAs (DS §7) */
+  --text-button-tracking: 0.01em;
 
   /* Motion (see .cursor/rules/16-ui-ux-standards.mdc §8) */
   --ease-default: cubic-bezier(0.16, 1, 0.3, 1);

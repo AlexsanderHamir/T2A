@@ -104,7 +104,7 @@ textarea::placeholder {
   padding: 0.625rem 1rem;
   font-size: var(--text-sm);
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--text-button-tracking);
   text-decoration: none;
   color: var(--text-on-brand);
   background: var(--brand);
@@ -501,7 +501,7 @@ textarea::placeholder {
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--text-button-tracking);
   line-height: 1.3;
   color: var(--danger-on-subtle-text);
   background: transparent;
@@ -596,7 +596,7 @@ textarea::placeholder {
   padding: 0.5rem 1.15rem;
   font-weight: 500;
   font-size: var(--text-sm);
-  letter-spacing: 0.01em;
+  letter-spacing: var(--text-button-tracking);
   color: var(--text-on-brand);
   background: var(--brand);
   border: 1px solid rgb(var(--brand-rgb) / 28%);
