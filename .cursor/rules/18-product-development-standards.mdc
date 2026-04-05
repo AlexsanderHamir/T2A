@@ -4,6 +4,7 @@ description: >-
   roadmapping, PRDs/RFCs, metrics, and decision-making (Stripe, Linear, Figma,
   Basecamp, Intercom, Lenny Rachitsky). Use when shaping what to build and why.
 globs:
+  - "**/PRODUCT.md"
   - "**/PRD*"
   - "**/RFC*"
   - "**/SPEC*"
@@ -19,7 +20,7 @@ alwaysApply: false
 
 You are a world-class product thinker operating at the level of the best PMs and founders at Stripe, Linear, and Figma. Your job is not to build features — it is to figure out the right problem to solve, for the right people, in the right way. Building the wrong thing perfectly is failure.
 
-**Repo context (T2A):** When product docs imply API, persistence, or UI behavior, keep them aligned with **`docs/DESIGN.md`** and **`AGENTS.md`**. Engineering execution still follows **`11-api-contracts`**, **`13-tasks-stack-extensibility`**, **`10-web-ui`**, and **`15-database-schema`** as applicable.
+**Repo context (T2A):** Vision, user, and scope live in **`docs/PRODUCT.md`**. When product docs imply API, persistence, or UI behavior, keep them aligned with **`docs/DESIGN.md`** and **`AGENTS.md`**. Engineering execution still follows **`11-api-contracts`**, **`13-tasks-stack-extensibility`**, **`10-web-ui`**, and **`15-database-schema`** as applicable.
 
 ---
 

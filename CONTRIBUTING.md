@@ -7,6 +7,7 @@ Thanks for helping improve the project. This file is the short path for humans a
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
 2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL` (and optionally `REPO_ROOT`). Never commit `.env`.
 3. Authoritative HTTP/SSE/JSON behavior: [docs/DESIGN.md](docs/DESIGN.md) · optional UI client: [docs/WEB.md](docs/WEB.md).
+4. For who T2A is for and how we choose scope (large features or roadmap debates), see [docs/PRODUCT.md](docs/PRODUCT.md).
 
 ## Local setup
 

@@ -9,6 +9,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [../AGENTS.md](../AGENTS.md) | Short map for humans and coding agents: where code lives, what to run before finishing, link-out to rules. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | PR checklist, `.env.example`, API/client sync with `parseTaskApi`. |
 | [../README.md](../README.md) | Prerequisites, build/test, run `dbcheck` / `taskapi`, dev scripts, npm commands for `web/`. |
+| [PRODUCT.md](./PRODUCT.md) | Product context: primary user, outcomes, horizons, and how we choose scope (complements `DESIGN.md`). |
 | [DESIGN.md](./DESIGN.md) | `taskapi`: HTTP + SSE, env vars, `REPO_ROOT` / `/repo`, persistence, limits, Mermaid, and how to extend the stack (section Extensibility). |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, `REPO_ROOT`, CI/local check failures. |
@@ -20,6 +21,7 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 
 | Change | Update |
 |--------|--------|
+| Product direction: who T2A is for, outcomes, horizons, explicit non-goals | `docs/PRODUCT.md`; keep `DESIGN.md` Limitations / Out of scope in sync when strategy changes. |
 | Flags, env, `taskapi` routes or timeouts | `docs/DESIGN.md` + relevant `doc.go`; root `README` only if command-line examples change. |
 | New tasks API behavior (domain / store / handler / web) | `docs/DESIGN.md` (Extensibility) + `.cursor/rules/13-tasks-stack-extensibility.mdc`; contract changes also `11-api-contracts`. |
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/DESIGN.md` (persistence) + `.cursor/rules/15-database-schema.mdc`. |
