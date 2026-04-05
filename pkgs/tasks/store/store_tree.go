@@ -41,7 +41,8 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, err
 }
 
 // ListRootForest pages root tasks (parent_id IS NULL) and attaches each full descendant subtree.
-func (s *Store) ListRootForest(ctx context.Context, limit, offset int) ([]TaskNode, error) {
+// It fetches limit+1 rows to detect hasMore. Ordering is id ASC (keyset-compatible).
+func (s *Store) ListRootForest(ctx context.Context, limit, offset int) (nodes []TaskNode, hasMore bool, err error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForest")
 	if limit <= 0 {
 		limit = 50
@@ -53,15 +54,60 @@ func (s *Store) ListRootForest(ctx context.Context, limit, offset int) ([]TaskNo
 		offset = 0
 	}
 	var roots []domain.Task
-	err := s.db.WithContext(ctx).
+	err = s.db.WithContext(ctx).
 		Where("parent_id IS NULL").
 		Order("id ASC").
-		Limit(limit).
+		Limit(limit + 1).
 		Offset(offset).
 		Find(&roots).Error
 	if err != nil {
-		return nil, fmt.Errorf("list root tasks: %w", err)
+		return nil, false, fmt.Errorf("list root tasks: %w", err)
 	}
+	hasMore = len(roots) > limit
+	if hasMore {
+		roots = roots[:limit]
+	}
+	nodes, err = s.rootsToForest(ctx, roots)
+	if err != nil {
+		return nil, false, err
+	}
+	return nodes, hasMore, nil
+}
+
+// ListRootForestAfter returns root tasks with id strictly greater than afterID (same ordering and tree shape as ListRootForest).
+func (s *Store) ListRootForestAfter(ctx context.Context, limit int, afterID string) (nodes []TaskNode, hasMore bool, err error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForestAfter")
+	afterID = strings.TrimSpace(afterID)
+	if afterID == "" {
+		return nil, false, fmt.Errorf("%w: after_id", domain.ErrInvalidInput)
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	var roots []domain.Task
+	err = s.db.WithContext(ctx).
+		Where("parent_id IS NULL AND id > ?", afterID).
+		Order("id ASC").
+		Limit(limit + 1).
+		Find(&roots).Error
+	if err != nil {
+		return nil, false, fmt.Errorf("list root tasks after id: %w", err)
+	}
+	hasMore = len(roots) > limit
+	if hasMore {
+		roots = roots[:limit]
+	}
+	nodes, err = s.rootsToForest(ctx, roots)
+	if err != nil {
+		return nil, false, err
+	}
+	return nodes, hasMore, nil
+}
+
+func (s *Store) rootsToForest(ctx context.Context, roots []domain.Task) ([]TaskNode, error) {
 	if len(roots) == 0 {
 		return []TaskNode{}, nil
 	}

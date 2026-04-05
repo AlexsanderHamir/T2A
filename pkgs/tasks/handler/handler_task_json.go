@@ -28,9 +28,10 @@ type taskPatchJSON struct {
 }
 
 type listResponse struct {
-	Tasks  []store.TaskNode `json:"tasks"`
-	Limit  int              `json:"limit"`
-	Offset int              `json:"offset"`
+	Tasks   []store.TaskNode `json:"tasks"`
+	Limit   int              `json:"limit"`
+	Offset  int              `json:"offset"`
+	HasMore bool             `json:"has_more"`
 }
 
 type taskEventLine struct {

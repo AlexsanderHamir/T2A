@@ -54,6 +54,16 @@ function parseFiniteNumber(v: unknown, field: string): number {
   return v;
 }
 
+function parseBooleanField(v: unknown, field: string): boolean {
+  if (v === undefined || v === null) {
+    return false;
+  }
+  if (typeof v === "boolean") {
+    return v;
+  }
+  throw new Error(`Invalid API response: ${field} must be a boolean`);
+}
+
 /** Validates JSON from GET /tasks before the UI relies on it. */
 export function parseTaskListResponse(value: unknown): TaskListResponse {
   if (!isRecord(value)) {
@@ -61,7 +71,12 @@ export function parseTaskListResponse(value: unknown): TaskListResponse {
   }
   const rawTasks = value.tasks;
   if (rawTasks === null || rawTasks === undefined) {
-    return { tasks: [], limit: parseFiniteNumber(value.limit, "limit"), offset: parseFiniteNumber(value.offset, "offset") };
+    return {
+      tasks: [],
+      limit: parseFiniteNumber(value.limit, "limit"),
+      offset: parseFiniteNumber(value.offset, "offset"),
+      has_more: parseBooleanField(value.has_more, "has_more"),
+    };
   }
   if (!Array.isArray(rawTasks)) {
     throw new Error("Invalid API response: tasks must be an array");
@@ -78,6 +93,7 @@ export function parseTaskListResponse(value: unknown): TaskListResponse {
     tasks,
     limit: parseFiniteNumber(value.limit, "limit"),
     offset: parseFiniteNumber(value.offset, "offset"),
+    has_more: parseBooleanField(value.has_more, "has_more"),
   };
 }
 

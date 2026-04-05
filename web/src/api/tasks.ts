@@ -104,12 +104,14 @@ export async function patchTaskEventUserResponse(
 export async function listTasks(
   limit = 200,
   offset = 0,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; afterId?: string },
 ): Promise<TaskListResponse> {
-  const q = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
-  });
+  const q = new URLSearchParams({ limit: String(limit) });
+  if (options?.afterId) {
+    q.set("after_id", options.afterId);
+  } else {
+    q.set("offset", String(offset));
+  }
   const res = await fetch(`/tasks?${q}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,

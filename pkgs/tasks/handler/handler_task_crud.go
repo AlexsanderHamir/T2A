@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/google/uuid"
 )
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -78,19 +79,26 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.list")
 	const op = "tasks.list"
 	r = withCallRoot(r, op)
-	limit, offset, err := parseListParams(r.Context(), r.URL.Query())
+	limit, offset, afterID, err := parseListParams(r.Context(), r.URL.Query())
 	if err != nil {
 		debugHTTPRequest(r, op, "list_params_invalid", true)
 		writeStoreError(w, r, op, err)
 		return
 	}
-	debugHTTPRequest(r, op, "limit", limit, "offset", offset)
-	tasks, err := h.store.ListRootForest(r.Context(), limit, offset)
+	debugHTTPRequest(r, op, "limit", limit, "offset", offset, "after_id", afterID)
+	var tasks []store.TaskNode
+	var hasMore bool
+	if afterID != "" {
+		tasks, hasMore, err = h.store.ListRootForestAfter(r.Context(), limit, afterID)
+		offset = 0
+	} else {
+		tasks, hasMore, err = h.store.ListRootForest(r.Context(), limit, offset)
+	}
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset})
+	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
 }
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
@@ -159,29 +167,40 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func parseListParams(ctx context.Context, q url.Values) (limit, offset int, err error) {
+func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseListParams")
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx = PushCall(ctx, "parseListParams")
-	helperDebugIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"))
-	defer func() { helperDebugOut(ctx, "parseListParams", "limit", limit, "offset", offset, "err", err) }()
+	helperDebugIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"), "after_id_q", q.Get("after_id"))
+	defer func() {
+		helperDebugOut(ctx, "parseListParams", "limit", limit, "offset", offset, "after_id", afterID, "err", err)
+	}()
 	limit = 50
 	offset = 0
+	afterID = strings.TrimSpace(q.Get("after_id"))
+	if _, ok := q["offset"]; ok && afterID != "" {
+		return 0, 0, "", fmt.Errorf("%w: offset cannot be used with after_id", domain.ErrInvalidInput)
+	}
+	if afterID != "" {
+		if _, perr := uuid.Parse(afterID); perr != nil {
+			return 0, 0, "", fmt.Errorf("%w: after_id must be a UUID", domain.ErrInvalidInput)
+		}
+	}
 	if v := q.Get("limit"); v != "" {
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 || n > 200 {
-			return 0, 0, fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
+			return 0, 0, "", fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
 		}
 		limit = n
 	}
 	if v := q.Get("offset"); v != "" {
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 {
-			return 0, 0, fmt.Errorf("%w: offset must be non-negative integer", domain.ErrInvalidInput)
+			return 0, 0, "", fmt.Errorf("%w: offset must be non-negative integer", domain.ErrInvalidInput)
 		}
 		offset = n
 	}
-	return limit, offset, nil
+	return limit, offset, afterID, nil
 }

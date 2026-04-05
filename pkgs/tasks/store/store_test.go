@@ -698,9 +698,12 @@ func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
 func TestStore_ListRootForest_empty_nonNilSlice(t *testing.T) {
 	db := testdb.OpenSQLite(t)
 	s := NewStore(db)
-	got, err := s.ListRootForest(context.Background(), 10, 0)
+	got, hasMore, err := s.ListRootForest(context.Background(), 10, 0)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if hasMore {
+		t.Fatal("unexpected hasMore")
 	}
 	if got == nil {
 		t.Fatal("want empty non-nil slice so JSON encodes as [] not null")
@@ -723,9 +726,12 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	forest, err := s.ListRootForest(ctx, 10, 0)
+	forest, hasMore, err := s.ListRootForest(ctx, 10, 0)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if hasMore {
+		t.Fatal("unexpected hasMore")
 	}
 	if len(forest) != 1 {
 		t.Fatalf("roots %d", len(forest))
@@ -735,6 +741,36 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 	}
 	if forest[0].Children[0].Title != "kid" {
 		t.Fatalf("child title %q", forest[0].Children[0].Title)
+	}
+}
+
+func TestStore_ListRootForest_hasMore_and_keyset(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	s := NewStore(db)
+	ctx := context.Background()
+	ids := []string{
+		"10000000-0000-4000-8000-000000000001",
+		"10000000-0000-4000-8000-000000000002",
+		"10000000-0000-4000-8000-000000000003",
+	}
+	for _, id := range ids {
+		if _, err := s.Create(ctx, CreateTaskInput{ID: id, Priority: domain.PriorityMedium, Title: "r"}, domain.ActorUser); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, hasMore, err := s.ListRootForest(ctx, 2, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasMore || len(got) != 2 || got[0].ID != ids[0] || got[1].ID != ids[1] {
+		t.Fatalf("page1: len=%d hasMore=%v", len(got), hasMore)
+	}
+	got2, hasMore2, err := s.ListRootForestAfter(ctx, 2, ids[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasMore2 || len(got2) != 1 || got2[0].ID != ids[2] {
+		t.Fatalf("page2: len=%d hasMore=%v", len(got2), hasMore2)
 	}
 }
 

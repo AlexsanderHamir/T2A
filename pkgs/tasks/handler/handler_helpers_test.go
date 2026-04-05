@@ -96,22 +96,27 @@ func TestStoreErrHTTPResponse(t *testing.T) {
 }
 
 func TestParseListParams(t *testing.T) {
+	id2 := "22222222-2222-4222-8222-222222222222"
 	tests := []struct {
-		name       string
-		q          url.Values
-		wantLimit  int
-		wantOffset int
-		wantErr    bool
+		name        string
+		q           url.Values
+		wantLimit   int
+		wantOffset  int
+		wantAfterID string
+		wantErr     bool
 	}{
 		{name: "defaults", q: url.Values{}, wantLimit: 50, wantOffset: 0},
 		{name: "limit_200_offset_3", q: url.Values{"limit": {"200"}, "offset": {"3"}}, wantLimit: 200, wantOffset: 3},
+		{name: "after_id_only", q: url.Values{"after_id": {id2}, "limit": {"10"}}, wantLimit: 10, wantOffset: 0, wantAfterID: id2},
+		{name: "after_id_with_offset", q: url.Values{"after_id": {id2}, "offset": {"0"}}, wantErr: true},
+		{name: "after_id_bad_uuid", q: url.Values{"after_id": {"not-a-uuid"}}, wantErr: true},
 		{name: "limit_nan", q: url.Values{"limit": {"nope"}}, wantErr: true},
 		{name: "limit_201", q: url.Values{"limit": {"201"}}, wantErr: true},
 		{name: "offset_negative", q: url.Values{"offset": {"-1"}}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			limit, offset, err := parseListParams(context.Background(), tt.q)
+			limit, offset, afterID, err := parseListParams(context.Background(), tt.q)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -121,8 +126,8 @@ func TestParseListParams(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if limit != tt.wantLimit || offset != tt.wantOffset {
-				t.Fatalf("limit=%d offset=%d want limit=%d offset=%d", limit, offset, tt.wantLimit, tt.wantOffset)
+			if limit != tt.wantLimit || offset != tt.wantOffset || afterID != tt.wantAfterID {
+				t.Fatalf("limit=%d offset=%d afterID=%q want limit=%d offset=%d afterID=%q", limit, offset, afterID, tt.wantLimit, tt.wantOffset, tt.wantAfterID)
 			}
 		})
 	}

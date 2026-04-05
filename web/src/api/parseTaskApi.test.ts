@@ -91,8 +91,41 @@ describe("parseTaskListResponse", () => {
         tasks: [validTask],
         limit: 200,
         offset: 0,
+        has_more: false,
       }),
-    ).toEqual({ tasks: [validTask], limit: 200, offset: 0 });
+    ).toEqual({ tasks: [validTask], limit: 200, offset: 0, has_more: false });
+  });
+
+  it("defaults has_more when omitted", () => {
+    expect(
+      parseTaskListResponse({
+        tasks: [validTask],
+        limit: 50,
+        offset: 0,
+      }),
+    ).toEqual({ tasks: [validTask], limit: 50, offset: 0, has_more: false });
+  });
+
+  it("parses has_more true", () => {
+    expect(
+      parseTaskListResponse({
+        tasks: [validTask],
+        limit: 2,
+        offset: 0,
+        has_more: true,
+      }),
+    ).toEqual({ tasks: [validTask], limit: 2, offset: 0, has_more: true });
+  });
+
+  it("rejects invalid has_more", () => {
+    expect(() =>
+      parseTaskListResponse({
+        tasks: [validTask],
+        limit: 1,
+        offset: 0,
+        has_more: "yes",
+      }),
+    ).toThrow(/has_more/);
   });
 
   it("rejects non-array tasks", () => {
@@ -108,7 +141,7 @@ describe("parseTaskListResponse", () => {
         limit: 50,
         offset: 0,
       }),
-    ).toEqual({ tasks: [], limit: 50, offset: 0 });
+    ).toEqual({ tasks: [], limit: 50, offset: 0, has_more: false });
   });
 });
 

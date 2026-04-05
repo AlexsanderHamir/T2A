@@ -15,7 +15,7 @@
 //   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with
 //     type task_created | task_updated | task_deleted and id (UUID)
 //   - POST   /tasks           — create; 201 + JSON task tree (same shape as GET)
-//   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0, default 0) apply to roots; each element includes nested children[]
+//   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0) or keyset after_id (UUID, mutually exclusive with offset); response includes has_more; each element includes nested children[]
 //   - GET    /tasks/{id}/checklist — 200 + JSON { items: [{ id, sort_order, text, done }] } for this task (definition from self or inherited ancestor)
 //   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row; 400 if checklist_inherit
 //   - PATCH  /tasks/{id}/checklist/items/{itemId} — exactly one of { text } (non-empty) or { done: bool }; 200 + full { items }; done requires X-Actor agent; text allowed for user or agent; 400 if checklist_inherit

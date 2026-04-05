@@ -29,6 +29,8 @@ export type TaskListResponse = {
   tasks: Task[];
   limit: number;
   offset: number;
+  /** True when the server may have more root tasks (see GET /tasks in docs/DESIGN.md). */
+  has_more: boolean;
 };
 
 export type TaskChangeType =

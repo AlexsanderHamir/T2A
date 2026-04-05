@@ -29,6 +29,7 @@ describe("listTasks", () => {
           ],
           limit: 50,
           offset: 0,
+          has_more: false,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -39,6 +40,7 @@ describe("listTasks", () => {
     expect(out.tasks[0].title).toBe("One");
     expect(out.limit).toBe(50);
     expect(out.offset).toBe(0);
+    expect(out.has_more).toBe(false);
 
     expect(fetch).toHaveBeenCalledWith(
       expect.stringMatching(/^\/tasks\?/),
@@ -46,10 +48,28 @@ describe("listTasks", () => {
     );
   });
 
+  it("uses after_id when provided", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          tasks: [],
+          limit: 10,
+          offset: 0,
+          has_more: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await listTasks(10, 99, { afterId: "11111111-1111-4111-8111-111111111111" });
+    const url = String(spy.mock.calls[0][0]);
+    expect(url).toContain("after_id=");
+    expect(url).not.toContain("offset=");
+  });
+
   it("forwards AbortSignal to fetch when provided", async () => {
     const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({ tasks: [], limit: 200, offset: 0 }),
+        JSON.stringify({ tasks: [], limit: 200, offset: 0, has_more: false }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
