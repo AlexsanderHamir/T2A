@@ -797,3 +797,10 @@ func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
 		t.Fatal("expected checklist_inherit_changed event")
 	}
 }
+
+func TestStore_Ping_ok(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	if err := s.Ping(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -129,14 +129,16 @@ func TestWithAccessLog_skipsHealth(t *testing.T) {
 	srv := httptest.NewServer(WithAccessLog(inner))
 	t.Cleanup(srv.Close)
 
-	res, err := http.Get(srv.URL + "/health")
-	if err != nil {
-		t.Fatal(err)
+	for _, path := range []string{"/health", "/health/live", "/health/ready"} {
+		res, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
 	}
-	res.Body.Close()
 
 	if strings.Contains(buf.String(), "http request complete") {
-		t.Fatalf("health should not log access: %q", buf.String())
+		t.Fatalf("health probes should not log access: %q", buf.String())
 	}
 }
 

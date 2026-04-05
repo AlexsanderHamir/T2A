@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -32,6 +33,8 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	h := &Handler{store: s, hub: hub, repo: rep}
 	m := http.NewServeMux()
 	m.Handle("GET /health", http.HandlerFunc(health))
+	m.Handle("GET /health/live", http.HandlerFunc(healthLive))
+	m.Handle("GET /health/ready", http.HandlerFunc(h.healthReady))
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
@@ -51,11 +54,41 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 }
 
 func health(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health")
-	const op = "health"
+	writeLiveness(w, r, "health")
+}
+
+func healthLive(w http.ResponseWriter, r *http.Request) {
+	writeLiveness(w, r, "health.live")
+}
+
+func writeLiveness(w http.ResponseWriter, r *http.Request, op string) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler."+op)
 	r = withCallRoot(r, op)
 	debugHTTPRequest(r, op)
 	writeJSON(w, r, op, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+const healthReadyDBTimeout = 2 * time.Second
+
+func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health.ready")
+	const op = "health.ready"
+	r = withCallRoot(r, op)
+	debugHTTPRequest(r, op)
+	ctx, cancel := context.WithTimeout(r.Context(), healthReadyDBTimeout)
+	defer cancel()
+	if err := h.store.Ping(ctx); err != nil {
+		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err)
+		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
+			"status": "degraded",
+			"checks": map[string]string{"database": "fail"},
+		})
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, map[string]any{
+		"status": "ok",
+		"checks": map[string]string{"database": "ok"},
+	})
 }
 
 func actorFromRequest(r *http.Request) (a domain.Actor) {

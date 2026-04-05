@@ -38,7 +38,7 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 | **Request correlation** | Tie access line, handler errors, and GORM SQL | `request_id` on the request context; echoed as `X-Request-ID` when the client sends it. |
 | **Log order** | Sort JSONL within a request or the process | `log_seq` (monotonic) with `log_seq_scope` `request` (access middleware) or `process` (startup, `/health`, background). |
 | **Line kind** | Filter JSONL in tools | `obs_category`: `http_access`, `http_io`, `helper_io`. |
-| **Access line** | One completion record per HTTP request (except `GET /health`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |
+| **Access line** | One completion record per HTTP request (except `GET /health`, `/health/live`, `/health/ready`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |
 | **SQL traces** | DB latency and shape | GORM → same `slog` sink; parameterized SQL; slow threshold per GORM config. |
 | **Metrics** | Rates, histograms, SLO dashboards | Not built into `taskapi` yet; add deliberately (e.g. Prometheus) when we need SLIs beyond logs. |
 | **Distributed traces** | Span graphs across services | Not in scope for single-process `taskapi` unless we adopt OpenTelemetry later. |

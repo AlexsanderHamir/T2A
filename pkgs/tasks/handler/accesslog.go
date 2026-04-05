@@ -11,7 +11,7 @@ import (
 
 // WithAccessLog wraps h to assign a request id, attach it to r.Context, echo X-Request-ID on
 // responses, and emit one structured line per request when it finishes (method, path, route,
-// status, duration, bytes written). GET /health is omitted to avoid probe noise.
+// status, duration, bytes written). GET /health, /health/live, and /health/ready are omitted to avoid probe noise.
 func WithAccessLog(h http.Handler) http.Handler {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithAccessLog")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +69,15 @@ func WithAccessLog(h http.Handler) http.Handler {
 
 func omitAccessLog(r *http.Request) bool {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitAccessLog")
-	return r.Method == http.MethodGet && r.URL.Path == "/health"
+	if r.Method != http.MethodGet {
+		return false
+	}
+	switch r.URL.Path {
+	case "/health", "/health/live", "/health/ready":
+		return true
+	default:
+		return false
+	}
 }
 
 type accessLogWriter struct {

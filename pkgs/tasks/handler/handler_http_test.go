@@ -497,7 +497,34 @@ func TestHTTP_health(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Get(srv.URL + "/health")
+	for _, path := range []string{"/health", "/health/live"} {
+		t.Run(path, func(t *testing.T) {
+			res, err := http.Get(srv.URL + path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer res.Body.Close()
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("status %d", res.StatusCode)
+			}
+			var body struct {
+				Status string `json:"status"`
+			}
+			if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Status != "ok" {
+				t.Fatalf("status field %q", body.Status)
+			}
+		})
+	}
+}
+
+func TestHTTP_health_ready_ok(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/health/ready")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -506,13 +533,48 @@ func TestHTTP_health(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 	var body struct {
-		Status string `json:"status"`
+		Status string            `json:"status"`
+		Checks map[string]string `json:"checks"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "ok" {
-		t.Fatalf("status field %q", body.Status)
+	if body.Status != "ok" || body.Checks["database"] != "ok" {
+		t.Fatalf("body %+v", body)
+	}
+}
+
+func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	srv := httptest.NewServer(NewHandler(st, NewSSEHub(), nil))
+	defer srv.Close()
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := http.Get(srv.URL + "/health/ready")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var body struct {
+		Status string            `json:"status"`
+		Checks map[string]string `json:"checks"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Status != "degraded" || body.Checks["database"] != "fail" {
+		t.Fatalf("body %+v", body)
 	}
 }
 

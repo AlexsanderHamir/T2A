@@ -25,6 +25,18 @@ func NewStore(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
+// Ping checks that the database session is reachable (e.g. for HTTP readiness probes).
+func (s *Store) Ping(ctx context.Context) error {
+	if s == nil || s.db == nil {
+		return errors.New("tasks store: nil database")
+	}
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.PingContext(ctx)
+}
+
 type CreateTaskInput struct {
 	ID               string
 	Title            string
