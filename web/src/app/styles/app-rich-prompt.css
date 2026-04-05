@@ -97,7 +97,7 @@
   font-weight: 500;
   line-height: 1.35;
   color: var(--text-primary);
-  background: linear-gradient(180deg, rgb(250 250 252) 0%, rgb(244 244 248) 100%);
+  background: var(--surface-repo-file-chip-gradient);
   border: 1px solid var(--brand-border-faint);
   box-shadow: var(--neutral-lip-shadow);
   white-space: nowrap;
