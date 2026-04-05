@@ -161,6 +161,8 @@ button.task-detail-btn-delete {
 }
 
 button.task-detail-btn-delete:not(:disabled):hover {
+  /* Reassert gradient: global `button:not(.custom-select-trigger):hover` sets brand background. */
+  background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   filter: brightness(1.04);
   transform: none;
   box-shadow: 0 2px 8px rgb(180 30 30 / 20%);
