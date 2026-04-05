@@ -79,8 +79,8 @@ button.custom-select-trigger:focus-visible {
   padding: 0.35rem 0.35rem 0.15rem;
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: var(--data-caps-letter-spacing);
+  text-transform: var(--data-caps-text-transform);
   color: var(--text-tertiary);
   cursor: default;
   pointer-events: none;
@@ -212,8 +212,8 @@ tbody tr:last-child td {
 th {
   font-size: var(--text-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: var(--data-caps-text-transform);
+  letter-spacing: var(--data-caps-letter-spacing);
   color: var(--text-secondary);
   padding-top: var(--table-header-padding-y-top);
   padding-bottom: var(--table-header-padding-y-bottom);

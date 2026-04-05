@@ -745,8 +745,8 @@ button.task-detail-checklist-remove:focus-visible {
   margin: 0 0 0.5rem;
   font-size: var(--text-help);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: var(--section-caps-text-transform);
+  letter-spacing: var(--section-caps-letter-spacing);
   color: var(--text-tertiary);
 }
 

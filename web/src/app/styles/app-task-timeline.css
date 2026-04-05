@@ -346,8 +346,8 @@ a.task-timeline-item-hit {
 
 .task-event-detail-thread-by {
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: var(--data-caps-text-transform);
+  letter-spacing: var(--data-caps-letter-spacing);
   color: var(--text-secondary);
 }
 
@@ -438,8 +438,8 @@ a.task-timeline-item-hit {
 .task-timeline-user-response-label {
   font-weight: 700;
   font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: var(--data-caps-text-transform);
+  letter-spacing: var(--data-caps-letter-spacing);
   color: var(--success);
 }
 
@@ -531,8 +531,8 @@ a.task-timeline-item-hit {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: var(--data-caps-text-transform);
+  letter-spacing: var(--data-caps-letter-spacing);
   color: var(--text-tertiary);
 }
 

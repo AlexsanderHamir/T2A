@@ -33,6 +33,12 @@
   --table-cell-padding-y: 0.875rem;
   --table-header-padding-y-top: 0.5rem;
   --table-header-padding-y-bottom: 0.625rem;
+  /* Table th, DL dt, dropdown group labels, thread meta (DS §10) */
+  --data-caps-letter-spacing: 0.04em;
+  --data-caps-text-transform: uppercase;
+  /* Section subheadings, required/optional field badges */
+  --section-caps-letter-spacing: 0.06em;
+  --section-caps-text-transform: uppercase;
 
   /* Touch targets (DS §13 — 44px minimum) */
   --touch-target-min: 2.75rem;
