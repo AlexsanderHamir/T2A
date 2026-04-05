@@ -243,6 +243,7 @@ func run() int {
 	dbClosed := false
 	if sqlDB, err := db.DB(); err != nil {
 		slog.Error("database close skipped", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
+		return 1
 	} else if err := sqlDB.Close(); err != nil {
 		slog.Error("database close", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
 		return 1

@@ -155,7 +155,7 @@ Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not 
 
 ### Graceful shutdown
 
-On SIGINT / SIGTERM, `taskapi` calls `http.Server.Shutdown` with a 10s deadline, then `Close` on the SQL pool, then syncs and closes the log file if one was opened.
+On SIGINT / SIGTERM, `taskapi` calls `http.Server.Shutdown` with a 10s deadline, then `Close` on the SQL pool, then syncs and closes the log file if one was opened. If GORM cannot expose the underlying `*sql.DB` for close, or `Close` returns an error, the process exits **1** after logging (`database close skipped` / `database close`); otherwise shutdown ends with exit **0**.
 
 ```mermaid
 sequenceDiagram
