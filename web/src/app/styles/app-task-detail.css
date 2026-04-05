@@ -126,10 +126,14 @@
 
 /* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
 button.task-detail-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   letter-spacing: -0.015em;
   color: var(--text-primary);
   background: var(--bg-elevated);
@@ -153,10 +157,14 @@ button.task-detail-btn-edit:focus-visible {
 }
 
 button.task-detail-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--text-on-brand);
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   border: 1px solid var(--danger-delete-border);
@@ -247,11 +255,14 @@ button.task-detail-btn-delete:focus-visible {
 
 button.task-detail-add-subtask-btn,
 button.task-detail-add-checklist-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
   padding: 0.45rem 0.95rem;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   letter-spacing: -0.015em;
   color: var(--text-primary);
   background: var(--bg-elevated);
@@ -284,6 +295,9 @@ button.task-detail-add-checklist-btn:disabled {
 }
 
 button.task-home-new-task-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
   padding: 0.5rem 1.15rem;
@@ -346,11 +360,14 @@ button.task-home-new-task-btn:disabled {
 }
 
 button.task-detail-checklist-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
   padding: 0.5rem 0.95rem;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
@@ -381,9 +398,13 @@ button.task-detail-checklist-add-btn:focus-visible {
 }
 
 button.task-detail-checklist-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
   border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--brand-deep);
@@ -405,9 +426,13 @@ button.task-detail-checklist-edit:focus-visible {
 }
 
 button.task-detail-checklist-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
   border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--danger-deep);
@@ -715,7 +740,11 @@ button.task-detail-checklist-remove:focus-visible {
 }
 
 .btn-inline {
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  font-size: var(--text-xs);
   padding: 0.2rem 0.5rem;
 }
 

@@ -146,6 +146,10 @@
 }
 
 .btn-table {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
   padding: 0.35rem 0.75rem;
   font-size: var(--text-help);
   border-radius: var(--radius-full);

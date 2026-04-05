@@ -569,6 +569,7 @@ a.task-timeline-item-hit {
 
 .task-pager-btn {
   min-width: 5.5rem;
+  min-height: var(--touch-target-min);
 }
 
 .err-inline {
