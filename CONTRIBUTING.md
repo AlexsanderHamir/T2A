@@ -2,6 +2,10 @@
 
 Thanks for helping improve the project. This file is the short path for humans and agents; deeper contracts live in `docs/`.
 
+## Security
+
+For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private advisory on GitHub, not a public issue). Dependency update PRs may be opened by [Dependabot](.github/dependabot.yml); review and run `./scripts/check.sh` (or `.\scripts\check.ps1`) before merging.
+
 ## Before you start
 
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
@@ -11,7 +15,7 @@ Thanks for helping improve the project. This file is the short path for humans a
 
 ## Local setup
 
-- Go 1.25+ and Node 20+ (for `web/`).
+- Go 1.25+ and Node 20+ (for `web/`; `web/package.json` **`engines.node`** matches CI).
 - Migrate/check DB: `go run ./cmd/dbcheck -migrate` (see root [README.md](README.md)).
 - API only: `go run ./cmd/taskapi`
 - API + Vite together: `scripts/dev.ps1` or `scripts/dev.sh` from the repo root.
