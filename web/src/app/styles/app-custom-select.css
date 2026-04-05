@@ -138,7 +138,7 @@ button.secondary {
   background: transparent;
   color: var(--text-primary);
   box-shadow: none;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border-strong);
 }
 
 button.secondary:not(:disabled):hover {

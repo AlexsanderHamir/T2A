@@ -154,7 +154,7 @@
 .task-list-table .actions .btn-table.secondary {
   background: var(--bg-elevated);
   color: var(--text-primary);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border-strong);
   box-shadow: none;
 }
 

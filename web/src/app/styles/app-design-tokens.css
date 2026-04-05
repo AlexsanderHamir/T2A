@@ -88,6 +88,10 @@
   --duration-slower: 500ms;
   --duration-toast: 300ms;
   --duration-skeleton: 1.5s;
+  /* Content phase-in (list status / enter — DS §8) */
+  --duration-ui-phase: 380ms;
+  /* Modal / inline busy spinner rotation */
+  --duration-spinner: 650ms;
 
   /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
   --slate-shadow: 15 23 42;
@@ -153,6 +157,8 @@
 
   --border-hairline: rgb(0 0 0 / 8%);
   --border-soft: rgb(0 0 0 / 12%);
+  /* Outlined secondary actions — DS §7 (--color-border-strong ~16%) */
+  --border-strong: rgb(var(--slate-shadow) / 16%);
   /* Neutral controls — hover/focus-adjacent border step (inputs, outlined buttons; DS §7) */
   --border-interactive-hover: rgb(var(--slate-shadow) / 18%);
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 4%);
@@ -216,6 +222,7 @@
 
     --border-hairline: rgb(255 255 255 / 8%);
     --border-soft: rgb(255 255 255 / 12%);
+    --border-strong: rgb(255 255 255 / 14%);
     --border-interactive-hover: rgb(255 255 255 / 16%);
 
     --shadow-xs: 0 1px 2px rgb(0 0 0 / 40%);

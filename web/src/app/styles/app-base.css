@@ -291,7 +291,7 @@ textarea::placeholder {
 }
 
 .stream-pill--sync-enter {
-  animation: ui-phase-fade-in 0.36s var(--ease-ui) both;
+  animation: ui-phase-fade-in var(--duration-ui-phase) var(--ease-ui) both;
 }
 
 .stream-status-dev {
@@ -439,7 +439,7 @@ textarea::placeholder {
 }
 
 .task-list-phase-msg {
-  animation: ui-phase-fade-in 0.38s var(--ease-ui) both;
+  animation: ui-phase-fade-in var(--duration-ui-phase) var(--ease-ui) both;
 }
 
 .task-list-content--enter {

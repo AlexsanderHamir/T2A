@@ -101,7 +101,7 @@
   border: 3px solid rgb(var(--slate-shadow) / 10%);
   border-top-color: var(--brand);
   border-radius: 50%;
-  animation: modal-spinner-rotate 0.65s linear infinite;
+  animation: modal-spinner-rotate var(--duration-spinner) var(--ease-linear) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
