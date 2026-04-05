@@ -109,7 +109,7 @@ export function TaskComposeFields({
             value={prompt}
             onChange={onPromptChange}
             disabled={disabled}
-            placeholder="Optional context for an agent… Use the toolbar for headings and bold. Type @ to pick a file from the repo."
+            placeholder="Optional context. Toolbar for headings and bold; type @ to mention a repo file."
           />
         </div>
       </div>
@@ -135,11 +135,10 @@ export function TaskComposeFields({
               New criterion
             </button>
           </div>
-          <p className="task-create-checklist-hint">
-            Optional checklist — all items must be complete before the task can
-            be marked done. Use <strong>New criterion</strong> for each line; it
-            opens the same short dialog as on the task page. Nothing is saved
-            until you submit this form.
+          <p className="task-create-checklist-hint muted">
+            All items must be satisfied before the task is done.{" "}
+            <strong>New criterion</strong> adds one; saved when you click{" "}
+            <strong>Create</strong>.
           </p>
           {checklistItems.length > 0 ? (
             <ul

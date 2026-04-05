@@ -152,16 +152,13 @@ export function TaskCreateModal({
               <p className="task-create-parent-hint muted">
                 {hasParent ? (
                   <>
-                    Full details for this subtask — prompt, priority, and
-                    optional done criteria (or inherit from the parent&apos;s
-                    checklist).
+                    Prompt, priority, and optional criteria — or inherit the
+                    parent&apos;s checklist.
                   </>
                 ) : (
                   <>
-                    Leave as top-level for a root task (full form below).
-                    Choose a parent to create a <strong>subtask</strong>. The
-                    list includes subtasks so you can nest under any task on
-                    this page (the home table shows top-level tasks only).
+                    Empty = top-level task. Pick a parent to add a{" "}
+                    <strong>subtask</strong>.
                   </>
                 )}
               </p>
@@ -211,10 +208,9 @@ export function TaskCreateModal({
                   </h3>
                   <FieldRequirementBadge requirement="optional" />
                 </div>
-                <p className="task-create-subtasks-hint">
-                  Optional — use <strong>New subtask</strong> for each child; it
-                  opens the same detailed form in a second window. Nothing is
-                  saved until you choose Create here.
+                <p className="task-create-subtasks-hint muted">
+                  <strong>New subtask</strong> opens another form. Subtasks are
+                  created when you click <strong>Create</strong>.
                 </p>
                 {pendingSubtasks.length > 0 ? (
                   <ul
