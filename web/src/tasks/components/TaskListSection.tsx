@@ -145,8 +145,8 @@ export function TaskListSection({
     !loading && (hasPrevPage || hasNextPage || tasks.length === listPageSize);
 
   return (
-    <section className="panel">
-      <h2>All tasks</h2>
+    <section className="panel" aria-labelledby="task-list-heading">
+      <h2 id="task-list-heading">All tasks</h2>
       {refreshing && !loading && !hideBackgroundRefreshHint ? (
         <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…

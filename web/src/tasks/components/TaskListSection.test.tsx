@@ -71,6 +71,9 @@ describe("TaskListSection", () => {
     );
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
     expect(
+      screen.getByRole("region", { name: /^all tasks$/i }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("table", {
         name: /all tasks: title, status, priority, prompt preview, and row actions/i,
       }),
