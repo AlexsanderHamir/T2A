@@ -166,6 +166,7 @@ func decodeJSON(ctx context.Context, r io.Reader, dst any) (err error) {
 // setAPISecurityHeaders sets baseline hardening headers for browser-facing HTTP responses (JSON, SSE, and plain-text errors).
 func setAPISecurityHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setAPISecurityHeaders")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")

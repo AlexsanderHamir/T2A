@@ -12,6 +12,9 @@ import (
 
 func assertBaselineSecurityHeaders(t *testing.T, h http.Header) {
 	t.Helper()
+	if got := h.Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q want no-store", got)
+	}
 	if got := h.Get("X-Frame-Options"); got != "DENY" {
 		t.Errorf("X-Frame-Options = %q want DENY", got)
 	}
