@@ -28,6 +28,16 @@ func slowQueryThresholdForGORM() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
+// SlowQueryThresholdMS returns the effective GORM slow-SQL threshold in milliseconds
+// (T2A_GORM_SLOW_QUERY_MS; default 200; 0 means the slow-SQL warn branch is off).
+func SlowQueryThresholdMS() int {
+	d := slowQueryThresholdForGORM()
+	if d <= 0 {
+		return 0
+	}
+	return int(d / time.Millisecond)
+}
+
 // ConfigWithSlogLogger returns a GORM config that records each SQL round-trip through lg
 // (typically slog.Default() after taskapi attaches the JSON log handler).
 // ParameterizedQueries keeps bound values out of log lines; statements slower than

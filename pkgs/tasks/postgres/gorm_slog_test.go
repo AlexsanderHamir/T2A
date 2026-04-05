@@ -35,6 +35,28 @@ func TestSlowQueryThresholdForGORM(t *testing.T) {
 	}
 }
 
+func TestSlowQueryThresholdMS(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		want int
+	}{
+		{"default", "", 200},
+		{"zero_disables", "0", 0},
+		{"custom_ms", "500", 500},
+		{"invalid_falls_back", "nope", 200},
+		{"negative_falls_back", "-3", 200},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("T2A_GORM_SLOW_QUERY_MS", tc.env)
+			if got := SlowQueryThresholdMS(); got != tc.want {
+				t.Fatalf("got %d want %d", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestNewSlogLogger_slowSQLLogsAtWarn(t *testing.T) {
 	var buf bytes.Buffer
 	lg := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))

@@ -99,6 +99,16 @@ func run() int {
 	}
 	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate")
 
+	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)
+
+	slog.Info("http server limits", "cmd", cmdName, "operation", "taskapi.http_limits",
+		"read_header_timeout_sec", int(readHeaderTimeout.Seconds()),
+		"read_timeout_sec", int(readTimeout.Seconds()),
+		"idle_timeout_sec", int(idleTimeout.Seconds()),
+		"max_header_bytes", maxRequestHeaders,
+		"shutdown_timeout_sec", int(shutdownTimeout.Seconds()),
+	)
+
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
 	var rep *repo.Root
