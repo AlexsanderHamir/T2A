@@ -111,6 +111,31 @@ describe("Modal", () => {
     });
   });
 
+  it("sets inert on #root while a modal is open under ModalStackProvider", async () => {
+    const user = userEvent.setup();
+    const rootHost = document.createElement("div");
+    rootHost.id = "root";
+    document.body.appendChild(rootHost);
+    try {
+      render(
+        <ModalStackProvider>
+          <Harness />
+        </ModalStackProvider>,
+        { container: rootHost },
+      );
+      expect(rootHost.hasAttribute("inert")).toBe(false);
+      await user.click(screen.getByRole("button", { name: /^open$/i }));
+      await screen.findByRole("dialog");
+      expect(rootHost.hasAttribute("inert")).toBe(true);
+      await user.keyboard("{Escape}");
+      await waitFor(() => {
+        expect(rootHost.hasAttribute("inert")).toBe(false);
+      });
+    } finally {
+      rootHost.remove();
+    }
+  });
+
   it("closes only the top modal on Escape when stacked under ModalStackProvider", async () => {
     const user = userEvent.setup();
     render(<NestedStackHarness />);
