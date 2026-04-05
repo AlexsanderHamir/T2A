@@ -65,8 +65,8 @@ textarea:focus-visible,
   margin: 0 auto;
   padding-top: 2.5rem;
   padding-bottom: 4rem;
-  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
-  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding-left: max(var(--layout-gutter-x), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--layout-gutter-x), env(safe-area-inset-right, 0px));
 }
 
 /* Screen-reader-only copy (captions, live regions, etc.) */
@@ -132,7 +132,7 @@ textarea:focus-visible,
 }
 
 .app-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .app-header--sticky {
@@ -140,13 +140,13 @@ textarea:focus-visible,
   top: 0;
   z-index: 50;
   margin-top: -2.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
   /* Stay in the same column as `main` / panels — no negative horizontal margin
      (that bled into `.app` padding and made the header wider than content). */
   margin-left: 0;
   margin-right: 0;
-  /* Match `.panel` horizontal padding so title/status align with card content */
-  padding: 1.25rem 1.25rem 1rem;
+  /* Inset matches `.panel` horizontal padding (`--layout-gutter-x`) */
+  padding: var(--layout-gutter-x) var(--layout-gutter-x) var(--space-4);
   background: color-mix(in srgb, var(--bg-page) 82%, white);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
@@ -339,7 +339,7 @@ textarea:focus-visible,
 .sub {
   color: var(--text-secondary);
   font-size: 0.875rem;
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--layout-gutter-x);
   letter-spacing: -0.01em;
 }
 
@@ -448,7 +448,7 @@ textarea:focus-visible,
   color: var(--danger-deep);
   padding: 0.875rem 1rem;
   border-radius: var(--radius-md);
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--layout-gutter-x);
   font-size: var(--text-base);
   line-height: 1.5;
   border: 1px solid rgb(239 68 68 / 22%);
@@ -459,7 +459,7 @@ textarea:focus-visible,
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4, 1rem);
+  gap: var(--space-4);
 }
 
 .error-banner__text {
@@ -469,11 +469,10 @@ textarea:focus-visible,
 
 .error-banner__dismiss {
   flex-shrink: 0;
-  margin: calc(var(--space-1, 0.25rem) * -1) calc(var(--space-2, 0.5rem) * -1)
-    calc(var(--space-1, 0.25rem) * -1) 0;
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -539,12 +538,12 @@ textarea:focus-visible,
 
 .empty-state__icon-wrap {
   color: var(--text-tertiary);
-  margin-bottom: var(--space-4, 1rem);
+  margin-bottom: var(--space-4);
   line-height: 0;
 }
 
 .empty-state--compact .empty-state__icon-wrap {
-  margin-bottom: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-3);
 }
 
 .empty-state__glyph {
@@ -557,7 +556,7 @@ textarea:focus-visible,
 }
 
 .empty-state__title {
-  margin: 0 0 var(--space-2, 0.5rem);
+  margin: 0 0 var(--space-2);
   font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -577,7 +576,7 @@ textarea:focus-visible,
 }
 
 .empty-state__actions {
-  margin-top: var(--space-4, 1rem);
+  margin-top: var(--space-4);
 }
 
 .empty-state__cta {
@@ -629,9 +628,8 @@ textarea:focus-visible,
   position: relative;
   background: var(--bg-elevated);
   border-radius: var(--radius-lg);
-  /* Match .app / sticky header horizontal gutter (1.25rem) for column alignment */
-  padding: 1.5rem 1.25rem;
-  margin-bottom: 1.25rem;
+  padding: var(--layout-panel-padding-y) var(--layout-gutter-x);
+  margin-bottom: var(--layout-gutter-x);
   border: 1px solid var(--border-hairline);
   box-shadow: none;
   transition: border-color var(--duration-normal) var(--ease-out),
