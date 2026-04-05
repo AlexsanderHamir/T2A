@@ -171,7 +171,8 @@ func setJSONHeaders(w http.ResponseWriter) {
 }
 
 type jsonErrorBody struct {
-	Error string `json:"error"`
+	Error     string `json:"error"`
+	RequestID string `json:"request_id,omitempty"`
 }
 
 // writeJSON writes v as JSON. When r is non-nil and Debug is enabled, logs response_body (truncated) and response_json_bytes.
@@ -212,6 +213,9 @@ func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int,
 	ctx := context.Background()
 	if r != nil {
 		ctx = r.Context()
+		if rid := RequestIDFromContext(ctx); rid != "" {
+			body.RequestID = rid
+		}
 	}
 	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
 		b, err := json.Marshal(body)

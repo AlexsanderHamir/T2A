@@ -94,7 +94,7 @@ sequenceDiagram
 
 ## JSON boundary
 
-Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in `api/parseTaskApi.test.ts` and `api/tasks.test.ts`.
+Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in `api/parseTaskApi.test.ts` and `api/tasks.test.ts`. JSON error bodies from `taskapi` may include optional `request_id` (see [DESIGN.md](./DESIGN.md)); `api/shared.ts` `readError` appends it to the message so UI errors stay correlated with `X-Request-ID` / access logs.
 
 ## Testing
 

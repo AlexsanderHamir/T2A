@@ -257,7 +257,7 @@ JSON: request bodies reject unknown fields and reject trailing data after the to
 
 New audit `type` values include checklist (`checklist_item_added`, `checklist_item_toggled`, `checklist_item_updated`, `checklist_item_removed`), `checklist_inherit_changed`, and the rest of `domain.EventType` (e.g. `subtask_added` on the **parent** when a child task is created with `parent_id`, and `subtask_removed` on the **parent** when that child is deleted, both with payload `child_task_id` and `title`).
 
-Task error responses use JSON `{"error":"..."}` for mapped store errors:
+Task error responses use JSON `{"error":"..."}` for mapped store errors. When the request ran through access middleware (normal `taskapi` stack), the body may also include **`request_id`** (same value as response header **`X-Request-ID`** and `request_id` in structured logs) so clients can correlate failures with server-side traces.
 
 ```mermaid
 flowchart TD
