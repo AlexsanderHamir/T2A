@@ -1,4 +1,4 @@
-import { Outlet, Route, Routes } from "react-router-dom";
+import { Link, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { DeleteConfirmDialog } from "../tasks/components/DeleteConfirmDialog";
 import { StreamStatusHint } from "../tasks/components/StreamStatusHint";
 import { TaskEditForm } from "../tasks/components/TaskEditForm";
@@ -11,12 +11,23 @@ import { ModalStackProvider } from "../shared/ModalStackContext";
 import "./App.css";
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
+  const location = useLocation();
+  const homeIsCurrent = location.pathname === "/";
+
   return (
     <ModalStackProvider>
       <div className="app">
         <header className="app-header app-header--sticky">
           <div className="app-header-top">
-            <h1 className="app-title">Tasks</h1>
+            <nav className="app-header-site-nav" aria-label="Site">
+              <Link
+                to="/"
+                className="app-title-link"
+                {...(homeIsCurrent ? { "aria-current": "page" as const } : {})}
+              >
+                <h1 className="app-title">Tasks</h1>
+              </Link>
+            </nav>
             <p className="app-tagline">Capture work. Ship with clarity.</p>
           </div>
           <StreamStatusHint

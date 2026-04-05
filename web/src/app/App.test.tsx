@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
@@ -50,6 +50,92 @@ describe("App", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("exposes Tasks title as home link with aria-current on /", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByRole("heading", { name: /^tasks$/i });
+    const titleLink = screen.getByRole("link", { name: /^tasks$/i });
+    expect(titleLink).toHaveAttribute("href", "/");
+    expect(titleLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("navigates home when Tasks title is used from a task route", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url === "/tasks/h1") {
+        return Response.json({
+          id: "h1",
+          title: "Home link task",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/h1/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/h1/events")) {
+        return Response.json({
+          task_id: "h1",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/tasks/h1"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^home link task$/i });
+    const titleLink = screen.getByRole("link", { name: /^tasks$/i });
+    expect(titleLink).not.toHaveAttribute("aria-current");
+
+    await user.click(titleLink);
+    expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^tasks$/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("renders heading and empty state after tasks load", async () => {

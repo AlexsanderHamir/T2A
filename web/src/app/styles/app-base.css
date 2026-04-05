@@ -51,6 +51,14 @@ textarea:focus-visible,
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+/* Text links (buttons covered above; modals portal outside #root) */
+#root a:focus-visible,
+.modal-shell a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: 2px;
+}
+
 .app {
   max-width: min(100%, 72rem);
   margin: 0 auto;
@@ -88,6 +96,30 @@ textarea:focus-visible,
 
 .app-header-top {
   margin-bottom: 1rem;
+}
+
+.app-header-site-nav {
+  margin: 0;
+}
+
+.app-title-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  margin: -0.2rem -0.4rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.app-title-link:focus-visible {
+  border-radius: var(--radius-md);
+}
+
+@media (hover: hover) {
+  .app-title-link:hover .app-title {
+    color: var(--link);
+  }
 }
 
 .app-title {
