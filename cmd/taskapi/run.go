@@ -146,7 +146,9 @@ func run() int {
 	}
 
 	baseURL := fmt.Sprintf("http://localhost:%s/", *port)
-	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", ln.Addr().String(), "url", baseURL,
+	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve",
+		"version", handler.ServerVersion(),
+		"addr", ln.Addr().String(), "url", baseURL,
 		"metrics_url", fmt.Sprintf("http://localhost:%s/metrics", *port))
 
 	srv := &http.Server{
