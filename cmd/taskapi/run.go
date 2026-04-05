@@ -139,7 +139,9 @@ func run() int {
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.Handler())
 	if devsim.Enabled() {
-		if d := resolveSSETestTickerInterval(); d >= time.Second {
+		d := resolveSSETestTickerInterval()
+		if d >= time.Second {
+			slog.Info("sse dev ticker enabled", "cmd", cmdName, "operation", "taskapi.sse_dev", "interval", d.String())
 			opts := devsim.LoadOptions()
 			devsim.RunTicker(taskStore, d, opts, func(kind devsim.ChangeKind, id string) {
 				var typ handler.TaskChangeType
@@ -153,6 +155,9 @@ func run() int {
 				}
 				hub.Publish(handler.TaskChangeEvent{Type: typ, ID: id})
 			})
+		} else {
+			slog.Info("sse dev env on, ticker off", "cmd", cmdName, "operation", "taskapi.sse_dev",
+				"interval", d.String(), "hint", "set T2A_SSE_TEST_INTERVAL to 1s or more to run the ticker")
 		}
 	}
 	mux.Handle("/", api)
@@ -211,6 +216,8 @@ func run() int {
 	} else if err := sqlDB.Close(); err != nil {
 		slog.Error("database close", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
 		return 1
+	} else {
+		slog.Info("database pool closed", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "db_done")
 	}
 	return 0
 }
