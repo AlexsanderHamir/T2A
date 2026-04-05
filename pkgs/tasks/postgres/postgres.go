@@ -21,6 +21,11 @@ const (
 	defaultConnMaxIdleTime = 5 * time.Minute
 )
 
+// DefaultMigrateTimeout is the recommended upper bound for [Migrate] from operators
+// (taskapi startup, dbcheck -migrate). Tests and fast local runs may use a shorter deadline or
+// [context.Background] when AutoMigrate is expected to finish quickly.
+const DefaultMigrateTimeout = 2 * time.Minute
+
 func configureSQLPool(sqldb *sql.DB) {
 	slog.Debug("trace", "operation", "postgres.configureSQLPool")
 	sqldb.SetMaxOpenConns(defaultMaxOpenConns)

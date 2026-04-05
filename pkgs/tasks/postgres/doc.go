@@ -6,4 +6,6 @@
 // For long-lived servers, use [ConfigWithSlogLogger] with [log/slog.Default] so SQL traces share the
 // process JSON log sink; one-off tools can pass [gorm.Config] with a silent logger instead.
 // SQL slower than T2A_GORM_SLOW_QUERY_MS (default 200; 0 disables) is logged at Warn.
+//
+// [DefaultMigrateTimeout] documents the shared AutoMigrate deadline used by taskapi and dbcheck -migrate.
 package postgres

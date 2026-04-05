@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	dbPingTimeout    = 30 * time.Second
-	dbMigrateTimeout = 2 * time.Minute // same wall clock as taskapi startup migrate (cmd/taskapi/run.go)
-	cmdName          = "dbcheck"
+	dbPingTimeout = 30 * time.Second
+	cmdName       = "dbcheck"
 )
 
 type options struct {
@@ -61,7 +60,7 @@ func run(o options) error {
 		"ping_timeout_sec", pingSec,
 	}
 	if o.migrate {
-		startArgs = append(startArgs, "migrate_timeout_sec", int(dbMigrateTimeout/time.Second))
+		startArgs = append(startArgs, "migrate_timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
 	}
 	slog.Info("dbcheck starting", startArgs...)
 
@@ -90,8 +89,8 @@ func migrateIfRequested(db *gorm.DB, want bool) error {
 	if !want {
 		return nil
 	}
-	// Dedicated deadline: migrate can exceed pingTimeout; match taskapi migrate bound.
-	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), dbMigrateTimeout)
+	// Dedicated deadline: migrate can exceed pingTimeout; same bound as taskapi startup (postgres.DefaultMigrateTimeout).
+	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), postgres.DefaultMigrateTimeout)
 	defer migrateCancel()
 	if err := postgres.Migrate(migrateCtx, db); err != nil {
 		return fmt.Errorf("postgres.Migrate: %w", err)

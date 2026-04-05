@@ -24,9 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// migrateStartupTimeout bounds postgres.Migrate (AutoMigrate) so a stuck DB cannot block startup forever.
-const migrateStartupTimeout = 2 * time.Minute
-
 func run() int {
 	port := flag.String("port", "8080", "HTTP listen port")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
@@ -103,17 +100,17 @@ func run() int {
 		return 1
 	}
 
-	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), migrateStartupTimeout)
+	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), postgres.DefaultMigrateTimeout)
 	defer migrateCancel()
 	if err := postgres.Migrate(migrateCtx, db); err != nil {
 		slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate",
 			"err", err,
 			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded),
-			"timeout_sec", int(migrateStartupTimeout/time.Second))
+			"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
 		return 1
 	}
 	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate",
-		"timeout_sec", int(migrateStartupTimeout/time.Second))
+		"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
 
 	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)
 
