@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -12,8 +14,9 @@ type checklistItemCreateJSON struct {
 	Text string `json:"text"`
 }
 
-type checklistItemDoneJSON struct {
-	Done bool `json:"done"`
+type patchChecklistItemBody struct {
+	Text *string `json:"text,omitempty"`
+	Done *bool   `json:"done,omitempty"`
 }
 
 type checklistListResponse struct {
@@ -57,23 +60,42 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusCreated, it)
 }
 
-func (h *Handler) patchChecklistItemDone(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchChecklistItemDone")
-	const op = "tasks.checklist.done"
+func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchChecklistItem")
+	const op = "tasks.checklist.patch"
 	r = withCallRoot(r, op)
 	taskID := strings.TrimSpace(r.PathValue("id"))
 	itemID := strings.TrimSpace(r.PathValue("itemId"))
-	var body checklistItemDoneJSON
+	var body patchChecklistItemBody
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "task_id", taskID, "item_id", itemID, "json_decode_failed", true)
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
-	by := actorFromRequest(r)
-	debugHTTPRequest(r, op, "task_id", taskID, "item_id", itemID, "done", body.Done, "actor", string(by))
-	if err := h.store.SetChecklistItemDone(r.Context(), taskID, itemID, body.Done, by); err != nil {
-		writeStoreError(w, r, op, err)
+	textSet := body.Text != nil
+	doneSet := body.Done != nil
+	if textSet == doneSet {
+		writeStoreError(w, r, op, fmt.Errorf("%w: send exactly one of text or done", domain.ErrInvalidInput))
 		return
+	}
+	by := actorFromRequest(r)
+	if textSet {
+		t := strings.TrimSpace(*body.Text)
+		debugHTTPRequest(r, op, "task_id", taskID, "item_id", itemID, "text_len", len(t), "text_preview", truncateRunes(t, maxHTTPLogTextRunes), "actor", string(by))
+		if t == "" {
+			writeStoreError(w, r, op, fmt.Errorf("%w: text required", domain.ErrInvalidInput))
+			return
+		}
+		if err := h.store.UpdateChecklistItemText(r.Context(), taskID, itemID, t, by); err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+	} else {
+		debugHTTPRequest(r, op, "task_id", taskID, "item_id", itemID, "done", *body.Done, "actor", string(by))
+		if err := h.store.SetChecklistItemDone(r.Context(), taskID, itemID, *body.Done, by); err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
 	}
 	h.notifyChange(TaskUpdated, taskID)
 	items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
@@ -91,7 +113,8 @@ func (h *Handler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	itemID := strings.TrimSpace(r.PathValue("itemId"))
 	debugHTTPRequest(r, op, "task_id", id, "item_id", itemID)
-	if err := h.store.DeleteChecklistItem(r.Context(), id, itemID); err != nil {
+	by := actorFromRequest(r)
+	if err := h.store.DeleteChecklistItem(r.Context(), id, itemID, by); err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}

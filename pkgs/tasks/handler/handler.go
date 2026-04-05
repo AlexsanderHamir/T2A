@@ -37,7 +37,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	m.Handle("GET /tasks", http.HandlerFunc(h.list))
 	m.Handle("GET /tasks/{id}/checklist", http.HandlerFunc(h.getChecklist))
 	m.Handle("POST /tasks/{id}/checklist/items", http.HandlerFunc(h.postChecklistItem))
-	m.Handle("PATCH /tasks/{id}/checklist/items/{itemId}", http.HandlerFunc(h.patchChecklistItemDone))
+	m.Handle("PATCH /tasks/{id}/checklist/items/{itemId}", http.HandlerFunc(h.patchChecklistItem))
 	m.Handle("DELETE /tasks/{id}/checklist/items/{itemId}", http.HandlerFunc(h.deleteChecklistItem))
 	m.Handle("GET /tasks/{id}/events/{seq}", http.HandlerFunc(h.taskEvent))
 	m.Handle("PATCH /tasks/{id}/events/{seq}", http.HandlerFunc(h.patchTaskEventUserResponse))

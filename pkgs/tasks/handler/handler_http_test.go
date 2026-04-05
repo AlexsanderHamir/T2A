@@ -885,6 +885,159 @@ func TestHTTP_repo_validate_range_missing_params(t *testing.T) {
 	}
 }
 
+func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	it, err := st.AddChecklistItem(ctx, created.ID, "alpha", domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch,
+		srv.URL+"/tasks/"+created.ID+"/checklist/items/"+it.ID,
+		strings.NewReader(`{"text":"beta"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resPatch, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchBody, err := io.ReadAll(resPatch.Body)
+	if cerr := resPatch.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resPatch.StatusCode != http.StatusOK {
+		t.Fatalf("patch %d %s", resPatch.StatusCode, patchBody)
+	}
+	var out struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Text string `json:"text"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(patchBody, &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Items) != 1 || out.Items[0].Text != "beta" {
+		t.Fatalf("items %#v", out.Items)
+	}
+}
+
+func TestHTTP_patch_checklist_item_done_rejects_default_user_actor(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	it, err := st.AddChecklistItem(ctx, created.ID, "c", domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch,
+		srv.URL+"/tasks/"+created.ID+"/checklist/items/"+it.ID,
+		strings.NewReader(`{"done":true}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resPatch, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resPatch.Body.Close()
+	if resPatch.StatusCode != http.StatusBadRequest {
+		t.Fatalf("user done patch want 400, got %d", resPatch.StatusCode)
+	}
+}
+
+func TestHTTP_patch_checklist_item_rejects_text_and_done_together(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	it, err := st.AddChecklistItem(ctx, created.ID, "c", domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch,
+		srv.URL+"/tasks/"+created.ID+"/checklist/items/"+it.ID,
+		strings.NewReader(`{"text":"x","done":true}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resPatch, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resPatch.Body.Close()
+	if resPatch.StatusCode != http.StatusBadRequest {
+		t.Fatalf("both fields want 400, got %d", resPatch.StatusCode)
+	}
+}
+
 func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "a.txt")

@@ -16,7 +16,7 @@
 //   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0, default 0) apply to roots; each element includes nested children[]
 //   - GET    /tasks/{id}/checklist — 200 + JSON { items: [{ id, sort_order, text, done }] } for this task (definition from self or inherited ancestor)
 //   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row; 400 if checklist_inherit
-//   - PATCH  /tasks/{id}/checklist/items/{itemId} — body { done: bool }; 200 + full { items } list; X-Actor must be agent (400 if user)
+//   - PATCH  /tasks/{id}/checklist/items/{itemId} — exactly one of { text } (non-empty) or { done: bool }; 200 + full { items }; done requires X-Actor agent; text allowed for user or agent; 400 if checklist_inherit
 //   - DELETE /tasks/{id}/checklist/items/{itemId} — 204; 400 if checklist_inherit
 //   - GET    /tasks/{id}/events/{seq} — 200 + JSON { task_id, seq, at, type, by, data }; 404 if no such row; 400 if seq invalid
 //   - GET    /tasks/{id}/events — 200 + JSON { task_id, events[], approval_pending }; optional query limit (0–200) with keyset cursors before_seq / after_seq (positive ints, mutually exclusive) for paging (newest first; stable under concurrent inserts). offset is rejected. Unpaged full list when limit, before_seq, and after_seq are all omitted; 404 if task missing
