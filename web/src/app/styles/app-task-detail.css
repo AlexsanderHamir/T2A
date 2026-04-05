@@ -466,7 +466,7 @@ button.task-detail-checklist-remove:focus-visible {
   padding: 1rem 1.1rem;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  background: rgb(0 0 0 / 2%);
+  background: var(--neutral-fill-faint);
 }
 
 .checkbox-label {
@@ -726,7 +726,7 @@ button.task-detail-checklist-remove:focus-visible {
   padding: 1rem 1.1rem;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  background: rgb(0 0 0 / 2%);
+  background: var(--neutral-fill-faint);
 }
 
 .checkbox-label {

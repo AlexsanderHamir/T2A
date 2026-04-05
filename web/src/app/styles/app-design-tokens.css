@@ -182,6 +182,14 @@
   /* Primary actions — brand (single clear CTA color) */
   --ink: #0a0a0a;
   --ink-soft: #171717;
+  /* Black-alpha on light UI — code wells, badges, hairline chrome (DS §3 / §6) */
+  --neutral-fill-faint: rgb(0 0 0 / 2%);
+  --neutral-fill-ghost: rgb(0 0 0 / 3%);
+  --neutral-fill-muted: rgb(0 0 0 / 4%);
+  --neutral-fill-subtle: rgb(0 0 0 / 5%);
+  --neutral-border-soft: rgb(0 0 0 / 9%);
+  --neutral-lip-shadow: 0 1px 0 rgb(0 0 0 / 4%);
+  --shadow-neutral-micro: 0 1px 2px rgb(0 0 0 / 6%);
 
   --border-hairline: rgb(0 0 0 / 8%);
   --border-soft: rgb(0 0 0 / 12%);
@@ -300,6 +308,14 @@
     --border-soft: rgb(255 255 255 / 12%);
     --border-strong: rgb(255 255 255 / 14%);
     --border-interactive-hover: rgb(255 255 255 / 16%);
+    /* Lift + wells on dark surfaces (DS §14) */
+    --neutral-fill-faint: rgb(255 255 255 / 4%);
+    --neutral-fill-ghost: rgb(255 255 255 / 5%);
+    --neutral-fill-muted: rgb(255 255 255 / 6%);
+    --neutral-fill-subtle: rgb(255 255 255 / 8%);
+    --neutral-border-soft: rgb(255 255 255 / 14%);
+    --neutral-lip-shadow: 0 1px 0 rgb(255 255 255 / 6%);
+    --shadow-neutral-micro: 0 1px 2px rgb(0 0 0 / 48%);
 
     --shadow-xs: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-sm: 0 1px 3px rgb(0 0 0 / 45%), 0 1px 2px rgb(0 0 0 / 35%);

@@ -162,7 +162,7 @@
   background: var(--bg-subtle);
   border-color: var(--border-interactive-hover);
   transform: none;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  box-shadow: var(--shadow-neutral-micro);
 }
 
 .task-list-table .actions .btn-table.danger:not(:disabled):hover {
@@ -333,7 +333,7 @@
 }
 
 .mention-option button:hover {
-  background: rgb(0 0 0 / 4%);
+  background: var(--neutral-fill-muted);
 }
 
 .mention-option.highlight button {

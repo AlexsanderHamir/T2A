@@ -309,7 +309,7 @@ textarea::placeholder {
   font-size: var(--text-help);
   color: var(--text-tertiary);
   border-radius: var(--radius-sm);
-  border: 1px solid rgb(0 0 0 / 9%);
+  border: 1px solid var(--neutral-border-soft);
   background: rgb(255 255 255 / 72%);
   backdrop-filter: blur(8px);
   box-shadow: var(--shadow-sm);
@@ -359,7 +359,7 @@ textarea::placeholder {
   font-size: 0.85em;
   padding: 0.1em 0.35em;
   border-radius: var(--radius-sm);
-  background: rgb(0 0 0 / 4%);
+  background: var(--neutral-fill-muted);
 }
 
 .sub {
@@ -374,7 +374,7 @@ textarea::placeholder {
   font-size: 0.75rem;
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-full);
-  background: rgb(0 0 0 / 5%);
+  background: var(--neutral-fill-subtle);
   color: var(--text-secondary);
 }
 
@@ -389,7 +389,7 @@ textarea::placeholder {
 }
 
 .badge.sync {
-  background: rgb(0 0 0 / 5%);
+  background: var(--neutral-fill-subtle);
   color: var(--text-secondary);
 }
 

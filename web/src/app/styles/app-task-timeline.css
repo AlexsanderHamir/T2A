@@ -211,7 +211,7 @@ a.task-timeline-item-hit {
   padding: 0.5rem 0.65rem;
   font-size: var(--text-help);
   font-family: var(--font-mono);
-  background: rgb(0 0 0 / 3%);
+  background: var(--neutral-fill-ghost);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-hairline);
   white-space: pre-wrap;
@@ -319,7 +319,7 @@ a.task-timeline-item-hit {
   padding: 0.55rem 0.75rem 0.6rem;
   border-radius: var(--radius-thread-bubble);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  box-shadow: var(--shadow-neutral-micro);
 }
 
 .task-event-detail-thread-item--agent .task-event-detail-thread-bubble {
