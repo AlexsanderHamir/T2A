@@ -1,5 +1,22 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+
+function focusableSelector(): string {
+  return [
+    "a[href]:not([disabled])",
+    "button:not([disabled])",
+    "textarea:not([disabled])",
+    'input:not([disabled]):not([type="hidden"])',
+    "select:not([disabled])",
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(", ");
+}
+
+function listFocusables(shell: HTMLElement): HTMLElement[] {
+  return Array.from(shell.querySelectorAll<HTMLElement>(focusableSelector())).filter(
+    (el) => !el.closest("[aria-hidden='true']"),
+  );
+}
 
 type Props = {
   children: ReactNode;
@@ -28,6 +45,61 @@ export function Modal({
   lockBodyScroll = true,
   stack = "default",
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const shell = shellRef.current;
+    if (!root || !shell) return;
+
+    const previous =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const raf = requestAnimationFrame(() => {
+      if (busy) return;
+      if (shell.contains(document.activeElement)) return;
+      const list = listFocusables(shell);
+      if (list.length > 0) {
+        list[0]?.focus();
+      } else {
+        shell.focus();
+      }
+    });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || busy) return;
+      const active = document.activeElement;
+      if (!(active instanceof Node) || !root.contains(active)) return;
+
+      const list = listFocusables(shell);
+      if (list.length === 0) return;
+
+      const first = list[0]!;
+      const last = list[list.length - 1]!;
+
+      if (e.shiftKey) {
+        if (active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", onKeyDown, true);
+      if (previous?.isConnected && typeof previous.focus === "function") {
+        previous.focus();
+      }
+    };
+  }, [busy, labelledBy]);
+
   useEffect(() => {
     if (!lockBodyScroll) return;
     const prev = document.body.style.overflow;
@@ -49,7 +121,7 @@ export function Modal({
     stack === "nested" ? "modal-root modal-root--nested" : "modal-root";
 
   return createPortal(
-    <div className={rootClass}>
+    <div className={rootClass} ref={rootRef}>
       <div
         className="modal-backdrop"
         aria-hidden="true"
@@ -58,6 +130,7 @@ export function Modal({
         }}
       />
       <div
+        ref={shellRef}
         className={
           size === "wide" ? "modal-shell modal-shell--wide" : "modal-shell"
         }
@@ -65,6 +138,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-busy={busy}
+        tabIndex={-1}
       >
         {children}
         {busy ? (
