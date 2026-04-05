@@ -10,6 +10,7 @@
 }
 
 button.custom-select-trigger {
+  font: inherit;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -32,9 +33,16 @@ button.custom-select-trigger {
 button.custom-select-trigger:hover:not(:disabled) {
   transform: none;
   filter: none;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   border-color: rgb(var(--slate-shadow) / 16%);
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm),
     0 4px 14px rgb(var(--slate-shadow) / 6%);
+}
+
+button.custom-select-trigger:active:not(:disabled) {
+  transform: none;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, var(--shadow-sm);
 }
 
 button.custom-select-trigger:focus-visible {
@@ -98,7 +106,8 @@ textarea {
   resize: vertical;
 }
 
-button {
+/* Primary CTA buttons only — combobox triggers are separate (see .custom-select-trigger). */
+button:not(.custom-select-trigger) {
   font: inherit;
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -114,14 +123,14 @@ button {
   box-shadow: var(--shadow-sm);
 }
 
-button:not(:disabled):hover {
+button:not(.custom-select-trigger):not(:disabled):hover {
   background: var(--brand-hover);
   box-shadow: var(--shadow-md);
   transform: none;
   filter: none;
 }
 
-button:not(:disabled):active {
+button:not(.custom-select-trigger):not(:disabled):active {
   transform: scale(0.98);
   box-shadow: var(--shadow-sm);
 }
