@@ -292,7 +292,7 @@
 
 .mention-dropdown {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-mention-popover);
   left: 0;
   right: 0;
   top: 100%;

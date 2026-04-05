@@ -3,7 +3,7 @@
 .modal-root {
   position: fixed;
   inset: 0;
-  z-index: 11000;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +14,7 @@
 }
 
 .modal-root--nested {
-  z-index: 12050;
+  z-index: var(--z-modal-nested);
 }
 
 .modal-backdrop {
@@ -69,7 +69,7 @@
 .modal-busy-overlay {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: var(--z-modal-busy);
   display: flex;
   align-items: center;
   justify-content: center;

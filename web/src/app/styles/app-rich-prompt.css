@@ -113,5 +113,5 @@
 
 .tiptap-suggestion-list {
   position: relative;
-  z-index: 20;
+  z-index: var(--z-rich-prompt-float);
 }

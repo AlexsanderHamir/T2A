@@ -34,6 +34,17 @@
   --bp-xl: 1280px;
   --bp-2xl: 1536px;
 
+  /* Stacking — portal popover must sit above modals (CustomSelect list); skip link wins overall */
+  --z-mention-popover: 10;
+  --z-rich-prompt-float: 20;
+  --z-sticky: 50;
+  --z-modal: 11000;
+  --z-modal-nested: 12050;
+  --z-portal-popover: 13000;
+  --z-modal-content: 1;
+  --z-modal-busy: 3;
+  --z-skip-link: 100001;
+
   /* Typography scale (rem) */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -64,6 +75,7 @@
   --duration-short: 200ms;
   --duration-slow: 350ms;
   --duration-slower: 500ms;
+  --duration-toast: 300ms;
 
   /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
   --slate-shadow: 15 23 42;
@@ -129,6 +141,10 @@
   --warning: #f59e0b;
   --warning-soft: rgb(245 158 11 / 14%);
 
+  --info: #3b82f6;
+  --info-soft: rgb(59 130 246 / 14%);
+  --color-info-subtle: #dbeafe;
+
   font-family: var(--font-sans);
   line-height: 1.5;
   font-size: var(--text-md);
@@ -173,6 +189,8 @@
     --color-error-subtle: rgb(127 29 29 / 35%);
     --color-warning-subtle: rgb(120 53 15 / 35%);
     --warning-soft: rgb(245 158 11 / 20%);
+    --info-soft: rgb(59 130 246 / 22%);
+    --color-info-subtle: rgb(30 58 138 / 38%);
     --overlay-backdrop: rgb(0 0 0 / 58%);
 
     color-scheme: dark;

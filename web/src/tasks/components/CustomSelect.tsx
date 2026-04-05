@@ -252,8 +252,8 @@ export function CustomSelect({
           top: pos.top,
           left: pos.left,
           width: Math.max(pos.width, compact ? 10 * 16 : 12 * 16),
-          /* Above .modal-root (11k) and .modal-root--nested (12050); list is portaled to body. */
-          zIndex: 13000,
+          /* Above modals — matches --z-portal-popover in app-design-tokens.css */
+          zIndex: "var(--z-portal-popover)",
         }}
         onKeyDown={onListKeyDown}
       >
