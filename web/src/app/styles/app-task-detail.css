@@ -148,7 +148,7 @@ button.task-detail-btn-edit:not(:disabled):hover {
 
 button.task-detail-btn-edit:focus-visible {
   outline: none;
-  border-color: rgb(var(--brand-rgb) / 35%);
+  border-color: var(--brand-border-focus);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -272,7 +272,7 @@ button.task-detail-add-checklist-btn:not(:disabled):hover {
 button.task-detail-add-subtask-btn:focus-visible,
 button.task-detail-add-checklist-btn:focus-visible {
   outline: none;
-  border-color: rgb(var(--brand-rgb) / 35%);
+  border-color: var(--brand-border-focus);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -291,7 +291,7 @@ button.task-home-new-task-btn {
   letter-spacing: var(--text-button-tracking);
   color: var(--text-on-brand);
   background: var(--brand);
-  border: 1px solid rgb(var(--brand-rgb) / 28%);
+  border: 1px solid var(--brand-border-cta);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: background var(--duration-normal) var(--ease-out),
@@ -366,7 +366,7 @@ button.task-detail-checklist-add-btn:not(:disabled):hover {
 
 button.task-detail-checklist-add-btn:focus-visible {
   outline: none;
-  border-color: rgb(var(--brand-rgb) / 35%);
+  border-color: var(--brand-border-focus);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -392,7 +392,7 @@ button.task-detail-checklist-edit {
 
 button.task-detail-checklist-edit:not(:disabled):hover {
   background: var(--brand-muted);
-  border-color: rgb(var(--brand-rgb) / 18%);
+  border-color: var(--brand-border-subtle);
   transform: none;
   filter: none;
 }
@@ -786,7 +786,7 @@ button.task-detail-checklist-remove:focus-visible {
   color: var(--brand-hover);
   background: var(--brand-muted);
   text-decoration: underline;
-  text-decoration-color: rgb(var(--brand-rgb) / 35%);
+  text-decoration-color: var(--brand-border-focus);
   text-underline-offset: 0.2em;
 }
 
@@ -821,7 +821,7 @@ button.task-detail-checklist-remove:focus-visible {
   flex-shrink: 0;
   font-size: 0.65rem;
   line-height: 1;
-  color: rgb(var(--brand-rgb) / 55%);
+  color: var(--brand-text-strong);
   transition:
     transform var(--duration-normal) var(--ease-out),
     color var(--duration-fast) var(--ease-out);

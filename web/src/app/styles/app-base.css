@@ -599,7 +599,7 @@ textarea::placeholder {
   letter-spacing: var(--text-button-tracking);
   color: var(--text-on-brand);
   background: var(--brand);
-  border: 1px solid rgb(var(--brand-rgb) / 28%);
+  border: 1px solid var(--brand-border-cta);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition:

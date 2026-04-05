@@ -46,7 +46,7 @@ button.custom-select-trigger:active:not(:disabled) {
 
 button.custom-select-trigger:focus-visible {
   outline: none;
-  border-color: rgb(var(--brand-rgb) / 40%);
+  border-color: var(--brand-border-emphasis);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 

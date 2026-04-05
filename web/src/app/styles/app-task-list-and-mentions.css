@@ -52,13 +52,13 @@
   flex-shrink: 0;
   font-size: 0.85em;
   font-weight: 500;
-  color: rgb(var(--brand-rgb) / 45%);
+  color: var(--brand-text-muted);
   line-height: 1;
 }
 
 @media (hover: hover) {
   .task-list-table .cell-title-link:hover .cell-title-open-hint {
-    color: rgb(var(--brand-rgb) / 72%);
+    color: var(--brand-text-on-surface-hover);
   }
 }
 
@@ -87,7 +87,7 @@
 .cell-pill--status-running {
   background: var(--brand-muted);
   color: var(--brand-deep);
-  border-color: rgb(var(--brand-rgb) / 22%);
+  border-color: var(--brand-border-soft);
 }
 
 .cell-pill--status-blocked {
