@@ -12,17 +12,6 @@ export function TaskHome({ app }: Props) {
 
   return (
     <>
-      <div className="task-home-toolbar">
-        <button
-          type="button"
-          className="task-home-new-task-btn"
-          onClick={app.openCreateModal}
-          disabled={app.createModalOpen}
-        >
-          New task
-        </button>
-      </div>
-
       {app.createModalOpen ? (
         <TaskCreateModal
           pending={app.createPending}
@@ -51,6 +40,16 @@ export function TaskHome({ app }: Props) {
       ) : null}
 
       <TaskListSection
+        actions={
+          <button
+            type="button"
+            className="task-home-new-task-btn"
+            onClick={app.openCreateModal}
+            disabled={app.createModalOpen}
+          >
+            New task
+          </button>
+        }
         tasks={app.tasks}
         rootTasksOnPage={app.rootTasksOnPage}
         loading={app.loading}

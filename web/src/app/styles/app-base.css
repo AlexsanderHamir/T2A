@@ -627,7 +627,8 @@ textarea:focus-visible,
   position: relative;
   background: var(--bg-elevated);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  /* Match .app / sticky header horizontal gutter (1.25rem) for column alignment */
+  padding: 1.5rem 1.25rem;
   margin-bottom: 1.25rem;
   border: 1px solid var(--border-hairline);
   box-shadow: none;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
@@ -52,6 +52,8 @@ type Props = {
   onRequestDelete: (t: Task) => void;
   /** Primary action when the server returned no tasks (e.g. open create modal). */
   emptyListAction?: EmptyStateAction;
+  /** Optional toolbar on the title row (e.g. home “New task”). */
+  actions?: ReactNode;
 };
 
 type StatusFilter = "all" | Status;
@@ -81,6 +83,7 @@ export function TaskListSection({
   onEdit,
   onRequestDelete,
   emptyListAction,
+  actions,
 }: Props) {
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
@@ -146,7 +149,14 @@ export function TaskListSection({
 
   return (
     <section className="panel" aria-labelledby="task-list-heading">
-      <h2 id="task-list-heading">All tasks</h2>
+      {actions ? (
+        <div className="task-list-section-head">
+          <h2 id="task-list-heading">All tasks</h2>
+          <div className="task-list-section-actions">{actions}</div>
+        </div>
+      ) : (
+        <h2 id="task-list-heading">All tasks</h2>
+      )}
       {refreshing && !loading && !hideBackgroundRefreshHint ? (
         <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…
