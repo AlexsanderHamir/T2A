@@ -33,7 +33,9 @@ describe("TaskListSection", () => {
         onRequestDelete={vi.fn()}
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(
+      screen.getByRole("status", { name: "Loading tasks" }),
+    ).toBeInTheDocument();
   });
 
   it("shows syncing status when refreshing", () => {
