@@ -121,12 +121,13 @@ func run() int {
 		rep = r
 		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
 	}
-	if lim := handler.RateLimitPerMinuteConfigured(); lim > 0 {
-		slog.Info("rate limit enabled", "cmd", cmdName, "operation", "taskapi.rate_limit", "per_ip_per_min", lim)
-	}
-	if mb := handler.MaxRequestBodyBytesConfigured(); mb > 0 {
-		slog.Info("max request body limit enabled", "cmd", cmdName, "operation", "taskapi.max_body", "max_bytes", mb)
-	}
+	rlim := handler.RateLimitPerMinuteConfigured()
+	slog.Info("rate limit config", "cmd", cmdName, "operation", "taskapi.rate_limit",
+		"enabled", rlim > 0, "per_ip_per_min", rlim)
+
+	mb := handler.MaxRequestBodyBytesConfigured()
+	slog.Info("max request body config", "cmd", cmdName, "operation", "taskapi.max_body",
+		"enabled", mb > 0, "max_bytes", mb)
 	idemTTL := handler.IdempotencyTTL()
 	idemSec := int(idemTTL / time.Second)
 	if idemTTL > 0 && idemSec == 0 {
