@@ -194,6 +194,11 @@
   --danger-deep: #b91c1c;
   --danger-bright: #ef4444;
   --danger-soft: rgb(239 68 68 / 10%);
+  /* Error banners / inline danger chrome (DS §11) */
+  --danger-border: rgb(239 68 68 / 22%);
+  --danger-border-strong: rgb(239 68 68 / 35%);
+  --danger-muted-hover-fill: rgb(239 68 68 / 8%);
+  --danger-muted-hover-border: rgb(239 68 68 / 50%);
 
   --color-error-subtle: #fee2e2;
   --color-warning-subtle: #fef3c7;
@@ -251,6 +256,10 @@
     --success-mesh: rgb(0 169 110 / 8%);
 
     --danger-soft: rgb(239 68 68 / 16%);
+    --danger-border: rgb(248 113 113 / 28%);
+    --danger-border-strong: rgb(248 113 113 / 40%);
+    --danger-muted-hover-fill: rgb(248 113 113 / 12%);
+    --danger-muted-hover-border: rgb(248 113 113 / 55%);
     --color-error-subtle: rgb(127 29 29 / 35%);
     --color-warning-subtle: rgb(120 53 15 / 35%);
     --warning-soft: rgb(245 158 11 / 20%);
