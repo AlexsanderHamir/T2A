@@ -601,6 +601,10 @@ textarea::placeholder {
   color: var(--text-secondary);
 }
 
+.empty-state--compact .empty-state__description {
+  max-width: var(--layout-empty-description-max-compact);
+}
+
 .empty-state__actions {
   margin-top: var(--space-4);
 }

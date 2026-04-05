@@ -117,87 +117,85 @@ export function TaskDetailChecklistSection({
         ) : null}
       </div>
       <div
-        className="task-checklist-surface"
+        className="task-detail-checklist-body"
         aria-labelledby="task-checklist-heading"
       >
         {checklistQuery.isError ? (
-          <p className="err-inline task-checklist-surface-pad" role="alert">
-            {checklistQuery.error instanceof Error
-              ? checklistQuery.error.message
-              : "Could not load checklist."}
-          </p>
+          <div className="task-checklist-surface">
+            <p className="err-inline task-checklist-surface-pad" role="alert">
+              {checklistQuery.error instanceof Error
+                ? checklistQuery.error.message
+                : "Could not load checklist."}
+            </p>
+          </div>
         ) : checklistQuery.isPending ? (
-          <TaskChecklistSkeleton />
-        ) : (
-          <ul
-            className={
-              (checklistQuery.data?.items.length ?? 0) > 0
-                ? "task-checklist-list task-checklist-list--grouped"
-                : "task-checklist-list task-checklist-list--grouped task-checklist-list--empty"
+          <div className="task-checklist-surface">
+            <TaskChecklistSkeleton />
+          </div>
+        ) : (checklistQuery.data?.items.length ?? 0) === 0 ? (
+          <EmptyState
+            density="compact"
+            className="task-detail-section-empty"
+            icon={<EmptyStateChecklistGlyph />}
+            title="No criteria yet"
+            description={
+              <>
+                Use <strong>Add criterion</strong> above to describe what must
+                be true before this task can be marked done.
+              </>
             }
-          >
-            {(checklistQuery.data?.items.length ?? 0) === 0 ? (
-              <li className="task-checklist-empty-row">
-                <EmptyState
-                  density="compact"
-                  icon={<EmptyStateChecklistGlyph />}
-                  title="No criteria yet"
-                  description={
-                    <>
-                      Use <strong>Add criterion</strong> above to describe what
-                      must be true before this task can be marked done.
-                    </>
-                  }
-                />
-              </li>
-            ) : null}
-            {checklistQuery.data?.items.map((item) => (
-              <li key={item.id} className="task-checklist-row">
-                <div className="task-checklist-row-main">
-                  <span
-                    className={
-                      item.done
-                        ? "task-checklist-status task-checklist-status--done"
-                        : "task-checklist-status task-checklist-status--pending"
-                    }
-                    role="img"
-                    aria-label={
-                      item.done ? "Satisfied" : "Not satisfied yet"
-                    }
-                  >
-                    {item.done ? "✓" : null}
-                  </span>
-                  <span className="task-checklist-text">{item.text}</span>
-                </div>
-                {!checklistInherit ? (
-                  <div className="task-checklist-row-actions">
-                    <button
-                      type="button"
-                      className="task-detail-checklist-edit"
-                      disabled={
-                        editCriterionPending ||
-                        removeItemPending ||
-                        addCriterionPending
+          />
+        ) : (
+          <div className="task-checklist-surface">
+            <ul className="task-checklist-list task-checklist-list--grouped">
+              {(checklistQuery.data?.items ?? []).map((item) => (
+                <li key={item.id} className="task-checklist-row">
+                  <div className="task-checklist-row-main">
+                    <span
+                      className={
+                        item.done
+                          ? "task-checklist-status task-checklist-status--done"
+                          : "task-checklist-status task-checklist-status--pending"
                       }
-                      onClick={() =>
-                        onOpenEditCriterionModal(item.id, item.text)
+                      role="img"
+                      aria-label={
+                        item.done ? "Satisfied" : "Not satisfied yet"
                       }
                     >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="task-detail-checklist-remove"
-                      disabled={removeItemPending}
-                      onClick={() => onRemoveChecklistItem(item.id)}
-                    >
-                      Remove
-                    </button>
+                      {item.done ? "✓" : null}
+                    </span>
+                    <span className="task-checklist-text">{item.text}</span>
                   </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                  {!checklistInherit ? (
+                    <div className="task-checklist-row-actions">
+                      <button
+                        type="button"
+                        className="task-detail-checklist-edit"
+                        disabled={
+                          editCriterionPending ||
+                          removeItemPending ||
+                          addCriterionPending
+                        }
+                        onClick={() =>
+                          onOpenEditCriterionModal(item.id, item.text)
+                        }
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="task-detail-checklist-remove"
+                        disabled={removeItemPending}
+                        onClick={() => onRemoveChecklistItem(item.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
       {modalOpen && !checklistInherit ? (

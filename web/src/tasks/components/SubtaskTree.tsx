@@ -19,6 +19,7 @@ export function SubtaskTree({
       <EmptyState
         id="task-subtasks-empty"
         density="compact"
+        className="task-detail-section-empty"
         icon={<EmptyStateSubtasksGlyph />}
         title="No subtasks yet"
         description={

@@ -583,6 +583,11 @@ button.task-detail-checklist-remove:focus-visible {
   padding: 0;
 }
 
+.task-detail-panel .task-detail-section-empty.empty-state--compact {
+  margin-top: 0.15rem;
+  max-width: min(40rem, 100%);
+}
+
 .task-checklist-intro {
   margin: 0 0 0.85rem;
   max-width: 40rem;
@@ -629,15 +634,6 @@ button.task-detail-checklist-remove:focus-visible {
   margin: 0;
   padding: 0;
   background: var(--bg-elevated);
-}
-
-.task-checklist-list--grouped.task-checklist-list--empty .task-checklist-empty-row {
-  border-bottom: none;
-}
-
-.task-checklist-empty-row {
-  padding: 0.85rem 1rem;
-  font-size: var(--text-sm);
 }
 
 .task-checklist-list--grouped .task-checklist-row {

@@ -183,6 +183,8 @@
   --layout-empty-max-compact: 28rem;
   --layout-empty-max-in-table: 22rem;
   --layout-empty-description-max: 17.5rem;
+  /* Section-scale compact empties (task detail): readable line length without tiny columns */
+  --layout-empty-description-max-compact: min(40rem, 100%);
 
   /* Modal viewport gutter (safe-area aware rules in app-modals.css) */
   --layout-modal-safe-padding: var(--space-4);

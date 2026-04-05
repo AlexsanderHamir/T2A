@@ -180,7 +180,8 @@
   letter-spacing: -0.01em;
 }
 
-.empty-state {
+/* Table empty only — do not target global .empty-state (breaks compact / task-detail empties). */
+.task-list-empty-cell .empty-state {
   text-align: center;
   padding: var(--space-8) var(--space-4);
   font-size: var(--text-base);
