@@ -163,9 +163,10 @@ func decodeJSON(ctx context.Context, r io.Reader, dst any) (err error) {
 	return err
 }
 
-// setAPISecurityHeaders sets baseline hardening headers for browser-facing HTTP responses (JSON, SSE, and plain-text errors).
-func setAPISecurityHeaders(w http.ResponseWriter) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setAPISecurityHeaders")
+// applyAPISecurityHeaders sets baseline hardening headers without logging.
+// High-frequency paths (for example Prometheus scrapes) use this alone; JSON uses it from setJSONHeaders
+// so each response does not emit both setJSONHeaders and setAPISecurityHeaders trace lines.
+func applyAPISecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Referrer-Policy", "no-referrer")
@@ -174,19 +175,26 @@ func setAPISecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
 }
 
+// setAPISecurityHeaders sets baseline hardening headers for browser-facing HTTP responses (SSE, plain-text errors, idempotency replay).
+func setAPISecurityHeaders(w http.ResponseWriter) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setAPISecurityHeaders")
+	applyAPISecurityHeaders(w)
+}
+
 // WrapPrometheusHandler applies the same baseline response hardening as API routes
-// (see setAPISecurityHeaders) before delegating to the Prometheus registry handler.
+// (see applyAPISecurityHeaders) before delegating to the Prometheus registry handler.
 // Scrapers ignore these headers; they help when /metrics is opened in a browser.
+// Per-scrape debug trace is omitted so metrics polling does not flood logs at level debug.
 func WrapPrometheusHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		setAPISecurityHeaders(w)
+		applyAPISecurityHeaders(w)
 		next.ServeHTTP(w, r)
 	})
 }
 
 func setJSONHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setJSONHeaders")
-	setAPISecurityHeaders(w)
+	applyAPISecurityHeaders(w)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 }
 
