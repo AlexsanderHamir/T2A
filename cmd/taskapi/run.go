@@ -205,6 +205,7 @@ func run() int {
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sig)
 
 	shutdownViaSignal := false
 	select {
