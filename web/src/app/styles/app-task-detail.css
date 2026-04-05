@@ -153,7 +153,7 @@ button.task-detail-btn-delete {
   padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: #fff;
+  color: var(--text-on-brand);
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   border: 1px solid rgb(159 18 57 / 35%);
   box-shadow: 0 1px 2px rgb(180 30 30 / 15%);
@@ -285,7 +285,7 @@ button.task-home-new-task-btn {
   font-weight: 500;
   font-size: var(--text-sm);
   letter-spacing: 0.01em;
-  color: #fff;
+  color: var(--text-on-brand);
   background: var(--brand);
   border: 1px solid rgb(var(--brand-rgb) / 28%);
   box-shadow: var(--shadow-sm);
@@ -658,7 +658,7 @@ button.task-detail-checklist-remove:focus-visible {
 .task-checklist-status--done {
   border-color: var(--brand);
   background: var(--brand);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 .task-checklist-text {

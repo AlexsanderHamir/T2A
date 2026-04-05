@@ -115,7 +115,7 @@ button:not(.custom-select-trigger) {
   border-radius: var(--radius-md);
   min-height: 2.5rem;
   padding: 0.625rem 1.25rem;
-  color: #fff;
+  color: var(--text-on-brand);
   background: var(--brand);
   transition: background var(--duration-normal) var(--ease-out),
     transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);

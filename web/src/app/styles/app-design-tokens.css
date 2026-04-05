@@ -95,6 +95,8 @@
   --text-secondary: rgb(75 85 99 / 92%);
   --text-tertiary: rgb(107 114 128 / 78%);
   --text-disabled: #d1d5db;
+  /* On brand / saturated fills — avoids pure #fff while keeping contrast (DS §3) */
+  --text-on-brand: #fafafa;
 
   --bg-page: #f6f8fa;
   --bg-elevated: #fafafa;
