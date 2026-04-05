@@ -1,6 +1,7 @@
 // Package handler exposes REST JSON CRUD for tasks backed by a store.Store (pkgs/tasks/store).
 // Wiring and shared HTTP helpers: handler.go. Task routes and DTOs: handler_tasks.go.
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
+// Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/DESIGN.md).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): calllog.go — use withCallRoot on each handler, PushCall inside helpers.
 // JSONL order: WrapSlogHandlerWithLogSequence (taskapi outer) + ContextWithLogSeq in access middleware → log_seq, log_seq_scope; RunObserved for explicit helper in/out pairs.

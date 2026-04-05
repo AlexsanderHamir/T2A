@@ -111,7 +111,10 @@ func run() int {
 		rep = r
 		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
 	}
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.NewHandler(taskStore, hub, rep))))
+	if lim := handler.RateLimitPerMinuteConfigured(); lim > 0 {
+		slog.Info("rate limit enabled", "cmd", cmdName, "operation", "taskapi.rate_limit", "per_ip_per_min", lim)
+	}
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.NewHandler(taskStore, hub, rep)))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.Handler())
 	if devsim.Enabled() {

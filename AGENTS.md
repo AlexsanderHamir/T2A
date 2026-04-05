@@ -57,3 +57,4 @@ Default tests must not require real Postgres, real outbound network, or a runnin
 - Do not add `fetch` to `web/src` components for app APIs — use `web/src/api/`.
 - Do not rely on `taskapi` serving `web/dist`; production is static files + reverse proxy or same-origin gateway.
 - `GET /events` is SSE; `/health` is plain JSON — different clients.
+- Default per-IP HTTP rate limit is 120/min (`T2A_RATE_LIMIT_PER_MIN`); set **`0`** to disable for heavy local testing.

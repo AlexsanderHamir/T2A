@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
+	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.35.0
 	gorm.io/datatypes v1.2.7
 	gorm.io/driver/postgres v1.6.0

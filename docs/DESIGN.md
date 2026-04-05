@@ -183,6 +183,7 @@ sequenceDiagram
 | `T2A_LOG_LEVEL` | No                        | Minimum `slog` level for the JSON log file: `debug`, `info`, `warn`, `error` (case-insensitive; `warning` accepted for `warn`). Ignored when `-loglevel` is set. Default when unset: `info`. No effect when logging is minimized (see `T2A_DISABLE_LOGGING`).                                                                                                                                                |
 | `T2A_DISABLE_LOGGING` | No                  | When `1`, `true`, `yes`, or `on` (case-insensitive): no JSONL file; only `slog.Error` to stderr. Same as `-disable-logging`. Overrides file logging and `-logdir` / `T2A_LOG_DIR`.                                                                                                                                                                                                                          |
 | `T2A_GORM_SLOW_QUERY_MS` | No               | GORM SQL trace: statements slower than this many milliseconds log at **Warn** (default **200**). Set to **0** to disable the slow-SQL branch (successful queries stay at Info when the GORM log level is Info). Invalid or negative values fall back to **200**.                                                                                                                                                                                                              |
+| `T2A_RATE_LIMIT_PER_MIN` | No               | Per-client-IP HTTP rate limit (token bucket, requests per minute). Default when unset: **120**. **`0`** disables limiting. Invalid or negative values fall back to **120**. Key is the host part of `RemoteAddr` only (forwarded headers are **not** trusted). Exempt: `GET /health`, `/health/live`, `/health/ready`, `/metrics` (defense in depth; `/metrics` is on the outer mux today). Over limit: **`429`** plain text `rate limit exceeded`, header **`Retry-After: 60`**. |
 
 
 `dbcheck` uses the same `.env` discovery for `DATABASE_URL` only; it does not use `REPO_ROOT`.
@@ -199,6 +200,10 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 | `GET /health/live` | Explicit liveness | Same as `GET /health`. |
 | `GET /health/ready` | Readiness | `200` `{"status":"ok","checks":{"database":"ok"}}` after `Ping` on the pool (2s timeout), or `503` `{"status":"degraded","checks":{"database":"fail"}}` if the DB is unreachable. |
 
+### Rate limiting
+
+All non-exempt routes on the API stack are subject to **`T2A_RATE_LIMIT_PER_MIN`** (see env table). Limits are enforced in-process with `golang.org/x/time/rate`; they are **not** shared across multiple `taskapi` replicas—use a reverse proxy or API gateway for a global budget.
+
 ### Prometheus (`GET /metrics`)
 
 `GET /metrics` serves the default registry in Prometheus text format (Go client). It is **not** behind the access-log or HTTP-metrics middleware, so scrapes do not emit `http.access` lines or `taskapi_http_*` series for themselves.
@@ -210,6 +215,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_http_in_flight` | Gauge | — | In-flight requests (health probe paths excluded). |
 | `taskapi_http_requests_total` | Counter | `method`, `route`, `code` | `route` is the matched mux pattern (e.g. `GET /tasks/{id}`) when set; otherwise **`other`** (limits cardinality on 404s). |
 | `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | Default buckets; health probe paths excluded. |
+| `taskapi_http_rate_limited_total` | Counter | — | Incremented when a request is rejected with **429** (per-IP limit). |
 
 There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.
 
@@ -421,7 +427,7 @@ Changing JSON shapes, routes, or SSE payload types also requires updating `docs/
 1. The SSE hub is in RAM and scoped to one process. Multiple `taskapi` replicas do not share subscribers; load balancers can split `/events` from the instance that handles writes.
 2. SSE delivery is best-effort: each subscriber has a bounded buffer (32); slow clients may drop events. For guaranteed history, use the database and `task_events`.
 3. No authentication or authorization in this module; `X-Actor` is labeling, not identity proof.
-4. No rate limiting or a dedicated max body size; request headers are capped via `MaxHeaderBytes`, and read timeouts bound how long the server waits for the request (including body). Very large JSON bodies are not explicitly rejected beyond memory and timeout behavior.
+4. Per-IP HTTP rate limiting is in-memory per process (`T2A_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`). There is no dedicated max body size; headers are capped via `MaxHeaderBytes`, and read timeouts bound how long the server waits for the request (including body). Very large JSON bodies are not explicitly rejected beyond memory and timeout behavior.
 5. Task CRUD error bodies are plain text, not a structured JSON envelope; `/repo/*` uses JSON errors (see [Optional workspace repo](#optional-workspace-repo-repo_root)).
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
 7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (database ping); `dbcheck` remains useful for CLI and migrations.
