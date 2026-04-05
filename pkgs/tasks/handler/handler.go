@@ -84,7 +84,9 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]string{}
 
 	if err := h.store.Ready(ctx); err != nil {
-		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err)
+		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err,
+			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded),
+			"timeout_sec", int(healthReadyDBTimeout/time.Second))
 		checks["database"] = "fail"
 		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
 			"status":  "degraded",
