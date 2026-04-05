@@ -71,6 +71,7 @@ func run(o options) error {
 	if o.migrate {
 		slog.Info("schema migrated", "cmd", cmdName, "operation", "automigrate")
 	}
+	slog.Info("dbcheck ok", "cmd", cmdName, "operation", "dbcheck.done", "migrate_ran", o.migrate)
 	return nil
 }
 
