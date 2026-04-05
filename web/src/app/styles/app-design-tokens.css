@@ -121,6 +121,15 @@
   --shadow-inset-field: inset 0 1px 2px rgb(var(--slate-shadow) / 4%);
   --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 90%) inset;
 
+  /* Form labels + control chrome (global rules in app-task-create-and-fields.css) */
+  --field-label-font-size: 0.8125rem;
+  --field-label-font-weight: 500;
+  --field-label-letter-spacing: -0.01em;
+  --field-label-color: var(--text-secondary);
+  --field-control-padding-y: 0.65rem;
+  --field-control-padding-x: 0.85rem;
+  --field-control-radius: var(--radius-sm);
+
   /* Toasts (DS §11) — dimensions until a toast stack ships */
   --toast-min-width: 20rem;
   --toast-max-width: 25rem;

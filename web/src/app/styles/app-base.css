@@ -57,6 +57,11 @@ select:disabled {
   color: var(--text-disabled);
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
 /* Text links (buttons covered above; modals portal outside #root) */
 #root a:focus-visible,
 .modal-shell a:focus-visible {

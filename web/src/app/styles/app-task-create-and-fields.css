@@ -308,10 +308,10 @@
 }
 
 label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--text-secondary);
+  font-size: var(--field-label-font-size);
+  font-weight: var(--field-label-font-weight);
+  letter-spacing: var(--field-label-letter-spacing);
+  color: var(--field-label-color);
   text-transform: none;
 }
 
@@ -319,12 +319,15 @@ input,
 select,
 textarea {
   font: inherit;
-  padding: 0.65rem 0.85rem;
+  padding: var(--field-control-padding-y) var(--field-control-padding-x);
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
+  border-radius: var(--field-control-radius);
   background: var(--bg-subtle);
   color: var(--text-primary);
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color var(--duration-short) var(--ease-out),
+    background var(--duration-short) var(--ease-out),
+    box-shadow var(--duration-short) var(--ease-out);
 }
 
 input:hover,
@@ -333,9 +336,12 @@ textarea:hover {
   border-color: rgb(0 0 0 / 12%);
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-tertiary);
+@media (prefers-color-scheme: dark) {
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: rgb(255 255 255 / 14%);
+  }
 }
 
 select {
