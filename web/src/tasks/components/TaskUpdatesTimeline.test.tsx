@@ -93,7 +93,7 @@ describe("TaskUpdatesTimeline", () => {
         timelineEvents={[]}
       />,
     );
-    expect(screen.getByText(/no audit events yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no updates yet/i)).toBeInTheDocument();
   });
 
   it("uses one list for mixed events and marks needs-user rows", () => {

@@ -1,5 +1,9 @@
 import { Link } from "react-router-dom";
 import type { Task } from "@/types";
+import {
+  EmptyState,
+  EmptyStateSubtasksGlyph,
+} from "@/shared/EmptyState";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 
 export function SubtaskTree({
@@ -12,11 +16,18 @@ export function SubtaskTree({
   if (!nodes.length) {
     if (nested) return null;
     return (
-      <p className="muted task-subtasks-empty" id="task-subtasks-empty">
-        No subtasks yet. Use{" "}
-        <span className="task-subtasks-empty-accent">Add subtask</span> to break
-        work into smaller steps.
-      </p>
+      <EmptyState
+        id="task-subtasks-empty"
+        density="compact"
+        icon={<EmptyStateSubtasksGlyph />}
+        title="No subtasks yet"
+        description={
+          <>
+            Use <strong>Add subtask</strong> above to break work into smaller
+            steps.
+          </>
+        }
+      />
     );
   }
   return (

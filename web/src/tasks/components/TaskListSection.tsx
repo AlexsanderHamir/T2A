@@ -14,6 +14,11 @@ import {
 } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
+import {
+  EmptyState,
+  EmptyStateFilterGlyph,
+  type EmptyStateAction,
+} from "@/shared/EmptyState";
 
 type Props = {
   tasks: TaskWithDepth[];
@@ -45,6 +50,8 @@ type Props = {
   onEdit: (t: Task) => void;
   /** Opens in-app delete confirmation (do not call `window.confirm` from the table). */
   onRequestDelete: (t: Task) => void;
+  /** Primary action when the server returned no tasks (e.g. open create modal). */
+  emptyListAction?: EmptyStateAction;
 };
 
 type StatusFilter = "all" | Status;
@@ -70,6 +77,7 @@ export function TaskListSection({
   smoothTransitions = true,
   onEdit,
   onRequestDelete,
+  emptyListAction,
 }: Props) {
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
@@ -243,13 +251,29 @@ export function TaskListSection({
                 {tasks.length === 0 ? (
                   <tr className="task-list-empty-row">
                     <td colSpan={5} className="task-list-empty-cell">
-                      No tasks yet.
+                      <EmptyState
+                        className="empty-state--in-table"
+                        title="No tasks yet"
+                        description={
+                          <>
+                            Use <strong>New task</strong> above to add your first
+                            task. Status, priority, and prompt previews appear
+                            here.
+                          </>
+                        }
+                        action={emptyListAction}
+                      />
                     </td>
                   </tr>
                 ) : filteredTasks.length === 0 ? (
                   <tr className="task-list-empty-row">
                     <td colSpan={5} className="task-list-empty-cell">
-                      No tasks match these filters.
+                      <EmptyState
+                        className="empty-state--in-table"
+                        icon={<EmptyStateFilterGlyph />}
+                        title="No matching tasks"
+                        description="Try a different status or priority, or clear the title search."
+                      />
                     </td>
                   </tr>
                 ) : (

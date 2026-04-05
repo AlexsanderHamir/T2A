@@ -66,7 +66,29 @@ describe("TaskListSection", () => {
         onRequestDelete={vi.fn()}
       />,
     );
-    expect(screen.getByText("No tasks yet.")).toBeInTheDocument();
+    expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+  });
+
+  it("calls emptyListAction when the empty-state CTA is used", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    renderWithRouter(
+      <TaskListSection
+        tasks={[]}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        {...listPagerDefaults}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+        emptyListAction={{
+          label: "Create one",
+          onClick: onCreate,
+        }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /^create one$/i }));
+    expect(onCreate).toHaveBeenCalledTimes(1);
   });
 
   it("renders rows and calls onEdit", async () => {
@@ -241,9 +263,7 @@ describe("TaskListSection", () => {
     );
     await user.click(screen.getByRole("combobox", { name: /^status$/i }));
     await user.click(screen.getByRole("option", { name: /^failed$/i }));
-    expect(
-      screen.getByText("No tasks match these filters."),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no matching tasks/i)).toBeInTheDocument();
   });
 
   it("shows list pager when another server page may exist", async () => {

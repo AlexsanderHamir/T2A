@@ -485,16 +485,6 @@
   margin-top: 0.2rem;
 }
 
-.task-subtasks-empty {
-  max-width: 32rem;
-  line-height: 1.5;
-}
-
-.task-subtasks-empty-accent {
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 .task-subtasks-list {
   list-style: none;
   margin: 0.35rem 0 0;
@@ -687,11 +677,6 @@
 .task-checklist-label {
   font-size: 0.875rem;
   color: var(--text-primary);
-}
-
-.task-checklist-empty-cta {
-  font-weight: 600;
-  color: var(--text-secondary);
 }
 
 .task-checklist-criterion-modal-sheet h2 {

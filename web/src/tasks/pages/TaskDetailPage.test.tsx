@@ -111,7 +111,7 @@ describe("TaskDetailPage", () => {
     expect(await screen.findByRole("heading", { name: /^testing$/i })).toBeInTheDocument();
     const stance = await screen.findByText("Informational");
     expect(stance).toHaveAttribute("data-stance", "informational");
-    expect(await screen.findByText(/no audit events yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no updates yet/i)).toBeInTheDocument();
 
     const details = document.querySelector(".task-detail-prompt-details");
     expect(details).not.toBeNull();

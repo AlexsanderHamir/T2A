@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { awaitingUserReply } from "../taskEventThread";
+import {
+  EmptyState,
+  EmptyStateTimelineGlyph,
+} from "@/shared/EmptyState";
 import { TaskTimelineSkeleton } from "./taskLoadingSkeletons";
 
 export type TaskUpdatesTimelineProps = {
@@ -37,7 +41,11 @@ export function TaskUpdatesTimeline({
           {error instanceof Error ? error.message : "Could not load updates."}
         </p>
       ) : isEmpty ? (
-        <p className="muted">No audit events yet.</p>
+        <EmptyState
+          icon={<EmptyStateTimelineGlyph />}
+          title="No updates yet"
+          description="When agents and the system record changes, they will appear here in order."
+        />
       ) : (
         <TimelineEventList
           events={timelineEvents}

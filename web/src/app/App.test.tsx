@@ -71,7 +71,7 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: /^tasks$/i }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("No tasks yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
   });
 
   it("shows an alert when the initial list request fails", async () => {
@@ -135,7 +135,7 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByText("No tasks yet.");
+    await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
@@ -204,7 +204,7 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByText("No tasks yet.");
+    await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
@@ -443,7 +443,7 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByText("No tasks yet.");
+    await screen.findByText("No tasks yet");
 
     const outer = await openNewTaskModal(user);
     await user.type(within(outer).getByLabelText(/^title$/i), "Epic");

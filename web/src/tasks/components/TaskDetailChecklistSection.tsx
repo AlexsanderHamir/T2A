@@ -2,6 +2,10 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 import type { TaskChecklistResponse } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import {
+  EmptyState,
+  EmptyStateChecklistGlyph,
+} from "@/shared/EmptyState";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
 import { TaskChecklistSkeleton } from "./taskLoadingSkeletons";
 
@@ -134,11 +138,17 @@ export function TaskDetailChecklistSection({
           >
             {(checklistQuery.data?.items.length ?? 0) === 0 ? (
               <li className="task-checklist-empty-row">
-                <span className="muted">
-                  No criteria yet. Use{" "}
-                  <strong className="task-checklist-empty-cta">Add criterion</strong>{" "}
-                  to add one.
-                </span>
+                <EmptyState
+                  density="compact"
+                  icon={<EmptyStateChecklistGlyph />}
+                  title="No criteria yet"
+                  description={
+                    <>
+                      Use <strong>Add criterion</strong> above to describe what
+                      must be true before this task can be marked done.
+                    </>
+                  }
+                />
               </li>
             ) : null}
             {checklistQuery.data?.items.map((item) => (
