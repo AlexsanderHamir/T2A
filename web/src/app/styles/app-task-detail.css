@@ -170,7 +170,7 @@ button.task-detail-btn-delete:not(:disabled):hover {
 
 button.task-detail-btn-delete:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgb(225 29 72 / 18%);
+  box-shadow: var(--shadow-focus-danger);
 }
 
 .task-detail-section {
@@ -412,14 +412,14 @@ button.task-detail-checklist-remove {
 
 button.task-detail-checklist-remove:not(:disabled):hover {
   background: var(--danger-soft);
-  border-color: rgb(225 29 72 / 18%);
+  border-color: var(--danger-control-hover-border);
   transform: none;
   filter: none;
 }
 
 button.task-detail-checklist-remove:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgb(225 29 72 / 16%);
+  box-shadow: var(--shadow-focus-danger);
 }
 
 .task-detail-prompt.task-detail-section {

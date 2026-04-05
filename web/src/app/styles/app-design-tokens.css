@@ -205,6 +205,9 @@
   --danger-border-strong: rgb(239 68 68 / 35%);
   --danger-muted-hover-fill: rgb(239 68 68 / 8%);
   --danger-muted-hover-border: rgb(239 68 68 / 50%);
+  /* Ghost / text destructive controls — hover border + :focus-visible (DS §7 / §13) */
+  --danger-control-hover-border: rgb(239 68 68 / 18%);
+  --shadow-focus-danger: 0 0 0 3px rgb(239 68 68 / 16%);
 
   --color-error-subtle: #fee2e2;
   --color-warning-subtle: #fef3c7;
@@ -266,6 +269,8 @@
     --danger-border-strong: rgb(248 113 113 / 40%);
     --danger-muted-hover-fill: rgb(248 113 113 / 12%);
     --danger-muted-hover-border: rgb(248 113 113 / 55%);
+    --danger-control-hover-border: rgb(248 113 113 / 22%);
+    --shadow-focus-danger: 0 0 0 3px rgb(248 113 113 / 18%);
     --color-error-subtle: rgb(127 29 29 / 35%);
     --color-warning-subtle: rgb(120 53 15 / 35%);
     --warning-soft: rgb(245 158 11 / 20%);

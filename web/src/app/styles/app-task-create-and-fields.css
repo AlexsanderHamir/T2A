@@ -222,14 +222,14 @@
 
 .task-create-checklist-remove:not(:disabled):hover {
   background: var(--danger-soft);
-  border-color: rgb(225 29 72 / 18%);
+  border-color: var(--danger-control-hover-border);
   transform: none;
   filter: none;
 }
 
 .task-create-checklist-remove:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgb(225 29 72 / 16%);
+  box-shadow: var(--shadow-focus-danger);
 }
 
 .task-create-subtasks {
