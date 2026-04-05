@@ -53,7 +53,7 @@
 }
 
 /* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
-@media (min-width: 768px) {
+@media (min-width: var(--bp-md)) {
   .modal-shell > .panel {
     margin-bottom: 0;
     border: none;
@@ -125,7 +125,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: var(--bp-md-max)) {
   .modal-root {
     align-items: flex-end;
     justify-content: center;
@@ -182,7 +182,7 @@
   }
 }
 
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+@media (max-width: var(--bp-md-max)) and (prefers-reduced-motion: reduce) {
   .modal-shell {
     animation: none;
   }

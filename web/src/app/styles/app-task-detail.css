@@ -438,7 +438,7 @@ button.task-detail-checklist-remove:focus-visible {
   padding-bottom: 0.25rem;
 }
 
-@media (max-width: 540px) {
+@media (max-width: var(--bp-task-header-stack)) {
   .task-detail-header {
     display: flex;
     flex-direction: column;

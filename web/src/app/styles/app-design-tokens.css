@@ -37,13 +37,17 @@
   /* Touch targets (DS §13 — 44px minimum) */
   --touch-target-min: 2.75rem;
 
-  /* Breakpoints (px) — use in JS/container queries; not for legacy @media(var()) */
+  /* Breakpoints (px) — @media (min-width: var(--bp-*)); JS; container queries (modern browsers) */
   --bp-xs: 375px;
   --bp-sm: 640px;
   --bp-md: 768px;
+  /* Pair with --bp-md for max-width “below tablet” (e.g. modal bottom sheet) */
+  --bp-md-max: calc(var(--bp-md) - 1px);
   --bp-lg: 1024px;
   --bp-xl: 1280px;
   --bp-2xl: 1536px;
+  /* Task detail: stack header title/actions (between xs and sm) */
+  --bp-task-header-stack: 540px;
 
   /* Stacking — portal popover must sit above modals (CustomSelect list); skip link wins overall */
   --z-mention-popover: 10;
