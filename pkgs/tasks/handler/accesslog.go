@@ -11,25 +11,20 @@ import (
 
 // WithAccessLog wraps h to assign a request id, attach it to r.Context, echo X-Request-ID on
 // responses, and emit one structured line per request when it finishes (method, path, route,
-// status, duration, bytes written). GET /health, /health/live, and /health/ready are omitted to avoid probe noise.
+// status, duration, bytes written). GET /health, /health/live, and /health/ready skip the access
+// line to avoid probe noise but still assign and echo X-Request-ID (and request context) so probes
+// and any logs during readiness stay correlatable.
 func WithAccessLog(h http.Handler) http.Handler {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithAccessLog")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = resolveAndAttachRequestID(w, r)
+
 		if omitAccessLog(r) {
 			h.ServeHTTP(w, r)
 			return
 		}
 
-		id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-		if id == "" {
-			id = uuid.NewString()
-		} else if len(id) > maxIncomingRequestIDLen {
-			id = id[:maxIncomingRequestIDLen]
-		}
-		w.Header().Set("X-Request-ID", id)
-
-		ctx := ContextWithRequestID(r.Context(), id)
-		ctx = ContextWithLogSeq(ctx)
+		ctx := ContextWithLogSeq(r.Context())
 		r = r.WithContext(ctx)
 
 		aw := &accessLogWriter{ResponseWriter: w}
@@ -65,6 +60,18 @@ func WithAccessLog(h http.Handler) http.Handler {
 			"bytes_written", aw.bytes,
 		)
 	})
+}
+
+func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Request {
+	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+	if id == "" {
+		id = uuid.NewString()
+	} else if len(id) > maxIncomingRequestIDLen {
+		id = id[:maxIncomingRequestIDLen]
+	}
+	w.Header().Set("X-Request-ID", id)
+	ctx := ContextWithRequestID(r.Context(), id)
+	return r.WithContext(ctx)
 }
 
 func omitAccessLog(r *http.Request) bool {

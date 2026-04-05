@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestWrapSlogHandlerWithRequestContext_addsRequestID(t *testing.T) {
@@ -124,6 +126,12 @@ func TestWithAccessLog_skipsHealth(t *testing.T) {
 	slog.SetDefault(slog.New(WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, nil))))
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/health", "/health/live", "/health/ready":
+			if RequestIDFromContext(r.Context()) == "" {
+				t.Fatalf("missing request id for %s", r.URL.Path)
+			}
+		}
 		w.WriteHeader(http.StatusOK)
 	})
 	srv := httptest.NewServer(WithAccessLog(inner))
@@ -140,6 +148,37 @@ func TestWithAccessLog_skipsHealth(t *testing.T) {
 	if strings.Contains(buf.String(), "http request complete") {
 		t.Fatalf("health probes should not log access: %q", buf.String())
 	}
+
+	reqProbe, err := http.NewRequest(http.MethodGet, srv.URL+"/health/ready", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqProbe.Header.Set("X-Request-ID", "probe-correlation-1")
+	resProbe, err := http.DefaultClient.Do(reqProbe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resProbe.Body.Close()
+	if got := strings.TrimSpace(resProbe.Header.Get("X-Request-ID")); got != "probe-correlation-1" {
+		t.Fatalf("health echo X-Request-ID: %q", got)
+	}
+	_, _ = io.Copy(io.Discard, resProbe.Body)
+
+	reqGen, err := http.NewRequest(http.MethodGet, srv.URL+"/health", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resGen, err := http.DefaultClient.Do(reqGen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resGen.Body.Close()
+	if rid := strings.TrimSpace(resGen.Header.Get("X-Request-ID")); rid == "" {
+		t.Fatal("health missing X-Request-ID")
+	} else if _, err := uuid.Parse(rid); err != nil {
+		t.Fatalf("health X-Request-ID not a UUID: %q", rid)
+	}
+	_, _ = io.Copy(io.Discard, resGen.Body)
 }
 
 func TestRequestIDFromContext_empty(t *testing.T) {
