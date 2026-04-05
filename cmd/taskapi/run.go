@@ -58,8 +58,12 @@ func run() int {
 		if logFile == nil {
 			return
 		}
-		_ = logFile.Sync()
-		_ = logFile.Close()
+		if err := logFile.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: log file sync: %v\n", cmdName, err)
+		}
+		if err := logFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: log file close: %v\n", cmdName, err)
+		}
 	}()
 
 	var baseHandler slog.Handler
