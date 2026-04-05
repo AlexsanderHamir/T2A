@@ -161,7 +161,9 @@ textarea::placeholder {
   background: color-mix(in srgb, var(--bg-page) 82%, white);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border-bottom: 1px solid var(--border-hairline);
+  /* Match `.panel` chrome so the shell header reads as the same card family (DS §5 / §6) */
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
 }
 
 @media (prefers-color-scheme: dark) {
