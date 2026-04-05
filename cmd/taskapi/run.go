@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -213,7 +214,9 @@ func run() int {
 		shutdownErr := srv.Shutdown(shutdownCtx)
 		cancel()
 		if shutdownErr != nil {
-			slog.Error("shutdown", "cmd", cmdName, "operation", "taskapi.shutdown", "err", shutdownErr)
+			slog.Error("shutdown", "cmd", cmdName, "operation", "taskapi.shutdown",
+				"err", shutdownErr,
+				"deadline_exceeded", errors.Is(shutdownErr, context.DeadlineExceeded))
 			return 1
 		}
 		slog.Info("http server drained", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "http_done")
