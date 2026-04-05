@@ -3,7 +3,7 @@
 }
 
 .task-detail-back {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--link);
   text-decoration: none;
@@ -77,12 +77,12 @@
 .task-detail-attention strong {
   display: block;
   margin-bottom: 0.35rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
 }
 
 .task-detail-attention p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.45;
   opacity: 0.95;
 }
@@ -100,13 +100,13 @@
 .task-detail-ok strong {
   display: block;
   margin-bottom: 0.35rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   color: var(--text-primary);
 }
 
 .task-detail-ok p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.45;
 }
 
@@ -500,7 +500,7 @@ button.task-detail-checklist-remove:focus-visible {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -551,7 +551,7 @@ button.task-detail-checklist-remove:focus-visible {
 .task-subtasks-link {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text-primary);
@@ -590,7 +590,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-checklist-intro-lead {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -602,7 +602,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-checklist-progress {
   margin: 0.35rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.45;
 }
 
@@ -637,7 +637,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-checklist-empty-row {
   padding: 0.85rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .task-checklist-list--grouped .task-checklist-row {
@@ -658,7 +658,7 @@ button.task-detail-checklist-remove:focus-visible {
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   line-height: 1.4;
   flex: 1 1 auto;
   min-width: 0;
@@ -698,7 +698,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 /* Plain text label in create/compose checklist rows (not the detail read-only row). */
 .task-checklist-label {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--text-primary);
 }
 
@@ -708,7 +708,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-checklist-criterion-modal-lead {
   margin: 0 0 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.45;
   max-width: 28rem;
 }
@@ -764,7 +764,7 @@ button.task-detail-checklist-remove:focus-visible {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -801,7 +801,7 @@ button.task-detail-checklist-remove:focus-visible {
   gap: 0.5rem;
   padding: 0.65rem 0.85rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--link);
@@ -874,7 +874,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-detail-prompt-body {
   padding: 0.85rem 0.85rem 1rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   line-height: 1.5;
   color: var(--text-secondary);
   max-width: 52rem;

@@ -43,7 +43,7 @@
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   line-height: 1.5;
   transition:
     border-color var(--duration-short) var(--ease-out),

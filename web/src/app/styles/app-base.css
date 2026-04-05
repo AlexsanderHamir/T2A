@@ -266,7 +266,7 @@ textarea::placeholder {
 }
 
 .stream-status-text {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-secondary);
@@ -370,7 +370,7 @@ textarea::placeholder {
 
 .sub {
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   margin: 0 0 var(--layout-gutter-x);
   letter-spacing: -0.01em;
 }

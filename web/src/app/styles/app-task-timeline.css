@@ -221,7 +221,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-back-task {
   margin-left: 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .task-event-detail-header {
@@ -230,7 +230,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-stance {
   margin: 0.35rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -372,7 +372,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-thread-body {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -507,7 +507,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-task-id {
   margin: 0.35rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .task-event-detail-task-id code {
@@ -574,7 +574,7 @@ a.task-timeline-item-hit {
 
 .err-inline {
   color: var(--danger);
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   margin: 0 0 0.75rem;
 }
 

@@ -75,7 +75,7 @@
 
 .task-create-inherit-field {
   margin: -0.35rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .task-create-title-row {
