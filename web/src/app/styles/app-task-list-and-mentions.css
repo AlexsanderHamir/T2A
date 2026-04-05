@@ -1,6 +1,6 @@
 /* Task list: ink title + arrow, soft hover; Edit/Delete stay secondary + danger */
 .task-list-table tbody tr.task-list-row {
-  transition: background 0.15s ease;
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -231,7 +231,7 @@
 
 .task-list-table-wrap {
   position: relative;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-short) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

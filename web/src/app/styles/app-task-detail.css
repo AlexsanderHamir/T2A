@@ -131,7 +131,7 @@ button.task-detail-btn-edit {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-btn-edit:not(:disabled):hover {
@@ -157,7 +157,7 @@ button.task-detail-btn-delete {
   background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
   border: 1px solid rgb(159 18 57 / 35%);
   box-shadow: 0 1px 2px rgb(180 30 30 / 15%);
-  transition: filter 0.15s ease, box-shadow 0.15s ease;
+  transition: filter var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-btn-delete:not(:disabled):hover {
@@ -253,7 +253,7 @@ button.task-detail-add-checklist-btn {
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-add-subtask-btn:not(:disabled):hover,
@@ -349,7 +349,7 @@ button.task-detail-checklist-add-btn {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-checklist-add-btn:not(:disabled):hover {
@@ -509,7 +509,7 @@ button.task-detail-checklist-remove:focus-visible {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .task-subtasks-item-row:hover {
@@ -773,9 +773,9 @@ button.task-detail-checklist-remove:focus-visible {
   user-select: none;
   border-radius: calc(var(--radius-sm) - 2px);
   transition:
-    color 0.12s ease,
-    background-color 0.12s ease,
-    text-decoration-color 0.12s ease;
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    text-decoration-color var(--duration-fast) var(--ease-out);
 }
 
 .task-detail-prompt-summary:hover {
@@ -819,8 +819,8 @@ button.task-detail-checklist-remove:focus-visible {
   line-height: 1;
   color: rgb(var(--brand-rgb) / 55%);
   transition:
-    transform 0.15s ease,
-    color 0.12s ease;
+    transform var(--duration-normal) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .task-detail-prompt-summary:hover .task-detail-prompt-summary-chevron {
