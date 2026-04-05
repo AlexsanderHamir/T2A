@@ -25,6 +25,24 @@ func NewStore(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
+// isDuplicateTaskPrimaryKey detects unique/PK violations on task insert across GORM + SQLite + Postgres drivers.
+func isDuplicateTaskPrimaryKey(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "unique constraint failed") {
+		return strings.Contains(msg, "tasks") && strings.Contains(msg, "id")
+	}
+	if strings.Contains(msg, "duplicate key value violates unique constraint") {
+		return strings.Contains(msg, "tasks_pkey")
+	}
+	return false
+}
+
 // Ping checks that the database session is reachable (e.g. for HTTP readiness probes).
 func (s *Store) Ping(ctx context.Context) error {
 	if s == nil || s.db == nil {
@@ -146,6 +164,9 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 			}
 		}
 		if err := tx.Create(t).Error; err != nil {
+			if isDuplicateTaskPrimaryKey(err) {
+				return fmt.Errorf("%w: task id already exists", domain.ErrConflict)
+			}
 			return fmt.Errorf("insert task: %w", err)
 		}
 		seq := int64(1)

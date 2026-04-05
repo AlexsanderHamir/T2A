@@ -235,7 +235,7 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 
 | Capability     | Method / path            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create task    | `POST /tasks`            | Title required after trim; optional `id` (else UUID); default status `ready`; **`priority` required** (one of `low` / `medium` / `high` / `critical`). Optional `parent_id` (existing task) for nesting; optional `checklist_inherit` (bool) — when true, `parent_id` is required. Response is a task **tree** (`children[]` nested).                                                                                                                                                                                                                        |
+| Create task    | `POST /tasks`            | Title required after trim; optional `id` (else UUID); default status `ready`; **`priority` required** (one of `low` / `medium` / `high` / `critical`). Optional `parent_id` (existing task) for nesting; optional `checklist_inherit` (bool) — when true, `parent_id` is required. **409** if `id` is supplied and already exists. Response is a task **tree** (`children[]` nested).                                                                                                                                                                                                                        |
 | List tasks     | `GET /tasks`             | Query `limit` (0–200, default 50). **Offset paging:** `offset` (≥ 0). **Keyset paging (preferred at scale):** `after_id` (UUID) — roots with `id > after_id`; **mutually exclusive** with `offset` (presence of an `offset` query key is rejected when `after_id` is set). Roots ordered by `id ASC`. Response includes `has_more` when another page may exist (server fetches `limit+1` roots). Each element includes `children[]` with the full descendant subtree. Non-positive `limit` is coerced to 50. When using `after_id`, `offset` in the JSON body is **0**.                                                                                                                                                                                                                          |
 | Get one task   | `GET /tasks/{id}`        | Empty or whitespace `id` → 400. JSON includes `parent_id`, `checklist_inherit`, and nested `children[]` for all descendants.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Checklist      | `GET /tasks/{id}/checklist` | `200` JSON `{ "items": [ { "id", "sort_order", "text", "done" } ] }`. Definitions are owned by the task or by the nearest ancestor that does not inherit; `done` reflects completions recorded for **this** task id.                                                                                                                                                                                                 |
@@ -255,13 +255,14 @@ JSON: request bodies reject unknown fields and reject trailing data after the to
 
 New audit `type` values include checklist (`checklist_item_added`, `checklist_item_toggled`, `checklist_item_updated`, `checklist_item_removed`), `checklist_inherit_changed`, and the rest of `domain.EventType` (e.g. `subtask_added` on the **parent** when a child task is created with `parent_id`, and `subtask_removed` on the **parent** when that child is deleted, both with payload `child_task_id` and `title`).
 
-Task error responses use plain text (not JSON):
+Task error responses use JSON `{"error":"..."}` for mapped store errors:
 
 ```mermaid
 flowchart TD
   R[Store returns error] --> M{errors.Is}
   M -->|ErrNotFound| N404[404 not found]
   M -->|ErrInvalidInput| B400[400 bad request]
+  M -->|ErrConflict| C409[409 task id already exists]
   M -->|else| I500[500 internal server error]
 ```
 
@@ -298,7 +299,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 - 200 JSON: `{ "ok": true/false, "line_count"?: number, "warning"?: string }` — used to warn about invalid ranges without always returning non-200.
 
-`POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil, `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths or bad ranges fail with `domain.ErrInvalidInput` → 400 plain text (same as other task validation errors).
+`POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil, `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths or bad ranges fail with `domain.ErrInvalidInput` → 400 JSON error (same as other task validation errors).
 
 ```mermaid
 sequenceDiagram
@@ -319,7 +320,7 @@ sequenceDiagram
   R->>FS: resolve + optional line check
   FS-->>R: ok or err
   R-->>API: nil or ErrInvalidInput
-  API-->>UI: 201 task or 400 plain text
+  API-->>UI: 201 task or 400 JSON error
 ```
 
 
@@ -439,13 +440,13 @@ Changing JSON shapes, routes, or SSE payload types also requires updating `docs/
 2. SSE delivery is best-effort: each subscriber has a bounded buffer (32); slow clients may drop events. For guaranteed history, use the database and `task_events`.
 3. No authentication or authorization in this module; `X-Actor` is labeling, not identity proof.
 4. Per-IP HTTP rate limiting is in-memory per process (`T2A_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`). Unless **`T2A_MAX_REQUEST_BODY_BYTES`** is set, there is no explicit max body size; headers are capped via `MaxHeaderBytes`, and read timeouts bound how long the server waits for the request (including body).
-5. Task CRUD error bodies are plain text, not a structured JSON envelope; `/repo/*` uses JSON errors (see [Optional workspace repo](#optional-workspace-repo-repo_root)).
+5. Task CRUD error bodies are JSON `{"error":"<message>"}` for handler-mapped failures (404 / 400 / 409 / 500); `/repo/*` uses the same JSON error shape (see [Optional workspace repo](#optional-workspace-repo-repo_root)).
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
 7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (DB ping + trivial SQL, optional workspace directory stat when `REPO_ROOT` is set); `dbcheck` remains useful for CLI and migrations.
 8. `taskapi` serves plain HTTP — TLS is expected at a reverse proxy or load balancer, not inside this binary.
 9. Schema evolution is `AutoMigrate` only — no versioned migration files, rollback story, or drift detection beyond what GORM provides.
 10. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.
-11. `POST /tasks` with a client-supplied `id` that already exists fails at the database layer and is surfaced as 500 (not a dedicated 409 conflict response).
+11. `POST /tasks` with a client-supplied `id` that already exists returns **409** JSON `{"error":"task id already exists"}` (`domain.ErrConflict`).
 12. No ETag / If-Match on tasks; concurrent edits to the same row last-winner within locking rules (see Persistence).
 13. If JSON encoding of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
 14. **`Idempotency-Key`** is honored only inside a single `taskapi` process (in-memory cache + `singleflight`); multiple replicas or restarts do not share entries. Chunked request bodies skip idempotency for `POST`/`PATCH`.

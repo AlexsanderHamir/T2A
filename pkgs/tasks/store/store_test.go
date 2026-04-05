@@ -210,8 +210,8 @@ func TestStore_Create_duplicate_primary_key_fails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error on duplicate id")
 	}
-	if errors.Is(err, domain.ErrInvalidInput) || errors.Is(err, domain.ErrNotFound) {
-		t.Fatalf("unexpected sentinel: %v", err)
+	if !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("want ErrConflict, got %v", err)
 	}
 }
 

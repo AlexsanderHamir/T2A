@@ -48,7 +48,7 @@
 // PATCH body: optional title, initial_prompt, status, priority, checklist_inherit, parent_id
 // (JSON null clears parent). At least one field must be present. See store.UpdateTaskInput.
 //
-// Errors: domain.ErrNotFound → 404 "not found", domain.ErrInvalidInput → 400 "bad request";
-// other store errors → 500. Response bodies are plain text, not JSON. Failures are logged once
+// Errors: domain.ErrNotFound → 404, domain.ErrInvalidInput → 400, domain.ErrConflict → 409 (duplicate client id on POST /tasks);
+// other store errors → 500. Response bodies are JSON {"error":"..."} (same shape as writeJSONError). Failures are logged once
 // at the handler with structured fields (including http_status); 4xx → Warn, 5xx → Error.
 package handler

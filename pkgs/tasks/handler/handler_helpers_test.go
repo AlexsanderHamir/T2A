@@ -83,6 +83,7 @@ func TestStoreErrHTTPResponse(t *testing.T) {
 			wantCode: http.StatusBadRequest,
 			wantMsg:  "empty id",
 		},
+		{name: "conflict", err: domain.ErrConflict, wantCode: http.StatusConflict, wantMsg: "task id already exists"},
 		{name: "internal", err: errors.New("db unavailable"), wantCode: http.StatusInternalServerError, wantMsg: "internal server error"},
 	}
 	for _, tt := range tests {

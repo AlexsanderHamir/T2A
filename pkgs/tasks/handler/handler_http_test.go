@@ -457,6 +457,38 @@ func TestHTTP_create_and_list(t *testing.T) {
 	}
 }
 
+func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+	id := "30000000-0000-4000-8000-000000000099"
+	res1, err := http.Post(srv.URL+"/tasks", "application/json",
+		strings.NewReader(`{"id":"`+id+`","title":"first","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = res1.Body.Close()
+	if res1.StatusCode != http.StatusCreated {
+		t.Fatalf("first create status %d", res1.StatusCode)
+	}
+	res2, err := http.Post(srv.URL+"/tasks", "application/json",
+		strings.NewReader(`{"id":"`+id+`","title":"second","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusConflict {
+		b, _ := io.ReadAll(res2.Body)
+		t.Fatalf("status %d body %s", res2.StatusCode, b)
+	}
+	var errBody jsonErrorBody
+	if err := json.NewDecoder(res2.Body).Decode(&errBody); err != nil {
+		t.Fatal(err)
+	}
+	if errBody.Error != "task id already exists" {
+		t.Fatalf("error message %q", errBody.Error)
+	}
+}
+
 func TestHTTP_list_keyset_after_id(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
