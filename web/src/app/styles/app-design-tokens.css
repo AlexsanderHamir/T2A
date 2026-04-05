@@ -208,6 +208,8 @@
   --radius-xl: 16px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
+  /* Thread bubbles in event detail (between md and lg at 16px root — DS §5) */
+  --radius-thread-bubble: 0.85rem;
 
   /* Semantic */
   --success: #00a96e;

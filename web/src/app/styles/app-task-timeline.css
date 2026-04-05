@@ -63,7 +63,7 @@ a.task-timeline-item-hit {
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
   padding: 0.2rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid transparent;
   flex-shrink: 0;
   white-space: nowrap;
@@ -196,7 +196,7 @@ a.task-timeline-item-hit {
   background: hsl(48 100% 92%);
   border: 1px solid hsl(38 70% 72%);
   padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -317,7 +317,7 @@ a.task-timeline-item-hit {
 .task-event-detail-thread-bubble {
   max-width: min(100%, 26rem);
   padding: 0.55rem 0.75rem 0.6rem;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-thread-bubble);
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
 }
@@ -329,7 +329,7 @@ a.task-timeline-item-hit {
 }
 
 .task-event-detail-thread-item--user .task-event-detail-thread-bubble {
-  border-bottom-right-radius: 0.25rem;
+  border-bottom-right-radius: var(--radius-sm);
   background: rgb(16 185 129 / 10%);
   border-color: var(--success-border);
 }
