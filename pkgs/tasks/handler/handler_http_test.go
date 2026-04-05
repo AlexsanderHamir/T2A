@@ -596,13 +596,17 @@ func TestHTTP_health(t *testing.T) {
 				t.Fatalf("status %d", res.StatusCode)
 			}
 			var body struct {
-				Status string `json:"status"`
+				Status  string `json:"status"`
+				Version string `json:"version"`
 			}
 			if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
 			if body.Status != "ok" {
 				t.Fatalf("status field %q", body.Status)
+			}
+			if body.Version == "" {
+				t.Fatal("missing version")
 			}
 		})
 	}
@@ -621,13 +625,14 @@ func TestHTTP_health_ready_ok(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 	var body struct {
-		Status string            `json:"status"`
-		Checks map[string]string `json:"checks"`
+		Status  string            `json:"status"`
+		Checks  map[string]string `json:"checks"`
+		Version string            `json:"version"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "ok" || body.Checks["database"] != "ok" {
+	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
 }
@@ -687,13 +692,14 @@ func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 	var body struct {
-		Status string            `json:"status"`
-		Checks map[string]string `json:"checks"`
+		Status  string            `json:"status"`
+		Checks  map[string]string `json:"checks"`
+		Version string            `json:"version"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "degraded" || body.Checks["database"] != "fail" {
+	if body.Status != "degraded" || body.Checks["database"] != "fail" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
 }
@@ -712,13 +718,14 @@ func TestHTTP_health_ready_workspace_repo_ok(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 	var body struct {
-		Status string            `json:"status"`
-		Checks map[string]string `json:"checks"`
+		Status  string            `json:"status"`
+		Checks  map[string]string `json:"checks"`
+		Version string            `json:"version"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "ok" {
+	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "ok" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
 }
@@ -746,13 +753,14 @@ func TestHTTP_health_ready_workspace_repo_fail_when_root_removed(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 	var body struct {
-		Status string            `json:"status"`
-		Checks map[string]string `json:"checks"`
+		Status  string            `json:"status"`
+		Checks  map[string]string `json:"checks"`
+		Version string            `json:"version"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "degraded" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "fail" {
+	if body.Status != "degraded" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "fail" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
 }

@@ -65,7 +65,10 @@ func writeLiveness(w http.ResponseWriter, r *http.Request, op string) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler."+op)
 	r = withCallRoot(r, op)
 	debugHTTPRequest(r, op)
-	writeJSON(w, r, op, http.StatusOK, map[string]string{"status": "ok"})
+	writeJSON(w, r, op, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"version": ServerVersion(),
+	})
 }
 
 const healthReadyDBTimeout = 2 * time.Second
@@ -84,8 +87,9 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err)
 		checks["database"] = "fail"
 		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
-			"status": "degraded",
-			"checks": checks,
+			"status":  "degraded",
+			"checks":  checks,
+			"version": ServerVersion(),
 		})
 		return
 	}
@@ -96,8 +100,9 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 			slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "workspace_repo", "err", err)
 			checks["workspace_repo"] = "fail"
 			writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
-				"status": "degraded",
-				"checks": checks,
+				"status":  "degraded",
+				"checks":  checks,
+				"version": ServerVersion(),
 			})
 			return
 		}
@@ -105,8 +110,9 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, r, op, http.StatusOK, map[string]any{
-		"status": "ok",
-		"checks": checks,
+		"status":  "ok",
+		"checks":  checks,
+		"version": ServerVersion(),
 	})
 }
 
