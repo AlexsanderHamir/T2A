@@ -26,7 +26,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/DESIGN.md`. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. |
-| Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. |
+| Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. Global styles: `web/src/app/App.css` `@import`s partials under `web/src/app/styles/`. |
 
 API contracts (paths, query params, JSON shapes) are authoritative in `docs/DESIGN.md` and `docs/WEB.md`, not only in prose comments.
 

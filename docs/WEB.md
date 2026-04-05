@@ -10,7 +10,7 @@ Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a 
 
 ## Stack
 
-Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (`RichPromptEditor`, `RichPromptMenuBar`, `MentionRangePanel`), `fetch` only under `src/api/` (import `@/api` or `../api`), Vitest + Testing Library (`fetch` / `EventSource` mocked in tests).
+Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (`RichPromptEditor`, `RichPromptMenuBar`, `MentionRangePanel`), `fetch` only under `src/api/` (import `@/api` or `../api`), Vitest + Testing Library (`fetch` / `EventSource` mocked in tests). App-wide CSS: `src/app/App.css` imports partials from `src/app/styles/` (e.g. task list, task detail, timeline).
 
 ## SPA in the system
 
