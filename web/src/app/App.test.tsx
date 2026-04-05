@@ -143,6 +143,44 @@ describe("App", () => {
     );
   });
 
+  it("shows not found for unknown routes", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter
+          future={ROUTER_FUTURE_FLAGS}
+          initialEntries={["/no-such-page"]}
+        >
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /^page not found$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /^← all tasks$/i }),
+    ).toHaveAttribute("href", "/");
+  });
+
   it("renders heading and empty state after tasks load", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);

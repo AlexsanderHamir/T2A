@@ -8,6 +8,7 @@ import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
+import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import "./App.css";
 
@@ -93,6 +94,7 @@ export default function App() {
           element={<TaskEventDetailPage />}
         />
         <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );
