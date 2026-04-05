@@ -120,12 +120,23 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateTas
 	}
 	if in.ChecklistInherit != nil {
 		was := cur.ChecklistInherit
-		if *in.ChecklistInherit && !was {
+		want := *in.ChecklistInherit
+		if want && !was {
 			if err := deleteOwnedChecklistItemsTx(tx, taskID); err != nil {
 				return err
 			}
 		}
-		cur.ChecklistInherit = *in.ChecklistInherit
+		if want != was {
+			b, err := json.Marshal(map[string]bool{"from": was, "to": want})
+			if err != nil {
+				return err
+			}
+			if err := appendEvent(tx, taskID, seq, domain.EventChecklistInheritChanged, by, b); err != nil {
+				return err
+			}
+			seq++
+		}
+		cur.ChecklistInherit = want
 	}
 	if in.Priority != nil {
 		if !validPriority(*in.Priority) {

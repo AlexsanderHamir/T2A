@@ -52,7 +52,7 @@ func tryDeleteDevsimTask(ctx context.Context, st *store.Store, publish func(Chan
 	}
 	for _, i := range rand.Perm(len(tasks)) {
 		id := tasks[i].ID
-		if err := st.Delete(ctx, id); err != nil {
+		if _, err := st.Delete(ctx, id, domain.ActorAgent); err != nil {
 			continue
 		}
 		publish(ChangeDeleted, id)

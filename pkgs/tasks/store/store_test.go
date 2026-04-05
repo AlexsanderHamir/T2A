@@ -177,7 +177,7 @@ func TestStore_Update_not_found(t *testing.T) {
 
 func TestStore_Delete_not_found(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
-	err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077")
+	_, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("got %v want ErrNotFound", err)
 	}
@@ -185,7 +185,7 @@ func TestStore_Delete_not_found(t *testing.T) {
 
 func TestStore_Delete_rejects_empty_id(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
-	err := s.Delete(context.Background(), "")
+	_, err := s.Delete(context.Background(), "", domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
@@ -604,7 +604,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Delete(ctx, tsk.ID); err != nil {
+	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	err = db.Where("task_id = ?", tsk.ID).First(&domain.TaskEvent{}).Error
@@ -646,9 +646,44 @@ func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.Delete(ctx, parent.ID)
+	_, err = s.Delete(ctx, parent.ID, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	child, err := s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentNotify, err := s.Delete(ctx, child.ID, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parentNotify != parent.ID {
+		t.Fatalf("notify parent %q want %q", parentNotify, parent.ID)
+	}
+	pEv, err := s.ListTaskEvents(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saw bool
+	for _, e := range pEv {
+		if e.Type == domain.EventSubtaskRemoved {
+			saw = true
+			break
+		}
+	}
+	if !saw {
+		t.Fatalf("parent events: want subtask_removed, got %#v", pEv)
 	}
 }
 
@@ -692,5 +727,65 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 	}
 	if forest[0].Children[0].Title != "kid" {
 		t.Fatalf("child title %q", forest[0].Children[0].Title)
+	}
+}
+
+func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	child, err := s.Create(ctx, CreateTaskInput{Title: "kid", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chEv, err := s.ListTaskEvents(ctx, child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chEv) != 1 || chEv[0].Type != domain.EventTaskCreated {
+		t.Fatalf("child events: %+v", chEv)
+	}
+	pEv, err := s.ListTaskEvents(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pEv) != 2 || pEv[0].Type != domain.EventTaskCreated || pEv[1].Type != domain.EventSubtaskAdded {
+		t.Fatalf("parent events: %+v", pEv)
+	}
+}
+
+func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	child, err := s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &pid, ChecklistInherit: false}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inherit := true
+	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{ChecklistInherit: &inherit}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	evs, err := s.ListTaskEvents(ctx, child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saw bool
+	for _, e := range evs {
+		if e.Type == domain.EventChecklistInheritChanged {
+			saw = true
+			break
+		}
+	}
+	if !saw {
+		t.Fatal("expected checklist_inherit_changed event")
 	}
 }

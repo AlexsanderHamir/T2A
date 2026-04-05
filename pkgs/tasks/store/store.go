@@ -120,14 +120,20 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 		}
 		seq++
 		if parentID != nil {
-			b, err := json.Marshal(map[string]string{"parent_id": *parentID})
+			pseq, err := nextEventSeq(tx, *parentID)
 			if err != nil {
 				return err
 			}
-			if err := appendEvent(tx, t.ID, seq, domain.EventSubtaskAdded, by, b); err != nil {
+			pb, err := json.Marshal(map[string]string{
+				"child_task_id": t.ID,
+				"title":         title,
+			})
+			if err != nil {
 				return err
 			}
-			seq++
+			if err := appendEvent(tx, *parentID, pseq, domain.EventSubtaskAdded, by, pb); err != nil {
+				return err
+			}
 		}
 		if st == domain.StatusDone {
 			if err := validateCanMarkDoneTx(tx, t.ID); err != nil {
@@ -256,27 +262,72 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	return updated, nil
 }
 
-func (s *Store) Delete(ctx context.Context, id string) error {
+// Delete removes a task with no children. When the task had a parent, appends
+// subtask_removed on the parent and returns that parent id (for SSE); otherwise returns "".
+func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) (string, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
+	if err := validateActor(by); err != nil {
+		return "", err
+	}
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
+		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	var childCount int64
-	if err := s.db.WithContext(ctx).Model(&domain.Task{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
-		return fmt.Errorf("delete task: %w", err)
+	var parentToNotify string
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var t domain.Task
+		if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return fmt.Errorf("load task: %w", err)
+		}
+		var childCount int64
+		if err := tx.Model(&domain.Task{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
+			return fmt.Errorf("delete task: %w", err)
+		}
+		if childCount > 0 {
+			return fmt.Errorf("%w: delete subtasks first", domain.ErrInvalidInput)
+		}
+		if t.ParentID != nil {
+			pid := strings.TrimSpace(*t.ParentID)
+			if pid != "" {
+				var pn int64
+				if err := tx.Model(&domain.Task{}).Where("id = ?", pid).Count(&pn).Error; err != nil {
+					return fmt.Errorf("parent lookup: %w", err)
+				}
+				if pn > 0 {
+					pseq, err := nextEventSeq(tx, pid)
+					if err != nil {
+						return err
+					}
+					b, mErr := json.Marshal(map[string]string{
+						"child_task_id": id,
+						"title":         strings.TrimSpace(t.Title),
+					})
+					if mErr != nil {
+						return mErr
+					}
+					if err := appendEvent(tx, pid, pseq, domain.EventSubtaskRemoved, by, b); err != nil {
+						return err
+					}
+					parentToNotify = pid
+				}
+			}
+		}
+		res := tx.Where("id = ?", id).Delete(&domain.Task{})
+		if res.Error != nil {
+			return fmt.Errorf("delete task: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
-	if childCount > 0 {
-		return fmt.Errorf("%w: delete subtasks first", domain.ErrInvalidInput)
-	}
-	res := s.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Task{})
-	if res.Error != nil {
-		return fmt.Errorf("delete task: %w", res.Error)
-	}
-	if res.RowsAffected == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
+	return parentToNotify, nil
 }
 
 func validStatus(s domain.Status) bool {

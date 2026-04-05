@@ -29,8 +29,12 @@ var EventCycle = []domain.EventType{
 	domain.EventNonGoalAdded,
 	domain.EventPlanAdded,
 	domain.EventSubtaskAdded,
+	domain.EventSubtaskRemoved,
 	domain.EventChecklistItemAdded,
 	domain.EventChecklistItemToggled,
+	domain.EventChecklistItemUpdated,
+	domain.EventChecklistItemRemoved,
+	domain.EventChecklistInheritChanged,
 	domain.EventArtifactAdded,
 	domain.EventApprovalRequested,
 	domain.EventApprovalGranted,
@@ -68,10 +72,21 @@ func samplePayload(typ domain.EventType) ([]byte, error) {
 			"child_task_id": "00000000-0000-0000-0000-000000000099",
 			"title":         "Child (synthetic id)",
 		})
+	case domain.EventSubtaskRemoved:
+		return json.Marshal(map[string]string{
+			"child_task_id": "00000000-0000-0000-0000-000000000099",
+			"title":         "Removed child (synthetic)",
+		})
 	case domain.EventChecklistItemAdded:
 		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Run go test ./..."})
 	case domain.EventChecklistItemToggled:
 		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "done": "true"})
+	case domain.EventChecklistItemUpdated:
+		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Run go test ./... (updated)"})
+	case domain.EventChecklistItemRemoved:
+		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Removed criterion (synthetic)"})
+	case domain.EventChecklistInheritChanged:
+		return json.Marshal(map[string]bool{"from": false, "to": true})
 	case domain.EventArtifactAdded:
 		return json.Marshal(map[string]string{"name": "notes.md", "uri": "file:///tmp/t2a-devsim"})
 	case domain.EventApprovalRequested:
