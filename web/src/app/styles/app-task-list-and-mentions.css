@@ -213,6 +213,7 @@
 }
 
 .task-list-table-wrap {
+  position: relative;
   transition: opacity 0.2s ease;
 }
 

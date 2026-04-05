@@ -61,6 +61,9 @@ const LOADING_STATUS_DELAY_MS = 220;
 
 const SKELETON_ROW_COUNT = 6;
 
+const TASK_LIST_TABLE_CAPTION =
+  "All tasks: title, status, priority, prompt preview, and row actions.";
+
 export function TaskListSection({
   tasks,
   rootTasksOnPage,
@@ -158,6 +161,9 @@ export function TaskListSection({
         >
           <div className="table-wrap task-list-table-wrap">
             <table className="task-list-table task-list-table--skeleton">
+              <caption className="visually-hidden">
+                {TASK_LIST_TABLE_CAPTION}
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Title</th>
@@ -238,6 +244,9 @@ export function TaskListSection({
           </div>
           <div className="table-wrap task-list-table-wrap">
             <table className="task-list-table" aria-busy={refreshing}>
+              <caption className="visually-hidden">
+                {TASK_LIST_TABLE_CAPTION}
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Title</th>

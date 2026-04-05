@@ -69,8 +69,8 @@ textarea:focus-visible,
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
 }
 
-/* SPA: mirror document.title for AT after client navigations (WCAG 4.1.3) */
-.route-announcer {
+/* Screen-reader-only copy (captions, live regions, etc.) */
+.visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -81,6 +81,8 @@ textarea:focus-visible,
   white-space: nowrap;
   border: 0;
 }
+
+/* RouteAnnouncer adds this class alongside .visually-hidden for stable test hooks. */
 
 /* Skip link — first tab stop; visible on focus (DS §13 / WCAG 2.4.1) */
 .skip-link {

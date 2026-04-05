@@ -70,6 +70,11 @@ describe("TaskListSection", () => {
       />,
     );
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("table", {
+        name: /all tasks: title, status, priority, prompt preview, and row actions/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("calls emptyListAction when the empty-state CTA is used", async () => {

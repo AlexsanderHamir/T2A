@@ -16,7 +16,11 @@ export function RouteAnnouncer() {
   }, [location.pathname, location.search, location.key]);
 
   return (
-    <div className="route-announcer" aria-live="polite" aria-atomic="true">
+    <div
+      className="route-announcer visually-hidden"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {message}
     </div>
   );
