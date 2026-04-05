@@ -1,0 +1,126 @@
+/* Design tokens — aligned with .cursor/rules/16-ui-ux-design-system.mdc */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Typography scale (rem) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  /* Motion */
+  --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-instant: 50ms;
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-moderate: 250ms;
+
+  /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
+  --slate-shadow: 15 23 42;
+  --text-primary: #0a0a0a;
+  --text-secondary: rgb(75 85 99 / 92%);
+  --text-tertiary: rgb(107 114 128 / 78%);
+  --bg-page: #f6f8fa;
+  --bg-elevated: #fafafa;
+  --bg-subtle: #f0f2f5;
+
+  /* Brand — Stripe-style purple */
+  --brand: #635bff;
+  --brand-hover: #5046e5;
+  --brand-deep: #4338cc;
+  --brand-rgb: 99 91 255;
+  --brand-muted: rgb(var(--brand-rgb) / 12%);
+  --brand-mesh: rgb(var(--brand-rgb) / 6%);
+  --brand-focus: rgb(var(--brand-rgb) / 32%);
+  --link: #5046e5;
+  --link-hover: #4338cc;
+  --surface-hover: var(--brand-muted);
+  --surface-press: rgb(var(--brand-rgb) / 16%);
+  --focus-ring: var(--brand-focus);
+
+  /* Primary actions — brand (single clear CTA color) */
+  --ink: #0a0a0a;
+  --ink-soft: #171717;
+
+  --border-hairline: rgb(0 0 0 / 8%);
+  --border-soft: rgb(0 0 0 / 12%);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 4%);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 4%);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 6%), 0 2px 4px -1px rgb(0 0 0 / 4%);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 7%), 0 4px 6px -2px rgb(0 0 0 / 4%);
+  /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
+  --shadow-card: var(--shadow-sm);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Semantic */
+  --success: #00a96e;
+  --success-bright: #00b87a;
+  --success-soft: rgb(0 169 110 / 12%);
+  --success-border: rgb(0 169 110 / 22%);
+  --success-mesh: rgb(0 169 110 / 5%);
+
+  --danger: #dc2626;
+  --danger-deep: #b91c1c;
+  --danger-bright: #ef4444;
+  --danger-soft: rgb(239 68 68 / 10%);
+
+  --color-error-subtle: #fee2e2;
+  --color-warning-subtle: #fef3c7;
+
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  background: var(--bg-page);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #f5f5f5;
+    --text-secondary: rgb(160 160 160 / 92%);
+    --text-tertiary: rgb(96 96 96 / 95%);
+    --bg-page: #0a0a0a;
+    --bg-elevated: #141414;
+    --bg-subtle: #1a1a1a;
+
+    --border-hairline: rgb(255 255 255 / 8%);
+    --border-soft: rgb(255 255 255 / 12%);
+
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 40%);
+    --shadow-sm: 0 1px 3px rgb(0 0 0 / 45%), 0 1px 2px rgb(0 0 0 / 35%);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 45%);
+    --shadow-lg: 0 12px 24px rgb(0 0 0 / 50%);
+    --shadow-card: var(--shadow-sm);
+
+    --brand-muted: rgb(var(--brand-rgb) / 18%);
+    --brand-mesh: rgb(var(--brand-rgb) / 10%);
+    --brand-focus: rgb(var(--brand-rgb) / 45%);
+    --focus-ring: var(--brand-focus);
+
+    --success-soft: rgb(0 169 110 / 18%);
+    --success-border: rgb(0 169 110 / 35%);
+    --success-mesh: rgb(0 169 110 / 8%);
+
+    --danger-soft: rgb(239 68 68 / 16%);
+    --color-error-subtle: rgb(127 29 29 / 35%);
+    --color-warning-subtle: rgb(120 53 15 / 35%);
+
+    color-scheme: dark;
+  }
+}

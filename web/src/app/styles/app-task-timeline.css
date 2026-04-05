@@ -248,8 +248,8 @@ a.task-timeline-item-hit {
   margin: 0 0 1.25rem;
   padding: 1rem 1.1rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgb(79 70 229 / 18%);
-  background: rgb(79 70 229 / 5%);
+  border: 1px solid rgb(var(--brand-rgb) / 18%);
+  background: rgb(var(--brand-rgb) / 5%);
 }
 
 .task-event-detail-response-field {
@@ -324,8 +324,8 @@ a.task-timeline-item-hit {
 
 .task-event-detail-thread-item--agent .task-event-detail-thread-bubble {
   border-bottom-left-radius: 0.25rem;
-  background: rgb(79 70 229 / 8%);
-  border-color: rgb(79 70 229 / 22%);
+  background: rgb(var(--brand-rgb) / 8%);
+  border-color: rgb(var(--brand-rgb) / 22%);
 }
 
 .task-event-detail-thread-item--user .task-event-detail-thread-bubble {
@@ -496,7 +496,7 @@ a.task-timeline-item-hit {
 }
 
 .task-timeline-thread-msg--agent .task-timeline-thread-msg-meta strong {
-  color: var(--accent, #6366f1);
+  color: var(--accent, var(--brand));
 }
 
 .task-timeline-thread-msg-body {

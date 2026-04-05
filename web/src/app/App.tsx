@@ -12,7 +12,7 @@ import "./App.css";
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   return (
     <div className="app">
-      <header className="app-header">
+      <header className="app-header app-header--sticky">
         <div className="app-header-top">
           <h1 className="app-title">Tasks</h1>
           <p className="app-tagline">Capture work. Ship with clarity.</p>

@@ -30,38 +30,38 @@
 }
 
 .task-create-submit {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1.15rem;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
   color: #fff;
-  background: linear-gradient(180deg, #6366f1 0%, var(--brand) 48%, var(--brand-hover) 100%);
-  border: 1px solid rgb(67 56 202 / 35%);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 22%) inset,
-    0 1px 2px rgb(79 70 229 / 18%);
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.2s ease, filter 0.2s ease, background 0.2s ease;
+  background: var(--brand);
+  border: 1px solid rgb(var(--brand-rgb) / 28%);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .task-create-submit:not(:disabled):hover {
-  filter: brightness(1.04);
-  transform: translateY(-1px);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 26%) inset,
-    0 2px 6px rgb(79 70 229 / 22%);
+  background: var(--brand-hover);
+  filter: none;
+  transform: none;
+  box-shadow: var(--shadow-md);
 }
 
 .task-create-submit:not(:disabled):active {
-  transform: translateY(0);
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
 }
 
 .task-create-submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--brand-muted), 0 1px 0 rgb(255 255 255 / 22%) inset;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
 .task-create-parent-field select {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset;
 }
@@ -90,14 +90,14 @@
 }
 
 .task-create button.custom-select-trigger {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset, 0 1px 0 rgb(255 255 255 / 88%) inset;
 }
 
 .task-create input[type="text"],
 .task-create input:not([type]) {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset;
 }
@@ -112,7 +112,7 @@
 }
 
 .task-create-editor-shell {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
@@ -130,7 +130,7 @@
 }
 
 .task-create-editor-shell .toolbar-btn {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.32rem 0.55rem;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -151,7 +151,7 @@
 
 .task-create-editor-shell .toolbar-btn[aria-pressed="true"] {
   background: var(--brand-muted);
-  border-color: rgb(79 70 229 / 22%);
+  border-color: rgb(var(--brand-rgb) / 22%);
   color: var(--brand-deep);
 }
 
@@ -169,7 +169,7 @@
 
 .task-create-editor-shell .rich-prompt-wrap .tiptap:focus-within {
   outline: none;
-  box-shadow: inset 0 0 0 1px rgb(79 70 229 / 28%);
+  box-shadow: inset 0 0 0 1px rgb(var(--brand-rgb) / 28%);
 }
 
 .task-create-checklist {
@@ -178,8 +178,17 @@
   border-top: 1px solid var(--border-hairline);
 }
 
-.task-create-checklist-heading-row.field-heading-with-req {
-  margin: 0 0 0.35rem;
+.task-create-checklist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-create-checklist-title-row.field-heading-with-req {
+  margin: 0;
 }
 
 .task-create-checklist-heading {
@@ -199,39 +208,8 @@
   max-width: 40rem;
 }
 
-.task-create-checklist-add {
-  align-items: flex-end;
-}
-
-.task-create-checklist-add-btn {
-  border-radius: 6px;
-  padding: 0.5rem 0.95rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.task-create-checklist-add-btn:not(:disabled):hover {
-  background: var(--bg-subtle);
-  border-color: rgb(var(--slate-shadow) / 14%);
-  transform: none;
-  filter: none;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset,
-    0 1px 3px rgb(var(--slate-shadow) / 6%);
-}
-
-.task-create-checklist-add-btn:focus-visible {
-  outline: none;
-  border-color: rgb(79 70 229 / 35%);
-  box-shadow: 0 0 0 3px var(--brand-muted);
-}
-
 .task-create-checklist-remove {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 600;

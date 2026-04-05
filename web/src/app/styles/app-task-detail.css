@@ -61,7 +61,7 @@
 
 .task-detail-attention {
   padding: 0.85rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-top: 1rem;
   margin-bottom: 0;
   background: linear-gradient(180deg, rgb(255 250 240) 0%, rgb(255 252 248) 100%);
@@ -85,7 +85,7 @@
 
 .task-detail-ok {
   padding: 0.85rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-top: 1rem;
   margin-bottom: 0;
   background: var(--bg-subtle);
@@ -122,7 +122,7 @@
 
 /* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
 .task-detail-btn-edit {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -144,12 +144,12 @@
 
 .task-detail-btn-edit:focus-visible {
   outline: none;
-  border-color: rgb(79 70 229 / 35%);
+  border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
 .task-detail-btn-delete {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -195,7 +195,7 @@
 
 .task-detail-panel input[type="text"],
 .task-detail-panel input:not([type]) {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset;
 }
@@ -241,7 +241,7 @@
 
 .task-detail-add-subtask-btn,
 .task-detail-add-checklist-btn {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 0.45rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -266,7 +266,7 @@
 .task-detail-add-subtask-btn:focus-visible,
 .task-detail-add-checklist-btn:focus-visible {
   outline: none;
-  border-color: rgb(79 70 229 / 35%);
+  border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -286,35 +286,36 @@
 }
 
 .task-home-new-task-btn {
-  border-radius: 6px;
-  padding: 0.45rem 0.95rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  letter-spacing: -0.015em;
+  border-radius: var(--radius-md);
+  min-height: 2.5rem;
+  padding: 0.5rem 1.15rem;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
   color: #fff;
-  background: linear-gradient(
-    180deg,
-    #6366f1 0%,
-    var(--brand) 48%,
-    var(--brand-hover) 100%
-  );
-  border: 1px solid rgb(67 56 202 / 35%);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 22%) inset,
-    0 1px 2px rgb(79 70 229 / 18%);
+  background: var(--brand);
+  border: 1px solid rgb(var(--brand-rgb) / 28%);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: filter 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease;
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .task-home-new-task-btn:not(:disabled):hover {
-  filter: brightness(1.04);
-  transform: translateY(-1px);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 26%) inset,
-    0 2px 6px rgb(79 70 229 / 22%);
+  background: var(--brand-hover);
+  filter: none;
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+.task-home-new-task-btn:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
 }
 
 .task-home-new-task-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--brand-muted);
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
 .task-home-new-task-btn:disabled {
@@ -335,7 +336,7 @@
 
 .task-subtask-modal-sheet button.custom-select-trigger,
 .task-create-modal-sheet button.custom-select-trigger {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%) inset,
     0 1px 0 rgb(255 255 255 / 88%) inset;
@@ -348,7 +349,7 @@
 }
 
 .task-detail-checklist-add-btn {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -369,7 +370,7 @@
 
 .task-detail-checklist-add-btn:focus-visible {
   outline: none;
-  border-color: rgb(79 70 229 / 35%);
+  border-color: rgb(var(--brand-rgb) / 35%);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -382,7 +383,7 @@
 }
 
 .task-detail-checklist-edit {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -395,7 +396,7 @@
 
 .task-detail-checklist-edit:not(:disabled):hover {
   background: var(--brand-muted);
-  border-color: rgb(79 70 229 / 18%);
+  border-color: rgb(var(--brand-rgb) / 18%);
   transform: none;
   filter: none;
 }
@@ -406,7 +407,7 @@
 }
 
 .task-detail-checklist-remove {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.28rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -434,7 +435,7 @@
 }
 
 .task-detail-prompt-details {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: var(--bg-elevated);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 4%);
@@ -459,7 +460,7 @@
 }
 
 .task-detail-panel .task-timeline-item {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 3%);
 }
@@ -550,7 +551,7 @@
 
 .task-subtasks-link:focus-visible {
   outline: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
@@ -804,7 +805,7 @@
   color: var(--brand-hover);
   background: var(--brand-muted);
   text-decoration: underline;
-  text-decoration-color: rgb(79 70 229 / 35%);
+  text-decoration-color: rgb(var(--brand-rgb) / 35%);
   text-underline-offset: 0.2em;
 }
 
@@ -839,7 +840,7 @@
   flex-shrink: 0;
   font-size: 0.65rem;
   line-height: 1;
-  color: rgb(79 70 229 / 55%);
+  color: rgb(var(--brand-rgb) / 55%);
   transition:
     transform 0.15s ease,
     color 0.12s ease;
