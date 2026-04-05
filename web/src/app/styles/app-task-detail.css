@@ -650,7 +650,7 @@ button.task-detail-checklist-remove:focus-visible {
   font-weight: 700;
   line-height: 1;
   box-sizing: border-box;
-  border: 2px solid rgb(var(--slate-shadow) / 22%);
+  border: 2px solid var(--border-chrome-checklist);
   color: transparent;
   user-select: none;
 }

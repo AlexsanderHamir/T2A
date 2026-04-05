@@ -142,7 +142,7 @@
 }
 
 .task-create-editor-shell .toolbar-btn:not(:disabled):hover {
-  background: rgb(255 255 255 / 90%);
+  background: var(--surface-glass-toolbar);
   border-color: var(--border-hairline);
   color: var(--text-primary);
   transform: none;

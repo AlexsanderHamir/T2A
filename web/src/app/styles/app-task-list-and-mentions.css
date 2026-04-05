@@ -5,13 +5,13 @@
 
 @media (hover: hover) {
   .task-list-table tbody tr.task-list-row:hover {
-    background: rgb(var(--slate-shadow) / 4.5%);
+    background: var(--chrome-fill-task-row-hover);
   }
 }
 
 @media (hover: hover) and (prefers-color-scheme: dark) {
   .task-list-table tbody tr.task-list-row:hover {
-    background: rgb(255 255 255 / 6%);
+    background: var(--neutral-fill-muted);
   }
 }
 
