@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { TaskUpdatesTimeline } from "./TaskUpdatesTimeline";
 
 describe("TaskUpdatesTimeline", () => {
@@ -98,7 +99,7 @@ describe("TaskUpdatesTimeline", () => {
 
   it("uses one list for mixed events and marks needs-user rows", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskUpdatesTimeline
           isPending={false}
           isError={false}
@@ -148,7 +149,7 @@ describe("TaskUpdatesTimeline", () => {
 
   it("shows thread and hides needs-input hint when user replied last", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskUpdatesTimeline
           isPending={false}
           isError={false}
@@ -192,7 +193,7 @@ describe("TaskUpdatesTimeline", () => {
 
   it("links each row when taskIdForLinks is set", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskUpdatesTimeline
           isPending={false}
           isError={false}

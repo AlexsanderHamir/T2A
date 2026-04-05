@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
 import { requestUrl } from "../../test/requestUrl";
 import { TaskEventDetailPage } from "./TaskEventDetailPage";
@@ -12,7 +13,10 @@ function renderEventPage(initialPath: string) {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialPath]}>
+      <MemoryRouter
+        future={ROUTER_FUTURE_FLAGS}
+        initialEntries={[initialPath]}
+      >
         <Routes>
           <Route
             path="/tasks/:taskId/events/:eventSeq"

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { useTasksApp } from "../hooks/useTasksApp";
 import { stubEventSource } from "../../test/browserMocks";
 import { requestUrl } from "../../test/requestUrl";
+import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
 import { TaskDetailPage } from "./TaskDetailPage";
 
@@ -37,7 +38,10 @@ function renderDetail(
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialPath]}>
+      <MemoryRouter
+        future={ROUTER_FUTURE_FLAGS}
+        initialEntries={[initialPath]}
+      >
         <Routes>
           <Route
             path="/tasks/:taskId"

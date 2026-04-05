@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../shared/useDocumentTitle";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
@@ -36,7 +37,7 @@ function renderApp() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter future={ROUTER_FUTURE_FLAGS}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>,
@@ -121,7 +122,10 @@ describe("App", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={["/tasks/h1"]}>
+        <MemoryRouter
+          future={ROUTER_FUTURE_FLAGS}
+          initialEntries={["/tasks/h1"]}
+        >
           <App />
         </MemoryRouter>
       </QueryClientProvider>,

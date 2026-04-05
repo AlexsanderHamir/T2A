@@ -3,10 +3,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { TaskListSection } from "./TaskListSection";
 
 function renderWithRouter(ui: ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  return render(
+    <MemoryRouter future={ROUTER_FUTURE_FLAGS}>{ui}</MemoryRouter>,
+  );
 }
 
 const listPagerDefaults = {
