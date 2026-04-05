@@ -52,7 +52,7 @@ button.custom-select-trigger:focus-visible {
 
 .custom-select-value-pill.cell-pill,
 .custom-select-option-pill.cell-pill {
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   padding: 0.12rem 0.45rem;
 }
 

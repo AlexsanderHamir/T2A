@@ -62,6 +62,8 @@
 
   /* Typography scale (rem) */
   --text-xs: 0.75rem;
+  /* Form labels, helper/error lines, dense table/section meta (DS §2 / §7 — ~13px) */
+  --text-help: 0.8125rem;
   --text-sm: 0.875rem;
   --text-base: 0.9375rem;
   --text-md: 1rem;
@@ -132,7 +134,7 @@
   --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 90%) inset;
 
   /* Form labels + control chrome (global rules in app-task-create-and-fields.css) */
-  --field-label-font-size: 0.8125rem;
+  --field-label-font-size: var(--text-help);
   --field-label-font-weight: 500;
   --field-label-letter-spacing: -0.01em;
   --field-label-color: var(--text-secondary);

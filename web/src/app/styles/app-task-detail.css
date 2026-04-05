@@ -180,7 +180,7 @@ button.task-detail-btn-delete:focus-visible {
 
 .task-detail-section-heading {
   margin: 0 0 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 600;
   letter-spacing: -0.012em;
   text-transform: none;
@@ -189,7 +189,7 @@ button.task-detail-btn-delete:focus-visible {
 
 .task-detail-section-hint {
   margin: -0.15rem 0 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
   color: var(--text-tertiary);
   max-width: 40rem;
@@ -739,7 +739,7 @@ button.task-detail-checklist-remove:focus-visible {
 
 .task-detail-subheading {
   margin: 0 0 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;

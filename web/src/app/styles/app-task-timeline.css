@@ -47,7 +47,7 @@ a.task-timeline-item-hit {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   margin-bottom: 0.35rem;
 }
 
@@ -209,7 +209,7 @@ a.task-timeline-item-hit {
 .task-timeline-data {
   margin: 0;
   padding: 0.5rem 0.65rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-family: var(--font-mono);
   background: rgb(0 0 0 / 3%);
   border-radius: var(--radius-sm);
@@ -276,7 +276,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-thread-hint {
   margin: 0 0 0.65rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
 }
 
@@ -381,7 +381,7 @@ a.task-timeline-item-hit {
 
 .task-event-detail-saved-note {
   margin: 0.65rem 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
 }
 
 .task-event-detail-saved-response-below-data {
@@ -413,7 +413,7 @@ a.task-timeline-item-hit {
   border-radius: var(--radius-sm);
   background: rgb(16 185 129 / 9%);
   border: 1px solid var(--success-border);
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
   display: flex;
   flex-direction: column;
@@ -455,7 +455,7 @@ a.task-timeline-item-hit {
   border-radius: var(--radius-sm);
   background: rgb(16 185 129 / 9%);
   border: 1px solid var(--success-border);
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
 }
 
@@ -511,7 +511,7 @@ a.task-timeline-item-hit {
 }
 
 .task-event-detail-task-id code {
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
 }
 
 .task-event-detail-dl {
@@ -561,7 +561,7 @@ a.task-timeline-item-hit {
 }
 
 .task-pager-summary {
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   flex: 1 1 auto;
   text-align: center;
   min-width: 8rem;
@@ -608,7 +608,7 @@ a.task-timeline-item-hit {
 
 .skeleton-block--detail-time {
   width: 10.5rem;
-  height: 0.8125rem;
+  height: var(--text-help);
 }
 
 .skeleton-block--detail-type-pill {
@@ -619,7 +619,7 @@ a.task-timeline-item-hit {
 
 .skeleton-block--detail-by {
   width: 3.75rem;
-  height: 0.8125rem;
+  height: var(--text-help);
 }
 
 .skeleton-block--detail-data {

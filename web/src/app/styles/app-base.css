@@ -306,7 +306,7 @@ textarea::placeholder {
 }
 
 .stream-status-dev {
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   color: var(--text-tertiary);
   border-radius: var(--radius-sm);
   border: 1px solid rgb(0 0 0 / 9%);
@@ -443,7 +443,7 @@ textarea::placeholder {
 
 .sync-hint {
   margin: 0 0 0.65rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: -0.01em;

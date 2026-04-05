@@ -68,7 +68,7 @@
 
 .task-create-parent-hint {
   margin: 0.4rem 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
   max-width: 38rem;
 }
@@ -132,7 +132,7 @@
 .task-create-editor-shell .toolbar-btn {
   border-radius: var(--radius-md);
   padding: 0.32rem 0.55rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 500;
   letter-spacing: -0.015em;
   color: var(--text-secondary);
@@ -193,7 +193,7 @@
 
 .task-create-checklist-heading {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 600;
   letter-spacing: -0.012em;
   text-transform: none;
@@ -202,7 +202,7 @@
 
 .task-create-checklist-hint {
   margin: 0 0 0.85rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
   color: var(--text-tertiary);
   max-width: 40rem;
@@ -244,7 +244,7 @@
 
 .task-create-subtasks-heading {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   font-weight: 600;
   letter-spacing: -0.012em;
   text-transform: none;
@@ -253,7 +253,7 @@
 
 .task-create-subtasks-hint {
   margin: 0 0 0.85rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   line-height: 1.45;
   color: var(--text-tertiary);
   max-width: 40rem;

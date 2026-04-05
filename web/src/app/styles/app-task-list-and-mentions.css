@@ -147,7 +147,7 @@
 
 .btn-table {
   padding: 0.35rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   border-radius: var(--radius-full);
 }
 
@@ -366,7 +366,7 @@
 .mention-repo-hint {
   margin: 0.65rem 0 0;
   padding: 0.65rem 0.85rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-help);
   color: rgb(120 53 15);
   background: rgb(255 251 235);
   border: 1px solid rgb(253 230 138 / 80%);
