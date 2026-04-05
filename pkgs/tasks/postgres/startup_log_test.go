@@ -30,6 +30,19 @@ func TestLogStartupDBConfig_emitsExpectedFields(t *testing.T) {
 	}
 }
 
+func TestLogStartupDBConfig_operationMatchesCmd(t *testing.T) {
+	var buf bytes.Buffer
+	lg := slog.New(slog.NewJSONHandler(&buf, nil))
+	db, err := gorm.Open(sqlite.Open(":memory:"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	LogStartupDBConfig(lg, "dbcheck", db)
+	if !strings.Contains(buf.String(), `"operation":"dbcheck.db_config"`) {
+		t.Fatalf("missing dbcheck operation: %q", buf.String())
+	}
+}
+
 func TestLogStartupDBConfig_nilDBIsNoOp(t *testing.T) {
 	var buf bytes.Buffer
 	lg := slog.New(slog.NewJSONHandler(&buf, nil))

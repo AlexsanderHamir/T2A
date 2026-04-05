@@ -63,6 +63,7 @@ func run(o options) error {
 		return fmt.Errorf("database: %w", err)
 	}
 	slog.Info("database reachable", "cmd", cmdName, "operation", "ping")
+	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)
 
 	if err := migrateIfRequested(ctx, db, o.migrate); err != nil {
 		return fmt.Errorf("migrate: %w", err)

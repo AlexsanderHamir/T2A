@@ -7,6 +7,7 @@ import (
 )
 
 // LogStartupDBConfig logs SQL pool caps and GORM slow-query threshold at Info.
+// operation is cmd+".db_config" (e.g. taskapi.db_config, dbcheck.db_config).
 // It does not log the DSN or other secrets. db must be non-nil (typically right after Open + Migrate).
 func LogStartupDBConfig(lg *slog.Logger, cmd string, db *gorm.DB) {
 	if lg == nil {
@@ -17,7 +18,7 @@ func LogStartupDBConfig(lg *slog.Logger, cmd string, db *gorm.DB) {
 	}
 	lg.Info("database config",
 		"cmd", cmd,
-		"operation", "taskapi.db_config",
+		"operation", cmd+".db_config",
 		"max_open_conns", defaultMaxOpenConns,
 		"max_idle_conns", defaultMaxIdleConns,
 		"conn_max_lifetime_sec", int(defaultConnMaxLifetime.Seconds()),
