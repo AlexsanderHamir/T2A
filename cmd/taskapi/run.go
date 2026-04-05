@@ -20,6 +20,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func run() int {
@@ -110,8 +111,9 @@ func run() int {
 		rep = r
 		slog.Info("repo root configured", "cmd", cmdName, "operation", "taskapi.startup", "path", rep.Abs())
 	}
-	api := handler.WithRecovery(handler.WithAccessLog(handler.NewHandler(taskStore, hub, rep)))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.NewHandler(taskStore, hub, rep))))
 	mux := http.NewServeMux()
+	mux.Handle("GET /metrics", promhttp.Handler())
 	if devsim.Enabled() {
 		if d := resolveSSETestTickerInterval(); d >= time.Second {
 			opts := devsim.LoadOptions()
@@ -138,7 +140,8 @@ func run() int {
 	}
 
 	baseURL := fmt.Sprintf("http://localhost:%s/", *port)
-	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", ln.Addr().String(), "url", baseURL)
+	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve", "addr", ln.Addr().String(), "url", baseURL,
+		"metrics_url", fmt.Sprintf("http://localhost:%s/metrics", *port))
 
 	srv := &http.Server{
 		Handler:           mux,

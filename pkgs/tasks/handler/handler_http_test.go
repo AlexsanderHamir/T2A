@@ -19,6 +19,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func newTaskTestServer(t *testing.T) *httptest.Server {
@@ -541,6 +542,38 @@ func TestHTTP_health_ready_ok(t *testing.T) {
 	}
 	if body.Status != "ok" || body.Checks["database"] != "ok" {
 		t.Fatalf("body %+v", body)
+	}
+}
+
+func TestHTTP_metrics_scrape(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	api := WithRecovery(WithHTTPMetrics(WithAccessLog(NewHandler(store.NewStore(db), NewSSEHub(), nil))))
+	mux := http.NewServeMux()
+	mux.Handle("GET /metrics", promhttp.Handler())
+	mux.Handle("/", api)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resTasks, err := http.Get(srv.URL + "/tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resTasks.Body.Close()
+
+	res, err := http.Get(srv.URL + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(body, []byte("taskapi_http_requests_total")) {
+		t.Fatalf("metrics body missing taskapi_http_requests_total")
 	}
 }
 

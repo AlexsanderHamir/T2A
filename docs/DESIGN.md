@@ -189,7 +189,7 @@ sequenceDiagram
 
 ## REST API — task and event routes
 
-The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, health endpoints (plain JSON), and optionally repo (see below).
+The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, health endpoints (plain JSON), **`GET /metrics`** (Prometheus text), and optionally repo (see below).
 
 ### Health
 
@@ -198,6 +198,20 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 | `GET /health` | Backward-compatible liveness | `200` `{"status":"ok"}` — does not hit the database. |
 | `GET /health/live` | Explicit liveness | Same as `GET /health`. |
 | `GET /health/ready` | Readiness | `200` `{"status":"ok","checks":{"database":"ok"}}` after `Ping` on the pool (2s timeout), or `503` `{"status":"degraded","checks":{"database":"fail"}}` if the DB is unreachable. |
+
+### Prometheus (`GET /metrics`)
+
+`GET /metrics` serves the default registry in Prometheus text format (Go client). It is **not** behind the access-log or HTTP-metrics middleware, so scrapes do not emit `http.access` lines or `taskapi_http_*` series for themselves.
+
+HTTP traffic that **does** pass through the API stack records:
+
+| Metric | Type | Labels | Notes |
+| ------ | ---- | ------ | ----- |
+| `taskapi_http_in_flight` | Gauge | — | In-flight requests (health probe paths excluded). |
+| `taskapi_http_requests_total` | Counter | `method`, `route`, `code` | `route` is the matched mux pattern (e.g. `GET /tasks/{id}`) when set; otherwise **`other`** (limits cardinality on 404s). |
+| `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | Default buckets; health probe paths excluded. |
+
+There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.
 
 ### Task resource (`/tasks`)
 
@@ -425,7 +439,7 @@ Changing JSON shapes, routes, or SSE payload types also requires updating `docs/
 - Outbound webhooks.
 - ETag / conditional GET (possible future optimization; see `UI_TASK.MD`).
 - Versioned SQL migrations and multi-step schema upgrades.
-- Built-in metrics / OpenTelemetry (only `slog` logs today).
+- OpenTelemetry-style distributed tracing (only `slog` logs and Prometheus HTTP metrics today).
 
 ## Optional browser client (`web/`)
 
