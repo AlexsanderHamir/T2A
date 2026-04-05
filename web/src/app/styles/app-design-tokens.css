@@ -58,6 +58,7 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 7%), 0 4px 6px -2px rgb(0 0 0 / 4%);
   /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
   --shadow-card: var(--shadow-sm);
+  --shadow-focus: 0 0 0 3px var(--brand-focus);
 
   --radius-sm: 4px;
   --radius-md: 8px;
