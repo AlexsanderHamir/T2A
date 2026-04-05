@@ -36,7 +36,7 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 |--------|----------------|----------|
 | **Structured logs** | Primary signal: JSON lines per process run | `slog` with stable keys; errors include `err`; no secrets (see security baseline rule). |
 | **Request correlation** | Tie access line, handler errors, and GORM SQL | `request_id` on the request context; echoed as `X-Request-ID` when the client sends it. |
-| **Build identity** | Match JSONL to binary and health probes | `taskapi` logs **`version`** on the **`listening`** line (`operation` **`taskapi.serve`**); same string as **`GET /health`** / **`/health/live`** / **`/health/ready`** JSON **`version`** (`handler.ServerVersion()` from build metadata). |
+| **Build identity** | Match JSONL / CLI to binary and health probes | **`internal/version.String()`** (module tag, short **`vcs.revision`**, **`devel`**, or **`unknown`**). `taskapi` logs **`version`** on **`listening`** (`operation` **`taskapi.serve`**); **`dbcheck`** logs **`version`** on **`dbcheck.start`**; health JSON uses the same value via **`handler.ServerVersion()`**. |
 | **Log order** | Sort JSONL within a request or the process | `log_seq` (monotonic) with `log_seq_scope` `request` (access middleware) or `process` (startup, `/health`, background). |
 | **Line kind** | Filter JSONL in tools | `obs_category`: `http_access`, `http_io`, `helper_io`. |
 | **Access line** | One completion record per HTTP request (except `GET /health`, `/health/live`, `/health/ready`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |

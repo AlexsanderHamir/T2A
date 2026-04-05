@@ -1,29 +1,9 @@
 package handler
 
-import "runtime/debug"
+import "github.com/AlexsanderHamir/T2A/internal/version"
 
-// ServerVersion returns a short identifier for this binary for health JSON and support
-// correlation. It prefers a non-devel module version, else a short VCS revision, else
-// "devel" or "unknown". Safe to expose on /health (no secrets).
+// ServerVersion returns the same build identifier as internal/version.String (module
+// release tag, short VCS revision, devel, or unknown). Safe to expose on /health.
 func ServerVersion() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "unknown"
-	}
-	if v := info.Main.Version; v != "" && v != "(devel)" {
-		return v
-	}
-	for _, s := range info.Settings {
-		if s.Key == "vcs.revision" && s.Value != "" {
-			rev := s.Value
-			if len(rev) > 12 {
-				return rev[:12]
-			}
-			return rev
-		}
-	}
-	if info.Main.Version == "(devel)" {
-		return "devel"
-	}
-	return "unknown"
+	return version.String()
 }

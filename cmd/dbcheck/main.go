@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/version"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
 )
@@ -51,7 +52,8 @@ func run(o options) error {
 	if err := loadRepoDotenv(o); err != nil {
 		return fmt.Errorf("env setup: %w", err)
 	}
-	slog.Info("dbcheck starting", "cmd", cmdName, "operation", "dbcheck.start", "migrate", o.migrate)
+	slog.Info("dbcheck starting", "cmd", cmdName, "operation", "dbcheck.start",
+		"version", version.String(), "migrate", o.migrate)
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
