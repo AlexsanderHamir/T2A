@@ -202,6 +202,7 @@ func run() int {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
+	shutdownViaSignal := false
 	select {
 	case err := <-serveDone:
 		if err != nil && err != http.ErrServerClosed {
@@ -209,6 +210,7 @@ func run() int {
 			return 1
 		}
 	case s := <-sig:
+		shutdownViaSignal = true
 		slog.Info("shutdown signal received", "cmd", cmdName, "operation", "taskapi.shutdown", "signal", s.String())
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		shutdownErr := srv.Shutdown(shutdownCtx)
@@ -235,7 +237,8 @@ func run() int {
 		slog.Info("database pool closed", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "db_done")
 		dbClosed = true
 	}
-	slog.Info("process exit", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "exit", "db_closed", dbClosed)
+	slog.Info("process exit", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "exit",
+		"db_closed", dbClosed, "signal_shutdown", shutdownViaSignal)
 	return 0
 }
 
