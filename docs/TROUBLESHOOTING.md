@@ -26,6 +26,13 @@ Cause: `taskapi` not running, wrong port, or Vite proxy target mismatch.
 
 Fix: Default API is `http://127.0.0.1:8080`. If you change the API port, set `VITE_TASKAPI_ORIGIN` for the Vite dev server (and `DEV_TASKAPI_PORT` for `scripts/dev.*` if you use them). See root [README.md](../README.md).
 
+## Matching a failing request to logs (request id and build version)
+
+When the UI or `curl` shows an error, you can tie it to JSONL and confirm which binary handled traffic without a separate analytics stack.
+
+- **Request id:** Task API JSON errors may include **`request_id`** in the body (and the response may echo **`X-Request-ID`**). The same value appears on structured **`http.access`** lines and related handler logs when access middleware ran — see [DESIGN.md](./DESIGN.md) (errors + headers) and [WEB.md](./WEB.md) (`readError` appends the id for thrown errors).
+- **Build version:** **`GET /health`**, **`/health/live`**, and **`/health/ready`** return JSON **`version`**. `taskapi` logs that same string on the **`listening`** line (`operation` **`taskapi.serve`**); **`dbcheck`** logs **`version`** on **`dbcheck.start`**. Details: [OBSERVABILITY.md](./OBSERVABILITY.md) (build identity row).
+
 ## Tests fail with “database” or connection errors
 
 Cause: Default `go test ./...` should use SQLite test helpers, not real Postgres.
