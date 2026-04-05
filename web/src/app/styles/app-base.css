@@ -1,12 +1,18 @@
 /* Base layout and globals — tokens live in app-design-tokens.css */
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 }
 
@@ -466,6 +472,16 @@ textarea::placeholder {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-pill--sync-enter,
+  .task-list-phase-msg,
+  .task-list-content--enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
