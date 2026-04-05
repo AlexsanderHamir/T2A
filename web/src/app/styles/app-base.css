@@ -145,8 +145,8 @@ textarea:focus-visible,
      (that bled into `.app` padding and made the header wider than content). */
   margin-left: 0;
   margin-right: 0;
-  /* Horizontal gutter comes from `.app` padding; only pad top/bottom here */
-  padding: 1.25rem 0 1rem;
+  /* Match `.panel` horizontal padding so title/status align with card content */
+  padding: 1.25rem 1.25rem 1rem;
   background: color-mix(in srgb, var(--bg-page) 82%, white);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
