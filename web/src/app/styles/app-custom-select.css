@@ -113,7 +113,7 @@ button:not(.custom-select-trigger) {
   cursor: pointer;
   border: none;
   border-radius: var(--radius-md);
-  min-height: 2.5rem;
+  min-height: var(--touch-target-min);
   padding: 0.625rem 1.25rem;
   color: var(--text-on-brand);
   background: var(--brand);

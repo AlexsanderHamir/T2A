@@ -248,6 +248,7 @@ button.task-detail-btn-delete:focus-visible {
 button.task-detail-add-subtask-btn,
 button.task-detail-add-checklist-btn {
   border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
   padding: 0.45rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
@@ -284,7 +285,7 @@ button.task-detail-add-checklist-btn:disabled {
 
 button.task-home-new-task-btn {
   border-radius: var(--radius-md);
-  min-height: 2.5rem;
+  min-height: var(--touch-target-min);
   padding: 0.5rem 1.15rem;
   font-weight: 500;
   font-size: var(--text-sm);
@@ -346,6 +347,7 @@ button.task-home-new-task-btn:disabled {
 
 button.task-detail-checklist-add-btn {
   border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
   padding: 0.5rem 0.95rem;
   font-weight: 600;
   font-size: 0.875rem;
