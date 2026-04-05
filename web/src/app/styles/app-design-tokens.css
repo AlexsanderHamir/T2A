@@ -213,6 +213,16 @@
   --color-warning-subtle: #fef3c7;
   --warning: #f59e0b;
   --warning-soft: rgb(245 158 11 / 14%);
+  /* Amber callouts, repo hints, blocked status (DS §3 / §11) */
+  --warning-ink: rgb(120 53 15);
+  --warning-surface: rgb(255 251 235);
+  --warning-border: rgb(253 230 138);
+  --warning-border-soft: rgb(253 230 138 / 80%);
+  --warning-chip-bg: rgb(254 243 199 / 80%);
+  --warning-chip-border: rgb(251 191 36 / 35%);
+  --warning-attention-border: rgb(251 191 36 / 28%);
+  --warning-attention-gradient-start: rgb(255 250 240);
+  --warning-attention-gradient-end: rgb(255 252 248);
 
   --info: #3b82f6;
   --info-soft: rgb(59 130 246 / 14%);
@@ -274,6 +284,15 @@
     --color-error-subtle: rgb(127 29 29 / 35%);
     --color-warning-subtle: rgb(120 53 15 / 35%);
     --warning-soft: rgb(245 158 11 / 20%);
+    --warning-ink: rgb(252 211 77);
+    --warning-surface: rgb(251 191 36 / 12%);
+    --warning-border: rgb(251 191 36 / 42%);
+    --warning-border-soft: rgb(251 191 36 / 28%);
+    --warning-chip-bg: rgb(251 191 36 / 14%);
+    --warning-chip-border: rgb(251 191 36 / 30%);
+    --warning-attention-border: rgb(251 191 36 / 32%);
+    --warning-attention-gradient-start: rgb(251 191 36 / 12%);
+    --warning-attention-gradient-end: rgb(251 191 36 / 8%);
     --info-soft: rgb(59 130 246 / 22%);
     --color-info-subtle: rgb(30 58 138 / 38%);
     --overlay-backdrop: rgb(0 0 0 / 58%);

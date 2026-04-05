@@ -290,9 +290,9 @@ textarea::placeholder {
 }
 
 .stream-pill--warn {
-  color: rgb(120 53 15);
-  background: rgb(254 243 199 / 80%);
-  border-color: rgb(251 191 36 / 35%);
+  color: var(--warning-ink);
+  background: var(--warning-chip-bg);
+  border-color: var(--warning-chip-border);
 }
 
 .stream-pill--sync {

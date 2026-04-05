@@ -91,9 +91,9 @@
 }
 
 .cell-pill--status-blocked {
-  background: rgb(255 251 235);
-  color: rgb(146 64 14);
-  border-color: rgb(253 230 138);
+  background: var(--warning-surface);
+  color: var(--warning-ink);
+  border-color: var(--warning-border);
 }
 
 .cell-pill--status-review {
@@ -360,16 +360,16 @@
 .mention-warn {
   margin: 0.5rem 0 0;
   font-size: 0.875rem;
-  color: #b45309;
+  color: var(--warning-ink);
 }
 
 .mention-repo-hint {
   margin: 0.65rem 0 0;
   padding: 0.65rem 0.85rem;
   font-size: var(--text-help);
-  color: rgb(120 53 15);
-  background: rgb(255 251 235);
-  border: 1px solid rgb(253 230 138 / 80%);
+  color: var(--warning-ink);
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border-soft);
   border-radius: var(--radius-sm);
 }
 
