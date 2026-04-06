@@ -140,4 +140,14 @@ describe("TaskEventDetailPage", () => {
     ).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("rejects partially numeric seq values instead of coercing", () => {
+    vi.spyOn(globalThis, "fetch");
+    renderEventPage("/tasks/t1/events/2oops");
+
+    expect(
+      screen.getByText(/invalid event sequence/i),
+    ).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

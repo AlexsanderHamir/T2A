@@ -16,8 +16,11 @@ export function TaskEventDetailPage() {
     taskId: string;
     eventSeq: string;
   }>();
-  const eventSeq = Number.parseInt(eventSeqParam, 10);
-  const seqValid = Number.isFinite(eventSeq) && eventSeq >= 1;
+  const seqLooksLikePositiveInt = /^[1-9]\d*$/.test(eventSeqParam);
+  const eventSeq = seqLooksLikePositiveInt
+    ? Number.parseInt(eventSeqParam, 10)
+    : Number.NaN;
+  const seqValid = Number.isSafeInteger(eventSeq) && eventSeq >= 1;
 
   const [draft, setDraft] = useState("");
 
