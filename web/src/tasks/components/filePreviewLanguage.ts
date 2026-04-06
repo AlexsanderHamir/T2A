@@ -41,8 +41,20 @@ const LANGUAGE_BY_EXTENSION: Record<string, FilePreviewLanguage> = {
   patch: { label: "Patch", prism: "diff" },
 };
 
+/** Match server `maxRepoRelPathQueryBytes`; only the tail affects basename/extension. */
+const maxPathCharsForLanguageDetection = 4096;
+
 export function filePreviewLanguageFromPath(path: string): FilePreviewLanguage {
-  const base = path.split("/").pop() ?? path;
+  const trimmed = path.trim();
+  if (trimmed === "") {
+    return FALLBACK;
+  }
+  const tail =
+    trimmed.length > maxPathCharsForLanguageDetection
+      ? trimmed.slice(-maxPathCharsForLanguageDetection)
+      : trimmed;
+  const lastSlash = tail.lastIndexOf("/");
+  const base = lastSlash >= 0 ? tail.slice(lastSlash + 1) : tail;
   const lowerBase = base.toLowerCase();
   if (lowerBase === "dockerfile") {
     return { label: "Dockerfile", prism: "docker" };
@@ -50,7 +62,11 @@ export function filePreviewLanguageFromPath(path: string): FilePreviewLanguage {
   if (lowerBase === ".gitignore" || lowerBase === ".gitattributes") {
     return { label: "Git", prism: "git" };
   }
-  const ext = base.includes(".") ? base.split(".").pop()?.toLowerCase() : "";
+  const lastDot = base.lastIndexOf(".");
+  if (lastDot <= 0 || lastDot >= base.length - 1) {
+    return FALLBACK;
+  }
+  const ext = base.slice(lastDot + 1).toLowerCase();
   if (!ext) return FALLBACK;
   return LANGUAGE_BY_EXTENSION[ext] ?? FALLBACK;
 }

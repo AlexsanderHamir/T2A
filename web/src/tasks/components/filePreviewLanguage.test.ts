@@ -37,4 +37,20 @@ describe("filePreviewLanguageFromPath", () => {
       prism: "plain",
     });
   });
+
+  it("treats whitespace-only path as plain text", () => {
+    expect(filePreviewLanguageFromPath("   \t")).toEqual({
+      label: "Plain text",
+      prism: "plain",
+    });
+  });
+
+  it("detects language from basename in very long paths without splitting the full string", () => {
+    const suffix = "pkgs/tasks/handler/idempotency.go";
+    const long = `${"x/".repeat(5000)}${suffix}`;
+    expect(filePreviewLanguageFromPath(long)).toEqual({
+      label: "Go",
+      prism: "go",
+    });
+  });
 });
