@@ -192,6 +192,8 @@ export function CustomSelect({
         e.preventDefault();
         e.stopPropagation();
         setOpen(false);
+      } else if (e.key === "Tab") {
+        setOpen(false);
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -255,6 +257,9 @@ export function CustomSelect({
       e.preventDefault();
       setOpen(false);
       buttonRef.current?.focus();
+    } else if (e.key === "Tab") {
+      // Keep keyboard navigation predictable: close the popover and allow focus to move on.
+      setOpen(false);
     }
   };
 
@@ -283,6 +288,7 @@ export function CustomSelect({
           zIndex: "var(--z-portal-popover)",
         }}
         onKeyDown={onListKeyDown}
+        onBlur={() => setOpen(false)}
       >
         {options.map((o, i) =>
           isCustomSelectHeader(o) ? (
