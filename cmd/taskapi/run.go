@@ -143,6 +143,8 @@ func run() int {
 	rlim := handler.RateLimitPerMinuteConfigured()
 	slog.Info("rate limit config", "cmd", cmdName, "operation", "taskapi.rate_limit",
 		"enabled", rlim > 0, "per_ip_per_min", rlim)
+	slog.Info("api auth config", "cmd", cmdName, "operation", "taskapi.api_auth",
+		"enabled", handler.APIAuthEnabled())
 
 	mb := handler.MaxRequestBodyBytesConfigured()
 	slog.Info("max request body config", "cmd", cmdName, "operation", "taskapi.max_body",
@@ -157,7 +159,7 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithAPIAuth(handler.WithRateLimit(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep))))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
