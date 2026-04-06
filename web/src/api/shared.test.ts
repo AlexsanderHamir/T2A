@@ -24,11 +24,29 @@ describe("fetchWithTimeout", () => {
     const userSignal = new AbortController().signal;
     await fetchWithTimeout("/tasks", { signal: userSignal });
     const [, init] = fetchSpy.mock.calls[0] as [RequestInfo | URL, RequestInit];
-    if (typeof (AbortSignal as typeof AbortSignal & { any?: unknown }).any === "function") {
-      expect(init.signal).not.toBe(userSignal);
-      return;
+    expect(init.signal).toBeDefined();
+    expect(init.signal).not.toBe(userSignal);
+  });
+
+  it("falls back to composed controller when AbortSignal.any is unavailable", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", { status: 200 }),
+    );
+    const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "any");
+    if (descriptor) {
+      Object.defineProperty(AbortSignal, "any", {
+        value: undefined,
+        configurable: true,
+      });
     }
-    expect(init.signal).toBe(userSignal);
+    const userSignal = new AbortController().signal;
+    await fetchWithTimeout("/tasks", { signal: userSignal });
+    const [, init] = fetchSpy.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    expect(init.signal).toBeDefined();
+    expect(init.signal).not.toBe(userSignal);
+    if (descriptor) {
+      Object.defineProperty(AbortSignal, "any", descriptor);
+    }
   });
 });
 

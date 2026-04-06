@@ -28,7 +28,18 @@ function combineSignals(
   if (typeof AT.any === "function") {
     return AT.any([user, timeout]);
   }
-  return user;
+  const combined = new AbortController();
+  const abortCombined = () => {
+    if (!combined.signal.aborted) {
+      combined.abort();
+    }
+  };
+  user.addEventListener("abort", abortCombined, { once: true });
+  timeout.addEventListener("abort", abortCombined, { once: true });
+  if (user.aborted || timeout.aborted) {
+    abortCombined();
+  }
+  return combined.signal;
 }
 
 export async function fetchWithTimeout(
