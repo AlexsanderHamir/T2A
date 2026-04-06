@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -433,6 +435,44 @@ func TestStore_AppendTaskEventResponseMessage(t *testing.T) {
 	}
 	if th2[1].By != domain.ActorAgent || th2[1].Body != "Thanks" {
 		t.Fatalf("second entry %#v", th2[1])
+	}
+}
+
+func TestStore_AppendTaskEventResponseMessage_concurrent_no_lost_updates(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "concurrent-thread"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	const n = 8
+	var wg sync.WaitGroup
+	wg.Add(n)
+	errs := make(chan error, n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			defer wg.Done()
+			msg := fmt.Sprintf("msg-%d", i)
+			errs <- s.AppendTaskEventResponseMessage(ctx, tsk.ID, 2, msg, domain.ActorUser)
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for e := range errs {
+		if e != nil {
+			t.Fatalf("append: %v", e)
+		}
+	}
+	got, err := s.GetTaskEvent(ctx, tsk.ID, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	th := ThreadEntriesForDisplay(got)
+	if len(th) != n {
+		t.Fatalf("want %d thread entries (no lost updates under concurrency), got %d entries: %#v", n, len(th), th)
 	}
 }
 

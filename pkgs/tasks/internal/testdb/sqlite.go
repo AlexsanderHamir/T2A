@@ -25,6 +25,9 @@ func OpenSQLite(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Single connection: in-memory DB is per-connection; also serializes writers for tests.
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 	t.Cleanup(func() {
 		if err := sqlDB.Close(); err != nil {
 			t.Errorf("close sqlite: %v", err)
