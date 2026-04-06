@@ -358,8 +358,21 @@ function parseOptionalParentId(
   return s.trim() === "" ? undefined : s;
 }
 
+/**
+ * Maximum nesting depth for `children` when parsing task trees. Deeper payloads
+ * are rejected to avoid stack overflows on pathological or hostile responses.
+ */
+export const maxTaskParseDepth = 64;
+
 /** Validates a single task object from POST/PATCH responses (recursive `children`). */
 export function parseTask(value: unknown): Task {
+  return parseTaskAtDepth(value, 0);
+}
+
+function parseTaskAtDepth(value: unknown, depth: number): Task {
+  if (depth > maxTaskParseDepth) {
+    throw new Error("Invalid API response: task tree is too deep");
+  }
   if (!isRecord(value)) {
     throw new Error("Invalid API response: task must be an object");
   }
@@ -391,7 +404,7 @@ export function parseTask(value: unknown): Task {
     }
     base.children = rawChildren.map((item, i) => {
       try {
-        return parseTask(item);
+        return parseTaskAtDepth(item, depth + 1);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         throw new Error(`Invalid API response: children[${i}]: ${msg}`);

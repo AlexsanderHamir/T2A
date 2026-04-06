@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  maxTaskParseDepth,
   parseTask,
   parseTaskEventDetail,
   parseTaskEventsResponse,
@@ -42,6 +43,26 @@ describe("parseTask", () => {
 
   it("rejects non-object", () => {
     expect(() => parseTask(null)).toThrow(/object/);
+  });
+
+  it("rejects children nested deeper than maxTaskParseDepth", () => {
+    const deepTask = (n: number): Record<string, unknown> => {
+      const base: Record<string, unknown> = {
+        id: `id-${n}`,
+        title: "t",
+        initial_prompt: "",
+        status: "ready",
+        priority: "medium",
+        task_type: "general",
+        checklist_inherit: false,
+      };
+      if (n <= 0) {
+        return base;
+      }
+      return { ...base, children: [deepTask(n - 1)] };
+    };
+    expect(() => parseTask(deepTask(maxTaskParseDepth + 1))).toThrow(/too deep/);
+    expect(parseTask(deepTask(maxTaskParseDepth))).toBeDefined();
   });
 
   it("parses nested children and checklist_inherit", () => {
