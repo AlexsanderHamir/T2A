@@ -103,3 +103,8 @@ export default function App() {
           element={<TaskEventDetailPage />}
         />
         <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
+}

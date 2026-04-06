@@ -10,6 +10,9 @@ type Props = {
 
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
+  const totalTasks = app.tasks.length;
+  const readyTasks = app.tasks.filter((t) => t.status === "ready").length;
+  const criticalTasks = app.tasks.filter((t) => t.priority === "critical").length;
 
   return (
     <>
@@ -55,6 +58,24 @@ export function TaskHome({ app }: Props) {
           onResume={(id) => void app.resumeDraftByID(id)}
         />
       ) : null}
+
+      <section className="task-home-overview" aria-label="Task overview">
+        <article className="task-home-kpi-card">
+          <p className="task-home-kpi-label">Total tasks</p>
+          <p className="task-home-kpi-value">{totalTasks}</p>
+          <p className="task-home-kpi-meta">across all statuses</p>
+        </article>
+        <article className="task-home-kpi-card">
+          <p className="task-home-kpi-label">Ready</p>
+          <p className="task-home-kpi-value">{readyTasks}</p>
+          <p className="task-home-kpi-meta">awaiting action</p>
+        </article>
+        <article className="task-home-kpi-card task-home-kpi-card--attention">
+          <p className="task-home-kpi-label">Critical</p>
+          <p className="task-home-kpi-value">{criticalTasks}</p>
+          <p className="task-home-kpi-meta">needs attention</p>
+        </article>
+      </section>
 
       <TaskListSection
         actions={
