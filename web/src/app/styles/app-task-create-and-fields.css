@@ -60,6 +60,28 @@
   box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
+.task-create-evaluate-btn {
+  min-width: 7.5rem;
+}
+
+.task-create-evaluation-summary {
+  margin-top: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.task-create-evaluation-overall {
+  margin: 0 0 0.25rem;
+}
+
+.task-create-evaluation-sections {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+}
+
 .task-create-parent-field .field--custom-select {
   min-width: 100%;
   max-width: none;
@@ -101,6 +123,17 @@
 
 .task-create-title-row .field.grow {
   min-width: min(100%, 12rem);
+}
+
+/* Task type should read as supportive metadata, not a primary emphasis token. */
+.task-create .task-type-select .custom-select-value-neutral {
+  color: var(--text-secondary);
+  font-weight: 450;
+}
+
+.task-create .task-type-select .custom-select-trigger:hover:not(:disabled) .custom-select-value-neutral,
+.task-create .task-type-select .custom-select-trigger:focus-visible .custom-select-value-neutral {
+  color: var(--text-primary);
 }
 
 .task-create button.custom-select-trigger {

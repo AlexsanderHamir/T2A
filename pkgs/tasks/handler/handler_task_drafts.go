@@ -1,0 +1,67 @@
+package handler
+
+import (
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
+	const op = "task_drafts.list"
+	r = withCallRoot(r, op)
+	limit := 50
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 || n > 100 {
+			writeJSONError(w, r, op, http.StatusBadRequest, "limit must be integer 0..100")
+			return
+		}
+		limit = n
+	}
+	rows, err := h.store.ListDrafts(r.Context(), limit)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, map[string]any{"drafts": rows})
+}
+
+func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
+	const op = "task_drafts.save"
+	r = withCallRoot(r, op)
+	var body taskDraftSaveJSON
+	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
+		writeError(w, r, op, err, http.StatusBadRequest)
+		return
+	}
+	saved, err := h.store.SaveDraft(r.Context(), body.ID, body.Name, body.Payload)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusCreated, saved)
+}
+
+func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
+	const op = "task_drafts.get"
+	r = withCallRoot(r, op)
+	id := strings.TrimSpace(r.PathValue("id"))
+	row, err := h.store.GetDraft(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, row)
+}
+
+func (h *Handler) deleteTaskDraft(w http.ResponseWriter, r *http.Request) {
+	const op = "task_drafts.delete"
+	r = withCallRoot(r, op)
+	id := strings.TrimSpace(r.PathValue("id"))
+	if err := h.store.DeleteDraft(r.Context(), id); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	debugHTTPOut(r.Context(), op, http.StatusNoContent, "draft_id", id, "response_empty", true)
+	w.WriteHeader(http.StatusNoContent)
+}

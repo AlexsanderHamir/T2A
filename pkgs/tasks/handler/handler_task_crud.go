@@ -38,10 +38,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:               body.ID,
+		DraftID:          body.DraftID,
 		Title:            body.Title,
 		InitialPrompt:    body.InitialPrompt,
 		Status:           body.Status,
 		Priority:         body.Priority,
+		TaskType:         body.TaskType,
 		ParentID:         body.ParentID,
 		ChecklistInherit: inherit,
 	}, by)
@@ -118,6 +120,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		InitialPrompt:    body.InitialPrompt,
 		Status:           body.Status,
 		Priority:         body.Priority,
+		TaskType:         body.TaskType,
 		ChecklistInherit: body.ChecklistInherit,
 	}
 	if body.ParentID.Defined {

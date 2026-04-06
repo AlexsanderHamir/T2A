@@ -5,6 +5,7 @@ import { TaskEditForm } from "../tasks/components/TaskEditForm";
 import { useTasksApp } from "../tasks/hooks/useTasksApp";
 import { TaskDetailPage } from "../tasks/pages/TaskDetailPage";
 import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
+import { TaskDraftsPage } from "../tasks/pages/TaskDraftsPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
@@ -24,21 +25,26 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         </a>
         <header className="app-header app-header--sticky">
           <div className="app-header-top">
-            <nav className="app-header-site-nav" aria-label="Site">
-              <Link
-                to="/"
-                className="app-title-link"
-                {...(homeIsCurrent ? { "aria-current": "page" as const } : {})}
-              >
-                <h1 className="app-title app-title--logo">T2A</h1>
-              </Link>
-            </nav>
-            <p className="app-tagline">Capture work. Ship with clarity.</p>
+            <div className="app-brand-lockup">
+              <nav className="app-header-site-nav" aria-label="Site">
+                <Link
+                  to="/"
+                  className="app-title-link"
+                  {...(homeIsCurrent ? { "aria-current": "page" as const })}
+                >
+                  <h1 className="app-title app-title--logo">T2A</h1>
+                </Link>
+                <Link to="/drafts" className="app-title-link">
+                  Drafts
+                </Link>
+              </nav>
+              <p className="app-tagline">Capture work. Ship with clarity.</p>
+            </div>
+            <StreamStatusHint
+              connected={app.sseLive}
+              listSyncing={app.sseLive ? false : app.listRefreshing}
+            />
           </div>
-          <StreamStatusHint
-            connected={app.sseLive}
-            listSyncing={app.sseLive ? false : app.listRefreshing}
-          />
         </header>
         {app.error ? <ErrorBanner message={app.error} /> : null}
 
@@ -61,6 +67,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               title={app.editTitle}
               prompt={app.editPrompt}
               priority={app.editPriority}
+              taskType={app.editTaskType}
               status={app.editStatus}
               checklistInherit={app.editChecklistInherit}
               canInheritChecklist={Boolean(app.editing.parent_id)}
@@ -69,6 +76,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               onTitleChange={app.setEditTitle}
               onPromptChange={app.setEditPrompt}
               onPriorityChange={app.setEditPriority}
+              onTaskTypeChange={app.setEditTaskType}
               onStatusChange={app.setEditStatus}
               onChecklistInheritChange={app.setEditChecklistInherit}
               onSubmit={(e) => void app.submitEdit(e)}
@@ -89,13 +97,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
+        <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"
           element={<TaskEventDetailPage />}
         />
         <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
-  );
-}

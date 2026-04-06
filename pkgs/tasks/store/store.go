@@ -84,10 +84,12 @@ func (s *Store) Ready(ctx context.Context) error {
 
 type CreateTaskInput struct {
 	ID               string
+	DraftID          string
 	Title            string
 	InitialPrompt    string
 	Status           domain.Status
 	Priority         domain.Priority
+	TaskType         domain.TaskType
 	ParentID         *string
 	ChecklistInherit bool
 }
@@ -103,6 +105,7 @@ type UpdateTaskInput struct {
 	InitialPrompt    *string
 	Status           *domain.Status
 	Priority         *domain.Priority
+	TaskType         *domain.TaskType
 	Parent           *ParentFieldPatch
 	ChecklistInherit *bool
 }
@@ -130,6 +133,13 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	if !validPriority(pr) {
 		return nil, fmt.Errorf("%w: priority", domain.ErrInvalidInput)
 	}
+	tt := in.TaskType
+	if tt == "" {
+		tt = domain.TaskTypeGeneral
+	}
+	if !validTaskType(tt) {
+		return nil, fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
+	}
 	id := strings.TrimSpace(in.ID)
 	if id == "" {
 		id = uuid.NewString()
@@ -154,6 +164,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 		InitialPrompt:    in.InitialPrompt,
 		Status:           st,
 		Priority:         pr,
+		TaskType:         tt,
 		ParentID:         parentID,
 		ChecklistInherit: in.ChecklistInherit,
 	}
@@ -175,6 +186,12 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 			return fmt.Errorf("insert task: %w", err)
 		}
 		seq := int64(1)
+		if err := attachDraftEvaluationsTx(tx, in.DraftID, t.ID); err != nil {
+			return err
+		}
+		if err := deleteDraftByIDTx(tx, in.DraftID); err != nil {
+			return err
+		}
 		if err := appendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
 			return err
 		}
@@ -285,7 +302,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.Parent == nil && in.ChecklistInherit == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Parent == nil && in.ChecklistInherit == nil {
 		return nil, fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 
@@ -404,6 +421,16 @@ func validPriority(p domain.Priority) bool {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validPriority")
 	switch p {
 	case domain.PriorityLow, domain.PriorityMedium, domain.PriorityHigh, domain.PriorityCritical:
+		return true
+	default:
+		return false
+	}
+}
+
+func validTaskType(t domain.TaskType) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validTaskType")
+	switch t {
+	case domain.TaskTypeGeneral, domain.TaskTypeBugFix, domain.TaskTypeFeature, domain.TaskTypeRefactor, domain.TaskTypeDocs:
 		return true
 	default:
 		return false

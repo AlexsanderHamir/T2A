@@ -14,6 +14,7 @@ type Task struct {
 	InitialPrompt    string   `json:"initial_prompt" gorm:"type:text;not null"`
 	Status           Status   `json:"status" gorm:"not null;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
 	Priority         Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
+	TaskType         TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ParentID         *string  `json:"parent_id,omitempty" gorm:"index"`
 	ChecklistInherit bool     `json:"checklist_inherit" gorm:"not null;default:false"`
 }
@@ -65,4 +66,24 @@ type TaskEvent struct {
 	ResponseThread datatypes.JSON `gorm:"column:response_thread_json;type:jsonb"`
 
 	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TaskDraftEvaluation stores one scoring snapshot for a draft task before creation.
+type TaskDraftEvaluation struct {
+	ID         string         `gorm:"primaryKey"`
+	DraftID    *string        `gorm:"index"`
+	TaskID     *string        `gorm:"index"`
+	By         Actor          `gorm:"column:by;not null"`
+	InputJSON  datatypes.JSON `gorm:"column:input_json;type:jsonb;not null;default:'{}'"`
+	ResultJSON datatypes.JSON `gorm:"column:result_json;type:jsonb;not null;default:'{}'"`
+	CreatedAt  time.Time      `gorm:"not null;index"`
+}
+
+// TaskDraft stores a resumable create-task draft payload.
+type TaskDraft struct {
+	ID          string         `gorm:"primaryKey"`
+	Name        string         `gorm:"not null;index"`
+	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
+	CreatedAt   time.Time      `gorm:"not null;index"`
+	UpdatedAt   time.Time      `gorm:"not null;index"`
 }

@@ -44,12 +44,52 @@
   z-index: var(--z-modal-content);
   width: min(100%, 26rem);
   max-height: min(90vh, 880px);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .modal-shell--wide {
   width: min(100%, 52rem);
+}
+
+/* Modal scrollbars: match app chrome instead of OS-default contrast spikes. */
+.modal-shell,
+.modal-shell > .panel {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border-strong) 78%, transparent)
+    transparent;
+}
+
+.modal-shell::-webkit-scrollbar,
+.modal-shell > .panel::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.modal-shell::-webkit-scrollbar-track,
+.modal-shell > .panel::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: var(--radius-full);
+}
+
+.modal-shell::-webkit-scrollbar-thumb,
+.modal-shell > .panel::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  background: color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+@media (hover: hover) {
+  .modal-shell:hover::-webkit-scrollbar-thumb,
+  .modal-shell > .panel:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-strong) 90%, var(--text-tertiary));
+  }
+}
+
+.modal-shell:focus-within::-webkit-scrollbar-thumb,
+.modal-shell > .panel:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand) 46%, var(--border-strong));
 }
 
 /* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
@@ -59,6 +99,9 @@
     border: none;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-2xl);
+    max-height: min(90vh, 880px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   @media (hover: hover) and (prefers-color-scheme: light) {
@@ -171,6 +214,12 @@
     border-right: none;
     border-bottom: none;
     border-top: 1px solid var(--border-hairline);
+  }
+
+  .modal-shell,
+  .modal-shell > .panel {
+    scrollbar-color: color-mix(in srgb, var(--border-strong) 82%, var(--text-tertiary))
+      transparent;
   }
 
   .modal-busy-overlay {

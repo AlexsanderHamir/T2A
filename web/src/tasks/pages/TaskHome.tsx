@@ -1,4 +1,5 @@
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { DraftResumeModal } from "../components/DraftResumeModal";
 import { TaskCreateModal } from "../components/TaskCreateModal";
 import { TaskListSection } from "../components/TaskListSection";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -20,6 +21,7 @@ export function TaskHome({ app }: Props) {
           title={app.newTitle}
           prompt={app.newPrompt}
           priority={app.newPriority}
+          taskType={app.newTaskType}
           checklistItems={app.newChecklistItems}
           parentOptions={app.parentPickerTasks}
           parentId={app.newParentId}
@@ -27,6 +29,7 @@ export function TaskHome({ app }: Props) {
           onTitleChange={app.setNewTitle}
           onPromptChange={app.setNewPrompt}
           onPriorityChange={app.setNewPriority}
+          onTaskTypeChange={app.setNewTaskType}
           onParentIdChange={app.setNewParentId}
           onChecklistInheritChange={app.setNewChecklistInherit}
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
@@ -36,7 +39,20 @@ export function TaskHome({ app }: Props) {
           onAddPendingSubtask={app.addPendingSubtask}
           onUpdatePendingSubtask={app.updatePendingSubtask}
           onRemovePendingSubtask={app.removePendingSubtask}
+          evaluatePending={app.evaluatePending}
+          evaluation={app.latestDraftEvaluation}
+          draftName={app.newDraftName}
+          onDraftNameChange={app.setNewDraftName}
+          onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}
+        />
+      ) : null}
+      {app.draftPickerOpen ? (
+        <DraftResumeModal
+          drafts={app.taskDrafts}
+          onClose={() => app.setDraftPickerOpen(false)}
+          onStartFresh={() => void app.startFreshDraft()}
+          onResume={(id) => void app.resumeDraftByID(id)}
         />
       ) : null}
 

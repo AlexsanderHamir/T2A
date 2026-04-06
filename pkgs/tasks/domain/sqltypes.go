@@ -62,6 +62,20 @@ func (p Priority) Value() (driver.Value, error) {
 	return valueStringEnum(p)
 }
 
+func (t *TaskType) Scan(value any) error {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskType.Scan")
+	}
+	return scanStringEnum(t, value)
+}
+
+func (t TaskType) Value() (driver.Value, error) {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskType.Value")
+	}
+	return valueStringEnum(t)
+}
+
 func (e *EventType) Scan(value any) error {
 	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		slog.Debug("trace", "operation", "domain.EventType.Scan")

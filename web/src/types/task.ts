@@ -7,6 +7,7 @@ export type Status =
   | "failed";
 
 export type Priority = "low" | "medium" | "high" | "critical";
+export type TaskType = "general" | "bug_fix" | "feature" | "refactor" | "docs";
 
 /** Empty string means no selection yet (create / draft forms). */
 export type PriorityChoice = Priority | "";
@@ -17,6 +18,7 @@ export type Task = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
+  task_type?: TaskType;
   /** Present when this task is nested under another (GET /tasks tree). */
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
@@ -145,4 +147,79 @@ export type TaskChecklistItemView = {
 
 export type TaskChecklistResponse = {
   items: TaskChecklistItemView[];
+};
+
+export type DraftTaskEvaluationInput = {
+  id?: string;
+  title: string;
+  initial_prompt?: string;
+  status?: Status;
+  priority?: Priority;
+  task_type?: TaskType;
+  parent_id?: string;
+  checklist_inherit?: boolean;
+  checklist_items?: Array<{ text: string }>;
+};
+
+export const TASK_TYPES: TaskType[] = [
+  "general",
+  "bug_fix",
+  "feature",
+  "refactor",
+  "docs",
+];
+
+export const DEFAULT_NEW_TASK_TYPE: TaskType = "general";
+
+export type DraftTaskEvaluationSection = {
+  key: string;
+  label: string;
+  score: number;
+  summary: string;
+  suggestions: string[];
+};
+
+export type DraftTaskEvaluation = {
+  evaluation_id: string;
+  created_at: string;
+  overall_score: number;
+  overall_summary: string;
+  sections: DraftTaskEvaluationSection[];
+  cohesion_score: number;
+  cohesion_summary: string;
+  cohesion_suggestions: string[];
+};
+
+export type TaskDraftPayload = {
+  title: string;
+  initial_prompt: string;
+  priority: PriorityChoice;
+  task_type: TaskType;
+  parent_id: string;
+  checklist_inherit: boolean;
+  checklist_items: string[];
+  pending_subtasks: Array<{
+    title: string;
+    initial_prompt: string;
+    priority: Priority;
+    task_type: TaskType;
+    checklist_items: string[];
+    checklist_inherit: boolean;
+  }>;
+  latest_evaluation?: {
+    overall_score: number;
+    overall_summary: string;
+    sections: Array<{ key: string; score: number }>;
+  };
+};
+
+export type TaskDraftSummary = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaskDraftDetail = TaskDraftSummary & {
+  payload: TaskDraftPayload;
 };

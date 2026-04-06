@@ -11,6 +11,9 @@
 // Create records EventTaskCreated; Update appends events when title, prompt, status, or
 // priority actually change. ListTaskEvents returns all audit rows in ascending seq order;
 // ListTaskEventsPageCursor returns a descending-seq keyset page with total and navigation flags.
+// EvaluateDraftTask computes draft task scores and suggestions and persists each snapshot in
+// domain.TaskDraftEvaluation so clients can retrieve historical evaluations. Create links those
+// rows to the final task when CreateTaskInput.DraftID is provided.
 // Sentinel errors are domain.ErrNotFound and domain.ErrInvalidInput; the store does not log.
 //
 // [DefaultReadyTimeout] is the recommended context deadline for (*Store).Ready from GET /health/ready.

@@ -1,5 +1,5 @@
 import { useCallback, useState, type FormEvent } from "react";
-import type { PriorityChoice } from "@/types";
+import type { PriorityChoice, TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
@@ -15,6 +15,7 @@ type Props = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
+  taskType: TaskType;
   checklistItems: string[];
   parentOptions: TaskWithDepth[];
   parentId: string;
@@ -22,6 +23,7 @@ type Props = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
+  onTaskTypeChange: (t: TaskType) => void;
   onParentIdChange: (id: string) => void;
   onChecklistInheritChange: (v: boolean) => void;
   onAppendChecklistCriterion: (text: string) => void;
@@ -31,6 +33,15 @@ type Props = {
   onAddPendingSubtask: (d: PendingSubtaskDraft) => void;
   onUpdatePendingSubtask: (index: number, d: PendingSubtaskDraft) => void;
   onRemovePendingSubtask: (index: number) => void;
+  evaluatePending: boolean;
+  evaluation: {
+    overallScore: number;
+    overallSummary: string;
+    sections: Array<{ key: string; score: number }>;
+  } | null;
+  draftName: string;
+  onDraftNameChange: (name: string) => void;
+  onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
 };
 
@@ -41,6 +52,7 @@ export function TaskCreateModal({
   title,
   prompt,
   priority,
+  taskType,
   checklistItems,
   parentOptions,
   parentId,
@@ -48,6 +60,7 @@ export function TaskCreateModal({
   onTitleChange,
   onPromptChange,
   onPriorityChange,
+  onTaskTypeChange,
   onParentIdChange,
   onChecklistInheritChange,
   onAppendChecklistCriterion,
@@ -57,6 +70,11 @@ export function TaskCreateModal({
   onAddPendingSubtask,
   onUpdatePendingSubtask,
   onRemovePendingSubtask,
+  evaluatePending,
+  evaluation,
+  draftName,
+  onDraftNameChange,
+  onEvaluate,
   onSubmit,
 }: Props) {
   const disabled = pending || saving;
@@ -86,6 +104,7 @@ export function TaskCreateModal({
         title: d.title,
         initial_prompt: d.initial_prompt,
         priority: d.priority,
+        task_type: d.task_type,
         checklistItems: [...d.checklistItems],
         checklist_inherit: d.checklist_inherit,
       });
@@ -134,6 +153,16 @@ export function TaskCreateModal({
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
+            <div className="field grow">
+              <label htmlFor="task-draft-name">Draft name</label>
+              <input
+                id="task-draft-name"
+                value={draftName}
+                onChange={(ev) => onDraftNameChange(ev.target.value)}
+                placeholder="Name this draft"
+                disabled={disabled}
+              />
+            </div>
             <div className="task-create-parent-field grow">
               <ParentTaskSelect
                 id="task-new-parent"
@@ -163,12 +192,14 @@ export function TaskCreateModal({
               title={title}
               prompt={prompt}
               priority={priority}
+              taskType={taskType}
               checklistItems={checklistItems}
               hideChecklist={hideComposeChecklist}
               disabled={disabled}
               onTitleChange={onTitleChange}
               onPromptChange={onPromptChange}
               onPriorityChange={onPriorityChange}
+              onTaskTypeChange={onTaskTypeChange}
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
               onRemoveChecklistRow={onRemoveChecklistRow}
@@ -263,6 +294,14 @@ export function TaskCreateModal({
                 Cancel
               </button>
               <button
+                type="button"
+                className="secondary task-create-evaluate-btn"
+                disabled={!title.trim() || !priority || disabled}
+                onClick={onEvaluate}
+              >
+                {evaluatePending ? "Evaluating…" : "Evaluate"}
+              </button>
+              <button
                 type="submit"
                 className="task-create-submit"
                 disabled={!title.trim() || !priority || disabled}
@@ -270,6 +309,24 @@ export function TaskCreateModal({
                 {hasParent ? "Add subtask" : "Create"}
               </button>
             </div>
+            {evaluation ? (
+              <section
+                className="task-create-evaluation-summary"
+                aria-label="Draft evaluation summary"
+              >
+                <p className="task-create-evaluation-overall">
+                  <strong>Score:</strong> {evaluation.overallScore}/100
+                </p>
+                <p className="muted">{evaluation.overallSummary}</p>
+                <ul className="task-create-evaluation-sections">
+                  {evaluation.sections.map((s) => (
+                    <li key={s.key}>
+                      {s.key.replaceAll("_", " ")}: {s.score}/100
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </form>
         </section>
       </Modal>

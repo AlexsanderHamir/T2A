@@ -68,6 +68,8 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.TaskEvent{},
 		&domain.TaskChecklistItem{},
 		&domain.TaskChecklistCompletion{},
+		&domain.TaskDraftEvaluation{},
+		&domain.TaskDraft{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}

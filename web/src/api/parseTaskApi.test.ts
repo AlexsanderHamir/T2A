@@ -3,6 +3,7 @@ import {
   parseTask,
   parseTaskEventDetail,
   parseTaskEventsResponse,
+  parseDraftTaskEvaluation,
   parseTaskListResponse,
 } from "./parseTaskApi";
 
@@ -12,6 +13,7 @@ const validTask = {
   initial_prompt: "",
   status: "ready",
   priority: "medium",
+  task_type: "general",
   checklist_inherit: false,
 };
 
@@ -49,6 +51,7 @@ describe("parseTask", () => {
         initial_prompt: "",
         status: "ready",
         priority: "medium",
+        task_type: "general",
         checklist_inherit: false,
         children: [
           {
@@ -57,6 +60,7 @@ describe("parseTask", () => {
             initial_prompt: "",
             status: "running",
             priority: "low",
+            task_type: "bug_fix",
             checklist_inherit: true,
             parent_id: "root",
           },
@@ -68,6 +72,7 @@ describe("parseTask", () => {
       initial_prompt: "",
       status: "ready",
       priority: "medium",
+      task_type: "general",
       checklist_inherit: false,
       children: [
         {
@@ -76,6 +81,7 @@ describe("parseTask", () => {
           initial_prompt: "",
           status: "running",
           priority: "low",
+          task_type: "bug_fix",
           checklist_inherit: true,
           parent_id: "root",
         },
@@ -305,6 +311,53 @@ describe("parseTaskEventDetail", () => {
       user_response_at,
       response_thread: [
         { at: user_response_at, by: "user", body: "Retry scheduled" },
+      ],
+    });
+  });
+});
+
+describe("parseDraftTaskEvaluation", () => {
+  it("parses draft evaluation payload", () => {
+    const createdAt = "2026-01-02T15:30:00.000Z";
+    expect(
+      parseDraftTaskEvaluation({
+        evaluation_id: "eval-1",
+        created_at: createdAt,
+        overall_score: 82,
+        overall_summary: "Promising draft with a few improvement opportunities.",
+        sections: [
+          {
+            key: "title",
+            label: "Title quality",
+            score: 90,
+            summary: "Title is clear and specific.",
+            suggestions: ["Use a verb + object format in the title."],
+          },
+        ],
+        cohesion_score: 78,
+        cohesion_summary: "Most sections align, but intent can be sharpened.",
+        cohesion_suggestions: [
+          "Ensure title, prompt, and priority describe the same outcome.",
+        ],
+      }),
+    ).toEqual({
+      evaluation_id: "eval-1",
+      created_at: createdAt,
+      overall_score: 82,
+      overall_summary: "Promising draft with a few improvement opportunities.",
+      sections: [
+        {
+          key: "title",
+          label: "Title quality",
+          score: 90,
+          summary: "Title is clear and specific.",
+          suggestions: ["Use a verb + object format in the title."],
+        },
+      ],
+      cohesion_score: 78,
+      cohesion_summary: "Most sections align, but intent can be sharpened.",
+      cohesion_suggestions: [
+        "Ensure title, prompt, and priority describe the same outcome.",
       ],
     });
   });

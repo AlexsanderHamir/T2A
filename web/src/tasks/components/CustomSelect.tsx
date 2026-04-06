@@ -76,6 +76,7 @@ type Props = {
   value: string;
   options: CustomSelectOption[];
   onChange: (value: string) => void;
+  className?: string;
   /** Accessible name for the listbox (defaults to `label`). */
   listboxName?: string;
   /** Tighter width for filter toolbar. */
@@ -91,6 +92,7 @@ export function CustomSelect({
   value,
   options,
   onChange,
+  className,
   listboxName,
   compact = false,
   requirement = "none",
@@ -373,11 +375,14 @@ export function CustomSelect({
 
   return (
     <div
-      className={
+      className={[
         compact
           ? "field field--custom-select field--custom-select--compact"
-          : "field field--custom-select"
-      }
+          : "field field--custom-select",
+        className ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className="field-label-with-req">
         <label htmlFor={id}>{label}</label>

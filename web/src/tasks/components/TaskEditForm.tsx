@@ -1,15 +1,17 @@
 import type { FormEvent } from "react";
-import { STATUSES, type Priority, type Status } from "@/types";
+import { STATUSES, type Priority, type Status, type TaskType } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { PrioritySelect } from "./PrioritySelect";
 import { RichPromptEditor } from "./RichPromptEditor";
+import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {
   taskId: string;
   title: string;
   prompt: string;
   priority: Priority;
+  taskType: TaskType;
   status: Status;
   checklistInherit: boolean;
   /** When false, the inherit checkbox is disabled (task has no parent). */
@@ -19,6 +21,7 @@ type Props = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
+  onTaskTypeChange: (t: TaskType) => void;
   onStatusChange: (s: Status) => void;
   onChecklistInheritChange: (v: boolean) => void;
   onSubmit: (e: FormEvent) => void;
@@ -30,6 +33,7 @@ export function TaskEditForm({
   title,
   prompt,
   priority,
+  taskType,
   status,
   checklistInherit,
   canInheritChecklist,
@@ -38,6 +42,7 @@ export function TaskEditForm({
   onTitleChange,
   onPromptChange,
   onPriorityChange,
+  onTaskTypeChange,
   onStatusChange,
   onChecklistInheritChange,
   onSubmit,
@@ -77,6 +82,12 @@ export function TaskEditForm({
               onChange={(p) => {
                 if (p !== "") onPriorityChange(p);
               }}
+            />
+            <TaskTypeSelect
+              id="task-edit-task-type"
+              value={taskType}
+              onChange={onTaskTypeChange}
+              disabled={saving}
             />
           </div>
           <div className="field grow">

@@ -154,6 +154,12 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateTas
 			cur.Priority = *in.Priority
 		}
 	}
+	if in.TaskType != nil {
+		if !validTaskType(*in.TaskType) {
+			return fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
+		}
+		cur.TaskType = *in.TaskType
+	}
 	if in.Status != nil {
 		if !validStatus(*in.Status) {
 			return fmt.Errorf("%w: status", domain.ErrInvalidInput)

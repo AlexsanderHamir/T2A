@@ -47,6 +47,26 @@ func TestStore_Create_rejects_invalid_priority(t *testing.T) {
 	}
 }
 
+func TestStore_Create_defaults_task_type_to_general(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	got, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.TaskType != domain.TaskTypeGeneral {
+		t.Fatalf("task type %q", got.TaskType)
+	}
+}
+
+func TestStore_Create_rejects_invalid_task_type(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	tt := domain.TaskType("nope")
+	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium, TaskType: tt}, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
 func TestStore_Create_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok"}, domain.Actor("system"))
@@ -860,5 +880,105 @@ func TestStore_Ready_fails_when_db_closed(t *testing.T) {
 	}
 	if err := s.Ready(context.Background()); err == nil {
 		t.Fatal("expected error after close")
+	}
+}
+
+func TestStore_EvaluateDraftTask_persists_multiple_evaluations(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+
+	in := EvaluateDraftTaskInput{
+		DraftID:       "draft-abc",
+		Title:         "Harden task event pagination",
+		InitialPrompt: "Add cursor tests for before_seq and after_seq",
+		Priority:      domain.PriorityHigh,
+	}
+	a, err := s.EvaluateDraftTask(ctx, in, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.EvaluateDraftTask(ctx, in, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.EvaluationID == b.EvaluationID {
+		t.Fatal("expected unique evaluation ids")
+	}
+	rows, err := s.ListDraftEvaluations(ctx, "draft-abc", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+}
+
+func TestStore_Create_attaches_draft_evaluations_to_task(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	in := EvaluateDraftTaskInput{
+		DraftID:       "draft-link-1",
+		Title:         "Link draft evals",
+		InitialPrompt: "Persist and bind evaluations on create",
+		Priority:      domain.PriorityMedium,
+	}
+	if _, err := s.EvaluateDraftTask(ctx, in, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.EvaluateDraftTask(ctx, in, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	task, err := s.Create(ctx, CreateTaskInput{
+		Title:    "Final task",
+		Priority: domain.PriorityMedium,
+		DraftID:  "draft-link-1",
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.ListDraftEvaluations(ctx, "draft-link-1", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+	for _, row := range rows {
+		if row.TaskID == nil || *row.TaskID != task.ID {
+			t.Fatalf("expected task_id %q, got %#v", task.ID, row.TaskID)
+		}
+	}
+}
+
+func TestStore_DraftCRUD_roundtrip(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	saved, err := s.SaveDraft(ctx, "", "My draft", []byte(`{"title":"A"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.ID == "" {
+		t.Fatal("expected generated draft id")
+	}
+	got, err := s.GetDraft(ctx, saved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "My draft" {
+		t.Fatalf("name %q", got.Name)
+	}
+	list, err := s.ListDrafts(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != saved.ID {
+		t.Fatalf("list %#v", list)
+	}
+	if err := s.DeleteDraft(ctx, saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.GetDraft(ctx, saved.ID)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("want not found, got %v", err)
 	}
 }

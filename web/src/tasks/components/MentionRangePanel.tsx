@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRepoFile, type RepoFileResult } from "@/api/repo";
 import { lineRangeFromSelection } from "@/lib/lineRangeFromSelection";
+import { filePreviewLanguageFromPath } from "./filePreviewLanguage";
+import { highlightPreviewContent } from "./filePreviewHighlight";
 
 export type MentionRangePanelProps = {
   id: string;
@@ -28,6 +30,7 @@ export function MentionRangePanel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [file, setFile] = useState<RepoFileResult | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const codeContentRef = useRef<HTMLElement>(null);
   const [selStart, setSelStart] = useState(0);
   const [selEnd, setSelEnd] = useState(0);
   const [startLineInput, setStartLineInput] = useState("");
@@ -65,6 +68,13 @@ export function MentionRangePanel({
     if (!ta) return;
     setSelStart(ta.selectionStart);
     setSelEnd(ta.selectionEnd);
+  }, []);
+
+  const syncScroll = useCallback(() => {
+    const ta = taRef.current;
+    const codeContent = codeContentRef.current;
+    if (!ta || !codeContent) return;
+    codeContent.style.transform = `translate(${-ta.scrollLeft}px, ${-ta.scrollTop}px)`;
   }, []);
 
   const range = useMemo(() => {
@@ -112,6 +122,19 @@ export function MentionRangePanel({
   }, [activeRange, onInsertWithRange]);
 
   const taId = `${id}-mention-file-preview`;
+  const detectedLanguage = useMemo(() => filePreviewLanguageFromPath(path), [path]);
+  const highlightedPreview = useMemo(() => {
+    if (!file || file.binary) return "";
+    return highlightPreviewContent(file.content, detectedLanguage.prism);
+  }, [detectedLanguage.prism, file]);
+  const previewLineCount = useMemo(() => {
+    if (!file || file.binary) return 10;
+    return Math.max(8, Math.min(file.line_count, 18));
+  }, [file]);
+
+  useEffect(() => {
+    syncScroll();
+  }, [highlightedPreview, syncScroll]);
 
   return (
     <div
@@ -157,20 +180,38 @@ export function MentionRangePanel({
           <div className="mention-range-content">
             <label className="mention-range-preview-label" htmlFor={taId}>
               Preview
+              <span className="mention-range-lang-pill" aria-label="Detected file language">
+                {detectedLanguage.label}
+              </span>
             </label>
-            <textarea
-              id={taId}
-              ref={taRef}
-              className="mention-file-preview"
-              readOnly
-              spellCheck={false}
-              value={file.content}
-              disabled={disabled}
-              aria-describedby={`${taId}-hint`}
-              onSelect={syncSelection}
-              onMouseUp={syncSelection}
-              onKeyUp={syncSelection}
-            />
+            <div
+              className="mention-file-preview-shell"
+              style={{ "--mention-preview-lines": previewLineCount } as Record<string, string | number>}
+            >
+              <pre
+                className={`mention-file-preview-code mention-file-preview-code--${detectedLanguage.prism}`}
+                aria-hidden="true"
+              >
+                <code
+                  ref={codeContentRef}
+                  dangerouslySetInnerHTML={{ __html: highlightedPreview }}
+                />
+              </pre>
+              <textarea
+                id={taId}
+                ref={taRef}
+                className="mention-file-preview"
+                readOnly
+                spellCheck={false}
+                value={file.content}
+                disabled={disabled}
+                aria-describedby={`${taId}-hint`}
+                onSelect={syncSelection}
+                onMouseUp={syncSelection}
+                onKeyUp={syncSelection}
+                onScroll={syncScroll}
+              />
+            </div>
             <p id={`${taId}-hint`} className="visually-hidden">
               Select text to set the start and end line for this file mention.
             </p>

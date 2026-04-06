@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { PriorityChoice } from "@/types";
+import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { TaskComposeFields } from "./TaskComposeFields";
@@ -12,11 +12,13 @@ type Props = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
+  taskType: TaskType;
   checklistItems: string[];
   checklistInherit: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
+  onTaskTypeChange: (t: TaskType) => void;
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
@@ -32,11 +34,13 @@ export function SubtaskCreateModal({
   title,
   prompt,
   priority,
+  taskType,
   checklistItems,
   checklistInherit,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
+  onTaskTypeChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
@@ -65,12 +69,14 @@ export function SubtaskCreateModal({
             title={title}
             prompt={prompt}
             priority={priority}
+            taskType={taskType ?? DEFAULT_NEW_TASK_TYPE}
             checklistItems={checklistItems}
             hideChecklist={checklistInherit}
             disabled={disabled}
             onTitleChange={onTitleChange}
             onPromptChange={onPromptChange}
             onPriorityChange={onPriorityChange}
+            onTaskTypeChange={onTaskTypeChange}
             onAppendChecklistCriterion={onAppendChecklistCriterion}
             onUpdateChecklistRow={onUpdateChecklistRow}
             onRemoveChecklistRow={onRemoveChecklistRow}

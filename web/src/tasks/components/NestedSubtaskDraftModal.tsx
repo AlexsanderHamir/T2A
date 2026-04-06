@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { PriorityChoice } from "@/types";
+import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
@@ -21,6 +21,7 @@ export function NestedSubtaskDraftModal({
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [priority, setPriority] = useState<PriorityChoice>("");
+  const [taskType, setTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [checklistInherit, setChecklistInherit] = useState(false);
 
@@ -29,6 +30,7 @@ export function NestedSubtaskDraftModal({
       setTitle(initialDraft.title);
       setPrompt(initialDraft.initial_prompt);
       setPriority(initialDraft.priority);
+      setTaskType(initialDraft.task_type);
       setChecklistInherit(initialDraft.checklist_inherit);
       setChecklistItems(
         initialDraft.checklist_inherit ? [] : [...initialDraft.checklistItems],
@@ -37,6 +39,7 @@ export function NestedSubtaskDraftModal({
       setTitle("");
       setPrompt("");
       setPriority("");
+      setTaskType(DEFAULT_NEW_TASK_TYPE);
       setChecklistInherit(false);
       setChecklistItems([]);
     }
@@ -68,6 +71,7 @@ export function NestedSubtaskDraftModal({
       title: title.trim(),
       initial_prompt: prompt,
       priority,
+      task_type: taskType,
       checklistItems: checklistItems.map((x) => x.trim()).filter(Boolean),
       checklist_inherit: checklistInherit,
     });
@@ -93,12 +97,14 @@ export function NestedSubtaskDraftModal({
             title={title}
             prompt={prompt}
             priority={priority}
+            taskType={taskType}
             checklistItems={checklistItems}
             hideChecklist={hideChecklist}
             disabled={false}
             onTitleChange={setTitle}
             onPromptChange={setPrompt}
             onPriorityChange={setPriority}
+            onTaskTypeChange={setTaskType}
             onAppendChecklistCriterion={appendCriterion}
             onUpdateChecklistRow={updateRow}
             onRemoveChecklistRow={removeRow}

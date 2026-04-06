@@ -457,6 +457,198 @@ func TestHTTP_create_and_list(t *testing.T) {
 	}
 }
 
+func TestHTTP_evaluate_task_draft_creates_persisted_evaluation(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+
+	body := `{
+		"id":"draft-123",
+		"title":"Improve mention parser reliability",
+		"initial_prompt":"Handle nested mentions and malformed ranges with clear errors.",
+		"priority":"high",
+		"status":"ready",
+		"checklist_inherit":false,
+		"checklist_items":[{"text":"Add parser tests"},{"text":"Document edge cases"}]
+	}`
+	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var out struct {
+		EvaluationID string `json:"evaluation_id"`
+		OverallScore int    `json:"overall_score"`
+		Sections     []struct {
+			Key         string   `json:"key"`
+			Score       int      `json:"score"`
+			Suggestions []string `json:"suggestions"`
+		} `json:"sections"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.EvaluationID == "" {
+		t.Fatal("expected evaluation_id")
+	}
+	if out.OverallScore < 0 || out.OverallScore > 100 {
+		t.Fatalf("overall score %d out of range", out.OverallScore)
+	}
+	if len(out.Sections) < 4 {
+		t.Fatalf("expected section scores, got %#v", out.Sections)
+	}
+	for _, s := range out.Sections {
+		if s.Key == "" {
+			t.Fatal("section key missing")
+		}
+		if s.Score < 0 || s.Score > 100 {
+			t.Fatalf("section score %d out of range", s.Score)
+		}
+		if len(s.Suggestions) == 0 {
+			t.Fatalf("expected suggestions for section %q", s.Key)
+		}
+	}
+
+	records, err := st.ListDraftEvaluations(context.Background(), "draft-123", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 evaluation row, got %d", len(records))
+	}
+}
+
+func TestHTTP_evaluate_task_draft_rejects_unknown_field(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(`{"title":"x","priority":"medium","nope":1}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_create_task_attaches_previous_draft_evaluations(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+
+	for i := 0; i < 2; i++ {
+		resEval, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(`{
+			"id":"draft-link-http",
+			"title":"Evaluate then create",
+			"initial_prompt":"Attach previous evaluations on create",
+			"priority":"high"
+		}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resEval.Body.Close()
+		if resEval.StatusCode != http.StatusCreated {
+			t.Fatalf("evaluate status %d", resEval.StatusCode)
+		}
+	}
+
+	resCreate, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{
+		"title":"Finalized task",
+		"initial_prompt":"from evaluated draft",
+		"priority":"high",
+		"draft_id":"draft-link-http"
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(resCreate.Body)
+	if cerr := resCreate.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resCreate.StatusCode != http.StatusCreated {
+		t.Fatalf("create status %d body %s", resCreate.StatusCode, body)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := st.ListDraftEvaluations(context.Background(), "draft-link-http", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+	for _, row := range rows {
+		if row.TaskID == nil || *row.TaskID != created.ID {
+			t.Fatalf("expected task_id %q, got %#v", created.ID, row.TaskID)
+		}
+	}
+}
+
+func TestHTTP_task_drafts_crud(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	saveRes, err := http.Post(srv.URL+"/task-drafts", "application/json", strings.NewReader(`{
+		"name":"Draft one",
+		"payload":{"title":"hello","priority":"medium"}
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(saveRes.Body)
+	_ = saveRes.Body.Close()
+	if saveRes.StatusCode != http.StatusCreated {
+		t.Fatalf("save status %d body %s", saveRes.StatusCode, body)
+	}
+	var saved struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved.ID == "" {
+		t.Fatal("missing draft id")
+	}
+
+	listRes, err := http.Get(srv.URL + "/task-drafts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listRes.Body.Close()
+	if listRes.StatusCode != http.StatusOK {
+		t.Fatalf("list status %d", listRes.StatusCode)
+	}
+
+	getRes, err := http.Get(srv.URL + "/task-drafts/" + saved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	getBody, _ := io.ReadAll(getRes.Body)
+	_ = getRes.Body.Close()
+	if getRes.StatusCode != http.StatusOK {
+		t.Fatalf("get status %d body %s", getRes.StatusCode, getBody)
+	}
+
+	delReq, _ := http.NewRequest(http.MethodDelete, srv.URL+"/task-drafts/"+saved.ID, nil)
+	delRes, err := http.DefaultClient.Do(delReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = delRes.Body.Close()
+	if delRes.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete status %d", delRes.StatusCode)
+	}
+}
+
 func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
@@ -864,6 +1056,21 @@ func TestHTTP_create_rejects_invalid_status(t *testing.T) {
 	defer srv.Close()
 
 	body := `{"title":"ok","status":"not_a_real_status","priority":"medium"}`
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_create_rejects_invalid_task_type(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	body := `{"title":"ok","priority":"medium","task_type":"not_a_real_type"}`
 	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)

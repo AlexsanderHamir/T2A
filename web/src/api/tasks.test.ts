@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createTask,
   deleteTask,
+  evaluateDraftTask,
   getTaskEvent,
   listTasks,
   patchTask,
@@ -24,6 +25,7 @@ describe("listTasks", () => {
               initial_prompt: "",
               status: "ready",
               priority: "medium",
+              task_type: "general",
               checklist_inherit: false,
             },
           ],
@@ -130,6 +132,7 @@ describe("createTask", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          task_type: "general",
           checklist_inherit: false,
         }),
         { status: 201, headers: { "Content-Type": "application/json" } },
@@ -141,6 +144,7 @@ describe("createTask", () => {
       initial_prompt: "p",
       status: "running",
       priority: "medium",
+      draft_id: "draft-xyz",
     });
 
     expect(spy).toHaveBeenCalledWith(
@@ -159,6 +163,7 @@ describe("createTask", () => {
       initial_prompt: "p",
       status: "running",
       priority: "medium",
+      draft_id: "draft-xyz",
     });
   });
 
@@ -171,6 +176,7 @@ describe("createTask", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
+          task_type: "general",
           checklist_inherit: false,
         }),
         { status: 201, headers: { "Content-Type": "application/json" } },
@@ -188,6 +194,60 @@ describe("createTask", () => {
   });
 });
 
+describe("evaluateDraftTask", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("POSTs draft payload and parses response", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          evaluation_id: "eval-1",
+          created_at: "2026-01-01T12:00:00Z",
+          overall_score: 81,
+          overall_summary: "Promising draft with a few improvement opportunities.",
+          sections: [
+            {
+              key: "title",
+              label: "Title quality",
+              score: 90,
+              summary: "Title is clear and specific.",
+              suggestions: ["Use a verb + object format in the title."],
+            },
+          ],
+          cohesion_score: 74,
+          cohesion_summary: "Most sections align, but intent can be sharpened.",
+          cohesion_suggestions: [
+            "Ensure title, prompt, and priority describe the same outcome.",
+          ],
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const out = await evaluateDraftTask({
+      id: "draft-1",
+      title: "Improve API docs",
+      initial_prompt: "Update route docs and examples",
+      priority: "high",
+      checklist_items: [{ text: "Add endpoint row" }],
+    });
+    expect(out.evaluation_id).toBe("eval-1");
+
+    expect(spy).toHaveBeenCalledWith(
+      "/tasks/evaluate",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }),
+      }),
+    );
+  });
+});
+
 describe("patchTask", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -202,6 +262,7 @@ describe("patchTask", () => {
           initial_prompt: "",
           status: "done",
           priority: "low",
+          task_type: "general",
           checklist_inherit: false,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },

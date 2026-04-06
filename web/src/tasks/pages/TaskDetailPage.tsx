@@ -16,7 +16,12 @@ import {
   listTaskEvents,
   patchChecklistItemText,
 } from "@/api";
-import type { Priority, PriorityChoice } from "@/types";
+import {
+  DEFAULT_NEW_TASK_TYPE,
+  type Priority,
+  type PriorityChoice,
+  type TaskType,
+} from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
@@ -45,6 +50,7 @@ export function TaskDetailPage({ app }: Props) {
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskPrompt, setSubtaskPrompt] = useState("");
   const [subtaskPriority, setSubtaskPriority] = useState<PriorityChoice>("");
+  const [subtaskTaskType, setSubtaskTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [subtaskChecklistItems, setSubtaskChecklistItems] = useState<string[]>(
     [],
   );
@@ -74,6 +80,7 @@ export function TaskDetailPage({ app }: Props) {
     setSubtaskTitle("");
     setSubtaskPrompt("");
     setSubtaskPriority("");
+    setSubtaskTaskType(DEFAULT_NEW_TASK_TYPE);
     setSubtaskChecklistItems([]);
     setSubtaskInherit(false);
   }, []);
@@ -163,6 +170,7 @@ export function TaskDetailPage({ app }: Props) {
       title: string;
       initial_prompt: string;
       priority: Priority;
+      task_type: TaskType;
       checklist_inherit: boolean;
       checklistItems: string[];
     }) => {
@@ -170,6 +178,7 @@ export function TaskDetailPage({ app }: Props) {
         title: input.title,
         initial_prompt: input.initial_prompt,
         priority: input.priority,
+        task_type: input.task_type,
         parent_id: taskId,
         checklist_inherit: input.checklist_inherit,
       });
@@ -206,6 +215,7 @@ export function TaskDetailPage({ app }: Props) {
         title: subtaskTitle.trim(),
         initial_prompt: subtaskPrompt,
         priority: subtaskPriority,
+        task_type: subtaskTaskType,
         checklist_inherit: subtaskInherit,
         checklistItems: subtaskInherit ? [] : subtaskChecklistItems,
       });
@@ -214,6 +224,7 @@ export function TaskDetailPage({ app }: Props) {
       subtaskTitle,
       subtaskPrompt,
       subtaskPriority,
+      subtaskTaskType,
       subtaskInherit,
       subtaskChecklistItems,
       createSubtaskMutation.mutate,
@@ -475,11 +486,13 @@ export function TaskDetailPage({ app }: Props) {
             title={subtaskTitle}
             prompt={subtaskPrompt}
             priority={subtaskPriority}
+            taskType={subtaskTaskType}
             checklistItems={subtaskChecklistItems}
             checklistInherit={subtaskInherit}
             onTitleChange={setSubtaskTitle}
             onPromptChange={setSubtaskPrompt}
             onPriorityChange={setSubtaskPriority}
+            onTaskTypeChange={setSubtaskTaskType}
             onAppendChecklistCriterion={appendSubtaskChecklistCriterion}
             onUpdateChecklistRow={updateSubtaskChecklistRow}
             onRemoveChecklistRow={removeSubtaskChecklistRow}

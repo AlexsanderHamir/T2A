@@ -10,12 +10,32 @@ import (
 
 type taskCreateJSON struct {
 	ID               string          `json:"id"`
+	DraftID          string          `json:"draft_id"`
 	Title            string          `json:"title"`
 	InitialPrompt    string          `json:"initial_prompt"`
 	Status           domain.Status   `json:"status"`
 	Priority         domain.Priority `json:"priority"`
+	TaskType         domain.TaskType `json:"task_type"`
 	ParentID         *string         `json:"parent_id"`
 	ChecklistInherit *bool           `json:"checklist_inherit"`
+}
+
+type taskEvaluateJSON struct {
+	ID               string                                  `json:"id"`
+	Title            string                                  `json:"title"`
+	InitialPrompt    string                                  `json:"initial_prompt"`
+	Status           domain.Status                           `json:"status"`
+	Priority         domain.Priority                         `json:"priority"`
+	TaskType         domain.TaskType                         `json:"task_type"`
+	ParentID         *string                                 `json:"parent_id"`
+	ChecklistInherit *bool                                   `json:"checklist_inherit"`
+	ChecklistItems   []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
+}
+
+type taskDraftSaveJSON struct {
+	ID      string          `json:"id"`
+	Name    string          `json:"name"`
+	Payload json.RawMessage `json:"payload"`
 }
 
 type taskPatchJSON struct {
@@ -23,6 +43,7 @@ type taskPatchJSON struct {
 	InitialPrompt    *string          `json:"initial_prompt"`
 	Status           *domain.Status   `json:"status"`
 	Priority         *domain.Priority `json:"priority"`
+	TaskType         *domain.TaskType `json:"task_type"`
 	ParentID         patchParentField `json:"parent_id"`
 	ChecklistInherit *bool            `json:"checklist_inherit"`
 }
