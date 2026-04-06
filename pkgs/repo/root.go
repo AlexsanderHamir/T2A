@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -145,15 +146,40 @@ func LineCount(absPath string) (int, error) {
 	if fi.Size() > maxFileReadBytes {
 		return 0, fmt.Errorf("%w: file too large", domain.ErrInvalidInput)
 	}
-	data, err := os.ReadFile(absPath)
+	f, err := os.Open(absPath)
 	if err != nil {
 		return 0, err
 	}
-	if len(data) == 0 {
+	defer f.Close()
+	lr := io.LimitReader(f, maxFileReadBytes+1)
+	buf := make([]byte, 32*1024)
+	var n int
+	var total int64
+	var last byte
+	hasData := false
+	for {
+		readN, readErr := lr.Read(buf)
+		if readN > 0 {
+			chunk := buf[:readN]
+			total += int64(readN)
+			n += bytes.Count(chunk, []byte{'\n'})
+			last = chunk[readN-1]
+			hasData = true
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return 0, readErr
+		}
+	}
+	if total > maxFileReadBytes {
+		return 0, fmt.Errorf("%w: file too large", domain.ErrInvalidInput)
+	}
+	if !hasData {
 		return 0, nil
 	}
-	n := bytes.Count(data, []byte{'\n'})
-	if !bytes.HasSuffix(data, []byte{'\n'}) {
+	if last != '\n' {
 		n++
 	}
 	return n, nil

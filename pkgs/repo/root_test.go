@@ -159,6 +159,23 @@ func TestLineCount_and_ValidateRange(t *testing.T) {
 	}
 }
 
+func TestLineCount_rejects_files_larger_than_limit(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	p := filepath.Join(dir, "big.txt")
+	big := strings.Repeat("a", maxFileReadBytes+1)
+	if err := os.WriteFile(p, []byte(big), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LineCount(p)
+	if err == nil {
+		t.Fatal("expected file too large error")
+	}
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
 func TestValidatePromptMentions(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
