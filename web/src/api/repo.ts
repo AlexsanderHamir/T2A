@@ -20,7 +20,18 @@ function searchRepoCombinedSignal(
   if (typeof AT.any === "function") {
     return AT.any([user, timeoutSig]);
   }
-  return user;
+  const combined = new AbortController();
+  const abortCombined = () => {
+    if (!combined.signal.aborted) {
+      combined.abort();
+    }
+  };
+  user.addEventListener("abort", abortCombined, { once: true });
+  timeoutSig.addEventListener("abort", abortCombined, { once: true });
+  if (user.aborted || timeoutSig.aborted) {
+    abortCombined();
+  }
+  return combined.signal;
 }
 
 /** Result of probing whether taskapi has a usable workspace repo (see GET /health/ready). */

@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchRepoFile, probeRepoWorkspace, validateRepoRange } from "./repo";
+import {
+  fetchRepoFile,
+  probeRepoWorkspace,
+  searchRepoFiles,
+  validateRepoRange,
+} from "./repo";
 
 describe("probeRepoWorkspace", () => {
   beforeEach(() => {
@@ -130,6 +135,34 @@ describe("fetchRepoFile", () => {
       line_count: 1,
       warning: "w",
     });
+  });
+});
+
+describe("searchRepoFiles", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("preserves timeout protection when a caller signal is provided", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({ paths: ["a.go"] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const userSignal = new AbortController().signal;
+
+    await searchRepoFiles("a", { signal: userSignal });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeDefined();
+    if (typeof (AbortSignal as typeof AbortSignal & { timeout?: unknown }).timeout === "function") {
+      expect(init.signal).not.toBe(userSignal);
+    }
   });
 });
 
