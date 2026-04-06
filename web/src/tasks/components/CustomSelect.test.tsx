@@ -36,4 +36,29 @@ describe("CustomSelect", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  it("selects the highlighted option when pressing Space in the listbox", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <CustomSelect
+        id="status"
+        label="Status"
+        value="ready"
+        options={OPTIONS}
+        onChange={onChange}
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: /status/i });
+    await user.click(trigger);
+    const listbox = screen.getByRole("listbox", { name: /status/i });
+    await user.click(listbox);
+
+    await user.keyboard("{ArrowDown}");
+    await user.keyboard(" ");
+
+    expect(onChange).toHaveBeenCalledWith("running");
+  });
 });

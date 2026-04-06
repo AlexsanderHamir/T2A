@@ -243,7 +243,7 @@ export function CustomSelect({
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => prevSelectable(options, h));
-    } else if (e.key === "Enter") {
+    } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const o = options[highlight];
       if (!isCustomSelectHeader(o)) pick(o.value);
