@@ -37,7 +37,7 @@
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
 //
-// Optional header Idempotency-Key (non-empty, max 128 bytes after trim): mutating requests with the same
+// Optional header Idempotency-Key (non-empty, max 128 bytes after trim; longer values are rejected with 400): mutating requests with the same
 // method, path, key, and (for POST/PATCH) request body replay the first successful 200/201/204 response
 // for the configured TTL (in-process cache; see DESIGN.md).
 //

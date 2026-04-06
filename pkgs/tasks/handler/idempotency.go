@@ -266,7 +266,7 @@ func clearIdempotencyStateForTest() {
 }
 
 // WithIdempotency deduplicates mutating requests that send a non-empty Idempotency-Key header.
-// The composite key is method, URL path, trimmed key (max 128 bytes), and SHA-256 of the body for
+// The composite key is method, URL path, trimmed key, and SHA-256 of the body for
 // POST/PATCH (DELETE omits a body fingerprint). Only responses with status 200, 201, or 204 are
 // cached. Concurrent identical requests share one handler execution via singleflight.
 //
@@ -288,10 +288,13 @@ func WithIdempotency(h http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
-		key := rawKey
-		if len(key) > maxIdempotencyKeyLen {
-			key = key[:maxIdempotencyKeyLen]
+		if len(rawKey) > maxIdempotencyKeyLen {
+			slog.Warn("idempotency key too long", "cmd", httpLogCmd, "operation", "handler.idempotency",
+				"max_len", maxIdempotencyKeyLen, "len", len(rawKey))
+			writeJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long")
+			return
 		}
+		key := rawKey
 
 		var bodyFP string
 		switch r.Method {

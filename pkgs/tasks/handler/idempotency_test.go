@@ -245,6 +245,80 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 	}
 }
 
+func TestHTTP_idempotency_rejects_overlength_key(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
+
+	db := testdb.OpenSQLite(t)
+	srv := httptest.NewServer(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
+	t.Cleanup(srv.Close)
+
+	longKey := strings.Repeat("k", maxIdempotencyKeyLen+1)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(`{"title":"idem-long","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", longKey)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var out jsonErrorBody
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Error != "idempotency key too long" {
+		t.Fatalf("error %q", out.Error)
+	}
+}
+
+func TestHTTP_idempotency_accepts_boundary_key_length(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
+
+	db := testdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
+	t.Cleanup(srv.Close)
+
+	key := strings.Repeat("k", maxIdempotencyKeyLen)
+	body := `{"title":"idem-boundary","priority":"medium"}`
+
+	do := func() (int, string) {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Idempotency-Key", key)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res.StatusCode, string(b)
+	}
+
+	status1, body1 := do()
+	status2, body2 := do()
+	if status1 != http.StatusCreated || status2 != http.StatusCreated {
+		t.Fatalf("statuses %d/%d", status1, status2)
+	}
+	if body1 != body2 {
+		t.Fatalf("expected replay with boundary key")
+	}
+}
+
 func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "")
