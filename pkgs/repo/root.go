@@ -23,7 +23,8 @@ const (
 
 // Root is a validated absolute directory used for repo-relative paths.
 type Root struct {
-	abs string
+	abs   string
+	canon string
 }
 
 // OpenRoot returns a Root for dir, or ErrInvalidInput if missing or not a directory.
@@ -44,7 +45,11 @@ func OpenRoot(dir string) (*Root, error) {
 	if !fi.IsDir() {
 		return nil, fmt.Errorf("%w: repo root is not a directory", domain.ErrInvalidInput)
 	}
-	return &Root{abs: abs}, nil
+	canon, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return nil, fmt.Errorf("%w: repo root symlink resolution: %v", domain.ErrInvalidInput, err)
+	}
+	return &Root{abs: abs, canon: filepath.Clean(canon)}, nil
 }
 
 // Abs returns the absolute root path.
@@ -82,10 +87,59 @@ func (r *Root) Resolve(rel string) (string, error) {
 	clean := filepath.Clean(joined)
 	rootClean := filepath.Clean(r.abs)
 	relOut, err := filepath.Rel(rootClean, clean)
-	if err != nil || strings.HasPrefix(relOut, "..") {
+	if err != nil || pathEscapesRoot(relOut) {
 		return "", fmt.Errorf("%w: path escapes repo root", domain.ErrInvalidInput)
 	}
+	targetCanonical, err := canonicalizePathForContainment(clean)
+	if err != nil {
+		return "", fmt.Errorf("%w: path canonicalization failed: %v", domain.ErrInvalidInput, err)
+	}
+	canonicalRel, err := filepath.Rel(r.canon, targetCanonical)
+	if err != nil || pathEscapesRoot(canonicalRel) {
+		return "", fmt.Errorf("%w: path escapes repo root via symlink", domain.ErrInvalidInput)
+	}
 	return clean, nil
+}
+
+func pathEscapesRoot(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func canonicalizePathForContainment(path string) (string, error) {
+	if target, err := filepath.EvalSymlinks(path); err == nil {
+		return filepath.Clean(target), nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	cur := filepath.Clean(path)
+	var suffix []string
+	for {
+		fi, statErr := os.Stat(cur)
+		if statErr == nil {
+			if !fi.IsDir() {
+				return "", fmt.Errorf("path parent is not a directory")
+			}
+			baseCanonical, evalErr := filepath.EvalSymlinks(cur)
+			if evalErr != nil {
+				return "", evalErr
+			}
+			canonical := filepath.Clean(baseCanonical)
+			for i := len(suffix) - 1; i >= 0; i-- {
+				canonical = filepath.Join(canonical, suffix[i])
+			}
+			return filepath.Clean(canonical), nil
+		}
+		if !errors.Is(statErr, os.ErrNotExist) {
+			return "", statErr
+		}
+		next := filepath.Dir(cur)
+		if next == cur {
+			return "", statErr
+		}
+		suffix = append(suffix, filepath.Base(cur))
+		cur = next
+	}
 }
 
 // Search returns repo-relative paths matching query (substring, case-insensitive).

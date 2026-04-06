@@ -217,3 +217,55 @@ func TestValidatePromptMentions(t *testing.T) {
 		t.Fatalf("expected ErrInvalidInput, got %v", err)
 	}
 }
+
+func TestRootResolve_rejects_symlink_escape(t *testing.T) {
+	dir := t.TempDir()
+	outsideDir := t.TempDir()
+	outsideFile := filepath.Join(outsideDir, "outside.txt")
+	if err := os.WriteFile(outsideFile, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	linkPath := filepath.Join(dir, "escape.txt")
+	if err := os.Symlink(outsideFile, linkPath); err != nil {
+		t.Skipf("symlink not supported in this environment: %v", err)
+	}
+
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.Resolve("escape.txt")
+	if err == nil {
+		t.Fatal("expected symlink escape error")
+	}
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
+func TestRootResolve_allows_symlink_inside_root(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "pkg", "x.go")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("package pkg"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	linkPath := filepath.Join(dir, "x.go")
+	if err := os.Symlink(target, linkPath); err != nil {
+		t.Skipf("symlink not supported in this environment: %v", err)
+	}
+
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	abs, err := r.Resolve("x.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if abs != linkPath {
+		t.Fatalf("Resolve = %q want %q", abs, linkPath)
+	}
+}
