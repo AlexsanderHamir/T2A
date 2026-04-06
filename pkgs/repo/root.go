@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	maxSearchResults = 50
-	maxFileReadBytes = 32 << 20 // 32 MiB upper bound for line counting
+	// Empty q lists the first N files (walk order) for @-mention browse; non-empty q caps matches for performance.
+	maxSearchResultsBrowse = 250
+	maxSearchResultsFilter = 100
+	maxFileReadBytes       = 32 << 20 // 32 MiB upper bound for line counting
 )
 
 // Root is a validated absolute directory used for repo-relative paths.
@@ -85,10 +87,15 @@ func (r *Root) Resolve(rel string) (string, error) {
 	return clean, nil
 }
 
-// Search returns up to maxSearchResults file paths relative to root matching query (substring, case-insensitive).
+// Search returns repo-relative paths matching query (substring, case-insensitive).
+// Empty query lists up to maxSearchResultsBrowse files (walk order); non-empty query up to maxSearchResultsFilter matches.
 func (r *Root) Search(query string) ([]string, error) {
 	slog.Debug("trace", "operation", "repo.Root.Search")
 	q := strings.ToLower(strings.TrimSpace(query))
+	limit := maxSearchResultsFilter
+	if q == "" {
+		limit = maxSearchResultsBrowse
+	}
 	var out []string
 	err := filepath.WalkDir(r.abs, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -96,7 +103,12 @@ func (r *Root) Search(query string) ([]string, error) {
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" {
+			switch name {
+			case ".git", "node_modules", "vendor":
+				return filepath.SkipDir
+			// Build / cache trees — skip for @-mention browse speed (large workspaces, OneDrive, etc.)
+			case "dist", "build", "out", "target", "coverage", ".next", ".nuxt", ".turbo",
+				"__pycache__", ".pytest_cache", ".venv", "venv", ".mypy_cache", ".tox":
 				return filepath.SkipDir
 			}
 			return nil
@@ -108,7 +120,7 @@ func (r *Root) Search(query string) ([]string, error) {
 		rel = filepath.ToSlash(rel)
 		if q == "" || strings.Contains(strings.ToLower(rel), q) {
 			out = append(out, rel)
-			if len(out) >= maxSearchResults {
+			if len(out) >= limit {
 				return fs.SkipAll
 			}
 		}

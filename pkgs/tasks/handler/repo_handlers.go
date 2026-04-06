@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -34,12 +35,15 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query().Get("q")
+	t0 := time.Now()
 	paths, err := h.repo.Search(q)
+	dur := time.Since(t0)
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "err", err)
+		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
 		writeJSONError(w, r, op, http.StatusInternalServerError, "search failed")
 		return
 	}
+	slog.Info("repo search completed", "cmd", httpLogCmd, "operation", op, "path_count", len(paths), "duration_ms", dur.Milliseconds(), "q_empty", strings.TrimSpace(q) == "")
 	writeJSON(w, r, op, http.StatusOK, repoSearchResponse{Paths: paths})
 }
 

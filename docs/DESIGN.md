@@ -290,7 +290,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 | Query | Meaning                                                                                                             |
 | ----- | ------------------------------------------------------------------------------------------------------------------- |
-| `q`   | Search string (implementation-defined matching in `pkgs/repo`); returns up to a capped list of repo-relative paths. |
+| `q`   | Search string (implementation-defined matching in `pkgs/repo`); returns a capped list of repo-relative paths (larger cap when `q` is empty for @-mention browse). |
 
 
 - 200 JSON: `{ "paths": [ "..." ] }`
