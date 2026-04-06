@@ -297,6 +297,112 @@ func TestHTTP_get_task_event(t *testing.T) {
 	if resBad.StatusCode != http.StatusBadRequest {
 		t.Fatalf("seq 0 want 400, got %d", resBad.StatusCode)
 	}
+
+	longSeq := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
+	resLong, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events/" + longSeq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resLong.Body.Close()
+	if resLong.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong seq want 400, got %d", resLong.StatusCode)
+	}
+}
+
+func TestHTTP_task_events_reject_overlong_query_params(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"e","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+
+	long := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
+
+	resBefore, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=5&before_seq=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resBefore.Body.Close()
+	if resBefore.StatusCode != http.StatusBadRequest {
+		t.Fatalf("before_seq too long: status %d want %d", resBefore.StatusCode, http.StatusBadRequest)
+	}
+
+	resAfter, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=5&after_seq=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resAfter.Body.Close()
+	if resAfter.StatusCode != http.StatusBadRequest {
+		t.Fatalf("after_seq too long: status %d want %d", resAfter.StatusCode, http.StatusBadRequest)
+	}
+
+	resLimit, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resLimit.Body.Close()
+	if resLimit.StatusCode != http.StatusBadRequest {
+		t.Fatalf("limit too long: status %d want %d", resLimit.StatusCode, http.StatusBadRequest)
+	}
+}
+
+func TestHTTP_patch_task_event_rejects_overlong_seq(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if cerr := res.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AppendTaskEvent(ctx, created.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	longSeq := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
+	req, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/"+longSeq, strings.NewReader(`{"user_response":"x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resPatch, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resPatch.Body.Close()
+	if resPatch.StatusCode != http.StatusBadRequest {
+		t.Fatalf("patch overlong seq want 400, got %d", resPatch.StatusCode)
+	}
 }
 
 func TestHTTP_get_task_events_paged_cursor(t *testing.T) {

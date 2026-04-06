@@ -25,8 +25,8 @@
 //   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row; 400 if checklist_inherit
 //   - PATCH  /tasks/{id}/checklist/items/{itemId} — exactly one of { text } (non-empty) or { done: bool }; 200 + full { items }; done requires X-Actor agent; text allowed for user or agent; 400 if checklist_inherit
 //   - DELETE /tasks/{id}/checklist/items/{itemId} — 204; 400 if checklist_inherit
-//   - GET    /tasks/{id}/events/{seq} — 200 + JSON { task_id, seq, at, type, by, data }; 404 if no such row; 400 if seq invalid
-//   - GET    /tasks/{id}/events — 200 + JSON { task_id, events[], approval_pending }; optional query limit (0–200) with keyset cursors before_seq / after_seq (positive ints, mutually exclusive) for paging (newest first; stable under concurrent inserts). offset is rejected. Unpaged full list when limit, before_seq, and after_seq are all omitted; 404 if task missing
+//   - GET    /tasks/{id}/events/{seq} — 200 + JSON { task_id, seq, at, type, by, data }; 404 if no such row; 400 if seq invalid or path segment over 32 bytes
+//   - GET    /tasks/{id}/events — 200 + JSON { task_id, events[], approval_pending }; optional query limit (0–200) with keyset cursors before_seq / after_seq (positive ints, mutually exclusive) for paging (newest first; stable under concurrent inserts); each of limit/before_seq/after_seq capped at 32 bytes. offset is rejected. Unpaged full list when limit, before_seq, and after_seq are all omitted; 404 if task missing
 //   - GET    /tasks/{id}      — 200 + task tree (nested children[])
 //   - PATCH  /tasks/{id}      — partial update; 200 + task tree
 //   - DELETE /tasks/{id}      — 204, no body; 400 if the task still has subtasks

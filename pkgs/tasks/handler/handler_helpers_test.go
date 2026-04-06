@@ -137,6 +137,17 @@ func TestParseListParams(t *testing.T) {
 	}
 }
 
+func TestParseTaskEventsLimit_reject_overlong_limit(t *testing.T) {
+	long := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
+	_, err := parseTaskEventsLimit(context.Background(), url.Values{"limit": {long}})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestDecodeJSON_trailing_garbage_after_object(t *testing.T) {
 	const raw = `{"title":"x","initial_prompt":""}junk`
 	var got taskCreateJSON

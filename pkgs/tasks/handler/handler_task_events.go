@@ -15,12 +15,19 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+// Seq values are small positive integers; huge path/query strings waste CPU in strconv and log fields.
+const maxTaskEventSeqParamBytes = 32
+
 func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvent")
 	const op = "tasks.event"
 	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
+	if len(seqStr) > maxTaskEventSeqParamBytes {
+		writeError(w, r, op, errors.New("seq too long"), http.StatusBadRequest)
+		return
+	}
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
 		debugHTTPRequest(r, op, "task_id", id, "seq_param", seqStr, "seq_parse_failed", true)
@@ -122,6 +129,10 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("before_seq and after_seq cannot both be set"), http.StatusBadRequest)
 		return
 	}
+	if (beforeStr != "" && len(beforeStr) > maxTaskEventSeqParamBytes) || (afterStr != "" && len(afterStr) > maxTaskEventSeqParamBytes) {
+		writeError(w, r, op, errors.New("before_seq or after_seq too long"), http.StatusBadRequest)
+		return
+	}
 	limit, err := parseTaskEventsLimit(r.Context(), q)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -175,6 +186,10 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 	r = withCallRoot(r, op)
 	id := strings.TrimSpace(r.PathValue("id"))
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
+	if len(seqStr) > maxTaskEventSeqParamBytes {
+		writeError(w, r, op, errors.New("seq too long"), http.StatusBadRequest)
+		return
+	}
 	seq, err := strconv.ParseInt(seqStr, 10, 64)
 	if err != nil || seq < 1 {
 		debugHTTPRequest(r, op, "task_id", id, "seq_param", seqStr, "seq_parse_failed", true)
@@ -215,6 +230,9 @@ func parseTaskEventsLimit(ctx context.Context, q url.Values) (limit int, err err
 	defer func() { helperDebugOut(ctx, "parseTaskEventsLimit", "limit", limit, "err", err) }()
 	limit = 50
 	if v := q.Get("limit"); v != "" {
+		if len(v) > maxTaskEventSeqParamBytes {
+			return 0, fmt.Errorf("%w: limit too long", domain.ErrInvalidInput)
+		}
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 || n > 200 {
 			return 0, fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
