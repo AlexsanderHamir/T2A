@@ -4,19 +4,17 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 
-function logDevError(scope: string, err: unknown): void {
-  if (import.meta.env.DEV) {
-    console.error(`[${scope}]`, err);
-  }
+function logQueryError(scope: string, err: unknown): void {
+  console.error(`[${scope}]`, err);
 }
 
 export function createAppQueryClient(): QueryClient {
   return new QueryClient({
     queryCache: new QueryCache({
-      onError: (err) => logDevError("tasks query", err),
+      onError: (err) => logQueryError("tasks query", err),
     }),
     mutationCache: new MutationCache({
-      onError: (err) => logDevError("tasks mutation", err),
+      onError: (err) => logQueryError("tasks mutation", err),
     }),
     defaultOptions: {
       queries: {
