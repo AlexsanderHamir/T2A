@@ -30,6 +30,16 @@ func TestParseFileMentions(t *testing.T) {
 				{Path: "b.go", RawStart: 15, RawEnd: 20},
 			},
 		},
+		{
+			name: "filename with parentheses is path only",
+			in:   `see @docs/file(name).md for details`,
+			want: []Mention{{Path: "docs/file(name).md", RawStart: 4, RawEnd: 23}},
+		},
+		{
+			name: "range-like segment inside filename is not parsed as range",
+			in:   `use @docs/file(1-2).md next`,
+			want: []Mention{{Path: "docs/file(1-2).md", RawStart: 4, RawEnd: 22}},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
