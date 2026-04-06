@@ -48,6 +48,28 @@ describe("fetchWithTimeout", () => {
       Object.defineProperty(AbortSignal, "any", descriptor);
     }
   });
+
+  it("uses manual timeout controller when AbortSignal.timeout is unavailable", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", { status: 200 }),
+    );
+    const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "timeout");
+    if (descriptor) {
+      Object.defineProperty(AbortSignal, "timeout", {
+        value: undefined,
+        configurable: true,
+      });
+    }
+    try {
+      await fetchWithTimeout("/tasks");
+      const [, init] = fetchSpy.mock.calls[0] as [RequestInfo | URL, RequestInit];
+      expect(init.signal).toBeDefined();
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(AbortSignal, "timeout", descriptor);
+      }
+    }
+  });
 });
 
 describe("readError", () => {

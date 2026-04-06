@@ -6,14 +6,26 @@ export const jsonHeaders = {
 
 const defaultFetchTimeoutMs = 20_000;
 
-function timeoutSignal(ms: number): AbortSignal | undefined {
+function timeoutSignal(
+  ms: number,
+): { signal: AbortSignal | undefined; cleanup: (() => void) | undefined } {
   const AT = AbortSignal as typeof AbortSignal & {
     timeout?: (timeoutMs: number) => AbortSignal;
   };
   if (typeof AT.timeout !== "function") {
-    return undefined;
+    const timeoutController = new AbortController();
+    const timer = setTimeout(() => {
+      timeoutController.abort();
+    }, ms);
+    return {
+      signal: timeoutController.signal,
+      cleanup: () => clearTimeout(timer),
+    };
   }
-  return AT.timeout(ms);
+  return {
+    signal: AT.timeout(ms),
+    cleanup: undefined,
+  };
 }
 
 function combineSignals(
@@ -48,9 +60,13 @@ export async function fetchWithTimeout(
   options?: { timeoutMs?: number },
 ): Promise<Response> {
   const timeoutMs = options?.timeoutMs ?? defaultFetchTimeoutMs;
-  const timeout = timeoutSignal(timeoutMs);
+  const { signal: timeout, cleanup } = timeoutSignal(timeoutMs);
   const signal = combineSignals(init?.signal, timeout);
-  return fetch(input, { ...init, ...(signal ? { signal } : {}) });
+  try {
+    return await fetch(input, { ...init, ...(signal ? { signal } : {}) });
+  } finally {
+    cleanup?.();
+  }
 }
 
 export async function readError(res: Response): Promise<string> {
