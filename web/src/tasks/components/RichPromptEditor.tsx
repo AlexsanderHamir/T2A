@@ -19,6 +19,7 @@ import {
 } from "../promptFormat";
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
+import { Modal } from "@/shared/Modal";
 
 type Props = {
   id: string;
@@ -133,6 +134,8 @@ export function RichPromptEditor({
       (workspaceProbe.state === "available" && fileSearchUnavailable));
 
   const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
+  const rangeModalTitleId = `${id}-mention-range-modal-title`;
+  const rangeModalDescId = `${id}-mention-range-modal-desc`;
 
   /** Avoid flashing “Searching…” when /repo/search returns in a few ms (useDelayedTrue drops immediately when idle). */
   const fileSearchLoadingEligible =
@@ -204,18 +207,35 @@ export function RichPromptEditor({
       <RichPromptMenuBar editor={editor} disabled={disabled} />
       <EditorContent editor={editor} />
       {pendingInsert ? (
-        <MentionRangePanel
-          id={id}
-          path={pendingInsert.path}
-          disabled={disabled}
-          rangeWarning={rangeWarning}
-          onInsertWithRange={insertWithRange}
-          onInsertPathOnly={insertPathOnly}
-          onCancel={() => {
+        <Modal
+          onClose={() => {
             setPendingInsert(null);
             setRangeWarning(null);
           }}
-        />
+          labelledBy={rangeModalTitleId}
+          describedBy={rangeModalDescId}
+          size="wide"
+        >
+          <section className="panel modal-sheet mention-range-modal">
+            <h2 id={rangeModalTitleId}>Insert file reference</h2>
+            <p id={rangeModalDescId} className="mention-range-modal-desc muted">
+              Review the file, optionally choose a line range, then insert it into
+              your prompt.
+            </p>
+            <MentionRangePanel
+              id={id}
+              path={pendingInsert.path}
+              disabled={disabled}
+              rangeWarning={rangeWarning}
+              onInsertWithRange={insertWithRange}
+              onInsertPathOnly={insertPathOnly}
+              onCancel={() => {
+                setPendingInsert(null);
+                setRangeWarning(null);
+              }}
+            />
+          </section>
+        </Modal>
       ) : null}
       {showRepoMisconfigHint ? (
         <p className="mention-repo-hint" role="status">
