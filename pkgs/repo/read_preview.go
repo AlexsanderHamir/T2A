@@ -33,7 +33,7 @@ func ReadFilePreview(absPath string) (*FilePreview, error) {
 		return nil, fmt.Errorf("%w: path is a directory", domain.ErrInvalidInput)
 	}
 	size := fi.Size()
-	out := &FilePreview{SizeBytes: size}
+	out := &FilePreview{SizeBytes: size, Truncated: size > maxFileReadBytes}
 	if size == 0 {
 		out.LineCount = 0
 		return out, nil
@@ -43,16 +43,27 @@ func ReadFilePreview(absPath string) (*FilePreview, error) {
 		return nil, err
 	}
 	defer f.Close()
+	sniff := make([]byte, binarySniffBytes)
+	nSniff, sniffErr := io.ReadFull(f, sniff)
+	if sniffErr != nil && sniffErr != io.EOF && sniffErr != io.ErrUnexpectedEOF {
+		return nil, sniffErr
+	}
+	sniff = sniff[:nSniff]
+	if isBinaryData(sniff) {
+		out.Binary = true
+		return out, nil
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
 	data, err := io.ReadAll(io.LimitReader(f, maxFileReadBytes+1))
 	if err != nil {
 		return nil, err
 	}
-	truncated := false
 	if int64(len(data)) > maxFileReadBytes {
 		data = data[:maxFileReadBytes]
-		truncated = true
+		out.Truncated = true
 	}
-	out.Truncated = truncated
 	if isBinaryData(data) {
 		out.Binary = true
 		return out, nil

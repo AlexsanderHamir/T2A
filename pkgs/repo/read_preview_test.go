@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"strings"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -71,5 +71,43 @@ func TestReadFilePreview_truncatedLargeText(t *testing.T) {
 	}
 	if fp.LineCount <= 0 {
 		t.Fatalf("line_count %d", fp.LineCount)
+	}
+}
+
+func TestReadFilePreview_binaryLargeFileFlagsTruncated(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	p := filepath.Join(dir, "big.bin")
+	f, err := os.Create(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write([]byte{0}); err != nil {
+		_ = f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Truncate(maxFileReadBytes + 10); err != nil {
+		_ = f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	fp, err := ReadFilePreview(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !fp.Binary {
+		t.Fatal("expected binary")
+	}
+	if !fp.Truncated {
+		t.Fatal("expected truncated")
+	}
+	if fp.Content != "" {
+		t.Fatal("expected empty content")
+	}
+	if fp.SizeBytes != maxFileReadBytes+10 {
+		t.Fatalf("size_bytes %d", fp.SizeBytes)
 	}
 }
