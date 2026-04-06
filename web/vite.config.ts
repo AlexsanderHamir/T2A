@@ -50,6 +50,8 @@ export default defineConfig({
       },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
+      // So the SPA can probe taskapi readiness (REPO_ROOT) without a full /repo/search walk.
+      "/health": { target: api, changeOrigin: true },
     },
   },
   test: {
