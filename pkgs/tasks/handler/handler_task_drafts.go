@@ -11,6 +11,10 @@ func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
 	r = withCallRoot(r, op)
 	limit := 50
 	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if len(raw) > maxListIntQueryParamBytes {
+			writeJSONError(w, r, op, http.StatusBadRequest, "limit value too long")
+			return
+		}
 		n, err := strconv.Atoi(raw)
 		if err != nil || n < 0 || n > 100 {
 			writeJSONError(w, r, op, http.StatusBadRequest, "limit must be integer 0..100")

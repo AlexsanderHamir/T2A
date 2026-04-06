@@ -784,6 +784,21 @@ func TestHTTP_task_drafts_list_limit_zero_coerces_to_default(t *testing.T) {
 	}
 }
 
+func TestHTTP_task_drafts_list_overlong_limit(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	long := strings.Repeat("1", maxListIntQueryParamBytes+1)
+	res, err := http.Get(srv.URL + "/task-drafts?limit=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong limit: status %d want %d", res.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
@@ -1221,6 +1236,40 @@ func TestHTTP_list_bad_limit(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_list_overlong_query_params(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	long := strings.Repeat("1", maxListIntQueryParamBytes+1)
+	res, err := http.Get(srv.URL + "/tasks?limit=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong limit: status %d want %d", res.StatusCode, http.StatusBadRequest)
+	}
+
+	res2, err := http.Get(srv.URL + "/tasks?offset=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong offset: status %d want %d", res2.StatusCode, http.StatusBadRequest)
+	}
+
+	longAfter := strings.Repeat("a", maxListAfterIDParamBytes+1)
+	res3, err := http.Get(srv.URL + "/tasks?after_id=" + longAfter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res3.Body.Close()
+	if res3.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong after_id: status %d want %d", res3.StatusCode, http.StatusBadRequest)
 	}
 }
 

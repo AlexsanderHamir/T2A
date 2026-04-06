@@ -117,6 +117,9 @@ func TestParseListParams(t *testing.T) {
 		{name: "limit_nan", q: url.Values{"limit": {"nope"}}, wantErr: true},
 		{name: "limit_201", q: url.Values{"limit": {"201"}}, wantErr: true},
 		{name: "offset_negative", q: url.Values{"offset": {"-1"}}, wantErr: true},
+		{name: "limit_value_too_long", q: url.Values{"limit": {strings.Repeat("1", maxListIntQueryParamBytes+1)}}, wantErr: true},
+		{name: "offset_value_too_long", q: url.Values{"offset": {strings.Repeat("1", maxListIntQueryParamBytes+1)}}, wantErr: true},
+		{name: "after_id_too_long", q: url.Values{"after_id": {strings.Repeat("a", maxListAfterIDParamBytes+1)}}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

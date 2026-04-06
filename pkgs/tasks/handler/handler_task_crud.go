@@ -14,6 +14,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	maxListIntQueryParamBytes = 32
+	maxListAfterIDParamBytes  = 128
+)
+
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.create")
 	const op = "tasks.create"
@@ -203,6 +208,9 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 	limit = 50
 	offset = 0
 	afterID = strings.TrimSpace(q.Get("after_id"))
+	if afterID != "" && len(afterID) > maxListAfterIDParamBytes {
+		return 0, 0, "", fmt.Errorf("%w: after_id too long", domain.ErrInvalidInput)
+	}
 	if _, ok := q["offset"]; ok && afterID != "" {
 		return 0, 0, "", fmt.Errorf("%w: offset cannot be used with after_id", domain.ErrInvalidInput)
 	}
@@ -212,6 +220,9 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 		}
 	}
 	if v := q.Get("limit"); v != "" {
+		if len(v) > maxListIntQueryParamBytes {
+			return 0, 0, "", fmt.Errorf("%w: limit value too long", domain.ErrInvalidInput)
+		}
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 || n > 200 {
 			return 0, 0, "", fmt.Errorf("%w: limit must be integer 0..200", domain.ErrInvalidInput)
@@ -222,6 +233,9 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 		limit = 50
 	}
 	if v := q.Get("offset"); v != "" {
+		if len(v) > maxListIntQueryParamBytes {
+			return 0, 0, "", fmt.Errorf("%w: offset value too long", domain.ErrInvalidInput)
+		}
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 {
 			return 0, 0, "", fmt.Errorf("%w: offset must be non-negative integer", domain.ErrInvalidInput)

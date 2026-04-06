@@ -19,7 +19,7 @@
 //     type task_created | task_updated | task_deleted and id (UUID)
 //   - POST   /tasks           — create; 201 + JSON task tree (same shape as GET)
 //   - POST   /tasks/evaluate  — evaluate task-creation draft payload; 201 + JSON score breakdown
-//   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0) or keyset after_id (UUID, mutually exclusive with offset); response includes has_more; each element includes nested children[]
+//   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0) or keyset after_id (UUID, mutually exclusive with offset); limit/offset capped at 32 bytes, after_id at 128 bytes; response includes has_more; each element includes nested children[]
 //   - GET    /tasks/stats     — global counters across all tasks; 200 + JSON { total, ready, critical, by_status, by_priority, by_scope }
 //   - GET    /tasks/{id}/checklist — 200 + JSON { items: [{ id, sort_order, text, done }] } for this task (definition from self or inherited ancestor)
 //   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row; 400 if checklist_inherit
