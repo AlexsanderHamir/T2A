@@ -345,6 +345,14 @@ func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string)
 	}()
 	code = http.StatusInternalServerError
 	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		code = http.StatusGatewayTimeout
+		msg = "request timed out"
+		return code, msg
+	case errors.Is(err, context.Canceled):
+		code = http.StatusRequestTimeout
+		msg = "request canceled"
+		return code, msg
 	case errors.Is(err, domain.ErrNotFound):
 		code = http.StatusNotFound
 	case errors.Is(err, domain.ErrInvalidInput):

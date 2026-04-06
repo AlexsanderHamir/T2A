@@ -83,6 +83,8 @@ func TestStoreErrHTTPResponse(t *testing.T) {
 			wantCode: http.StatusBadRequest,
 			wantMsg:  "empty id",
 		},
+		{name: "deadline_exceeded", err: context.DeadlineExceeded, wantCode: http.StatusGatewayTimeout, wantMsg: "request timed out"},
+		{name: "context_canceled", err: context.Canceled, wantCode: http.StatusRequestTimeout, wantMsg: "request canceled"},
 		{name: "conflict", err: domain.ErrConflict, wantCode: http.StatusConflict, wantMsg: "task id already exists"},
 		{name: "internal", err: errors.New("db unavailable"), wantCode: http.StatusInternalServerError, wantMsg: "internal server error"},
 	}
