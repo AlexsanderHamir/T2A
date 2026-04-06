@@ -87,4 +87,12 @@ describe("promptFormat", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("bad");
   });
+
+  it("escapes without DOMParser when prompt exceeds size cap", () => {
+    const big = "x".repeat(350_001);
+    const html = sanitizePromptHtml(big);
+    expect(html.startsWith("<p>")).toBe(true);
+    expect(html).toContain("x");
+    expect(html).not.toContain("<script");
+  });
 });

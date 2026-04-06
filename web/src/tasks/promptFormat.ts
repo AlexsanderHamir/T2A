@@ -19,12 +19,18 @@ function isSafeHref(rawHref: string): boolean {
   return /^(https?:|mailto:)/i.test(href);
 }
 
+/** Roughly aligns with default API body size (~1 MiB UTF-8); avoids DOMParser on pathological prompts. */
+const maxSanitizePromptCodeUnits = 350_000;
+
 /**
  * Sanitize stored prompt HTML before injecting into the DOM.
  * Keeps a narrow rich-text allowlist and drops dangerous attributes/protocols.
  */
 export function sanitizePromptHtml(input: string): string {
   if (!input.trim()) return "";
+  if (input.length > maxSanitizePromptCodeUnits) {
+    return `<p>${escapeHtml(input)}</p>`;
+  }
   if (typeof DOMParser === "undefined") {
     return `<p>${escapeHtml(input)}</p>`;
   }
