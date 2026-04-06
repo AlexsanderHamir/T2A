@@ -56,6 +56,14 @@ func (s *Store) EvaluateDraftTask(ctx context.Context, in EvaluateDraftTaskInput
 	if err := validateActor(by); err != nil {
 		return nil, err
 	}
+	tt := in.TaskType
+	if tt == "" {
+		tt = domain.TaskTypeGeneral
+	}
+	if !validTaskType(tt) {
+		return nil, fmt.Errorf("%w: invalid task_type", domain.ErrInvalidInput)
+	}
+	in.TaskType = tt
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	titleScore := scoreTitle(strings.TrimSpace(in.Title))

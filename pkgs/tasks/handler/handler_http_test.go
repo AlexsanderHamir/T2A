@@ -1133,6 +1133,59 @@ func TestHTTP_create_rejects_invalid_task_type(t *testing.T) {
 	}
 }
 
+func TestHTTP_evaluate_rejects_invalid_task_type(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	body := `{"id":"draft-x","title":"ok","priority":"medium","task_type":"not_a_real_type"}`
+	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestHTTP_patch_rejects_invalid_task_type(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	createRes, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"task","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	createBody, err := io.ReadAll(createRes.Body)
+	if cerr := createRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if createRes.StatusCode != http.StatusCreated {
+		t.Fatalf("create %d %s", createRes.StatusCode, createBody)
+	}
+	var created domain.Task
+	if err := json.Unmarshal(createBody, &created); err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID, strings.NewReader(`{"task_type":"not_a_real_type"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
 func TestHTTP_create_rejects_missing_priority(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

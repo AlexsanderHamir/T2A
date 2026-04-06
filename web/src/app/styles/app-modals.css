@@ -95,6 +95,12 @@
 
 /* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
 @media (min-width: var(--bp-md)) {
+  .modal-shell {
+    border-radius: var(--radius-xl);
+    /* Keep desktop scrolling on shell, but hard-clip paint to avoid corner jitter. */
+    clip-path: inset(0 round var(--radius-xl));
+  }
+
   .modal-shell > .panel {
     margin-bottom: 0;
     border: none;
