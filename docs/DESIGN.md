@@ -333,7 +333,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 
 - 200 JSON: `{ "ok": true/false, "line_count"?: number, "warning"?: string }` — used to warn about invalid ranges without always returning non-200.
-- 400 if `path` is longer than 4096 bytes (abuse guard).
+- 400 if `path` is longer than 4096 bytes, or if `start` or `end` is longer than 32 bytes (abuse guard; line numbers are short decimal strings).
 
 `POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil, `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths or bad ranges fail with `domain.ErrInvalidInput` → 400 JSON error (same as other task validation errors).
 

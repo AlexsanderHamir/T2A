@@ -1584,6 +1584,31 @@ func TestHTTP_repo_validate_range_missing_params(t *testing.T) {
 	}
 }
 
+func TestHTTP_repo_validate_range_reject_overlong_start_end(t *testing.T) {
+	dir := t.TempDir()
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	long := strings.Repeat("1", maxRepoLineQueryParamBytes+1)
+	res, err := http.Get(srv.URL + "/repo/validate-range?path=note.txt&start=" + long + "&end=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("validate-range overlong start: status %d want %d", res.StatusCode, http.StatusBadRequest)
+	}
+
+	res2, err := http.Get(srv.URL + "/repo/validate-range?path=note.txt&start=1&end=" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusBadRequest {
+		t.Fatalf("validate-range overlong end: status %d want %d", res2.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()

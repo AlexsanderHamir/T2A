@@ -39,6 +39,9 @@ const maxRepoSearchQueryBytes = 512
 // Repo-relative paths in query strings should stay within normal filesystem limits; huge values waste work in Resolve/logging.
 const maxRepoRelPathQueryBytes = 4096
 
+// Line numbers fit in a small decimal string; huge query values waste CPU in strconv and slog fields.
+const maxRepoLineQueryParamBytes = 32
+
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	r = withCallRoot(r, op)
@@ -75,7 +78,6 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSpace(r.URL.Query().Get("path"))
 	startStr := strings.TrimSpace(r.URL.Query().Get("start"))
 	endStr := strings.TrimSpace(r.URL.Query().Get("end"))
-	debugHTTPRequest(r, op, "validate_path", path, "validate_start", startStr, "validate_end", endStr)
 	if r.Method != http.MethodGet {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
@@ -92,6 +94,11 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusBadRequest, "path too long")
 		return
 	}
+	if len(startStr) > maxRepoLineQueryParamBytes || len(endStr) > maxRepoLineQueryParamBytes {
+		writeJSONError(w, r, op, http.StatusBadRequest, "start or end too long")
+		return
+	}
+	debugHTTPRequest(r, op, "validate_path", truncateRunes(path, maxHTTPLogTitleRunes), "validate_start", truncateRunes(startStr, maxHTTPLogTitleRunes), "validate_end", truncateRunes(endStr, maxHTTPLogTitleRunes))
 	start, err1 := strconv.Atoi(startStr)
 	end, err2 := strconv.Atoi(endStr)
 	if err1 != nil || err2 != nil {
