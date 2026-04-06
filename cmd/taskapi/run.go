@@ -147,12 +147,14 @@ func run() int {
 	slog.Info("max request body config", "cmd", cmdName, "operation", "taskapi.max_body",
 		"enabled", mb > 0, "max_bytes", mb)
 	idemTTL := handler.IdempotencyTTL()
+	idemMaxEntries, idemMaxBytes := handler.IdempotencyCacheLimits()
 	idemSec := int(idemTTL / time.Second)
 	if idemTTL > 0 && idemSec == 0 {
 		idemSec = 1
 	}
 	slog.Info("idempotency config", "cmd", cmdName, "operation", "taskapi.idempotency",
-		"enabled", idemTTL > 0, "ttl_sec", idemSec)
+		"enabled", idemTTL > 0, "ttl_sec", idemSec,
+		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
 	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))
 	mux := http.NewServeMux()

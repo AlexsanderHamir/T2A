@@ -120,7 +120,9 @@ func TestHTTP_idempotency_disabled_allows_duplicate_post(t *testing.T) {
 		}
 		return res.StatusCode
 	}
-	if do() != http.StatusCreated || do() != http.StatusCreated {
+	first := do()
+	second := do()
+	if first != http.StatusCreated || second != http.StatusCreated {
 		t.Fatal("expected two 201 responses")
 	}
 
@@ -260,5 +262,71 @@ func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "not-a-duration")
 	if idempotencyTTLConfigured() != defaultIdempotencyTTL || IdempotencyTTL() != defaultIdempotencyTTL {
 		t.Fatalf("invalid falls back")
+	}
+}
+
+func TestIdempotencyCacheLimitsConfigured(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "")
+	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "")
+	maxEntries, maxBytes := IdempotencyCacheLimits()
+	if maxEntries != defaultIdempotencyMaxEntries || maxBytes != defaultIdempotencyMaxBytes {
+		t.Fatalf("defaults got entries=%d bytes=%d", maxEntries, maxBytes)
+	}
+
+	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "128")
+	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "262144")
+	maxEntries, maxBytes = IdempotencyCacheLimits()
+	if maxEntries != 128 || maxBytes != 262144 {
+		t.Fatalf("configured got entries=%d bytes=%d", maxEntries, maxBytes)
+	}
+
+	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "-1")
+	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "nope")
+	maxEntries, maxBytes = IdempotencyCacheLimits()
+	if maxEntries != defaultIdempotencyMaxEntries || maxBytes != defaultIdempotencyMaxBytes {
+		t.Fatalf("invalid fallback got entries=%d bytes=%d", maxEntries, maxBytes)
+	}
+}
+
+func TestIdempotencyCache_set_enforces_entry_limit(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "2")
+	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "0")
+
+	now := time.Now()
+	idempCache.set("k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("a")}, now.Add(time.Hour))
+	idempCache.set("k2", idempotencyCaptured{status: http.StatusCreated, body: []byte("b")}, now.Add(time.Hour))
+	idempCache.set("k3", idempotencyCaptured{status: http.StatusCreated, body: []byte("c")}, now.Add(time.Hour))
+
+	if _, ok := idempCache.get("k1"); ok {
+		t.Fatalf("oldest key should be evicted")
+	}
+	if _, ok := idempCache.get("k2"); !ok {
+		t.Fatalf("k2 should remain")
+	}
+	if _, ok := idempCache.get("k3"); !ok {
+		t.Fatalf("k3 should remain")
+	}
+}
+
+func TestIdempotencyCache_set_enforces_byte_limit(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "0")
+	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "5")
+
+	now := time.Now()
+	idempCache.set("k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("111")}, now.Add(time.Hour))
+	idempCache.set("k2", idempotencyCaptured{status: http.StatusCreated, body: []byte("22")}, now.Add(time.Hour))
+	idempCache.set("k3", idempotencyCaptured{status: http.StatusCreated, body: []byte("3")}, now.Add(time.Hour))
+
+	if _, ok := idempCache.get("k1"); ok {
+		t.Fatalf("k1 should be evicted to satisfy byte cap")
+	}
+	if _, ok := idempCache.get("k2"); !ok {
+		t.Fatalf("k2 should remain")
+	}
+	if _, ok := idempCache.get("k3"); !ok {
+		t.Fatalf("k3 should remain")
 	}
 }
