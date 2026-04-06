@@ -21,11 +21,19 @@ import "prismjs/components/prism-tsx";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-yaml";
 
+function escapePreviewHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function highlightPreviewContent(
   content: string,
   prismLanguage: string,
 ): string {
   const grammar = Prism.languages[prismLanguage];
-  if (!grammar) return content;
+  if (!grammar) return escapePreviewHtml(content);
   return Prism.highlight(content, grammar, prismLanguage);
 }
