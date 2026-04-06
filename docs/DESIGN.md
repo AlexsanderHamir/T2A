@@ -321,7 +321,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 
 - 200 JSON: `{ "path", "content" (UTF-8 text, empty if binary), "binary", "truncated", "size_bytes", "line_count", "warning"?: string }` — full file for preview up to 32 MiB; binary or invalid UTF-8 sets `binary: true` with empty `content`; larger files set `truncated: true`.
-- 400 if `path` missing or invalid; 404 if file missing; 503 if repo not configured; 500 on read failure.
+- 400 if `path` missing, invalid, or longer than 4096 bytes; 404 if file missing; 503 if repo not configured; 500 on read failure.
 
 ### `GET /repo/validate-range`
 
@@ -333,6 +333,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 
 - 200 JSON: `{ "ok": true/false, "line_count"?: number, "warning"?: string }` — used to warn about invalid ranges without always returning non-200.
+- 400 if `path` is longer than 4096 bytes (abuse guard).
 
 `POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil, `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths or bad ranges fail with `domain.ErrInvalidInput` → 400 JSON error (same as other task validation errors).
 

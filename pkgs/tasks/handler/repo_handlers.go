@@ -36,6 +36,9 @@ type repoFileResponse struct {
 // Substring search cost scales with len(q); cap keeps pathological queries from burning CPU.
 const maxRepoSearchQueryBytes = 512
 
+// Repo-relative paths in query strings should stay within normal filesystem limits; huge values waste work in Resolve/logging.
+const maxRepoRelPathQueryBytes = 4096
+
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	r = withCallRoot(r, op)
@@ -83,6 +86,10 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "" || startStr == "" || endStr == "" {
 		writeJSONError(w, r, op, http.StatusBadRequest, "path, start, and end query parameters are required")
+		return
+	}
+	if len(path) > maxRepoRelPathQueryBytes {
+		writeJSONError(w, r, op, http.StatusBadRequest, "path too long")
 		return
 	}
 	start, err1 := strconv.Atoi(startStr)
@@ -138,6 +145,10 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "" {
 		writeJSONError(w, r, op, http.StatusBadRequest, "path query parameter is required")
+		return
+	}
+	if len(path) > maxRepoRelPathQueryBytes {
+		writeJSONError(w, r, op, http.StatusBadRequest, "path too long")
 		return
 	}
 	abs, err := h.repo.Resolve(path)

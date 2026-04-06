@@ -1515,6 +1515,31 @@ func TestHTTP_repo_file_ok(t *testing.T) {
 	}
 }
 
+func TestHTTP_repo_file_and_validate_range_reject_overlong_path(t *testing.T) {
+	dir := t.TempDir()
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	longPath := strings.Repeat("a", maxRepoRelPathQueryBytes+1)
+	resFile, err := http.Get(srv.URL + "/repo/file?path=" + longPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resFile.Body.Close()
+	if resFile.StatusCode != http.StatusBadRequest {
+		t.Fatalf("repo file overlong path: status %d want %d", resFile.StatusCode, http.StatusBadRequest)
+	}
+
+	resVal, err := http.Get(srv.URL + "/repo/validate-range?path=" + longPath + "&start=1&end=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resVal.Body.Close()
+	if resVal.StatusCode != http.StatusBadRequest {
+		t.Fatalf("validate-range overlong path: status %d want %d", resVal.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestHTTP_repo_validate_range_ok(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "note.txt")
