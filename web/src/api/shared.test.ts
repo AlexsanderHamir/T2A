@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchWithTimeout, readError } from "./shared";
+import {
+  fetchWithTimeout,
+  maxErrorResponseBodyBytes,
+  readError,
+} from "./shared";
 
 describe("fetchWithTimeout", () => {
   afterEach(() => {
@@ -104,5 +108,37 @@ describe("readError", () => {
   it("falls back to statusText when body empty", async () => {
     const msg = await readError(new Response("", { status: 503, statusText: "Service Unavailable" }));
     expect(msg).toBe("Service Unavailable");
+  });
+
+  it("streams at most maxErrorResponseBodyBytes from oversized error bodies", async () => {
+    const pad = "x".repeat(maxErrorResponseBodyBytes + 500);
+    const res = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(pad));
+          controller.close();
+        },
+      }),
+      { status: 500 },
+    );
+    const msg = await readError(res);
+    expect(msg.length).toBe(maxErrorResponseBodyBytes);
+    expect(msg).toBe("x".repeat(maxErrorResponseBodyBytes));
+  });
+
+  it("still parses JSON error when body fits under limit", async () => {
+    const res = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(JSON.stringify({ error: "short", request_id: "r1" })),
+          );
+          controller.close();
+        },
+      }),
+      { status: 400 },
+    );
+    const msg = await readError(res);
+    expect(msg).toBe("short (request r1)");
   });
 });

@@ -6,6 +6,55 @@ export const jsonHeaders = {
 
 const defaultFetchTimeoutMs = 20_000;
 
+/** Upper bound for error response bodies (abuse / buggy proxies); aligns with bounded handler bodies. */
+export const maxErrorResponseBodyBytes = 64 * 1024;
+
+async function readResponseTextLimited(
+  res: Response,
+  maxBytes: number,
+): Promise<string> {
+  if (!res.body) {
+    return "";
+  }
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value?.byteLength) {
+        continue;
+      }
+      const remaining = maxBytes - total;
+      if (remaining <= 0) {
+        await reader.cancel();
+        break;
+      }
+      if (value.byteLength <= remaining) {
+        chunks.push(value);
+        total += value.byteLength;
+      } else {
+        chunks.push(value.subarray(0, remaining));
+        total += remaining;
+        await reader.cancel();
+        break;
+      }
+    }
+  } catch {
+    /* ignore stream read errors; fall through with partial data */
+  }
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    merged.set(c, offset);
+    offset += c.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: false }).decode(merged);
+}
+
 function timeoutSignal(
   ms: number,
 ): { signal: AbortSignal | undefined; cleanup: (() => void) | undefined } {
@@ -70,7 +119,9 @@ export async function fetchWithTimeout(
 }
 
 export async function readError(res: Response): Promise<string> {
-  const t = await res.text();
+  const t = res.body
+    ? await readResponseTextLimited(res, maxErrorResponseBodyBytes)
+    : await res.text();
   try {
     const j = JSON.parse(t) as { error?: string; request_id?: string };
     const msg = typeof j?.error === "string" && j.error.trim() ? j.error.trim() : "";
