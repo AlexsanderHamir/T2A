@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -211,66 +212,61 @@ type jsonErrorBody struct {
 // writeJSON writes v as JSON. When r is non-nil and Debug is enabled, logs response_body (truncated) and response_json_bytes.
 func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v any) {
 	setJSONHeaders(w)
-	w.WriteHeader(code)
 	ctx := context.Background()
 	if r != nil {
 		ctx = r.Context()
 	}
-	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
-		b, err := json.Marshal(v)
-		if err != nil {
-			slog.Error("response marshal failed", "cmd", httpLogCmd, "operation", op, "err", err)
-			return
-		}
-		preview := truncateUTF8ByBytes(string(b), maxHTTPLogJSONPreviewBytes)
-		slog.Log(ctx, slog.LevelDebug, "http.io",
-			"cmd", httpLogCmd, "obs_category", "http_io", "operation", op, "call_path", CallPath(ctx), "phase", "out",
-			"http_status", code, "response_json_bytes", len(b), "response_body", preview)
-		if _, werr := w.Write(b); werr != nil {
-			return
-		}
-		_, _ = w.Write([]byte("\n"))
-		return
-	}
-	enc := json.NewEncoder(w)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(v); err != nil {
 		slog.Error("response encode failed", "cmd", httpLogCmd, "operation", op, "err", err)
+		writeJSONError(w, r, op, http.StatusInternalServerError, "internal server error")
+		return
 	}
+	payload := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
+		preview := truncateUTF8ByBytes(string(payload), maxHTTPLogJSONPreviewBytes)
+		slog.Log(ctx, slog.LevelDebug, "http.io",
+			"cmd", httpLogCmd, "obs_category", "http_io", "operation", op, "call_path", CallPath(ctx), "phase", "out",
+			"http_status", code, "response_json_bytes", len(payload), "response_body", preview)
+	}
+	w.WriteHeader(code)
+	_, _ = w.Write(payload)
+	_, _ = w.Write([]byte("\n"))
 }
 
 func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int, msg string) {
 	setJSONHeaders(w)
-	w.WriteHeader(code)
-	body := jsonErrorBody{Error: msg}
 	ctx := context.Background()
 	if r != nil {
 		ctx = r.Context()
+	}
+	body := jsonErrorBody{Error: msg}
+	if r != nil {
 		if rid := RequestIDFromContext(ctx); rid != "" {
 			body.RequestID = rid
 		}
 	}
-	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
-		b, err := json.Marshal(body)
-		if err != nil {
-			slog.Error("response marshal failed", "cmd", httpLogCmd, "operation", op, "err", err)
-			return
-		}
-		preview := truncateUTF8ByBytes(string(b), maxHTTPLogJSONPreviewBytes)
-		slog.Log(ctx, slog.LevelDebug, "http.io",
-			"cmd", httpLogCmd, "obs_category", "http_io", "operation", op, "call_path", CallPath(ctx), "phase", "out",
-			"http_status", code, "response_json_bytes", len(b), "response_body", preview)
-		if _, werr := w.Write(b); werr != nil {
-			return
-		}
-		_, _ = w.Write([]byte("\n"))
-		return
-	}
-	enc := json.NewEncoder(w)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(body); err != nil {
 		slog.Error("response encode failed", "cmd", httpLogCmd, "operation", op, "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, "{\"error\":\"internal server error\"}\n")
+		return
 	}
+	payload := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
+		preview := truncateUTF8ByBytes(string(payload), maxHTTPLogJSONPreviewBytes)
+		slog.Log(ctx, slog.LevelDebug, "http.io",
+			"cmd", httpLogCmd, "obs_category", "http_io", "operation", op, "call_path", CallPath(ctx), "phase", "out",
+			"http_status", code, "response_json_bytes", len(payload), "response_body", preview)
+	}
+	w.WriteHeader(code)
+	_, _ = w.Write(payload)
+	_, _ = w.Write([]byte("\n"))
 }
 
 func userFacingJSONError(err error) string {
