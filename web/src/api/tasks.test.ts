@@ -3,9 +3,11 @@ import {
   createTask,
   deleteTask,
   evaluateDraftTask,
+  getTask,
   getTaskStats,
   getTaskEvent,
   listTasks,
+  maxTaskPathIDBytes,
   patchTask,
   patchTaskEventUserResponse,
 } from "./index";
@@ -116,6 +118,32 @@ describe("listTasks", () => {
       }),
     );
     await expect(listTasks()).rejects.toThrow(/array/);
+  });
+
+  it("rejects limit out of range before fetch", async () => {
+    vi.spyOn(globalThis, "fetch");
+    await expect(listTasks(201, 0)).rejects.toThrow(/between/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects overlong after_id before fetch", async () => {
+    vi.spyOn(globalThis, "fetch");
+    const longAfter = "a".repeat(maxTaskPathIDBytes + 1);
+    await expect(listTasks(10, 0, { afterId: longAfter })).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("getTask", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects id longer than max before fetch", async () => {
+    vi.spyOn(globalThis, "fetch");
+    const longId = "x".repeat(maxTaskPathIDBytes + 1);
+    await expect(getTask(longId)).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 

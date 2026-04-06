@@ -28,12 +28,28 @@ import {
   parseTaskStatsResponse,
 } from "./parseTaskApi";
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import {
+  assertAfterId,
+  assertListIntQuery,
+  assertNonNegativeOffset,
+  assertOptionalTaskPathId,
+  assertPositiveSeq,
+  assertTaskPathId,
+} from "./taskRequestBounds";
+
+export {
+  maxListAfterIDParamBytes,
+  maxListIntQueryParamBytes,
+  maxTaskPathIDBytes,
+  maxTaskSeqPathOrQueryParamBytes,
+} from "./taskRequestBounds";
 
 export async function getTask(
   id: string,
   options?: { signal?: AbortSignal },
 ): Promise<Task> {
-  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
+  const tid = assertTaskPathId(id);
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -51,19 +67,22 @@ export async function listTaskEvents(
     afterSeq?: number;
   },
 ): Promise<TaskEventsResponse> {
+  const tid = assertTaskPathId(id);
   const q = new URLSearchParams();
-  if (options?.limit !== undefined) q.set("limit", String(options.limit));
+  if (options?.limit !== undefined) {
+    q.set("limit", assertListIntQuery("limit", options.limit, 0, 200));
+  }
   if (options?.beforeSeq !== undefined) {
-    q.set("before_seq", String(options.beforeSeq));
+    q.set("before_seq", assertPositiveSeq("before_seq", options.beforeSeq));
   }
   if (options?.afterSeq !== undefined) {
-    q.set("after_seq", String(options.afterSeq));
+    q.set("after_seq", assertPositiveSeq("after_seq", options.afterSeq));
   }
   const qs = q.toString();
   const path =
     qs === ""
-      ? `/tasks/${encodeURIComponent(id)}/events`
-      : `/tasks/${encodeURIComponent(id)}/events?${qs}`;
+      ? `/tasks/${encodeURIComponent(tid)}/events`
+      : `/tasks/${encodeURIComponent(tid)}/events?${qs}`;
   const res = await fetchWithTimeout(path, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
@@ -78,8 +97,10 @@ export async function getTaskEvent(
   seq: number,
   options?: { signal?: AbortSignal },
 ): Promise<TaskEventDetail> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const seqStr = assertPositiveSeq("seq", seq);
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
+    `/tasks/${encodeURIComponent(tid)}/events/${encodeURIComponent(seqStr)}`,
     {
       headers: { Accept: "application/json" },
       signal: options?.signal,
@@ -96,12 +117,14 @@ export async function patchTaskEventUserResponse(
   userResponse: string,
   options?: { actor?: "user" | "agent" },
 ): Promise<TaskEventDetail> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const seqStr = assertPositiveSeq("seq", seq);
   const headers: Record<string, string> = { ...jsonHeaders };
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
+    `/tasks/${encodeURIComponent(tid)}/events/${encodeURIComponent(seqStr)}`,
     {
       method: "PATCH",
       headers,
@@ -118,11 +141,12 @@ export async function listTasks(
   offset = 0,
   options?: { signal?: AbortSignal; afterId?: string },
 ): Promise<TaskListResponse> {
-  const q = new URLSearchParams({ limit: String(limit) });
+  const lim = assertListIntQuery("limit", limit, 0, 200);
+  const q = new URLSearchParams({ limit: lim });
   if (options?.afterId) {
-    q.set("after_id", options.afterId);
+    q.set("after_id", assertAfterId(options.afterId));
   } else {
-    q.set("offset", String(offset));
+    q.set("offset", assertNonNegativeOffset("offset", offset));
   }
   const res = await fetchWithTimeout(`/tasks?${q}`, {
     headers: { Accept: "application/json" },
@@ -156,22 +180,32 @@ export async function createTask(input: {
   parent_id?: string;
   checklist_inherit?: boolean;
 }): Promise<Task> {
+  const body: Record<string, unknown> = {
+    title: input.title,
+    initial_prompt: input.initial_prompt ?? "",
+    status: input.status ?? DEFAULT_NEW_TASK_STATUS,
+    priority: input.priority,
+    task_type: input.task_type ?? DEFAULT_NEW_TASK_TYPE,
+  };
+  const cid = assertOptionalTaskPathId(input.id, "id");
+  if (cid !== undefined) {
+    body.id = cid;
+  }
+  const draftId = assertOptionalTaskPathId(input.draft_id, "draft_id");
+  if (draftId !== undefined) {
+    body.draft_id = draftId;
+  }
+  const parentId = assertOptionalTaskPathId(input.parent_id, "parent_id");
+  if (parentId !== undefined) {
+    body.parent_id = parentId;
+  }
+  if (input.checklist_inherit === true) {
+    body.checklist_inherit = true;
+  }
   const res = await fetchWithTimeout("/tasks", {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify({
-      title: input.title,
-      initial_prompt: input.initial_prompt ?? "",
-      status: input.status ?? DEFAULT_NEW_TASK_STATUS,
-      priority: input.priority,
-      task_type: input.task_type ?? DEFAULT_NEW_TASK_TYPE,
-      ...(input.id ? { id: input.id } : {}),
-      ...(input.draft_id ? { draft_id: input.draft_id } : {}),
-      ...(input.parent_id ? { parent_id: input.parent_id } : {}),
-      ...(input.checklist_inherit === true
-        ? { checklist_inherit: true }
-        : {}),
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
@@ -181,22 +215,37 @@ export async function createTask(input: {
 export async function evaluateDraftTask(
   input: DraftTaskEvaluationInput,
 ): Promise<DraftTaskEvaluation> {
+  const payload: Record<string, unknown> = {
+    title: input.title,
+    initial_prompt: input.initial_prompt ?? "",
+  };
+  const eid = assertOptionalTaskPathId(input.id, "id");
+  if (eid !== undefined) {
+    payload.id = eid;
+  }
+  if (input.status) {
+    payload.status = input.status;
+  }
+  if (input.priority) {
+    payload.priority = input.priority;
+  }
+  if (input.task_type) {
+    payload.task_type = input.task_type;
+  }
+  const ep = assertOptionalTaskPathId(input.parent_id, "parent_id");
+  if (ep !== undefined) {
+    payload.parent_id = ep;
+  }
+  if (input.checklist_inherit !== undefined) {
+    payload.checklist_inherit = input.checklist_inherit;
+  }
+  if (input.checklist_items) {
+    payload.checklist_items = input.checklist_items;
+  }
   const res = await fetchWithTimeout("/tasks/evaluate", {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify({
-      id: input.id,
-      title: input.title,
-      initial_prompt: input.initial_prompt ?? "",
-      ...(input.status ? { status: input.status } : {}),
-      ...(input.priority ? { priority: input.priority } : {}),
-      ...(input.task_type ? { task_type: input.task_type } : {}),
-      ...(input.parent_id ? { parent_id: input.parent_id } : {}),
-      ...(input.checklist_inherit !== undefined
-        ? { checklist_inherit: input.checklist_inherit }
-        : {}),
-      ...(input.checklist_items ? { checklist_items: input.checklist_items } : {}),
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
@@ -207,7 +256,8 @@ export async function listTaskDrafts(
   limit = 50,
   options?: { signal?: AbortSignal },
 ): Promise<TaskDraftSummary[]> {
-  const res = await fetchWithTimeout(`/task-drafts?limit=${encodeURIComponent(String(limit))}`, {
+  const lim = assertListIntQuery("limit", limit, 0, 100);
+  const res = await fetchWithTimeout(`/task-drafts?limit=${encodeURIComponent(lim)}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -221,10 +271,15 @@ export async function saveTaskDraft(input: {
   name: string;
   payload: TaskDraftPayload;
 }): Promise<{ id: string; name: string }> {
+  const sid = assertOptionalTaskPathId(input.id, "id");
   const res = await fetchWithTimeout("/task-drafts", {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      name: input.name,
+      payload: input.payload,
+      ...(sid !== undefined ? { id: sid } : {}),
+    }),
   });
   if (!res.ok) throw new Error(await readError(res));
   const raw = (await res.json()) as { id: string; name: string };
@@ -236,7 +291,8 @@ export async function getTaskDraft(
   id: string,
   options?: { signal?: AbortSignal },
 ): Promise<TaskDraftDetail> {
-  const res = await fetchWithTimeout(`/task-drafts/${encodeURIComponent(id)}`, {
+  const did = assertTaskPathId(id, "draft id");
+  const res = await fetchWithTimeout(`/task-drafts/${encodeURIComponent(did)}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -246,7 +302,8 @@ export async function getTaskDraft(
 }
 
 export async function deleteTaskDraft(id: string): Promise<void> {
-  const res = await fetchWithTimeout(`/task-drafts/${encodeURIComponent(id)}`, {
+  const did = assertTaskPathId(id, "draft id");
+  const res = await fetchWithTimeout(`/task-drafts/${encodeURIComponent(did)}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error(await readError(res));
@@ -264,17 +321,23 @@ export async function patchTask(
     checklist_inherit?: boolean;
   },
 ): Promise<Task> {
+  const tid = assertTaskPathId(id);
   const body: Record<string, unknown> = {};
   if (patch.title !== undefined) body.title = patch.title;
   if (patch.initial_prompt !== undefined) body.initial_prompt = patch.initial_prompt;
   if (patch.status !== undefined) body.status = patch.status;
   if (patch.priority !== undefined) body.priority = patch.priority;
   if (patch.task_type !== undefined) body.task_type = patch.task_type;
-  if (patch.parent_id !== undefined) body.parent_id = patch.parent_id;
+  if (patch.parent_id !== undefined) {
+    body.parent_id =
+      patch.parent_id === null
+        ? null
+        : assertTaskPathId(patch.parent_id, "parent_id");
+  }
   if (patch.checklist_inherit !== undefined) {
     body.checklist_inherit = patch.checklist_inherit;
   }
-  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "PATCH",
     headers: jsonHeaders,
     body: JSON.stringify(body),
@@ -285,7 +348,8 @@ export async function patchTask(
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
+  const tid = assertTaskPathId(id);
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error(await readError(res));
@@ -295,8 +359,9 @@ export async function listChecklist(
   taskId: string,
   options?: { signal?: AbortSignal },
 ): Promise<TaskChecklistResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/checklist`,
+    `/tasks/${encodeURIComponent(tid)}/checklist`,
     {
       headers: { Accept: "application/json" },
       signal: options?.signal,
@@ -333,12 +398,14 @@ export async function patchChecklistItemText(
   text: string,
   options?: { actor?: "user" | "agent" },
 ): Promise<TaskChecklistResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const iid = assertTaskPathId(itemId, "item id");
   const headers: Record<string, string> = { ...jsonHeaders };
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    `/tasks/${encodeURIComponent(tid)}/checklist/items/${encodeURIComponent(iid)}`,
     {
       method: "PATCH",
       headers,
@@ -357,12 +424,14 @@ export async function patchChecklistItemDone(
   done: boolean,
   options?: { actor?: "user" | "agent" },
 ): Promise<TaskChecklistResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const iid = assertTaskPathId(itemId, "item id");
   const headers: Record<string, string> = { ...jsonHeaders };
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    `/tasks/${encodeURIComponent(tid)}/checklist/items/${encodeURIComponent(iid)}`,
     {
       method: "PATCH",
       headers,
@@ -378,8 +447,10 @@ export async function deleteChecklistItem(
   taskId: string,
   itemId: string,
 ): Promise<void> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const iid = assertTaskPathId(itemId, "item id");
   const res = await fetchWithTimeout(
-    `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
+    `/tasks/${encodeURIComponent(tid)}/checklist/items/${encodeURIComponent(iid)}`,
     { method: "DELETE" },
   );
   if (!res.ok) throw new Error(await readError(res));
