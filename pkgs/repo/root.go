@@ -211,29 +211,40 @@ func validateRangeWithLineCount(start, end, n int) error {
 // ValidatePromptMentions checks every parsed mention against the repo root.
 func (r *Root) ValidatePromptMentions(prompt string) error {
 	slog.Debug("trace", "operation", "repo.Root.ValidatePromptMentions")
+	resolvedPaths := make(map[string]string)
+	seenFiles := make(map[string]struct{})
 	lineCounts := make(map[string]int)
 	for _, m := range ParseFileMentions(prompt) {
-		abs, err := r.Resolve(m.Path)
-		if err != nil {
-			return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
-		}
-		fi, err := os.Stat(abs)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("%w: mention @%s: file does not exist", domain.ErrInvalidInput, m.Path)
+		abs, ok := resolvedPaths[m.Path]
+		if !ok {
+			var err error
+			abs, err = r.Resolve(m.Path)
+			if err != nil {
+				return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
 			}
-			return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
+			resolvedPaths[m.Path] = abs
 		}
-		if fi.IsDir() {
-			return fmt.Errorf("%w: mention @%s: path is a directory, not a file", domain.ErrInvalidInput, m.Path)
+		if _, ok := seenFiles[abs]; !ok {
+			fi, err := os.Stat(abs)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return fmt.Errorf("%w: mention @%s: file does not exist", domain.ErrInvalidInput, m.Path)
+				}
+				return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
+			}
+			if fi.IsDir() {
+				return fmt.Errorf("%w: mention @%s: path is a directory, not a file", domain.ErrInvalidInput, m.Path)
+			}
+			seenFiles[abs] = struct{}{}
 		}
 		if m.HasRange {
 			n, ok := lineCounts[abs]
 			if !ok {
-				n, err = LineCount(abs)
-				if err != nil {
-					return fmt.Errorf("%w: mention @%s(%d-%d): %w", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
+				lineCount, lineErr := LineCount(abs)
+				if lineErr != nil {
+					return fmt.Errorf("%w: mention @%s(%d-%d): %w", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, lineErr)
 				}
+				n = lineCount
 				lineCounts[abs] = n
 			}
 			if err := validateRangeWithLineCount(m.StartLine, m.EndLine, n); err != nil {
