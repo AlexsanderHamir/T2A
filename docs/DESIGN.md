@@ -308,6 +308,7 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 
 
 - 200 JSON: `{ "paths": [ "..." ] }`
+- 400 JSON if `q` exceeds 512 bytes (abuse guard; substring search cost scales with query length).
 - 503 JSON if repo not configured: `{ "error": "..." }`
 - 500 JSON on internal search failure (message is generic; details in logs).
 

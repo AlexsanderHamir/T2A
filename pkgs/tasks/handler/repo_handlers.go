@@ -33,6 +33,9 @@ type repoFileResponse struct {
 	Warning   string `json:"warning,omitempty"`
 }
 
+// Substring search cost scales with len(q); cap keeps pathological queries from burning CPU.
+const maxRepoSearchQueryBytes = 512
+
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	r = withCallRoot(r, op)
@@ -46,6 +49,10 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query().Get("q")
+	if len(q) > maxRepoSearchQueryBytes {
+		writeJSONError(w, r, op, http.StatusBadRequest, "search query too long")
+		return
+	}
 	t0 := time.Now()
 	paths, err := h.repo.Search(q)
 	dur := time.Since(t0)

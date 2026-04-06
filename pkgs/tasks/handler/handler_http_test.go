@@ -1446,6 +1446,16 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 		t.Fatalf("paths %#v", searchPayload.Paths)
 	}
 
+	longQ := strings.Repeat("a", maxRepoSearchQueryBytes+1)
+	resLong, err := http.Get(srv.URL + "/repo/search?q=" + longQ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resLong.Body.Close()
+	if resLong.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong search q: status %d want %d", resLong.StatusCode, http.StatusBadRequest)
+	}
+
 	res2, err := http.Post(srv.URL+"/tasks", "application/json",
 		strings.NewReader(`{"title":"t","initial_prompt":"@nope.txt","priority":"medium"}`))
 	if err != nil {
