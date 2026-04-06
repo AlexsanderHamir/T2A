@@ -127,9 +127,13 @@ describe("TaskListSection", () => {
         onRequestDelete={onRequestDelete}
       />,
     );
-    await user.click(screen.getByRole("button", { name: /^edit$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /^edit task "alpha"$/i }),
+    );
     expect(onEdit).toHaveBeenCalledWith(task);
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /^delete task "alpha"$/i }),
+    );
     expect(onRequestDelete).toHaveBeenCalledWith(task);
   });
 

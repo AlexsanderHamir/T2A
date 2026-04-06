@@ -353,6 +353,7 @@ export function TaskListSection({
                             <button
                               type="button"
                               className="secondary btn-table"
+                              aria-label={`Edit task "${t.title}"`}
                               onClick={() => onEdit(t)}
                               disabled={saving}
                             >
@@ -361,6 +362,7 @@ export function TaskListSection({
                             <button
                               type="button"
                               className="danger btn-table"
+                              aria-label={`Delete task "${t.title}"`}
                               onClick={() => onRequestDelete(t)}
                               disabled={saving}
                             >
