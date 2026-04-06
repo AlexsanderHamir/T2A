@@ -18,6 +18,7 @@ type Props = {
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
   onAppendChecklistCriterion: (text: string) => void;
+  onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   onChecklistInheritChange: (v: boolean) => void;
   onSubmit: (e: FormEvent) => void;
@@ -37,6 +38,7 @@ export function SubtaskCreateModal({
   onPromptChange,
   onPriorityChange,
   onAppendChecklistCriterion,
+  onUpdateChecklistRow,
   onRemoveChecklistRow,
   onChecklistInheritChange,
   onSubmit,
@@ -70,6 +72,7 @@ export function SubtaskCreateModal({
             onPromptChange={onPromptChange}
             onPriorityChange={onPriorityChange}
             onAppendChecklistCriterion={onAppendChecklistCriterion}
+            onUpdateChecklistRow={onUpdateChecklistRow}
             onRemoveChecklistRow={onRemoveChecklistRow}
           />
           <label className="checkbox-label task-subtask-inherit">

@@ -150,3 +150,62 @@ export async function validateRepoRange(
   }
   throw new Error("unexpected validate-range response");
 }
+
+export type RepoFileResult = {
+  path: string;
+  content: string;
+  binary: boolean;
+  truncated: boolean;
+  size_bytes: number;
+  line_count: number;
+  warning?: string;
+};
+
+/** Full file text for @ line-range UI, or null if repo is not configured (503). */
+export async function fetchRepoFile(
+  path: string,
+  options?: { signal?: AbortSignal },
+): Promise<RepoFileResult | null> {
+  const params = new URLSearchParams({ path });
+  const res = await fetch(`/repo/file?${params}`, {
+    headers: { Accept: "application/json" },
+    signal: searchRepoCombinedSignal(options?.signal),
+  });
+  if (res.status === 503) {
+    return null;
+  }
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("unexpected file response");
+  }
+  const o = raw as Record<string, unknown>;
+  const pathVal = o.path;
+  const contentVal = o.content;
+  const binaryVal = o.binary;
+  const truncatedVal = o.truncated;
+  const sizeVal = o.size_bytes;
+  const linesVal = o.line_count;
+  if (
+    typeof pathVal !== "string" ||
+    typeof contentVal !== "string" ||
+    typeof binaryVal !== "boolean" ||
+    typeof truncatedVal !== "boolean" ||
+    typeof sizeVal !== "number" ||
+    typeof linesVal !== "number"
+  ) {
+    throw new Error("unexpected file response shape");
+  }
+  const out: RepoFileResult = {
+    path: pathVal,
+    content: contentVal,
+    binary: binaryVal,
+    truncated: truncatedVal,
+    size_bytes: sizeVal,
+    line_count: linesVal,
+  };
+  if (typeof o.warning === "string") {
+    out.warning = o.warning;
+  }
+  return out;
+}

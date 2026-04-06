@@ -22,6 +22,7 @@ export type TaskComposeFieldsProps = {
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
   onAppendChecklistCriterion: (text: string) => void;
+  onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   /** Passed to `RichPromptEditor` as `key` so the editor resets when needed. */
   editorKey: string;
@@ -39,6 +40,7 @@ export function TaskComposeFields({
   onPromptChange,
   onPriorityChange,
   onAppendChecklistCriterion,
+  onUpdateChecklistRow,
   onRemoveChecklistRow,
   editorKey,
 }: TaskComposeFieldsProps) {
@@ -49,14 +51,23 @@ export function TaskComposeFields({
 
   const [criterionModalOpen, setCriterionModalOpen] = useState(false);
   const [criterionModalText, setCriterionModalText] = useState("");
+  const [criterionEditIndex, setCriterionEditIndex] = useState<number | null>(null);
 
   const openCriterionModal = () => {
+    setCriterionEditIndex(null);
     setCriterionModalText("");
+    setCriterionModalOpen(true);
+  };
+
+  const openEditCriterionModal = (index: number, text: string) => {
+    setCriterionEditIndex(index);
+    setCriterionModalText(text);
     setCriterionModalOpen(true);
   };
 
   const closeCriterionModal = () => {
     setCriterionModalOpen(false);
+    setCriterionEditIndex(null);
     setCriterionModalText("");
   };
 
@@ -65,7 +76,11 @@ export function TaskComposeFields({
     e.stopPropagation();
     const t = criterionModalText.trim();
     if (!t) return;
-    onAppendChecklistCriterion(t);
+    if (criterionEditIndex === null) {
+      onAppendChecklistCriterion(t);
+    } else {
+      onUpdateChecklistRow(criterionEditIndex, t);
+    }
     closeCriterionModal();
   };
 
@@ -141,31 +156,45 @@ export function TaskComposeFields({
             <strong>Create</strong>.
           </p>
           {checklistItems.length > 0 ? (
-            <ul
-              className="task-checklist-list"
-              aria-labelledby={checklistHeadingId}
-            >
-              {checklistItems.map((text, index) => (
-                <li key={`${index}-${text}`} className="task-checklist-row">
-                  <span className="task-checklist-label">{text}</span>
-                  <button
-                    type="button"
-                    className="task-create-checklist-remove"
-                    disabled={disabled}
-                    onClick={() => onRemoveChecklistRow(index)}
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="task-checklist-surface">
+              <ul
+                className="task-checklist-list task-checklist-list--grouped"
+                aria-labelledby={checklistHeadingId}
+              >
+                {checklistItems.map((text, index) => (
+                  <li key={`${index}-${text}`} className="task-checklist-row">
+                    <div className="task-checklist-row-main">
+                      <span className="task-checklist-text">{text}</span>
+                    </div>
+                    <div className="task-checklist-row-actions">
+                      <button
+                        type="button"
+                        className="task-detail-checklist-edit"
+                        disabled={disabled}
+                        onClick={() => openEditCriterionModal(index, text)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="task-detail-checklist-remove"
+                        disabled={disabled}
+                        onClick={() => onRemoveChecklistRow(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </div>
       ) : null}
 
       {criterionModalOpen ? (
         <ChecklistCriterionModal
-          mode="add"
+          mode={criterionEditIndex === null ? "add" : "edit"}
           pending={false}
           saving={false}
           onClose={closeCriterionModal}

@@ -385,6 +385,107 @@ describe("App", () => {
     expect(checklistPosts[0]).toContain("Tests pass");
   });
 
+  it("creates a top-level task using edited checklist criterion text", async () => {
+    const user = userEvent.setup();
+    let created = false;
+    const checklistPosts: string[] = [];
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        if (!created) {
+          return Response.json({ tasks: [], limit: 200, offset: 0 });
+        }
+        return Response.json({
+          tasks: [
+            {
+              id: "t1",
+              title: "With edited criteria",
+              initial_prompt: "",
+              status: "ready",
+              priority: "medium",
+              checklist_inherit: false,
+            },
+          ],
+          limit: 200,
+          offset: 0,
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      if (url === "/tasks" && init?.method === "POST") {
+        created = true;
+        return new Response(
+          JSON.stringify({
+            id: "t1",
+            title: "With edited criteria",
+            initial_prompt: "",
+            status: "ready",
+            priority: "medium",
+            checklist_inherit: false,
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
+        const body = init?.body != null ? String(init.body) : "";
+        checklistPosts.push(body);
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+
+    const dialog = await openNewTaskModal(user);
+    await user.type(
+      within(dialog).getByLabelText(/^title$/i),
+      "With edited criteria",
+    );
+    await choosePriorityInDialog(user, dialog);
+    await user.click(
+      within(dialog).getByRole("button", { name: /new criterion/i }),
+    );
+    const addCriterionDialog = await screen.findByRole("dialog", {
+      name: /new criterion/i,
+    });
+    await user.type(
+      within(addCriterionDialog).getByLabelText(/^criterion$/i),
+      "Old wording",
+    );
+    await user.click(
+      within(addCriterionDialog).getByRole("button", { name: /^add criterion$/i }),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: /^edit$/i }));
+    const editCriterionDialog = await screen.findByRole("dialog", {
+      name: /edit criterion/i,
+    });
+    const criterionInput = within(editCriterionDialog).getByLabelText(
+      /^criterion$/i,
+    );
+    await user.clear(criterionInput);
+    await user.type(criterionInput, "Updated wording");
+    await user.click(
+      within(editCriterionDialog).getByRole("button", { name: /^save changes$/i }),
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /^create$/i }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /with edited criteria/i }),
+    ).toBeInTheDocument();
+    expect(checklistPosts).toHaveLength(1);
+    expect(checklistPosts[0]).toContain("Updated wording");
+  });
+
   it("creates a subtask from home with checklist criteria added after create", async () => {
     const user = userEvent.setup();
     let created = false;

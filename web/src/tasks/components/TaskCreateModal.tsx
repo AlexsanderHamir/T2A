@@ -25,6 +25,7 @@ type Props = {
   onParentIdChange: (id: string) => void;
   onChecklistInheritChange: (v: boolean) => void;
   onAppendChecklistCriterion: (text: string) => void;
+  onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   pendingSubtasks: PendingSubtaskDraft[];
   onAddPendingSubtask: (d: PendingSubtaskDraft) => void;
@@ -50,6 +51,7 @@ export function TaskCreateModal({
   onParentIdChange,
   onChecklistInheritChange,
   onAppendChecklistCriterion,
+  onUpdateChecklistRow,
   onRemoveChecklistRow,
   pendingSubtasks,
   onAddPendingSubtask,
@@ -168,6 +170,7 @@ export function TaskCreateModal({
               onPromptChange={onPromptChange}
               onPriorityChange={onPriorityChange}
               onAppendChecklistCriterion={onAppendChecklistCriterion}
+              onUpdateChecklistRow={onUpdateChecklistRow}
               onRemoveChecklistRow={onRemoveChecklistRow}
             />
 

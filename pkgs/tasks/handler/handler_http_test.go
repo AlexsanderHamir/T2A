@@ -1105,6 +1105,42 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 	}
 }
 
+func TestHTTP_repo_file_ok(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "note.txt")
+	if err := os.WriteFile(p, []byte("line1\nline2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/file?path=note.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d %s", res.StatusCode, b)
+	}
+	var payload struct {
+		Path      string `json:"path"`
+		Content   string `json:"content"`
+		Binary    bool   `json:"binary"`
+		Truncated bool   `json:"truncated"`
+		LineCount int    `json:"line_count"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Path != "note.txt" || payload.Binary || payload.Truncated {
+		t.Fatalf("payload %#v", payload)
+	}
+	if payload.Content != "line1\nline2\n" || payload.LineCount != 2 {
+		t.Fatalf("content/line_count %#v", payload)
+	}
+}
+
 func TestHTTP_repo_validate_range_ok(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "note.txt")

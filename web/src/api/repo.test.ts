@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { probeRepoWorkspace } from "./repo";
+import { fetchRepoFile, probeRepoWorkspace } from "./repo";
 
 describe("probeRepoWorkspace", () => {
   beforeEach(() => {
@@ -71,5 +71,46 @@ describe("probeRepoWorkspace", () => {
   it("returns unknown when fetch throws", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("down"));
     await expect(probeRepoWorkspace()).resolves.toEqual({ state: "unknown" });
+  });
+});
+
+describe("fetchRepoFile", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null on 503", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response("", { status: 503 }));
+    await expect(fetchRepoFile("a.go")).resolves.toBeNull();
+  });
+
+  it("parses ok JSON", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          path: "a.go",
+          content: "x",
+          binary: false,
+          truncated: false,
+          size_bytes: 1,
+          line_count: 1,
+          warning: "w",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await expect(fetchRepoFile("a.go")).resolves.toEqual({
+      path: "a.go",
+      content: "x",
+      binary: false,
+      truncated: false,
+      size_bytes: 1,
+      line_count: 1,
+      warning: "w",
+    });
   });
 });

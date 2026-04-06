@@ -30,6 +30,7 @@ export function TaskHome({ app }: Props) {
           onParentIdChange={app.setNewParentId}
           onChecklistInheritChange={app.setNewChecklistInherit}
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
+          onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}
           pendingSubtasks={app.pendingSubtasks}
           onAddPendingSubtask={app.addPendingSubtask}

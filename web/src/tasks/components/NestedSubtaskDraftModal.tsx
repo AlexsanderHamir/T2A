@@ -55,6 +55,12 @@ export function NestedSubtaskDraftModal({
     setChecklistItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateRow(index: number, text: string) {
+    const t = text.trim();
+    if (!t) return;
+    setChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!title.trim() || !priority) return;
@@ -94,6 +100,7 @@ export function NestedSubtaskDraftModal({
             onPromptChange={setPrompt}
             onPriorityChange={setPriority}
             onAppendChecklistCriterion={appendCriterion}
+            onUpdateChecklistRow={updateRow}
             onRemoveChecklistRow={removeRow}
           />
           <label className="checkbox-label task-subtask-inherit">

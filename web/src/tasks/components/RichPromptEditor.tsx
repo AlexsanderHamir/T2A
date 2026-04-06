@@ -12,6 +12,7 @@ import {
   validateRepoRange,
   type RepoWorkspaceProbe,
 } from "../../api";
+import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
@@ -44,16 +45,12 @@ export function RichPromptEditor({
     insertAt: number;
     path: string;
   } | null>(null);
-  const [lineStart, setLineStart] = useState("");
-  const [lineEnd, setLineEnd] = useState("");
   const [rangeWarning, setRangeWarning] = useState<string | null>(null);
   const lastEmittedHtml = useRef<string | null>(null);
 
   const onFilePicked = useCallback(
     (payload: { insertAt: number; path: string }) => {
       setPendingInsert({ insertAt: payload.insertAt, path: payload.path });
-      setLineStart("");
-      setLineEnd("");
       setRangeWarning(null);
     },
     [],
@@ -137,11 +134,13 @@ export function RichPromptEditor({
 
   const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
 
-  const showFileSearchSpinner =
+  /** Avoid flashing “Searching…” when /repo/search returns in a few ms (useDelayedTrue drops immediately when idle). */
+  const fileSearchLoadingEligible =
     probeDone &&
     workspaceProbe.state === "available" &&
     fileSuggestBusy &&
     !fileSearchUnavailable;
+  const showFileSearchSpinner = useDelayedTrue(fileSearchLoadingEligible, 300);
 
   const insertPathOnly = () => {
     if (!editor || !pendingInsert) return;
@@ -157,15 +156,11 @@ export function RichPromptEditor({
     setPendingInsert(null);
   };
 
-  const insertWithRange = async () => {
+  const insertWithRange = async (startLine: number, endLine: number) => {
     if (!editor || !pendingInsert) return;
     const { insertAt, path } = pendingInsert;
-    const a = parseInt(lineStart, 10);
-    const b = parseInt(lineEnd, 10);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) {
-      setRangeWarning("Enter start and end line numbers.");
-      return;
-    }
+    const a = startLine;
+    const b = endLine;
     setRangeWarning(null);
     const res = await validateRepoRange(path, a, b);
     if (res === null) {
@@ -213,11 +208,7 @@ export function RichPromptEditor({
           id={id}
           path={pendingInsert.path}
           disabled={disabled}
-          lineStart={lineStart}
-          lineEnd={lineEnd}
           rangeWarning={rangeWarning}
-          onLineStartChange={setLineStart}
-          onLineEndChange={setLineEnd}
           onInsertWithRange={insertWithRange}
           onInsertPathOnly={insertPathOnly}
           onCancel={() => {

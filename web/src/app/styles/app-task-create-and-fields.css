@@ -222,6 +222,10 @@
   max-width: 40rem;
 }
 
+.task-create-checklist .task-checklist-surface {
+  margin-top: 0.15rem;
+}
+
 .task-create-checklist-remove {
   display: inline-flex;
   align-items: center;

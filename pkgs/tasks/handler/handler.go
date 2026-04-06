@@ -49,6 +49,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 	m.Handle("PATCH /tasks/{id}", http.HandlerFunc(h.patch))
 	m.Handle("DELETE /tasks/{id}", http.HandlerFunc(h.delete))
 	m.Handle("GET /repo/search", http.HandlerFunc(h.repoSearch))
+	m.Handle("GET /repo/file", http.HandlerFunc(h.repoFile))
 	m.Handle("GET /repo/validate-range", http.HandlerFunc(h.repoValidateRange))
 	return m
 }

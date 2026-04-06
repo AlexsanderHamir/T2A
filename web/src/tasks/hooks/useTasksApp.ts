@@ -277,6 +277,12 @@ export function useTasksApp() {
     setNewChecklistItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const updateNewChecklistRow = useCallback((index: number, raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    setNewChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
+  }, []);
+
   const addPendingSubtask = useCallback((d: PendingSubtaskDraft) => {
     setPendingSubtasks((prev) => [...prev, d]);
   }, []);
@@ -392,6 +398,7 @@ export function useTasksApp() {
     newChecklistInherit,
     setNewChecklistInherit,
     appendNewChecklistCriterion,
+    updateNewChecklistRow,
     removeNewChecklistRow,
     submitCreate,
     createModalOpen,

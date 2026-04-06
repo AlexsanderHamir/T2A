@@ -297,6 +297,17 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 - 503 JSON if repo not configured: `{ "error": "..." }`
 - 500 JSON on internal search failure (message is generic; details in logs).
 
+### `GET /repo/file`
+
+
+| Query  | Meaning                 |
+| ------ | ----------------------- |
+| `path` | Repo-relative file path |
+
+
+- 200 JSON: `{ "path", "content" (UTF-8 text, empty if binary), "binary", "truncated", "size_bytes", "line_count", "warning"?: string }` — full file for preview up to 32 MiB; binary or invalid UTF-8 sets `binary: true` with empty `content`; larger files set `truncated: true`.
+- 400 if `path` missing or invalid; 404 if file missing; 503 if repo not configured; 500 on read failure.
+
 ### `GET /repo/validate-range`
 
 

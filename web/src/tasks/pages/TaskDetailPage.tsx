@@ -152,6 +152,12 @@ export function TaskDetailPage({ app }: Props) {
     setSubtaskChecklistItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const updateSubtaskChecklistRow = useCallback((index: number, raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    setSubtaskChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
+  }, []);
+
   const createSubtaskMutation = useMutation({
     mutationFn: async (input: {
       title: string;
@@ -475,6 +481,7 @@ export function TaskDetailPage({ app }: Props) {
             onPromptChange={setSubtaskPrompt}
             onPriorityChange={setSubtaskPriority}
             onAppendChecklistCriterion={appendSubtaskChecklistCriterion}
+            onUpdateChecklistRow={updateSubtaskChecklistRow}
             onRemoveChecklistRow={removeSubtaskChecklistRow}
             onChecklistInheritChange={setSubtaskInherit}
             onSubmit={submitNewSubtask}
