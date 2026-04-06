@@ -15,6 +15,8 @@
 //
 // # Routes (Go 1.22 patterns on the returned mux)
 //
+// Path parameters {id} and {itemId} are trimmed and rejected when longer than 128 bytes (see DESIGN.md).
+//
 //   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with
 //     type task_created | task_updated | task_deleted and id (UUID)
 //   - POST   /tasks           — create; 201 + JSON task tree (same shape as GET)

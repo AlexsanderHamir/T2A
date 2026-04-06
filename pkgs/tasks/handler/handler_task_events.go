@@ -22,7 +22,11 @@ func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvent")
 	const op = "tasks.event"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	if len(seqStr) > maxTaskEventSeqParamBytes {
 		writeError(w, r, op, errors.New("seq too long"), http.StatusBadRequest)
@@ -94,7 +98,11 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvents")
 	const op = "tasks.events"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPRequest(r, op, "task_id", id)
 	if _, err := h.store.Get(r.Context(), id); err != nil {
 		writeStoreError(w, r, op, err)
@@ -184,7 +192,11 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchTaskEventUserResponse")
 	const op = "tasks.event.user_response"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	seqStr := strings.TrimSpace(r.PathValue("seq"))
 	if len(seqStr) > maxTaskEventSeqParamBytes {
 		writeError(w, r, op, errors.New("seq too long"), http.StatusBadRequest)

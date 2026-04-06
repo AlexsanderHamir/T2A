@@ -27,7 +27,11 @@ func (h *Handler) getChecklist(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.getChecklist")
 	const op = "tasks.checklist.list"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPRequest(r, op, "task_id", id)
 	items, err := h.store.ListChecklistForSubject(r.Context(), id)
 	if err != nil {
@@ -41,7 +45,11 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.postChecklistItem")
 	const op = "tasks.checklist.create"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	var body checklistItemCreateJSON
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "task_id", id, "json_decode_failed", true)
@@ -64,8 +72,16 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchChecklistItem")
 	const op = "tasks.checklist.patch"
 	r = withCallRoot(r, op)
-	taskID := strings.TrimSpace(r.PathValue("id"))
-	itemID := strings.TrimSpace(r.PathValue("itemId"))
+	taskID, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	itemID, err := parseTaskPathItemID(r.PathValue("itemId"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	var body patchChecklistItemBody
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "task_id", taskID, "item_id", itemID, "json_decode_failed", true)
@@ -110,8 +126,16 @@ func (h *Handler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.deleteChecklistItem")
 	const op = "tasks.checklist.delete"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
-	itemID := strings.TrimSpace(r.PathValue("itemId"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	itemID, err := parseTaskPathItemID(r.PathValue("itemId"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPRequest(r, op, "task_id", id, "item_id", itemID)
 	by := actorFromRequest(r)
 	if err := h.store.DeleteChecklistItem(r.Context(), id, itemID, by); err != nil {

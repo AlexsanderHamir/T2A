@@ -1239,6 +1239,21 @@ func TestHTTP_list_bad_limit(t *testing.T) {
 	}
 }
 
+func TestHTTP_get_task_rejects_overlong_path_id(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	long := strings.Repeat("a", maxTaskPathIDBytes+1)
+	res, err := http.Get(srv.URL + "/tasks/" + long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("overlong id: status %d want %d", res.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestHTTP_list_overlong_query_params(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

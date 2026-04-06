@@ -52,7 +52,11 @@ func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
 	const op = "task_drafts.get"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	row, err := h.store.GetDraft(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -64,7 +68,11 @@ func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteTaskDraft(w http.ResponseWriter, r *http.Request) {
 	const op = "task_drafts.delete"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	if err := h.store.DeleteDraft(r.Context(), id); err != nil {
 		writeStoreError(w, r, op, err)
 		return

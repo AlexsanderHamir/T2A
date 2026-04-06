@@ -72,7 +72,11 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.get")
 	const op = "tasks.get"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPRequest(r, op, "task_id", id)
 	t, err := h.store.GetTaskTree(r.Context(), id)
 	if err != nil {
@@ -132,7 +136,11 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patch")
 	const op = "tasks.patch"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	var body taskPatchJSON
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "task_id", id, "json_decode_failed", true)
@@ -179,7 +187,11 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.delete")
 	const op = "tasks.delete"
 	r = withCallRoot(r, op)
-	id := strings.TrimSpace(r.PathValue("id"))
+	id, err := parseTaskPathID(r.PathValue("id"))
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPRequest(r, op, "task_id", id)
 	by := actorFromRequest(r)
 	parentNotify, err := h.store.Delete(r.Context(), id, by)
