@@ -29,10 +29,16 @@ function escapePreviewHtml(raw: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Prism on multi‑MB strings can freeze the tab; repo preview may be up to ~32 MiB. */
+const maxPrismHighlightChars = 1_000_000;
+
 export function highlightPreviewContent(
   content: string,
   prismLanguage: string,
 ): string {
+  if (content.length > maxPrismHighlightChars) {
+    return escapePreviewHtml(content);
+  }
   const grammar = Prism.languages[prismLanguage];
   if (!grammar) return escapePreviewHtml(content);
   return Prism.highlight(content, grammar, prismLanguage);

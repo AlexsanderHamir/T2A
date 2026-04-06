@@ -13,4 +13,11 @@ describe("highlightPreviewContent", () => {
     const out = highlightPreviewContent("const a = 1", "typescript");
     expect(out).toContain("<span");
   });
+
+  it("skips Prism when content exceeds size cap", () => {
+    const big = "a".repeat(1_000_001);
+    const out = highlightPreviewContent(big, "typescript");
+    expect(out).not.toContain("<span");
+    expect(out).toBe(big);
+  });
 });
