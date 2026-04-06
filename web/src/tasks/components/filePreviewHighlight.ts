@@ -51,6 +51,33 @@ const maxPrismHighlightChars = 1_000_000;
 /** HTML escape still scans the full string several times; cap before escape on huge previews. */
 const maxEscapedPreviewChars = 4_000_000;
 
+/** Prism grammar keys are short identifiers; cap + allowlist avoids odd keys and prototype edge cases. */
+const maxPrismLanguageKeyLength = 32;
+
+const safePrismLanguageKey = /^[a-z0-9_-]+$/i;
+
+function prismGrammarForLanguage(prismLanguage: string) {
+  const key = prismLanguage.trim();
+  if (
+    key.length === 0 ||
+    key.length > maxPrismLanguageKeyLength ||
+    !safePrismLanguageKey.test(key)
+  ) {
+    return undefined;
+  }
+  if (key === "__proto__" || key === "constructor" || key === "prototype") {
+    return undefined;
+  }
+  if (!Object.hasOwn(Prism.languages, key)) {
+    return undefined;
+  }
+  const g = Prism.languages[key];
+  if (g === undefined || g === null) {
+    return undefined;
+  }
+  return { key, grammar: g };
+}
+
 export function highlightPreviewContent(
   content: string,
   prismLanguage: string,
@@ -62,7 +89,7 @@ export function highlightPreviewContent(
         : content;
     return escapePreviewHtml(toEscape);
   }
-  const grammar = Prism.languages[prismLanguage];
-  if (!grammar) return escapePreviewHtml(content);
-  return Prism.highlight(content, grammar, prismLanguage);
+  const resolved = prismGrammarForLanguage(prismLanguage);
+  if (!resolved) return escapePreviewHtml(content);
+  return Prism.highlight(content, resolved.grammar, resolved.key);
 }

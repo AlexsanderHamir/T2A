@@ -27,4 +27,30 @@ describe("highlightPreviewContent", () => {
     expect(out.length).toBe(4_000_000);
     expect(out).not.toContain("<span");
   });
+
+  it("escapes when language key is not a safe Prism identifier", () => {
+    const src = "const x = 1";
+    expect(highlightPreviewContent(src, "__proto__")).toBe(
+      escapeExpected(src),
+    );
+    expect(highlightPreviewContent(src, "type\nscript")).toBe(
+      escapeExpected(src),
+    );
+    expect(highlightPreviewContent(src, "a".repeat(33))).toBe(
+      escapeExpected(src),
+    );
+  });
+
+  it("escapes when language key is only whitespace", () => {
+    const src = "x";
+    expect(highlightPreviewContent(src, "   ")).toBe(escapeExpected(src));
+  });
 });
+
+function escapeExpected(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
