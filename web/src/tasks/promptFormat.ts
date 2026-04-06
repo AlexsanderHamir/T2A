@@ -7,6 +7,109 @@ export function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function isSafeHref(rawHref: string): boolean {
+  const href = rawHref.trim();
+  if (!href) return false;
+  if (href.startsWith("#")) return true;
+  if (href.startsWith("/")) return true;
+  return /^(https?:|mailto:)/i.test(href);
+}
+
+/**
+ * Sanitize stored prompt HTML before injecting into the DOM.
+ * Keeps a narrow rich-text allowlist and drops dangerous attributes/protocols.
+ */
+export function sanitizePromptHtml(input: string): string {
+  if (!input.trim()) return "";
+  if (typeof DOMParser === "undefined") {
+    return `<p>${escapeHtml(input)}</p>`;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(input, "text/html");
+  const allowedTags = new Set([
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "s",
+    "code",
+    "pre",
+    "blockquote",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+  ]);
+  const dropWithContentTags = new Set([
+    "script",
+    "style",
+    "iframe",
+    "object",
+    "embed",
+    "link",
+    "meta",
+  ]);
+
+  const sanitizeNode = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) return;
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      node.parentNode?.removeChild(node);
+      return;
+    }
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (!allowedTags.has(tag)) {
+      const parent = el.parentNode;
+      if (!parent) return;
+      if (dropWithContentTags.has(tag)) {
+        parent.removeChild(el);
+        return;
+      }
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      return;
+    }
+
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase();
+      const value = attr.value;
+      const allowedForA = tag === "a" && (name === "href" || name === "title");
+      if (!allowedForA) {
+        el.removeAttribute(attr.name);
+        continue;
+      }
+      if (name === "href" && !isSafeHref(value)) {
+        el.removeAttribute("href");
+      }
+    }
+
+    if (tag === "a") {
+      const href = el.getAttribute("href");
+      if (href && /^https?:/i.test(href)) {
+        el.setAttribute("target", "_blank");
+        el.setAttribute("rel", "noopener noreferrer");
+      }
+    }
+
+    const children = Array.from(el.childNodes);
+    for (const child of children) sanitizeNode(child);
+  };
+
+  for (const child of Array.from(doc.body.childNodes)) sanitizeNode(child);
+  return doc.body.innerHTML;
+}
+
 /** Heuristic: stored prompt looks like TipTap HTML. */
 export function looksLikeStoredHtml(s: string): boolean {
   const t = s.trim();

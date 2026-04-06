@@ -4,6 +4,7 @@ import {
   plainTextToInitialHtml,
   previewTextFromPrompt,
   promptHasVisibleContent,
+  sanitizePromptHtml,
 } from "./promptFormat";
 
 describe("promptFormat", () => {
@@ -28,5 +29,15 @@ describe("promptFormat", () => {
     expect(promptHasVisibleContent("   ")).toBe(false);
     expect(promptHasVisibleContent("<p></p>")).toBe(false);
     expect(promptHasVisibleContent("<p>hi</p>")).toBe(true);
+  });
+
+  it("sanitizes dangerous markup while preserving safe formatting", () => {
+    const html = sanitizePromptHtml(
+      '<p>Hello <strong>world</strong><script>alert(1)</script></p><a href="javascript:alert(1)" onclick="evil()">x</a>',
+    );
+    expect(html).toContain("<p>Hello <strong>world</strong></p>");
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("onclick=");
   });
 });

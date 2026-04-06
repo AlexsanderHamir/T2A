@@ -28,7 +28,7 @@ import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
 import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
 import { TaskPager } from "../components/TaskPager";
-import { promptHasVisibleContent } from "../promptFormat";
+import { promptHasVisibleContent, sanitizePromptHtml } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
@@ -384,6 +384,7 @@ export function TaskDetailPage({ app }: Props) {
   });
   /** API returns newest first when paged. */
   const timelineEvents = events;
+  const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
 
   return (
     <section className="panel task-detail-panel">
@@ -556,7 +557,7 @@ export function TaskDetailPage({ app }: Props) {
             </summary>
             <div
               className="task-detail-prompt-body"
-              dangerouslySetInnerHTML={{ __html: task.initial_prompt }}
+              dangerouslySetInnerHTML={{ __html: sanitizedInitialPrompt }}
             />
           </details>
         )}

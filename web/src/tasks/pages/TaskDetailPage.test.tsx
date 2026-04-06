@@ -133,6 +133,52 @@ describe("TaskDetailPage", () => {
     expect(screen.getByText(/hide initial prompt/i)).toBeInTheDocument();
   });
 
+  it("sanitizes unsafe HTML from initial prompt before rendering", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/txss") {
+        return Response.json({
+          id: "txss",
+          title: "Unsafe prompt",
+          initial_prompt:
+            '<p>Safe text</p><img src=x onerror="window.__xss = 1" /><script>window.__xss_script = 1</script><a href="javascript:alert(1)">bad</a>',
+          status: "ready",
+          priority: "medium",
+          checklist_inherit: false,
+        });
+      }
+      if (url === "/tasks/txss/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/txss/events")) {
+        return Response.json({
+          task_id: "txss",
+          events: [],
+          limit: 20,
+          total: 0,
+          has_more_newer: false,
+          has_more_older: false,
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/txss", mockApp());
+    expect(
+      await screen.findByRole("heading", { name: /^unsafe prompt$/i }),
+    ).toBeInTheDocument();
+
+    const promptBody = document.querySelector(
+      ".task-detail-prompt-body",
+    ) as HTMLElement | null;
+    expect(promptBody).not.toBeNull();
+    expect(promptBody!.innerHTML).not.toContain("<script");
+    expect(promptBody!.innerHTML).not.toContain("onerror=");
+    expect(promptBody!.innerHTML).not.toContain("javascript:");
+    expect(promptBody).toHaveTextContent(/safe text/i);
+  });
+
   it("shows an em dash when there is no visible initial prompt", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
