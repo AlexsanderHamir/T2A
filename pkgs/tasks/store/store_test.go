@@ -105,6 +105,33 @@ func TestStore_Get_rejects_empty_id(t *testing.T) {
 	}
 }
 
+func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
+	s := NewStore(testdb.OpenSQLite(t))
+	ctx := context.Background()
+	root, err := s.Create(ctx, CreateTaskInput{Title: "root", Priority: domain.PriorityMedium}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := root.ID
+	for i := 0; i < MaxTaskTreeDepth; i++ {
+		child, err := s.Create(ctx, CreateTaskInput{Title: fmt.Sprintf("d%d", i), Priority: domain.PriorityMedium, ParentID: &pid}, domain.ActorUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pid = child.ID
+	}
+	if _, err := s.GetTaskTree(ctx, root.ID); err != nil {
+		t.Fatalf("tree at max depth should succeed: %v", err)
+	}
+	if _, err := s.Create(ctx, CreateTaskInput{Title: "too-deep", Priority: domain.PriorityMedium, ParentID: &pid}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.GetTaskTree(ctx, root.ID)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
 func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 	s := NewStore(testdb.OpenSQLite(t))
 	ctx := context.Background()

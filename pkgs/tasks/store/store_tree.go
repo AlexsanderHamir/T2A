@@ -10,6 +10,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// MaxTaskTreeDepth is the maximum nesting depth for task trees returned by GetTaskTree and list
+// endpoints. It must stay aligned with web/src/api/parseTaskApi.ts maxTaskParseDepth.
+const MaxTaskTreeDepth = 64
+
 // ListFlat returns tasks ordered by id with limit/offset over all rows (no tree).
 func (s *Store) ListFlat(ctx context.Context, limit, offset int) ([]domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
@@ -115,7 +119,7 @@ func (s *Store) rootsToForest(ctx context.Context, roots []domain.Task) ([]TaskN
 	if err != nil {
 		return nil, err
 	}
-	return buildForest(roots, all), nil
+	return buildForest(roots, all)
 }
 
 // GetTaskTree returns one task and every descendant nested under it.
@@ -137,7 +141,10 @@ func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
 	if err != nil {
 		return TaskNode{}, err
 	}
-	nodes := buildForest([]domain.Task{root}, all)
+	nodes, err := buildForest([]domain.Task{root}, all)
+	if err != nil {
+		return TaskNode{}, err
+	}
 	if len(nodes) != 1 {
 		return TaskNode{}, fmt.Errorf("get task tree: %w", domain.ErrNotFound)
 	}
@@ -171,7 +178,7 @@ func (s *Store) loadTasksForForest(ctx context.Context, seeds []domain.Task) (ma
 	return all, nil
 }
 
-func buildForest(roots []domain.Task, byID map[string]domain.Task) []TaskNode {
+func buildForest(roots []domain.Task, byID map[string]domain.Task) ([]TaskNode, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildForest")
 	childrenOf := make(map[string][]domain.Task)
 	for _, t := range byID {
@@ -194,17 +201,28 @@ func buildForest(roots []domain.Task, byID map[string]domain.Task) []TaskNode {
 	}
 	out := make([]TaskNode, 0, len(roots))
 	for _, r := range roots {
-		out = append(out, buildNode(r, childrenOf))
+		n, err := buildNode(r, childrenOf, 0)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, n)
 	}
-	return out
+	return out, nil
 }
 
-func buildNode(t domain.Task, childrenOf map[string][]domain.Task) TaskNode {
+func buildNode(t domain.Task, childrenOf map[string][]domain.Task, depth int) (TaskNode, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildNode")
+	if depth > MaxTaskTreeDepth {
+		return TaskNode{}, fmt.Errorf("%w: task tree exceeds maximum depth", domain.ErrInvalidInput)
+	}
 	kids := childrenOf[t.ID]
 	ch := make([]TaskNode, 0, len(kids))
 	for _, c := range kids {
-		ch = append(ch, buildNode(c, childrenOf))
+		n, err := buildNode(c, childrenOf, depth+1)
+		if err != nil {
+			return TaskNode{}, err
+		}
+		ch = append(ch, n)
 	}
-	return TaskNode{Task: t, Children: ch}
+	return TaskNode{Task: t, Children: ch}, nil
 }
