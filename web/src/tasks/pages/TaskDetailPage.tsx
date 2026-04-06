@@ -27,8 +27,9 @@ import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
 import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
+import { TaskDetailPromptSection } from "../components/TaskDetailPromptSection";
 import { TaskPager } from "../components/TaskPager";
-import { promptHasVisibleContent, sanitizePromptHtml } from "../promptFormat";
+import { sanitizePromptHtml } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
@@ -528,40 +529,10 @@ export function TaskDetailPage({ app }: Props) {
         removeItemPending={deleteChecklistMutation.isPending}
       />
 
-      <div className="task-detail-section task-detail-prompt">
-        <h3 className="task-detail-section-heading" id="task-detail-prompt-heading">
-          Initial prompt
-        </h3>
-        {!promptHasVisibleContent(task.initial_prompt) ? (
-          <p
-            className="muted task-detail-prompt-empty"
-            aria-labelledby="task-detail-prompt-heading"
-          >
-            —
-          </p>
-        ) : (
-          <details className="task-detail-prompt-details">
-            <summary className="task-detail-prompt-summary">
-              <span className="task-detail-prompt-summary-open-label">
-                Show full initial prompt
-              </span>
-              <span className="task-detail-prompt-summary-close-label">
-                Hide initial prompt
-              </span>
-              <span
-                className="task-detail-prompt-summary-chevron"
-                aria-hidden="true"
-              >
-                ▾
-              </span>
-            </summary>
-            <div
-              className="task-detail-prompt-body"
-              dangerouslySetInnerHTML={{ __html: sanitizedInitialPrompt }}
-            />
-          </details>
-        )}
-      </div>
+      <TaskDetailPromptSection
+        initialPrompt={task.initial_prompt}
+        sanitizedInitialPrompt={sanitizedInitialPrompt}
+      />
 
       <TaskUpdatesTimeline
         isPending={eventsQuery.isPending}

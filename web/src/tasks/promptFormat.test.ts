@@ -40,4 +40,24 @@ describe("promptFormat", () => {
     expect(html).not.toContain("javascript:");
     expect(html).not.toContain("onclick=");
   });
+
+  it("adds safe external link attributes and keeps relative links", () => {
+    const html = sanitizePromptHtml(
+      '<a href="https://example.com">external</a><a href="/tasks/1">internal</a>',
+    );
+    expect(html).toContain(
+      '<a href="https://example.com" target="_blank" rel="noopener noreferrer">external</a>',
+    );
+    expect(html).toContain('<a href="/tasks/1">internal</a>');
+  });
+
+  it("drops entire dangerous tags instead of preserving their text", () => {
+    const html = sanitizePromptHtml(
+      '<p>before</p><script>alert(1)</script><style>.x{}</style><p>after</p>',
+    );
+    expect(html).toContain("<p>before</p>");
+    expect(html).toContain("<p>after</p>");
+    expect(html).not.toContain("alert(1)");
+    expect(html).not.toContain(".x{}");
+  });
 });

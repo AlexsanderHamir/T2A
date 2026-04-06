@@ -12,6 +12,12 @@ Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a 
 
 Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (`RichPromptEditor`, `RichPromptMenuBar`, `MentionRangePanel`), `fetch` only under `src/api/` (import `@/api` or `../api`), Vitest + Testing Library (`fetch` / `EventSource` mocked in tests). App-wide CSS: `src/app/App.css` imports partials from `src/app/styles/` (e.g. task list, task detail, timeline).
 
+## Recent hardening and refactors
+
+- Task detail prompt rendering now sanitizes stored HTML before DOM injection (`tasks/promptFormat.ts` + `TaskDetailPage`) to block script/event-handler and unsafe-link payloads while preserving safe rich-text tags.
+- Prompt UI markup was extracted into `tasks/components/TaskDetailPromptSection.tsx` to keep `TaskDetailPage` smaller and easier to maintain.
+- Frontend tests expanded around prompt sanitization edge cases (unsafe protocols, external-link attributes, dangerous tag removal).
+
 ## SPA in the system
 
 ```mermaid

@@ -50,6 +50,10 @@ type idempotencyEntry struct {
 	seq   uint64
 }
 
+type idempotencyPreparedRequest struct {
+	compositeKey string
+}
+
 type idempotencyCache struct {
 	mu         sync.Mutex
 	items      map[string]idempotencyEntry
@@ -265,6 +269,57 @@ func clearIdempotencyStateForTest() {
 	idempCache.mu.Unlock()
 }
 
+func validateIdempotencyKey(rawKey string, w http.ResponseWriter, r *http.Request) bool {
+	if len(rawKey) <= maxIdempotencyKeyLen {
+		return true
+	}
+	slog.Warn("idempotency key too long", "cmd", httpLogCmd, "operation", "handler.idempotency",
+		"max_len", maxIdempotencyKeyLen, "len", len(rawKey))
+	writeJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long")
+	return false
+}
+
+func bodyFingerprintFromRequest(r *http.Request, w http.ResponseWriter) (string, bool) {
+	if r.ContentLength < 0 {
+		writeJSONError(w, r, "idempotency.content_length", http.StatusBadRequest, "idempotency requires known content length")
+		return "", false
+	}
+	if r.ContentLength > maxIdempotencyBodySize {
+		writeJSONError(w, r, "idempotency.body_too_large", http.StatusRequestEntityTooLarge, "request body too large for idempotency")
+		return "", false
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Warn("idempotency body read failed", "cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
+		writeJSONError(w, r, "idempotency.read_body", http.StatusBadRequest, "could not read request body")
+		return "", false
+	}
+	_ = r.Body.Close()
+	sum := sha256.Sum256(body)
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	return hex.EncodeToString(sum[:]), true
+}
+
+func prepareIdempotencyRequest(r *http.Request, w http.ResponseWriter) (idempotencyPreparedRequest, bool) {
+	rawKey := strings.TrimSpace(r.Header.Get(idempotencyHeader))
+	if rawKey == "" {
+		return idempotencyPreparedRequest{}, false
+	}
+	if !validateIdempotencyKey(rawKey, w, r) {
+		return idempotencyPreparedRequest{}, false
+	}
+	var bodyFP string
+	if r.Method == http.MethodPost || r.Method == http.MethodPatch {
+		fp, ok := bodyFingerprintFromRequest(r, w)
+		if !ok {
+			return idempotencyPreparedRequest{}, false
+		}
+		bodyFP = fp
+	}
+	composite := r.Method + "\x00" + r.URL.Path + "\x00" + rawKey + "\x00" + bodyFP
+	return idempotencyPreparedRequest{compositeKey: composite}, true
+}
+
 // WithIdempotency deduplicates mutating requests that send a non-empty Idempotency-Key header.
 // The composite key is method, URL path, trimmed key, and SHA-256 of the body for
 // POST/PATCH (DELETE omits a body fingerprint). Only responses with status 200, 201, or 204 are
@@ -283,43 +338,14 @@ func WithIdempotency(h http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
-		rawKey := strings.TrimSpace(r.Header.Get(idempotencyHeader))
-		if rawKey == "" {
-			h.ServeHTTP(w, r)
+		prepared, ok := prepareIdempotencyRequest(r, w)
+		if !ok {
+			if strings.TrimSpace(r.Header.Get(idempotencyHeader)) == "" {
+				h.ServeHTTP(w, r)
+			}
 			return
 		}
-		if len(rawKey) > maxIdempotencyKeyLen {
-			slog.Warn("idempotency key too long", "cmd", httpLogCmd, "operation", "handler.idempotency",
-				"max_len", maxIdempotencyKeyLen, "len", len(rawKey))
-			writeJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long")
-			return
-		}
-		key := rawKey
-
-		var bodyFP string
-		switch r.Method {
-		case http.MethodPost, http.MethodPatch:
-			if r.ContentLength < 0 {
-				writeJSONError(w, r, "idempotency.content_length", http.StatusBadRequest, "idempotency requires known content length")
-				return
-			}
-			if r.ContentLength > maxIdempotencyBodySize {
-				writeJSONError(w, r, "idempotency.body_too_large", http.StatusRequestEntityTooLarge, "request body too large for idempotency")
-				return
-			}
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				slog.Warn("idempotency body read failed", "cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
-				writeJSONError(w, r, "idempotency.read_body", http.StatusBadRequest, "could not read request body")
-				return
-			}
-			_ = r.Body.Close()
-			sum := sha256.Sum256(body)
-			bodyFP = hex.EncodeToString(sum[:])
-			r.Body = io.NopCloser(bytes.NewReader(body))
-		}
-
-		composite := r.Method + "\x00" + r.URL.Path + "\x00" + key + "\x00" + bodyFP
+		composite := prepared.compositeKey
 
 		if cap, ok := idempCache.get(composite); ok {
 			taskapiHTTPIdempotentReplayTotal.Inc()
