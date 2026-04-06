@@ -15,13 +15,13 @@ import {
   parseTaskEventsResponse,
   parseTaskListResponse,
 } from "./parseTaskApi";
-import { jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
 
 export async function getTask(
   id: string,
   options?: { signal?: AbortSignal },
 ): Promise<Task> {
-  const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -52,7 +52,7 @@ export async function listTaskEvents(
     qs === ""
       ? `/tasks/${encodeURIComponent(id)}/events`
       : `/tasks/${encodeURIComponent(id)}/events?${qs}`;
-  const res = await fetch(path, {
+  const res = await fetchWithTimeout(path, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -66,7 +66,7 @@ export async function getTaskEvent(
   seq: number,
   options?: { signal?: AbortSignal },
 ): Promise<TaskEventDetail> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
     {
       headers: { Accept: "application/json" },
@@ -88,7 +88,7 @@ export async function patchTaskEventUserResponse(
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/events/${encodeURIComponent(String(seq))}`,
     {
       method: "PATCH",
@@ -112,7 +112,7 @@ export async function listTasks(
   } else {
     q.set("offset", String(offset));
   }
-  const res = await fetch(`/tasks?${q}`, {
+  const res = await fetchWithTimeout(`/tasks?${q}`, {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
@@ -130,7 +130,7 @@ export async function createTask(input: {
   parent_id?: string;
   checklist_inherit?: boolean;
 }): Promise<Task> {
-  const res = await fetch("/tasks", {
+  const res = await fetchWithTimeout("/tasks", {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify({
@@ -170,7 +170,7 @@ export async function patchTask(
   if (patch.checklist_inherit !== undefined) {
     body.checklist_inherit = patch.checklist_inherit;
   }
-  const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: jsonHeaders,
     body: JSON.stringify(body),
@@ -181,7 +181,7 @@ export async function patchTask(
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const res = await fetch(`/tasks/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error(await readError(res));
@@ -191,7 +191,7 @@ export async function listChecklist(
   taskId: string,
   options?: { signal?: AbortSignal },
 ): Promise<TaskChecklistResponse> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist`,
     {
       headers: { Accept: "application/json" },
@@ -212,7 +212,7 @@ export async function addChecklistItem(
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist/items`,
     {
       method: "POST",
@@ -233,7 +233,7 @@ export async function patchChecklistItemText(
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
     {
       method: "PATCH",
@@ -257,7 +257,7 @@ export async function patchChecklistItemDone(
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
   }
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
     {
       method: "PATCH",
@@ -274,7 +274,7 @@ export async function deleteChecklistItem(
   taskId: string,
   itemId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist/items/${encodeURIComponent(itemId)}`,
     { method: "DELETE" },
   );

@@ -4,6 +4,31 @@ export const jsonHeaders = {
   Accept: "application/json",
 };
 
+const defaultFetchTimeoutMs = 20_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  const AT = AbortSignal as typeof AbortSignal & {
+    timeout?: (timeoutMs: number) => AbortSignal;
+  };
+  if (typeof AT.timeout !== "function") {
+    return undefined;
+  }
+  return AT.timeout(ms);
+}
+
+export async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  options?: { timeoutMs?: number },
+): Promise<Response> {
+  const timeoutMs = options?.timeoutMs ?? defaultFetchTimeoutMs;
+  const timeout = timeoutSignal(timeoutMs);
+  if (!timeout || init?.signal) {
+    return fetch(input, init);
+  }
+  return fetch(input, { ...init, signal: timeout });
+}
+
 export async function readError(res: Response): Promise<string> {
   const t = await res.text();
   try {

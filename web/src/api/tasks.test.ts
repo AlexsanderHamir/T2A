@@ -84,6 +84,20 @@ describe("listTasks", () => {
     );
   });
 
+  it("uses a timeout-backed signal when no signal is provided", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ tasks: [], limit: 200, offset: 0, has_more: false }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await listTasks(200, 0);
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeDefined();
+  });
+
   it("throws with response body on error", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("bad request", { status: 400 }),
@@ -286,6 +300,9 @@ describe("deleteTask", () => {
 
     await deleteTask("ab/c");
 
-    expect(spy).toHaveBeenCalledWith("/tasks/ab%2Fc", { method: "DELETE" });
+    expect(spy).toHaveBeenCalledWith(
+      "/tasks/ab%2Fc",
+      expect.objectContaining({ method: "DELETE" }),
+    );
   });
 });
