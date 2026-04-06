@@ -75,7 +75,7 @@ export function TaskHome({ app }: Props) {
       ) : null}
 
       <section className="task-home-overview" aria-label="Task overview">
-        <article className="task-home-kpi-card">
+        <article className="task-home-kpi-card task-home-kpi-card--total">
           <p className="task-home-kpi-label">Total tasks</p>
           <p className="task-home-kpi-value">{totalTasks}</p>
           <p className="task-home-kpi-meta">
@@ -83,10 +83,10 @@ export function TaskHome({ app }: Props) {
             {subtaskTasks === 1 ? "" : "s"}
           </p>
         </article>
-        <article className="task-home-kpi-card">
-          <p className="task-home-kpi-label">Ready</p>
+        <article className="task-home-kpi-card task-home-kpi-card--ready">
+          <p className="task-home-kpi-label">Ready tasks</p>
           <p className="task-home-kpi-value">{readyTasks}</p>
-          <p className="task-home-kpi-meta">awaiting action</p>
+          <p className="task-home-kpi-meta">ready for agent pickup</p>
         </article>
         <article className="task-home-kpi-card task-home-kpi-card--attention">
           <p className="task-home-kpi-label">Critical</p>

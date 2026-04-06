@@ -36,7 +36,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 >
                   <h1 className="app-title app-title--logo">T2A</h1>
                 </Link>
-                <Link to="/drafts" className="app-title-link">
+                <Link to="/drafts" className="app-title-link app-title-link--drafts">
                   Drafts
                 </Link>
               </nav>

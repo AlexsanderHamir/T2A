@@ -15,6 +15,22 @@
   min-height: 7.5rem;
 }
 
+.task-home-kpi-card--total {
+  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--info-soft));
+}
+
+.task-home-kpi-card--total .task-home-kpi-value {
+  color: var(--info);
+}
+
+.task-home-kpi-card--ready {
+  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--success-soft));
+}
+
+.task-home-kpi-card--ready .task-home-kpi-value {
+  color: var(--success);
+}
+
 .task-home-kpi-label {
   margin: 0;
   font-size: var(--text-xs);

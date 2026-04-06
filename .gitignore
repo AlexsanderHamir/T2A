@@ -11,3 +11,4 @@ taskapi-dev.exe
 /handler
 /handler.exe
 logs/
+work_technique/*.md
