@@ -159,7 +159,7 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithAPIAuth(handler.WithRateLimit(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep))))))))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep))))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
