@@ -69,4 +69,14 @@ describe("promptFormat", () => {
     expect(html).not.toContain("alert(1)");
     expect(html).not.toContain(".x{}");
   });
+
+  it("sanitizes children unwrapped from disallowed tags (e.g. svg)", () => {
+    const html = sanitizePromptHtml(
+      '<p>ok</p><svg><script>bad</script></svg><p>end</p>',
+    );
+    expect(html).toContain("<p>ok</p>");
+    expect(html).toContain("<p>end</p>");
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("bad");
+  });
 });

@@ -80,7 +80,12 @@ export function sanitizePromptHtml(input: string): string {
         parent.removeChild(el);
         return;
       }
-      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      // Unwrap: moved nodes must be sanitized (initial top-down walk can miss them).
+      while (el.firstChild) {
+        const ch = el.firstChild;
+        parent.insertBefore(ch, el);
+        sanitizeNode(ch);
+      }
       parent.removeChild(el);
       return;
     }
