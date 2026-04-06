@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { createAppQueryClient } from "../lib/queryClient";
 import { ROUTER_FUTURE_FLAGS } from "../lib/routerFutureFlags";
+import { AppErrorBoundary } from "../shared/AppErrorBoundary";
 
 const queryClient = createAppQueryClient();
 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter future={ROUTER_FUTURE_FLAGS}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <AppErrorBoundary>
+          <App />
+        </AppErrorBoundary>
       </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>,
