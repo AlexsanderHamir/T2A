@@ -7,7 +7,11 @@ import {
   RepoFileSuggestion,
   type RepoFileSuggestionOptions,
 } from "../extensions/repoFileSuggestion";
-import { validateRepoRange } from "../../api";
+import {
+  probeRepoWorkspace,
+  validateRepoRange,
+  type RepoWorkspaceProbe,
+} from "../../api";
 import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
@@ -31,7 +35,11 @@ export function RichPromptEditor({
   disabled,
   placeholder,
 }: Props) {
-  const [repoUnavailable, setRepoUnavailable] = useState(false);
+  const [workspaceProbe, setWorkspaceProbe] = useState<
+    RepoWorkspaceProbe | "pending"
+  >("pending");
+  const [fileSearchUnavailable, setFileSearchUnavailable] = useState(false);
+  const [fileSuggestBusy, setFileSuggestBusy] = useState(false);
   const [pendingInsert, setPendingInsert] = useState<{
     insertAt: number;
     path: string;
@@ -53,8 +61,9 @@ export function RichPromptEditor({
 
   const repoOpts = useMemo<RepoFileSuggestionOptions>(
     () => ({
-      onRepoUnavailable: () => setRepoUnavailable(true),
-      onRepoAvailable: () => setRepoUnavailable(false),
+      onRepoUnavailable: () => setFileSearchUnavailable(true),
+      onRepoAvailable: () => setFileSearchUnavailable(false),
+      onSuggestFetchChange: setFileSuggestBusy,
       onFilePicked,
     }),
     [onFilePicked],
@@ -97,6 +106,17 @@ export function RichPromptEditor({
   }, [editor, disabled]);
 
   useEffect(() => {
+    let cancelled = false;
+    setWorkspaceProbe("pending");
+    void probeRepoWorkspace().then((p) => {
+      if (!cancelled) setWorkspaceProbe(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!editor) return;
     if (value === lastEmittedHtml.current) return;
     const next = looksLikeStoredHtml(value)
@@ -106,6 +126,22 @@ export function RichPromptEditor({
     lastEmittedHtml.current = next;
     setPendingInsert(null);
   }, [editor, value]);
+
+  const probeDone = workspaceProbe !== "pending";
+
+  const showRepoMisconfigHint =
+    probeDone &&
+    (workspaceProbe.state === "unavailable" ||
+      workspaceProbe.state === "broken" ||
+      (workspaceProbe.state === "available" && fileSearchUnavailable));
+
+  const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
+
+  const showFileSearchSpinner =
+    probeDone &&
+    workspaceProbe.state === "available" &&
+    fileSuggestBusy &&
+    !fileSearchUnavailable;
 
   const insertPathOnly = () => {
     if (!editor || !pendingInsert) return;
@@ -190,12 +226,45 @@ export function RichPromptEditor({
           }}
         />
       ) : null}
-      {repoUnavailable ? (
+      {showRepoMisconfigHint ? (
         <p className="mention-repo-hint" role="status">
-          No repository is configured for file search. Set{" "}
-          <code>REPO_ROOT</code> in the server environment (same{" "}
-          <code>.env</code> as <code>DATABASE_URL</code>) and restart{" "}
-          <code>taskapi</code>.
+          {workspaceProbe.state === "broken" ? (
+            <>
+              The workspace folder for <code>REPO_ROOT</code> is missing or not a
+              directory on the machine running <code>taskapi</code>. Fix the path
+              and restart <code>taskapi</code>.
+            </>
+          ) : workspaceProbe.state === "available" && fileSearchUnavailable ? (
+            <>
+              File search failed even though the server reports a workspace.
+              Restart <code>taskapi</code> or check server logs.
+            </>
+          ) : (
+            <>
+              No repository is configured for file search. Set{" "}
+              <code>REPO_ROOT</code> in the server environment (same{" "}
+              <code>.env</code> as <code>DATABASE_URL</code>) and restart{" "}
+              <code>taskapi</code> from the repo root so it loads that{" "}
+              <code>.env</code>.
+            </>
+          )}
+        </p>
+      ) : null}
+      {showRepoUnknownHint ? (
+        <p className="mention-repo-hint" role="status">
+          Could not verify workspace file search. For local dev, run{" "}
+          <code>taskapi</code> and the Vite dev server so <code>/health</code>{" "}
+          and <code>/repo</code> proxy to the API (see <code>web/vite.config</code>
+          ).
+        </p>
+      ) : null}
+      {showFileSearchSpinner ? (
+        <p
+          className="mention-repo-hint mention-repo-hint--pending"
+          role="status"
+          aria-live="polite"
+        >
+          Searching files…
         </p>
       ) : null}
     </div>

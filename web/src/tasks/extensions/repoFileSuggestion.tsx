@@ -10,6 +10,9 @@ import tippy from "tippy.js";
 import { PluginKey } from "@tiptap/pm/state";
 import { searchRepoFiles } from "../../api";
 
+/** Keep in sync with `--z-portal-popover` / `--z-mention-popover` in app-design-tokens.css */
+const MENTION_POPOVER_Z_INDEX = 13000;
+
 export type RepoSuggestionItem = { path: string };
 
 type ListProps = {
@@ -20,14 +23,19 @@ type ListProps = {
 function SuggestionList({ items, command }: ListProps) {
   return (
     <div className="mention-dropdown tiptap-suggestion-list">
-      <ul role="listbox" aria-label="Matching files">
+      <div className="tiptap-suggestion-list__head" aria-hidden="true">
+        Repository files
+      </div>
+      <ul role="listbox" aria-label="Matching repository files">
         {items.length === 0 ? (
-          <li className="muted">No matching files</li>
+          <li className="tiptap-suggestion-list__empty" role="presentation">
+            No matching files
+          </li>
         ) : (
           items.map((item) => (
             <li key={item.path} className="mention-option" role="option">
               <button type="button" onClick={() => command(item)}>
-                {item.path}
+                <span className="tiptap-suggestion-list__path">{item.path}</span>
               </button>
             </li>
           ))
@@ -39,11 +47,25 @@ function SuggestionList({ items, command }: ListProps) {
 
 export const repoFileSuggestionPluginKey = new PluginKey("repoFileSuggestion");
 
-function clientRectOrFallback(
-  fn: (() => DOMRect | null) | null | undefined,
+/** TipTap may pass a clientRect that returns null or 0×0 before the suggestion decoration is in the DOM — fall back to coords at the match range. */
+function referenceRectForSuggestion(
+  props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
 ): DOMRect {
-  if (!fn) return new DOMRect(0, 0, 0, 0);
-  return fn() ?? new DOMRect(0, 0, 0, 0);
+  const r = props.clientRect?.() ?? null;
+  if (r && (r.width > 0 || r.height > 0)) {
+    return r;
+  }
+  try {
+    const coords = props.editor.view.coordsAtPos(props.range.from);
+    return new DOMRect(
+      coords.left,
+      coords.top,
+      coords.right - coords.left,
+      coords.bottom - coords.top,
+    );
+  } catch {
+    return new DOMRect(0, 0, 0, 0);
+  }
 }
 
 export type RepoFilePickedPayload = {
@@ -56,6 +78,11 @@ export type RepoFilePickedPayload = {
 export type RepoFileSuggestionOptions = {
   onRepoUnavailable: () => void;
   onRepoAvailable: () => void;
+  /**
+   * Fires when TipTap starts or updates an @‑mention query (before the network request)
+   * and again after the request finishes or the menu closes — for immediate “searching…” UX.
+   */
+  onSuggestFetchChange?: (busy: boolean) => void;
   /** After the user picks a file, range UI runs; insert happens when they confirm. */
   onFilePicked?: (payload: RepoFilePickedPayload) => void;
 };
@@ -67,6 +94,9 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
     return {
       onRepoUnavailable: () => {},
       onRepoAvailable: () => {},
+      onSuggestFetchChange: undefined as
+        | ((busy: boolean) => void)
+        | undefined,
       onFilePicked: undefined as
         | ((payload: RepoFilePickedPayload) => void)
         | undefined,
@@ -76,7 +106,16 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
   addProseMirrorPlugins() {
     const onUnavailable = this.options.onRepoUnavailable;
     const onAvailable = this.options.onRepoAvailable;
+    const onSuggestFetchChange = this.options.onSuggestFetchChange;
     const onFilePicked = this.options.onFilePicked;
+    const setFetchBusy = (busy: boolean) => {
+      onSuggestFetchChange?.(busy);
+    };
+
+    // TipTap/ProseMirror may run overlapping async `view.update` passes; abort + returning []
+    // lets a stale completion overwrite a newer successful `items` result and clears the menu.
+    let mentionSearchSeq = 0;
+    let lastRepoSuggestionItems: RepoSuggestionItem[] = [];
 
     return [
       Suggestion<RepoSuggestionItem, RepoSuggestionItem>({
@@ -84,6 +123,8 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
         editor: this.editor,
         char: "@",
         allowSpaces: false,
+        // Default is only a regular space; allow @ after a newline inside the same block.
+        allowedPrefixes: [" ", "\n"],
         command: ({ editor, range, props }) => {
           const insertAt = range.from;
           const path = props.path.replace(/\\/g, "/");
@@ -92,22 +133,55 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
           onFilePicked?.({ path, insertAt });
         },
         items: async ({ query }) => {
-          const paths = await searchRepoFiles(query);
-          if (paths === null) {
-            onUnavailable();
-            return [];
+          mentionSearchSeq += 1;
+          const seq = mentionSearchSeq;
+
+          try {
+            const paths = await searchRepoFiles(query);
+            if (seq !== mentionSearchSeq) {
+              return lastRepoSuggestionItems;
+            }
+            if (paths === null) {
+              onUnavailable();
+              lastRepoSuggestionItems = [];
+              return [];
+            }
+            onAvailable();
+            lastRepoSuggestionItems = paths.map((path) => ({ path }));
+            return lastRepoSuggestionItems;
+          } catch {
+            if (seq !== mentionSearchSeq) {
+              return lastRepoSuggestionItems;
+            }
+            // Transient errors: keep prior list if any; do not toggle the repo banner.
+            return lastRepoSuggestionItems;
+          } finally {
+            // TipTap may interleave async view updates; always clear busy for this completion
+            // so the inline hint never sticks if onStart/onUpdate ordering changes.
+            if (seq === mentionSearchSeq) {
+              setFetchBusy(false);
+            }
           }
-          onAvailable();
-          return paths.map((path) => ({ path }));
         },
         render: () => {
           let component: ReactRenderer | null = null;
           let popup: TippyInstance | null = null;
+          let latestProps: SuggestionProps<
+            RepoSuggestionItem,
+            RepoSuggestionItem
+          > | null = null;
 
           return {
+            onBeforeStart() {
+              setFetchBusy(true);
+            },
+            onBeforeUpdate() {
+              setFetchBusy(true);
+            },
             onStart(
               props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
             ) {
+              latestProps = props;
               component = new ReactRenderer(SuggestionList, {
                 props: {
                   items: props.items,
@@ -118,19 +192,23 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
                 editor: props.editor,
               });
 
-              if (!props.clientRect) {
-                return;
-              }
-
               const t = tippy(document.body, {
                 getReferenceClientRect: () =>
-                  clientRectOrFallback(props.clientRect ?? null),
+                  latestProps != null
+                    ? referenceRectForSuggestion(latestProps)
+                    : new DOMRect(0, 0, 0, 0),
                 appendTo: () => document.body,
                 content: component.element,
                 showOnCreate: true,
                 interactive: true,
                 trigger: "manual",
                 placement: "bottom-start",
+                zIndex: MENTION_POPOVER_Z_INDEX,
+                /* Override tippy.css default dark #333 box + padding (see app-task-list-and-mentions.css) */
+                theme: "repo-files-popover",
+                arrow: false,
+                maxWidth: "min(100vw - 2rem, 28rem)",
+                offset: [0, 6],
               });
               popup = Array.isArray(t) ? t[0]! : t;
             },
@@ -138,6 +216,7 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
             onUpdate(
               props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
             ) {
+              latestProps = props;
               component?.updateProps({
                 items: props.items,
                 command: (item: RepoSuggestionItem) => {
@@ -146,7 +225,9 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
               });
               popup?.setProps({
                 getReferenceClientRect: () =>
-                  clientRectOrFallback(props.clientRect ?? null),
+                  latestProps != null
+                    ? referenceRectForSuggestion(latestProps)
+                    : new DOMRect(0, 0, 0, 0),
               });
             },
 
@@ -159,6 +240,8 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
             },
 
             onExit() {
+              lastRepoSuggestionItems = [];
+              setFetchBusy(false);
               popup?.destroy();
               component?.destroy();
             },

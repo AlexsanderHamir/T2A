@@ -56,7 +56,8 @@
   --bp-task-header-stack: 540px;
 
   /* Stacking — portal popover must sit above modals (CustomSelect list); skip link wins overall */
-  --z-mention-popover: 10;
+  /* Same stack as portal popovers (CustomSelect); must sit above modals for @ file picker */
+  --z-mention-popover: 13000;
   --z-rich-prompt-float: 20;
   --z-sticky: 50;
   --z-modal: 11000;
