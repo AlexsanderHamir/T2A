@@ -16,6 +16,21 @@ function timeoutSignal(ms: number): AbortSignal | undefined {
   return AT.timeout(ms);
 }
 
+function combineSignals(
+  user: AbortSignal | null | undefined,
+  timeout: AbortSignal | undefined,
+): AbortSignal | undefined {
+  if (!user) return timeout;
+  if (!timeout) return user;
+  const AT = AbortSignal as typeof AbortSignal & {
+    any?: (signals: AbortSignal[]) => AbortSignal;
+  };
+  if (typeof AT.any === "function") {
+    return AT.any([user, timeout]);
+  }
+  return user;
+}
+
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -23,10 +38,8 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const timeoutMs = options?.timeoutMs ?? defaultFetchTimeoutMs;
   const timeout = timeoutSignal(timeoutMs);
-  if (!timeout || init?.signal) {
-    return fetch(input, init);
-  }
-  return fetch(input, { ...init, signal: timeout });
+  const signal = combineSignals(init?.signal, timeout);
+  return fetch(input, { ...init, ...(signal ? { signal } : {}) });
 }
 
 export async function readError(res: Response): Promise<string> {

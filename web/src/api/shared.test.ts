@@ -1,5 +1,36 @@
-import { describe, expect, it } from "vitest";
-import { readError } from "./shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchWithTimeout, readError } from "./shared";
+
+describe("fetchWithTimeout", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("uses timeout signal when caller signal is missing", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", { status: 200 }),
+    );
+
+    await fetchWithTimeout("/tasks");
+
+    const [, init] = fetchSpy.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    expect(init.signal).toBeDefined();
+  });
+
+  it("combines caller signal with timeout signal when AbortSignal.any exists", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", { status: 200 }),
+    );
+    const userSignal = new AbortController().signal;
+    await fetchWithTimeout("/tasks", { signal: userSignal });
+    const [, init] = fetchSpy.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    if (typeof (AbortSignal as typeof AbortSignal & { any?: unknown }).any === "function") {
+      expect(init.signal).not.toBe(userSignal);
+      return;
+    }
+    expect(init.signal).toBe(userSignal);
+  });
+});
 
 describe("readError", () => {
   it("returns trimmed error string from JSON", async () => {
