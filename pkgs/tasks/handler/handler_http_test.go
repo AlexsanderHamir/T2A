@@ -649,6 +649,35 @@ func TestHTTP_task_drafts_crud(t *testing.T) {
 	}
 }
 
+func TestHTTP_task_drafts_list_limit_zero_coerces_to_default(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	for i := 0; i < 55; i++ {
+		name := "draft-" + strconv.Itoa(i)
+		if _, err := st.SaveDraft(ctx, "", name, []byte(`{}`)); err != nil {
+			t.Fatalf("seed draft %d: %v", i, err)
+		}
+	}
+	res, err := http.Get(srv.URL + "/task-drafts?limit=0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var body struct {
+		Drafts []json.RawMessage `json:"drafts"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Drafts) > 50 {
+		t.Fatalf("limit=0: got %d drafts want <=50", len(body.Drafts))
+	}
+}
+
 func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

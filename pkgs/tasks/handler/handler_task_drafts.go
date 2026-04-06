@@ -18,6 +18,9 @@ func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = n
 	}
+	if limit <= 0 {
+		limit = 50
+	}
 	rows, err := h.store.ListDrafts(r.Context(), limit)
 	if err != nil {
 		writeStoreError(w, r, op, err)
