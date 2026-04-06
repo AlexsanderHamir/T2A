@@ -188,6 +188,9 @@ func LineCount(absPath string) (int, error) {
 // ValidateRange returns nil if start..end are valid 1-based inclusive line numbers for the file.
 func ValidateRange(absPath string, start, end int) error {
 	slog.Debug("trace", "operation", "repo.ValidateRange")
+	if err := validateRangeBounds(start, end); err != nil {
+		return err
+	}
 	n, err := LineCount(absPath)
 	if err != nil {
 		return fmt.Errorf("%w: %v", domain.ErrInvalidInput, err)
@@ -195,12 +198,19 @@ func ValidateRange(absPath string, start, end int) error {
 	return validateRangeWithLineCount(start, end, n)
 }
 
-func validateRangeWithLineCount(start, end, n int) error {
+func validateRangeBounds(start, end int) error {
 	if start < 1 || end < 1 {
 		return fmt.Errorf("%w: line numbers must be >= 1", domain.ErrInvalidInput)
 	}
 	if start > end {
 		return fmt.Errorf("%w: start line must be <= end line", domain.ErrInvalidInput)
+	}
+	return nil
+}
+
+func validateRangeWithLineCount(start, end, n int) error {
+	if err := validateRangeBounds(start, end); err != nil {
+		return err
 	}
 	if end > n {
 		return fmt.Errorf("%w: line range 1-%d is past end of file (%d lines)", domain.ErrInvalidInput, end, n)
@@ -238,6 +248,9 @@ func (r *Root) ValidatePromptMentions(prompt string) error {
 			seenFiles[abs] = struct{}{}
 		}
 		if m.HasRange {
+			if err := validateRangeBounds(m.StartLine, m.EndLine); err != nil {
+				return fmt.Errorf("%w: mention @%s(%d-%d): %v", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
+			}
 			n, ok := lineCounts[abs]
 			if !ok {
 				lineCount, lineErr := LineCount(abs)
