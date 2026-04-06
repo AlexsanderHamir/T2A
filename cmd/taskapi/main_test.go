@@ -25,3 +25,24 @@ func TestResolveSSETestTickerInterval(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveListenHost(t *testing.T) {
+	t.Run("defaults to localhost when flag and env are empty", func(t *testing.T) {
+		t.Setenv("T2A_LISTEN_HOST", "")
+		if got := resolveListenHost(""); got != "127.0.0.1" {
+			t.Fatalf("got %q want 127.0.0.1", got)
+		}
+	})
+	t.Run("uses env when flag is empty", func(t *testing.T) {
+		t.Setenv("T2A_LISTEN_HOST", "0.0.0.0")
+		if got := resolveListenHost(""); got != "0.0.0.0" {
+			t.Fatalf("got %q want 0.0.0.0", got)
+		}
+	})
+	t.Run("flag overrides env", func(t *testing.T) {
+		t.Setenv("T2A_LISTEN_HOST", "0.0.0.0")
+		if got := resolveListenHost("127.0.0.1"); got != "127.0.0.1" {
+			t.Fatalf("got %q want 127.0.0.1", got)
+		}
+	})
+}

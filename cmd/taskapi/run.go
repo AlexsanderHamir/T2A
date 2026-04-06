@@ -26,6 +26,7 @@ import (
 
 func run() int {
 	port := flag.String("port", "8080", "HTTP listen port")
+	host := flag.String("host", "", "HTTP listen host/IP (default: T2A_LISTEN_HOST or 127.0.0.1)")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")
 	logDir := flag.String("logdir", "", "directory for JSON log files (default: T2A_LOG_DIR or ./logs)")
 	logLevelFlag := flag.String("loglevel", "", "minimum log level for JSON file: debug, info, warn, error (default: T2A_LOG_LEVEL or info)")
@@ -185,7 +186,8 @@ func run() int {
 	}
 	mux.Handle("/", api)
 
-	ln, err := net.Listen("tcp", net.JoinHostPort("", *port))
+	listenHost := resolveListenHost(*host)
+	ln, err := net.Listen("tcp", net.JoinHostPort(listenHost, *port))
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.listen", "err", err)
 		return 1
@@ -194,7 +196,7 @@ func run() int {
 	baseURL := fmt.Sprintf("http://localhost:%s/", *port)
 	slog.Info("listening", "cmd", cmdName, "operation", "taskapi.serve",
 		"version", handler.ServerVersion(),
-		"addr", ln.Addr().String(), "url", baseURL,
+		"addr", ln.Addr().String(), "listen_host", listenHost, "url", baseURL,
 		"metrics_url", fmt.Sprintf("http://localhost:%s/metrics", *port))
 
 	srv := &http.Server{
@@ -277,6 +279,17 @@ func resolveSSETestTickerInterval() time.Duration {
 		return sseTestDefaultInterval
 	}
 	return d
+}
+
+func resolveListenHost(flagHost string) string {
+	s := strings.TrimSpace(flagHost)
+	if s == "" {
+		s = strings.TrimSpace(os.Getenv("T2A_LISTEN_HOST"))
+	}
+	if s == "" {
+		return "127.0.0.1"
+	}
+	return s
 }
 
 // emitTaskAPIFileLoggingConfig logs effective JSON file logging settings (call only when not in minimized logging mode).

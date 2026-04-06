@@ -8,6 +8,7 @@
 //
 // Flags (see also -h):
 //
+//	-host string     listen host/IP (default: T2A_LISTEN_HOST env or 127.0.0.1)
 //	-port string     listen port (default "8080")
 //	-env string      path to .env (default: <repo-root>/.env)
 //	-logdir string   directory for JSON log files (default: T2A_LOG_DIR env or ./logs)
