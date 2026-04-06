@@ -188,15 +188,19 @@ func LineCount(absPath string) (int, error) {
 // ValidateRange returns nil if start..end are valid 1-based inclusive line numbers for the file.
 func ValidateRange(absPath string, start, end int) error {
 	slog.Debug("trace", "operation", "repo.ValidateRange")
+	n, err := LineCount(absPath)
+	if err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrInvalidInput, err)
+	}
+	return validateRangeWithLineCount(start, end, n)
+}
+
+func validateRangeWithLineCount(start, end, n int) error {
 	if start < 1 || end < 1 {
 		return fmt.Errorf("%w: line numbers must be >= 1", domain.ErrInvalidInput)
 	}
 	if start > end {
 		return fmt.Errorf("%w: start line must be <= end line", domain.ErrInvalidInput)
-	}
-	n, err := LineCount(absPath)
-	if err != nil {
-		return fmt.Errorf("%w: %v", domain.ErrInvalidInput, err)
 	}
 	if end > n {
 		return fmt.Errorf("%w: line range 1-%d is past end of file (%d lines)", domain.ErrInvalidInput, end, n)
@@ -207,6 +211,7 @@ func ValidateRange(absPath string, start, end int) error {
 // ValidatePromptMentions checks every parsed mention against the repo root.
 func (r *Root) ValidatePromptMentions(prompt string) error {
 	slog.Debug("trace", "operation", "repo.Root.ValidatePromptMentions")
+	lineCounts := make(map[string]int)
 	for _, m := range ParseFileMentions(prompt) {
 		abs, err := r.Resolve(m.Path)
 		if err != nil {
@@ -223,7 +228,15 @@ func (r *Root) ValidatePromptMentions(prompt string) error {
 			return fmt.Errorf("%w: mention @%s: path is a directory, not a file", domain.ErrInvalidInput, m.Path)
 		}
 		if m.HasRange {
-			if err := ValidateRange(abs, m.StartLine, m.EndLine); err != nil {
+			n, ok := lineCounts[abs]
+			if !ok {
+				n, err = LineCount(abs)
+				if err != nil {
+					return fmt.Errorf("%w: mention @%s(%d-%d): %w", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
+				}
+				lineCounts[abs] = n
+			}
+			if err := validateRangeWithLineCount(m.StartLine, m.EndLine, n); err != nil {
 				return fmt.Errorf("%w: mention @%s(%d-%d): %v", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
 			}
 		}
