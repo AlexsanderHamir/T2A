@@ -19,6 +19,7 @@ import {
   type TaskEventType,
   type TaskEventsResponse,
   type TaskListResponse,
+  type TaskStatsResponse,
 } from "@/types";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -107,6 +108,56 @@ export function parseTaskListResponse(value: unknown): TaskListResponse {
     limit: parseFiniteNumber(value.limit, "limit"),
     offset: parseFiniteNumber(value.offset, "offset"),
     has_more: parseBooleanField(value.has_more, "has_more"),
+  };
+}
+
+export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: task stats payload must be an object");
+  }
+  const byStatusRaw = value.by_status;
+  if (!isRecord(byStatusRaw)) {
+    throw new Error("Invalid API response: by_status must be an object");
+  }
+  const byPriorityRaw = value.by_priority;
+  if (!isRecord(byPriorityRaw)) {
+    throw new Error("Invalid API response: by_priority must be an object");
+  }
+  const byScopeRaw = value.by_scope;
+  if (!isRecord(byScopeRaw)) {
+    throw new Error("Invalid API response: by_scope must be an object");
+  }
+  const by_status: Partial<Record<Status, number>> = {};
+  for (const [key, rawCount] of Object.entries(byStatusRaw)) {
+    if (!(STATUSES as readonly string[]).includes(key)) {
+      throw new Error(`Invalid API response: by_status.${key} is not a known status`);
+    }
+    by_status[key as Status] = parseFiniteNumber(rawCount, `by_status.${key}`);
+  }
+  const by_priority: Partial<Record<Priority, number>> = {};
+  for (const [key, rawCount] of Object.entries(byPriorityRaw)) {
+    if (!(PRIORITIES as readonly string[]).includes(key)) {
+      throw new Error(`Invalid API response: by_priority.${key} is not a known priority`);
+    }
+    by_priority[key as Priority] = parseFiniteNumber(rawCount, `by_priority.${key}`);
+  }
+  if (!("parent" in byScopeRaw)) {
+    throw new Error("Invalid API response: by_scope.parent must be present");
+  }
+  if (!("subtask" in byScopeRaw)) {
+    throw new Error("Invalid API response: by_scope.subtask must be present");
+  }
+  const by_scope = {
+    parent: parseFiniteNumber(byScopeRaw.parent, "by_scope.parent"),
+    subtask: parseFiniteNumber(byScopeRaw.subtask, "by_scope.subtask"),
+  };
+  return {
+    total: parseFiniteNumber(value.total, "total"),
+    ready: parseFiniteNumber(value.ready, "ready"),
+    critical: parseFiniteNumber(value.critical, "critical"),
+    by_status,
+    by_priority,
+    by_scope,
   };
 }
 

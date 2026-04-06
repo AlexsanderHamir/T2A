@@ -103,6 +103,26 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
 }
 
+func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.stats")
+	const op = "tasks.stats"
+	r = withCallRoot(r, op)
+	debugHTTPRequest(r, op)
+	stats, err := h.store.TaskStats(r.Context())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, taskStatsResponse{
+		Total:      stats.Total,
+		Ready:      stats.Ready,
+		Critical:   stats.Critical,
+		ByStatus:   stats.ByStatus,
+		ByPriority: stats.ByPriority,
+		ByScope:    stats.ByScope,
+	})
+}
+
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patch")
 	const op = "tasks.patch"

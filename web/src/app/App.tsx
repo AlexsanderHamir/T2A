@@ -30,7 +30,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 <Link
                   to="/"
                   className="app-title-link"
-                  {...(homeIsCurrent ? { "aria-current": "page" as const })}
+                  {...(homeIsCurrent
+                    ? { "aria-current": "page" as const }
+                    : {})}
                 >
                   <h1 className="app-title app-title--logo">T2A</h1>
                 </Link>

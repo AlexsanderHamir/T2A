@@ -44,7 +44,8 @@
   z-index: var(--z-modal-content);
   width: min(100%, 26rem);
   max-height: min(90vh, 880px);
-  overflow: hidden;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-shell--wide {
@@ -99,9 +100,6 @@
     border: none;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-2xl);
-    max-height: min(90vh, 880px);
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   @media (hover: hover) and (prefers-color-scheme: light) {

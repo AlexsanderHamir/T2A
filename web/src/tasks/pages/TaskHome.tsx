@@ -10,9 +10,21 @@ type Props = {
 
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
-  const totalTasks = app.tasks.length;
-  const readyTasks = app.tasks.filter((t) => t.status === "ready").length;
-  const criticalTasks = app.tasks.filter((t) => t.priority === "critical").length;
+  const totalTasks = app.taskStats?.total ?? app.tasks.length;
+  const readyTasks =
+    app.taskStats?.by_status.ready ??
+    app.taskStats?.ready ??
+    app.tasks.filter((t) => t.status === "ready").length;
+  const criticalTasks =
+    app.taskStats?.by_priority.critical ??
+    app.taskStats?.critical ??
+    app.tasks.filter((t) => t.priority === "critical").length;
+  const parentTasks =
+    app.taskStats?.by_scope.parent ??
+    app.tasks.filter((t) => !t.parent_id).length;
+  const subtaskTasks =
+    app.taskStats?.by_scope.subtask ??
+    app.tasks.filter((t) => Boolean(t.parent_id)).length;
 
   return (
     <>
@@ -20,6 +32,8 @@ export function TaskHome({ app }: Props) {
         <TaskCreateModal
           pending={app.createPending}
           saving={app.saving}
+          draftSaving={app.draftSavePending}
+          draftSaveLabel={app.draftSaveLabel}
           onClose={app.closeCreateModal}
           title={app.newTitle}
           prompt={app.newPrompt}
@@ -46,6 +60,7 @@ export function TaskHome({ app }: Props) {
           evaluation={app.latestDraftEvaluation}
           draftName={app.newDraftName}
           onDraftNameChange={app.setNewDraftName}
+          onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}
         />
@@ -63,7 +78,10 @@ export function TaskHome({ app }: Props) {
         <article className="task-home-kpi-card">
           <p className="task-home-kpi-label">Total tasks</p>
           <p className="task-home-kpi-value">{totalTasks}</p>
-          <p className="task-home-kpi-meta">across all statuses</p>
+          <p className="task-home-kpi-meta">
+            {parentTasks} parent • {subtaskTasks} subtask
+            {subtaskTasks === 1 ? "" : "s"}
+          </p>
         </article>
         <article className="task-home-kpi-card">
           <p className="task-home-kpi-label">Ready</p>

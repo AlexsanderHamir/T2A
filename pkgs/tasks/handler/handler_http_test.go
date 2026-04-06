@@ -736,6 +736,58 @@ func TestHTTP_list_keyset_after_id(t *testing.T) {
 	}
 }
 
+func TestHTTP_tasks_stats_global_counts(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+	for _, body := range []string{
+		`{"id":"20000000-0000-4000-8000-000000000001","title":"ready one","priority":"medium","status":"ready"}`,
+		`{"title":"critical one","priority":"critical","status":"running"}`,
+		`{"title":"critical ready","priority":"critical","status":"ready"}`,
+		`{"title":"subtask","priority":"low","status":"ready","parent_id":"20000000-0000-4000-8000-000000000001"}`,
+	} {
+		res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+		if res.StatusCode != http.StatusCreated {
+			t.Fatalf("create status %d", res.StatusCode)
+		}
+	}
+
+	res, err := http.Get(srv.URL + "/tasks/stats")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("stats %d", res.StatusCode)
+	}
+	var got struct {
+		Total      int64            `json:"total"`
+		Ready      int64            `json:"ready"`
+		Critical   int64            `json:"critical"`
+		ByStatus   map[string]int64 `json:"by_status"`
+		ByPriority map[string]int64 `json:"by_priority"`
+		ByScope    map[string]int64 `json:"by_scope"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Total != 4 || got.Ready != 3 || got.Critical != 2 {
+		t.Fatalf("stats %+v", got)
+	}
+	if got.ByStatus["ready"] != 3 || got.ByStatus["running"] != 1 {
+		t.Fatalf("stats by_status %+v", got.ByStatus)
+	}
+	if got.ByPriority["critical"] != 2 || got.ByPriority["medium"] != 1 {
+		t.Fatalf("stats by_priority %+v", got.ByPriority)
+	}
+	if got.ByScope["parent"] != 3 || got.ByScope["subtask"] != 1 {
+		t.Fatalf("stats by_scope %+v", got.ByScope)
+	}
+}
+
 func TestHTTP_create_rejects_unknown_field(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

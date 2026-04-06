@@ -5,6 +5,7 @@ import {
   parseTaskEventsResponse,
   parseDraftTaskEvaluation,
   parseTaskListResponse,
+  parseTaskStatsResponse,
 } from "./parseTaskApi";
 
 const validTask = {
@@ -148,6 +149,78 @@ describe("parseTaskListResponse", () => {
         offset: 0,
       }),
     ).toEqual({ tasks: [], limit: 50, offset: 0, has_more: false });
+  });
+});
+
+describe("parseTaskStatsResponse", () => {
+  it("parses task stats envelope", () => {
+    expect(
+      parseTaskStatsResponse({
+        total: 22,
+        ready: 7,
+        critical: 2,
+        by_status: { ready: 7, running: 5 },
+        by_priority: { critical: 2, high: 4 },
+        by_scope: { parent: 10, subtask: 12 },
+      }),
+    ).toEqual({
+      total: 22,
+      ready: 7,
+      critical: 2,
+      by_status: { ready: 7, running: 5 },
+      by_priority: { critical: 2, high: 4 },
+      by_scope: { parent: 10, subtask: 12 },
+    });
+  });
+
+  it("rejects invalid stats payload", () => {
+    expect(() =>
+      parseTaskStatsResponse({
+        total: "22",
+        ready: 7,
+        critical: 2,
+        by_status: {},
+        by_priority: {},
+        by_scope: { parent: 0, subtask: 0 },
+      }),
+    ).toThrow(/total/);
+  });
+
+  it("rejects unknown status/priority keys in breakdowns", () => {
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 22,
+        ready: 7,
+        critical: 2,
+        by_status: { nope: 1 },
+        by_priority: {},
+        by_scope: { parent: 10, subtask: 12 },
+      }),
+    ).toThrow(/known status/);
+
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 22,
+        ready: 7,
+        critical: 2,
+        by_status: {},
+        by_priority: { urgent: 1 },
+        by_scope: { parent: 10, subtask: 12 },
+      }),
+    ).toThrow(/known priority/);
+  });
+
+  it("requires parent/subtask scope counts", () => {
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 22,
+        ready: 7,
+        critical: 2,
+        by_status: { ready: 7 },
+        by_priority: { critical: 2 },
+        by_scope: { parent: 10 },
+      }),
+    ).toThrow(/by_scope\.subtask/);
   });
 });
 

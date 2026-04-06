@@ -11,6 +11,8 @@ import { TaskComposeFields } from "./TaskComposeFields";
 type Props = {
   pending: boolean;
   saving: boolean;
+  draftSaving: boolean;
+  draftSaveLabel: string | null;
   onClose: () => void;
   title: string;
   prompt: string;
@@ -41,6 +43,7 @@ type Props = {
   } | null;
   draftName: string;
   onDraftNameChange: (name: string) => void;
+  onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
 };
@@ -48,6 +51,8 @@ type Props = {
 export function TaskCreateModal({
   pending,
   saving,
+  draftSaving,
+  draftSaveLabel,
   onClose,
   title,
   prompt,
@@ -74,6 +79,7 @@ export function TaskCreateModal({
   evaluation,
   draftName,
   onDraftNameChange,
+  onSaveDraft,
   onEvaluate,
   onSubmit,
 }: Props) {
@@ -162,6 +168,11 @@ export function TaskCreateModal({
                 placeholder="Name this draft"
                 disabled={disabled}
               />
+              {draftSaveLabel ? (
+                <p className="muted task-create-draft-status" aria-live="polite">
+                  {draftSaveLabel}
+                </p>
+              ) : null}
             </div>
             <div className="task-create-parent-field grow">
               <ParentTaskSelect
@@ -284,6 +295,44 @@ export function TaskCreateModal({
               </div>
             ) : null}
 
+            <section
+              className="task-create-evaluation-summary"
+              aria-label="Draft evaluation summary"
+              aria-live="polite"
+            >
+              <div className="task-create-evaluation-head">
+                <h3 className="task-create-evaluation-title">
+                  Latest evaluation score
+                </h3>
+                {evaluation ? (
+                  <p className="task-create-evaluation-score-badge">
+                    {evaluation.overallScore}
+                    <span>/100</span>
+                  </p>
+                ) : null}
+              </div>
+              {evaluation ? (
+                <>
+                  <p className="task-create-evaluation-overall">
+                    <strong>Overall:</strong> {evaluation.overallSummary}
+                  </p>
+                  <ul className="task-create-evaluation-sections">
+                    {evaluation.sections.map((s) => (
+                      <li key={s.key}>
+                        <span>{s.key.replaceAll("_", " ")}</span>
+                        <strong>{s.score}/100</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="muted task-create-evaluation-empty">
+                  No score yet. Click <strong>Evaluate</strong> and your result
+                  appears here before you create the task.
+                </p>
+              )}
+            </section>
+
             <div className="row stack-row-actions task-create-modal-actions">
               <button
                 type="button"
@@ -292,6 +341,14 @@ export function TaskCreateModal({
                 onClick={onClose}
               >
                 Cancel
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={disabled || draftSaving}
+                onClick={onSaveDraft}
+              >
+                {draftSaving ? "Saving draft…" : "Save draft"}
               </button>
               <button
                 type="button"
@@ -309,24 +366,6 @@ export function TaskCreateModal({
                 {hasParent ? "Add subtask" : "Create"}
               </button>
             </div>
-            {evaluation ? (
-              <section
-                className="task-create-evaluation-summary"
-                aria-label="Draft evaluation summary"
-              >
-                <p className="task-create-evaluation-overall">
-                  <strong>Score:</strong> {evaluation.overallScore}/100
-                </p>
-                <p className="muted">{evaluation.overallSummary}</p>
-                <ul className="task-create-evaluation-sections">
-                  {evaluation.sections.map((s) => (
-                    <li key={s.key}>
-                      {s.key.replaceAll("_", " ")}: {s.score}/100
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
           </form>
         </section>
       </Modal>

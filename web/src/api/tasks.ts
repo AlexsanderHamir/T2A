@@ -14,6 +14,7 @@ import {
   type TaskEventDetail,
   type TaskEventsResponse,
   type TaskListResponse,
+  type TaskStatsResponse,
 } from "@/types";
 import {
   parseTask,
@@ -24,6 +25,7 @@ import {
   parseTaskEventDetail,
   parseTaskEventsResponse,
   parseTaskListResponse,
+  parseTaskStatsResponse,
 } from "./parseTaskApi";
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
 
@@ -129,6 +131,18 @@ export async function listTasks(
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
   return parseTaskListResponse(raw);
+}
+
+export async function getTaskStats(
+  options?: { signal?: AbortSignal },
+): Promise<TaskStatsResponse> {
+  const res = await fetchWithTimeout("/tasks/stats", {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskStatsResponse(raw);
 }
 
 export async function createTask(input: {

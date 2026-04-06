@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addChecklistItem,
   createTask as apiCreate,
+  getTaskStats,
   deleteTaskDraft as apiDeleteDraft,
   deleteTask as apiDelete,
   evaluateDraftTask as apiEvaluateDraft,
@@ -48,6 +49,7 @@ export function useTasksApp() {
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   const [newDraftID, setNewDraftID] = useState("");
   const [newDraftName, setNewDraftName] = useState("");
+  const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
   const [latestDraftEvaluation, setLatestDraftEvaluation] = useState<{
     overallScore: number;
@@ -82,6 +84,7 @@ export function useTasksApp() {
   const [editTitleRequiredError, setEditTitleRequiredError] = useState<
     string | null
   >(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [taskListPage, setTaskListPage] = useState(0);
 
@@ -97,6 +100,16 @@ export function useTasksApp() {
   const draftsQuery = useQuery({
     queryKey: ["task-drafts"],
     queryFn: ({ signal }) => apiListDrafts(100, { signal }),
+  });
+  const taskStatsQuery = useQuery({
+    queryKey: ["task-stats"],
+    queryFn: async ({ signal }) => {
+      try {
+        return await getTaskStats({ signal });
+      } catch {
+        return null;
+      }
+    },
   });
 
   const resetTaskListPage = useCallback(() => {
@@ -140,6 +153,7 @@ export function useTasksApp() {
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
     setNewDraftName("Untitled draft");
+    setLastDraftSavedAt(null);
   }, []);
 
   const closeCreateModal = useCallback(() => {
@@ -226,6 +240,7 @@ export function useTasksApp() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
       closeCreateModal();
     },
@@ -289,6 +304,7 @@ export function useTasksApp() {
     onSuccess: async () => {
       setEditing(null);
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
     },
   });
 
@@ -300,6 +316,7 @@ export function useTasksApp() {
       setDeleteTarget(null);
       setEditing((prev) => (prev?.id === deletedId ? null : prev));
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
     },
   });
 
@@ -334,6 +351,7 @@ export function useTasksApp() {
       if (saved.id !== newDraftID) {
         setNewDraftID(saved.id);
       }
+      setLastDraftSavedAt(Date.now());
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
     },
   });
@@ -358,6 +376,7 @@ export function useTasksApp() {
       return errorMessage(evaluateDraftMutation.error);
     if (patchMutation.isError) return errorMessage(patchMutation.error);
     if (deleteMutation.isError) return errorMessage(deleteMutation.error);
+    if (saveDraftMutation.isError) return errorMessage(saveDraftMutation.error);
     return editTitleRequiredError;
   }, [
     tasksQuery.isError,
@@ -370,6 +389,8 @@ export function useTasksApp() {
     patchMutation.error,
     deleteMutation.isError,
     deleteMutation.error,
+    saveDraftMutation.isError,
+    saveDraftMutation.error,
     editTitleRequiredError,
   ]);
 
@@ -387,44 +408,38 @@ export function useTasksApp() {
     newChecklistItems.length > 0 ||
     pendingSubtasks.length > 0;
 
-  useEffect(() => {
-    if (!createModalOpen || !newDraftID || !hasDraftContent) return;
-    const t = setTimeout(() => {
-      saveDraftMutation.mutate({
-        id: newDraftID,
-        name: newDraftName.trim() || "Untitled draft",
-        payload: {
-          title: newTitle,
-          initial_prompt: newPrompt,
-          priority: newPriority,
-          task_type: newTaskType,
-          parent_id: newParentId,
-          checklist_inherit: newChecklistInherit,
-          checklist_items: newChecklistItems,
-          pending_subtasks: pendingSubtasks.map((st) => ({
-            title: st.title,
-            initial_prompt: st.initial_prompt,
-            priority: st.priority,
-            task_type: st.task_type,
-            checklist_items: st.checklistItems,
-            checklist_inherit: st.checklist_inherit,
-          })),
-          ...(latestDraftEvaluation
-            ? {
-                latest_evaluation: {
-                  overall_score: latestDraftEvaluation.overallScore,
-                  overall_summary: latestDraftEvaluation.overallSummary,
-                  sections: latestDraftEvaluation.sections,
-                },
-              }
-            : {}),
-        },
-      });
-    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
-    return () => clearTimeout(t);
+  const buildDraftSaveInput = useCallback(() => {
+    return {
+      id: newDraftID,
+      name: newDraftName.trim() || "Untitled draft",
+      payload: {
+        title: newTitle,
+        initial_prompt: newPrompt,
+        priority: newPriority,
+        task_type: newTaskType,
+        parent_id: newParentId,
+        checklist_inherit: newChecklistInherit,
+        checklist_items: newChecklistItems,
+        pending_subtasks: pendingSubtasks.map((st) => ({
+          title: st.title,
+          initial_prompt: st.initial_prompt,
+          priority: st.priority,
+          task_type: st.task_type,
+          checklist_items: st.checklistItems,
+          checklist_inherit: st.checklist_inherit,
+        })),
+        ...(latestDraftEvaluation
+          ? {
+              latest_evaluation: {
+                overall_score: latestDraftEvaluation.overallScore,
+                overall_summary: latestDraftEvaluation.overallSummary,
+                sections: latestDraftEvaluation.sections,
+              },
+            }
+          : {}),
+      },
+    };
   }, [
-    createModalOpen,
-    hasDraftContent,
     latestDraftEvaluation,
     newChecklistInherit,
     newChecklistItems,
@@ -436,8 +451,43 @@ export function useTasksApp() {
     newTaskType,
     newTitle,
     pendingSubtasks,
+  ]);
+
+  const saveDraftNow = useCallback(async () => {
+    if (!createModalOpen || !newDraftID) return;
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    await saveDraftMutation.mutateAsync(buildDraftSaveInput());
+  }, [buildDraftSaveInput, createModalOpen, newDraftID, saveDraftMutation]);
+
+  useEffect(() => {
+    if (!createModalOpen || !newDraftID || !hasDraftContent) return;
+    autosaveTimerRef.current = setTimeout(() => {
+      saveDraftMutation.mutate(buildDraftSaveInput());
+      autosaveTimerRef.current = null;
+    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    buildDraftSaveInput,
+    createModalOpen,
+    hasDraftContent,
+    newDraftID,
     saveDraftMutation,
   ]);
+
+  const draftSaveLabel = useMemo(() => {
+    if (!createModalOpen) return null;
+    if (saveDraftMutation.isPending) return "Saving draft…";
+    if (lastDraftSavedAt == null) return null;
+    return "Draft saved";
+  }, [createModalOpen, lastDraftSavedAt, saveDraftMutation.isPending]);
 
   async function evaluateDraftBeforeCreate() {
     const parentId = newParentId.trim();
@@ -612,6 +662,7 @@ export function useTasksApp() {
   const evaluatePending = evaluateDraftMutation.isPending;
   const patchPending = patchMutation.isPending;
   const deletePending = deleteMutation.isPending;
+  const draftSavePending = saveDraftMutation.isPending;
 
   useEffect(() => {
     if (!tasksQuery.isPending && rootTaskTrees.length === 0 && taskListPage > 0) {
@@ -629,6 +680,8 @@ export function useTasksApp() {
     loading,
     listRefreshing,
     saving,
+    draftSavePending,
+    draftSaveLabel,
     createPending,
     evaluatePending,
     patchPending,
@@ -636,6 +689,7 @@ export function useTasksApp() {
     deleteMutation,
     error,
     sseLive,
+    taskStats: taskStatsQuery.data,
     draftPickerOpen,
     setDraftPickerOpen,
     taskDrafts: draftsQuery.data ?? [],
@@ -665,6 +719,7 @@ export function useTasksApp() {
     submitCreate,
     evaluateDraftBeforeCreate,
     startFreshDraft,
+    saveDraftNow,
     resumeDraftByID,
     deleteDraftByID,
     createModalOpen,

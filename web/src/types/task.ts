@@ -35,6 +35,18 @@ export type TaskListResponse = {
   has_more: boolean;
 };
 
+export type TaskStatsResponse = {
+  total: number;
+  ready: number;
+  critical: number;
+  by_status: Partial<Record<Status, number>>;
+  by_priority: Partial<Record<Priority, number>>;
+  by_scope: {
+    parent: number;
+    subtask: number;
+  };
+};
+
 export type TaskChangeType =
   | "task_created"
   | "task_updated"

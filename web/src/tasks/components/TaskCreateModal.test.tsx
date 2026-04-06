@@ -9,6 +9,8 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
   const base: ComponentProps<typeof TaskCreateModal> = {
     pending: false,
     saving: false,
+    draftSaving: false,
+    draftSaveLabel: null,
     onClose: vi.fn(),
     title: "Draft title",
     prompt: "Draft prompt",
@@ -35,6 +37,7 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     evaluation: null,
     draftName: "Untitled draft",
     onDraftNameChange: vi.fn(),
+    onSaveDraft: vi.fn(),
     onEvaluate: vi.fn(),
     onSubmit: vi.fn(),
   };
@@ -64,7 +67,34 @@ describe("TaskCreateModal", () => {
     const panel = screen.getByRole("region", {
       name: /draft evaluation summary/i,
     });
-    expect(within(panel).getByText(/86/)).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("heading", { name: /latest evaluation score/i }),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText(/86/i)).toBeInTheDocument();
     expect(within(panel).getByText(/title/i)).toBeInTheDocument();
+  });
+
+  it("shows where score appears before evaluation", () => {
+    renderModal({ evaluation: null });
+    const panel = screen.getByRole("region", {
+      name: /draft evaluation summary/i,
+    });
+    expect(within(panel).getByText(/no score yet/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/click/i)).toBeInTheDocument();
+  });
+
+  it("shows Save draft action and calls onSaveDraft", async () => {
+    const user = userEvent.setup();
+    const onSaveDraft = vi.fn();
+    renderModal({ onSaveDraft });
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+    expect(onSaveDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables Save draft while draft save is pending", () => {
+    renderModal({ draftSaving: true });
+    expect(
+      screen.getByRole("button", { name: /saving draft/i }),
+    ).toBeDisabled();
   });
 });

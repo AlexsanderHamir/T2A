@@ -3,6 +3,7 @@ import {
   createTask,
   deleteTask,
   evaluateDraftTask,
+  getTaskStats,
   getTaskEvent,
   listTasks,
   patchTask,
@@ -115,6 +116,45 @@ describe("listTasks", () => {
       }),
     );
     await expect(listTasks()).rejects.toThrow(/array/);
+  });
+});
+
+describe("getTaskStats", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns typed global stats response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          total: 10,
+          ready: 3,
+          critical: 1,
+          by_status: { ready: 3, running: 4, done: 3 },
+          by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
+          by_scope: { parent: 6, subtask: 4 },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const out = await getTaskStats();
+    expect(out).toEqual({
+      total: 10,
+      ready: 3,
+      critical: 1,
+      by_status: { ready: 3, running: 4, done: 3 },
+      by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
+      by_scope: { parent: 6, subtask: 4 },
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/tasks/stats",
+      expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
   });
 });
 

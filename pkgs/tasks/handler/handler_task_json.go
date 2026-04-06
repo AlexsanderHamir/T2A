@@ -55,6 +55,15 @@ type listResponse struct {
 	HasMore bool             `json:"has_more"`
 }
 
+type taskStatsResponse struct {
+	Total      int64                     `json:"total"`
+	Ready      int64                     `json:"ready"`
+	Critical   int64                     `json:"critical"`
+	ByStatus   map[domain.Status]int64   `json:"by_status"`
+	ByPriority map[domain.Priority]int64 `json:"by_priority"`
+	ByScope    map[string]int64          `json:"by_scope"`
+}
+
 type taskEventLine struct {
 	Seq            int64                        `json:"seq"`
 	At             time.Time                    `json:"at"`
