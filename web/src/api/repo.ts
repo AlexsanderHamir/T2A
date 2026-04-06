@@ -40,7 +40,7 @@ export async function probeRepoWorkspace(
   try {
     const res = await fetch("/health/ready", {
       headers: { Accept: "application/json" },
-      signal: options?.signal,
+      signal: searchRepoCombinedSignal(options?.signal),
     });
     let raw: unknown;
     try {
@@ -129,7 +129,7 @@ export async function validateRepoRange(
   });
   const res = await fetch(`/repo/validate-range?${params}`, {
     headers: { Accept: "application/json" },
-    signal: options?.signal,
+    signal: searchRepoCombinedSignal(options?.signal),
   });
   if (res.status === 503) {
     return null;

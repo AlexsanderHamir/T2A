@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchRepoFile, probeRepoWorkspace } from "./repo";
+import { fetchRepoFile, probeRepoWorkspace, validateRepoRange } from "./repo";
 
 describe("probeRepoWorkspace", () => {
   beforeEach(() => {
@@ -72,6 +72,24 @@ describe("probeRepoWorkspace", () => {
     vi.mocked(fetch).mockRejectedValue(new Error("down"));
     await expect(probeRepoWorkspace()).resolves.toEqual({ state: "unknown" });
   });
+
+  it("attaches a signal when no caller signal is provided", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "ok",
+          checks: { database: "ok", workspace_repo: "ok" },
+          version: "v",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await probeRepoWorkspace();
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeDefined();
+  });
 });
 
 describe("fetchRepoFile", () => {
@@ -112,5 +130,29 @@ describe("fetchRepoFile", () => {
       line_count: 1,
       warning: "w",
     });
+  });
+});
+
+describe("validateRepoRange", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("attaches a signal when no caller signal is provided", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({ ok: true, line_count: 10 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await validateRepoRange("a.go", 1, 2);
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeDefined();
   });
 });
