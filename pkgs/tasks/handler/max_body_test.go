@@ -14,8 +14,8 @@ import (
 
 func TestMaxRequestBodyBytesConfigured(t *testing.T) {
 	t.Setenv(maxRequestBodyEnv, "")
-	if MaxRequestBodyBytesConfigured() != 0 {
-		t.Fatalf("unset want 0")
+	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
+		t.Fatalf("unset want default")
 	}
 	t.Setenv(maxRequestBodyEnv, "4096")
 	if MaxRequestBodyBytesConfigured() != 4096 {
@@ -26,12 +26,12 @@ func TestMaxRequestBodyBytesConfigured(t *testing.T) {
 		t.Fatalf("zero means unlimited")
 	}
 	t.Setenv(maxRequestBodyEnv, "-3")
-	if MaxRequestBodyBytesConfigured() != 0 {
-		t.Fatalf("negative -> unlimited")
+	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
+		t.Fatalf("negative -> default")
 	}
 	t.Setenv(maxRequestBodyEnv, "nope")
-	if MaxRequestBodyBytesConfigured() != 0 {
-		t.Fatalf("invalid -> unlimited")
+	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
+		t.Fatalf("invalid -> default")
 	}
 }
 

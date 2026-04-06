@@ -9,16 +9,20 @@ import (
 )
 
 const maxRequestBodyEnv = "T2A_MAX_REQUEST_BODY_BYTES"
+const defaultMaxRequestBodyBytes = 1 << 20 // 1 MiB
 
 // MaxRequestBodyBytesConfigured returns the max request body size from T2A_MAX_REQUEST_BODY_BYTES.
-// 0 or unset means no limit (default). Invalid or negative values are treated as 0 (unlimited).
+// Unset defaults to 1 MiB. 0 means no limit (explicit opt-out). Invalid or negative values use the default.
 func MaxRequestBodyBytesConfigured() int {
 	s := strings.TrimSpace(os.Getenv(maxRequestBodyEnv))
 	if s == "" {
-		return 0
+		return defaultMaxRequestBodyBytes
 	}
 	n, err := strconv.Atoi(s)
-	if err != nil || n <= 0 {
+	if err != nil || n < 0 {
+		return defaultMaxRequestBodyBytes
+	}
+	if n == 0 {
 		return 0
 	}
 	return n
