@@ -30,6 +30,9 @@ export function MentionRangePanel({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [selStart, setSelStart] = useState(0);
   const [selEnd, setSelEnd] = useState(0);
+  const [startLineInput, setStartLineInput] = useState("");
+  const [endLineInput, setEndLineInput] = useState("");
+  const [insertError, setInsertError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +72,16 @@ export function MentionRangePanel({
     return lineRangeFromSelection(file.content, selStart, selEnd);
   }, [file, selStart, selEnd]);
 
+  const manualRange = useMemo(() => {
+    const start = Number(startLineInput);
+    const end = Number(endLineInput);
+    if (!Number.isInteger(start) || !Number.isInteger(end)) return null;
+    if (start < 1 || end < 1 || start > end) return null;
+    return { startLine: start, endLine: end };
+  }, [endLineInput, startLineInput]);
+
+  const activeRange = manualRange ?? range;
+
   const showLargeHint = useMemo(() => {
     if (!file || file.binary) return false;
     return file.size_bytes > LARGE_BYTES || file.line_count > LARGE_LINES;
@@ -79,9 +92,24 @@ export function MentionRangePanel({
       !disabled &&
         file &&
         !file.binary &&
-        range &&
-        range.startLine <= range.endLine,
+        activeRange &&
+        activeRange.startLine <= activeRange.endLine,
     );
+
+  const handleInsertWithRange = useCallback(async () => {
+    if (!activeRange) return;
+    setInsertError(null);
+    try {
+      await onInsertWithRange(activeRange.startLine, activeRange.endLine);
+    } catch (e: unknown) {
+      console.error("[MentionRangePanel] insert line range failed", e);
+      setInsertError(
+        e instanceof Error
+          ? e.message
+          : "Insert failed. Please try again.",
+      );
+    }
+  }, [activeRange, onInsertWithRange]);
 
   const taId = `${id}-mention-file-preview`;
 
@@ -91,13 +119,14 @@ export function MentionRangePanel({
       role="region"
       aria-label="File mention and line range"
     >
-      <p className="mention-range-path">
-        <code>{path}</code>
-      </p>
-      <p className="muted mention-range-hint">
-        Drag in the preview below to choose a line range (like selecting text in an
-        editor), or insert the file reference without a range.
-      </p>
+      <div className="mention-range-header">
+        <p className="mention-range-path">
+          <code>{path}</code>
+        </p>
+        <p className="muted mention-range-hint">
+          Optional: select text or type line numbers to insert a specific range.
+        </p>
+      </div>
 
       {loading ? (
         <p className="mention-range-status" role="status">
@@ -125,37 +154,65 @@ export function MentionRangePanel({
 
       {!loading && file && !file.binary ? (
         <>
-          <label className="mention-range-preview-label" htmlFor={taId}>
-            Preview
-          </label>
-          <textarea
-            id={taId}
-            ref={taRef}
-            className="mention-file-preview"
-            readOnly
-            spellCheck={false}
-            value={file.content}
-            disabled={disabled}
-            aria-describedby={`${taId}-hint`}
-            onSelect={syncSelection}
-            onMouseUp={syncSelection}
-            onKeyUp={syncSelection}
-          />
-          <p id={`${taId}-hint`} className="visually-hidden">
-            Select text to set the start and end line for this file mention.
-          </p>
-          <p className="mention-range-selection" aria-live="polite">
-            {range ? (
-              <>
-                Selected lines{" "}
-                <strong>
-                  {range.startLine}–{range.endLine}
-                </strong>
-              </>
-            ) : (
-              <span className="muted">No selection — drag to highlight lines</span>
-            )}
-          </p>
+          <div className="mention-range-content">
+            <label className="mention-range-preview-label" htmlFor={taId}>
+              Preview
+            </label>
+            <textarea
+              id={taId}
+              ref={taRef}
+              className="mention-file-preview"
+              readOnly
+              spellCheck={false}
+              value={file.content}
+              disabled={disabled}
+              aria-describedby={`${taId}-hint`}
+              onSelect={syncSelection}
+              onMouseUp={syncSelection}
+              onKeyUp={syncSelection}
+            />
+            <p id={`${taId}-hint`} className="visually-hidden">
+              Select text to set the start and end line for this file mention.
+            </p>
+            <div className="row mention-range-row mention-range-inputs">
+              <label className="field">
+                <span>From line</span>
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={startLineInput}
+                  onChange={(e) => setStartLineInput(e.target.value)}
+                  placeholder={range ? String(range.startLine) : "1"}
+                  disabled={disabled}
+                />
+              </label>
+              <label className="field">
+                <span>To line</span>
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={endLineInput}
+                  onChange={(e) => setEndLineInput(e.target.value)}
+                  placeholder={range ? String(range.endLine) : "1"}
+                  disabled={disabled}
+                />
+              </label>
+            </div>
+            <p className="mention-range-selection" aria-live="polite">
+              {activeRange ? (
+                <>
+                  Range{" "}
+                  <strong>
+                    {activeRange.startLine}–{activeRange.endLine}
+                  </strong>
+                </>
+              ) : (
+                <span className="muted">No range selected</span>
+              )}
+            </p>
+          </div>
         </>
       ) : null}
 
@@ -170,25 +227,25 @@ export function MentionRangePanel({
           {rangeWarning}
         </p>
       ) : null}
+      {insertError ? (
+        <p className="mention-warn" role="alert">
+          {insertError}
+        </p>
+      ) : null}
 
       <div className="row stack-row-actions mention-range-actions">
-        <button
-          type="button"
-          disabled={disabled || !canInsertRange}
-          onClick={() => {
-            if (!range) return;
-            void onInsertWithRange(range.startLine, range.endLine);
-          }}
-        >
-          Insert selected range
+        <button type="button" className="secondary" disabled={disabled} onClick={onInsertPathOnly}>
+          Insert file only
         </button>
         <button
           type="button"
-          className="secondary"
-          disabled={disabled}
-          onClick={onInsertPathOnly}
+          className="mention-range-action-primary"
+          disabled={disabled || !canInsertRange}
+          onClick={() => {
+            void handleInsertWithRange();
+          }}
         >
-          Insert file only
+          Insert line range
         </button>
         <button
           type="button"

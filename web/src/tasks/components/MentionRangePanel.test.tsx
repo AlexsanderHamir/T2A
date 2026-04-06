@@ -71,8 +71,31 @@ describe("MentionRangePanel", () => {
     ta.setSelectionRange(0, 5);
     fireEvent.select(ta);
 
-    await user.click(screen.getByRole("button", { name: /insert selected range/i }));
+    await user.click(screen.getByRole("button", { name: /insert line range/i }));
     expect(onInsertWithRange).toHaveBeenCalledWith(1, 1);
+  });
+
+  it("inserts manual line range when typed", async () => {
+    const user = userEvent.setup();
+    const onInsertWithRange = vi.fn();
+
+    render(
+      <MentionRangePanel
+        id="p4"
+        path="src/foo.go"
+        rangeWarning={null}
+        onInsertWithRange={onInsertWithRange}
+        onInsertPathOnly={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText(/preview/i);
+    await user.type(screen.getByLabelText(/from line/i), "1");
+    await user.type(screen.getByLabelText(/to line/i), "2");
+
+    await user.click(screen.getByRole("button", { name: /insert line range/i }));
+    expect(onInsertWithRange).toHaveBeenCalledWith(1, 2);
   });
 
   it("shows range warning", async () => {
@@ -89,5 +112,31 @@ describe("MentionRangePanel", () => {
 
     await screen.findByLabelText(/preview/i);
     expect(screen.getByRole("alert")).toHaveTextContent("Bad range");
+  });
+
+  it("shows an error when insert line range fails", async () => {
+    const user = userEvent.setup();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const onInsertWithRange = vi.fn().mockRejectedValue(new Error("Network down"));
+
+    render(
+      <MentionRangePanel
+        id="p5"
+        path="src/foo.go"
+        rangeWarning={null}
+        onInsertWithRange={onInsertWithRange}
+        onInsertPathOnly={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText(/preview/i);
+    await user.type(screen.getByLabelText(/from line/i), "1");
+    await user.type(screen.getByLabelText(/to line/i), "2");
+
+    await user.click(screen.getByRole("button", { name: /insert line range/i }));
+
+    expect(await screen.findByText("Network down")).toBeInTheDocument();
+    errorSpy.mockRestore();
   });
 });
