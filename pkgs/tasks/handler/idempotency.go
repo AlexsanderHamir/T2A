@@ -270,8 +270,8 @@ func clearIdempotencyStateForTest() {
 // POST/PATCH (DELETE omits a body fingerprint). Only responses with status 200, 201, or 204 are
 // cached. Concurrent identical requests share one handler execution via singleflight.
 //
-// POST/PATCH with unknown Content-Length (chunked), negative length, or a body larger than 1 MiB
-// skip this middleware (handler runs normally; key is ignored for caching).
+// POST/PATCH with unknown Content-Length (chunked) are rejected with 400 because
+// body fingerprinting would be ambiguous; bodies larger than 1 MiB are rejected with 413.
 //
 // Cache TTL comes from T2A_IDEMPOTENCY_TTL (Go duration; default 24h). Set to 0 to disable.
 // The cache is in-process only and is not shared across replicas.
@@ -299,8 +299,12 @@ func WithIdempotency(h http.Handler) http.Handler {
 		var bodyFP string
 		switch r.Method {
 		case http.MethodPost, http.MethodPatch:
-			if r.ContentLength < 0 || r.ContentLength > maxIdempotencyBodySize {
-				h.ServeHTTP(w, r)
+			if r.ContentLength < 0 {
+				writeJSONError(w, r, "idempotency.content_length", http.StatusBadRequest, "idempotency requires known content length")
+				return
+			}
+			if r.ContentLength > maxIdempotencyBodySize {
+				writeJSONError(w, r, "idempotency.body_too_large", http.StatusRequestEntityTooLarge, "request body too large for idempotency")
 				return
 			}
 			body, err := io.ReadAll(r.Body)

@@ -319,6 +319,58 @@ func TestHTTP_idempotency_accepts_boundary_key_length(t *testing.T) {
 	}
 }
 
+func TestHTTP_idempotency_rejects_unknown_content_length(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
+
+	db := testdb.OpenSQLite(t)
+	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
+
+	req := httptest.NewRequest(http.MethodPost, "/tasks", io.NopCloser(strings.NewReader(`{"title":"idem-unknown","priority":"medium"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-unknown-len")
+	req.ContentLength = -1
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
+	var out jsonErrorBody
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Error != "idempotency requires known content length" {
+		t.Fatalf("error %q", out.Error)
+	}
+}
+
+func TestHTTP_idempotency_rejects_large_content_length(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
+
+	db := testdb.OpenSQLite(t)
+	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
+
+	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"idem-large","priority":"medium"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-large-len")
+	req.ContentLength = maxIdempotencyBodySize + 1
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
+	var out jsonErrorBody
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Error != "request body too large for idempotency" {
+		t.Fatalf("error %q", out.Error)
+	}
+}
+
 func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "")
