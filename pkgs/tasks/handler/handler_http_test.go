@@ -1349,6 +1349,29 @@ func TestHTTP_list_limit_200_ok(t *testing.T) {
 	}
 }
 
+func TestHTTP_list_limit_zero_reports_coerced_default(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/tasks?limit=0&offset=0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var body struct {
+		Limit int `json:"limit"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Limit != 50 {
+		t.Fatalf("limit %d want 50", body.Limit)
+	}
+}
+
 func TestHTTP_method_not_allowed_routes_only_registered_verbs(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

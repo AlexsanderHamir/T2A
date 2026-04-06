@@ -218,6 +218,9 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 		}
 		limit = n
 	}
+	if limit <= 0 {
+		limit = 50
+	}
 	if v := q.Get("offset"); v != "" {
 		n, e := strconv.Atoi(v)
 		if e != nil || n < 0 {

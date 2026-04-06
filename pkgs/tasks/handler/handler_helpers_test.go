@@ -109,6 +109,7 @@ func TestParseListParams(t *testing.T) {
 		wantErr     bool
 	}{
 		{name: "defaults", q: url.Values{}, wantLimit: 50, wantOffset: 0},
+		{name: "limit_0_coerced_to_default", q: url.Values{"limit": {"0"}}, wantLimit: 50, wantOffset: 0},
 		{name: "limit_200_offset_3", q: url.Values{"limit": {"200"}, "offset": {"3"}}, wantLimit: 200, wantOffset: 3},
 		{name: "after_id_only", q: url.Values{"after_id": {id2}, "limit": {"10"}}, wantLimit: 10, wantOffset: 0, wantAfterID: id2},
 		{name: "after_id_with_offset", q: url.Values{"after_id": {id2}, "offset": {"0"}}, wantErr: true},
