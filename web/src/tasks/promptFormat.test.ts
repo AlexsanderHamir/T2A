@@ -51,6 +51,15 @@ describe("promptFormat", () => {
     expect(html).toContain('<a href="/tasks/1">internal</a>');
   });
 
+  it("strips protocol-relative hrefs that look like root-relative paths", () => {
+    const html = sanitizePromptHtml(
+      '<p><a href="//evil.example/phish">phish</a><a href="/safe">ok</a></p>',
+    );
+    expect(html).not.toContain("//evil.example");
+    expect(html).not.toContain('href="//');
+    expect(html).toContain('<a href="/safe">ok</a>');
+  });
+
   it("drops entire dangerous tags instead of preserving their text", () => {
     const html = sanitizePromptHtml(
       '<p>before</p><script>alert(1)</script><style>.x{}</style><p>after</p>',

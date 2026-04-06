@@ -11,7 +11,11 @@ function isSafeHref(rawHref: string): boolean {
   const href = rawHref.trim();
   if (!href) return false;
   if (href.startsWith("#")) return true;
-  if (href.startsWith("/")) return true;
+  if (href.startsWith("/")) {
+    // `//host` is protocol-relative (off-site), not a same-origin path.
+    if (href.startsWith("//")) return false;
+    return true;
+  }
   return /^(https?:|mailto:)/i.test(href);
 }
 
