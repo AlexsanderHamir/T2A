@@ -149,6 +149,13 @@ func run() int {
 	mb := handler.MaxRequestBodyBytesConfigured()
 	slog.Info("max request body config", "cmd", cmdName, "operation", "taskapi.max_body",
 		"enabled", mb > 0, "max_bytes", mb)
+	reqTimeout := handler.RequestTimeout()
+	reqTimeoutSec := int(reqTimeout / time.Second)
+	if reqTimeout > 0 && reqTimeoutSec == 0 {
+		reqTimeoutSec = 1
+	}
+	slog.Info("request timeout config", "cmd", cmdName, "operation", "taskapi.request_timeout",
+		"enabled", reqTimeout > 0, "timeout_sec", reqTimeoutSec)
 	idemTTL := handler.IdempotencyTTL()
 	idemMaxEntries, idemMaxBytes := handler.IdempotencyCacheLimits()
 	idemSec := int(idemTTL / time.Second)
@@ -159,7 +166,7 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep))))))))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
