@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchRepoFile,
+  maxRepoPathQueryBytes,
+  maxRepoSearchQueryBytes,
   probeRepoWorkspace,
   searchRepoFiles,
   validateRepoRange,
@@ -136,6 +138,17 @@ describe("fetchRepoFile", () => {
       warning: "w",
     });
   });
+
+  it("rejects path longer than max before fetch", async () => {
+    const longPath = "x".repeat(maxRepoPathQueryBytes + 1);
+    await expect(fetchRepoFile(longPath)).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects whitespace-only path before fetch", async () => {
+    await expect(fetchRepoFile("   ")).rejects.toThrow(/required/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("searchRepoFiles", () => {
@@ -164,6 +177,12 @@ describe("searchRepoFiles", () => {
       expect(init.signal).not.toBe(userSignal);
     }
   });
+
+  it("rejects search query longer than max before fetch", async () => {
+    const longQ = "q".repeat(maxRepoSearchQueryBytes + 1);
+    await expect(searchRepoFiles(longQ)).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("validateRepoRange", () => {
@@ -187,5 +206,18 @@ describe("validateRepoRange", () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(init.signal).toBeDefined();
+  });
+
+  it("rejects invalid start before fetch", async () => {
+    await expect(validateRepoRange("a.go", Number.NaN, 2)).rejects.toThrow(
+      /positive integer/,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects path longer than max before fetch", async () => {
+    const longPath = "p".repeat(maxRepoPathQueryBytes + 1);
+    await expect(validateRepoRange(longPath, 1, 2)).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

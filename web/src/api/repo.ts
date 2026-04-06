@@ -1,6 +1,39 @@
 import { readError } from "./shared";
 
+/** Match pkgs/tasks/handler/repo_handlers.go and docs/DESIGN.md (abuse guards). */
+export const maxRepoPathQueryBytes = 4096;
+export const maxRepoSearchQueryBytes = 512;
+export const maxRepoLineQueryParamBytes = 32;
+
 const searchRepoFetchTimeoutMs = 45_000;
+
+function assertRepoRelPath(path: string): string {
+  const t = path.trim();
+  if (t.length === 0) {
+    throw new Error("path is required");
+  }
+  if (t.length > maxRepoPathQueryBytes) {
+    throw new Error("path is too long");
+  }
+  return t;
+}
+
+function assertRepoSearchQueryLength(q: string): void {
+  if (q.length > maxRepoSearchQueryBytes) {
+    throw new Error("search query is too long");
+  }
+}
+
+function assertRepoLineQueryParam(name: string, n: number): string {
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  const s = String(n);
+  if (s.length > maxRepoLineQueryParamBytes) {
+    throw new Error(`${name} is too large`);
+  }
+  return s;
+}
 
 function searchRepoCombinedSignal(
   user?: AbortSignal,
@@ -97,6 +130,7 @@ export async function searchRepoFiles(
   q: string,
   options?: { signal?: AbortSignal },
 ): Promise<string[] | null> {
+  assertRepoSearchQueryLength(q);
   const params = new URLSearchParams({ q });
   const res = await fetch(`/repo/search?${params}`, {
     headers: { Accept: "application/json" },
@@ -133,10 +167,11 @@ export async function validateRepoRange(
   end: number,
   options?: { signal?: AbortSignal },
 ): Promise<RepoValidateRangeResult | null> {
+  const p = assertRepoRelPath(path);
   const params = new URLSearchParams({
-    path,
-    start: String(start),
-    end: String(end),
+    path: p,
+    start: assertRepoLineQueryParam("start", start),
+    end: assertRepoLineQueryParam("end", end),
   });
   const res = await fetch(`/repo/validate-range?${params}`, {
     headers: { Accept: "application/json" },
@@ -177,7 +212,8 @@ export async function fetchRepoFile(
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<RepoFileResult | null> {
-  const params = new URLSearchParams({ path });
+  const p = assertRepoRelPath(path);
+  const params = new URLSearchParams({ path: p });
   const res = await fetch(`/repo/file?${params}`, {
     headers: { Accept: "application/json" },
     signal: searchRepoCombinedSignal(options?.signal),
