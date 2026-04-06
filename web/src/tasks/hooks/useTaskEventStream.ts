@@ -13,6 +13,8 @@ export function useTaskEventStream(): boolean {
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const disconnectUiRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const pendingIdsRef = useRef<Set<string>>(new Set());
+  /** Cleared on effect cleanup so queued timer callbacks cannot run after unmount. */
+  const streamEffectActiveRef = useRef(false);
   const [sseLive, setSseLive] = useState(false);
 
   const flushStreamInvalidation = useCallback(() => {
@@ -38,6 +40,9 @@ export function useTaskEventStream(): boolean {
       }
       sseDebounceRef.current = setTimeout(() => {
         sseDebounceRef.current = undefined;
+        if (!streamEffectActiveRef.current) {
+          return;
+        }
         flushStreamInvalidation();
       }, SSE_INVALIDATE_MS);
     },
@@ -45,6 +50,7 @@ export function useTaskEventStream(): boolean {
   );
 
   useEffect(() => {
+    streamEffectActiveRef.current = true;
     const es = new EventSource("/events");
     const clearDisconnectUi = () => {
       if (disconnectUiRef.current !== undefined) {
@@ -54,6 +60,9 @@ export function useTaskEventStream(): boolean {
     };
     es.onopen = () => {
       clearDisconnectUi();
+      if (!streamEffectActiveRef.current) {
+        return;
+      }
       setSseLive(true);
     };
     es.onmessage = (ev) => {
@@ -63,12 +72,16 @@ export function useTaskEventStream(): boolean {
       clearDisconnectUi();
       disconnectUiRef.current = setTimeout(() => {
         disconnectUiRef.current = undefined;
+        if (!streamEffectActiveRef.current) {
+          return;
+        }
         if (es.readyState !== EventSource.OPEN) {
           setSseLive(false);
         }
       }, SSE_DISCONNECT_UI_MS);
     };
     return () => {
+      streamEffectActiveRef.current = false;
       clearDisconnectUi();
       if (sseDebounceRef.current !== undefined) {
         clearTimeout(sseDebounceRef.current);
