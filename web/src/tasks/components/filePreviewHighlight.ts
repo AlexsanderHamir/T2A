@@ -29,15 +29,38 @@ function escapePreviewHtml(raw: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Avoid splitting a UTF-16 surrogate pair when slicing for escape caps. */
+function truncateUtf16Safe(s: string, max: number): string {
+  if (s.length <= max) {
+    return s;
+  }
+  if (max <= 0) {
+    return "";
+  }
+  let t = s.slice(0, max);
+  const last = t.charCodeAt(t.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) {
+    t = t.slice(0, -1);
+  }
+  return t;
+}
+
 /** Prism on multi‑MB strings can freeze the tab; repo preview may be up to ~32 MiB. */
 const maxPrismHighlightChars = 1_000_000;
+
+/** HTML escape still scans the full string several times; cap before escape on huge previews. */
+const maxEscapedPreviewChars = 4_000_000;
 
 export function highlightPreviewContent(
   content: string,
   prismLanguage: string,
 ): string {
   if (content.length > maxPrismHighlightChars) {
-    return escapePreviewHtml(content);
+    const toEscape =
+      content.length > maxEscapedPreviewChars
+        ? truncateUtf16Safe(content, maxEscapedPreviewChars)
+        : content;
+    return escapePreviewHtml(toEscape);
   }
   const grammar = Prism.languages[prismLanguage];
   if (!grammar) return escapePreviewHtml(content);

@@ -20,4 +20,11 @@ describe("highlightPreviewContent", () => {
     expect(out).not.toContain("<span");
     expect(out).toBe(big);
   });
+
+  it("truncates before HTML escape when content far exceeds escape cap", () => {
+    const big = "c".repeat(4_000_001);
+    const out = highlightPreviewContent(big, "typescript");
+    expect(out.length).toBe(4_000_000);
+    expect(out).not.toContain("<span");
+  });
 });
