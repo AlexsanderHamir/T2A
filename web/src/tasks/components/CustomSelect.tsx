@@ -16,7 +16,15 @@ import {
 
 export type CustomSelectOption =
   | { type: "header"; label: string }
-  | { value: string; label: string; pillClass?: string };
+  | {
+      value: string;
+      label: string;
+      pillClass?: string;
+      /** Visual indent steps for hierarchical lists (e.g. parent task picker). */
+      depth?: number;
+      /** Short leading label (e.g. Top level / Subtask in parent picker). */
+      rowTag?: string;
+    };
 
 export function isCustomSelectHeader(
   o: CustomSelectOption,
@@ -74,6 +82,7 @@ type Props = {
   compact?: boolean;
   /** Shown next to the field label (default: no badge). */
   requirement?: FieldRequirement;
+  disabled?: boolean;
 };
 
 export function CustomSelect({
@@ -85,6 +94,7 @@ export function CustomSelect({
   listboxName,
   compact = false,
   requirement = "none",
+  disabled = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -104,15 +114,31 @@ export function CustomSelect({
     value: string;
     label: string;
     pillClass?: string;
+    depth?: number;
+    rowTag?: string;
   } => {
     const sel = options.find(
-      (o): o is { value: string; label: string; pillClass?: string } =>
-        !isCustomSelectHeader(o) && o.value === value,
+      (
+        o,
+      ): o is {
+        value: string;
+        label: string;
+        pillClass?: string;
+        depth?: number;
+        rowTag?: string;
+      } => !isCustomSelectHeader(o) && o.value === value,
     );
     if (sel) return sel;
     const first = options.find(
-      (o): o is { value: string; label: string; pillClass?: string } =>
-        !isCustomSelectHeader(o),
+      (
+        o,
+      ): o is {
+        value: string;
+        label: string;
+        pillClass?: string;
+        depth?: number;
+        rowTag?: string;
+      } => !isCustomSelectHeader(o),
     );
     return first ?? { value: "", label: "" };
   }, [options, value]);
@@ -186,6 +212,7 @@ export function CustomSelect({
   );
 
   const onButtonKeyDown = (e: ReactKeyboardEvent) => {
+    if (disabled) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!open) setOpen(true);
@@ -272,10 +299,20 @@ export function CustomSelect({
               id={optionId(o.value)}
               role="option"
               aria-selected={o.value === value}
+              aria-label={
+                o.rowTag ? `${o.rowTag}: ${o.label}` : undefined
+              }
               className={
                 i === highlight
                   ? "custom-select-option custom-select-option--highlight"
                   : "custom-select-option"
+              }
+              style={
+                o.depth != null && o.depth > 0
+                  ? {
+                      paddingLeft: `calc(0.35rem + ${o.depth} * 0.85rem)`,
+                    }
+                  : undefined
               }
               onMouseEnter={() => setHighlight(i)}
               onMouseDown={(e) => e.preventDefault()}
@@ -283,12 +320,44 @@ export function CustomSelect({
             >
               {o.pillClass ? (
                 <span
-                  className={`custom-select-option-pill ${o.pillClass}`}
+                  className={[
+                    "custom-select-option-row",
+                    o.rowTag ? "custom-select-row--tagged" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
-                  {o.label}
+                  {o.rowTag ? (
+                    <span className="custom-select-option-tag">{o.rowTag}</span>
+                  ) : null}
+                  <span
+                    className={`custom-select-option-pill ${o.pillClass}`}
+                  >
+                    {o.label}
+                  </span>
                 </span>
               ) : (
-                <span className="custom-select-option-neutral">{o.label}</span>
+                <span
+                  className={[
+                    "custom-select-option-row",
+                    o.rowTag ? "custom-select-row--tagged" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {o.rowTag ? (
+                    <span className="custom-select-option-tag">{o.rowTag}</span>
+                  ) : null}
+                  <span
+                    className={
+                      o.depth != null && o.depth > 0
+                        ? "custom-select-option-neutral custom-select-option-neutral--nested"
+                        : "custom-select-option-neutral"
+                    }
+                  >
+                    {o.label}
+                  </span>
+                </span>
               )}
             </li>
           ),
@@ -317,15 +386,51 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}
-        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((o) => !o);
+        }}
         onKeyDown={onButtonKeyDown}
       >
         {current.pillClass ? (
-          <span className={`custom-select-value-pill ${current.pillClass}`}>
-            {current.label}
+          <span
+            className={[
+              "custom-select-value-row",
+              current.rowTag ? "custom-select-row--tagged" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {current.rowTag ? (
+              <span className="custom-select-value-tag">{current.rowTag}</span>
+            ) : null}
+            <span className={`custom-select-value-pill ${current.pillClass}`}>
+              {current.label}
+            </span>
           </span>
         ) : (
-          <span className="custom-select-value-neutral">{current.label}</span>
+          <span
+            className={[
+              "custom-select-value-row",
+              current.rowTag ? "custom-select-row--tagged" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {current.rowTag ? (
+              <span className="custom-select-value-tag">{current.rowTag}</span>
+            ) : null}
+            <span
+              className={
+                current.value === ""
+                  ? "custom-select-value-neutral custom-select-value-neutral--placeholder"
+                  : "custom-select-value-neutral"
+              }
+            >
+              {current.label}
+            </span>
+          </span>
         )}
         <span className="custom-select-chevron" aria-hidden="true">
           ▾

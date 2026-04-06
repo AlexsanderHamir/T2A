@@ -50,6 +50,71 @@ button.custom-select-trigger:focus-visible {
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
+/* Match input::placeholder (see app-base.css) when no real value is selected */
+.custom-select-value-neutral--placeholder {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.custom-select-option-row,
+.custom-select-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Fixed tag column so titles align (parent task picker — Stripe / Apple list rhythm) */
+.custom-select-option-row.custom-select-row--tagged,
+.custom-select-value-row.custom-select-row--tagged {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+}
+
+.custom-select-value-row {
+  flex: 1;
+}
+
+.custom-select-option-tag,
+.custom-select-value-tag {
+  flex-shrink: 0;
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text-tertiary);
+  line-height: 1.35;
+}
+
+.custom-select-value-row .custom-select-value-neutral,
+.custom-select-value-row .custom-select-value-neutral--placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-option-row .custom-select-option-neutral,
+.custom-select-option-row .custom-select-option-neutral--nested {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-value-row .custom-select-value-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .custom-select-value-pill.cell-pill,
 .custom-select-option-pill.cell-pill {
   font-size: var(--text-help);
@@ -65,12 +130,12 @@ button.custom-select-trigger:focus-visible {
 
 .custom-select-dropdown {
   margin: 0;
-  padding: 0.4rem;
+  padding: var(--space-2);
   list-style: none;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-chrome-tint);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-chrome-surface);
   background: var(--surface-dropdown-panel);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   max-height: min(50vh, 22rem);
   overflow-y: auto;
 }
@@ -87,17 +152,38 @@ button.custom-select-trigger:focus-visible {
 }
 
 .custom-select-option {
-  padding: 0.2rem;
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+.custom-select-option-neutral {
+  color: var(--text-primary);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+
+.custom-select-option-neutral--nested {
+  color: var(--text-secondary);
+  font-weight: 450;
+  letter-spacing: -0.01em;
 }
 
 .custom-select-option--highlight {
-  background: var(--chrome-fill-wash);
+  background: var(--brand-muted);
 }
 
-.custom-select-option:hover {
-  background: var(--chrome-fill-muted);
+.custom-select-option--highlight:hover {
+  background: var(--brand-muted);
+}
+
+@media (hover: hover) {
+  .custom-select-option:hover:not(.custom-select-option--highlight) {
+    background: var(--chrome-fill-table-row-hover);
+  }
 }
 
 textarea {

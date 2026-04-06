@@ -60,10 +60,24 @@
   box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
-.task-create-parent-field select {
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-inset-field);
+.task-create-parent-field .field--custom-select {
+  min-width: 100%;
+  max-width: none;
+}
+
+.task-create-parent-field .custom-select-trigger {
+  min-height: var(--touch-target-min);
+  color: var(--text-secondary);
+  font-weight: 450;
+}
+
+.task-create-parent-field .custom-select-trigger:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.task-create-parent-field .field-label-with-req label {
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .task-create-parent-hint {
@@ -242,8 +256,17 @@
   border-top: 1px solid var(--border-hairline);
 }
 
+.task-create-subtasks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .task-create-subtasks-heading-row.field-heading-with-req {
-  margin: 0 0 0.35rem;
+  margin: 0;
 }
 
 .task-create-subtasks-heading {
@@ -263,10 +286,6 @@
   max-width: 40rem;
 }
 
-.task-create-subtasks-add {
-  align-items: flex-end;
-}
-
 .task-create-pending-subtask-row {
   flex-wrap: wrap;
   align-items: center;
@@ -279,10 +298,6 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   align-items: center;
-}
-
-.task-create-open-nested-subtask {
-  margin-top: 0.65rem;
 }
 
 .row {

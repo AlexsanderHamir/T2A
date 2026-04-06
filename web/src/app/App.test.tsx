@@ -28,6 +28,19 @@ async function choosePriorityInDialog(
   );
 }
 
+async function chooseParentTaskInDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  optionLabel: string,
+) {
+  await user.click(
+    within(dialog).getByRole("combobox", { name: /^parent task$/i }),
+  );
+  await user.click(
+    screen.getByRole("option", { name: new RegExp(optionLabel, "i") }),
+  );
+}
+
 function renderApp() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -454,13 +467,12 @@ describe("App", () => {
     expect(await screen.findByText("Check parent")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);
-    const parentSelect = within(dialog).getByLabelText(/^parent task$/i);
     await waitFor(() => {
       expect(
-        within(parentSelect).getByRole("option", { name: "Check parent" }),
+        within(dialog).getByRole("combobox", { name: /^parent task$/i }),
       ).toBeInTheDocument();
     });
-    await user.selectOptions(parentSelect, "p1");
+    await chooseParentTaskInDialog(user, dialog, "Check parent");
     expect(
       await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
     ).toBeInTheDocument();
@@ -714,13 +726,12 @@ describe("App", () => {
     expect(await screen.findByText("Parent task")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);
-    const parentSelect = within(dialog).getByLabelText(/^parent task$/i);
     await waitFor(() => {
       expect(
-        within(parentSelect).getByRole("option", { name: "Parent task" }),
+        within(dialog).getByRole("combobox", { name: /^parent task$/i }),
       ).toBeInTheDocument();
     });
-    await user.selectOptions(parentSelect, "parent");
+    await chooseParentTaskInDialog(user, dialog, "Parent task");
     expect(
       await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
     ).toBeInTheDocument();

@@ -1,10 +1,11 @@
 import { useCallback, useState, type FormEvent } from "react";
 import type { PriorityChoice } from "@/types";
-import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
+import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
 import { NestedSubtaskDraftModal } from "./NestedSubtaskDraftModal";
+import { ParentTaskSelect } from "./ParentTaskSelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 
 type Props = {
@@ -131,24 +132,14 @@ export function TaskCreateModal({
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <div className="field grow task-create-parent-field">
-              <FieldLabel htmlFor="task-new-parent" requirement="optional">
-                Parent task
-              </FieldLabel>
-              <select
+            <div className="task-create-parent-field grow">
+              <ParentTaskSelect
                 id="task-new-parent"
                 value={parentId}
-                onChange={(ev) => onParentIdChange(ev.target.value)}
+                parentOptions={parentOptions}
+                onChange={onParentIdChange}
                 disabled={disabled}
-              >
-                <option value="">None — top-level task</option>
-                {parentOptions.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {"— ".repeat(t.depth)}
-                    {t.title}
-                  </option>
-                ))}
-              </select>
+              />
               <p className="task-create-parent-hint muted">
                 {hasParent ? (
                   <>
@@ -199,14 +190,25 @@ export function TaskCreateModal({
 
             {!hasParent ? (
               <div className="task-create-subtasks">
-                <div className="field-heading-with-req task-create-subtasks-heading-row">
-                  <h3
-                    className="task-create-subtasks-heading"
-                    id={subtasksHeadingId}
+                <div className="task-create-subtasks-head">
+                  <div className="field-heading-with-req task-create-subtasks-heading-row">
+                    <h3
+                      className="task-create-subtasks-heading"
+                      id={subtasksHeadingId}
+                    >
+                      Subtasks
+                    </h3>
+                    <FieldRequirementBadge requirement="optional" />
+                  </div>
+                  <button
+                    type="button"
+                    className="task-detail-add-subtask-btn"
+                    disabled={disabled}
+                    aria-label="Open form to add a subtask"
+                    onClick={openNestedNew}
                   >
-                    Subtasks
-                  </h3>
-                  <FieldRequirementBadge requirement="optional" />
+                    New subtask
+                  </button>
                 </div>
                 <p className="task-create-subtasks-hint muted">
                   <strong>New subtask</strong> opens another form. Subtasks are
@@ -245,15 +247,6 @@ export function TaskCreateModal({
                     ))}
                   </ul>
                 ) : null}
-                <button
-                  type="button"
-                  className="task-detail-add-subtask-btn task-create-open-nested-subtask"
-                  disabled={disabled}
-                  aria-label="Open form to add a subtask"
-                  onClick={openNestedNew}
-                >
-                  New subtask
-                </button>
               </div>
             ) : null}
 
