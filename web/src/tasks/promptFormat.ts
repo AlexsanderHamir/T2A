@@ -63,9 +63,16 @@ export function sanitizePromptHtml(input: string): string {
     "meta",
   ]);
 
-  const sanitizeNode = (node: Node): void => {
+  /** Caps recursion so adversarial deep nesting cannot blow the JS stack or freeze the tab. */
+  const maxSanitizeDepth = 200;
+
+  const sanitizeNode = (node: Node, depth: number): void => {
     if (node.nodeType === Node.TEXT_NODE) return;
     if (node.nodeType !== Node.ELEMENT_NODE) {
+      node.parentNode?.removeChild(node);
+      return;
+    }
+    if (depth > maxSanitizeDepth) {
       node.parentNode?.removeChild(node);
       return;
     }
@@ -84,7 +91,7 @@ export function sanitizePromptHtml(input: string): string {
       while (el.firstChild) {
         const ch = el.firstChild;
         parent.insertBefore(ch, el);
-        sanitizeNode(ch);
+        sanitizeNode(ch, depth + 1);
       }
       parent.removeChild(el);
       return;
@@ -112,10 +119,10 @@ export function sanitizePromptHtml(input: string): string {
     }
 
     const children = Array.from(el.childNodes);
-    for (const child of children) sanitizeNode(child);
+    for (const child of children) sanitizeNode(child, depth + 1);
   };
 
-  for (const child of Array.from(doc.body.childNodes)) sanitizeNode(child);
+  for (const child of Array.from(doc.body.childNodes)) sanitizeNode(child, 0);
   return doc.body.innerHTML;
 }
 

@@ -79,4 +79,12 @@ describe("promptFormat", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("bad");
   });
+
+  it("drops very deep markup without throwing", () => {
+    const deep = `${"<div>".repeat(220)}<script>bad</script>${"</div>".repeat(220)}`;
+    expect(() => sanitizePromptHtml(deep)).not.toThrow();
+    const html = sanitizePromptHtml(deep);
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("bad");
+  });
 });
