@@ -1,12 +1,9 @@
 # T2A
 
-T2A is a control plane for agent-heavy workflows. As agents take over execution, the IDE stops being the right home for orchestration.
+**Control plane for agent-heavy workflows.** When execution shifts to agents, orchestration needs a shared home—not only the IDE. T2A is that layer: **Postgres** tasks, an **append-only audit trail**, **REST** (`/tasks`), and **SSE** (`GET /events`) so UIs and runners **refetch on hints** instead of polling.
 
-T2A keeps humans and automation aligned: one shared task store, a web API, an audit trail, and live update hints (`GET /events`) so clients refetch JSON instead of polling blindly.
-
-Go module: `github.com/AlexsanderHamir/T2A`.
-
-Documentation: [docs/README.md](docs/README.md) (what to read first) · [docs/PRODUCT.md](docs/PRODUCT.md) (who and why) · [docs/DESIGN.md](docs/DESIGN.md) (`taskapi`, HTTP, SSE, DB) · [docs/WEB.md](docs/WEB.md) (optional `web/` SPA) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). Security: [SECURITY.md](SECURITY.md). AI and contributor map: [AGENTS.md](AGENTS.md). Large Cursor-assisted edits: @-mention `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING.md).
+**Module:** `github.com/AlexsanderHamir/T2A`  
+**Documentation:** [docs/README.md](docs/README.md) (index: product, API, web, troubleshooting) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [AGENTS.md](AGENTS.md)
 
 ## Prerequisites
 
@@ -44,7 +41,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-With `taskapi` on `http://127.0.0.1:8080` by default: REST at `/tasks`, SSE at `/events` — details in [docs/DESIGN.md](docs/DESIGN.md). For synthetic SSE during UI development, set `T2A_SSE_TEST=1`: a background ticker every 3s (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable) lists all tasks via `store.List`, appends a rotated `task_events` row per task (cycles through every `EventType`, actor `agent`, sample payloads), and publishes `task_updated`. Task fields are unchanged; only the audit log grows. No extra HTTP routes (see Server-Sent Events in [docs/DESIGN.md](docs/DESIGN.md)).
+By default `taskapi` listens on `http://127.0.0.1:8080` with REST `/tasks` and SSE `/events`. For **synthetic SSE** during UI work, set `T2A_SSE_TEST=1` and optional `T2A_SSE_TEST_INTERVAL` (default `3s`; `0` disables the ticker). Behavior and limits: [docs/DESIGN.md](docs/DESIGN.md).
 
 Windows PowerShell: use `curl.exe` and single-quoted JSON:
 
@@ -55,7 +52,7 @@ curl.exe -N http://127.0.0.1:8080/events
 
 ## Web UI (optional)
 
-`web/` is a Vite + React + TypeScript SPA for task CRUD. Behavior, `web/src` layout, and diagrams: [docs/WEB.md](docs/WEB.md).
+Vite + React + TypeScript SPA — layout, React Query, SSE invalidation: [docs/WEB.md](docs/WEB.md).
 
 ```bash
 cd web
@@ -64,7 +61,7 @@ npm test
 npm run dev
 ```
 
-Opens Vite’s URL (often `http://localhost:5173`). The dev server proxies `/tasks`, `/events`, `/repo` to `taskapi` (`web/vite.config.ts`). `VITE_TASKAPI_ORIGIN` overrides the proxy target if the API is not `http://127.0.0.1:8080`.
+Opens Vite (often `http://localhost:5173`). Proxy targets `/tasks`, `/events`, `/repo` → `taskapi` (`web/vite.config.ts`). Override with `VITE_TASKAPI_ORIGIN` if the API is not `http://127.0.0.1:8080`.
 
 | Command | Purpose |
 |---------|---------|
@@ -74,18 +71,20 @@ Opens Vite’s URL (often `http://localhost:5173`). The dev server proxies `/tas
 | `npm run build` | Typecheck → `web/dist/` |
 | `npm run preview` | Preview `dist` (you still need API routing) |
 
-Production: build static assets; serve `dist` same-origin as the API or behind a reverse proxy (`taskapi` does not serve `dist`). No CORS in the binary — see [docs/DESIGN.md](docs/DESIGN.md) (limitations).
+Production: build static assets; serve `dist` same-origin as the API or behind a reverse proxy (`taskapi` does not serve `dist`). No CORS in the binary — [docs/DESIGN.md](docs/DESIGN.md) (limitations).
 
 ## For developers
 
-Orientation (repo map, test commands, pitfalls): [AGENTS.md](AGENTS.md). PR checklist and API sync: [CONTRIBUTING.md](CONTRIBUTING.md). Extending the tasks stack (domain → store → handler → web): [docs/DESIGN.md](docs/DESIGN.md) (Extensibility) and `.cursor/rules/13-tasks-stack-extensibility.mdc`. Workspace repo (`REPO_ROOT`, `/repo`, @ mentions): [docs/DESIGN.md](docs/DESIGN.md) (Optional workspace repo) and `.cursor/rules/14-repo-workspace-extensibility.mdc`. Common dev issues: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+- [AGENTS.md](AGENTS.md) — repo map, checks, pitfalls  
+- [CONTRIBUTING.md](CONTRIBUTING.md) — PRs, API / `parseTaskApi` sync  
+- Extend the tasks stack: [docs/DESIGN.md](docs/DESIGN.md) (Extensibility) and `.cursor/rules/13-tasks-stack-extensibility.mdc`  
+- Workspace repo (`REPO_ROOT`, `/repo`): [docs/DESIGN.md](docs/DESIGN.md) (Optional workspace repo), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
+- Large Cursor-assisted edits: `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING)
 
 ```bash
 go doc -all ./pkgs/tasks/...
 go doc -all ./internal/envload ./cmd/taskapi ./cmd/dbcheck
 ```
-
-Web: run `npm test` from `web/`; details in [docs/WEB.md](docs/WEB.md).
 
 ## License
 
