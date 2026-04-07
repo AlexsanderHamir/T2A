@@ -1,6 +1,8 @@
 # T2A
 
-T2A delegates many tasks to agents while keeping humans and automation aligned: one shared task store, a web API, an audit trail, and live update hints (`GET /events`) so clients refetch JSON instead of polling blindly.
+T2A is a control plane for agent-heavy workflows. As agents take over execution, the IDE stops being the right home for orchestration.
+
+T2A keeps humans and automation aligned: one shared task store, a web API, an audit trail, and live update hints (`GET /events`) so clients refetch JSON instead of polling blindly.
 
 Go module: `github.com/AlexsanderHamir/T2A`.
 
