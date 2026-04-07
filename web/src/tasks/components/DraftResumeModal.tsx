@@ -24,6 +24,12 @@ export function DraftResumeModal({
   resumePending = false,
   resumeError = null,
 }: Props) {
+  const draftListState = loading
+    ? "loading"
+    : drafts.length === 0
+      ? "empty"
+      : "ready";
+
   return (
     <Modal onClose={onClose} labelledBy="draft-resume-modal-title" size="wide">
       <section className="panel modal-sheet modal-sheet--edit">
@@ -45,12 +51,16 @@ export function DraftResumeModal({
           </div>
         ) : null}
         {resumeError ? <p role="alert">{resumeError}</p> : null}
-        <div className="stack">
-          {loading ? (
+        <div
+          key={draftListState}
+          className={`stack draft-resume-state draft-resume-state--${draftListState}`}
+          aria-live="polite"
+        >
+          {draftListState === "loading" ? (
             <p className="muted" role="status" aria-live="polite">
               Loading drafts…
             </p>
-          ) : drafts.length === 0 ? (
+          ) : draftListState === "empty" ? (
             <p className="muted" role="status" aria-live="polite">
               No saved drafts yet. Start fresh to create your first one.
             </p>

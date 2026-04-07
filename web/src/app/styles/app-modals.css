@@ -124,6 +124,30 @@
   max-height: min(42vh, 22rem);
 }
 
+@keyframes draft-resume-state-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.draft-resume-state {
+  min-height: 2.75rem;
+  animation: draft-resume-state-enter var(--duration-moderate) var(--ease-out)
+    both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draft-resume-state {
+    animation: none;
+  }
+}
+
 @keyframes modal-spinner-rotate {
   to {
     transform: rotate(360deg);

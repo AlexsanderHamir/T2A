@@ -16,11 +16,13 @@ describe("DraftResumeModal", () => {
   it("renders loading state while draft list is pending", () => {
     render(<DraftResumeModal {...baseProps()} loading />);
     expect(screen.getByRole("status")).toHaveTextContent(/loading drafts/i);
+    expect(document.querySelector(".draft-resume-state--loading")).not.toBeNull();
   });
 
   it("renders empty state when there are no drafts", () => {
     render(<DraftResumeModal {...baseProps()} />);
     expect(screen.getByRole("status")).toHaveTextContent(/no saved drafts yet/i);
+    expect(document.querySelector(".draft-resume-state--empty")).not.toBeNull();
   });
 
   it("renders error state and start fresh remains actionable", async () => {
@@ -49,6 +51,7 @@ describe("DraftResumeModal", () => {
       drafts: [{ id: "d1", name: "My draft", created_at: "", updated_at: "" }],
     };
     render(<DraftResumeModal {...props} />);
+    expect(document.querySelector(".draft-resume-state--ready")).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: /resume: my draft/i }));
     expect(props.onResume).toHaveBeenCalledWith("d1");
