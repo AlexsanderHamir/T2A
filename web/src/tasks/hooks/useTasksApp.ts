@@ -356,11 +356,20 @@ export function useTasksApp() {
     },
   });
 
+  useEffect(() => {
+    if (!createModalOpen && !saveDraftMutation.isIdle) {
+      saveDraftMutation.reset();
+    }
+  }, [createModalOpen, saveDraftMutation]);
+
   const deleteDraftMutation = useMutation({
     mutationFn: (id: string) => apiDeleteDraft(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
     },
+  });
+  const resumeDraftMutation = useMutation({
+    mutationFn: (id: string) => apiGetDraft(id),
   });
 
   const saving =
@@ -369,6 +378,11 @@ export function useTasksApp() {
     patchMutation.isPending ||
     deleteMutation.isPending;
 
+  const draftListLoading = draftsQuery.isPending;
+  const draftListError = draftsQuery.isError
+    ? errorMessage(draftsQuery.error)
+    : null;
+
   const error = useMemo(() => {
     if (tasksQuery.isError) return errorMessage(tasksQuery.error);
     if (createMutation.isError) return errorMessage(createMutation.error);
@@ -376,7 +390,6 @@ export function useTasksApp() {
       return errorMessage(evaluateDraftMutation.error);
     if (patchMutation.isError) return errorMessage(patchMutation.error);
     if (deleteMutation.isError) return errorMessage(deleteMutation.error);
-    if (saveDraftMutation.isError) return errorMessage(saveDraftMutation.error);
     return editTitleRequiredError;
   }, [
     tasksQuery.isError,
@@ -389,8 +402,6 @@ export function useTasksApp() {
     patchMutation.error,
     deleteMutation.isError,
     deleteMutation.error,
-    saveDraftMutation.isError,
-    saveDraftMutation.error,
     editTitleRequiredError,
   ]);
 
@@ -485,9 +496,16 @@ export function useTasksApp() {
   const draftSaveLabel = useMemo(() => {
     if (!createModalOpen) return null;
     if (saveDraftMutation.isPending) return "Saving draft…";
+    if (saveDraftMutation.isError) return "Draft autosave failed. You can still create the task.";
     if (lastDraftSavedAt == null) return null;
     return "Draft saved";
-  }, [createModalOpen, lastDraftSavedAt, saveDraftMutation.isPending]);
+  }, [
+    createModalOpen,
+    lastDraftSavedAt,
+    saveDraftMutation.isError,
+    saveDraftMutation.isPending,
+  ]);
+  const draftSaveError = createModalOpen && saveDraftMutation.isError;
 
   async function evaluateDraftBeforeCreate() {
     const parentId = newParentId.trim();
@@ -530,7 +548,7 @@ export function useTasksApp() {
   }
 
   async function resumeDraftByID(id: string) {
-    const draft = await apiGetDraft(id);
+    const draft = await resumeDraftMutation.mutateAsync(id);
     setNewDraftID(draft.id);
     setNewDraftName(draft.name);
     setNewTitle(draft.payload.title ?? "");
@@ -682,6 +700,7 @@ export function useTasksApp() {
     saving,
     draftSavePending,
     draftSaveLabel,
+    draftSaveError,
     createPending,
     evaluatePending,
     patchPending,
@@ -693,6 +712,13 @@ export function useTasksApp() {
     draftPickerOpen,
     setDraftPickerOpen,
     taskDrafts: draftsQuery.data ?? [],
+    draftListLoading,
+    draftListError,
+    resumeDraftPending: resumeDraftMutation.isPending,
+    resumeDraftError: resumeDraftMutation.isError
+      ? errorMessage(resumeDraftMutation.error)
+      : null,
+    clearResumeDraftError: resumeDraftMutation.reset,
     newDraftName,
     setNewDraftName,
     newTitle,

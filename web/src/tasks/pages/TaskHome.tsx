@@ -10,6 +10,11 @@ type Props = {
 
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
+  const handleResumeDraft = (id: string) => {
+    void app.resumeDraftByID(id).catch(() => {
+      // Error state is exposed by the hook and rendered in the modal.
+    });
+  };
   const totalTasks = app.taskStats?.total ?? app.tasks.length;
   const readyTasks =
     app.taskStats?.by_status.ready ??
@@ -34,6 +39,7 @@ export function TaskHome({ app }: Props) {
           saving={app.saving}
           draftSaving={app.draftSavePending}
           draftSaveLabel={app.draftSaveLabel}
+          draftSaveError={app.draftSaveError}
           onClose={app.closeCreateModal}
           title={app.newTitle}
           prompt={app.newPrompt}
@@ -70,7 +76,9 @@ export function TaskHome({ app }: Props) {
           drafts={app.taskDrafts}
           onClose={() => app.setDraftPickerOpen(false)}
           onStartFresh={() => void app.startFreshDraft()}
-          onResume={(id) => void app.resumeDraftByID(id)}
+          onResume={handleResumeDraft}
+          resumePending={app.resumeDraftPending}
+          resumeError={app.resumeDraftError}
         />
       ) : null}
 

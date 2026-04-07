@@ -300,6 +300,303 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps draft autosave failures inside the modal", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "Not Found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+
+    const dialog = await openNewTaskModal(user);
+    await user.type(within(dialog).getByLabelText(/^title$/i), "Autosave test");
+
+    expect(
+      await within(dialog).findByText(
+        /Draft autosave failed\. You can still create the task\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("clears prior autosave error when create modal is reopened", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "Not Found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+
+    const firstDialog = await openNewTaskModal(user);
+    await user.type(within(firstDialog).getByLabelText(/^title$/i), "trigger autosave");
+    expect(
+      await within(firstDialog).findByText(
+        /Draft autosave failed\. You can still create the task\./i,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(firstDialog).getByRole("button", { name: /^cancel$/i }));
+
+    const secondDialog = await openNewTaskModal(user);
+    expect(
+      within(secondDialog).queryByText(
+        /Draft autosave failed\. You can still create the task\./i,
+      ),
+    ).toBeNull();
+  });
+
+  it("opens a draft from drafts page in a prefilled create modal", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "Draft from list",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url === "/task-drafts/d1") {
+        return Response.json({
+          id: "d1",
+          name: "Draft from list",
+          created_at: "2026-04-07T10:00:00Z",
+          updated_at: "2026-04-07T10:05:00Z",
+          payload: {
+            title: "Prefilled title",
+            initial_prompt: "Prefilled prompt",
+            priority: "high",
+            task_type: "feature",
+            parent_id: "",
+            checklist_inherit: false,
+            checklist_items: ["Do step A"],
+            pending_subtasks: [
+              {
+                title: "Child A",
+                initial_prompt: "child prompt",
+                priority: "medium",
+                task_type: "general",
+                checklist_items: ["child criterion"],
+                checklist_inherit: false,
+              },
+            ],
+            latest_evaluation: {
+              overall_score: 87,
+              overall_summary: "Good scope",
+              sections: [{ key: "clarity", score: 92 }],
+            },
+          },
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^task drafts$/i });
+    await user.click(
+      screen.getByRole("button", { name: /^open draft draft from list in create form$/i }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /^new task$/i });
+    expect(within(dialog).getByLabelText(/^draft name$/i)).toHaveValue(
+      "Draft from list",
+    );
+    expect(within(dialog).getByLabelText(/^title$/i)).toHaveValue("Prefilled title");
+    await waitFor(() => {
+      expect(dialog).toHaveTextContent("Prefilled prompt");
+    });
+    expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
+    expect(within(dialog).getByText("Child A")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Good scope/i)).toBeInTheDocument();
+  });
+
+  it("shows loading status on drafts page while drafts are fetching", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return new Promise<Response>(() => {});
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: /^task drafts$/i })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/loading drafts/i);
+  });
+
+  it("shows an error on drafts page when draft list request fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return new Response(
+          JSON.stringify({ error: "drafts unavailable" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
+  });
+
+  it("shows resume error on drafts page when opening a draft fails", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "Broken draft",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url === "/task-drafts/d1") {
+        return new Response(
+          JSON.stringify({ error: "resume failed" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^task drafts$/i });
+    await user.click(
+      screen.getByRole("button", { name: /open draft broken draft in create form/i }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(/resume failed/i);
+  });
+
   it("creates a top-level task with checklist criteria added after create", async () => {
     const user = userEvent.setup();
     let created = false;
