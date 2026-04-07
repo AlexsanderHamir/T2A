@@ -13,6 +13,7 @@ type Props = {
   saving: boolean;
   draftSaving: boolean;
   draftSaveLabel: string | null;
+  draftSaveError: boolean;
   onClose: () => void;
   title: string;
   prompt: string;
@@ -53,6 +54,7 @@ export function TaskCreateModal({
   saving,
   draftSaving,
   draftSaveLabel,
+  draftSaveError,
   onClose,
   title,
   prompt,
@@ -169,7 +171,15 @@ export function TaskCreateModal({
                 disabled={disabled}
               />
               {draftSaveLabel ? (
-                <p className="muted task-create-draft-status" aria-live="polite">
+                <p
+                  className={[
+                    "task-create-draft-status",
+                    draftSaveError ? "task-create-draft-status--error" : "muted",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-live={draftSaveError ? "assertive" : "polite"}
+                >
                   {draftSaveLabel}
                 </p>
               ) : null}

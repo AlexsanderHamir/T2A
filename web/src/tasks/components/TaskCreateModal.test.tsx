@@ -11,6 +11,7 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     saving: false,
     draftSaving: false,
     draftSaveLabel: null,
+    draftSaveError: false,
     onClose: vi.fn(),
     title: "Draft title",
     prompt: "Draft prompt",

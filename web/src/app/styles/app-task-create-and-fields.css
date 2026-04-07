@@ -143,6 +143,14 @@
   font-size: var(--text-help);
 }
 
+.task-create-draft-status--error {
+  color: var(--danger-deep);
+  border: 1px solid var(--danger-control-hover-border);
+  background: var(--danger-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.55rem;
+}
+
 .task-create-parent-field .custom-select-trigger {
   min-height: var(--touch-target-min);
   color: var(--text-secondary);
