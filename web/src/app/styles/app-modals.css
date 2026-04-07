@@ -1,6 +1,7 @@
 
 /* —— Viewport modals (edit / delete) —— */
 .modal-root {
+  --modal-control-size: 2.25rem;
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
@@ -333,8 +334,8 @@
 }
 
 .modal-spinner {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--modal-control-size);
+  height: var(--modal-control-size);
   border: 3px solid var(--border-chrome-spinner);
   border-top-color: var(--brand);
   border-radius: 50%;
@@ -390,7 +391,7 @@
   .modal-shell::before {
     content: "";
     flex-shrink: 0;
-    width: 2.25rem;
+    width: var(--modal-control-size);
     height: var(--space-1);
     margin: 0.625rem auto var(--space-1);
     border-radius: var(--radius-full);
