@@ -8,7 +8,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 |------|-----|-----|
 | 1 | [README.md](README.md) | Install, run `taskapi` / `dbcheck`, `web/` npm commands, dev scripts. |
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
-| — | [docs/PRODUCT.md](docs/PRODUCT.md) | Product context before large bets: user, outcomes, horizons, scope rules. |
+| — | [docs/PRODUCT.md](docs/PRODUCT.md) | Control-plane positioning and what T2A provides before large bets; horizons, scope rules. |
 | 3 | [docs/DESIGN.md](docs/DESIGN.md) | HTTP routes, SSE, env vars (`DATABASE_URL`, `REPO_ROOT`), persistence, limitations. |
 | 4 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 5 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |

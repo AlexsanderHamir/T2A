@@ -11,7 +11,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [../SECURITY.md](../SECURITY.md) | How to report vulnerabilities privately; notes on TLS and secrets. |
 | [../LICENSE](../LICENSE) | MIT license for the repository. |
 | [../README.md](../README.md) | Prerequisites, build/test, run `dbcheck` / `taskapi`, dev scripts, npm commands for `web/`. |
-| [PRODUCT.md](./PRODUCT.md) | Product context: primary user, outcomes, horizons, and how we choose scope (complements `DESIGN.md`). |
+| [PRODUCT.md](./PRODUCT.md) | Product context: control-plane positioning (agent workflows vs IDE), what T2A provides, horizons, and how we choose scope (complements `DESIGN.md`). |
 | [DESIGN.md](./DESIGN.md) | `taskapi`: HTTP + SSE, env vars, `REPO_ROOT` / `/repo`, persistence, limits, Mermaid, and how to extend the stack (section Extensibility). |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, `REPO_ROOT`, CI/local check failures. |

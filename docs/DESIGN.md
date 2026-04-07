@@ -2,6 +2,8 @@
 
 Backend design for `taskapi`: data flow, HTTP + SSE, persistence, env vars, tradeoffs. Entry points: [docs/README.md](./README.md) (index), root [README.md](../README.md) (commands), `go doc` (packages).
 
+**Product angle:** T2A is a control plane for agent-heavy workflows—as execution shifts to agents, orchestration moves out of the IDE into a shared API and persistent store. See [docs/PRODUCT.md](./PRODUCT.md) and the root [README](../README.md).
+
 ## Goals
 
 - Support mass delegation: lots of tasks in flight, with agents and people acting through the same system without ad-hoc state.
