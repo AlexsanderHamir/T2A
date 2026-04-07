@@ -33,6 +33,15 @@ describe("DraftResumeModal", () => {
     expect(props.onStartFresh).toHaveBeenCalledTimes(1);
   });
 
+  it("renders retry action for draft list errors", async () => {
+    const user = userEvent.setup();
+    const props = { ...baseProps(), onRetryLoad: vi.fn() };
+    render(<DraftResumeModal {...props} loadError="drafts unavailable" />);
+
+    await user.click(screen.getByRole("button", { name: /retry loading drafts/i }));
+    expect(props.onRetryLoad).toHaveBeenCalledTimes(1);
+  });
+
   it("renders draft actions and resumes selected draft", async () => {
     const user = userEvent.setup();
     const props = {

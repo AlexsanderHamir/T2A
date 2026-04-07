@@ -1,4 +1,19 @@
 ---
+## Session 2 — 2026-04-07
+**Category**: P1 — Data Fetching Anti-Patterns
+**Files changed**: web/src/tasks/components/DraftResumeModal.tsx, web/src/tasks/components/DraftResumeModal.test.tsx, web/src/tasks/pages/TaskHome.tsx, web/src/tasks/hooks/useTasksApp.ts
+**Summary**: Added explicit retry controls for failed draft summary loads in the resume modal path and wired retry through the tasks app hook. Extended component tests to cover the retry behavior.
+**Tests**: 213 passed, 1 added, 0 modified
+**Design system refs used**: §11 Feedback & Status (error + recovery), §7 Interactive Components (button state), §13 Accessibility
+**Verification**: typecheck pass | lint pass | tests pass | build pass
+
+### NEXT_SESSION_QUEUE
+1. [P1] Add explicit pre-open create-entry error hint when draft summary fetch fails and user chooses to proceed directly to create form — web/src/tasks/hooks/useTasksApp.ts + web/src/tasks/pages/TaskHome.tsx
+2. [P2] Add reduced-motion-safe enter/exit transitions for draft resume modal content states — web/src/tasks/components/DraftResumeModal.tsx + app modal styles
+3. [P3] Break up large task creation orchestration concerns from useTasksApp into smaller hooks — web/src/tasks/hooks/useTasksApp.ts
+---
+
+---
 ## Session 1 — 2026-04-07
 **Category**: P1 — Data Fetching Anti-Patterns
 **Files changed**: web/src/tasks/components/DraftResumeModal.tsx, web/src/tasks/components/DraftResumeModal.test.tsx

@@ -79,6 +79,9 @@ export function TaskHome({ app }: Props) {
           onResume={handleResumeDraft}
           loading={app.draftListLoading}
           loadError={app.draftListError}
+          onRetryLoad={() => {
+            void app.retryDraftList();
+          }}
           resumePending={app.resumeDraftPending}
           resumeError={app.resumeDraftError}
         />

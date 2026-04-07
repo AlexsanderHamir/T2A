@@ -8,6 +8,7 @@ type Props = {
   onClose: () => void;
   loading?: boolean;
   loadError?: string | null;
+  onRetryLoad?: () => void;
   resumePending?: boolean;
   resumeError?: string | null;
 };
@@ -19,6 +20,7 @@ export function DraftResumeModal({
   onClose,
   loading = false,
   loadError = null,
+  onRetryLoad,
   resumePending = false,
   resumeError = null,
 }: Props) {
@@ -27,7 +29,21 @@ export function DraftResumeModal({
       <section className="panel modal-sheet modal-sheet--edit">
         <h2 id="draft-resume-modal-title">Resume a draft or start fresh</h2>
         <p className="muted">Pick an existing draft to continue, or start a new one.</p>
-        {loadError ? <p role="alert">{loadError}</p> : null}
+        {loadError ? (
+          <div className="row stack-row-actions">
+            <p role="alert">{loadError}</p>
+            {onRetryLoad ? (
+              <button
+                type="button"
+                className="secondary"
+                onClick={onRetryLoad}
+                disabled={loading}
+              >
+                Retry loading drafts
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {resumeError ? <p role="alert">{resumeError}</p> : null}
         <div className="stack">
           {loading ? (

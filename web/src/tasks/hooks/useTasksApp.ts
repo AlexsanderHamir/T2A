@@ -811,6 +811,9 @@ export function useTasksApp() {
 
   const hasNextTaskPage = rootTaskTrees.length === TASK_LIST_PAGE_SIZE;
   const hasPrevTaskPage = taskListPage > 0;
+  const retryDraftList = useCallback(async () => {
+    await draftsQuery.refetch();
+  }, [draftsQuery]);
 
   return {
     tasks,
@@ -835,6 +838,7 @@ export function useTasksApp() {
     taskDrafts: draftsQuery.data ?? [],
     draftListLoading,
     draftListError,
+    retryDraftList,
     deleteDraftPending: deleteDraftMutation.isPending,
     deleteDraftError,
     resumeDraftPending: resumeDraftMutation.isPending,
