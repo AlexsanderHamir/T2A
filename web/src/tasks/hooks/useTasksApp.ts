@@ -38,6 +38,47 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+function draftAutosaveSignature(input: {
+  id: string;
+  name: string;
+  title: string;
+  prompt: string;
+  priority: PriorityChoice;
+  taskType: TaskType;
+  parentId: string;
+  checklistInherit: boolean;
+  checklistItems: string[];
+  pendingSubtasks: PendingSubtaskDraft[];
+  latestEvaluation: {
+    overallScore: number;
+    overallSummary: string;
+    sections: Array<{ key: string; score: number }>;
+  } | null;
+}): string {
+  return JSON.stringify({
+    id: input.id,
+    name: input.name,
+    payload: {
+      title: input.title,
+      initial_prompt: input.prompt,
+      priority: input.priority,
+      task_type: input.taskType,
+      parent_id: input.parentId,
+      checklist_inherit: input.checklistInherit,
+      checklist_items: input.checklistItems,
+      pending_subtasks: input.pendingSubtasks.map((st) => ({
+        title: st.title,
+        initial_prompt: st.initial_prompt,
+        priority: st.priority,
+        task_type: st.task_type,
+        checklist_items: st.checklistItems,
+        checklist_inherit: st.checklist_inherit,
+      })),
+      latest_evaluation: input.latestEvaluation,
+    },
+  });
+}
+
 export function useTasksApp() {
   const queryClient = useQueryClient();
   const sseLive = useTaskEventStream();
@@ -87,6 +128,7 @@ export function useTasksApp() {
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [taskListPage, setTaskListPage] = useState(0);
+  const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
 
   const tasksQuery = useQuery({
     queryKey: taskQueryKeys.list(taskListPage),
@@ -154,6 +196,21 @@ export function useTasksApp() {
     setNewDraftID(generatedID);
     setNewDraftName("Untitled draft");
     setLastDraftSavedAt(null);
+    setDraftAutosaveBaseline(
+      draftAutosaveSignature({
+        id: generatedID,
+        name: "Untitled draft",
+        title: "",
+        prompt: "",
+        priority: "",
+        taskType: DEFAULT_NEW_TASK_TYPE,
+        parentId: "",
+        checklistInherit: false,
+        checklistItems: [],
+        pendingSubtasks: [],
+        latestEvaluation: null,
+      }),
+    );
   }, []);
 
   const closeCreateModal = useCallback(() => {
@@ -348,6 +405,21 @@ export function useTasksApp() {
       if (saved.id !== newDraftID) {
         setNewDraftID(saved.id);
       }
+      setDraftAutosaveBaseline(
+        draftAutosaveSignature({
+          id: saved.id,
+          name: newDraftName.trim() || "Untitled draft",
+          title: newTitle,
+          prompt: newPrompt,
+          priority: newPriority,
+          taskType: newTaskType,
+          parentId: newParentId,
+          checklistInherit: newChecklistInherit,
+          checklistItems: newChecklistItems,
+          pendingSubtasks,
+          latestEvaluation: latestDraftEvaluation,
+        }),
+      );
       setLastDraftSavedAt(Date.now());
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
     },
@@ -415,6 +487,35 @@ export function useTasksApp() {
     Boolean(newParentId.trim()) ||
     newChecklistItems.length > 0 ||
     pendingSubtasks.length > 0;
+  const currentDraftAutosaveSignature = useMemo(
+    () =>
+      draftAutosaveSignature({
+        id: newDraftID,
+        name: newDraftName.trim() || "Untitled draft",
+        title: newTitle,
+        prompt: newPrompt,
+        priority: newPriority,
+        taskType: newTaskType,
+        parentId: newParentId,
+        checklistInherit: newChecklistInherit,
+        checklistItems: newChecklistItems,
+        pendingSubtasks,
+        latestEvaluation: latestDraftEvaluation,
+      }),
+    [
+      latestDraftEvaluation,
+      newChecklistInherit,
+      newChecklistItems,
+      newDraftID,
+      newDraftName,
+      newParentId,
+      newPriority,
+      newPrompt,
+      newTaskType,
+      newTitle,
+      pendingSubtasks,
+    ],
+  );
 
   const buildDraftSaveInput = useCallback(() => {
     return {
@@ -472,6 +573,7 @@ export function useTasksApp() {
 
   useEffect(() => {
     if (!createModalOpen || !newDraftID || !hasDraftContent) return;
+    if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
     autosaveTimerRef.current = setTimeout(() => {
       saveDraftMutation.mutate(buildDraftSaveInput());
       autosaveTimerRef.current = null;
@@ -485,6 +587,8 @@ export function useTasksApp() {
   }, [
     buildDraftSaveInput,
     createModalOpen,
+    currentDraftAutosaveSignature,
+    draftAutosaveBaseline,
     hasDraftContent,
     newDraftID,
     saveDraftMutation,
@@ -546,6 +650,21 @@ export function useTasksApp() {
 
   async function resumeDraftByID(id: string) {
     const draft = await resumeDraftMutation.mutateAsync(id);
+    const pendingSubtasks = (draft.payload.pending_subtasks ?? []).map((st) => ({
+      title: st.title,
+      initial_prompt: st.initial_prompt,
+      priority: st.priority,
+      task_type: st.task_type,
+      checklistItems: st.checklist_items,
+      checklist_inherit: st.checklist_inherit,
+    }));
+    const latestEvaluation = draft.payload.latest_evaluation
+      ? {
+          overallScore: draft.payload.latest_evaluation.overall_score,
+          overallSummary: draft.payload.latest_evaluation.overall_summary,
+          sections: draft.payload.latest_evaluation.sections,
+        }
+      : null;
     setNewDraftID(draft.id);
     setNewDraftName(draft.name);
     setNewTitle(draft.payload.title ?? "");
@@ -555,24 +674,22 @@ export function useTasksApp() {
     setNewParentId(draft.payload.parent_id ?? "");
     setNewChecklistInherit(draft.payload.checklist_inherit === true);
     setNewChecklistItems(draft.payload.checklist_items ?? []);
-    setPendingSubtasks(
-      (draft.payload.pending_subtasks ?? []).map((st) => ({
-        title: st.title,
-        initial_prompt: st.initial_prompt,
-        priority: st.priority,
-        task_type: st.task_type,
-        checklistItems: st.checklist_items,
-        checklist_inherit: st.checklist_inherit,
-      })),
-    );
-    setLatestDraftEvaluation(
-      draft.payload.latest_evaluation
-        ? {
-            overallScore: draft.payload.latest_evaluation.overall_score,
-            overallSummary: draft.payload.latest_evaluation.overall_summary,
-            sections: draft.payload.latest_evaluation.sections,
-          }
-        : null,
+    setPendingSubtasks(pendingSubtasks);
+    setLatestDraftEvaluation(latestEvaluation);
+    setDraftAutosaveBaseline(
+      draftAutosaveSignature({
+        id: draft.id,
+        name: draft.name,
+        title: draft.payload.title ?? "",
+        prompt: draft.payload.initial_prompt ?? "",
+        priority: draft.payload.priority ?? "",
+        taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
+        parentId: draft.payload.parent_id ?? "",
+        checklistInherit: draft.payload.checklist_inherit === true,
+        checklistItems: draft.payload.checklist_items ?? [],
+        pendingSubtasks,
+        latestEvaluation,
+      }),
     );
     setDraftPickerOpen(false);
     setCreateModalOpen(true);

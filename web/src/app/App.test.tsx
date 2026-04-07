@@ -389,8 +389,9 @@ describe("App", () => {
 
   it("opens a draft from drafts page in a prefilled create modal", async () => {
     const user = userEvent.setup();
+    const draftSaves: string[] = [];
 
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
@@ -439,6 +440,18 @@ describe("App", () => {
           },
         });
       }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        draftSaves.push(String(init.body ?? ""));
+        return new Response(
+          JSON.stringify({
+            id: "d1",
+            name: "Draft from list",
+            created_at: "2026-04-07T10:00:00Z",
+            updated_at: "2026-04-07T10:06:00Z",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
       if (url.startsWith("/repo/")) {
         return new Response(
           JSON.stringify({ error: "repo not configured" }),
@@ -472,6 +485,7 @@ describe("App", () => {
     expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
     expect(within(dialog).getByText("Child A")).toBeInTheDocument();
     expect(within(dialog).getByText(/Good scope/i)).toBeInTheDocument();
+    expect(draftSaves).toHaveLength(0);
   });
 
   it("shows loading status on drafts page while drafts are fetching", async () => {
