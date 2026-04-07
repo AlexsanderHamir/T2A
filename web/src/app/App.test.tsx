@@ -381,8 +381,9 @@ describe("App", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("keeps manual save draft failures inside the modal", async () => {
+  it("does not submit manual save when draft has no changes", async () => {
     const user = userEvent.setup();
+    const draftSaves: string[] = [];
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
@@ -393,6 +394,7 @@ describe("App", () => {
         return Response.json({ drafts: [] });
       }
       if (url === "/task-drafts" && init?.method === "POST") {
+        draftSaves.push(String(init.body ?? ""));
         return new Response(JSON.stringify({ error: "Not Found" }), {
           status: 404,
           headers: { "Content-Type": "application/json" },
@@ -413,11 +415,12 @@ describe("App", () => {
     const dialog = await openNewTaskModal(user);
     await user.click(within(dialog).getByRole("button", { name: /^save draft$/i }));
 
+    expect(draftSaves).toHaveLength(0);
     expect(
-      await within(dialog).findByText(
+      within(dialog).queryByText(
         /Draft autosave failed\. You can still create the task\./i,
       ),
-    ).toBeInTheDocument();
+    ).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -843,6 +846,108 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(screen.getByRole("button", { name: /^delete$/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/delete failed/i);
+  });
+
+  it("does not autosave untouched fresh drafts", async () => {
+    const user = userEvent.setup();
+    const draftSaves: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        draftSaves.push(String(init.body ?? ""));
+        return new Response(
+          JSON.stringify({ id: "d1", name: "Untitled draft" }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+    await user.click(screen.getByRole("button", { name: /^new task$/i }));
+    await screen.findByRole("dialog", { name: /^new task$/i });
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await waitFor(() => {
+      expect(draftSaves).toHaveLength(0);
+    });
+  });
+
+  it("shows delete loading state only for clicked draft row", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "First draft",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+            {
+              id: "d2",
+              name: "Second draft",
+              created_at: "2026-04-07T11:00:00Z",
+              updated_at: "2026-04-07T11:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url === "/task-drafts/d1" && init?.method === "DELETE") {
+        return new Promise<Response>(() => {});
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^task drafts$/i });
+    const firstResume = screen.getByRole("button", {
+      name: /open draft first draft in create form/i,
+    });
+    const secondResume = screen.getByRole("button", {
+      name: /open draft second draft in create form/i,
+    });
+    const firstRow = firstResume.parentElement as HTMLElement;
+    const secondRow = secondResume.parentElement as HTMLElement;
+
+    await user.click(within(firstRow).getByRole("button", { name: /^delete$/i }));
+
+    expect(within(firstRow).getByRole("button", { name: /^deleting…$/i })).toBeInTheDocument();
+    expect(within(secondRow).getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
   });
 
   it("creates a top-level task with checklist criteria added after create", async () => {

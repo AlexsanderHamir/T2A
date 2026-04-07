@@ -36,6 +36,7 @@ import {
   assertPositiveSeq,
   assertTaskPathId,
 } from "./taskRequestBounds";
+import { TASK_DRAFTS } from "@/constants/tasks";
 
 export {
   maxListAfterIDParamBytes,
@@ -253,7 +254,7 @@ export async function evaluateDraftTask(
 }
 
 export async function listTaskDrafts(
-  limit = 50,
+  limit = TASK_DRAFTS.draftsPageDefaultLimit,
   options?: { signal?: AbortSignal },
 ): Promise<TaskDraftSummary[]> {
   const lim = assertListIntQuery("limit", limit, 0, 100);

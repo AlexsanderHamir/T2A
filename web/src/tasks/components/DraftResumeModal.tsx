@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/shared/Modal";
+import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import type { TaskDraftSummary } from "@/types";
 
-const DRAFTS_PER_PAGE = 5;
-const MIN_LOADING_MS = 300;
+const DRAFTS_PER_PAGE = TASK_DRAFTS.resumeModalPerPage;
+const MIN_LOADING_MS = TASK_TIMINGS.draftResumeMinLoadingMs;
 
 type Props = {
   drafts: TaskDraftSummary[];

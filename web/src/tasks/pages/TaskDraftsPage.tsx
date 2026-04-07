@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNavigate } from "react-router-dom";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -9,6 +10,7 @@ type Props = {
 export function TaskDraftsPage({ app }: Props) {
   useDocumentTitle("Task drafts");
   const navigate = useNavigate();
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
   const openDraftInCreateForm = async (draftId: string) => {
     try {
       await app.resumeDraftByID(draftId);
@@ -18,10 +20,13 @@ export function TaskDraftsPage({ app }: Props) {
     }
   };
   const deleteDraft = async (draftId: string) => {
+    setDeletingDraftId(draftId);
     try {
       await app.deleteDraftByID(draftId);
     } catch {
       // Error state is exposed by the hook and rendered inline on this page.
+    } finally {
+      setDeletingDraftId((current) => (current === draftId ? null : current));
     }
   };
   const loading = app.draftListLoading;
@@ -65,7 +70,7 @@ export function TaskDraftsPage({ app }: Props) {
                 onClick={() => void deleteDraft(d.id)}
                 disabled={resumePending || deletePending}
               >
-                {deletePending ? "Deleting…" : "Delete"}
+                {deletePending && deletingDraftId === d.id ? "Deleting…" : "Delete"}
               </button>
             </div>
           ))
