@@ -558,7 +558,9 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
-      screen.getByRole("button", { name: /^open draft draft from list in create form$/i }),
+      await screen.findByRole("button", {
+        name: /^open draft draft from list in create form$/i,
+      }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: /^new task$/i });
