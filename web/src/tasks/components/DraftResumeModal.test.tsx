@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DraftResumeModal } from "./DraftResumeModal";
@@ -81,5 +81,19 @@ describe("DraftResumeModal", () => {
     await user.click(screen.getByRole("button", { name: /^next$/i }));
     expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /resume: draft 6/i })).toBeInTheDocument();
+  });
+
+  it("keeps loading state briefly to avoid quick skeleton flashes", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<DraftResumeModal {...baseProps()} loading />);
+
+    rerender(<DraftResumeModal {...baseProps()} loading={false} />);
+    expect(screen.getByRole("status")).toHaveTextContent(/loading drafts/i);
+
+    act(() => {
+      vi.advanceTimersByTime(320);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/no saved drafts yet/i);
+    vi.useRealTimers();
   });
 });

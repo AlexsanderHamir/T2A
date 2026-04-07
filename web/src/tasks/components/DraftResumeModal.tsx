@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/shared/Modal";
 import type { TaskDraftSummary } from "@/types";
 
 const DRAFTS_PER_PAGE = 5;
+const MIN_LOADING_MS = 300;
 
 type Props = {
   drafts: TaskDraftSummary[];
@@ -28,7 +29,9 @@ export function DraftResumeModal({
   resumeError = null,
 }: Props) {
   const [draftPage, setDraftPage] = useState(0);
-  const draftListState = loading
+  const [showLoadingState, setShowLoadingState] = useState(loading);
+  const loadingStartedAtRef = useRef<number | null>(loading ? Date.now() : null);
+  const draftListState = showLoadingState
     ? "loading"
     : drafts.length === 0
       ? "empty"
@@ -43,6 +46,30 @@ export function DraftResumeModal({
     if (draftPage < totalDraftPages) return;
     setDraftPage(Math.max(0, totalDraftPages - 1));
   }, [draftPage, totalDraftPages]);
+
+  useEffect(() => {
+    if (loading) {
+      loadingStartedAtRef.current = Date.now();
+      setShowLoadingState(true);
+      return;
+    }
+    if (!showLoadingState) return;
+    const startedAt = loadingStartedAtRef.current;
+    if (startedAt === null) {
+      setShowLoadingState(false);
+      return;
+    }
+    const elapsed = Date.now() - startedAt;
+    const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+    if (remaining === 0) {
+      setShowLoadingState(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setShowLoadingState(false);
+    }, remaining);
+    return () => window.clearTimeout(timer);
+  }, [loading, showLoadingState]);
 
   return (
     <Modal onClose={onClose} labelledBy="draft-resume-modal-title" size="wide">
