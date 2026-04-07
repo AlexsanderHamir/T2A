@@ -34,6 +34,10 @@ export function DraftResumeModal({
             <p className="muted" role="status" aria-live="polite">
               Loading drafts…
             </p>
+          ) : drafts.length === 0 ? (
+            <p className="muted" role="status" aria-live="polite">
+              No saved drafts yet. Start fresh to create your first one.
+            </p>
           ) : (
             drafts.map((d) => (
               <button

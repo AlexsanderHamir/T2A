@@ -1,0 +1,14 @@
+---
+## Session 1 — 2026-04-07
+**Category**: P1 — Data Fetching Anti-Patterns
+**Files changed**: web/src/tasks/components/DraftResumeModal.tsx, web/src/tasks/components/DraftResumeModal.test.tsx
+**Summary**: Added an explicit empty state for the draft resume modal so `[]` responses are no longer rendered as an ambiguous blank list. Added focused component tests for loading, error, empty, and success paths.
+**Tests**: 212 passed, 4 added, 0 modified
+**Design system refs used**: §11 Feedback & Status (loading/error/empty), §17 Writing & Microcopy, §13 Accessibility
+**Verification**: typecheck pass | lint pass | tests pass | build pass
+
+### NEXT_SESSION_QUEUE
+1. [P1] Add explicit error/retry UI in home create-entry flow when draft summary fetch fails before modal open — web/src/tasks/hooks/useTasksApp.ts + web/src/tasks/pages/TaskHome.tsx
+2. [P2] Add reduced-motion-safe enter/exit transitions for draft resume modal content states — web/src/tasks/components/DraftResumeModal.tsx + app modal styles
+3. [P3] Break up large task creation orchestration concerns from useTasksApp into smaller hooks — web/src/tasks/hooks/useTasksApp.ts
+---
