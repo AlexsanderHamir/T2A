@@ -234,6 +234,44 @@ describe("App", () => {
     expect(alert).toHaveTextContent("network down");
   });
 
+  it("shows evaluate error without unhandled rejection when draft evaluation fails", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url === "/tasks/evaluate" && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({ error: "evaluate failed" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({ id: "d1", name: "Untitled draft" }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+    const dialog = await openNewTaskModal(user);
+    await user.type(within(dialog).getByLabelText(/^title$/i), "Evaluate me");
+    await choosePriorityInDialog(user, dialog);
+    await user.click(within(dialog).getByRole("button", { name: /^evaluate$/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/evaluate failed/i);
+  });
+
   it("creates a task and shows it in the table after refresh", async () => {
     const user = userEvent.setup();
     let created = false;

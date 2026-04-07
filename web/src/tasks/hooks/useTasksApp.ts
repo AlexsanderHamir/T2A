@@ -611,10 +611,10 @@ export function useTasksApp() {
   ]);
   const draftSaveError = createModalOpen && saveDraftMutation.isError;
 
-  async function evaluateDraftBeforeCreate() {
+  function evaluateDraftBeforeCreate() {
     const parentId = newParentId.trim();
     if (!newTitle.trim() || !newPriority) return;
-    await evaluateDraftMutation.mutateAsync({
+    evaluateDraftMutation.mutate({
       id: newDraftID,
       title: newTitle.trim(),
       initial_prompt: newPrompt,
