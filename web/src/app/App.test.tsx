@@ -634,6 +634,31 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
   });
 
+  it("shows loading status in draft picker modal from home", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return new Promise<Response>(() => {});
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+    await user.click(screen.getByRole("button", { name: /^new task$/i }));
+    expect(await screen.findByRole("status")).toHaveTextContent(/loading drafts/i);
+  });
+
   it("shows resume error on drafts page when opening a draft fails", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

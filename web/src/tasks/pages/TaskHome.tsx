@@ -77,6 +77,8 @@ export function TaskHome({ app }: Props) {
           onClose={() => app.setDraftPickerOpen(false)}
           onStartFresh={() => void app.startFreshDraft()}
           onResume={handleResumeDraft}
+          loading={app.draftListLoading}
+          loadError={app.draftListError}
           resumePending={app.resumeDraftPending}
           resumeError={app.resumeDraftError}
         />

@@ -220,6 +220,10 @@ export function useTasksApp() {
   }, [resetNewTaskForm]);
 
   const openCreateModal = useCallback(() => {
+    if (draftsQuery.isPending) {
+      setDraftPickerOpen(true);
+      return;
+    }
     const drafts = draftsQuery.data ?? [];
     if (drafts.length > 0) {
       setDraftPickerOpen(true);
@@ -227,7 +231,7 @@ export function useTasksApp() {
     }
     resetNewTaskForm();
     setCreateModalOpen(true);
-  }, [draftsQuery.data, resetNewTaskForm]);
+  }, [draftsQuery.data, draftsQuery.isPending, resetNewTaskForm]);
 
   const loading = tasksQuery.isPending;
   const rawListRefreshing =
