@@ -793,7 +793,9 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
-      screen.getByRole("button", { name: /open draft broken draft in create form/i }),
+      await screen.findByRole("button", {
+        name: /open draft broken draft in create form/i,
+      }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(/resume failed/i);
   });
@@ -844,7 +846,7 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    await user.click(await screen.findByRole("button", { name: /^delete$/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/delete failed/i);
   });
 
@@ -935,10 +937,10 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
-    const firstResume = screen.getByRole("button", {
+    const firstResume = await screen.findByRole("button", {
       name: /open draft first draft in create form/i,
     });
-    const secondResume = screen.getByRole("button", {
+    const secondResume = await screen.findByRole("button", {
       name: /open draft second draft in create form/i,
     });
     const firstRow = firstResume.parentElement as HTMLElement;
