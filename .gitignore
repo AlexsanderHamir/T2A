@@ -12,3 +12,4 @@ taskapi-dev.exe
 /handler.exe
 logs/
 work_technique/*.md
+.agent/

@@ -124,6 +124,14 @@
   max-height: min(42vh, 22rem);
 }
 
+.modal-sheet--draft-resume {
+  min-height: min(54vh, 28rem);
+  max-height: min(80vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 @keyframes draft-resume-state-enter {
   from {
     opacity: 0;
@@ -137,9 +145,127 @@
 }
 
 .draft-resume-state {
-  min-height: 2.75rem;
+  min-height: 3.5rem;
   animation: draft-resume-state-enter var(--duration-moderate) var(--ease-out)
     both;
+  gap: var(--space-4);
+  flex: 0 0 auto;
+}
+
+.draft-resume-list {
+  display: grid;
+  gap: var(--space-3);
+  max-height: min(38vh, 18rem);
+  overflow-y: auto;
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+}
+
+.draft-resume-list .secondary {
+  min-height: 2.75rem;
+}
+
+.draft-resume-skeleton {
+  display: grid;
+  gap: var(--space-3);
+  min-height: min(38vh, 18rem);
+  align-content: start;
+}
+
+.draft-resume-skeleton-row {
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+}
+
+.draft-resume-skeleton-meta {
+  width: min(44%, 12rem);
+  height: 0.875rem;
+}
+
+.draft-resume-skeleton-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.draft-resume-skeleton-btn {
+  width: 5.5rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+}
+
+.draft-resume-item {
+  justify-content: flex-start;
+  text-align: left;
+  padding-inline: var(--space-4);
+  font-weight: 500;
+}
+
+.draft-resume-footer {
+  display: grid;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border-soft);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.draft-resume-page-indicator {
+  margin: 0;
+}
+
+.draft-resume-pagination {
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.draft-resume-pager-actions {
+  gap: var(--space-2);
+}
+
+.draft-resume-pagination .secondary {
+  min-width: 6.5rem;
+}
+
+.draft-resume-pager-btn {
+  min-height: 2.25rem;
+  min-width: 5.5rem;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  padding-inline: var(--space-3);
+  border-color: color-mix(in srgb, var(--border-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  color: var(--text-secondary);
+  transition:
+    background var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.draft-resume-pager-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--border-strong));
+  background: color-mix(in srgb, var(--brand-subtle) 44%, var(--bg-elevated));
+}
+
+.draft-resume-pager-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.draft-resume-pager-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.draft-resume-pager-btn:disabled {
+  opacity: 0.45;
+}
+
+.task-create-modal-actions {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+  gap: var(--space-3);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -256,6 +382,20 @@
 
   .modal-sheet--edit .rich-prompt-wrap .tiptap {
     max-height: min(38dvh, 20rem);
+  }
+
+  .modal-sheet--draft-resume {
+    min-height: min(62dvh, 32rem);
+    max-height: min(92dvh, 100%);
+  }
+
+  .draft-resume-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .draft-resume-pager-actions {
+    justify-content: flex-end;
   }
 }
 

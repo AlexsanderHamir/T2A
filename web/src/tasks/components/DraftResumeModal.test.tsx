@@ -55,5 +55,31 @@ describe("DraftResumeModal", () => {
 
     await user.click(screen.getByRole("button", { name: /resume: my draft/i }));
     expect(props.onResume).toHaveBeenCalledWith("d1");
+    expect(screen.getByText(/page 1 of 1/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^previous$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^next$/i })).toBeDisabled();
+  });
+
+  it("renders a paginated scrollable list of drafts", async () => {
+    const user = userEvent.setup();
+    const props = {
+      ...baseProps(),
+      drafts: Array.from({ length: 7 }, (_, i) => ({
+        id: `d${i + 1}`,
+        name: `Draft ${i + 1}`,
+        created_at: "",
+        updated_at: "",
+      })),
+    };
+    render(<DraftResumeModal {...props} />);
+
+    expect(document.querySelector(".draft-resume-list")).not.toBeNull();
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resume: draft 1/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /resume: draft 6/i })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /^next$/i }));
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resume: draft 6/i })).toBeInTheDocument();
   });
 });
