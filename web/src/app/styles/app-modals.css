@@ -289,11 +289,6 @@
   color: var(--text-secondary);
 }
 
-.draft-resume-pager-btn:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--brand) 42%, var(--border-strong));
-  background: color-mix(in srgb, var(--brand-subtle) 44%, var(--bg-elevated));
-}
-
 .draft-resume-pager-btn:disabled {
   opacity: 0.45;
 }
