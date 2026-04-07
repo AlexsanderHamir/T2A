@@ -378,6 +378,46 @@ describe("App", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("keeps manual save draft failures inside the modal", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
+      if (url === "/task-drafts" && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "Not Found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+
+    const dialog = await openNewTaskModal(user);
+    await user.click(within(dialog).getByRole("button", { name: /^save draft$/i }));
+
+    expect(
+      await within(dialog).findByText(
+        /Draft autosave failed\. You can still create the task\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("clears prior autosave error when create modal is reopened", async () => {
     const user = userEvent.setup();
 

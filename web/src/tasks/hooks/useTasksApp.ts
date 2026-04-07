@@ -565,13 +565,13 @@ export function useTasksApp() {
     pendingSubtasks,
   ]);
 
-  const saveDraftNow = useCallback(async () => {
+  const saveDraftNow = useCallback(() => {
     if (!createModalOpen || !newDraftID) return;
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
-    await saveDraftMutation.mutateAsync(buildDraftSaveInput());
+    saveDraftMutation.mutate(buildDraftSaveInput());
   }, [buildDraftSaveInput, createModalOpen, newDraftID, saveDraftMutation]);
 
   useEffect(() => {
