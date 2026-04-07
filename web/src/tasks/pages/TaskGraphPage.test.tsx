@@ -24,12 +24,14 @@ function renderGraph(initialPath: string) {
 
 describe("TaskGraphPage", () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
   it("renders virtualized graph with node count and links", async () => {
     stubEventSource();
+    vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "");
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url === "/tasks/groot") {
@@ -66,6 +68,41 @@ describe("TaskGraphPage", () => {
     expect(within(canvas).getByRole("link", { name: "Graph root" })).toHaveAttribute(
       "href",
       "/tasks/groot",
+    );
+  });
+
+  it("loads graph from mock URL when env is set", async () => {
+    stubEventSource();
+    vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "/mock-data/graphs/task-graph-200k.json");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/mock-data/graphs/task-graph-200k.json") {
+        return Response.json({
+          id: "mock-root",
+          title: "Mock root",
+          status: "ready",
+          priority: "high",
+          children: [
+            {
+              id: "mock-child",
+              title: "Mock child",
+              status: "running",
+              priority: "medium",
+              children: [],
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderGraph("/tasks/ignored/graph");
+
+    expect(await screen.findByRole("heading", { name: /task graph/i })).toBeInTheDocument();
+    expect(screen.getByText(/2 nodes rendered/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Mock root" })).toHaveAttribute(
+      "href",
+      "/tasks/mock-root",
     );
   });
 });

@@ -353,6 +353,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .task-home-kpi-card {
+    transition: none;
+  }
+
   .task-list-table-wrap {
     transition: none;
   }
@@ -361,6 +365,10 @@
   .task-list-content--enter,
   .stream-pill--sync-enter {
     animation: none;
+  }
+
+  .draft-list-row {
+    transition: none;
   }
 }
 
@@ -393,6 +401,26 @@
 
 .stack-row-actions {
   margin-top: 1rem;
+}
+
+.draft-list-row {
+  opacity: 1;
+  max-height: 5rem;
+  overflow: hidden;
+  transform: translateY(0);
+  transition:
+    opacity var(--duration-moderate) var(--ease-out),
+    transform var(--duration-moderate) var(--ease-out),
+    max-height var(--duration-moderate) var(--ease-out),
+    margin var(--duration-moderate) var(--ease-out);
+}
+
+.draft-list-row--exit {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  transform: translateY(calc(var(--space-2) * -1));
+  pointer-events: none;
 }
 
 .confirm-dialog {

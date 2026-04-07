@@ -6,6 +6,14 @@ import type { Priority, Status } from "@/types";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys } from "../queryKeys";
 
+type GraphTaskNode = {
+  id: string;
+  title: string;
+  status: Status;
+  priority: Priority;
+  children?: GraphTaskNode[];
+};
+
 type GraphNode = {
   id: string;
   title: string;
@@ -23,19 +31,11 @@ const ROW_GAP = 20;
 const PADDING = 24;
 const BUFFER_ROWS = 20;
 
-function flattenGraphTree(input: {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  children?: Array<{
-    id: string;
-    title: string;
-    status: string;
-    priority: string;
-    children?: unknown[];
-  }>;
-}): GraphNode[] {
+function graphMockUrl(): string {
+  return import.meta.env.VITE_TASK_GRAPH_MOCK_URL?.trim() ?? "";
+}
+
+function flattenGraphTree(input: GraphTaskNode): GraphNode[] {
   const nodes: GraphNode[] = [];
   const stack: Array<{
     node: typeof input;
@@ -74,6 +74,48 @@ function flattenGraphTree(input: {
   return nodes;
 }
 
+function isGraphTaskNode(value: unknown): value is GraphTaskNode {
+  if (!value || typeof value !== "object") return false;
+  const rec = value as Record<string, unknown>;
+  const validStatuses: Status[] = ["ready", "running", "blocked", "review", "done", "failed"];
+  const validPriorities: Priority[] = ["low", "medium", "high", "critical"];
+  if (
+    typeof rec.id !== "string" ||
+    typeof rec.title !== "string" ||
+    typeof rec.status !== "string" ||
+    !validStatuses.includes(rec.status as Status) ||
+    typeof rec.priority !== "string" ||
+    !validPriorities.includes(rec.priority as Priority)
+  ) {
+    return false;
+  }
+  if (rec.children === undefined) return true;
+  if (!Array.isArray(rec.children)) return false;
+  return rec.children.every((child) => isGraphTaskNode(child));
+}
+
+async function getGraphTask(
+  taskId: string,
+  options?: { signal?: AbortSignal },
+): Promise<GraphTaskNode> {
+  const mockUrl = graphMockUrl();
+  if (!mockUrl) {
+    return getTask(taskId, options) as unknown as GraphTaskNode;
+  }
+  const res = await fetch(mockUrl, {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
+  if (!res.ok) {
+    throw new Error(`Could not load graph mock from ${mockUrl}`);
+  }
+  const raw: unknown = await res.json();
+  if (!isGraphTaskNode(raw)) {
+    throw new Error("Invalid graph mock payload");
+  }
+  return raw;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -90,7 +132,7 @@ export function TaskGraphPage() {
 
   const taskQuery = useQuery({
     queryKey: taskQueryKeys.detail(taskId),
-    queryFn: ({ signal }) => getTask(taskId, { signal }),
+    queryFn: ({ signal }) => getGraphTask(taskId, { signal }),
     enabled: Boolean(taskId),
   });
 

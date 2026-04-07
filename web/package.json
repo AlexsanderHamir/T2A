@@ -11,7 +11,14 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mock:graph:generate": "node ./scripts/generate-graph-mock.mjs",
+    "mock:graph:100k": "node ./scripts/generate-graph-mock.mjs --node-count=100000 --output=public/mock-data/graphs/task-graph-100k.json",
+    "mock:graph:200k": "node ./scripts/generate-graph-mock.mjs --node-count=200000 --output=public/mock-data/graphs/task-graph-200k.json",
+    "mock:graph:use": "node ./scripts/use-graph-mock.mjs",
+    "mock:graph:use:100k": "node ./scripts/use-graph-mock.mjs --size=100k",
+    "mock:graph:use:200k": "node ./scripts/use-graph-mock.mjs --size=200k",
+    "mock:graph:use:500k": "node ./scripts/use-graph-mock.mjs --size=500k"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",

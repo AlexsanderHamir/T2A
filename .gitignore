@@ -1,4 +1,5 @@
 .env
+.env.local
 coverage.out
 coverage*.out
 coverage
@@ -11,5 +12,8 @@ taskapi-dev.exe
 /handler
 /handler.exe
 logs/
+web/.env.local
+web/.env.*.local
+web/public/mock-data/graphs/*.json
 work_technique/*.md
 .agent/

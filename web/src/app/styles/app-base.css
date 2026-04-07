@@ -337,7 +337,7 @@ textarea::placeholder {
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.3rem;
+  padding: 0.36rem 0.6rem 0.36rem 0.72rem;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-full);
   background: var(--surface-glass-toolbar);

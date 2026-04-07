@@ -3,6 +3,7 @@ export const TASK_TIMINGS = {
   listRefreshHideMs: 520,
   draftAutosaveDebounceMs: 900,
   draftResumeMinLoadingMs: 300,
+  draftDeleteExitMs: 180,
 } as const;
 
 export const TASK_DRAFTS: {
