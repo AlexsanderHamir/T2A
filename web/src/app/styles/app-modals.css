@@ -125,8 +125,14 @@
 }
 
 .modal-sheet--draft-resume {
-  min-height: min(54vh, 28rem);
-  max-height: min(80vh, 40rem);
+  --draft-resume-min-height: min(54vh, 28rem);
+  --draft-resume-max-height: min(80vh, 40rem);
+  --draft-resume-list-max-height: min(38vh, 18rem);
+  --draft-resume-btn-width: 5.5rem;
+  --draft-resume-btn-height: 2.25rem;
+  --draft-resume-btn-wide-width: 6.5rem;
+  min-height: var(--draft-resume-min-height);
+  max-height: var(--draft-resume-max-height);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -155,7 +161,7 @@
 .draft-resume-list {
   display: grid;
   gap: var(--space-3);
-  max-height: min(38vh, 18rem);
+  max-height: var(--draft-resume-list-max-height);
   overflow-y: auto;
   padding: var(--space-1) var(--space-2) var(--space-1) 0;
 }
@@ -167,7 +173,7 @@
 .draft-resume-skeleton {
   display: grid;
   gap: var(--space-3);
-  min-height: min(38vh, 18rem);
+  min-height: var(--draft-resume-list-max-height);
   align-content: start;
 }
 
@@ -188,8 +194,8 @@
 }
 
 .draft-resume-skeleton-btn {
-  width: 5.5rem;
-  height: 2.25rem;
+  width: var(--draft-resume-btn-width);
+  height: var(--draft-resume-btn-height);
   border-radius: var(--radius-full);
 }
 
@@ -242,12 +248,12 @@
 }
 
 .draft-resume-pagination .secondary {
-  min-width: 6.5rem;
+  min-width: var(--draft-resume-btn-wide-width);
 }
 
 .draft-resume-pager-btn {
-  min-height: 2.25rem;
-  min-width: 5.5rem;
+  min-height: var(--draft-resume-btn-height);
+  min-width: var(--draft-resume-btn-width);
   border-radius: var(--radius-full);
   font-weight: 500;
   font-size: var(--text-sm);
@@ -404,8 +410,10 @@
   }
 
   .modal-sheet--draft-resume {
-    min-height: min(62dvh, 32rem);
-    max-height: min(92dvh, 100%);
+    --draft-resume-min-height: min(62dvh, 32rem);
+    --draft-resume-max-height: min(92dvh, 100%);
+    min-height: var(--draft-resume-min-height);
+    max-height: var(--draft-resume-max-height);
   }
 
   .draft-resume-pagination {
