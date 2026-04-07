@@ -608,6 +608,56 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/resume failed/i);
   });
 
+  it("shows delete error on drafts page when deleting a draft fails", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "Delete me",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url === "/task-drafts/d1" && init?.method === "DELETE") {
+        return new Response(
+          JSON.stringify({ error: "delete failed" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^task drafts$/i });
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/delete failed/i);
+  });
+
   it("creates a top-level task with checklist criteria added after create", async () => {
     const user = userEvent.setup();
     let created = false;

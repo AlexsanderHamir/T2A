@@ -17,17 +17,27 @@ export function TaskDraftsPage({ app }: Props) {
       // Error state is exposed by the hook and rendered inline on this page.
     }
   };
+  const deleteDraft = async (draftId: string) => {
+    try {
+      await app.deleteDraftByID(draftId);
+    } catch {
+      // Error state is exposed by the hook and rendered inline on this page.
+    }
+  };
   const loading = app.draftListLoading;
   const error = app.draftListError;
   const drafts = app.taskDrafts;
   const resumePending = app.resumeDraftPending;
   const resumeError = app.resumeDraftError;
+  const deletePending = app.deleteDraftPending;
+  const deleteError = app.deleteDraftError;
 
   return (
     <section className="panel">
       <h2>Task drafts</h2>
       <p className="muted">Continue previous drafts or remove ones you no longer need.</p>
       {resumeError ? <p role="alert">{resumeError}</p> : null}
+      {deleteError ? <p role="alert">{deleteError}</p> : null}
       <div className="stack">
         {loading ? (
           <p className="muted" role="status" aria-live="polite">
@@ -45,17 +55,17 @@ export function TaskDraftsPage({ app }: Props) {
                 className="secondary"
                 onClick={() => void openDraftInCreateForm(d.id)}
                 aria-label={`Open draft ${d.name} in create form`}
-                disabled={resumePending}
+                disabled={resumePending || deletePending}
               >
                 {resumePending ? "Opening draft…" : `Resume: ${d.name}`}
               </button>
               <button
                 type="button"
                 className="secondary"
-                onClick={() => void app.deleteDraftByID(d.id)}
-                disabled={resumePending}
+                onClick={() => void deleteDraft(d.id)}
+                disabled={resumePending || deletePending}
               >
-                Delete
+                {deletePending ? "Deleting…" : "Delete"}
               </button>
             </div>
           ))

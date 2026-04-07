@@ -440,6 +440,9 @@ export function useTasksApp() {
   const resumeDraftMutation = useMutation({
     mutationFn: (id: string) => apiGetDraft(id),
   });
+  const deleteDraftError = deleteDraftMutation.isError
+    ? errorMessage(deleteDraftMutation.error)
+    : null;
 
   const saving =
     createMutation.isPending ||
@@ -828,6 +831,8 @@ export function useTasksApp() {
     taskDrafts: draftsQuery.data ?? [],
     draftListLoading,
     draftListError,
+    deleteDraftPending: deleteDraftMutation.isPending,
+    deleteDraftError,
     resumeDraftPending: resumeDraftMutation.isPending,
     resumeDraftError: resumeDraftMutation.isError
       ? errorMessage(resumeDraftMutation.error)
