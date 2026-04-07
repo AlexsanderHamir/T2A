@@ -119,7 +119,7 @@ export function DraftResumeModal({
                   <button
                     key={d.id}
                     type="button"
-                    className="secondary draft-resume-item"
+                    className="secondary draft-resume-action draft-resume-item"
                     onClick={() => onResume(d.id)}
                     disabled={resumePending}
                   >
@@ -138,7 +138,7 @@ export function DraftResumeModal({
                   <div className="row stack-row-actions draft-resume-pager-actions">
                     <button
                       type="button"
-                      className="secondary draft-resume-pager-btn"
+                      className="secondary draft-resume-action draft-resume-pager-btn"
                       disabled={resumePending || draftPage === 0}
                       onClick={() => {
                         setDraftPage((prev) => Math.max(0, prev - 1));
@@ -148,7 +148,7 @@ export function DraftResumeModal({
                     </button>
                     <button
                       type="button"
-                      className="secondary draft-resume-pager-btn"
+                      className="secondary draft-resume-action draft-resume-pager-btn"
                       disabled={resumePending || draftPage + 1 >= totalDraftPages}
                       onClick={() => {
                         setDraftPage((prev) => Math.min(totalDraftPages - 1, prev + 1));
