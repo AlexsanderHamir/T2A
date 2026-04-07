@@ -2,21 +2,53 @@
 .task-home-overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin: 0 0 var(--space-5);
+  gap: var(--space-5);
+  margin: 0 0 var(--space-6);
 }
 
 .task-home-kpi-card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-hairline);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-subtle)) 0%,
+    var(--bg-elevated) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--border-hairline) 80%, var(--border-soft));
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-  min-height: 7.5rem;
+  padding: var(--space-5);
+  box-shadow: var(--shadow-xs);
+  min-height: 8.5rem;
+  transition:
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+.task-home-kpi-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: color-mix(in srgb, var(--text-tertiary) 42%, transparent);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .task-home-kpi-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 .task-home-kpi-card--total {
-  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--info-soft));
+  --task-kpi-accent: color-mix(in srgb, var(--info) 72%, var(--info-soft));
 }
 
 .task-home-kpi-card--total .task-home-kpi-value {
@@ -24,7 +56,7 @@
 }
 
 .task-home-kpi-card--ready {
-  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--success-soft));
+  --task-kpi-accent: color-mix(in srgb, var(--success) 70%, var(--success-soft));
 }
 
 .task-home-kpi-card--ready .task-home-kpi-value {
@@ -35,25 +67,36 @@
   margin: 0;
   font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: var(--data-caps-letter-spacing);
+  letter-spacing: 0.05em;
   text-transform: var(--data-caps-text-transform);
   color: var(--text-tertiary);
 }
 
 .task-home-kpi-value {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-3xl);
+  margin: 0;
+  font-size: clamp(1.9rem, 2.4vw, 2.35rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   color: var(--text-primary);
-  line-height: 1.15;
+  line-height: 1.08;
 }
 
 .task-home-kpi-meta {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.task-home-kpi-card--attention {
+  --task-kpi-accent: color-mix(in srgb, var(--danger-deep) 70%, var(--danger));
+}
+
+.task-home-kpi-card--total::before,
+.task-home-kpi-card--ready::before,
+.task-home-kpi-card--attention::before {
+  background: color-mix(in srgb, var(--task-kpi-accent) 62%, transparent);
 }
 
 .task-home-kpi-card--attention .task-home-kpi-value {
