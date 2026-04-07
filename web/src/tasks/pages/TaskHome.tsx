@@ -34,9 +34,20 @@ export function TaskHome({ app }: Props) {
   return (
     <>
       {app.createEntryDraftErrorHint ? (
-        <p role="alert">
-          Saved drafts are unavailable right now, so a fresh task form was opened.
-        </p>
+        <div className="row stack-row-actions">
+          <p role="alert">
+            Saved drafts are unavailable right now, so a fresh task form was opened.
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              void app.retryCreateEntryDraftLoad();
+            }}
+          >
+            Retry loading drafts
+          </button>
+        </div>
       ) : null}
       {app.createModalOpen ? (
         <TaskCreateModal

@@ -692,6 +692,55 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /saved drafts are unavailable right now/i,
     );
+    expect(
+      screen.getByRole("button", { name: /retry loading drafts/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("retries draft loading from home entry hint and opens draft picker when available", async () => {
+    const user = userEvent.setup();
+    let draftAttempts = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        draftAttempts += 1;
+        if (draftAttempts === 1) {
+          return new Response(
+            JSON.stringify({ error: "drafts unavailable" }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "Recovered draft",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+    await user.click(screen.getByRole("button", { name: /^new task$/i }));
+    await user.click(screen.getByRole("button", { name: /retry loading drafts/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: /resume a draft or start fresh/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows resume error on drafts page when opening a draft fails", async () => {

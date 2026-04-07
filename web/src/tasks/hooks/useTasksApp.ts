@@ -825,6 +825,19 @@ export function useTasksApp() {
   const retryDraftList = useCallback(async () => {
     await draftsQuery.refetch();
   }, [draftsQuery]);
+  const retryCreateEntryDraftLoad = useCallback(async () => {
+    const refreshed = await draftsQuery.refetch();
+    if (refreshed.isError) {
+      setCreateEntryDraftErrorHint(errorMessage(refreshed.error));
+      return;
+    }
+    setCreateEntryDraftErrorHint(null);
+    const drafts = refreshed.data ?? [];
+    if (drafts.length > 0) {
+      setCreateModalOpen(false);
+      setDraftPickerOpen(true);
+    }
+  }, [draftsQuery]);
 
   return {
     tasks,
@@ -851,6 +864,7 @@ export function useTasksApp() {
     draftListError,
     createEntryDraftErrorHint,
     retryDraftList,
+    retryCreateEntryDraftLoad,
     deleteDraftPending: deleteDraftMutation.isPending,
     deleteDraftError,
     resumeDraftPending: resumeDraftMutation.isPending,

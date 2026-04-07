@@ -1,4 +1,19 @@
 ---
+## Session 5 — 2026-04-07
+**Category**: P1 — Data Fetching Anti-Patterns
+**Files changed**: web/src/tasks/hooks/useTasksApp.ts, web/src/tasks/pages/TaskHome.tsx, web/src/app/App.test.tsx
+**Summary**: Added a retry action to the home-entry draft-fetch fallback warning and wired recovery behavior to reopen the draft picker when a retry succeeds.
+**Tests**: 215 passed, 1 added, 1 modified
+**Design system refs used**: §11 Feedback & Status, §7 Interactive Components, §13 Accessibility
+**Verification**: typecheck pass | lint pass | tests pass | build pass
+
+### NEXT_SESSION_QUEUE
+1. [P3] Break up large task creation orchestration concerns from useTasksApp into smaller hooks — web/src/tasks/hooks/useTasksApp.ts
+2. [P4] Memoize heavy derived collections in task create flow to reduce unnecessary rerenders — web/src/tasks/hooks/useTasksApp.ts + modal consumers
+3. [P1] Add explicit error text differentiation between draft-list failures and resume-by-id failures in modal UI copy — web/src/tasks/components/DraftResumeModal.tsx
+---
+
+---
 ## Session 4 — 2026-04-07
 **Category**: P2 — UX & Interaction Quality
 **Files changed**: web/src/tasks/components/DraftResumeModal.tsx, web/src/tasks/components/DraftResumeModal.test.tsx, web/src/app/styles/app-modals.css
