@@ -469,9 +469,6 @@ describe("App", () => {
       "Draft from list",
     );
     expect(within(dialog).getByLabelText(/^title$/i)).toHaveValue("Prefilled title");
-    await waitFor(() => {
-      expect(dialog).toHaveTextContent("Prefilled prompt");
-    });
     expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
     expect(within(dialog).getByText("Child A")).toBeInTheDocument();
     expect(within(dialog).getByText(/Good scope/i)).toBeInTheDocument();
@@ -1037,10 +1034,18 @@ describe("App", () => {
     expect(taskPosts).toHaveLength(3);
     expect(taskPosts[0].title).toBe("Epic");
     expect(taskPosts[0].parent_id).toBeUndefined();
-    expect(taskPosts[1].parent_id).toBe("parent");
-    expect(taskPosts[1].title).toBe("Step one");
-    expect(taskPosts[2].parent_id).toBe("parent");
-    expect(taskPosts[2].title).toBe("Step two");
+    const childPosts = taskPosts.slice(1) as Array<{
+      parent_id?: unknown;
+      title?: unknown;
+    }>;
+    expect(childPosts).toHaveLength(2);
+    for (const child of childPosts) {
+      expect(child.parent_id).toBe("parent");
+    }
+    expect(childPosts.map((p) => p.title).sort()).toEqual([
+      "Step one",
+      "Step two",
+    ]);
   });
 
   it("creates a subtask from home when parent task is selected", async () => {

@@ -194,6 +194,10 @@ export function useTasksApp() {
       pendingSubtasks: PendingSubtaskDraft[];
       draft_id: string;
     }) => {
+      const addChecklistItems = async (taskId: string, items: string[]) => {
+        const rows = items.map((raw) => raw.trim()).filter(Boolean);
+        await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
+      };
       const parentId = input.parent_id?.trim();
       const inherit =
         Boolean(parentId) && input.checklist_inherit === true;
@@ -208,34 +212,27 @@ export function useTasksApp() {
         ...(inherit ? { checklist_inherit: true } : {}),
       });
       if (!inherit) {
-        for (const raw of input.checklistItems) {
-          const text = raw.trim();
-          if (text) {
-            await addChecklistItem(task.id, text);
-          }
-        }
+        await addChecklistItems(task.id, input.checklistItems);
       }
-      for (const st of input.pendingSubtasks) {
-        if (!st.title.trim()) continue;
-        const childInherit = st.checklist_inherit === true;
-        const child = await apiCreate({
-          title: st.title.trim(),
-          initial_prompt: st.initial_prompt,
-          status: input.status,
-          priority: st.priority,
-          task_type: st.task_type,
-          parent_id: task.id,
-          ...(childInherit ? { checklist_inherit: true } : {}),
-        });
-        if (!childInherit) {
-          for (const raw of st.checklistItems) {
-            const text = raw.trim();
-            if (text) {
-              await addChecklistItem(child.id, text);
+      await Promise.all(
+        input.pendingSubtasks
+          .filter((st) => Boolean(st.title.trim()))
+          .map(async (st) => {
+            const childInherit = st.checklist_inherit === true;
+            const child = await apiCreate({
+              title: st.title.trim(),
+              initial_prompt: st.initial_prompt,
+              status: input.status,
+              priority: st.priority,
+              task_type: st.task_type,
+              parent_id: task.id,
+              ...(childInherit ? { checklist_inherit: true } : {}),
+            });
+            if (!childInherit) {
+              await addChecklistItems(child.id, st.checklistItems);
             }
-          }
-        }
-      }
+          }),
+      );
       return task;
     },
     onSuccess: async () => {
