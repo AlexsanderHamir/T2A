@@ -1,0 +1,477 @@
+---
+description: >-
+  Animation and transition patterns for the frontend improvement agent.
+  Covers enter/exit transitions, staggered lists, route transitions,
+  reduced-motion handling, and the specific easing/duration tokens from the
+  design system. Read this file when fixing P2 motion issues.
+globs:
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/*.css"
+alwaysApply: false
+---
+
+# Animation & Transition Patterns
+
+Reference file for the frontend improvement agent. When fixing **P2 — UX & Interaction Quality** motion issues, follow these patterns exactly.
+
+---
+
+## 1. TOKEN REFERENCE
+
+These are defined in `16-ui-ux-iteration.mdc` §8. Use them by name — never hardcode values.
+
+```css
+/* Easing */
+--ease-default:   cubic-bezier(0.16, 1, 0.3, 1);     /* Most UI transitions */
+--ease-in:        cubic-bezier(0.4, 0, 1, 1);          /* Elements exiting */
+--ease-out:       cubic-bezier(0, 0, 0.2, 1);          /* Elements entering */
+--ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);        /* Balanced */
+--ease-bounce:    cubic-bezier(0.34, 1.56, 0.64, 1);  /* Playful, sparingly */
+
+/* Duration */
+--duration-instant:  50ms;   /* Hover color change */
+--duration-fast:     100ms;  /* Button press */
+--duration-normal:   150ms;  /* Most transitions */
+--duration-moderate: 250ms;  /* Dropdowns, menus */
+--duration-slow:     350ms;  /* Modals, drawers */
+--duration-slower:   500ms;  /* Page transitions only */
+```
+
+---
+
+## 2. GLOBAL KEYFRAMES
+
+Define these once at the application root. All transition components reference them.
+
+```css
+/* Enter: fade + slide up */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enter: fade only */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Enter: scale up (for modals, popovers) */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Exit: fade out */
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Exit: fade + slide down */
+@keyframes fadeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Reduced motion: no movement, opacity only */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fadeSlideIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes fadeSlideOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+}
+```
+
+---
+
+## 3. FADE-IN WRAPPER COMPONENT
+
+The most-used transition. Wraps any async content that appears after loading.
+
+```tsx
+import { type ReactNode, type CSSProperties } from 'react';
+
+interface FadeInProps {
+  children: ReactNode;
+  duration?: string;
+  delay?: string;
+  className?: string;
+  style?: CSSProperties;
+}
+
+function FadeIn({
+  children,
+  duration = '200ms',
+  delay = '0ms',
+  className,
+  style,
+}: FadeInProps) {
+  return (
+    <div
+      className={className}
+      style={{
+        animation: `fadeSlideIn ${duration} var(--ease-out) ${delay} both`,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+```
+
+**Usage:**
+```tsx
+// Simple — async content that just appeared
+<FadeIn>
+  <UserProfile user={data} />
+</FadeIn>
+
+// With delay — second item in a sequence
+<FadeIn delay="80ms">
+  <ActivityFeed items={activities} />
+</FadeIn>
+```
+
+---
+
+## 4. STAGGERED LIST ANIMATION
+
+For lists of items that appear together (search results, card grids, table rows loaded at once). Each child enters with an incremental delay.
+
+```tsx
+interface StaggeredListProps {
+  children: ReactNode[];
+  staggerMs?: number;
+  duration?: string;
+  className?: string;
+}
+
+function StaggeredList({
+  children,
+  staggerMs = 60,
+  duration = '200ms',
+  className,
+}: StaggeredListProps) {
+  return (
+    <div className={className}>
+      {children.map((child, i) => (
+        <div
+          key={i}
+          style={{
+            animation: `fadeSlideIn ${duration} var(--ease-out) ${i * staggerMs}ms both`,
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Usage:**
+```tsx
+<StaggeredList staggerMs={60}>
+  {users.map(user => (
+    <UserCard key={user.id} user={user} />
+  ))}
+</StaggeredList>
+```
+
+**Rules:**
+- Stagger: `50–80ms` between items. Default `60ms`.
+- Max items to stagger: ~10. Beyond that, render the rest at the same delay as item 10 to avoid slow perceived load.
+- Duration per item: `200ms` with `--ease-out`
+
+**Capped stagger for long lists:**
+```tsx
+const MAX_STAGGER_ITEMS = 10;
+
+function StaggeredList({ children, staggerMs = 60 }: StaggeredListProps) {
+  return (
+    <div>
+      {children.map((child, i) => (
+        <div
+          key={i}
+          style={{
+            animation: `fadeSlideIn 200ms var(--ease-out) ${Math.min(i, MAX_STAGGER_ITEMS) * staggerMs}ms both`,
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## 5. INTERACTIVE ELEMENT TRANSITIONS
+
+Every interactive element needs transition properties on its resting state. Never add transitions only on `:hover`.
+
+### Buttons
+```css
+.btn {
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+```
+
+### Cards (interactive)
+```css
+.card-interactive {
+  transition:
+    box-shadow var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default);
+}
+
+.card-interactive:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+}
+```
+
+### Inputs
+```css
+.input {
+  transition:
+    border-color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+```
+
+### Links / text buttons
+```css
+.link {
+  transition: color var(--duration-normal) var(--ease-default);
+}
+```
+
+---
+
+## 6. DROPDOWN / MENU TRANSITIONS
+
+```css
+.dropdown-enter {
+  animation: fadeSlideIn var(--duration-moderate) var(--ease-out) both;
+}
+
+.dropdown-exit {
+  animation: fadeSlideOut var(--duration-normal) var(--ease-in) both;
+}
+```
+
+**In React (conditional rendering):**
+```tsx
+function Dropdown({ isOpen, children }: { isOpen: boolean; children: ReactNode }) {
+  const [shouldRender, setShouldRender] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) setShouldRender(true);
+  }, [isOpen]);
+
+  const handleAnimationEnd = () => {
+    if (!isOpen) setShouldRender(false);
+  };
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={isOpen ? 'dropdown-enter' : 'dropdown-exit'}
+      onAnimationEnd={handleAnimationEnd}
+    >
+      {children}
+    </div>
+  );
+}
+```
+
+---
+
+## 7. MODAL / DRAWER TRANSITIONS
+
+**Backdrop:**
+```css
+.modal-backdrop-enter {
+  animation: fadeIn var(--duration-moderate) var(--ease-out) both;
+}
+
+.modal-backdrop-exit {
+  animation: fadeOut var(--duration-normal) var(--ease-in) both;
+}
+```
+
+**Modal container:**
+```css
+.modal-enter {
+  animation: scaleIn var(--duration-moderate) var(--ease-out) both;
+}
+
+.modal-exit {
+  animation: fadeOut var(--duration-normal) var(--ease-in) both;
+}
+```
+
+**Drawer (slide from right):**
+```css
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+.drawer-enter {
+  animation: slideInRight var(--duration-slow) var(--ease-out) both;
+}
+
+.drawer-exit {
+  animation: slideOutRight var(--duration-moderate) var(--ease-in) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-enter { animation: fadeIn var(--duration-moderate) var(--ease-out) both; }
+  .drawer-exit  { animation: fadeOut var(--duration-normal) var(--ease-in) both; }
+}
+```
+
+---
+
+## 8. ROUTE / PAGE TRANSITIONS
+
+Keep route transitions subtle and fast. Max `400ms`.
+
+```css
+.page-enter {
+  animation: fadeSlideIn var(--duration-slow) var(--ease-out) both;
+}
+
+.page-exit {
+  animation: fadeOut var(--duration-normal) var(--ease-in) both;
+}
+```
+
+**With React Router / Next.js App Router:**
+Wrap page content in `<FadeIn>` at the layout level. Each route's content fades in on mount.
+
+```tsx
+// Layout component
+function PageLayout({ children }: { children: ReactNode }) {
+  return (
+    <main>
+      <FadeIn duration="300ms">
+        {children}
+      </FadeIn>
+    </main>
+  );
+}
+```
+
+---
+
+## 9. TOAST / NOTIFICATION TRANSITIONS
+
+```css
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn var(--duration-moderate) var(--ease-out) both;
+}
+
+.toast-exit {
+  animation: fadeSlideOut var(--duration-normal) var(--ease-in) both;
+}
+```
+
+---
+
+## 10. REDUCED MOTION — NON-NEGOTIABLE
+
+Every animated element must respect `prefers-reduced-motion`. This is an accessibility requirement.
+
+**Strategy:** All motion-based keyframes have reduced-motion overrides defined in the global keyframes (Section 2 above). For inline transitions, use this utility:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+**Or per-component (more surgical):**
+```tsx
+const prefersReducedMotion =
+  typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+
+const animationDuration = prefersReducedMotion ? '0ms' : '200ms';
+```
+
+---
+
+## 11. NEVER DO
+
+- Animate `width`, `height`, `top`, `left`, `right`, `bottom` — use `transform` instead
+- Use `ease` (the CSS default) — always use the design system easing tokens
+- Use `linear` timing for UI transitions (only for looping spinners/progress)
+- Create animations longer than `500ms` unless it's a page-level transition
+- Use `display: none` → `display: block` for show/hide — use opacity + transform
+- Forget `@media (prefers-reduced-motion: reduce)` on any animated element
+- Add `transition` only on `:hover` — put it on the element's resting state

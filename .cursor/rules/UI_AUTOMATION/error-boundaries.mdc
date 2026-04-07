@@ -1,0 +1,425 @@
+---
+description: >-
+  Error boundary patterns for the frontend improvement agent. Covers
+  ErrorBoundary class components, retry logic, granular fallback UI, and
+  placement strategy. Read this file when fixing P0 issues involving
+  unhandled errors or missing error boundaries.
+globs:
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/*.ts"
+alwaysApply: false
+---
+
+# Error Boundary Patterns
+
+Reference file for the frontend improvement agent. When fixing **P0 — Broken Functionality** involving unhandled errors, follow these patterns.
+
+---
+
+## 1. CORE PRINCIPLE
+
+React error boundaries catch rendering errors in their subtree and display a fallback instead of crashing the entire page. Without them, a single broken component takes down everything.
+
+**Rules:**
+- Every route/page gets its own error boundary
+- Every component that fetches data asynchronously should be wrapped in an error boundary
+- Error boundaries are **granular** — wrap the smallest meaningful section, not the whole app
+- Always provide a retry mechanism — errors are often transient (network blip, race condition)
+- Never show raw error messages or stack traces to users
+
+---
+
+## 2. BASE ERROR BOUNDARY COMPONENT
+
+Error boundaries must be class components (React limitation). This is the reusable base:
+
+```tsx
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** Key prop — change this to reset the boundary (e.g., pass route path) */
+  resetKey?: string | number;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    this.props.onError?.(error, errorInfo);
+
+    // Log to your error reporting service
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+      // Example: Sentry.captureException(error, { extra: errorInfo });
+      console.error('[ErrorBoundary]', error, errorInfo);
+    }
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
+  handleReset = (): void => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+
+      return (
+        <ErrorFallback
+          error={this.state.error}
+          onRetry={this.handleReset}
+        />
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+---
+
+## 3. FALLBACK UI COMPONENTS
+
+### Section-level fallback (most common)
+For when a widget, panel, or data section fails. Contained, doesn't disrupt the rest of the page.
+
+```tsx
+interface ErrorFallbackProps {
+  error?: Error | null;
+  onRetry?: () => void;
+  title?: string;
+  description?: string;
+}
+
+function ErrorFallback({
+  error,
+  onRetry,
+  title = 'Something went wrong',
+  description = 'An unexpected error occurred. Please try again.',
+}: ErrorFallbackProps) {
+  return (
+    <div
+      role="alert"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-10) var(--space-6)',
+        textAlign: 'center',
+        background: 'var(--color-error-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
+      {/* Error icon */}
+      <div style={{
+        width: '48px',
+        height: '48px',
+        borderRadius: 'var(--radius-full)',
+        background: 'var(--color-error)',
+        color: 'var(--color-text-inverse)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '20px',
+        fontWeight: 700,
+        marginBottom: 'var(--space-4)',
+      }}>
+        !
+      </div>
+
+      <h3 style={{
+        fontSize: 'var(--text-md)',
+        fontWeight: 600,
+        color: 'var(--color-text-primary)',
+        marginBottom: 'var(--space-2)',
+      }}>
+        {title}
+      </h3>
+
+      <p style={{
+        fontSize: 'var(--text-sm)',
+        color: 'var(--color-text-secondary)',
+        maxWidth: '320px',
+        marginBottom: onRetry ? 'var(--space-5)' : 0,
+      }}>
+        {description}
+      </p>
+
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="btn-secondary"
+          style={{ fontSize: 'var(--text-sm)' }}
+        >
+          Try again
+        </button>
+      )}
+
+      {/* Dev-only error details */}
+      {process.env.NODE_ENV === 'development' && error && (
+        <details style={{
+          marginTop: 'var(--space-4)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-text-tertiary)',
+          maxWidth: '100%',
+          textAlign: 'left',
+        }}>
+          <summary style={{ cursor: 'pointer' }}>Error details</summary>
+          <pre style={{
+            marginTop: 'var(--space-2)',
+            padding: 'var(--space-3)',
+            background: 'var(--color-bg-muted)',
+            borderRadius: 'var(--radius-sm)',
+            overflow: 'auto',
+            fontSize: 'var(--text-xs)',
+            whiteSpace: 'pre-wrap',
+          }}>
+            {error.message}
+            {'\n\n'}
+            {error.stack}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+```
+
+### Page-level fallback
+For when an entire route fails. Full-page centered with navigation back.
+
+```tsx
+function PageErrorFallback({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        padding: 'var(--space-8)',
+        textAlign: 'center',
+      }}
+    >
+      <div style={{
+        width: '64px',
+        height: '64px',
+        borderRadius: 'var(--radius-full)',
+        background: 'var(--color-error-subtle)',
+        color: 'var(--color-error)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '28px',
+        fontWeight: 700,
+        marginBottom: 'var(--space-6)',
+      }}>
+        !
+      </div>
+
+      <h1 style={{
+        fontSize: 'var(--text-xl)',
+        fontWeight: 600,
+        color: 'var(--color-text-primary)',
+        marginBottom: 'var(--space-2)',
+      }}>
+        Something went wrong
+      </h1>
+
+      <p style={{
+        fontSize: 'var(--text-base)',
+        color: 'var(--color-text-secondary)',
+        maxWidth: '400px',
+        marginBottom: 'var(--space-6)',
+      }}>
+        We hit an unexpected error loading this page. This has been reported automatically.
+      </p>
+
+      <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+        {onRetry && (
+          <button onClick={onRetry} className="btn-primary">
+            Try again
+          </button>
+        )}
+        <button onClick={() => window.history.back()} className="btn-secondary">
+          Go back
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+### Inline/minimal fallback
+For small widgets where a full error UI would be overkill (e.g., an avatar that failed to load).
+
+```tsx
+function InlineErrorFallback({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <span
+      role="alert"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--color-error)',
+      }}
+    >
+      Failed to load
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--color-brand)',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            fontSize: 'inherit',
+            padding: 0,
+          }}
+        >
+          Retry
+        </button>
+      )}
+    </span>
+  );
+}
+```
+
+---
+
+## 4. PLACEMENT STRATEGY
+
+Where to put error boundaries in the component tree:
+
+```
+App (root boundary — catastrophic fallback only)
+├── Layout
+│   ├── Sidebar (boundary — sidebar errors don't break content)
+│   └── Main
+│       ├── Page (boundary per route — page errors show page fallback)
+│       │   ├── MetricsPanel (boundary — metrics fail independently)
+│       │   ├── DataTable (boundary — table errors don't break metrics)
+│       │   └── ActivityFeed (boundary — feed errors are isolated)
+```
+
+**Rules of thumb:**
+- Boundary at every **route/page** level — this is the minimum
+- Boundary around every **independently-loadable section** (widget, panel, feed)
+- Boundary around any component that renders **user-generated content** or **third-party embeds**
+- Do NOT wrap every single leaf component — that's excessive and hides real bugs
+- Do NOT put a single boundary at the app root and call it done — that gives users a blank page on any error
+
+---
+
+## 5. RESET ON NAVIGATION
+
+Error boundaries are sticky — once triggered, they stay in error state until reset. Reset them when the user navigates:
+
+**With React Router:**
+```tsx
+import { useLocation } from 'react-router-dom';
+
+function PageWithBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation();
+
+  return (
+    <ErrorBoundary
+      resetKey={location.pathname}
+      fallback={<PageErrorFallback onRetry={() => window.location.reload()} />}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+```
+
+**With Next.js App Router:**
+Next.js has built-in `error.tsx` files per route segment. Use them:
+```tsx
+// app/dashboard/error.tsx
+'use client';
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return <PageErrorFallback onRetry={reset} />;
+}
+```
+
+---
+
+## 6. ASYNC ERROR BOUNDARIES (SUSPENSE + ERROR BOUNDARY)
+
+For components using React Suspense (lazy loading, streaming), pair Suspense with an error boundary:
+
+```tsx
+import { Suspense, lazy } from 'react';
+
+const HeavyChart = lazy(() => import('./HeavyChart'));
+
+function Dashboard() {
+  return (
+    <ErrorBoundary fallback={<ErrorFallback title="Chart failed to load" />}>
+      <Suspense fallback={<ChartSkeleton />}>
+        <HeavyChart />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+
+**Order matters:** ErrorBoundary wraps Suspense, not the other way around. Suspense handles loading; ErrorBoundary handles failure.
+
+---
+
+## 7. LOGGING AND REPORTING
+
+In production, error boundaries should report to an error tracking service:
+
+```tsx
+<ErrorBoundary
+  onError={(error, errorInfo) => {
+    // Send to Sentry, DataDog, LogRocket, etc.
+    errorReporter.captureException(error, {
+      componentStack: errorInfo.componentStack,
+      route: window.location.pathname,
+    });
+  }}
+>
+  {children}
+</ErrorBoundary>
+```
+
+If no error reporting service exists, at minimum `console.error` in development and suppress in production. Never silently swallow errors.

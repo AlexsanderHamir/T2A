@@ -1,0 +1,434 @@
+---
+description: >-
+  Skeleton loading patterns for the frontend improvement agent. Covers
+  skeleton component recipes for every content type, shimmer CSS animation,
+  crossfade transitions from skeleton to real content. Read this file when
+  fixing P1 or P2 issues involving loading states.
+globs:
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/*.css"
+alwaysApply: false
+---
+
+# Skeleton Loading Patterns
+
+Reference file for the frontend improvement agent. When replacing spinners with skeletons or adding loading states, follow these patterns exactly.
+
+---
+
+## 1. CORE PRINCIPLE
+
+A skeleton is a **low-fidelity preview** of the real content's layout. It must match the real content's dimensions, spacing, and structure so there is **zero layout shift** when data arrives.
+
+**Rules:**
+- Skeleton shapes match the real content: text lines are rectangles, avatars are circles, images are rectangles at the correct aspect ratio
+- Skeletons use the same padding, gap, and margin as the real content
+- Skeletons use the same container dimensions (width, min-height) as the real content
+- Never show a skeleton for less than `300ms` — add a minimum delay to prevent flash
+- Transition from skeleton to real content with a crossfade — never a hard swap
+
+---
+
+## 2. SHIMMER CSS
+
+The base shimmer animation used by all skeleton elements. Define this once, globally.
+
+```css
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-muted) 25%,
+    var(--color-bg-subtle) 50%,
+    var(--color-bg-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--color-bg-muted);
+  }
+}
+```
+
+**As a React component:**
+```tsx
+interface SkeletonProps {
+  width?: string | number;
+  height?: string | number;
+  borderRadius?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+function Skeleton({
+  width = '100%',
+  height = '1rem',
+  borderRadius = 'var(--radius-sm)',
+  className,
+  style,
+}: SkeletonProps) {
+  return (
+    <div
+      className={`skeleton ${className ?? ''}`}
+      aria-hidden="true"
+      style={{
+        width,
+        height,
+        borderRadius,
+        ...style,
+      }}
+    />
+  );
+}
+```
+
+**Key:** Always add `aria-hidden="true"` — skeletons are visual-only, screen readers should ignore them.
+
+---
+
+## 3. SKELETON RECIPES BY CONTENT TYPE
+
+### Text block
+```tsx
+function TextSkeleton({ lines = 3 }: { lines?: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton
+          key={i}
+          height="var(--text-base)"
+          width={i === lines - 1 ? '60%' : '100%'}
+        />
+      ))}
+    </div>
+  );
+}
+```
+Last line is shorter (60%) to mimic natural text ending.
+
+### Card
+```tsx
+function CardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        padding: 'var(--space-6)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
+      <Skeleton height="var(--text-lg)" width="40%" style={{ marginBottom: 'var(--space-3)' }} />
+      <Skeleton height="var(--text-sm)" width="80%" style={{ marginBottom: 'var(--space-2)' }} />
+      <Skeleton height="var(--text-sm)" width="65%" />
+    </div>
+  );
+}
+```
+
+### Card grid
+```tsx
+function CardGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 'var(--space-5)',
+    }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Table row
+```tsx
+function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
+  return (
+    <tr aria-hidden="true">
+      {Array.from({ length: columns }).map((_, i) => (
+        <td key={i} style={{ padding: 'var(--space-3) var(--space-4)' }}>
+          <Skeleton height="var(--text-sm)" width={i === 0 ? '70%' : '50%'} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+  return (
+    <table style={{ width: '100%' }} aria-hidden="true">
+      <thead>
+        <tr>
+          {Array.from({ length: columns }).map((_, i) => (
+            <th key={i} style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'left' }}>
+              <Skeleton height="var(--text-xs)" width="60%" />
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: rows }).map((_, i) => (
+          <TableRowSkeleton key={i} columns={columns} />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+### Avatar + text (user row, comment, notification)
+```tsx
+function AvatarRowSkeleton() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--space-3)',
+    }}>
+      <Skeleton width="40px" height="40px" borderRadius="var(--radius-full)" />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+        <Skeleton height="var(--text-sm)" width="30%" />
+        <Skeleton height="var(--text-xs)" width="55%" />
+      </div>
+    </div>
+  );
+}
+```
+
+### Metric / stat card
+```tsx
+function MetricSkeleton() {
+  return (
+    <div style={{
+      padding: 'var(--space-6)',
+      borderRadius: 'var(--radius-lg)',
+      border: '1px solid var(--color-border)',
+    }}>
+      <Skeleton height="var(--text-xs)" width="40%" style={{ marginBottom: 'var(--space-3)' }} />
+      <Skeleton height="2rem" width="60%" style={{ marginBottom: 'var(--space-2)' }} />
+      <Skeleton height="var(--text-xs)" width="30%" />
+    </div>
+  );
+}
+```
+
+### Image / media placeholder
+```tsx
+function ImageSkeleton({ aspectRatio = '16/9' }: { aspectRatio?: string }) {
+  return (
+    <Skeleton
+      width="100%"
+      height="auto"
+      borderRadius="var(--radius-md)"
+      style={{ aspectRatio }}
+    />
+  );
+}
+```
+
+### Full page shell
+```tsx
+function PageSkeleton() {
+  return (
+    <div style={{ padding: 'var(--space-8)' }} aria-hidden="true">
+      {/* Page title */}
+      <Skeleton height="var(--text-2xl)" width="35%" style={{ marginBottom: 'var(--space-2)' }} />
+      <Skeleton height="var(--text-sm)" width="50%" style={{ marginBottom: 'var(--space-8)' }} />
+
+      {/* Metrics row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: 'var(--space-5)',
+        marginBottom: 'var(--space-8)',
+      }}>
+        <MetricSkeleton />
+        <MetricSkeleton />
+        <MetricSkeleton />
+      </div>
+
+      {/* Content area */}
+      <TableSkeleton rows={5} columns={4} />
+    </div>
+  );
+}
+```
+
+---
+
+## 4. CROSSFADE: SKELETON → REAL CONTENT
+
+Never hard-swap skeleton for real content. Always crossfade.
+
+**Pattern — wrapper component:**
+```tsx
+import { useState, useEffect, type ReactNode } from 'react';
+
+interface CrossfadeProps {
+  isLoading: boolean;
+  skeleton: ReactNode;
+  children: ReactNode;
+  minLoadingMs?: number;
+}
+
+function Crossfade({ isLoading, skeleton, children, minLoadingMs = 300 }: CrossfadeProps) {
+  const [showSkeleton, setShowSkeleton] = useState(isLoading);
+  const [hasMinElapsed, setHasMinElapsed] = useState(false);
+
+  // Enforce minimum loading duration to prevent flash
+  useEffect(() => {
+    if (isLoading) {
+      setShowSkeleton(true);
+      setHasMinElapsed(false);
+      const timer = setTimeout(() => setHasMinElapsed(true), minLoadingMs);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, minLoadingMs]);
+
+  // Transition out skeleton only after both: data ready AND min elapsed
+  useEffect(() => {
+    if (!isLoading && hasMinElapsed) {
+      setShowSkeleton(false);
+    }
+  }, [isLoading, hasMinElapsed]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* Skeleton layer */}
+      <div
+        aria-hidden="true"
+        style={{
+          opacity: showSkeleton ? 1 : 0,
+          transition: 'opacity 200ms var(--ease-in)',
+          position: showSkeleton ? 'relative' : 'absolute',
+          inset: showSkeleton ? undefined : 0,
+          pointerEvents: showSkeleton ? 'auto' : 'none',
+        }}
+      >
+        {skeleton}
+      </div>
+
+      {/* Content layer */}
+      {!showSkeleton && (
+        <div
+          style={{
+            opacity: 1,
+            animation: 'fadeSlideIn 200ms var(--ease-out) forwards',
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Required keyframe (add globally):**
+```css
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+**Usage:**
+```tsx
+function UserList() {
+  const { data, isLoading, error } = useUsers();
+
+  if (error) return <ErrorState message="Failed to load users" onRetry={refetch} />;
+
+  return (
+    <Crossfade
+      isLoading={isLoading}
+      skeleton={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {Array.from({ length: 5 }).map((_, i) => <AvatarRowSkeleton key={i} />)}
+        </div>
+      }
+    >
+      {data?.length === 0 ? (
+        <EmptyState icon={<UsersIcon />} title="No users yet" description="Invite your team to get started." />
+      ) : (
+        <ul>
+          {data?.map(user => <UserRow key={user.id} user={user} />)}
+        </ul>
+      )}
+    </Crossfade>
+  );
+}
+```
+
+---
+
+## 5. WHEN TO USE SPINNERS (the exceptions)
+
+Spinners are acceptable ONLY for:
+- **Button loading state**: spinner replaces label text, button dimensions stay identical
+- **Inline save/submit**: small spinner next to or inside the trigger element
+- **Infinite scroll loading indicator**: small spinner at the bottom of a list
+
+```tsx
+function LoadingButton({ isLoading, children, ...props }: ButtonProps & { isLoading: boolean }) {
+  return (
+    <button {...props} disabled={isLoading || props.disabled}>
+      {isLoading ? (
+        <span
+          className="spinner"
+          style={{ width: '16px', height: '16px' }}
+          aria-label="Loading"
+          role="status"
+        />
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
+```
+
+**Spinner CSS (for the exceptions only):**
+```css
+.spinner {
+  display: inline-block;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-brand);
+  border-radius: var(--radius-full);
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.5s;
+  }
+}
+```

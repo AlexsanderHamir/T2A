@@ -1,0 +1,398 @@
+---
+description: >-
+  Data fetching patterns for the frontend improvement agent. Covers fetch
+  wrappers with AbortController, React Query/SWR integration, parallel
+  fetching, and mandatory loading/error/empty state templates. Read this
+  file when fixing P1 issues.
+globs:
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/*.ts"
+alwaysApply: false
+---
+
+# Data Fetching Patterns
+
+Reference file for the frontend improvement agent. When fixing **P1 — Data Fetching Anti-Patterns**, follow these patterns exactly.
+
+---
+
+## 1. THE THREE-STATE RULE
+
+Every component that fetches data MUST render three explicit UI states. No exceptions.
+
+```tsx
+function ResourceList() {
+  const { data, isLoading, error } = useFetchResource();
+
+  if (isLoading) return <ResourceListSkeleton />;
+
+  if (error) return (
+    <ErrorState
+      message="Failed to load resources"
+      onRetry={() => refetch()}
+    />
+  );
+
+  if (!data || data.length === 0) return (
+    <EmptyState
+      icon={<InboxIcon />}
+      title="No resources yet"
+      description="Create your first resource to get started."
+      action={{ label: "Create resource", onClick: handleCreate }}
+    />
+  );
+
+  return <FadeIn>{/* render data */}</FadeIn>;
+}
+```
+
+**Loading state:** Always a skeleton that matches real content dimensions. Never a spinner for content areas. See `skeleton-loading.mdc` for component templates.
+
+**Error state pattern:**
+```tsx
+interface ErrorStateProps {
+  message: string;
+  onRetry?: () => void;
+  className?: string;
+}
+
+function ErrorState({ message, onRetry, className }: ErrorStateProps) {
+  return (
+    <div
+      className={className}
+      role="alert"
+      style={{
+        padding: 'var(--space-6)',
+        background: 'var(--color-error-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        textAlign: 'center',
+      }}
+    >
+      <p style={{
+        color: 'var(--color-error)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 500,
+        marginBottom: onRetry ? 'var(--space-3)' : 0,
+      }}>
+        {message}
+      </p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="btn-secondary"
+          style={{ fontSize: 'var(--text-sm)' }}
+        >
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Empty state pattern:**
+```tsx
+interface EmptyStateProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+}
+
+function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-12) var(--space-6)',
+      textAlign: 'center',
+    }}>
+      <div style={{
+        color: 'var(--color-text-tertiary)',
+        marginBottom: 'var(--space-4)',
+        fontSize: '48px',
+      }}>
+        {icon}
+      </div>
+      <h3 style={{
+        fontSize: 'var(--text-lg)',
+        fontWeight: 600,
+        color: 'var(--color-text-primary)',
+        marginBottom: 'var(--space-2)',
+      }}>
+        {title}
+      </h3>
+      <p style={{
+        fontSize: 'var(--text-sm)',
+        color: 'var(--color-text-secondary)',
+        maxWidth: '280px',
+        marginBottom: action ? 'var(--space-5)' : 0,
+      }}>
+        {description}
+      </p>
+      {action && (
+        <button onClick={action.onClick} className="btn-primary">
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 2. FETCH WITH ABORT CONTROLLER
+
+Every `useEffect` that fetches data MUST clean up with an AbortController. This prevents state updates on unmounted components and cancels in-flight requests on navigation.
+
+**Raw fetch pattern (when no data layer exists):**
+```tsx
+function useResource(id: string) {
+  const [data, setData] = useState<Resource | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/resources/${id}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setData(result);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => controller.abort();
+  }, [id]);
+
+  const refetch = useCallback(() => {
+    setData(null);
+    setIsLoading(true);
+    // re-trigger by changing a dep — or inline the fetch
+  }, []);
+
+  return { data, error, isLoading, refetch };
+}
+```
+
+**Critical details:**
+- Always check `controller.signal.aborted` before setting state in `finally`
+- Always catch and ignore `AbortError` — it's not a real error
+- Always expose a `refetch` function for error state retry buttons
+- Never `setIsLoading(false)` after an abort — the component is unmounting
+
+---
+
+## 3. REACT QUERY / TANSTACK QUERY PATTERN
+
+If the project uses React Query (or should — see migration criteria below), follow this pattern:
+
+```tsx
+import { useQuery } from '@tanstack/react-query';
+
+function useResource(id: string) {
+  return useQuery({
+    queryKey: ['resource', id],
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`/api/resources/${id}`, { signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json() as Promise<Resource>;
+    },
+    staleTime: 5 * 60 * 1000,      // 5 min — don't refetch if fresh
+    retry: 2,                        // retry failed requests twice
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+  });
+}
+```
+
+**In the component:**
+```tsx
+function ResourceDetail({ id }: { id: string }) {
+  const { data, isLoading, error, refetch } = useResource(id);
+
+  if (isLoading) return <ResourceDetailSkeleton />;
+  if (error) return <ErrorState message="Failed to load resource" onRetry={() => refetch()} />;
+  if (!data) return <EmptyState icon={<FileIcon />} title="Resource not found" description="This resource may have been deleted." />;
+
+  return <FadeIn>{/* render */}</FadeIn>;
+}
+```
+
+**React Query benefits over raw fetch:**
+- Automatic abort on unmount (via `signal` in `queryFn`)
+- Deduplication — same `queryKey` across components = one request
+- Stale-while-revalidate — shows cached data instantly, refreshes in background
+- Built-in retry with exponential backoff
+- Devtools for debugging
+
+---
+
+## 4. SWR PATTERN
+
+If the project uses SWR:
+
+```tsx
+import useSWR from 'swr';
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+
+function useResource(id: string) {
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/resources/${id}`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5 * 60 * 1000,
+      errorRetryCount: 2,
+    }
+  );
+
+  return { data, error, isLoading, refetch: () => mutate() };
+}
+```
+
+---
+
+## 5. PARALLEL FETCHING
+
+**Anti-pattern — request waterfall:**
+```tsx
+// BAD: sequential — second fetch waits for first
+useEffect(() => {
+  const fetchData = async () => {
+    const users = await fetch('/api/users').then(r => r.json());
+    const projects = await fetch('/api/projects').then(r => r.json());
+    setData({ users, projects });
+  };
+  fetchData();
+}, []);
+```
+
+**Correct — parallel fetching:**
+```tsx
+// GOOD: both requests fire simultaneously
+useEffect(() => {
+  const controller = new AbortController();
+
+  const fetchData = async () => {
+    try {
+      const [users, projects] = await Promise.all([
+        fetch('/api/users', { signal: controller.signal }).then(r => r.json()),
+        fetch('/api/projects', { signal: controller.signal }).then(r => r.json()),
+      ]);
+      setData({ users, projects });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setError(err instanceof Error ? err : new Error('Fetch failed'));
+    }
+  };
+
+  fetchData();
+  return () => controller.abort();
+}, []);
+```
+
+**With React Query:**
+```tsx
+// Both queries fire in parallel automatically
+const users = useQuery({ queryKey: ['users'], queryFn: fetchUsers });
+const projects = useQuery({ queryKey: ['projects'], queryFn: fetchProjects });
+
+const isLoading = users.isLoading || projects.isLoading;
+const error = users.error || projects.error;
+```
+
+---
+
+## 6. OPTIMISTIC UPDATES
+
+For mutations where the expected result is predictable (toggle, delete, simple edit), update the UI immediately and revert on failure:
+
+```tsx
+async function handleToggleFavorite(id: string) {
+  // Optimistic: update UI immediately
+  setItems(prev => prev.map(item =>
+    item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+  ));
+
+  try {
+    await fetch(`/api/items/${id}/favorite`, { method: 'POST' });
+  } catch {
+    // Revert on failure
+    setItems(prev => prev.map(item =>
+      item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+    ));
+    toast.error('Failed to update favorite');
+  }
+}
+```
+
+**With React Query:**
+```tsx
+const mutation = useMutation({
+  mutationFn: (id: string) => fetch(`/api/items/${id}/favorite`, { method: 'POST' }),
+  onMutate: async (id) => {
+    await queryClient.cancelQueries({ queryKey: ['items'] });
+    const previous = queryClient.getQueryData(['items']);
+    queryClient.setQueryData(['items'], (old: Item[]) =>
+      old.map(item => item.id === id ? { ...item, isFavorite: !item.isFavorite } : item)
+    );
+    return { previous };
+  },
+  onError: (_err, _id, context) => {
+    queryClient.setQueryData(['items'], context?.previous);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['items'] });
+  },
+});
+```
+
+---
+
+## 7. MIGRATION CRITERIA — WHEN TO INTRODUCE A DATA LAYER
+
+Introduce React Query or SWR when **any** of these are true:
+- 3+ components making raw `fetch()` calls
+- Same endpoint fetched by multiple components (duplication)
+- Manual cache management (storing API responses in global state)
+- Complex retry/polling logic implemented by hand
+- Stale data problems (user sees outdated info after navigation)
+
+**Do NOT introduce a data layer when:**
+- Only 1-2 simple fetch calls exist
+- The app is a static site with no dynamic data
+- The project already has a working data layer
+
+**If introducing React Query, the session scope is:**
+1. Install `@tanstack/react-query`
+2. Add `QueryClientProvider` to the app root
+3. Migrate the **worst-offending** fetch (most duplicated or most broken) to a `useQuery` hook
+4. Queue remaining migrations for future sessions — one component per session

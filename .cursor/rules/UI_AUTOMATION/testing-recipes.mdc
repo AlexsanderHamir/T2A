@@ -1,0 +1,514 @@
+---
+description: >-
+  Testing recipe patterns for the frontend improvement agent. Covers Vitest
+  setup, test templates for every component type (presentational, container,
+  data-fetching, forms, hooks), mock patterns, and the minimum test coverage
+  requirements. Read this file when fixing P0 (no test suite) or when writing
+  tests during any session.
+globs:
+  - "**/*.test.tsx"
+  - "**/*.test.ts"
+  - "**/*.spec.tsx"
+  - "**/*.spec.ts"
+alwaysApply: false
+---
+
+# Testing Recipes
+
+Reference file for the frontend improvement agent. Use these templates when writing tests. If no test suite exists, use the setup guide in Section 1 first.
+
+---
+
+## 1. VITEST SETUP (when no test runner exists)
+
+This is a P0 fix. If the project has zero tests, this is the entire first session.
+
+### Install
+
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
+```
+
+### Config
+
+Create `vitest.config.ts` at project root (or add to existing `vite.config.ts`):
+
+```ts
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    css: false,
+  },
+});
+```
+
+### Setup file
+
+Create `src/test/setup.ts`:
+
+```ts
+import '@testing-library/jest-dom';
+
+// Mock IntersectionObserver (common in lazy-loading components)
+class MockIntersectionObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+// Mock matchMedia (common in responsive/dark mode components)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock ResizeObserver
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+Object.defineProperty(window, 'ResizeObserver', {
+  writable: true,
+  value: MockResizeObserver,
+});
+```
+
+### Package.json script
+
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+
+### First session test output
+
+Write one smoke test per page/route:
+
+```tsx
+// src/features/dashboard/__tests__/Dashboard.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import Dashboard from '../Dashboard';
+
+describe('Dashboard', () => {
+  it('renders without crashing', () => {
+    render(<Dashboard />);
+    // Verify something visible renders — even a skeleton or loading state counts
+    expect(document.body.firstChild).toBeTruthy();
+  });
+});
+```
+
+---
+
+## 2. TEST TEMPLATES BY COMPONENT TYPE
+
+### Presentational component (pure display)
+
+```tsx
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import MetricCard from '../MetricCard';
+
+describe('MetricCard', () => {
+  const defaultProps = {
+    label: 'Revenue',
+    value: '$12,345',
+  };
+
+  it('renders label and value', () => {
+    render(<MetricCard {...defaultProps} />);
+    expect(screen.getByText('Revenue')).toBeInTheDocument();
+    expect(screen.getByText('$12,345')).toBeInTheDocument();
+  });
+
+  it('renders trend when provided', () => {
+    render(
+      <MetricCard
+        {...defaultProps}
+        trend={{ direction: 'up', value: '12%' }}
+      />
+    );
+    expect(screen.getByText(/12%/)).toBeInTheDocument();
+  });
+
+  it('does not render trend when absent', () => {
+    const { container } = render(<MetricCard {...defaultProps} />);
+    expect(container.querySelector('[data-testid="trend"]')).toBeNull();
+  });
+});
+```
+
+### Data-fetching component (the four-state test)
+
+Every data-fetching component needs tests for: **loading**, **success**, **error**, and **empty**.
+
+```tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import UserList from '../UserList';
+
+// Mock the data hook
+vi.mock('../hooks/useUsers', () => ({
+  useUsers: vi.fn(),
+}));
+
+import { useUsers } from '../hooks/useUsers';
+const mockUseUsers = vi.mocked(useUsers);
+
+describe('UserList', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows skeleton while loading', () => {
+    mockUseUsers.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(<UserList />);
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+  });
+
+  it('renders user list on success', async () => {
+    mockUseUsers.mockReturnValue({
+      data: [
+        { id: '1', name: 'Alice', email: 'alice@test.com' },
+        { id: '2', name: 'Bob', email: 'bob@test.com' },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<UserList />);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('shows error state with retry button on failure', async () => {
+    const refetch = vi.fn();
+    mockUseUsers.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch,
+    });
+
+    render(<UserList />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    const retryButton = screen.getByText(/try again/i);
+    await userEvent.click(retryButton);
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('shows empty state when data is empty array', () => {
+    mockUseUsers.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<UserList />);
+    expect(screen.getByText(/no users/i)).toBeInTheDocument();
+  });
+});
+```
+
+### Form component
+
+```tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+import LoginForm from '../LoginForm';
+
+describe('LoginForm', () => {
+  it('renders email and password fields with labels', () => {
+    render(<LoginForm onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+  });
+
+  it('shows validation errors on empty submit', async () => {
+    render(<LoginForm onSubmit={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+  });
+
+  it('shows email format error on blur with invalid email', async () => {
+    render(<LoginForm onSubmit={vi.fn()} />);
+    const emailInput = screen.getByLabelText(/email/i);
+    await userEvent.type(emailInput, 'notanemail');
+    await userEvent.tab(); // blur
+    expect(screen.getByText(/valid email/i)).toBeInTheDocument();
+  });
+
+  it('calls onSubmit with form data on valid submission', async () => {
+    const onSubmit = vi.fn();
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com');
+    await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({
+        email: 'user@test.com',
+        password: 'password123',
+      });
+    });
+  });
+
+  it('disables submit button while loading', () => {
+    render(<LoginForm onSubmit={vi.fn()} isLoading />);
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled();
+  });
+});
+```
+
+### Custom hook
+
+```tsx
+import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useUsers } from '../hooks/useUsers';
+
+// Mock fetch globally
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+describe('useUsers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns loading state initially', () => {
+    mockFetch.mockReturnValue(new Promise(() => {})); // never resolves
+    const { result } = renderHook(() => useUsers());
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('returns data on success', async () => {
+    const users = [{ id: '1', name: 'Alice' }];
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(users),
+    });
+
+    const { result } = renderHook(() => useUsers());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toEqual(users);
+    });
+  });
+
+  it('returns error on fetch failure', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
+
+    const { result } = renderHook(() => useUsers());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeTruthy();
+    });
+  });
+});
+```
+
+---
+
+## 3. MOCK PATTERNS
+
+### Mock a custom hook
+```tsx
+vi.mock('../hooks/useUsers', () => ({
+  useUsers: vi.fn(),
+}));
+import { useUsers } from '../hooks/useUsers';
+const mockUseUsers = vi.mocked(useUsers);
+```
+
+### Mock fetch globally
+```tsx
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Success response
+mockFetch.mockResolvedValueOnce({
+  ok: true,
+  json: () => Promise.resolve({ data: 'test' }),
+});
+
+// Error response
+mockFetch.mockResolvedValueOnce({
+  ok: false,
+  status: 404,
+  statusText: 'Not Found',
+});
+
+// Network error
+mockFetch.mockRejectedValueOnce(new Error('Network error'));
+```
+
+### Mock React Query
+```tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+}
+
+// Usage
+render(<UserList />, { wrapper: createWrapper() });
+```
+
+### Mock React Router
+```tsx
+import { MemoryRouter } from 'react-router-dom';
+
+render(
+  <MemoryRouter initialEntries={['/dashboard']}>
+    <Dashboard />
+  </MemoryRouter>
+);
+```
+
+### Mock next/navigation (App Router)
+```tsx
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/dashboard',
+  useSearchParams: () => new URLSearchParams(),
+}));
+```
+
+---
+
+## 4. ACCESSIBILITY TESTING
+
+Add to every component test:
+
+```tsx
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
+
+it('has no accessibility violations', async () => {
+  const { container } = render(<Component />);
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+});
+```
+
+Install: `npm install -D jest-axe @types/jest-axe`
+
+**Minimum accessibility checks per component:**
+- `role="alert"` on error messages
+- `aria-hidden="true"` on decorative/skeleton elements
+- `aria-label` on icon-only buttons
+- `<label>` associated with every `<input>`
+- Focus-visible works on interactive elements
+
+---
+
+## 5. MINIMUM COVERAGE REQUIREMENTS
+
+The agent enforces these minimums:
+
+| Category | Requirement |
+|----------|------------|
+| Every page/route | At least 1 smoke test (`renders without crashing`) |
+| Every data-fetching component | Tests for loading, success, error, empty states |
+| Every form | Tests for validation, valid submission, disabled state |
+| Every custom hook | Tests for initial state, success, error |
+| Every shared component | Tests for all prop variations |
+| Critical user flows | Integration test covering the full flow |
+
+**The full suite must run in < 30 seconds.** If it's slower, the tests are probably not properly mocked (hitting real network, waiting for real timers). Fix the mocks.
+
+---
+
+## 6. TEST FILE LOCATION
+
+Co-locate tests with their source:
+
+```
+src/features/dashboard/
+├── Dashboard.tsx
+├── Dashboard.test.tsx          ← right next to the component
+├── hooks/
+│   ├── useDashboardData.ts
+│   └── useDashboardData.test.ts
+```
+
+Or use a `__tests__/` directory if the project convention prefers it:
+
+```
+src/features/dashboard/
+├── Dashboard.tsx
+├── __tests__/
+│   └── Dashboard.test.tsx
+```
+
+**Match existing project conventions.** Don't reorganize test locations in a session.
+
+---
+
+## 7. WHEN WRITING TESTS DURING ANY SESSION
+
+Even when tests aren't the primary fix (P1-P6 sessions), always:
+
+1. If you modify a component that has tests → run them, update if broken
+2. If you modify a component that has NO tests → write a smoke test at minimum
+3. If you add a new component → write tests covering its primary behavior
+4. If you add a new hook → write tests for its return values in each state
+5. Never decrease the total test count
