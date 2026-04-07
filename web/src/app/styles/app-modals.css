@@ -254,7 +254,7 @@
 }
 
 .draft-resume-pager-btn:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
 .draft-resume-pager-btn:disabled {
