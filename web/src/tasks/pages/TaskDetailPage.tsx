@@ -469,16 +469,24 @@ export function TaskDetailPage({ app }: Props) {
             </h3>
             <FieldRequirementBadge requirement="optional" />
           </div>
-          <button
-            type="button"
-            className="task-detail-add-subtask-btn"
-            onClick={openSubtaskModal}
-            disabled={app.saving}
-          >
-            Add subtask
-          </button>
+          <div className="task-detail-subtasks-actions">
+            <Link
+              to={`/tasks/${encodeURIComponent(task.id)}/graph`}
+              className="task-detail-open-graph-btn"
+            >
+              Open graph view
+            </Link>
+            <button
+              type="button"
+              className="task-detail-add-subtask-btn task-detail-add-subtask-btn--primary"
+              onClick={openSubtaskModal}
+              disabled={app.saving}
+            >
+              Add subtask
+            </button>
+          </div>
         </div>
-        <SubtaskTree nodes={task.children ?? []} />
+        <SubtaskTree nodes={task.children ?? []} showNested={false} />
         {subtaskModalOpen ? (
           <SubtaskCreateModal
             taskId={taskId}

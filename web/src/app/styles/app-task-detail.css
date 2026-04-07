@@ -240,6 +240,15 @@ button.task-detail-btn-delete:focus-visible {
   margin: 0;
 }
 
+.task-detail-subtasks-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
 .task-detail-checklist-head {
   display: flex;
   flex-wrap: wrap;
@@ -280,6 +289,39 @@ button.task-detail-add-checklist-btn {
   transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 
+a.task-detail-open-graph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.45rem 0.95rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+a.task-detail-open-graph-btn:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+a.task-detail-open-graph-btn:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
 button.task-detail-add-subtask-btn:not(:disabled):hover,
 button.task-detail-add-checklist-btn:not(:disabled):hover {
   background: var(--bg-subtle);
@@ -300,6 +342,24 @@ button.task-detail-add-subtask-btn:disabled,
 button.task-detail-add-checklist-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+button.task-detail-add-subtask-btn--primary {
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border-color: var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+}
+
+button.task-detail-add-subtask-btn--primary:not(:disabled):hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-border-cta);
+  box-shadow: var(--shadow-md);
+}
+
+button.task-detail-add-subtask-btn--primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
 }
 
 button.task-home-new-task-btn {
@@ -488,6 +548,12 @@ button.task-detail-checklist-remove:focus-visible {
   .task-detail-meta {
     justify-content: flex-start;
   }
+
+  .task-detail-subtasks-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
 }
 
 .task-detail-panel .task-timeline-item {
@@ -583,6 +649,102 @@ button.task-detail-checklist-remove:focus-visible {
   justify-content: flex-end;
   gap: 0.35rem;
   flex-shrink: 0;
+}
+
+.task-graph-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 70vh;
+}
+
+.task-graph-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+}
+
+.task-graph-title {
+  margin: 0;
+  font-size: var(--text-title-app);
+  line-height: 1.2;
+}
+
+.task-graph-meta {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.task-graph-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 38rem;
+  max-height: min(74vh, 56rem);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  box-shadow: var(--shadow-chrome-xs);
+  overflow: auto;
+}
+
+.task-graph-canvas {
+  position: relative;
+}
+
+.task-graph-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.task-graph-edges path {
+  fill: none;
+  stroke: var(--border-chrome-muted);
+  stroke-width: 1.4;
+}
+
+.task-graph-node {
+  position: absolute;
+  width: 15rem;
+  min-height: 6.5rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-chrome-xs-soft);
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.task-graph-node-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.task-graph-node-link:hover {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.task-graph-node-link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.task-graph-node-meta {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .task-checklist-list {

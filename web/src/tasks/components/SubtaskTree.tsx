@@ -9,9 +9,11 @@ import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 export function SubtaskTree({
   nodes,
   nested = false,
+  showNested = true,
 }: {
   nodes: Task[];
   nested?: boolean;
+  showNested?: boolean;
 }) {
   if (!nodes.length) {
     if (nested) return null;
@@ -54,7 +56,9 @@ export function SubtaskTree({
               <span className={statusPillClass(c.status)}>{c.status}</span>
             </div>
           </div>
-          <SubtaskTree nodes={c.children ?? []} nested />
+          {showNested ? (
+            <SubtaskTree nodes={c.children ?? []} nested showNested={showNested} />
+          ) : null}
         </li>
       ))}
     </ul>

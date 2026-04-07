@@ -556,7 +556,7 @@ describe("TaskDetailPage", () => {
     expect(api.checklistPosts[0]).toContain("Criterion A");
   });
 
-  it("renders a nested subtask graph with task links", async () => {
+  it("links from task detail to the dedicated graph page", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url === "/tasks/parent-graph") {
@@ -591,20 +591,8 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /^parent graph$/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/graph view/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Parent graph" })).toHaveAttribute(
-      "href",
-      "/tasks/parent-graph",
-    );
     expect(
-      screen
-        .getAllByRole("link", { name: "Child A" })
-        .some((link) => link.getAttribute("href") === "/tasks/child-a"),
-    ).toBe(true);
-    expect(
-      screen
-        .getAllByRole("link", { name: "Grandchild A1" })
-        .some((link) => link.getAttribute("href") === "/tasks/grandchild-a1"),
-    ).toBe(true);
+      screen.getByRole("link", { name: /open graph view/i }),
+    ).toHaveAttribute("href", "/tasks/parent-graph/graph");
   });
 });
