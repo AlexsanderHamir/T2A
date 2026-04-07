@@ -11,6 +11,7 @@ import { TaskComposeFields } from "./TaskComposeFields";
 type Props = {
   pending: boolean;
   saving: boolean;
+  parentOptionsLoading?: boolean;
   draftSaving: boolean;
   draftSaveLabel: string | null;
   draftSaveError: boolean;
@@ -52,6 +53,7 @@ type Props = {
 export function TaskCreateModal({
   pending,
   saving,
+  parentOptionsLoading = false,
   draftSaving,
   draftSaveLabel,
   draftSaveError,
@@ -185,13 +187,23 @@ export function TaskCreateModal({
               ) : null}
             </div>
             <div className="task-create-parent-field grow">
-              <ParentTaskSelect
-                id="task-new-parent"
-                value={parentId}
-                parentOptions={parentOptions}
-                onChange={onParentIdChange}
-                disabled={disabled}
-              />
+              {parentOptionsLoading ? (
+                <div
+                  className="task-create-parent-loading"
+                  aria-hidden="true"
+                >
+                  <span className="skeleton-block task-create-parent-loading-label" />
+                  <span className="skeleton-block task-create-parent-loading-input" />
+                </div>
+              ) : (
+                <ParentTaskSelect
+                  id="task-new-parent"
+                  value={parentId}
+                  parentOptions={parentOptions}
+                  onChange={onParentIdChange}
+                  disabled={disabled}
+                />
+              )}
               <p className="task-create-parent-hint muted">
                 {hasParent ? (
                   <>
@@ -205,6 +217,11 @@ export function TaskCreateModal({
                   </>
                 )}
               </p>
+              {parentOptionsLoading ? (
+                <p className="visually-hidden" role="status" aria-live="polite">
+                  Loading parent task options…
+                </p>
+              ) : null}
             </div>
 
             <TaskComposeFields

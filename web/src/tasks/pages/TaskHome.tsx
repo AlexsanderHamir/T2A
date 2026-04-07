@@ -53,6 +53,7 @@ export function TaskHome({ app }: Props) {
         <TaskCreateModal
           pending={app.createPending}
           saving={app.saving}
+          parentOptionsLoading={app.loading}
           draftSaving={app.draftSavePending}
           draftSaveLabel={app.draftSaveLabel}
           draftSaveError={app.draftSaveError}

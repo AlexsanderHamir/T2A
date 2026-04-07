@@ -98,4 +98,14 @@ describe("TaskCreateModal", () => {
       screen.getByRole("button", { name: /saving draft/i }),
     ).toBeDisabled();
   });
+
+  it("renders parent options loading skeleton while parent options are pending", () => {
+    renderModal({ parentOptionsLoading: true });
+    expect(
+      document.querySelector(".task-create-parent-loading"),
+    ).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /loading parent task options/i,
+    );
+  });
 });
