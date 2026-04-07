@@ -135,7 +135,7 @@
 @keyframes draft-resume-state-enter {
   from {
     opacity: 0;
-    transform: translateY(0.5rem);
+    transform: translateY(var(--space-2));
   }
 
   to {
@@ -161,7 +161,7 @@
 }
 
 .draft-resume-list .secondary {
-  min-height: 2.75rem;
+  min-height: var(--touch-target-min);
 }
 
 .draft-resume-skeleton {
@@ -172,13 +172,13 @@
 }
 
 .draft-resume-skeleton-row {
-  height: 2.75rem;
+  height: var(--touch-target-min);
   border-radius: var(--radius-md);
 }
 
 .draft-resume-skeleton-meta {
   width: min(44%, 12rem);
-  height: 0.875rem;
+  height: var(--text-sm);
 }
 
 .draft-resume-skeleton-actions {
@@ -313,7 +313,7 @@
 @keyframes modal-sheet-enter {
   from {
     opacity: 0;
-    transform: translateY(0.75rem);
+    transform: translateY(var(--space-3));
   }
 
   to {
@@ -351,8 +351,8 @@
     content: "";
     flex-shrink: 0;
     width: 2.25rem;
-    height: 0.25rem;
-    margin: 0.625rem auto 0.25rem;
+    height: var(--space-1);
+    margin: 0.625rem auto var(--space-1);
     border-radius: var(--radius-full);
     background: var(--border-soft);
   }
