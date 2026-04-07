@@ -1,4 +1,19 @@
 ---
+## Session 3 — 2026-04-07
+**Category**: P1 — Data Fetching Anti-Patterns
+**Files changed**: web/src/tasks/hooks/useTasksApp.ts, web/src/tasks/pages/TaskHome.tsx, web/src/app/App.test.tsx
+**Summary**: Added explicit home-entry warning when draft summary fetch fails and the app opens a fresh create modal fallback. This keeps the fallback behavior transparent instead of silently bypassing drafts.
+**Tests**: 214 passed, 1 added, 1 modified
+**Design system refs used**: §11 Feedback & Status (error messaging), §17 Writing & Microcopy, §13 Accessibility
+**Verification**: typecheck pass | lint pass | tests pass | build pass
+
+### NEXT_SESSION_QUEUE
+1. [P2] Add reduced-motion-safe enter/exit transitions for draft resume modal content states — web/src/tasks/components/DraftResumeModal.tsx + app modal styles
+2. [P1] Add explicit retry CTA for home entry warning itself (not just modal path) — web/src/tasks/pages/TaskHome.tsx + web/src/tasks/hooks/useTasksApp.ts
+3. [P3] Break up large task creation orchestration concerns from useTasksApp into smaller hooks — web/src/tasks/hooks/useTasksApp.ts
+---
+
+---
 ## Session 2 — 2026-04-07
 **Category**: P1 — Data Fetching Anti-Patterns
 **Files changed**: web/src/tasks/components/DraftResumeModal.tsx, web/src/tasks/components/DraftResumeModal.test.tsx, web/src/tasks/pages/TaskHome.tsx, web/src/tasks/hooks/useTasksApp.ts

@@ -247,6 +247,9 @@ describe("App", () => {
           { status: 500, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
       if (url === "/task-drafts" && init?.method === "POST") {
         return new Response(
           JSON.stringify({ id: "d1", name: "Untitled draft" }),
@@ -657,6 +660,38 @@ describe("App", () => {
     await screen.findByText("No tasks yet");
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
     expect(await screen.findByRole("status")).toHaveTextContent(/loading drafts/i);
+  });
+
+  it("shows home entry hint when drafts fail and opens fresh create form", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return new Response(
+          JSON.stringify({ error: "drafts unavailable" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderApp();
+    await screen.findByText("No tasks yet");
+    await user.click(screen.getByRole("button", { name: /^new task$/i }));
+
+    expect(await screen.findByRole("dialog", { name: /^new task$/i })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /saved drafts are unavailable right now/i,
+    );
   });
 
   it("shows resume error on drafts page when opening a draft fails", async () => {

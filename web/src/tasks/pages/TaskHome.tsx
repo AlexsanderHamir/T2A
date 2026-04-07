@@ -33,6 +33,11 @@ export function TaskHome({ app }: Props) {
 
   return (
     <>
+      {app.createEntryDraftErrorHint ? (
+        <p role="alert">
+          Saved drafts are unavailable right now, so a fresh task form was opened.
+        </p>
+      ) : null}
       {app.createModalOpen ? (
         <TaskCreateModal
           pending={app.createPending}

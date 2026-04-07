@@ -129,6 +129,9 @@ export function useTasksApp() {
 
   const [taskListPage, setTaskListPage] = useState(0);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
+  const [createEntryDraftErrorHint, setCreateEntryDraftErrorHint] = useState<
+    string | null
+  >(null);
 
   const tasksQuery = useQuery({
     queryKey: taskQueryKeys.list(taskListPage),
@@ -216,12 +219,20 @@ export function useTasksApp() {
   const closeCreateModal = useCallback(() => {
     setCreateModalOpen(false);
     setDraftPickerOpen(false);
+    setCreateEntryDraftErrorHint(null);
     resetNewTaskForm();
   }, [resetNewTaskForm]);
 
   const openCreateModal = useCallback(() => {
+    setCreateEntryDraftErrorHint(null);
     if (draftsQuery.isPending) {
       setDraftPickerOpen(true);
+      return;
+    }
+    if (draftsQuery.isError) {
+      setCreateEntryDraftErrorHint(errorMessage(draftsQuery.error));
+      resetNewTaskForm();
+      setCreateModalOpen(true);
       return;
     }
     const drafts = draftsQuery.data ?? [];
@@ -231,7 +242,7 @@ export function useTasksApp() {
     }
     resetNewTaskForm();
     setCreateModalOpen(true);
-  }, [draftsQuery.data, draftsQuery.isPending, resetNewTaskForm]);
+  }, [draftsQuery.data, draftsQuery.error, draftsQuery.isError, draftsQuery.isPending, resetNewTaskForm]);
 
   const loading = tasksQuery.isPending;
   const rawListRefreshing =
@@ -838,6 +849,7 @@ export function useTasksApp() {
     taskDrafts: draftsQuery.data ?? [],
     draftListLoading,
     draftListError,
+    createEntryDraftErrorHint,
     retryDraftList,
     deleteDraftPending: deleteDraftMutation.isPending,
     deleteDraftError,
