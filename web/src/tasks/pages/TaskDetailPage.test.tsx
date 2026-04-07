@@ -29,6 +29,18 @@ function mockApp(): ReturnType<typeof useTasksApp> {
   } as unknown as ReturnType<typeof useTasksApp>;
 }
 
+function appWithDeleteSuccess(
+  variables: { id: string; parent_id?: string },
+): ReturnType<typeof useTasksApp> {
+  return {
+    ...mockApp(),
+    deleteMutation: {
+      isSuccess: true,
+      variables,
+    },
+  } as unknown as ReturnType<typeof useTasksApp>;
+}
+
 function renderDetail(
   initialPath: string,
   app: ReturnType<typeof useTasksApp>,
@@ -51,6 +63,197 @@ function renderDetail(
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function emptyEventsPayload(taskId: string) {
+  return {
+    task_id: taskId,
+    events: [],
+    limit: 20,
+    total: 0,
+    has_more_newer: false,
+    has_more_older: false,
+    approval_pending: false,
+  };
+}
+
+type MockTaskDetailData = {
+  id: string;
+  title: string;
+  initial_prompt: string;
+  status: string;
+  priority: string;
+  checklist_inherit: boolean;
+  parent_id?: string;
+};
+
+function taskDetail(
+  id: string,
+  title: string,
+  overrides: Partial<MockTaskDetailData> = {},
+): MockTaskDetailData {
+  return {
+    id,
+    title,
+    initial_prompt: "",
+    status: "ready",
+    priority: "medium",
+    checklist_inherit: false,
+    ...overrides,
+  };
+}
+
+function mockTaskDetailFetch(
+  task: MockTaskDetailData,
+  checklistItems: unknown[] = [],
+) {
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === `/tasks/${task.id}`) {
+        return Response.json(task);
+      }
+      if (url === `/tasks/${task.id}/checklist`) {
+        return Response.json({ items: checklistItems });
+      }
+      if (url.startsWith(`/tasks/${task.id}/events`)) {
+        return Response.json(emptyEventsPayload(task.id));
+      }
+      return new Response("not found", { status: 404 });
+    });
+}
+
+function mockTaskDetailFetchWithChecklistPatch(
+  task: MockTaskDetailData,
+  checklistItemId: string,
+  initialText: string,
+  nextText: string,
+) {
+  let patchBody: string | null = null;
+  let checklistText = initialText;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = requestUrl(input);
+    const method = init?.method ?? "GET";
+    if (url === `/tasks/${task.id}`) {
+      return Response.json(task);
+    }
+    if (url === `/tasks/${task.id}/checklist`) {
+      return Response.json({
+        items: [
+          {
+            id: checklistItemId,
+            sort_order: 0,
+            text: checklistText,
+            done: false,
+          },
+        ],
+      });
+    }
+    if (
+      url === `/tasks/${task.id}/checklist/items/${checklistItemId}` &&
+      method === "PATCH"
+    ) {
+      patchBody = (init?.body as string) ?? null;
+      checklistText = nextText;
+      return Response.json({
+        items: [
+          {
+            id: checklistItemId,
+            sort_order: 0,
+            text: nextText,
+            done: false,
+          },
+        ],
+      });
+    }
+    if (url.startsWith(`/tasks/${task.id}/events`)) {
+      return Response.json(emptyEventsPayload(task.id));
+    }
+    return new Response("not found", { status: 404 });
+  });
+  return {
+    getPatchBody: () => patchBody,
+  };
+}
+
+function mockTaskDetailFetchForSubtaskCreate(taskId: string) {
+  const checklistPosts: string[] = [];
+  let subtaskCreated = false;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = requestUrl(input);
+    const method = init?.method ?? "GET";
+    if (url === `/tasks/${taskId}` && method === "GET") {
+      return Response.json({
+        ...taskDetail(taskId, "Parent"),
+        children: subtaskCreated
+          ? [
+              {
+                ...taskDetail("child", "Child", {
+                  priority: "high",
+                  initial_prompt: "<p></p>",
+                }),
+              },
+            ]
+          : [],
+      });
+    }
+    if (url === `/tasks/${taskId}/checklist`) {
+      return Response.json({ items: [] });
+    }
+    if (url.startsWith(`/tasks/${taskId}/events`)) {
+      return Response.json(emptyEventsPayload(taskId));
+    }
+    if (url === "/tasks" && method === "POST") {
+      const body =
+        init?.body != null && typeof init.body === "string"
+          ? JSON.parse(init.body)
+          : {};
+      expect(body.parent_id).toBe(taskId);
+      expect(body.title).toBe("Child");
+      expect(body.priority).toBe("high");
+      subtaskCreated = true;
+      return new Response(
+        JSON.stringify(
+          taskDetail("child", "Child", {
+            priority: "high",
+            initial_prompt: "<p></p>",
+          }),
+        ),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (url === "/tasks/child/checklist/items" && method === "POST") {
+      checklistPosts.push(init?.body != null ? String(init.body) : "");
+      return new Response(null, { status: 204 });
+    }
+    return new Response("not found", { status: 404 });
+  });
+  return {
+    checklistPosts,
+  };
+}
+
+function mockTaskDetailFetchWithEvents(
+  task: MockTaskDetailData,
+  eventsPayload: Record<string, unknown>,
+  checklistItems: unknown[] = [],
+) {
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === `/tasks/${task.id}`) {
+        return Response.json(task);
+      }
+      if (url === `/tasks/${task.id}/checklist`) {
+        return Response.json({ items: checklistItems });
+      }
+      if (url.startsWith(`/tasks/${task.id}/events`)) {
+        return Response.json(eventsPayload);
+      }
+      return new Response("not found", { status: 404 });
+    });
 }
 
 describe("TaskDetailPage", () => {
@@ -82,34 +285,12 @@ describe("TaskDetailPage", () => {
 
   it("collapses initial prompt by default and expands on demand", async () => {
     const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1") {
-        return Response.json({
-          id: "t1",
-          title: "Testing",
-          initial_prompt: "<p>Secret long body text</p>",
-          status: "ready",
-          priority: "critical",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/t1/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/t1/events")) {
-        return Response.json({
-          task_id: "t1",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(
+      taskDetail("t1", "Testing", {
+      initial_prompt: "<p>Secret long body text</p>",
+      priority: "critical",
+      }),
+    );
 
     renderDetail("/tasks/t1", mockApp());
 
@@ -134,35 +315,12 @@ describe("TaskDetailPage", () => {
   });
 
   it("sanitizes unsafe HTML from initial prompt before rendering", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/txss") {
-        return Response.json({
-          id: "txss",
-          title: "Unsafe prompt",
-          initial_prompt:
-            '<p>Safe text</p><img src=x onerror="window.__xss = 1" /><script>window.__xss_script = 1</script><a href="javascript:alert(1)">bad</a>',
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/txss/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/txss/events")) {
-        return Response.json({
-          task_id: "txss",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(
+      taskDetail("txss", "Unsafe prompt", {
+      initial_prompt:
+        '<p>Safe text</p><img src=x onerror="window.__xss = 1" /><script>window.__xss_script = 1</script><a href="javascript:alert(1)">bad</a>',
+      }),
+    );
 
     renderDetail("/tasks/txss", mockApp());
     expect(
@@ -180,34 +338,7 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows an em dash when there is no visible initial prompt", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t2") {
-        return Response.json({
-          id: "t2",
-          title: "Empty prompt",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/t2/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/t2/events")) {
-        return Response.json({
-          task_id: "t2",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(taskDetail("t2", "Empty prompt"));
 
     renderDetail("/tasks/t2", mockApp());
 
@@ -221,34 +352,9 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows status stance when the task status needs user input", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/tb") {
-        return Response.json({
-          id: "tb",
-          title: "Blocked task",
-          initial_prompt: "",
-          status: "blocked",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/tb/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/tb/events")) {
-        return Response.json({
-          task_id: "tb",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(taskDetail("tb", "Blocked task", {
+      status: "blocked",
+    }));
 
     renderDetail("/tasks/tb", mockApp());
 
@@ -260,49 +366,23 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows done criteria as read-only with progress counts", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/tc") {
-        return Response.json({
-          id: "tc",
-          title: "Checklist task",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/tc/checklist") {
-        return Response.json({
-          items: [
-            {
-              id: "i1",
-              sort_order: 0,
-              text: "First",
-              done: true,
-            },
-            {
-              id: "i2",
-              sort_order: 1,
-              text: "Second",
-              done: false,
-            },
-          ],
-        });
-      }
-      if (url.startsWith("/tasks/tc/events")) {
-        return Response.json({
-          task_id: "tc",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(
+      taskDetail("tc", "Checklist task"),
+      [
+        {
+          id: "i1",
+          sort_order: 0,
+          text: "First",
+          done: true,
+        },
+        {
+          id: "i2",
+          sort_order: 1,
+          text: "Second",
+          done: false,
+        },
+      ],
+    );
 
     renderDetail("/tasks/tc", mockApp());
 
@@ -320,43 +400,11 @@ describe("TaskDetailPage", () => {
   });
 
   it("navigates to parent task after successful delete when parent_id is set", () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/sub1") {
-        return Response.json({
-          id: "sub1",
-          title: "Sub",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          parent_id: "par1",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/sub1/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/sub1/events")) {
-        return Response.json({
-          task_id: "sub1",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(taskDetail("sub1", "Sub", {
+      parent_id: "par1",
+    }));
 
-    const app = {
-      ...mockApp(),
-      deleteMutation: {
-        isSuccess: true,
-        variables: { id: "sub1", parent_id: "par1" },
-      },
-    } as unknown as ReturnType<typeof useTasksApp>;
+    const app = appWithDeleteSuccess({ id: "sub1", parent_id: "par1" });
 
     renderDetail("/tasks/sub1", app);
 
@@ -364,42 +412,9 @@ describe("TaskDetailPage", () => {
   });
 
   it("navigates home after successful delete when task has no parent", () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/root1") {
-        return Response.json({
-          id: "root1",
-          title: "Root",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/root1/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/root1/events")) {
-        return Response.json({
-          task_id: "root1",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetch(taskDetail("root1", "Root"));
 
-    const app = {
-      ...mockApp(),
-      deleteMutation: {
-        isSuccess: true,
-        variables: { id: "root1" },
-      },
-    } as unknown as ReturnType<typeof useTasksApp>;
+    const app = appWithDeleteSuccess({ id: "root1" });
 
     renderDetail("/tasks/root1", app);
 
@@ -408,61 +423,12 @@ describe("TaskDetailPage", () => {
 
   it("edits a checklist criterion via PATCH text", async () => {
     const user = userEvent.setup();
-    let patchBody: string | null = null;
-    let checklistText = "Before";
-
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = requestUrl(input);
-      const method = init?.method ?? "GET";
-      if (url === "/tasks/te") {
-        return Response.json({
-          id: "te",
-          title: "Edit checklist",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/te/checklist") {
-        return Response.json({
-          items: [
-            {
-              id: "item-1",
-              sort_order: 0,
-              text: checklistText,
-              done: false,
-            },
-          ],
-        });
-      }
-      if (url === "/tasks/te/checklist/items/item-1" && method === "PATCH") {
-        patchBody = (init?.body as string) ?? null;
-        checklistText = "After";
-        return Response.json({
-          items: [
-            {
-              id: "item-1",
-              sort_order: 0,
-              text: "After",
-              done: false,
-            },
-          ],
-        });
-      }
-      if (url.startsWith("/tasks/te/events")) {
-        return Response.json({
-          task_id: "te",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    const api = mockTaskDetailFetchWithChecklistPatch(
+      taskDetail("te", "Edit checklist"),
+      "item-1",
+      "Before",
+      "After",
+    );
 
     renderDetail("/tasks/te", mockApp());
 
@@ -489,56 +455,40 @@ describe("TaskDetailPage", () => {
       within(dialog).getByRole("button", { name: /^save changes$/i }),
     );
 
-    expect(patchBody).toBe(JSON.stringify({ text: "After" }));
+    expect(api.getPatchBody()).toBe(JSON.stringify({ text: "After" }));
     expect(await screen.findByText("After")).toBeInTheDocument();
   });
 
   it("lists updates newest first by seq", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t3") {
-        return Response.json({
-          id: "t3",
-          title: "Timeline order",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-        });
-      }
-      if (url === "/tasks/t3/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/t3/events")) {
-        return Response.json({
-          task_id: "t3",
-          limit: 20,
-          total: 2,
-          range_start: 1,
-          range_end: 2,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-          events: [
-            {
-              seq: 2,
-              at: "2026-01-02T12:00:00.000Z",
-              type: "sync_ping",
-              by: "user",
-              data: {},
-            },
-            {
-              seq: 1,
-              at: "2026-01-01T12:00:00.000Z",
-              type: "task_created",
-              by: "user",
-              data: {},
-            },
-          ],
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    mockTaskDetailFetchWithEvents(
+      taskDetail("t3", "Timeline order"),
+      {
+        task_id: "t3",
+        limit: 20,
+        total: 2,
+        range_start: 1,
+        range_end: 2,
+        has_more_newer: false,
+        has_more_older: false,
+        approval_pending: false,
+        events: [
+          {
+            seq: 2,
+            at: "2026-01-02T12:00:00.000Z",
+            type: "sync_ping",
+            by: "user",
+            data: {},
+          },
+          {
+            seq: 1,
+            at: "2026-01-01T12:00:00.000Z",
+            type: "task_created",
+            by: "user",
+            data: {},
+          },
+        ],
+      },
+    );
 
     renderDetail("/tasks/t3", mockApp());
 
@@ -559,77 +509,7 @@ describe("TaskDetailPage", () => {
 
   it("creates a subtask with checklist items after POST /tasks", async () => {
     const user = userEvent.setup();
-    const checklistPosts: string[] = [];
-    let subtaskCreated = false;
-
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = requestUrl(input);
-      const method = init?.method ?? "GET";
-      if (url === "/tasks/parent" && method === "GET") {
-        return Response.json({
-          id: "parent",
-          title: "Parent",
-          initial_prompt: "",
-          status: "ready",
-          priority: "medium",
-          checklist_inherit: false,
-          children: subtaskCreated
-            ? [
-                {
-                  id: "child",
-                  title: "Child",
-                  initial_prompt: "<p></p>",
-                  status: "ready",
-                  priority: "high",
-                  checklist_inherit: false,
-                },
-              ]
-            : [],
-        });
-      }
-      if (url === "/tasks/parent/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/parent/events")) {
-        return Response.json({
-          task_id: "parent",
-          events: [],
-          limit: 20,
-          total: 0,
-          has_more_newer: false,
-          has_more_older: false,
-          approval_pending: false,
-        });
-      }
-      if (url === "/tasks" && method === "POST") {
-        const body =
-          init?.body != null && typeof init.body === "string"
-            ? JSON.parse(init.body)
-            : {};
-        expect(body.parent_id).toBe("parent");
-        expect(body.title).toBe("Child");
-        expect(body.priority).toBe("high");
-        subtaskCreated = true;
-        return new Response(
-          JSON.stringify({
-            id: "child",
-            title: "Child",
-            initial_prompt: "<p></p>",
-            status: "ready",
-            priority: "high",
-            checklist_inherit: false,
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url === "/tasks/child/checklist/items" && method === "POST") {
-        checklistPosts.push(
-          init?.body != null ? String(init.body) : "",
-        );
-        return new Response(null, { status: 204 });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    const api = mockTaskDetailFetchForSubtaskCreate("parent");
 
     renderDetail("/tasks/parent", mockApp());
 
@@ -661,15 +541,70 @@ describe("TaskDetailPage", () => {
       within(dialog).getByRole("button", { name: /^add subtask$/i }),
     );
 
-    expect(await screen.findByText("Child")).toBeInTheDocument();
-    const childLink = screen.getByRole("link", { name: "Child" });
+    const childLinks = await screen.findAllByRole("link", { name: "Child" });
+    const childLink =
+      childLinks.find((link) =>
+        link.closest(".task-subtasks-item-row"),
+      ) ?? childLinks[0];
     const subtaskRow = childLink.closest(
       ".task-subtasks-item-row",
     ) as HTMLElement | null;
     expect(subtaskRow).not.toBeNull();
     expect(within(subtaskRow!).getByText("high")).toBeInTheDocument();
     expect(within(subtaskRow!).getByText("ready")).toBeInTheDocument();
-    expect(checklistPosts).toHaveLength(1);
-    expect(checklistPosts[0]).toContain("Criterion A");
+    expect(api.checklistPosts).toHaveLength(1);
+    expect(api.checklistPosts[0]).toContain("Criterion A");
+  });
+
+  it("renders a nested subtask graph with task links", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/parent-graph") {
+        return Response.json({
+          ...taskDetail("parent-graph", "Parent graph"),
+          children: [
+            {
+              ...taskDetail("child-a", "Child A"),
+              children: [
+                {
+                  ...taskDetail("grandchild-a1", "Grandchild A1"),
+                },
+              ],
+            },
+            {
+              ...taskDetail("child-b", "Child B"),
+            },
+          ],
+        });
+      }
+      if (url === "/tasks/parent-graph/checklist") {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith("/tasks/parent-graph/events")) {
+        return Response.json(emptyEventsPayload("parent-graph"));
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/parent-graph", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^parent graph$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/graph view/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parent graph" })).toHaveAttribute(
+      "href",
+      "/tasks/parent-graph",
+    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Child A" })
+        .some((link) => link.getAttribute("href") === "/tasks/child-a"),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: "Grandchild A1" })
+        .some((link) => link.getAttribute("href") === "/tasks/grandchild-a1"),
+    ).toBe(true);
   });
 });
