@@ -27,15 +27,55 @@ import {
   type TaskType,
 } from "@/types";
 import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
+import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import { useTaskEventStream } from "./useTaskEventStream";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
-const LIST_REFRESH_SHOW_MS = 380;
-const LIST_REFRESH_HIDE_MS = 520;
-const DRAFT_AUTOSAVE_DEBOUNCE_MS = 900;
+const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
+const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
+const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
+
+function normalizeDmapCommitLimit(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function buildDmapPrompt(input: {
+  commitLimit: string;
+  domain: string;
+  description: string;
+}): string {
+  const lines = [
+    "DMAP session setup",
+    "",
+    `- Commits until stoppage: ${normalizeDmapCommitLimit(input.commitLimit)}`,
+    `- Domain: ${input.domain.trim() || "unspecified"}`,
+  ];
+  if (input.description.trim()) {
+    lines.push(`- Direction: ${input.description.trim()}`);
+  }
+  return lines.join("\n");
+}
+
+function toApiTaskType(taskType: TaskType): TaskType {
+  return taskType === "dmap" ? "general" : taskType;
+}
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+function normalizeDraftPromptForDirty(prompt: string): string {
+  const compact = prompt.replace(/[\s\u200B\uFEFF]/g, "").toLowerCase();
+  if (
+    compact === "" ||
+    compact === "<p></p>" ||
+    compact === "<p><br></p>" ||
+    /^<p>(<br\/?>|&nbsp;|&#160;)*<\/p>$/.test(compact)
+  ) {
+    return "";
+  }
+  return prompt;
 }
 
 function draftAutosaveSignature(input: {
@@ -54,13 +94,18 @@ function draftAutosaveSignature(input: {
     overallSummary: string;
     sections: Array<{ key: string; score: number }>;
   } | null;
+  dmapConfig: {
+    commitLimit: string;
+    domain: string;
+    description: string;
+  };
 }): string {
   return JSON.stringify({
     id: input.id,
     name: input.name,
     payload: {
       title: input.title,
-      initial_prompt: input.prompt,
+      initial_prompt: normalizeDraftPromptForDirty(input.prompt),
       priority: input.priority,
       task_type: input.taskType,
       parent_id: input.parentId,
@@ -75,6 +120,7 @@ function draftAutosaveSignature(input: {
         checklist_inherit: st.checklist_inherit,
       })),
       latest_evaluation: input.latestEvaluation,
+      dmap_config: input.dmapConfig,
     },
   });
 }
@@ -87,6 +133,11 @@ export function useTasksApp() {
   const [newPrompt, setNewPrompt] = useState("");
   const [newPriority, setNewPriority] = useState<PriorityChoice>("");
   const [newTaskType, setNewTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
+  const [newDmapCommitLimit, setNewDmapCommitLimit] = useState<string>(
+    TASK_DRAFTS.initialDmapCommitLimit,
+  );
+  const [newDmapDomain, setNewDmapDomain] = useState("");
+  const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   const [newDraftID, setNewDraftID] = useState("");
   const [newDraftName, setNewDraftName] = useState("");
@@ -129,6 +180,7 @@ export function useTasksApp() {
 
   const [taskListPage, setTaskListPage] = useState(0);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
+  const [draftAutosaveBaselineID, setDraftAutosaveBaselineID] = useState("");
   const [createEntryDraftErrorHint, setCreateEntryDraftErrorHint] = useState<
     string | null
   >(null);
@@ -144,7 +196,8 @@ export function useTasksApp() {
   });
   const draftsQuery = useQuery({
     queryKey: ["task-drafts"],
-    queryFn: ({ signal }) => apiListDrafts(100, { signal }),
+    queryFn: ({ signal }) =>
+      apiListDrafts(TASK_DRAFTS.createModalDraftListLimit, { signal }),
   });
   const taskStatsQuery = useQuery({
     queryKey: ["task-stats"],
@@ -191,18 +244,21 @@ export function useTasksApp() {
     setNewPrompt("");
     setNewPriority("");
     setNewTaskType(DEFAULT_NEW_TASK_TYPE);
+    setNewDmapCommitLimit(TASK_DRAFTS.initialDmapCommitLimit);
+    setNewDmapDomain("");
+    setNewDmapDescription("");
     setNewChecklistItems([]);
     setPendingSubtasks([]);
     setNewParentId("");
     setNewChecklistInherit(false);
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
-    setNewDraftName("Untitled draft");
+    setNewDraftName(TASK_DRAFTS.untitledDraftName);
     setLastDraftSavedAt(null);
     setDraftAutosaveBaseline(
       draftAutosaveSignature({
         id: generatedID,
-        name: "Untitled draft",
+        name: TASK_DRAFTS.untitledDraftName,
         title: "",
         prompt: "",
         priority: "",
@@ -212,8 +268,14 @@ export function useTasksApp() {
         checklistItems: [],
         pendingSubtasks: [],
         latestEvaluation: null,
+        dmapConfig: {
+          commitLimit: TASK_DRAFTS.initialDmapCommitLimit,
+          domain: "",
+          description: "",
+        },
       }),
     );
+    setDraftAutosaveBaselineID(generatedID);
   }, []);
 
   const closeCreateModal = useCallback(() => {
@@ -423,7 +485,7 @@ export function useTasksApp() {
       setDraftAutosaveBaseline(
         draftAutosaveSignature({
           id: saved.id,
-          name: newDraftName.trim() || "Untitled draft",
+          name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
           title: newTitle,
           prompt: newPrompt,
           priority: newPriority,
@@ -433,8 +495,14 @@ export function useTasksApp() {
           checklistItems: newChecklistItems,
           pendingSubtasks,
           latestEvaluation: latestDraftEvaluation,
+          dmapConfig: {
+            commitLimit: newDmapCommitLimit,
+            domain: newDmapDomain,
+            description: newDmapDescription,
+          },
         }),
       );
+      setDraftAutosaveBaselineID(saved.id);
       setLastDraftSavedAt(Date.now());
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
     },
@@ -498,18 +566,11 @@ export function useTasksApp() {
     }
   }, [editTitle, editTitleRequiredError]);
 
-  const hasDraftContent =
-    Boolean(newTitle.trim()) ||
-    Boolean(newPrompt.trim()) ||
-    Boolean(newPriority) ||
-    Boolean(newParentId.trim()) ||
-    newChecklistItems.length > 0 ||
-    pendingSubtasks.length > 0;
   const currentDraftAutosaveSignature = useMemo(
     () =>
       draftAutosaveSignature({
         id: newDraftID,
-        name: newDraftName.trim() || "Untitled draft",
+        name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
         title: newTitle,
         prompt: newPrompt,
         priority: newPriority,
@@ -519,9 +580,17 @@ export function useTasksApp() {
         checklistItems: newChecklistItems,
         pendingSubtasks,
         latestEvaluation: latestDraftEvaluation,
+        dmapConfig: {
+          commitLimit: newDmapCommitLimit,
+          domain: newDmapDomain,
+          description: newDmapDescription,
+        },
       }),
     [
       latestDraftEvaluation,
+      newDmapCommitLimit,
+      newDmapDescription,
+      newDmapDomain,
       newChecklistInherit,
       newChecklistItems,
       newDraftID,
@@ -538,7 +607,7 @@ export function useTasksApp() {
   const buildDraftSaveInput = useCallback(() => {
     return {
       id: newDraftID,
-      name: newDraftName.trim() || "Untitled draft",
+      name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
       payload: {
         title: newTitle,
         initial_prompt: newPrompt,
@@ -564,10 +633,22 @@ export function useTasksApp() {
               },
             }
           : {}),
+        ...(newTaskType === "dmap"
+          ? {
+              dmap_config: {
+                commit_limit: normalizeDmapCommitLimit(newDmapCommitLimit),
+                domain: newDmapDomain.trim(),
+                description: newDmapDescription.trim(),
+              },
+            }
+          : {}),
       },
     };
   }, [
     latestDraftEvaluation,
+    newDmapCommitLimit,
+    newDmapDescription,
+    newDmapDomain,
     newChecklistInherit,
     newChecklistItems,
     newDraftID,
@@ -582,15 +663,26 @@ export function useTasksApp() {
 
   const saveDraftNow = useCallback(() => {
     if (!createModalOpen || !newDraftID) return;
+    if (draftAutosaveBaselineID !== newDraftID) return;
+    if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
     saveDraftMutation.mutate(buildDraftSaveInput());
-  }, [buildDraftSaveInput, createModalOpen, newDraftID, saveDraftMutation]);
+  }, [
+    buildDraftSaveInput,
+    createModalOpen,
+    currentDraftAutosaveSignature,
+    draftAutosaveBaseline,
+    draftAutosaveBaselineID,
+    newDraftID,
+    saveDraftMutation,
+  ]);
 
   useEffect(() => {
-    if (!createModalOpen || !newDraftID || !hasDraftContent) return;
+    if (!createModalOpen || !newDraftID) return;
+    if (draftAutosaveBaselineID !== newDraftID) return;
     if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
     autosaveTimerRef.current = setTimeout(() => {
       saveDraftMutation.mutate(buildDraftSaveInput());
@@ -607,7 +699,7 @@ export function useTasksApp() {
     createModalOpen,
     currentDraftAutosaveSignature,
     draftAutosaveBaseline,
-    hasDraftContent,
+    draftAutosaveBaselineID,
     newDraftID,
     saveDraftMutation,
   ]);
@@ -629,13 +721,22 @@ export function useTasksApp() {
   function evaluateDraftBeforeCreate() {
     const parentId = newParentId.trim();
     if (!newTitle.trim() || !newPriority) return;
+    const dmapDomain = newDmapDomain.trim();
+    if (newTaskType === "dmap" && !dmapDomain) return;
     evaluateDraftMutation.mutate({
       id: newDraftID,
       title: newTitle.trim(),
-      initial_prompt: newPrompt,
+      initial_prompt:
+        newTaskType === "dmap"
+          ? buildDmapPrompt({
+              commitLimit: newDmapCommitLimit,
+              domain: dmapDomain,
+              description: newDmapDescription,
+            })
+          : newPrompt,
       status: DEFAULT_NEW_TASK_STATUS,
       priority: newPriority,
-      task_type: newTaskType,
+      task_type: toApiTaskType(newTaskType),
       ...(parentId ? { parent_id: parentId } : {}),
       checklist_inherit: Boolean(parentId) && newChecklistInherit,
       checklistItems: newChecklistItems,
@@ -646,12 +747,21 @@ export function useTasksApp() {
     e.preventDefault();
     if (!newTitle.trim() || !newPriority) return;
     const parentId = newParentId.trim();
+    const dmapDomain = newDmapDomain.trim();
+    if (newTaskType === "dmap" && !dmapDomain) return;
     createMutation.mutate({
       title: newTitle.trim(),
-      initial_prompt: newPrompt,
+      initial_prompt:
+        newTaskType === "dmap"
+          ? buildDmapPrompt({
+              commitLimit: newDmapCommitLimit,
+              domain: dmapDomain,
+              description: newDmapDescription,
+            })
+          : newPrompt,
       status: DEFAULT_NEW_TASK_STATUS,
       priority: newPriority,
-      task_type: newTaskType,
+      task_type: toApiTaskType(newTaskType),
       draft_id: newDraftID,
       ...(parentId ? { parent_id: parentId } : {}),
       checklist_inherit: Boolean(parentId) && newChecklistInherit,
@@ -689,6 +799,14 @@ export function useTasksApp() {
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
     setNewTaskType(draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE);
+    setNewDmapCommitLimit(
+      String(
+        draft.payload.dmap_config?.commit_limit ??
+          Number(TASK_DRAFTS.initialDmapCommitLimit),
+      ),
+    );
+    setNewDmapDomain(draft.payload.dmap_config?.domain ?? "");
+    setNewDmapDescription(draft.payload.dmap_config?.description ?? "");
     setNewParentId(draft.payload.parent_id ?? "");
     setNewChecklistInherit(draft.payload.checklist_inherit === true);
     setNewChecklistItems(draft.payload.checklist_items ?? []);
@@ -707,8 +825,17 @@ export function useTasksApp() {
         checklistItems: draft.payload.checklist_items ?? [],
         pendingSubtasks,
         latestEvaluation,
+        dmapConfig: {
+          commitLimit: String(
+            draft.payload.dmap_config?.commit_limit ??
+              Number(TASK_DRAFTS.initialDmapCommitLimit),
+          ),
+          domain: draft.payload.dmap_config?.domain ?? "",
+          description: draft.payload.dmap_config?.description ?? "",
+        },
       }),
     );
+    setDraftAutosaveBaselineID(draft.id);
     setDraftPickerOpen(false);
     setCreateModalOpen(true);
   }
@@ -880,6 +1007,12 @@ export function useTasksApp() {
     setNewPrompt,
     newPriority,
     newTaskType,
+    newDmapCommitLimit,
+    setNewDmapCommitLimit,
+    newDmapDomain,
+    setNewDmapDomain,
+    newDmapDescription,
+    setNewDmapDescription,
     setNewPriority,
     setNewTaskType,
     newChecklistItems,

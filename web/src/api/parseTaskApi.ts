@@ -551,6 +551,21 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
           },
         }
       : {}),
+    ...(isRecord(value.dmap_config)
+      ? {
+          dmap_config: {
+            commit_limit: parseFiniteNumber(
+              value.dmap_config.commit_limit,
+              "payload.dmap_config.commit_limit",
+            ),
+            domain: parseString(value.dmap_config.domain, "payload.dmap_config.domain"),
+            description: parseString(
+              value.dmap_config.description,
+              "payload.dmap_config.description",
+            ),
+          },
+        }
+      : {}),
   };
 }
 

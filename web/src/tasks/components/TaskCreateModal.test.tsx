@@ -38,6 +38,12 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     evaluation: null,
     draftName: "Untitled draft",
     onDraftNameChange: vi.fn(),
+    dmapCommitLimit: "5",
+    dmapDomain: "",
+    dmapDescription: "",
+    onDmapCommitLimitChange: vi.fn(),
+    onDmapDomainChange: vi.fn(),
+    onDmapDescriptionChange: vi.fn(),
     onSaveDraft: vi.fn(),
     onEvaluate: vi.fn(),
     onSubmit: vi.fn(),
@@ -107,5 +113,17 @@ describe("TaskCreateModal", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /loading parent task options/i,
     );
+  });
+
+  it("shows DMAP-specific fields when task type is DMAP", () => {
+    renderModal({ taskType: "dmap" });
+    expect(screen.getByText(/dmap configuration/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/commits until stoppage/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/dmap domain/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/direction notes/i)).toBeInTheDocument();
+    expect(screen.queryByText(/done criteria/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/subtasks/i)).not.toBeInTheDocument();
   });
 });

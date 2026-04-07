@@ -382,6 +382,22 @@
   border-top: 1px solid var(--border-hairline);
 }
 
+.task-create-dmap {
+  margin-top: 0.15rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border-hairline);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.task-create-dmap-title {
+  margin: 0;
+  font-size: var(--text-help);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+}
+
 .task-create-subtasks-head {
   display: flex;
   flex-wrap: wrap;

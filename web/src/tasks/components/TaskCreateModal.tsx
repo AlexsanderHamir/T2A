@@ -1,12 +1,14 @@
 import { useCallback, useState, type FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
 import { NestedSubtaskDraftModal } from "./NestedSubtaskDraftModal";
 import { ParentTaskSelect } from "./ParentTaskSelect";
+import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
+import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {
   pending: boolean;
@@ -45,6 +47,12 @@ type Props = {
   } | null;
   draftName: string;
   onDraftNameChange: (name: string) => void;
+  dmapCommitLimit: string;
+  dmapDomain: string;
+  dmapDescription: string;
+  onDmapCommitLimitChange: (value: string) => void;
+  onDmapDomainChange: (value: string) => void;
+  onDmapDescriptionChange: (value: string) => void;
   onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
@@ -83,6 +91,12 @@ export function TaskCreateModal({
   evaluation,
   draftName,
   onDraftNameChange,
+  dmapCommitLimit,
+  dmapDomain,
+  dmapDescription,
+  onDmapCommitLimitChange,
+  onDmapDomainChange,
+  onDmapDescriptionChange,
   onSaveDraft,
   onEvaluate,
   onSubmit,
@@ -90,6 +104,12 @@ export function TaskCreateModal({
   const disabled = pending || saving;
   const hasParent = Boolean(parentId.trim());
   const hideComposeChecklist = hasParent && checklistInherit;
+  const dmapMode = taskType === "dmap";
+  const parsedCommitLimit = Number.parseInt(dmapCommitLimit, 10);
+  const dmapCommitValid =
+    Number.isInteger(parsedCommitLimit) && parsedCommitLimit > 0;
+  const dmapDomainValid = dmapDomain.trim().length > 0;
+  const dmapReady = !dmapMode || (dmapCommitValid && dmapDomainValid);
   const subtasksHeadingId = "task-new-subtasks-heading";
 
   const [nestedOpen, setNestedOpen] = useState(false);
@@ -224,26 +244,125 @@ export function TaskCreateModal({
               ) : null}
             </div>
 
-            <TaskComposeFields
-              idsPrefix="task-new"
-              editorKey="create-prompt-modal"
-              title={title}
-              prompt={prompt}
-              priority={priority}
-              taskType={taskType}
-              checklistItems={checklistItems}
-              hideChecklist={hideComposeChecklist}
-              disabled={disabled}
-              onTitleChange={onTitleChange}
-              onPromptChange={onPromptChange}
-              onPriorityChange={onPriorityChange}
-              onTaskTypeChange={onTaskTypeChange}
-              onAppendChecklistCriterion={onAppendChecklistCriterion}
-              onUpdateChecklistRow={onUpdateChecklistRow}
-              onRemoveChecklistRow={onRemoveChecklistRow}
-            />
+            {dmapMode ? (
+              <>
+                <div className="task-create-title-row">
+                  <div className="field grow">
+                    <FieldLabel htmlFor="task-new-title" requirement="required">
+                      Title
+                    </FieldLabel>
+                    <input
+                      id="task-new-title"
+                      value={title}
+                      onChange={(ev) => onTitleChange(ev.target.value)}
+                      placeholder="What should get done?"
+                      required
+                      aria-required="true"
+                      disabled={disabled}
+                    />
+                  </div>
+                  <PrioritySelect
+                    id="task-new-priority"
+                    value={priority}
+                    compact
+                    onChange={onPriorityChange}
+                  />
+                  <TaskTypeSelect
+                    id="task-new-task-type"
+                    value={taskType}
+                    onChange={onTaskTypeChange}
+                    disabled={disabled}
+                  />
+                </div>
+                <section
+                  className="task-create-dmap"
+                  aria-label="DMAP task configuration"
+                >
+                  <h3 className="task-create-dmap-title">DMAP configuration</h3>
+                  <div className="row">
+                    <div className="field grow">
+                      <FieldLabel
+                        htmlFor="task-new-dmap-commit-limit"
+                        requirement="required"
+                      >
+                        Commits until stoppage
+                      </FieldLabel>
+                      <input
+                        id="task-new-dmap-commit-limit"
+                        type="number"
+                        min={1}
+                        step={1}
+                        inputMode="numeric"
+                        value={dmapCommitLimit}
+                        onChange={(ev) => onDmapCommitLimitChange(ev.target.value)}
+                        placeholder="e.g. 8"
+                        required
+                        aria-required="true"
+                        disabled={disabled}
+                      />
+                    </div>
+                    <div className="field grow">
+                      <FieldLabel htmlFor="task-new-dmap-domain" requirement="required">
+                        DMAP domain
+                      </FieldLabel>
+                      <select
+                        id="task-new-dmap-domain"
+                        value={dmapDomain}
+                        onChange={(ev) => onDmapDomainChange(ev.target.value)}
+                        required
+                        aria-required="true"
+                        disabled={disabled}
+                      >
+                        <option value="">Choose domain</option>
+                        <option value="frontend">Frontend</option>
+                        <option value="backend">Backend</option>
+                        <option value="fullstack">Fullstack</option>
+                        <option value="devops">DevOps</option>
+                        <option value="data">Data</option>
+                        <option value="qa">QA</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field grow">
+                    <FieldLabel
+                      htmlFor="task-new-dmap-description"
+                      requirement="optional"
+                    >
+                      Direction notes
+                    </FieldLabel>
+                    <textarea
+                      id="task-new-dmap-description"
+                      value={dmapDescription}
+                      onChange={(ev) => onDmapDescriptionChange(ev.target.value)}
+                      placeholder="Optional guidance for this DMAP run."
+                      rows={4}
+                      disabled={disabled}
+                    />
+                  </div>
+                </section>
+              </>
+            ) : (
+              <TaskComposeFields
+                idsPrefix="task-new"
+                editorKey="create-prompt-modal"
+                title={title}
+                prompt={prompt}
+                priority={priority}
+                taskType={taskType}
+                checklistItems={checklistItems}
+                hideChecklist={hideComposeChecklist}
+                disabled={disabled}
+                onTitleChange={onTitleChange}
+                onPromptChange={onPromptChange}
+                onPriorityChange={onPriorityChange}
+                onTaskTypeChange={onTaskTypeChange}
+                onAppendChecklistCriterion={onAppendChecklistCriterion}
+                onUpdateChecklistRow={onUpdateChecklistRow}
+                onRemoveChecklistRow={onRemoveChecklistRow}
+              />
+            )}
 
-            {hasParent ? (
+            {hasParent && !dmapMode ? (
               <label className="checkbox-label task-create-inherit-field">
                 <input
                   type="checkbox"
@@ -260,7 +379,7 @@ export function TaskCreateModal({
               </label>
             ) : null}
 
-            {!hasParent ? (
+            {!hasParent && !dmapMode ? (
               <div className="task-create-subtasks">
                 <div className="task-create-subtasks-head">
                   <div className="field-heading-with-req task-create-subtasks-heading-row">
@@ -380,7 +499,7 @@ export function TaskCreateModal({
               <button
                 type="button"
                 className="secondary task-create-evaluate-btn"
-                disabled={!title.trim() || !priority || disabled}
+                disabled={!title.trim() || !priority || !dmapReady || disabled}
                 onClick={onEvaluate}
               >
                 {evaluatePending ? "Evaluating…" : "Evaluate"}
@@ -388,7 +507,7 @@ export function TaskCreateModal({
               <button
                 type="submit"
                 className="task-create-submit"
-                disabled={!title.trim() || !priority || disabled}
+                disabled={!title.trim() || !priority || !dmapReady || disabled}
               >
                 {hasParent ? "Add subtask" : "Create"}
               </button>

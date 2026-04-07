@@ -7,7 +7,13 @@ export type Status =
   | "failed";
 
 export type Priority = "low" | "medium" | "high" | "critical";
-export type TaskType = "general" | "bug_fix" | "feature" | "refactor" | "docs";
+export type TaskType =
+  | "general"
+  | "bug_fix"
+  | "feature"
+  | "refactor"
+  | "docs"
+  | "dmap";
 
 /** Empty string means no selection yet (create / draft forms). */
 export type PriorityChoice = Priority | "";
@@ -179,6 +185,7 @@ export const TASK_TYPES: TaskType[] = [
   "feature",
   "refactor",
   "docs",
+  "dmap",
 ];
 
 export const DEFAULT_NEW_TASK_TYPE: TaskType = "general";
@@ -222,6 +229,11 @@ export type TaskDraftPayload = {
     overall_score: number;
     overall_summary: string;
     sections: Array<{ key: string; score: number }>;
+  };
+  dmap_config?: {
+    commit_limit: number;
+    domain: string;
+    description: string;
   };
 };
 

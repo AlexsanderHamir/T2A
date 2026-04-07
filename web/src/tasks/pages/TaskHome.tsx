@@ -83,6 +83,12 @@ export function TaskHome({ app }: Props) {
           evaluation={app.latestDraftEvaluation}
           draftName={app.newDraftName}
           onDraftNameChange={app.setNewDraftName}
+          dmapCommitLimit={app.newDmapCommitLimit}
+          dmapDomain={app.newDmapDomain}
+          dmapDescription={app.newDmapDescription}
+          onDmapCommitLimitChange={app.setNewDmapCommitLimit}
+          onDmapDomainChange={app.setNewDmapDomain}
+          onDmapDescriptionChange={app.setNewDmapDescription}
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}

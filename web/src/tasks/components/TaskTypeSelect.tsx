@@ -21,6 +21,8 @@ function taskTypeLabel(t: TaskType): string {
       return "Refactor";
     case "docs":
       return "Docs";
+    case "dmap":
+      return "DMAP";
   }
 }
 
