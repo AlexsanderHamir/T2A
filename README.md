@@ -1,9 +1,6 @@
 # T2A
 
-**Control plane for agent-heavy workflows.** When execution shifts to agents, orchestration needs a shared home—not only the IDE. T2A is that layer: **Postgres** tasks, an **append-only audit trail**, **REST** (`/tasks`), and **SSE** (`GET /events`) so UIs and runners **refetch on hints** instead of polling.
-
-**Module:** `github.com/AlexsanderHamir/T2A`  
-**Documentation:** [docs/README.md](docs/README.md) (index: product, API, web, troubleshooting) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [AGENTS.md](AGENTS.md)
+A control plane for agent-heavy workflows. Humans no longer need to live inside the IDE—execution happens via agents like Claude and Cursor CLI. T2A enables humans to work on many tasks in parallel, simplifying context switching and supporting fully asynchronous workflows.
 
 ## Prerequisites
 
