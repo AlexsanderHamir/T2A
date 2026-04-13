@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
@@ -15,6 +14,7 @@ import { sanitizePromptHtml } from "../promptFormat";
 import { userAttention } from "../taskAttention";
 import { TaskDetailPageSkeleton } from "../components/taskLoadingSkeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
+import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
 import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
 import { taskQueryKeys } from "../queryKeys";
@@ -28,7 +28,6 @@ export function TaskDetailPage({ app }: Props) {
   const { taskId = "" } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const navigatedAfterDelete = useRef(false);
   const {
     subtaskModalOpen,
     subtaskTitle,
@@ -69,9 +68,12 @@ export function TaskDetailPage({ app }: Props) {
     deleteChecklistMutation,
   } = useTaskDetailChecklist(taskId, queryClient);
 
-  useEffect(() => {
-    navigatedAfterDelete.current = false;
-  }, [taskId]);
+  useTaskDetailDeleteNavigate(
+    taskId,
+    navigate,
+    app.deleteMutation.isSuccess,
+    app.deleteMutation.variables,
+  );
 
   const taskQuery = useQuery({
     queryKey: taskQueryKeys.detail(taskId),
@@ -92,35 +94,6 @@ export function TaskDetailPage({ app }: Props) {
     queryFn: ({ signal }) => listChecklist(taskId, { signal }),
     enabled: Boolean(taskId) && taskQuery.isSuccess,
   });
-
-  useEffect(() => {
-    if (!taskId || navigatedAfterDelete.current) return;
-    const v = app.deleteMutation.variables;
-    if (
-      !app.deleteMutation.isSuccess ||
-      !v ||
-      typeof v !== "object" ||
-      !("id" in v) ||
-      v.id !== taskId
-    ) {
-      return;
-    }
-    navigatedAfterDelete.current = true;
-    const parent =
-      "parent_id" in v && typeof v.parent_id === "string"
-        ? v.parent_id.trim()
-        : "";
-    if (parent) {
-      navigate(`/tasks/${encodeURIComponent(parent)}`, { replace: true });
-    } else {
-      navigate("/", { replace: true });
-    }
-  }, [
-    taskId,
-    app.deleteMutation.isSuccess,
-    app.deleteMutation.variables,
-    navigate,
-  ]);
 
   const taskDocTitle =
     taskId && taskQuery.isSuccess && taskQuery.data
