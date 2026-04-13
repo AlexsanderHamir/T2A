@@ -220,6 +220,8 @@ The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, h
 
 All non-exempt routes on the API stack are subject to **`T2A_RATE_LIMIT_PER_MIN`** (see env table). Limits are enforced in-process with `golang.org/x/time/rate`; they are **not** shared across multiple `taskapi` replicas—use a reverse proxy or API gateway for a global budget.
 
+When a request is rejected with **429**, structured logs emit **`rate limit exceeded`** at **Warn** (`operation` **`http.rate_limit`**) with **`client_ip`**, **`method`**, **`path`**, and the same **`request_id`** as other middleware (after access middleware assigns or echoes **`X-Request-ID`**), so operators can tie limit events to access lines.
+
 ### Max request body (`T2A_MAX_REQUEST_BODY_BYTES`)
 
 Cap on incoming body size for all routes on the API stack (including JSON bodies on mutating methods). Default is **1 MiB** (`1048576`) when the env var is unset or invalid; set **`T2A_MAX_REQUEST_BODY_BYTES=0`** to disable. Wired as **`WithMaxRequestBody`** before **`WithIdempotency`** so oversized bodies fail before idempotency reads the body.
