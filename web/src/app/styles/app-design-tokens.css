@@ -36,6 +36,12 @@
   /* Task list — nested title column (depth set on link as --task-list-tree-depth) */
   --task-list-tree-indent-base: var(--space-2);
   --task-list-tree-indent-step: 0.875rem;
+  /* Task graph (`TaskGraphPage` + `graphLayout.ts` — virtualization uses px at 16px/rem) */
+  --task-graph-card-width: 15rem;
+  --task-graph-card-min-height: 6.5rem;
+  --task-graph-col-gap: 5.5rem;
+  --task-graph-row-gap: var(--space-5);
+  --task-graph-canvas-padding: var(--space-6);
   /* Table th, DL dt, dropdown group labels, thread meta (DS §10) */
   --data-caps-letter-spacing: 0.04em;
   --data-caps-text-transform: uppercase;

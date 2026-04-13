@@ -5,6 +5,7 @@ import { getTask } from "@/api";
 import type { Priority, Status } from "@/types";
 import { TaskGraphPageSkeleton } from "../components/taskLoadingSkeletons";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
+import { GRAPH_LAYOUT_PX } from "../graphLayout";
 import { taskQueryKeys } from "../queryKeys";
 
 type GraphTaskNode = {
@@ -25,12 +26,14 @@ type GraphNode = {
   row: number;
 };
 
-const CARD_WIDTH = 240;
-const CARD_HEIGHT = 104;
-const COL_GAP = 88;
-const ROW_GAP = 20;
-const PADDING = 24;
-const BUFFER_ROWS = 20;
+const {
+  CARD_WIDTH,
+  CARD_HEIGHT,
+  COL_GAP,
+  ROW_GAP,
+  PADDING,
+  BUFFER_ROWS,
+} = GRAPH_LAYOUT_PX;
 
 function graphMockUrl(): string {
   return import.meta.env.VITE_TASK_GRAPH_MOCK_URL?.trim() ?? "";
