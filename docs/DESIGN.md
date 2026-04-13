@@ -290,6 +290,13 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 - `before_seq must be a positive integer` — `before_seq` is non-empty after trim but not a valid integer **≥ 1**.
 - `after_seq must be a positive integer` — same for `after_seq`.
 
+**`GET /tasks/{id}/events/{seq}` — documented `400` JSON `error` strings** (`{seq}` path segment is trimmed for length checks, then parsed as a base-10 integer; invalid task `id` is handled by shared path-id rules):
+
+- `seq too long` — trimmed `{seq}` exceeds **32** bytes.
+- `seq must be a positive integer` — empty after trim, `0`, negative, non-numeric, or otherwise not a valid integer **≥ 1**.
+
+The same `{seq}` path rules and `400` strings apply to **`PATCH /tasks/{id}/events/{seq}`** (thread append).
+
 **Checklist `PATCH` — documented `400` JSON `error` strings** (stable client-facing messages for the one-of body rule and store validation; malformed JSON still follows generic decode errors):
 
 - `send exactly one of text or done` — body included both `text` and `done`, or neither field was provided for the one-of choice.

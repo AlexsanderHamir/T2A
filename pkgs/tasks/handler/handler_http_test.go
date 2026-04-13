@@ -289,24 +289,34 @@ func TestHTTP_get_task_event(t *testing.T) {
 		t.Fatalf("missing seq want 404, got %d", res404.StatusCode)
 	}
 
-	resBad, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events/0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resBad.Body.Close()
-	if resBad.StatusCode != http.StatusBadRequest {
-		t.Fatalf("seq 0 want 400, got %d", resBad.StatusCode)
+	assertEventSeq400 := func(t *testing.T, rawURL, wantMsg string) {
+		t.Helper()
+		res, err := http.Get(rawURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("%s: status %d body %s", rawURL, res.StatusCode, b)
+		}
+		var out jsonErrorBody
+		if err := json.Unmarshal(b, &out); err != nil {
+			t.Fatal(err)
+		}
+		if out.Error != wantMsg {
+			t.Fatalf("%s: error %q want %q", rawURL, out.Error, wantMsg)
+		}
 	}
 
+	assertEventSeq400(t, srv.URL+"/tasks/"+created.ID+"/events/0", "seq must be a positive integer")
+	assertEventSeq400(t, srv.URL+"/tasks/"+created.ID+"/events/nope", "seq must be a positive integer")
+
 	longSeq := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
-	resLong, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events/" + longSeq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resLong.Body.Close()
-	if resLong.StatusCode != http.StatusBadRequest {
-		t.Fatalf("overlong seq want 400, got %d", resLong.StatusCode)
-	}
+	assertEventSeq400(t, srv.URL+"/tasks/"+created.ID+"/events/"+longSeq, "seq too long")
 }
 
 func TestHTTP_task_events_query_validation_error_messages(t *testing.T) {
@@ -431,8 +441,19 @@ func TestHTTP_patch_task_event_rejects_overlong_seq(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resPatch.Body.Close()
+	patchBody, err := io.ReadAll(resPatch.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resPatch.StatusCode != http.StatusBadRequest {
-		t.Fatalf("patch overlong seq want 400, got %d", resPatch.StatusCode)
+		t.Fatalf("patch overlong seq want 400, got %d %s", resPatch.StatusCode, patchBody)
+	}
+	var errOut jsonErrorBody
+	if err := json.Unmarshal(patchBody, &errOut); err != nil {
+		t.Fatal(err)
+	}
+	if errOut.Error != "seq too long" {
+		t.Fatalf("patch overlong seq error %q", errOut.Error)
 	}
 }
 
