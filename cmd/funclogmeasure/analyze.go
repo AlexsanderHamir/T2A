@@ -42,6 +42,17 @@ type analyzeOpts struct {
 	includeTool bool
 }
 
+// isNPMWebNodeModulesGo reports paths under web/node_modules (npm may ship
+// auxiliary Go packages such as flatted). Those files are not T2A product code
+// and must not affect funclogmeasure -enforce.
+func isNPMWebNodeModulesGo(path string) bool {
+	p := filepath.ToSlash(path)
+	if strings.Contains(p, "/web/node_modules/") {
+		return true
+	}
+	return strings.HasPrefix(p, "web/node_modules/")
+}
+
 func buildReport(modRoot string, opts analyzeOpts) (*report, error) {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{
@@ -85,6 +96,9 @@ func buildReport(modRoot string, opts analyzeOpts) (*report, error) {
 		info := pkg.TypesInfo
 		for i, f := range pkg.Syntax {
 			path := pkg.CompiledGoFiles[i]
+			if isNPMWebNodeModulesGo(path) {
+				continue
+			}
 			if !opts.tests && strings.HasSuffix(path, "_test.go") {
 				continue
 			}

@@ -2,8 +2,27 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestIsNPMWebNodeModulesGo(t *testing.T) {
+	sep := string(filepath.Separator)
+	for _, tt := range []struct {
+		path string
+		want bool
+	}{
+		{filepath.Join("x", "web", "node_modules", "p", "f.go"), true},
+		{strings.ReplaceAll("x/web/node_modules/p/f.go", "/", sep), true},
+		{filepath.Join("pkgs", "tasks", "handler", "x.go"), false},
+		{filepath.Join("web", "src", "not_node_modules", "x.go"), false},
+		{filepath.Join("myweb", "node_modules", "x.go"), false},
+	} {
+		if got := isNPMWebNodeModulesGo(tt.path); got != tt.want {
+			t.Fatalf("isNPMWebNodeModulesGo(%q): got %v want %v", tt.path, got, tt.want)
+		}
+	}
+}
 
 func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
 	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "String") {
