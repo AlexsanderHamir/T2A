@@ -687,6 +687,8 @@ button.task-detail-checklist-remove:focus-visible {
   background: var(--bg-subtle);
   box-shadow: var(--shadow-chrome-xs);
   overflow: auto;
+  /* Reserve scrollbar gutter so skeleton → loaded graph does not shift when overflow appears */
+  scrollbar-gutter: stable;
 }
 
 .task-graph-canvas {
@@ -777,8 +779,9 @@ button.task-detail-checklist-remove:focus-visible {
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
   box-shadow: var(--shadow-chrome-xs);
-  overflow: hidden;
-  padding: var(--space-6);
+  /* Match `.task-graph-viewport` (no inner padding — graph canvas uses its own padding math) */
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .task-graph-skeleton-cards {
@@ -789,8 +792,8 @@ button.task-detail-checklist-remove:focus-visible {
 }
 
 .task-graph-skeleton-card {
-  width: 15rem;
-  min-height: 6.5rem;
+  width: var(--task-graph-card-width);
+  min-height: var(--task-graph-card-min-height);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
