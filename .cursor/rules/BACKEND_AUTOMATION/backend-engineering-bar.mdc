@@ -1,99 +1,685 @@
 ---
 description: >-
-  Go / taskapi engineering quality bar: layering (cmd → handler → store →
-  domain), errors, context, HTTP boundaries, security, and testability. Use with
-  BACKEND_AUTOMATION agent or when editing pkgs/, internal/, cmd/.
+  Production-grade Go backend engineering standards (Stripe × Google): project
+  structure, file-size reviewability, error handling, API design, database access,
+  observability, testing, security, and operational concerns for Go services.
 globs:
   - "**/*.go"
-alwaysApply: false
+  - "**/go.mod"
+  - "**/go.sum"
+  - "**/Makefile"
+  - "**/Dockerfile"
+  - "**/*.sql"
+alwaysApply: true
 ---
 
-# Backend engineering bar (Go / taskapi)
+# Go Backend Engineering Standards
 
-You ship production-grade Go: predictable HTTP behavior, honest errors, clear package boundaries, and tests that run without external services by default.
+You are a world-class backend engineer. Every service, handler, and package you write must meet the bar set by how Google, Stripe, and Cloudflare build Go: idiomatic, observable, resilient, and maintainable. Every decision matters. Clever hacks and shortcuts are technical debt waiting to surface in production.
 
-**Repo map:** See `AGENTS.md`. **HTTP/SSE contracts:** `docs/DESIGN.md`. **Logs/metrics:** `docs/OBSERVABILITY.md`.
-
----
-
-## 1. LAYERING
-
-- **`cmd/`** — wiring only: config, listen, signal handling, dependency construction. No business rules.
-- **`pkgs/tasks/handler/`** — HTTP/SSE: decode/encode, status codes, call store, map domain errors to responses, notify SSE when appropriate. No SQL.
-- **`pkgs/tasks/store/`** (and related) — persistence orchestration: validate inputs against domain rules where that is the single place of truth, call GORM/repo, map DB errors to **`domain.ErrNotFound`**, **`domain.ErrInvalidInput`**, etc.
-- **`pkgs/tasks/domain/`** — types, enums, invariants that do not depend on HTTP or GORM.
-- **`pkgs/repo/`** — read-only workspace access when `REPO_ROOT` is set; never trust caller paths without repo package guardrails.
-
-**Dependency direction:** inner packages must not import `handler`. `domain` must not import `store` or `postgres`.
+**Repo context:** This document defines the **quality and standards bar** for all Go backend code. It covers project structure, file-size reviewability, API design, error handling, observability, testing, and operational concerns. It is language-specific — follow the [Go spec](https://go.dev/ref/spec) and [Effective Go](https://go.dev/doc/effective_go) as the foundation.
 
 ---
 
-## 2. ERRORS
+## 1. ENGINEERING PHILOSOPHY
 
-- Use **`fmt.Errorf("...: %w", err)`** when wrapping; callers may use `errors.Is` / `errors.As`.
-- At the **HTTP boundary**, map known domain/store errors to stable JSON and correct status codes (e.g. not found → 404 with documented body shape).
-- Do not leak internal details (SQL driver messages, file paths) to clients in production error JSON.
-- **`panic`** is not a control-flow tool on the request path; use `http.Server` recovery middleware where appropriate, but prefer explicit error returns.
-
----
-
-## 3. CONTEXT
-
-- The first parameter of functions that do I/O or respect deadlines should be **`context.Context`**.
-- On the request path, prefer **`r.Context()`** over `context.Background()` so cancellation propagates to the store/DB when the client disconnects (where the driver supports it).
+- **Explicit over implicit.** Go is not magic. If something important happens, it must be visible in the code.
+- **Errors are values.** Treat them as first-class citizens. Never ignore, swallow, or paper over them.
+- **Simplicity is the goal.** The best Go code reads like prose. If you need a comment to explain what the code does, refactor the code.
+- **Interfaces are contracts.** Keep them small. Accept interfaces, return concrete types.
+- **Composition over inheritance.** Embed, wrap, and decorate. Build small, reusable pieces.
+- **Design for the operator.** Every service must be debuggable, observable, and deployable by someone who didn't write it.
+- **Fail loudly at startup, gracefully at runtime.** Invalid config should panic at boot, not silently degrade at request time.
 
 ---
 
-## 4. HTTP / JSON BOUNDARY
+## 2. PROJECT STRUCTURE
 
-- Set **`Content-Type`** correctly for JSON bodies; reject unknown JSON fields when the API promises strict decoding (match existing handler behavior and docs).
-- Use consistent **success and error** envelope shapes documented in `docs/DESIGN.md`.
-- After successful writes that should drive live UI, ensure **SSE notification** behavior matches design (same process, in-memory hub — document limitations).
-- **SSE:** correct headers, flush behavior, and graceful handling of slow clients where implemented.
+Use a flat, intent-revealing layout. Avoid `pkg/` and `internal/` nesting that adds depth without meaning.
+
+```
+myservice/
+├── cmd/
+│   └── myservice/
+│       └── main.go          # Entrypoint only — wire deps, call run()
+├── internal/
+│   ├── api/                 # HTTP handlers and routing
+│   │   ├── handler_users.go
+│   │   ├── handler_orders.go
+│   │   └── middleware.go
+│   ├── domain/              # Core types, business logic, interfaces
+│   │   ├── user.go
+│   │   └── order.go
+│   ├── store/               # Database access layer (implements domain interfaces)
+│   │   ├── user_store.go
+│   │   └── order_store.go
+│   ├── service/             # Orchestration between domain + external systems
+│   │   └── order_service.go
+│   └── config/              # Config loading and validation
+│       └── config.go
+├── migrations/              # SQL migration files (numbered, up/down)
+├── Makefile
+├── Dockerfile
+└── go.mod
+```
+
+### Rules
+
+- `main.go` must do only three things: parse config, wire dependencies, start the server.
+- `internal/` prevents accidental external import. Use it for everything not intentionally public.
+- No `utils/` or `helpers/` packages. Name packages by what they provide, not what they are.
+- Domain types (`User`, `Order`) live in `domain/`. They have no database or HTTP awareness.
+- Stores implement domain interfaces. Services call stores through those interfaces.
+- One file per handler group. One file per store entity. Keep files focused.
+
+### File size (reviewability bar)
+
+Large files amplify merge conflicts, bury mixed responsibilities, and turn code review into skimming. Treat **how many lines live in one file** as a maintainability signal—same instinct as keeping APIs small.
+
+**Targets** (non-generated `*.go`; line counts are a guide, not dogma):
+
+- **Green** — aim for most production files **≤ ~400 lines**. A reviewer should be able to read the file top-to-bottom and still reason about control flow without a map.
+- **Yellow** — **~401–700 lines** needs an explicit justification: one cohesive unit (e.g. a single routing table, one generated artifact, one dense table-driven state machine). If it is not obviously one concern, **split before growing further**.
+- **Red** — **> ~800 lines** of handwritten application code is a strong smell for incremental work; **split by responsibility** (types/DTOs, per-resource handlers, per-entity store) rather than splitting arbitrarily mid-function.
+
+**How to split** (staying in the same package is fine):
+
+- Move types, constants, or boundary DTOs to a sibling file (`types.go`, `dto.go`, `wire.go`) when they dominate the file.
+- Split HTTP or RPC surface by resource or concern; keep `main` a thin wire-up.
+- Oversized `*_test.go`: keep table-driven subtests when they truly belong together; otherwise extract fixtures, builders, or shared helpers—**never** copy production logic into tests just to avoid an extra file.
+
+**Exceptions** (note in a short file or package comment when it would surprise a reader):
+
+- Generated code (`// Code generated … DO NOT EDIT`, protobuf, sqlc, `stringer`, etc.).
+- Rare “registry” files that are long but boring, low-churn, and data-heavy—still prefer splitting if the file churns often.
 
 ---
 
-## 5. SECURITY AND ROBUSTNESS
+## 3. NAMING
 
-- **Parameterized queries** via GORM; never format untrusted input into raw SQL strings.
-- **Path and query validation:** reject absurd limits, overlong IDs, and malformed filters with **400**; distinguish from **404**.
-- **Rate limits and request size:** respect configured limits; document env vars when adding new ones.
-- **Headers:** maintain baseline security headers expected by tests and deployment guides.
-- **Secrets:** never log tokens, passwords, or `DATABASE_URL`; redact or omit.
+Go naming is terse and purposeful. If you find yourself writing long names, the package name is part of the name.
 
----
+```go
+// Good — context provided by package
+user.Store         // user package, Store type
+user.New()         // user package, constructor
 
-## 6. CONCURRENCY
+// Bad
+userStore.UserStore
+helpers.CreateUserHelper()
+```
 
-- Shared maps or subscriber registries (**SSE hub**, caches) need explicit **synchronization** (mutex or channel design); document invariants.
-- Long-lived **goroutines** must exit on context cancellation or server shutdown.
-- Avoid data races: run **`go test -race`** when you touch concurrent code paths (or note in log if race detector is deferred to CI).
+### Rules
 
----
-
-## 7. OBSERVABILITY
-
-- Use structured **`log/slog`** (or project standard) with stable attribute keys; include useful correlation where the design specifies it.
-- **Metrics:** keep cardinality bounded; label dimensions should not include unbounded user strings (use path template or route name, not raw URL).
-
----
-
-## 8. TESTABILITY
-
-- Table-driven tests where there are multiple cases; use **`t.Helper()`** in test constructors.
-- Prefer **`httptest.Server`** for HTTP-level assertions; use the project's **`testdb.OpenSQLite`** (or equivalent) for store/handler integration without Postgres unless explicitly building tagged integration tests.
-- Tests must be **deterministic**: no wall-clock flakiness; use injected clocks or tight tolerances only when unavoidable and documented.
+- **Packages**: lowercase, single word, no underscores. `store`, `api`, `domain`, `config`.
+- **Exported types/funcs**: `PascalCase`. Unexported: `camelCase`.
+- **Interfaces**: name by behavior. `Reader`, `Writer`, `UserStore`, `Notifier` — not `IUserStore` or `UserInterface`.
+- **Constructors**: `New(deps) *Type` or `NewType(deps) *Type` if the package has multiple types.
+- **Error variables**: `ErrNotFound`, `ErrUnauthorized` — prefix with `Err`.
+- **Context param**: always first, always named `ctx`.
+- **Avoid stuttering**: `user.UserID` → `user.ID`, `store.StoreConfig` → `store.Config`.
+- **Acronyms**: `userID`, `httpClient`, `urlPath` — not `userId`, `HttpClient`, `UrlPath`.
 
 ---
 
-## 9. HYGIENE
+## 4. ERROR HANDLING
 
-- **`gofmt`** on every touched file.
-- Exported identifiers need **godoc** when they are part of a public API surface.
-- Remove dead code and misleading comments when you touch a file; do not expand scope to repo-wide cleanups in the same change as a feature fix unless the session goal is hygiene.
+Errors in Go are explicit. Every error must be handled. Every error must have context.
+
+```go
+// Always wrap with context
+if err := store.CreateUser(ctx, user); err != nil {
+    return fmt.Errorf("create user %s: %w", user.Email, err)
+}
+
+// Define sentinel errors in the domain layer
+var (
+    ErrNotFound     = errors.New("not found")
+    ErrUnauthorized = errors.New("unauthorized")
+    ErrConflict     = errors.New("conflict")
+)
+
+// Use errors.Is for checking, never string matching
+if errors.Is(err, domain.ErrNotFound) {
+    return http.StatusNotFound
+}
+
+// Custom error types when callers need structured data
+type ValidationError struct {
+    Field   string
+    Message string
+}
+func (e *ValidationError) Error() string {
+    return fmt.Sprintf("validation failed on %s: %s", e.Field, e.Message)
+}
+```
+
+### Rules
+
+- **Never use `_` to discard errors** from functions that return them.
+- **Always wrap errors** with `fmt.Errorf("context: %w", err)` when crossing package boundaries.
+- **Never log AND return** the same error. Pick one — the caller decides whether to log.
+- Sentinel errors (`ErrNotFound`) live in the domain layer. HTTP status mapping happens in the API layer.
+- Use `errors.As` to unwrap to typed errors; `errors.Is` for sentinel comparison.
+- Panic only for programming errors (nil pointer dereference, impossible state). Never panic on I/O or user input errors.
+- Never return `nil, nil` from a function where the caller cannot distinguish success from no-op.
 
 ---
 
-## 10. WHEN IN DOUBT
+## 5. HTTP API DESIGN
 
-Ask: **Would this change surprise the SPA or an API client?** If yes, update **`docs/DESIGN.md`** (and **`docs/WEB.md`** if the web client must change) in the same change.
+```go
+// Handler signature — accept deps via closure, not global state
+func handleCreateUser(svc UserService) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        ctx := r.Context()
+
+        var req CreateUserRequest
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+            respondError(w, http.StatusBadRequest, "invalid request body")
+            return
+        }
+
+        if err := req.Validate(); err != nil {
+            respondError(w, http.StatusUnprocessableEntity, err.Error())
+            return
+        }
+
+        user, err := svc.CreateUser(ctx, req)
+        if err != nil {
+            handleServiceError(w, err) // maps domain errors → HTTP status
+            return
+        }
+
+        respond(w, http.StatusCreated, user)
+    }
+}
+
+// Consistent response helpers
+func respond(w http.ResponseWriter, status int, data any) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+    json.NewEncoder(w).Encode(data)
+}
+
+func respondError(w http.ResponseWriter, status int, message string) {
+    respond(w, status, map[string]string{"error": message})
+}
+```
+
+### REST Conventions
+
+- `GET /resources` — list (paginated)
+- `POST /resources` — create
+- `GET /resources/{id}` — get single
+- `PUT /resources/{id}` — full replace
+- `PATCH /resources/{id}` — partial update
+- `DELETE /resources/{id}` — delete
+
+### Rules
+
+- All endpoints return `Content-Type: application/json`.
+- Errors always return a JSON body: `{"error": "human-readable message"}`.
+- Never expose internal error messages or stack traces to the client.
+- Use `http.StatusUnprocessableEntity` (422) for validation errors, not 400.
+- Use `http.StatusConflict` (409) for duplicate resource errors.
+- Versioning via URL prefix: `/v1/`, `/v2/` — never via headers.
+- Request IDs: inject via middleware, propagate through context, include in error responses.
+- All mutation endpoints must be idempotent where possible.
+- Timeouts: set `ReadTimeout`, `WriteTimeout`, `IdleTimeout` on every `http.Server`.
+
+---
+
+## 6. MIDDLEWARE
+
+Middleware composes behavior without modifying handlers. Keep each middleware focused on one concern.
+
+```go
+func withRequestID(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        id := r.Header.Get("X-Request-ID")
+        if id == "" {
+            id = uuid.New().String()
+        }
+        ctx := context.WithValue(r.Context(), requestIDKey{}, id)
+        w.Header().Set("X-Request-ID", id)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+
+// Middleware order (outermost to innermost):
+// Recover → RequestID → Logger → Auth → RateLimit → Handler
+```
+
+### Standard Middleware Chain
+
+1. **Recover** — catch panics, log them, return 500
+2. **RequestID** — inject/propagate request ID
+3. **Logger** — structured log of method, path, status, latency
+4. **Auth** — validate and inject identity into context
+5. **RateLimit** — per-IP or per-user throttling
+6. **CORS** — if serving browser clients
+
+### Rules
+
+- Store context values using unexported key types, never strings: `type requestIDKey struct{}`
+- Middleware must call `next.ServeHTTP` or explicitly short-circuit with a written response — never both.
+- Auth middleware sets identity in context. Handlers retrieve it — never parse auth tokens in handlers.
+- Recovery middleware must log the panic with stack trace before responding.
+
+---
+
+## 7. DATABASE ACCESS
+
+```go
+// Store interface defined in domain — not in store package
+type UserStore interface {
+    Create(ctx context.Context, user *User) error
+    GetByID(ctx context.Context, id uuid.UUID) (*User, error)
+    GetByEmail(ctx context.Context, email string) (*User, error)
+    Update(ctx context.Context, user *User) error
+    Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// Implementation in store package
+type PostgresUserStore struct {
+    db *sql.DB
+}
+
+func (s *PostgresUserStore) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
+    const q = `SELECT id, email, created_at FROM users WHERE id = $1`
+
+    var u domain.User
+    err := s.db.QueryRowContext(ctx, q, id).Scan(&u.ID, &u.Email, &u.CreatedAt)
+    if errors.Is(err, sql.ErrNoRows) {
+        return nil, domain.ErrNotFound
+    }
+    if err != nil {
+        return nil, fmt.Errorf("get user by id: %w", err)
+    }
+    return &u, nil
+}
+```
+
+### Rules
+
+- **Write raw SQL.** ORMs obscure behavior, make N+1 problems invisible, and generate poor queries. Use `database/sql` or `sqlx`.
+- Always use **parameterized queries** — never string interpolation. No exceptions.
+- Translate `sql.ErrNoRows` to `domain.ErrNotFound` at the store layer.
+- Use `context` in every query: `QueryRowContext`, `QueryContext`, `ExecContext`.
+- Database migrations: numbered sequential files (`001_create_users.up.sql`, `001_create_users.down.sql`). Use `golang-migrate` or `goose`.
+- Connection pool settings: always configure `SetMaxOpenConns`, `SetMaxIdleConns`, `SetConnMaxLifetime`.
+- Transactions: use `db.BeginTx(ctx, nil)`, always `defer tx.Rollback()`, call `tx.Commit()` explicitly.
+- Never return `*sql.Rows` from store methods — scan inside the store, return domain types.
+
+---
+
+## 8. CONFIGURATION
+
+```go
+// config/config.go
+type Config struct {
+    HTTP     HTTPConfig
+    Database DatabaseConfig
+    Auth     AuthConfig
+}
+
+type HTTPConfig struct {
+    Addr            string        `env:"HTTP_ADDR,default=:8080"`
+    ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT,default=5s"`
+    WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT,default=10s"`
+    IdleTimeout     time.Duration `env:"HTTP_IDLE_TIMEOUT,default=120s"`
+    ShutdownTimeout time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT,default=30s"`
+}
+
+// Load and validate at startup — fail fast
+func Load() (*Config, error) {
+    var cfg Config
+    if err := env.Parse(&cfg); err != nil {
+        return nil, fmt.Errorf("parse config: %w", err)
+    }
+    if err := cfg.Validate(); err != nil {
+        return nil, fmt.Errorf("invalid config: %w", err)
+    }
+    return &cfg, nil
+}
+```
+
+### Rules
+
+- **Environment variables only** for production config. No config files committed with secrets.
+- Use `envconfig` or `env` library for structured parsing — no manual `os.Getenv` scattered through code.
+- Validate all config at startup. If required values are missing, the service must not start.
+- Never log secrets. Implement `String() string` on sensitive types to redact them.
+- Provide sensible defaults for all optional values. Document every variable.
+- Local development: `.env` file loaded via `godotenv` in `main.go` only.
+
+---
+
+## 9. CONTEXT & CONCURRENCY
+
+```go
+// Context propagation — always first argument
+func (s *OrderService) Create(ctx context.Context, order *Order) error { ... }
+
+// Goroutines — always handle lifecycle
+func (w *Worker) Start(ctx context.Context) error {
+    g, ctx := errgroup.WithContext(ctx)
+    g.Go(func() error { return w.processLoop(ctx) })
+    g.Go(func() error { return w.cleanupLoop(ctx) })
+    return g.Wait()
+}
+
+// Channel patterns — always buffer if sender shouldn't block
+jobs := make(chan Job, 100)
+
+// Mutex — embed in the type it protects
+type Cache struct {
+    mu    sync.RWMutex
+    items map[string]Item
+}
+```
+
+### Rules
+
+- Context is always the **first parameter**, never stored in structs.
+- Never create goroutines without a clear ownership and shutdown story.
+- Use `errgroup` (`golang.org/x/sync/errgroup`) for concurrent work with error propagation.
+- Use `sync.WaitGroup` only when errors don't need to propagate.
+- Mutexes: embed in the struct they protect. Document what they guard with a comment.
+- Channels: close on the sender side only. Never close from the receiver.
+- `select` with `ctx.Done()`: every blocking goroutine must respect context cancellation.
+- Never use `time.Sleep` in hot paths — use timers or tickers with `ctx.Done()` select.
+
+---
+
+## 10. OBSERVABILITY
+
+Production code without observability is not production-ready. Every service must emit logs, metrics, and traces.
+
+### Structured Logging
+
+```go
+// Use slog (stdlib Go 1.21+) or zerolog
+logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+    Level: slog.LevelInfo,
+}))
+
+// Always include context fields
+slog.InfoContext(ctx, "user created",
+    slog.String("user_id", user.ID.String()),
+    slog.String("email", user.Email),
+    slog.Duration("duration", time.Since(start)),
+)
+```
+
+### Log Levels
+
+- `DEBUG` — request/response bodies, internal state (never in production by default)
+- `INFO` — significant lifecycle events (server started, job completed, user action)
+- `WARN` — recoverable errors, degraded behavior, retries
+- `ERROR` — failed operations requiring attention, always include `err` field
+
+### Rules
+
+- **Always use structured logging** (`slog`, `zerolog`). Never `fmt.Println` or `log.Printf`.
+- Never log inside hot loops — log at the boundary (handler, service entry).
+- Always log: request ID, user ID (if authenticated), operation name, duration, error (if any).
+- Never log: passwords, tokens, PII, credit card numbers. Redact before logging.
+- Treat log output as an event stream — log to stdout, let the platform route it.
+- Log errors at the point of handling, not at every propagation layer.
+
+### Metrics
+
+Expose a `/metrics` endpoint (Prometheus format) with:
+
+- Request count by endpoint, method, status code
+- Request latency histogram (p50, p95, p99)
+- Active DB connections, query duration
+- Error rates by type
+- Business metrics (orders created, users registered)
+
+### Health Checks
+
+```go
+// GET /healthz — liveness (is the process alive?)
+// GET /readyz  — readiness (can it serve traffic?)
+func handleReadyz(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        if err := db.PingContext(r.Context()); err != nil {
+            respondError(w, http.StatusServiceUnavailable, "database unavailable")
+            return
+        }
+        respond(w, http.StatusOK, map[string]string{"status": "ok"})
+    }
+}
+```
+
+---
+
+## 11. TESTING
+
+```go
+// Table-driven tests — Go's idiomatic test pattern
+func TestUserService_Create(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   CreateUserInput
+        mock    func(*mockUserStore)
+        wantErr error
+    }{
+        {
+            name:  "valid user",
+            input: CreateUserInput{Email: "a@b.com"},
+            mock:  func(m *mockUserStore) { m.On("Create", ...).Return(nil) },
+        },
+        {
+            name:    "duplicate email",
+            input:   CreateUserInput{Email: "a@b.com"},
+            mock:    func(m *mockUserStore) { m.On("Create", ...).Return(domain.ErrConflict) },
+            wantErr: domain.ErrConflict,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            store := &mockUserStore{}
+            tt.mock(store)
+            svc := NewUserService(store)
+            _, err := svc.Create(context.Background(), tt.input)
+            if !errors.Is(err, tt.wantErr) {
+                t.Errorf("got %v, want %v", err, tt.wantErr)
+            }
+        })
+    }
+}
+```
+
+### Test Layers
+
+- **Unit tests**: test service logic with mock stores. Fast, no I/O.
+- **Integration tests**: test store implementations against a real (dockerized) database. Use `testcontainers-go`.
+- **Handler tests**: use `httptest.NewRecorder()` + `httptest.NewServer()`. No real server needed.
+- **End-to-end tests**: thin layer of smoke tests against a deployed environment.
+
+### Rules
+
+- Test behavior, not implementation. Don't test private methods.
+- Use `testify/assert` and `testify/mock` for clean, readable assertions.
+- Every test is independent — no shared state, no ordering dependencies.
+- Use `t.Parallel()` in unit tests. Integration tests: use `t.Cleanup` to tear down state.
+- Test file: `foo_test.go`. Integration tests: `foo_integration_test.go` with `//go:build integration` tag.
+- Coverage: aim for 80%+ on service and domain layers. 60%+ on store layer (integration tests cover the rest).
+- Subtests (`t.Run`) for all table-driven tests — enable targeted re-runs.
+- Always test error paths. A test suite with only happy paths is not a test suite.
+
+---
+
+## 12. GRACEFUL SHUTDOWN
+
+```go
+func run(ctx context.Context, cfg *config.Config) error {
+    srv := &http.Server{
+        Addr:         cfg.HTTP.Addr,
+        Handler:      buildRouter(deps),
+        ReadTimeout:  cfg.HTTP.ReadTimeout,
+        WriteTimeout: cfg.HTTP.WriteTimeout,
+        IdleTimeout:  cfg.HTTP.IdleTimeout,
+    }
+
+    go func() {
+        if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+            log.Error("server error", slog.Any("err", err))
+        }
+    }()
+
+    <-ctx.Done() // Wait for OS signal (SIGTERM, SIGINT)
+
+    shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
+    defer cancel()
+
+    return srv.Shutdown(shutdownCtx)
+}
+```
+
+### Rules
+
+- Handle `SIGTERM` and `SIGINT` via `signal.NotifyContext`.
+- `Shutdown()` timeout must be generous enough to drain in-flight requests — minimum `15s`, prefer `30s`.
+- Close database connections and other resources after the server shuts down.
+- Log the shutdown sequence so operators can observe it.
+- Kubernetes: `preStop` hook should sleep 5s to allow load balancer to drain before `SIGTERM`.
+
+---
+
+## 13. SECURITY
+
+- **Never trust user input.** Validate and sanitize everything before use.
+- **SQL injection**: parameterized queries always, forever. No exceptions.
+- **Authentication**: validate JWTs in middleware — use a well-maintained library (`golang-jwt/jwt`). Never roll your own crypto.
+- **Secrets in environment**: never commit secrets to source control. Use secret managers (Vault, AWS Secrets Manager) in production.
+- **TLS**: all inter-service communication must use TLS. Let the platform handle termination (load balancer / service mesh).
+- **Rate limiting**: every public endpoint. Per-IP by default, per-user for authenticated endpoints.
+- **Input size limits**: set `http.MaxBytesReader` on all request bodies.
+- **CORS**: allowlist specific origins — never `*` in production for authenticated APIs.
+- **Dependency auditing**: run `govulncheck` and `go mod tidy` in CI. Pin dependencies.
+- **Principle of least privilege**: database users have only the permissions they need. No superuser connections from app code.
+
+---
+
+## 14. DEPENDENCY MANAGEMENT
+
+```
+go.mod   — defines module path and Go version
+go.sum   — checksums for reproducible builds
+```
+
+### Rules
+
+- Keep `go.mod` clean. Run `go mod tidy` before every commit.
+- Vendor (`go mod vendor`) for air-gapped or reproducibility-critical builds.
+- Prefer standard library. Add a dependency only when the cost of writing it yourself outweighs the cost of a dependency.
+- Before adding a dependency: check stars, last commit date, open issues, license, and API stability.
+- Avoid indirect dependencies with security histories. Run `govulncheck ./...` in CI.
+- Pin major versions. Never use `replace` directives in production modules.
+
+### Approved Dependency Categories
+
+| Category | Preferred library |
+|---|---|
+| HTTP router | `chi`, `gorilla/mux`, or stdlib `net/http` |
+| SQL | `database/sql` + `lib/pq` or `jackc/pgx` |
+| Config | `kelseyhightower/envconfig` or `caarlos0/env` |
+| Logging | `log/slog` (stdlib) or `rs/zerolog` |
+| Testing | `testify/assert`, `testify/mock` |
+| UUIDs | `google/uuid` |
+| Migrations | `golang-migrate/migrate` |
+| Errors | `stdlib errors` + `fmt.Errorf("%w")` |
+| Observability | `prometheus/client_golang`, `open-telemetry/opentelemetry-go` |
+
+---
+
+## 15. CI/CD & MAKEFILE
+
+Every repo must have a `Makefile` as the single interface for common operations:
+
+```makefile
+.PHONY: build test lint vet fmt run migrate
+
+build:
+	go build -o bin/myservice ./cmd/myservice
+
+test:
+	go test ./... -race -count=1 -timeout=60s
+
+test/integration:
+	go test ./... -tags=integration -race -count=1 -timeout=120s
+
+lint:
+	golangci-lint run ./...
+
+vet:
+	go vet ./...
+
+fmt:
+	gofmt -w .
+	goimports -w .
+
+run:
+	go run ./cmd/myservice
+
+migrate/up:
+	migrate -path ./migrations -database $$DATABASE_URL up
+
+migrate/down:
+	migrate -path ./migrations -database $$DATABASE_URL down 1
+```
+
+### CI Pipeline (required steps)
+
+1. `go vet ./...`
+2. `golangci-lint run`
+3. `go test ./... -race -count=1`
+4. `govulncheck ./...`
+5. `docker build` (verify image builds)
+
+### Linter Config (`golangci-lint`)
+
+Enable at minimum: `errcheck`, `gosimple`, `govet`, `ineffassign`, `staticcheck`, `unused`, `revive`, `gofmt`, `goimports`.
+
+---
+
+## 16. DO NOT
+
+- Use `init()` functions — initialization order is invisible and untestable
+- Use global variables for anything other than `var ErrFoo = errors.New(...)` sentinel errors
+- Use `interface{}` / `any` unless absolutely necessary — use generics (Go 1.18+) instead
+- Copy a `sync.Mutex` — always pass by pointer
+- Ignore `error` return values, even in `defer` — use a named return or log
+- Use `panic` for expected error conditions — only for true programmer errors
+- Write God structs or God services — a service with 20 methods needs to be split
+- Grow a single `*.go` into a junk drawer of unrelated handlers, stores, and types — split by responsibility before it crosses the file-size bar under **Project structure**
+- Hardcode timeouts as integer literals — use `time.Duration` constants
+- Use `time.Now()` directly in business logic — inject a clock for testability
+- Share `*http.Client` created with default settings — always set timeouts
+- Return `200 OK` with an error body — use the correct HTTP status code
+- Mix concerns: handlers must not contain SQL, stores must not contain HTTP logic
+- Use `log.Fatal` outside of `main.go` — it calls `os.Exit` and skips deferred cleanup
+- Use `context.Background()` inside request handlers — propagate the request context
+- Write tests that depend on execution order or shared mutable state
+
+---
+
+## 17. REFERENCE STANDARDS
+
+- [Effective Go](https://go.dev/doc/effective_go)
+- [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- [Google Go Style Guide](https://google.github.io/styleguide/go/)
+- [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
+- [The Go Programming Language (Donovan & Kernighan)](https://www.gopl.io/)
+- [Standard Go Project Layout](https://github.com/golang-standards/project-layout) — reference only, adapt to project size
+- [OWASP API Security Top 10](https://owasp.org/www-project-api-security/)
+
+---
+
+*Every piece of Go code you write should be something you'd be comfortable presenting to a senior engineer at Stripe or Google. If it wouldn't survive that review — refactor it.*
