@@ -656,6 +656,8 @@ button.task-detail-checklist-remove:focus-visible {
   flex-direction: column;
   gap: 0.85rem;
   min-height: 70vh;
+  container-type: inline-size;
+  container-name: task-graph-page;
 }
 
 .task-graph-header {
@@ -663,7 +665,7 @@ button.task-detail-checklist-remove:focus-visible {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem 0.75rem;
+  gap: var(--space-2) var(--space-3);
 }
 
 .task-graph-title {
@@ -675,6 +677,9 @@ button.task-detail-checklist-remove:focus-visible {
 .task-graph-meta {
   margin: 0;
   font-size: var(--text-sm);
+  line-height: 1.5;
+  max-width: min(52ch, 100%);
+  text-align: end;
 }
 
 .task-graph-viewport {
@@ -769,7 +774,28 @@ button.task-detail-checklist-remove:focus-visible {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem 0.75rem;
+  gap: var(--space-2) var(--space-3);
+}
+
+@container task-graph-page (max-width: var(--task-graph-cq-max)) {
+  .task-graph-header {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--space-2);
+  }
+
+  .task-graph-meta {
+    max-width: 100%;
+    text-align: start;
+  }
+
+  .task-graph-skeleton-header {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--space-2);
+  }
 }
 
 .task-graph-skeleton-viewport {
