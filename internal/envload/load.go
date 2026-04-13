@@ -63,6 +63,7 @@ func Load(envFileOverride string) (path string, err error) {
 // It does not require DATABASE_URL. If the file is missing, it succeeds without changing the environment.
 // Callers use this before full Load when variables from .env must be visible early (for example taskapi logging flags).
 func OverloadDotenvIfPresent(envFileOverride string) (resolvedPath string, err error) {
+	slog.Debug("trace", "operation", "envload.OverloadDotenvIfPresent")
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getwd: %w", err)

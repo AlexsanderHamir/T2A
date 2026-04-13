@@ -5,6 +5,15 @@ import (
 	"testing"
 )
 
+func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "String") {
+		t.Fatal("expected internal/version.String to be excluded from funclogmeasure slog requirement")
+	}
+	if shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "Other") {
+		t.Fatal("unexpected skip")
+	}
+}
+
 func TestMiniMod_typeResolvedSlog(t *testing.T) {
 	dir := filepath.Join("testdata", "minimod")
 	rep, err := buildReport(dir, analyzeOpts{includeTool: true})

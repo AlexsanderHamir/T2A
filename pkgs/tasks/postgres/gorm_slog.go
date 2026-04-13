@@ -17,6 +17,7 @@ const defaultSlowQueryMS = 200
 // Empty: defaultSlowQueryMS. "0": disable the slow-SQL branch (queries stay at Info when LogLevel is Info).
 // Invalid or negative: defaultSlowQueryMS.
 func slowQueryThresholdForGORM() time.Duration {
+	slog.Debug("trace", "operation", "postgres.slowQueryThresholdForGORM")
 	s := strings.TrimSpace(os.Getenv("T2A_GORM_SLOW_QUERY_MS"))
 	if s == "" {
 		return time.Duration(defaultSlowQueryMS) * time.Millisecond
@@ -31,6 +32,7 @@ func slowQueryThresholdForGORM() time.Duration {
 // SlowQueryThresholdMS returns the effective GORM slow-SQL threshold in milliseconds
 // (T2A_GORM_SLOW_QUERY_MS; default 200; 0 means the slow-SQL warn branch is off).
 func SlowQueryThresholdMS() int {
+	slog.Debug("trace", "operation", "postgres.SlowQueryThresholdMS")
 	d := slowQueryThresholdForGORM()
 	if d <= 0 {
 		return 0
