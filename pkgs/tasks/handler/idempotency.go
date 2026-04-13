@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -198,7 +199,7 @@ func (c *idempotencyCache) get(key string) (idempotencyCaptured, bool) {
 	return e.cap, true
 }
 
-func (c *idempotencyCache) set(key string, cap idempotencyCaptured, until time.Time) {
+func (c *idempotencyCache) set(ctx context.Context, key string, cap idempotencyCaptured, until time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if old, ok := c.items[key]; ok {
@@ -218,7 +219,12 @@ func (c *idempotencyCache) set(key string, cap idempotencyCaptured, until time.T
 	evicted := c.enforceLimitsLocked()
 	if evicted > 0 {
 		maxEntries, maxBytes := IdempotencyCacheLimits()
-		slog.Warn("idempotency cache evicted entries", "cmd", httpLogCmd, "operation", "handler.idempotency",
+		logCtx := ctx
+		if logCtx == nil {
+			logCtx = context.Background()
+		}
+		slog.Log(logCtx, slog.LevelWarn, "idempotency cache evicted entries",
+			"cmd", httpLogCmd, "operation", "handler.idempotency",
 			"evicted", evicted, "entries", len(c.items), "bytes", c.totalBytes,
 			"max_entries", maxEntries, "max_bytes", maxBytes)
 	}
@@ -375,7 +381,7 @@ func WithIdempotency(h http.Handler) http.Handler {
 			h.ServeHTTP(rec, r)
 			cap := captureIdempotentResponse(rec)
 			if shouldCacheIdempotentStatus(cap.status) {
-				idempCache.set(composite, cap, time.Now().Add(ttl))
+				idempCache.set(r.Context(), composite, cap, time.Now().Add(ttl))
 			}
 			return cap, nil
 		})
