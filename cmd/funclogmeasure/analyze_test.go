@@ -14,6 +14,12 @@ func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
 	}
 }
 
+func TestShouldSkipSlogRequirement_repoIsMentionDelimiter(t *testing.T) {
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/repo", "isMentionDelimiter") {
+		t.Fatal("expected pkgs/repo.isMentionDelimiter to be excluded (inner loop of ParseFileMentions)")
+	}
+}
+
 func TestMiniMod_typeResolvedSlog(t *testing.T) {
 	dir := filepath.Join("testdata", "minimod")
 	rep, err := buildReport(dir, analyzeOpts{includeTool: true})

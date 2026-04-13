@@ -16,10 +16,11 @@ import (
 const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure"
 
 // skipSlogRequirement marks pkg+func pairs that intentionally omit log/slog.
-// Keep this tiny: pure helpers on hot paths (e.g. health JSON) where a trace would
-// mislead operators or add noise. See docs/OBSERVABILITY.md (funclogmeasure caveats).
+// Keep this tiny: pure helpers on hot paths (e.g. health JSON) or inner-loop
+// predicates where Debug each call would flood logs. See docs/OBSERVABILITY.md.
 var skipSlogRequirement = map[string]struct{}{
-	"github.com/AlexsanderHamir/T2A/internal/version\tString": {},
+	"github.com/AlexsanderHamir/T2A/internal/version\tString":      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

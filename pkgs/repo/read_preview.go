@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"unicode/utf8"
 
@@ -25,6 +26,7 @@ const binarySniffBytes = 512
 // Content is capped at maxFileReadBytes; larger files return Truncated with a prefix of bytes.
 // Binary or invalid UTF-8 yields Binary=true and empty Content.
 func ReadFilePreview(absPath string) (*FilePreview, error) {
+	slog.Debug("trace", "operation", "repo.ReadFilePreview")
 	fi, err := os.Stat(absPath)
 	if err != nil {
 		return nil, err
@@ -79,6 +81,7 @@ func ReadFilePreview(absPath string) (*FilePreview, error) {
 }
 
 func isBinaryData(data []byte) bool {
+	slog.Debug("trace", "operation", "repo.isBinaryData")
 	if len(data) == 0 {
 		return false
 	}
@@ -90,6 +93,7 @@ func isBinaryData(data []byte) bool {
 }
 
 func lineCountFromBytes(data []byte) int {
+	slog.Debug("trace", "operation", "repo.lineCountFromBytes")
 	n := bytes.Count(data, []byte{'\n'})
 	if len(data) > 0 && data[len(data)-1] != '\n' {
 		n++

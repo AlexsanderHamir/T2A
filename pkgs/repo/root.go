@@ -102,10 +102,12 @@ func (r *Root) Resolve(rel string) (string, error) {
 }
 
 func pathEscapesRoot(rel string) bool {
+	slog.Debug("trace", "operation", "repo.pathEscapesRoot")
 	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func canonicalizePathForContainment(path string) (string, error) {
+	slog.Debug("trace", "operation", "repo.canonicalizePathForContainment")
 	if target, err := filepath.EvalSymlinks(path); err == nil {
 		return filepath.Clean(target), nil
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -253,6 +255,7 @@ func ValidateRange(absPath string, start, end int) error {
 }
 
 func validateRangeBounds(start, end int) error {
+	slog.Debug("trace", "operation", "repo.validateRangeBounds")
 	if start < 1 || end < 1 {
 		return fmt.Errorf("%w: line numbers must be >= 1", domain.ErrInvalidInput)
 	}
@@ -263,6 +266,7 @@ func validateRangeBounds(start, end int) error {
 }
 
 func validateRangeWithLineCount(start, end, n int) error {
+	slog.Debug("trace", "operation", "repo.validateRangeWithLineCount")
 	if err := validateRangeBounds(start, end); err != nil {
 		return err
 	}
