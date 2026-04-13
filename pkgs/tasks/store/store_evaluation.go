@@ -165,6 +165,7 @@ func (s *Store) ListDraftEvaluations(ctx context.Context, draftID string, limit 
 }
 
 func attachDraftEvaluationsTx(tx *gorm.DB, draftID string, taskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.attachDraftEvaluationsTx")
 	draftID = strings.TrimSpace(draftID)
 	taskID = strings.TrimSpace(taskID)
 	if draftID == "" || taskID == "" {
@@ -179,6 +180,7 @@ func attachDraftEvaluationsTx(tx *gorm.DB, draftID string, taskID string) error 
 }
 
 func scoreTitle(title string) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scoreTitle")
 	switch n := len([]rune(title)); {
 	case n == 0:
 		return 15
@@ -194,6 +196,7 @@ func scoreTitle(title string) int {
 }
 
 func scorePrompt(prompt string) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scorePrompt")
 	switch n := len([]rune(prompt)); {
 	case n == 0:
 		return 20
@@ -209,6 +212,7 @@ func scorePrompt(prompt string) int {
 }
 
 func scorePriority(p domain.Priority) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scorePriority")
 	switch p {
 	case domain.PriorityLow, domain.PriorityMedium, domain.PriorityHigh, domain.PriorityCritical:
 		return 92
@@ -218,6 +222,7 @@ func scorePriority(p domain.Priority) int {
 }
 
 func scoreStructure(parentID *string, inherit *bool, checklist []EvaluateDraftChecklistItemInput) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scoreStructure")
 	score := 72
 	if parentID != nil && strings.TrimSpace(*parentID) != "" {
 		score += 10
@@ -243,6 +248,7 @@ func scoreStructure(parentID *string, inherit *bool, checklist []EvaluateDraftCh
 }
 
 func scoreCohesion(title, prompt, priority, structure int, in EvaluateDraftTaskInput) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scoreCohesion")
 	score := int(math.Round((float64(title) + float64(prompt) + float64(priority) + float64(structure)) / 4.0))
 	if strings.TrimSpace(in.Title) != "" && strings.TrimSpace(in.InitialPrompt) == "" {
 		score -= 18
@@ -254,6 +260,7 @@ func scoreCohesion(title, prompt, priority, structure int, in EvaluateDraftTaskI
 }
 
 func clampScore(v int) int {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.clampScore")
 	if v < 0 {
 		return 0
 	}
@@ -264,6 +271,7 @@ func clampScore(v int) int {
 }
 
 func randomSuggestions(rng *rand.Rand, pool []string, score int) []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.randomSuggestions")
 	if len(pool) == 0 {
 		return []string{"Refine this section with clearer intent."}
 	}
@@ -288,6 +296,7 @@ func randomSuggestions(rng *rand.Rand, pool []string, score int) []string {
 }
 
 func titleSummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.titleSummary")
 	if score >= 85 {
 		return "Title is clear and specific."
 	}
@@ -298,6 +307,7 @@ func titleSummary(score int) string {
 }
 
 func promptSummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.promptSummary")
 	if score >= 85 {
 		return "Prompt gives strong implementation context."
 	}
@@ -308,6 +318,7 @@ func promptSummary(score int) string {
 }
 
 func prioritySummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.prioritySummary")
 	if score >= 85 {
 		return "Priority communicates urgency clearly."
 	}
@@ -315,6 +326,7 @@ func prioritySummary(score int) string {
 }
 
 func structureSummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.structureSummary")
 	if score >= 85 {
 		return "Task structure supports predictable execution."
 	}
@@ -325,6 +337,7 @@ func structureSummary(score int) string {
 }
 
 func cohesionSummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cohesionSummary")
 	if score >= 85 {
 		return "Sections align well and reinforce each other."
 	}
@@ -335,6 +348,7 @@ func cohesionSummary(score int) string {
 }
 
 func overallSummary(score int) string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.overallSummary")
 	if score >= 85 {
 		return "Strong draft, likely ready for creation."
 	}
@@ -345,6 +359,7 @@ func overallSummary(score int) string {
 }
 
 func titleSuggestionsPool() []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.titleSuggestionsPool")
 	return []string{
 		"Use a verb + object format in the title.",
 		"Name the affected module or screen directly.",
@@ -354,6 +369,7 @@ func titleSuggestionsPool() []string {
 }
 
 func promptSuggestionsPool() []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.promptSuggestionsPool")
 	return []string{
 		"Add explicit acceptance criteria.",
 		"Include edge cases that must be handled.",
@@ -364,6 +380,7 @@ func promptSuggestionsPool() []string {
 }
 
 func prioritySuggestionsPool() []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.prioritySuggestionsPool")
 	return []string{
 		"Set priority based on user impact and urgency.",
 		"State why this priority level is justified.",
@@ -372,6 +389,7 @@ func prioritySuggestionsPool() []string {
 }
 
 func structureSuggestionsPool() []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.structureSuggestionsPool")
 	return []string{
 		"Break implementation into a short checklist.",
 		"Add dependency notes if this task relies on another item.",
@@ -381,6 +399,7 @@ func structureSuggestionsPool() []string {
 }
 
 func cohesionSuggestionsPool() []string {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cohesionSuggestionsPool")
 	return []string{
 		"Ensure title, prompt, and priority describe the same outcome.",
 		"Add one sentence linking technical work to user impact.",
