@@ -2,7 +2,8 @@
 description: >-
   Autonomous frontend improvement agent. Trigger: "start session" or "improve
   frontend". Executes one diagnostic → fix → verify → log cycle per invocation
-  with zero user input. Invoke 20+ times consecutively to compound quality.
+  with zero user input; ends with git commit and push of tracked changes.
+  Invoke 20+ times consecutively to compound quality.
   Loads pattern files on-demand per priority tier. Enforces
   16-ui-ux-iteration.mdc as the visual quality bar.
 globs:
@@ -43,13 +44,13 @@ This agent depends on a system of reference files. Know where everything lives:
 
 ## PRIME DIRECTIVE
 
-Every session leaves the codebase **measurably better**. You are an executor, not an advisor. Diagnose → Fix → Test → Verify → Log. The user invokes you 20 times with nothing but "start session" and the frontend compounds from prototype to production-grade.
+Every session leaves the codebase **measurably better**. You are an executor, not an advisor. Diagnose → Fix → Test → Verify → Log → **Commit → Push**. The user invokes you 20 times with nothing but "start session" and the frontend compounds from prototype to production-grade.
 
 ---
 
 ## SESSION PROTOCOL
 
-Execute phases in strict order. Never skip. Never ask for input.
+Execute phases **1 → 6** in strict order (including **PHASE 6 — COMMIT & PUSH**). Never skip. Never ask for input.
 
 ---
 
@@ -260,6 +261,7 @@ All checks must pass. If any fail, fix before proceeding. Do not leave broken st
 **Pattern files used**: [which patterns/ files were read]
 **Tests**: [X passed, Y added]
 **Verification**: typecheck [pass/fail] | lint [pass/fail] | tests [pass/fail] | build [pass/fail]
+**Git**: branch [name] | commit [short SHA or "n/a"] | push [ok / failed: reason]
 
 ### NEXT_SESSION_QUEUE
 1. [P-level] [description] — [file/component]
@@ -271,6 +273,23 @@ All checks must pass. If any fail, fix before proceeding. Do not leave broken st
 **Log trimming:** When the log exceeds **15 sessions**, summarize sessions 1 through N-5 into a `## Session History Summary` block at the top (total files changed, categories covered, key patterns established) and delete the individual entries. Keep only the last 5 sessions in full detail. This prevents the log from consuming the context window.
 
 **First session only:** Create `.agent/` directory. Add `.agent/` to `.gitignore`. Write `.agent/project-snapshot.md` with framework, styling, data layer, and test runner findings.
+
+---
+
+### PHASE 6 — COMMIT & PUSH
+
+**Mandatory** whenever PHASE 4 passed and PHASE 3 changed any **tracked** files (source, tests, config the session touched). Run from repo root.
+
+1. `git status` — confirm only intended paths are modified; do not stage secrets, local env files, or unrelated edits.
+2. `git add` the paths you changed (prefer explicit paths over blind `git add -A` if the working tree is noisy).
+3. `git commit -m "..."` — one logical concern per commit; conventional message style per `AGENTS.md` / `.cursor/rules/08-atomic-commits.mdc` (e.g. `fix(web): …`, `test(web): …`, `chore(web): …`).
+4. `git push` — push the current branch to its upstream (use `git push -u origin HEAD` when no upstream is set yet).
+
+**If `git push` fails** (no network, missing `origin`, auth, branch protection): the commit **must still exist locally**; append the failure reason to the session log under a **`Git`** line and report it in the session output. Do not skip commit because push failed.
+
+**Never** `git push --force` to shared default branches unless the user explicitly ordered it (out of scope for this autonomous loop).
+
+If the working tree is clean but you believe you shipped code changes, re-check that files were saved and that you are in the correct repo root before ending the session.
 
 ---
 
@@ -290,6 +309,7 @@ Inviolable. Breaking any means the session failed.
 - **One category per session.** Batch related fixes within a file, but don't cross categories.
 - **Load only the pattern files you need.** Don't waste context on irrelevant references.
 - **Read only the last 3 log sessions.** Don't waste context on ancient history.
+- **Always commit and push** tracked code changes after verification (PHASE 6). Push failure is logged; skipping commit when there are real changes is a failed session.
 
 ---
 
@@ -321,6 +341,7 @@ Every session ends with exactly this:
 **Files changed**: [list]
 **Tests**: [X passed, Y added]
 **Visual diff**: [one sentence — what changed for the user]
+**Git**: [branch] commit [short SHA] | push [ok / failed: reason]
 **Next up**: [top queue item]
 ```
 
