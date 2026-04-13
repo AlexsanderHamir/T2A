@@ -14,6 +14,7 @@ Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (
 
 ## Recent hardening and refactors
 
+- Virtualized **task graph** (`tasks/pages/TaskGraphPage.tsx`) reads layout numbers from `tasks/graphLayout.ts` as **`GRAPH_LAYOUT_PX`**; they must stay aligned with **`--task-graph-*`** in `src/app/styles/app-design-tokens.css` and `.task-graph-node` in `app-task-detail.css` (culling math assumes **16px per rem**). Drift is guarded by `tasks/graphLayout.test.ts`.
 - Task detail prompt rendering now sanitizes stored HTML before DOM injection (`tasks/promptFormat.ts` + `TaskDetailPage`) to block script/event-handler and unsafe-link payloads while preserving safe rich-text tags.
 - Prompt UI markup was extracted into `tasks/components/TaskDetailPromptSection.tsx` to keep `TaskDetailPage` smaller and easier to maintain.
 - Frontend tests expanded around prompt sanitization edge cases (unsafe protocols, external-link attributes, dangerous tag removal).
