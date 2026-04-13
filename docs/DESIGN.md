@@ -270,6 +270,13 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 | Partial update | `PATCH /tasks/{id}`      | At least one of: `title`, `initial_prompt`, `status`, `priority`, `checklist_inherit`, `parent_id`. JSON `null` for `parent_id` clears the parent (orphan). `checklist_inherit` true requires a parent. Setting status to `done` is rejected until every descendant is `done` and every checklist item for this task (including inherited definitions) has `done: true` for this task. Response is a task tree. When `REPO_ROOT` is configured, `initial_prompt` is checked for `@` mentions. |
 | Delete task    | `DELETE /tasks/{id}`     | 204, empty body. Empty `id` → 400. Rejected (400) if the task still has subtasks (`parent_id` pointing to this id).                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
+**Checklist `PATCH` — documented `400` JSON `error` strings** (stable client-facing messages for the one-of body rule and store validation; malformed JSON still follows generic decode errors):
+
+- `send exactly one of text or done` — body included both `text` and `done`, or neither field was provided for the one-of choice.
+- `text required` — `text` was sent but is empty after trim.
+- `only the agent may mark checklist items done or undone` — body set `done` while `X-Actor` is not `agent` (including default user).
+- `cannot update inherited checklist definitions from this task` — `text` update while `checklist_inherit` is true on the subject task.
+
 **Path segment length:** The same **128-byte** cap (after trim) applies to `{id}` and `{itemId}` on other task routes (`PATCH /tasks/{id}`, checklist, `GET|PATCH /tasks/{id}/events…`, `GET|DELETE /task-drafts/{id}`, etc.); overlong segments return **400** before store access.
 
 **Event thread append:** `PATCH` appends run in one SQL transaction. On **PostgreSQL**, the store takes a row lock on the matching `task_events` row while merging the thread so concurrent appends cannot drop messages (read-modify-write races). Default **SQLite** tests use a single pooled connection for the in-memory DB.
