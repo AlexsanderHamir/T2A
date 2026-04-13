@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
@@ -305,12 +312,19 @@ export function TaskListSection({
                         <td className="cell-title">
                           <Link
                             to={`/tasks/${t.id}`}
-                            className="cell-title-link"
+                            className={
+                              t.depth > 0
+                                ? "cell-title-link cell-title-link--tree"
+                                : "cell-title-link"
+                            }
                             aria-label={`Open task details: ${t.title}`}
-                            style={{
-                              paddingLeft:
-                                t.depth > 0 ? 8 + t.depth * 14 : undefined,
-                            }}
+                            style={
+                              t.depth > 0
+                                ? ({
+                                    "--task-list-tree-depth": String(t.depth),
+                                  } as CSSProperties)
+                                : undefined
+                            }
                           >
                             {t.depth > 0 ? (
                               <span className="task-subtask-marker" aria-hidden>

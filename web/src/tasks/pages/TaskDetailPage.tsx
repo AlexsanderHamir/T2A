@@ -1,20 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  addChecklistItem,
-  deleteChecklistItem,
-  getTask,
-  listChecklist,
-  listTaskEvents,
-  patchChecklistItemText,
-} from "@/api";
+import { getTask, listChecklist, listTaskEvents } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
@@ -28,6 +15,7 @@ import { sanitizePromptHtml } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { TaskDetailPageSkeleton } from "../components/taskLoadingSkeletons";
+import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
 import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -62,13 +50,24 @@ export function TaskDetailPage({ app }: Props) {
     createSubtaskMutation,
     submitNewSubtask,
   } = useTaskDetailSubtasks(taskId, queryClient);
-  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
-  const [newChecklistText, setNewChecklistText] = useState("");
-  const [editCriterionModalOpen, setEditCriterionModalOpen] = useState(false);
-  const [editingChecklistItemId, setEditingChecklistItemId] = useState<
-    string | null
-  >(null);
-  const [editChecklistText, setEditChecklistText] = useState("");
+  const {
+    checklistModalOpen,
+    newChecklistText,
+    setNewChecklistText,
+    editCriterionModalOpen,
+    editingChecklistItemId,
+    editChecklistText,
+    setEditChecklistText,
+    closeChecklistModal,
+    closeEditCriterionModal,
+    openChecklistModal,
+    openEditCriterionModal,
+    addChecklistMutation,
+    submitNewChecklistCriterion,
+    updateChecklistTextMutation,
+    submitEditChecklistCriterion,
+    deleteChecklistMutation,
+  } = useTaskDetailChecklist(taskId, queryClient);
 
   const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({
     k: "head",
@@ -82,41 +81,6 @@ export function TaskDetailPage({ app }: Props) {
     setEventsCursor({ k: "head" });
   }, [taskId]);
 
-  const closeChecklistModal = useCallback(() => {
-    setChecklistModalOpen(false);
-    setNewChecklistText("");
-  }, []);
-
-  const closeEditCriterionModal = useCallback(() => {
-    setEditCriterionModalOpen(false);
-    setEditingChecklistItemId(null);
-    setEditChecklistText("");
-  }, []);
-
-  const openChecklistModal = useCallback(() => {
-    setNewChecklistText("");
-    setChecklistModalOpen(true);
-    setEditCriterionModalOpen(false);
-    setEditingChecklistItemId(null);
-    setEditChecklistText("");
-  }, []);
-
-  const openEditCriterionModal = useCallback((itemId: string, text: string) => {
-    setEditingChecklistItemId(itemId);
-    setEditChecklistText(text);
-    setEditCriterionModalOpen(true);
-    setChecklistModalOpen(false);
-    setNewChecklistText("");
-  }, []);
-
-  useEffect(() => {
-    setChecklistModalOpen(false);
-    setNewChecklistText("");
-    setEditCriterionModalOpen(false);
-    setEditingChecklistItemId(null);
-    setEditChecklistText("");
-  }, [taskId]);
-
   const taskQuery = useQuery({
     queryKey: taskQueryKeys.detail(taskId),
     queryFn: ({ signal }) => getTask(taskId, { signal }),
@@ -127,69 +91,6 @@ export function TaskDetailPage({ app }: Props) {
     queryKey: taskQueryKeys.checklist(taskId),
     queryFn: ({ signal }) => listChecklist(taskId, { signal }),
     enabled: Boolean(taskId) && taskQuery.isSuccess,
-  });
-
-  const addChecklistMutation = useMutation({
-    mutationFn: (text: string) => addChecklistItem(taskId, text),
-    onSuccess: async () => {
-      setNewChecklistText("");
-      setChecklistModalOpen(false);
-      await queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.checklist(taskId),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.detail(taskId),
-      });
-    },
-  });
-
-  const submitNewChecklistCriterion = useCallback(
-    (e: FormEvent) => {
-      e.preventDefault();
-      const t = newChecklistText.trim();
-      if (!t || addChecklistMutation.isPending) return;
-      addChecklistMutation.mutate(t);
-    },
-    [newChecklistText, addChecklistMutation.mutate, addChecklistMutation.isPending],
-  );
-
-  const updateChecklistTextMutation = useMutation({
-    mutationFn: (input: { itemId: string; text: string }) =>
-      patchChecklistItemText(taskId, input.itemId, input.text),
-    onSuccess: async () => {
-      closeEditCriterionModal();
-      await queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.checklist(taskId),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.detail(taskId),
-      });
-    },
-  });
-
-  const submitEditChecklistCriterion = useCallback(
-    (e: FormEvent) => {
-      e.preventDefault();
-      const t = editChecklistText.trim();
-      const id = editingChecklistItemId;
-      if (!t || !id || updateChecklistTextMutation.isPending) return;
-      updateChecklistTextMutation.mutate({ itemId: id, text: t });
-    },
-    [
-      editChecklistText,
-      editingChecklistItemId,
-      updateChecklistTextMutation.mutate,
-      updateChecklistTextMutation.isPending,
-    ],
-  );
-
-  const deleteChecklistMutation = useMutation({
-    mutationFn: (itemId: string) => deleteChecklistItem(taskId, itemId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.checklist(taskId),
-      });
-    },
   });
 
   const eventsQuery = useQuery({

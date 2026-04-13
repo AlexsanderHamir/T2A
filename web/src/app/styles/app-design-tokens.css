@@ -33,6 +33,9 @@
   --table-cell-padding-y: 0.875rem;
   --table-header-padding-y-top: 0.5rem;
   --table-header-padding-y-bottom: 0.625rem;
+  /* Task list — nested title column (depth set on link as --task-list-tree-depth) */
+  --task-list-tree-indent-base: var(--space-2);
+  --task-list-tree-indent-step: 0.875rem;
   /* Table th, DL dt, dropdown group labels, thread meta (DS §10) */
   --data-caps-letter-spacing: 0.04em;
   --data-caps-text-transform: uppercase;

@@ -135,6 +135,12 @@
     transform var(--duration-short) var(--ease-ui);
 }
 
+.task-list-table .cell-title-link.cell-title-link--tree {
+  padding-left: calc(
+    var(--task-list-tree-indent-base) + var(--task-list-tree-depth) * var(--task-list-tree-indent-step)
+  );
+}
+
 .task-list-table .cell-title-link:active {
   transform: scale(0.99);
 }
