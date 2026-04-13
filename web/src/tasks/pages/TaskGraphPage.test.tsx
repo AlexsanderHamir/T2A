@@ -63,6 +63,7 @@ describe("TaskGraphPage", () => {
     );
 
     expect(await screen.findByRole("heading", { name: /task graph/i })).toBeInTheDocument();
+    expect(screen.getByText(/1 node rendered/i)).toBeInTheDocument();
   });
 
   it("shows error with retry and refetches on success", async () => {
