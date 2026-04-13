@@ -42,8 +42,8 @@
   --task-graph-col-gap: 5.5rem;
   --task-graph-row-gap: var(--space-5);
   --task-graph-canvas-padding: var(--space-6);
-  /* Skeleton flex: `@container` max inline size (matches ~`--bp-sm` at 16px/rem) */
-  --task-graph-skeleton-cq-max: 40rem;
+  /* Graph viewports (skeleton + loaded): `@container` max inline size (~`--bp-sm` at 16px/rem) */
+  --task-graph-cq-max: 40rem;
   /* Table th, DL dt, dropdown group labels, thread meta (DS §10) */
   --data-caps-letter-spacing: 0.04em;
   --data-caps-text-transform: uppercase;

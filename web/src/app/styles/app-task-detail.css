@@ -690,6 +690,7 @@ button.task-detail-checklist-remove:focus-visible {
   /* Reserve scrollbar gutter so skeleton → loaded graph does not shift when overflow appears */
   scrollbar-gutter: stable;
   container-type: inline-size;
+  container-name: task-graph-viewport;
 }
 
 .task-graph-canvas {
@@ -814,9 +815,29 @@ button.task-detail-checklist-remove:focus-visible {
   gap: 0.35rem;
 }
 
-@container task-graph-skeleton (max-width: var(--task-graph-skeleton-cq-max)) {
+@container task-graph-skeleton (max-width: var(--task-graph-cq-max)) {
   .task-graph-skeleton-cards {
     gap: var(--space-3);
+  }
+
+  .task-graph-skeleton-card {
+    padding: 0.5rem 0.6rem;
+    gap: 0.35rem;
+  }
+
+  .task-graph-skeleton-card-meta {
+    gap: 0.25rem;
+  }
+}
+
+@container task-graph-viewport (max-width: var(--task-graph-cq-max)) {
+  .task-graph-node {
+    padding: 0.5rem 0.6rem;
+    gap: 0.35rem;
+  }
+
+  .task-graph-node-meta {
+    gap: 0.25rem;
   }
 }
 
