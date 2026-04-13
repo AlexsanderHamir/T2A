@@ -1,10 +1,8 @@
 package repo
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -101,49 +99,6 @@ func (r *Root) Resolve(rel string) (string, error) {
 	return clean, nil
 }
 
-func pathEscapesRoot(rel string) bool {
-	slog.Debug("trace", "operation", "repo.pathEscapesRoot")
-	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-func canonicalizePathForContainment(path string) (string, error) {
-	slog.Debug("trace", "operation", "repo.canonicalizePathForContainment")
-	if target, err := filepath.EvalSymlinks(path); err == nil {
-		return filepath.Clean(target), nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return "", err
-	}
-
-	cur := filepath.Clean(path)
-	var suffix []string
-	for {
-		fi, statErr := os.Stat(cur)
-		if statErr == nil {
-			if !fi.IsDir() {
-				return "", fmt.Errorf("path parent is not a directory")
-			}
-			baseCanonical, evalErr := filepath.EvalSymlinks(cur)
-			if evalErr != nil {
-				return "", evalErr
-			}
-			canonical := filepath.Clean(baseCanonical)
-			for i := len(suffix) - 1; i >= 0; i-- {
-				canonical = filepath.Join(canonical, suffix[i])
-			}
-			return filepath.Clean(canonical), nil
-		}
-		if !errors.Is(statErr, os.ErrNotExist) {
-			return "", statErr
-		}
-		next := filepath.Dir(cur)
-		if next == cur {
-			return "", statErr
-		}
-		suffix = append(suffix, filepath.Base(cur))
-		cur = next
-	}
-}
-
 // Search returns repo-relative paths matching query (substring, case-insensitive).
 // Empty query lists up to maxSearchResultsBrowse files (walk order); non-empty query up to maxSearchResultsFilter matches.
 func (r *Root) Search(query string) ([]string, error) {
@@ -187,93 +142,6 @@ func (r *Root) Search(query string) ([]string, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-// LineCount returns the number of lines in a file (newline-separated).
-func LineCount(absPath string) (int, error) {
-	slog.Debug("trace", "operation", "repo.LineCount")
-	fi, err := os.Stat(absPath)
-	if err != nil {
-		return 0, err
-	}
-	if fi.IsDir() {
-		return 0, fmt.Errorf("is a directory")
-	}
-	if fi.Size() > maxFileReadBytes {
-		return 0, fmt.Errorf("%w: file too large", domain.ErrInvalidInput)
-	}
-	f, err := os.Open(absPath)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-	lr := io.LimitReader(f, maxFileReadBytes+1)
-	buf := make([]byte, 32*1024)
-	var n int
-	var total int64
-	var last byte
-	hasData := false
-	for {
-		readN, readErr := lr.Read(buf)
-		if readN > 0 {
-			chunk := buf[:readN]
-			total += int64(readN)
-			n += bytes.Count(chunk, []byte{'\n'})
-			last = chunk[readN-1]
-			hasData = true
-		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			return 0, readErr
-		}
-	}
-	if total > maxFileReadBytes {
-		return 0, fmt.Errorf("%w: file too large", domain.ErrInvalidInput)
-	}
-	if !hasData {
-		return 0, nil
-	}
-	if last != '\n' {
-		n++
-	}
-	return n, nil
-}
-
-// ValidateRange returns nil if start..end are valid 1-based inclusive line numbers for the file.
-func ValidateRange(absPath string, start, end int) error {
-	slog.Debug("trace", "operation", "repo.ValidateRange")
-	if err := validateRangeBounds(start, end); err != nil {
-		return err
-	}
-	n, err := LineCount(absPath)
-	if err != nil {
-		return fmt.Errorf("%w: %v", domain.ErrInvalidInput, err)
-	}
-	return validateRangeWithLineCount(start, end, n)
-}
-
-func validateRangeBounds(start, end int) error {
-	slog.Debug("trace", "operation", "repo.validateRangeBounds")
-	if start < 1 || end < 1 {
-		return fmt.Errorf("%w: line numbers must be >= 1", domain.ErrInvalidInput)
-	}
-	if start > end {
-		return fmt.Errorf("%w: start line must be <= end line", domain.ErrInvalidInput)
-	}
-	return nil
-}
-
-func validateRangeWithLineCount(start, end, n int) error {
-	slog.Debug("trace", "operation", "repo.validateRangeWithLineCount")
-	if err := validateRangeBounds(start, end); err != nil {
-		return err
-	}
-	if end > n {
-		return fmt.Errorf("%w: line range 1-%d is past end of file (%d lines)", domain.ErrInvalidInput, end, n)
-	}
-	return nil
 }
 
 // ValidatePromptMentions checks every parsed mention against the repo root.
