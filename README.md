@@ -55,6 +55,7 @@ Vite + React + TypeScript SPA — layout, React Query, SSE invalidation: [docs/W
 cd web
 npm install
 npm test
+npm run lint
 npm run dev
 ```
 
@@ -64,6 +65,7 @@ Opens Vite (often `http://localhost:5173`). Proxy targets `/tasks`, `/events`, `
 |---------|---------|
 | `npm run dev` | Dev server + proxy |
 | `npm test` | Vitest (no real network; mocks) |
+| `npm run lint` | ESLint (`web/eslint.config.js`) |
 | `npm run test:watch` | Watch mode |
 | `npm run build` | Typecheck → `web/dist/` |
 | `npm run preview` | Preview `dist` (you still need API routing) |

@@ -72,7 +72,7 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
       if (!t || addChecklistMutation.isPending) return;
       addChecklistMutation.mutate(t);
     },
-    [newChecklistText, addChecklistMutation.mutate, addChecklistMutation.isPending],
+    [newChecklistText, addChecklistMutation],
   );
 
   const updateChecklistTextMutation = useMutation({
@@ -97,12 +97,7 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
       if (!t || !id || updateChecklistTextMutation.isPending) return;
       updateChecklistTextMutation.mutate({ itemId: id, text: t });
     },
-    [
-      editChecklistText,
-      editingChecklistItemId,
-      updateChecklistTextMutation.mutate,
-      updateChecklistTextMutation.isPending,
-    ],
+    [editChecklistText, editingChecklistItemId, updateChecklistTextMutation],
   );
 
   const deleteChecklistMutation = useMutation({

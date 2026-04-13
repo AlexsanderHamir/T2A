@@ -80,6 +80,7 @@ export function useTaskEventStream(): boolean {
         }
       }, SSE_DISCONNECT_UI_MS);
     };
+    const pendingIds = pendingIdsRef.current;
     return () => {
       streamEffectActiveRef.current = false;
       clearDisconnectUi();
@@ -87,7 +88,7 @@ export function useTaskEventStream(): boolean {
         clearTimeout(sseDebounceRef.current);
         sseDebounceRef.current = undefined;
       }
-      pendingIdsRef.current.clear();
+      pendingIds.clear();
       es.close();
       setSseLive(false);
     };

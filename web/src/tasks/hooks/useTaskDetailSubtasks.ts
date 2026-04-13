@@ -129,8 +129,7 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
       subtaskTaskType,
       subtaskInherit,
       subtaskChecklistItems,
-      createSubtaskMutation.mutate,
-      createSubtaskMutation.isPending,
+      createSubtaskMutation,
     ],
   );
 

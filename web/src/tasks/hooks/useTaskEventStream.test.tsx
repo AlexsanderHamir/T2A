@@ -12,7 +12,7 @@ type MockES = {
   readyState: number;
 };
 
-let mockES: MockES | null = null;
+let getCurrentMockES: () => MockES | null;
 
 function createWrapper(qc: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -22,18 +22,19 @@ function createWrapper(qc: QueryClient) {
 
 describe("useTaskEventStream", () => {
   beforeEach(() => {
-    mockES = null;
     vi.useFakeTimers();
-    class MockEventSource {
+    class MockEventSource implements MockES {
+      static latest: MockEventSource | null = null;
       onopen: (() => void) | null = null;
       onmessage: ((ev: { data?: string }) => void) | null = null;
       onerror: (() => void) | null = null;
       close = vi.fn();
       readyState = 0;
       constructor() {
-        mockES = this;
+        MockEventSource.latest = this;
       }
     }
+    getCurrentMockES = () => MockEventSource.latest;
     vi.stubGlobal("EventSource", MockEventSource);
   });
 
@@ -50,6 +51,7 @@ describe("useTaskEventStream", () => {
       wrapper: createWrapper(qc),
     });
 
+    const mockES = getCurrentMockES();
     expect(mockES).not.toBeNull();
     act(() => {
       mockES!.onopen?.();
@@ -75,6 +77,7 @@ describe("useTaskEventStream", () => {
       wrapper: createWrapper(qc),
     });
 
+    const mockES = getCurrentMockES();
     expect(mockES).not.toBeNull();
     act(() => {
       mockES!.onopen?.();

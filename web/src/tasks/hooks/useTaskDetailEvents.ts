@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listTaskEvents } from "@/api";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
@@ -29,7 +29,10 @@ export function useTaskDetailEvents(taskId: string, enabled: boolean) {
     enabled: Boolean(taskId) && enabled,
   });
 
-  const events = eventsQuery.data?.events ?? [];
+  const events = useMemo(
+    () => eventsQuery.data?.events ?? [],
+    [eventsQuery.data?.events],
+  );
 
   const onEventsPagerPrev = useCallback(() => {
     if (events.length === 0) return;

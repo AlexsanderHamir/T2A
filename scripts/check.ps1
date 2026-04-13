@@ -1,4 +1,4 @@
-# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce, web npm test + build.
+# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce, web npm test + lint + build.
 # Usage from repo root: .\scripts\check.ps1
 # Skip web steps: $env:CHECK_SKIP_WEB = "1"
 # Skip per-function slog audit: $env:CHECK_SKIP_FUNCLOG = "1"
@@ -43,6 +43,9 @@ Write-Host "web: npm test..." -ForegroundColor Cyan
 Push-Location $webDir
 try {
     & npm test -- --run
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-Host "web: npm run lint..." -ForegroundColor Cyan
+    & npm run lint
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Host "web: npm run build..." -ForegroundColor Cyan
     & npm run build

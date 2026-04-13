@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce, web npm test + build.
+# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce, web npm test + lint + build.
 # Usage from repo root: ./scripts/check.sh
 # Skip web: CHECK_SKIP_WEB=1 ./scripts/check.sh
 # Skip per-function slog audit: CHECK_SKIP_FUNCLOG=1 ./scripts/check.sh
@@ -33,7 +33,7 @@ fi
 
 if [[ -f web/package.json ]]; then
   echo "web: npm test..."
-  (cd web && npm test -- --run && npm run build)
+  (cd web && npm test -- --run && npm run lint && npm run build)
 fi
 
 echo "check OK"

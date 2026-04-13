@@ -214,7 +214,10 @@ export function useTasksApp() {
     setTaskListPage(0);
   }, []);
 
-  const rootTaskTrees = tasksQuery.data?.tasks ?? [];
+  const rootTaskTrees = useMemo(
+    () => tasksQuery.data?.tasks ?? [],
+    [tasksQuery.data?.tasks],
+  );
   const tasks = useMemo(
     () => flattenTaskTreeRoots(rootTaskTrees),
     [rootTaskTrees],
