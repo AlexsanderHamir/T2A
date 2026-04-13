@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -29,7 +29,7 @@ func TestWriteJSONError_includes_request_id_from_context(t *testing.T) {
 }
 
 func TestHTTP_error_JSON_includes_request_id_with_access_middleware(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	api := WithAccessLog(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 	srv := httptest.NewServer(api)
 	t.Cleanup(srv.Close)

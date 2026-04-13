@@ -33,7 +33,7 @@ alwaysApply: false
 
 ## Store / DB tests
 
-- Open test DB with **`pkgs/tasks/internal/testdb.OpenSQLite(t)`** (or current equivalent in repo).
+- Open test DB with **`internal/tasktestdb.OpenSQLite(t)`** (module-root `internal/` so any package under the module may import it).
 - Run migrations or schema setup the helper expects; do not duplicate migration logic ad hoc in each test file unless an existing pattern does so.
 - Use **transactions or cleanup** patterns already in the package so tests do not leak state when run in parallel (`t.Parallel()` only when safe — often disabled for DB-heavy tests).
 

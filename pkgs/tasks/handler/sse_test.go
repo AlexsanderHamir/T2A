@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -45,7 +45,7 @@ func TestSSEHub_Publish_nonBlockingSlowConsumer(t *testing.T) {
 }
 
 func TestHTTP_SSE_responseHeaders(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
@@ -80,7 +80,7 @@ func TestHTTP_SSE_responseHeaders(t *testing.T) {
 }
 
 func TestHTTP_SSE_receivesEventAfterCreate(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	defer srv.Close()

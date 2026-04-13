@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -47,7 +47,7 @@ func TestWithAccessLog_maxBodyOverLimit_logIncludesRequestID(t *testing.T) {
 	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := WithAccessLog(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 
 	body := `{"title":"` + strings.Repeat("h", 40) + `","priority":"medium"}`
@@ -87,7 +87,7 @@ func TestWithAccessLog_maxBodyOverLimit_logIncludesRequestID(t *testing.T) {
 
 func TestHTTP_max_body_rejects_content_length_over_limit(t *testing.T) {
 	t.Setenv(maxRequestBodyEnv, "50")
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
@@ -120,7 +120,7 @@ func TestHTTP_max_body_rejects_content_length_over_limit(t *testing.T) {
 
 func TestHTTP_max_body_allows_under_limit(t *testing.T) {
 	t.Setenv(maxRequestBodyEnv, "4096")
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
@@ -138,7 +138,7 @@ func TestHTTP_max_body_allows_under_limit(t *testing.T) {
 
 func TestHTTP_max_body_unknown_content_length_still_bounded(t *testing.T) {
 	t.Setenv(maxRequestBodyEnv, "48")
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
 	// Valid create JSON > 48 bytes; ContentLength -1 so middleware cannot pre-reject on length.

@@ -1,4 +1,4 @@
-package testdb
+package tasktestdb
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 // OpenSQLite returns an in-memory GORM DB with task schema migrated (for store/handler tests).
 func OpenSQLite(t *testing.T) *gorm.DB {
 	t.Helper()
-	slog.Debug("trace", "operation", "testdb.OpenSQLite")
+	slog.Debug("trace", "operation", "tasktestdb.OpenSQLite")
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})

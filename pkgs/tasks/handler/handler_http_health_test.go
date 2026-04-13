@@ -9,8 +9,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -72,7 +72,7 @@ func TestHTTP_health_ready_ok(t *testing.T) {
 }
 
 func TestHTTP_metrics_scrape(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	api := WithRecovery(WithHTTPMetrics(WithAccessLog(NewHandler(store.NewStore(db), NewSSEHub(), nil))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", WrapPrometheusHandler(promhttp.Handler()))
@@ -105,7 +105,7 @@ func TestHTTP_metrics_scrape(t *testing.T) {
 }
 
 func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(NewHandler(st, NewSSEHub(), nil))
 	defer srv.Close()
@@ -167,7 +167,7 @@ func TestHTTP_health_ready_workspace_repo_ok(t *testing.T) {
 
 func TestHTTP_health_ready_workspace_repo_fail_when_root_removed(t *testing.T) {
 	root := t.TempDir()
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	rep, err := repo.OpenRoot(root)
 	if err != nil {
 		t.Fatal(err)

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -45,7 +45,7 @@ func TestHTTP_health_includes_security_headers(t *testing.T) {
 }
 
 func TestStreamEvents_sets_security_headers(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := &Handler{store: store.NewStore(db), hub: NewSSEHub(), repo: nil}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

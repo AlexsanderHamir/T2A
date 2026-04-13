@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -55,7 +55,7 @@ func TestEventCycle_exhaustive(t *testing.T) {
 }
 
 func TestPersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
 	a, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "a"}, domain.ActorUser)
@@ -109,7 +109,7 @@ func TestPersistAllTasks_emitsOnePublishPerTask(t *testing.T) {
 }
 
 func TestPersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
 	if _, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "solo"}, domain.ActorUser); err != nil {
@@ -123,7 +123,7 @@ func TestPersistAllTasks_burst_emitsMultiplePublishes(t *testing.T) {
 }
 
 func TestPersistAllTasks_syncRow_updatesStatus(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
 	tsk, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
@@ -141,7 +141,7 @@ func TestPersistAllTasks_syncRow_updatesStatus(t *testing.T) {
 }
 
 func TestPersistAllTasks_userResponse_appendsThread(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
 	tsk, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
@@ -182,7 +182,7 @@ func TestPersistAllTasks_userResponse_appendsThread(t *testing.T) {
 }
 
 func TestSamplePayload_JSON(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	ctx := context.Background()
 	task, err := st.Create(ctx, store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)

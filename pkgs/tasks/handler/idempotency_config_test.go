@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
 )
@@ -117,7 +117,7 @@ func TestWithAccessLog_idempotencyCacheEviction_logIncludesRequestID(t *testing.
 	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithAccessLog(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))))
 	t.Cleanup(srv.Close)
 

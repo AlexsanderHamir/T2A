@@ -43,5 +43,5 @@ alwaysApply: false
 
 ## Tests
 
-- Store tests use **`testdb.OpenSQLite`** (or project helper) — no real Postgres in default `go test`.
+- Store tests use **`tasktestdb.OpenSQLite`** (`internal/tasktestdb`) — no real Postgres in default `go test`.
 - When asserting errors, use **`errors.Is`** against domain sentinels, not string contains on `err.Error()` unless the test is explicitly about a user-facing message.

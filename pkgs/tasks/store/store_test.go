@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"gorm.io/gorm"
 )
@@ -15,7 +15,7 @@ import (
 func strPtr(s string) *string { return &s }
 
 func TestStore_Create_rejects_empty_title(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "   "}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
@@ -23,7 +23,7 @@ func TestStore_Create_rejects_empty_title(t *testing.T) {
 }
 
 func TestStore_Create_rejects_invalid_status(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	st := domain.Status("nope")
 	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok", Status: st}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
@@ -32,7 +32,7 @@ func TestStore_Create_rejects_invalid_status(t *testing.T) {
 }
 
 func TestStore_Create_rejects_missing_priority(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok"}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
@@ -40,7 +40,7 @@ func TestStore_Create_rejects_missing_priority(t *testing.T) {
 }
 
 func TestStore_Create_rejects_invalid_priority(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	pr := domain.Priority("nope")
 	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: pr}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
@@ -49,7 +49,7 @@ func TestStore_Create_rejects_invalid_priority(t *testing.T) {
 }
 
 func TestStore_Create_defaults_task_type_to_general(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	got, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ func TestStore_Create_defaults_task_type_to_general(t *testing.T) {
 }
 
 func TestStore_Create_rejects_invalid_task_type(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	tt := domain.TaskType("nope")
 	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium, TaskType: tt}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
@@ -69,7 +69,7 @@ func TestStore_Create_rejects_invalid_task_type(t *testing.T) {
 }
 
 func TestStore_Create_rejects_invalid_actor(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok"}, domain.Actor("system"))
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
@@ -77,7 +77,7 @@ func TestStore_Create_rejects_invalid_actor(t *testing.T) {
 }
 
 func TestStore_Create_uses_explicit_id(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	id := "custom-id-1"
 	got, err := s.Create(context.Background(), CreateTaskInput{ID: id, Title: "t", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
@@ -89,7 +89,7 @@ func TestStore_Create_uses_explicit_id(t *testing.T) {
 }
 
 func TestStore_Get_not_found(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Get(context.Background(), "00000000-0000-0000-0000-000000000099")
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("got %v want ErrNotFound", err)
@@ -97,7 +97,7 @@ func TestStore_Get_not_found(t *testing.T) {
 }
 
 func TestStore_Get_rejects_empty_id(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Get(context.Background(), "  ")
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
@@ -105,7 +105,7 @@ func TestStore_Get_rejects_empty_id(t *testing.T) {
 }
 
 func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	root, err := s.Create(ctx, CreateTaskInput{Title: "root", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
 }
 
 func TestStore_List_pagination_and_limit_cap(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	for i := range 5 {
 		title := string(rune('a' + i))
@@ -175,7 +175,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 }
 
 func TestStore_Update_rejects_no_fields(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
@@ -188,7 +188,7 @@ func TestStore_Update_rejects_no_fields(t *testing.T) {
 }
 
 func TestStore_Update_rejects_empty_title_patch(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
@@ -201,7 +201,7 @@ func TestStore_Update_rejects_empty_title_patch(t *testing.T) {
 }
 
 func TestStore_Update_changes_status_and_prompt(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
@@ -223,7 +223,7 @@ func TestStore_Update_changes_status_and_prompt(t *testing.T) {
 }
 
 func TestStore_Update_not_found(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	st := domain.StatusRunning
 	_, err := s.Update(context.Background(), "00000000-0000-0000-0000-000000000088", UpdateTaskInput{Status: &st}, domain.ActorUser)
 	if !errors.Is(err, domain.ErrNotFound) {
@@ -232,7 +232,7 @@ func TestStore_Update_not_found(t *testing.T) {
 }
 
 func TestStore_Delete_not_found(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("got %v want ErrNotFound", err)
@@ -240,7 +240,7 @@ func TestStore_Delete_not_found(t *testing.T) {
 }
 
 func TestStore_Delete_rejects_empty_id(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Delete(context.Background(), "", domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
@@ -248,7 +248,7 @@ func TestStore_Delete_rejects_empty_id(t *testing.T) {
 }
 
 func TestStore_Create_duplicate_primary_key_fails(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	id := "dup"
 	if _, err := s.Create(ctx, CreateTaskInput{ID: id, Title: "a", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
@@ -264,14 +264,14 @@ func TestStore_Create_duplicate_primary_key_fails(t *testing.T) {
 }
 
 func TestMigrate_second_call_succeeds(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	if err := postgres.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestNewStore_roundTrip(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	in, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "r"}, domain.ActorUser)
@@ -288,7 +288,7 @@ func TestNewStore_roundTrip(t *testing.T) {
 }
 
 func TestStore_List_empty_table(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	got, err := s.ListFlat(context.Background(), 10, 0)
 	if err != nil {
@@ -300,7 +300,7 @@ func TestStore_List_empty_table(t *testing.T) {
 }
 
 func TestStore_Delete_cascades_events(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
@@ -317,7 +317,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 }
 
 func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
@@ -337,7 +337,7 @@ func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
 }
 
 func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
@@ -356,7 +356,7 @@ func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
 }
 
 func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {

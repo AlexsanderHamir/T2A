@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 )
 
 func TestStore_ApplyDevTaskRowMirror_status(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
@@ -33,7 +33,7 @@ func TestStore_ApplyDevTaskRowMirror_status(t *testing.T) {
 }
 
 func TestStore_ListDevsimTasks_like(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	if _, err := s.Create(ctx, CreateTaskInput{ID: "t2a-devsim-aa", Title: "a", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)

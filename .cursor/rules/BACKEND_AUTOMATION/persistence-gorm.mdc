@@ -14,7 +14,7 @@ alwaysApply: false
 ## Production vs tests
 
 - **Production** targets **PostgreSQL** per `docs/DESIGN.md` and `DATABASE_URL`.
-- **Default tests** use **SQLite** via **`testdb.OpenSQLite`** — keep SQL compatible with both where the project already does, or isolate dialect-specific code clearly.
+- **Default tests** use **SQLite** via **`tasktestdb.OpenSQLite`** — keep SQL compatible with both where the project already does, or isolate dialect-specific code clearly.
 
 ---
 

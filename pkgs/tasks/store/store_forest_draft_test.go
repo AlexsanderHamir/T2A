@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 )
 
 func TestStore_ListRootForest_empty_nonNilSlice(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	got, hasMore, err := s.ListRootForest(context.Background(), 10, 0)
 	if err != nil {
@@ -28,7 +28,7 @@ func TestStore_ListRootForest_empty_nonNilSlice(t *testing.T) {
 }
 
 func TestStore_ListRootForest_nested(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	p, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "root"}, domain.ActorUser)
@@ -59,7 +59,7 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 }
 
 func TestStore_ListRootForest_hasMore_and_keyset(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
 	ids := []string{
@@ -89,7 +89,7 @@ func TestStore_ListRootForest_hasMore_and_keyset(t *testing.T) {
 }
 
 func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 }
 
 func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
@@ -149,21 +149,21 @@ func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
 }
 
 func TestStore_Ping_ok(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	if err := s.Ping(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestStore_Ready_ok(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	if err := s.Ready(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestStore_Ready_fails_when_db_closed(t *testing.T) {
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -178,7 +178,7 @@ func TestStore_Ready_fails_when_db_closed(t *testing.T) {
 }
 
 func TestStore_EvaluateDraftTask_persists_multiple_evaluations(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 
 	in := EvaluateDraftTaskInput{
@@ -208,7 +208,7 @@ func TestStore_EvaluateDraftTask_persists_multiple_evaluations(t *testing.T) {
 }
 
 func TestStore_Create_attaches_draft_evaluations_to_task(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	in := EvaluateDraftTaskInput{
 		DraftID:       "draft-link-1",
@@ -245,7 +245,7 @@ func TestStore_Create_attaches_draft_evaluations_to_task(t *testing.T) {
 }
 
 func TestStore_DraftCRUD_roundtrip(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	saved, err := s.SaveDraft(ctx, "", "My draft", []byte(`{"title":"A"}`))
 	if err != nil {

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 )
 
 func TestStore_SetChecklistItemDone_rejects_user_actor(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
@@ -27,7 +27,7 @@ func TestStore_SetChecklistItemDone_rejects_user_actor(t *testing.T) {
 }
 
 func TestStore_SetChecklistItemDone_allows_agent(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestStore_SetChecklistItemDone_allows_agent(t *testing.T) {
 }
 
 func TestStore_UpdateChecklistItemText_updates_row(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestStore_UpdateChecklistItemText_updates_row(t *testing.T) {
 }
 
 func TestStore_UpdateChecklistItemText_rejects_checklist_inherit(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
 	if err != nil {
@@ -108,7 +108,7 @@ func TestStore_UpdateChecklistItemText_rejects_checklist_inherit(t *testing.T) {
 }
 
 func TestStore_DeleteChecklistItem_appends_removed_event(t *testing.T) {
-	s := NewStore(testdb.OpenSQLite(t))
+	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
 	if err != nil {

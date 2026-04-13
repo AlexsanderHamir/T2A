@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
 )
@@ -22,7 +22,7 @@ func TestHTTP_idempotency_post_second_replays_from_cache(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -96,7 +96,7 @@ func TestHTTP_idempotency_disabled_allows_duplicate_post(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "0")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -148,7 +148,7 @@ func TestHTTP_idempotency_different_body_same_key_creates_two(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -195,7 +195,7 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -258,7 +258,7 @@ func TestWithAccessLog_idempotencyKeyTooLong_logIncludesRequestID(t *testing.T) 
 	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := WithAccessLog(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 
 	longKey := strings.Repeat("k", maxIdempotencyKeyLen+1)
@@ -298,7 +298,7 @@ func TestHTTP_idempotency_rejects_overlength_key(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
@@ -331,7 +331,7 @@ func TestHTTP_idempotency_accepts_boundary_key_length(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -372,7 +372,7 @@ func TestHTTP_idempotency_rejects_unknown_content_length(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
 	req := httptest.NewRequest(http.MethodPost, "/tasks", io.NopCloser(strings.NewReader(`{"title":"idem-unknown","priority":"medium"}`)))
@@ -398,7 +398,7 @@ func TestHTTP_idempotency_rejects_large_content_length(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
 
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
 	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"idem-large","priority":"medium"}`))
