@@ -42,7 +42,8 @@ func WithMaxRequestBody(h http.Handler) http.Handler {
 		}
 		ml := int64(max)
 		if r.ContentLength > ml {
-			slog.Warn("request body over limit", "cmd", httpLogCmd, "operation", "handler.max_body",
+			slog.Log(r.Context(), slog.LevelWarn, "request body over limit",
+				"cmd", httpLogCmd, "operation", "handler.max_body",
 				"limit", max, "content_length", r.ContentLength)
 			writeJSONError(w, r, "http.max_body", http.StatusRequestEntityTooLarge, "request body too large")
 			return

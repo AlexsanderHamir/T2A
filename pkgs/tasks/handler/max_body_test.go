@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
@@ -32,6 +35,53 @@ func TestMaxRequestBodyBytesConfigured(t *testing.T) {
 	t.Setenv(maxRequestBodyEnv, "nope")
 	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
 		t.Fatalf("invalid -> default")
+	}
+}
+
+func TestWithAccessLog_maxBodyOverLimit_logIncludesRequestID(t *testing.T) {
+	t.Setenv(maxRequestBodyEnv, "50")
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	var processSeq atomic.Uint64
+	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+
+	db := testdb.OpenSQLite(t)
+	h := WithAccessLog(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
+
+	body := `{"title":"` + strings.Repeat("h", 40) + `","priority":"medium"}`
+	if len(body) <= 50 {
+		t.Fatal("body should exceed limit")
+	}
+	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Request-ID", "rid-max-body")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var warnLine map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			continue
+		}
+		if m["msg"] == "request body over limit" {
+			warnLine = m
+			break
+		}
+	}
+	if warnLine == nil {
+		t.Fatalf("no warn log in %q", buf.String())
+	}
+	if warnLine["request_id"] != "rid-max-body" {
+		t.Fatalf("request_id: %v", warnLine["request_id"])
 	}
 }
 

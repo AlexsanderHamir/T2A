@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -242,6 +245,53 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("want 1 task, got %d", count)
+	}
+}
+
+func TestWithAccessLog_idempotencyKeyTooLong_logIncludesRequestID(t *testing.T) {
+	t.Cleanup(clearIdempotencyStateForTest)
+	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	var processSeq atomic.Uint64
+	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+
+	db := testdb.OpenSQLite(t)
+	h := WithAccessLog(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
+
+	longKey := strings.Repeat("k", maxIdempotencyKeyLen+1)
+	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"x","priority":"medium"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", longKey)
+	req.Header.Set("X-Request-ID", "rid-idem-key-long")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var warnLine map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			continue
+		}
+		if m["msg"] == "idempotency key too long" {
+			warnLine = m
+			break
+		}
+	}
+	if warnLine == nil {
+		t.Fatalf("no warn log in %q", buf.String())
+	}
+	if warnLine["request_id"] != "rid-idem-key-long" {
+		t.Fatalf("request_id: %v", warnLine["request_id"])
 	}
 }
 

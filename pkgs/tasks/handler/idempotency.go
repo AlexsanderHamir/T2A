@@ -287,7 +287,8 @@ func validateIdempotencyKey(rawKey string, w http.ResponseWriter, r *http.Reques
 	if len(rawKey) <= maxIdempotencyKeyLen {
 		return true
 	}
-	slog.Warn("idempotency key too long", "cmd", httpLogCmd, "operation", "handler.idempotency",
+	slog.Log(r.Context(), slog.LevelWarn, "idempotency key too long",
+		"cmd", httpLogCmd, "operation", "handler.idempotency",
 		"max_len", maxIdempotencyKeyLen, "len", len(rawKey))
 	writeJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long")
 	return false
@@ -304,7 +305,8 @@ func bodyFingerprintFromRequest(r *http.Request, w http.ResponseWriter) (string,
 	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		slog.Warn("idempotency body read failed", "cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
+		slog.Log(r.Context(), slog.LevelWarn, "idempotency body read failed",
+			"cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
 		writeJSONError(w, r, "idempotency.read_body", http.StatusBadRequest, "could not read request body")
 		return "", false
 	}
@@ -378,7 +380,8 @@ func WithIdempotency(h http.Handler) http.Handler {
 			return cap, nil
 		})
 		if err != nil {
-			slog.Error("idempotency singleflight error", "cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
+			slog.Log(r.Context(), slog.LevelError, "idempotency singleflight error",
+				"cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
 			writeJSONError(w, r, "idempotency", http.StatusInternalServerError, "internal server error")
 			return
 		}
