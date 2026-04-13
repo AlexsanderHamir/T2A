@@ -276,7 +276,7 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 
 Headers: `X-Actor` is `user` (default) or `agent`, stored on audit events for attribution. It is not an authentication mechanism. Optional `X-Request-ID` (trimmed, max 128 chars): if the client sends it, the same value is echoed on the response and used as `request_id` in logs; otherwise the server assigns a UUID.
 
-Authentication: if `T2A_API_TOKEN` is configured, non-exempt routes require `Authorization: Bearer <token>` and return `401` JSON `{"error":"unauthorized"}` when missing/invalid. Health and metrics endpoints remain unauthenticated for probes/scrapers.
+Authentication: if `T2A_API_TOKEN` is configured, non-exempt routes require `Authorization: Bearer <token>` and return `401` JSON `{"error":"unauthorized"}` when missing/invalid. Health and metrics endpoints remain unauthenticated for probes/scrapers. Denied attempts log **`api auth denied`** at **Warn** (`operation` **`http.api_auth`**) with **`method`**, **`path`**, and **`request_id`** when the request passed access middleware.
 
 Baseline **response** hardening (JSON via `setJSONHeaders`, `GET /events` after the stream is accepted, **429** rate-limit bodies, and **`GET /metrics`** via `handler.WrapPrometheusHandler`): `Cache-Control: no-store`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`. A reverse proxy or gateway may add or override security headers for production.
 

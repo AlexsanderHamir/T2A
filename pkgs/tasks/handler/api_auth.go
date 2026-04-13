@@ -69,7 +69,8 @@ func WithAPIAuth(h http.Handler) http.Handler {
 			return
 		}
 		if !hasValidBearerToken(r.Header.Get(authorizationHeader), token) {
-			slog.Warn("api auth denied", "cmd", httpLogCmd, "operation", "http.api_auth",
+			slog.Log(r.Context(), slog.LevelWarn, "api auth denied",
+				"cmd", httpLogCmd, "operation", "http.api_auth",
 				"method", r.Method, "path", r.URL.Path)
 			writeJSONError(w, r, "http.api_auth", http.StatusUnauthorized, "unauthorized")
 			return

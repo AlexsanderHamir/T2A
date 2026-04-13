@@ -1,8 +1,13 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -32,6 +37,51 @@ func TestHasValidBearerToken(t *testing.T) {
 	}
 	if !hasValidBearerToken("Bearer secret", "secret") {
 		t.Fatal("valid token should pass")
+	}
+}
+
+func TestWithAccessLog_apiAuthDenied_logIncludesRequestID(t *testing.T) {
+	t.Setenv("T2A_API_TOKEN", "secret")
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	var processSeq atomic.Uint64
+	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := WithAccessLog(WithAPIAuth(inner))
+
+	req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
+	req.Header.Set("X-Request-ID", "rid-api-auth-deny")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var warnLine map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			continue
+		}
+		if m["msg"] == "api auth denied" {
+			warnLine = m
+			break
+		}
+	}
+	if warnLine == nil {
+		t.Fatalf("no warn log in %q", buf.String())
+	}
+	if warnLine["request_id"] != "rid-api-auth-deny" {
+		t.Fatalf("request_id: %v", warnLine["request_id"])
 	}
 }
 
