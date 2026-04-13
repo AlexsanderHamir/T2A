@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getTask } from "@/api";
 import type { Priority, Status } from "@/types";
+import { TaskGraphPageSkeleton } from "../components/taskLoadingSkeletons";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys } from "../queryKeys";
 
@@ -213,24 +214,35 @@ export function TaskGraphPage() {
   }
 
   if (taskQuery.isPending) {
-    return <p className="muted">Loading graph…</p>;
+    return <TaskGraphPageSkeleton />;
   }
 
   if (taskQuery.isError || !taskQuery.data) {
+    const message =
+      taskQuery.isError && taskQuery.error instanceof Error
+        ? taskQuery.error.message
+        : "Could not load task graph.";
     return (
       <section className="panel task-graph-page">
-        <p className="err-inline" role="alert">
-          Could not load task graph.
-        </p>
-        <p>
-          <Link to={`/tasks/${encodeURIComponent(taskId)}`}>Back to task detail</Link>
-        </p>
+        <div role="alert">
+          <p className="err-inline">{message}</p>
+          <div className="task-graph-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void taskQuery.refetch()}
+            >
+              Try again
+            </button>
+            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>Back to task detail</Link>
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="panel task-graph-page">
+    <section className="panel task-graph-page task-graph-content--enter">
       <nav className="task-detail-nav" aria-label="Task graph navigation">
         <Link to={`/tasks/${encodeURIComponent(taskId)}`} className="task-detail-back">
           ← Back to task detail

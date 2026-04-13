@@ -557,7 +557,9 @@ textarea::placeholder {
   animation: ui-phase-fade-in var(--duration-ui-phase) var(--ease-ui) both;
 }
 
-.task-list-content--enter {
+.task-list-content--enter,
+.task-graph-content--enter,
+.task-detail-content--enter {
   animation: ui-phase-fade-in var(--duration-slower) var(--ease-ui) both;
 }
 
@@ -576,7 +578,9 @@ textarea::placeholder {
 @media (prefers-reduced-motion: reduce) {
   .stream-pill--sync-enter,
   .task-list-phase-msg,
-  .task-list-content--enter {
+  .task-list-content--enter,
+  .task-graph-content--enter,
+  .task-detail-content--enter {
     animation: none;
     opacity: 1;
     transform: none;

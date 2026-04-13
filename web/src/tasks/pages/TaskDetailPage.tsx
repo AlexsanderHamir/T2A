@@ -22,20 +22,19 @@ import {
   type PriorityChoice,
   type TaskType,
 } from "@/types";
-import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
+import { TaskDetailAttentionBar } from "../components/TaskDetailAttentionBar";
 import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
+import { TaskDetailHeader } from "../components/TaskDetailHeader";
+import { TaskDetailSubtasksHead } from "../components/TaskDetailSubtasksHead";
 import { TaskDetailPromptSection } from "../components/TaskDetailPromptSection";
-import { TaskPager } from "../components/TaskPager";
+import { TaskDetailUpdatesSection } from "../components/TaskDetailUpdatesSection";
 import { sanitizePromptHtml } from "../promptFormat";
 import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
-import { statusNeedsUserInput } from "../taskStatusNeedsUser";
 import { TaskDetailPageSkeleton } from "../components/taskLoadingSkeletons";
-import { TaskUpdatesTimeline } from "../components/TaskUpdatesTimeline";
-import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
 
@@ -362,14 +361,23 @@ export function TaskDetailPage({ app }: Props) {
   if (taskQuery.isError) {
     return (
       <section className="panel task-detail-panel">
-        <p className="err-inline" role="alert">
-          {taskQuery.error instanceof Error
-            ? taskQuery.error.message
-            : "Could not load task."}
-        </p>
-        <p>
-          <Link to="/">← Back to tasks</Link>
-        </p>
+        <div role="alert">
+          <p className="err-inline">
+            {taskQuery.error instanceof Error
+              ? taskQuery.error.message
+              : "Could not load task."}
+          </p>
+          <div className="task-detail-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void taskQuery.refetch()}
+            >
+              Try again
+            </button>
+            <Link to="/">← Back to tasks</Link>
+          </div>
+        </div>
       </section>
     );
   }
@@ -388,104 +396,22 @@ export function TaskDetailPage({ app }: Props) {
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
 
   return (
-    <section className="panel task-detail-panel">
-      <nav className="task-detail-nav" aria-label="Task navigation">
-        <Link to="/" className="task-detail-back">
-          ← All tasks
-        </Link>
-      </nav>
+    <section className="panel task-detail-panel task-detail-content--enter">
+      <TaskDetailHeader task={task} />
 
-      <header className="task-detail-header">
-        <h2 className="task-detail-title">{task.title}</h2>
-        <p
-          className="task-event-detail-stance"
-          role="status"
-          data-stance={
-            statusNeedsUserInput(task.status) ? "needs-user" : "informational"
-          }
-        >
-          {statusNeedsUserInput(task.status)
-            ? "Agent needs input"
-            : "Informational"}
-        </p>
-        <div className="task-detail-meta">
-          <span
-            className={statusPillClass(task.status)}
-            data-needs-user={
-              statusNeedsUserInput(task.status) ? "true" : undefined
-            }
-          >
-            {task.status}
-          </span>
-          <span className={priorityPillClass(task.priority)}>
-            {task.priority}
-          </span>
-        </div>
-      </header>
-
-      {attention.show ? (
-        <div
-          className="task-detail-attention"
-          role="status"
-          aria-live="polite"
-        >
-          <strong>{attention.headline}</strong>
-          <p>{attention.body}</p>
-        </div>
-      ) : (
-        <div className="task-detail-ok" role="status">
-          <strong>No agent is waiting on you for this task right now.</strong>
-          <p className="muted">
-            Follow the timeline for updates. We highlight when an agent needs
-            input or approval.
-          </p>
-        </div>
-      )}
-
-      <div className="task-detail-actions">
-        <button
-          type="button"
-          className="task-detail-btn-edit"
-          onClick={() => app.openEdit(task)}
-          disabled={app.saving}
-        >
-          Edit task
-        </button>
-        <button
-          type="button"
-          className="task-detail-btn-delete"
-          onClick={() => app.requestDelete(task)}
-          disabled={app.saving}
-        >
-          Delete
-        </button>
-      </div>
+      <TaskDetailAttentionBar
+        attention={attention}
+        saving={app.saving}
+        onEdit={() => app.openEdit(task)}
+        onDelete={() => app.requestDelete(task)}
+      />
 
       <div className="task-detail-section" id="task-detail-subtasks">
-        <div className="task-detail-subtasks-head">
-          <div className="field-heading-with-req task-detail-subtasks-title-row">
-            <h3 className="task-detail-section-heading" id="task-subtasks-heading">
-              Subtasks
-            </h3>
-            <FieldRequirementBadge requirement="optional" />
-          </div>
-          <div className="task-detail-subtasks-actions">
-            <Link
-              to={`/tasks/${encodeURIComponent(task.id)}/graph`}
-              className="task-detail-open-graph-btn"
-            >
-              Open graph view
-            </Link>
-            <button
-              type="button"
-              className="task-detail-add-subtask-btn task-detail-add-subtask-btn--primary"
-              onClick={openSubtaskModal}
-              disabled={app.saving}
-            >
-              Add subtask
-            </button>
-          </div>
-        </div>
+        <TaskDetailSubtasksHead
+          taskId={task.id}
+          saving={app.saving}
+          onAddSubtask={openSubtaskModal}
+        />
         <SubtaskTree nodes={task.children ?? []} showNested={false} />
         {subtaskModalOpen ? (
           <SubtaskCreateModal
@@ -542,49 +468,22 @@ export function TaskDetailPage({ app }: Props) {
         sanitizedInitialPrompt={sanitizedInitialPrompt}
       />
 
-      <TaskUpdatesTimeline
-        isPending={eventsQuery.isPending}
-        isError={eventsQuery.isError}
-        error={eventsQuery.error}
+      <TaskDetailUpdatesSection
+        taskId={taskId}
+        eventsQuery={eventsQuery}
         timelineEvents={timelineEvents}
-        isEmpty={
-          !eventsQuery.isPending &&
-          !eventsQuery.isError &&
-          events.length === 0 &&
-          eventsTotal === 0
-        }
-        taskIdForLinks={taskId}
+        eventsTotal={eventsTotal}
+        onEventsPagerPrev={() => {
+          if (events.length === 0) return;
+          const maxSeq = Math.max(...events.map((e) => e.seq));
+          setEventsCursor({ k: "after", seq: maxSeq });
+        }}
+        onEventsPagerNext={() => {
+          if (events.length === 0) return;
+          const minSeq = Math.min(...events.map((e) => e.seq));
+          setEventsCursor({ k: "before", seq: minSeq });
+        }}
       />
-
-      {!eventsQuery.isPending &&
-      !eventsQuery.isError &&
-      eventsTotal > 0 &&
-      (eventsQuery.data?.has_more_newer ||
-        eventsQuery.data?.has_more_older) ? (
-        <TaskPager
-          navLabel="Update history pages"
-          summary={
-            eventsQuery.data?.range_start !== undefined &&
-            eventsQuery.data?.range_end !== undefined
-              ? `${eventsQuery.data.range_start}–${eventsQuery.data.range_end} of ${eventsTotal}`
-              : events.length === 0
-                ? "No rows on this page"
-                : "—"
-          }
-          onPrev={() => {
-            if (events.length === 0) return;
-            const maxSeq = Math.max(...events.map((e) => e.seq));
-            setEventsCursor({ k: "after", seq: maxSeq });
-          }}
-          onNext={() => {
-            if (events.length === 0) return;
-            const minSeq = Math.min(...events.map((e) => e.seq));
-            setEventsCursor({ k: "before", seq: minSeq });
-          }}
-          disablePrev={eventsQuery.data?.has_more_newer !== true}
-          disableNext={eventsQuery.data?.has_more_older !== true}
-        />
-      ) : null}
     </section>
   );
 }

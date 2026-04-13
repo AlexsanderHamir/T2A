@@ -110,53 +110,55 @@ export function TaskHome({ app }: Props) {
         />
       ) : null}
 
-      <section className="task-home-overview" aria-label="Task overview">
-        <article className="task-home-kpi-card task-home-kpi-card--total">
-          <p className="task-home-kpi-label">Total tasks</p>
-          <p className="task-home-kpi-value">{totalTasks}</p>
-          <p className="task-home-kpi-meta">
-            {parentTasks} parent • {subtaskTasks} subtask
-            {subtaskTasks === 1 ? "" : "s"}
-          </p>
-        </article>
-        <article className="task-home-kpi-card task-home-kpi-card--ready">
-          <p className="task-home-kpi-label">Ready tasks</p>
-          <p className="task-home-kpi-value">{readyTasks}</p>
-          <p className="task-home-kpi-meta">ready for agent pickup</p>
-        </article>
-        <article className="task-home-kpi-card task-home-kpi-card--attention">
-          <p className="task-home-kpi-label">Critical</p>
-          <p className="task-home-kpi-value">{criticalTasks}</p>
-          <p className="task-home-kpi-meta">needs attention</p>
-        </article>
-      </section>
+      <div className="task-detail-content--enter">
+        <section className="task-home-overview" aria-label="Task overview">
+          <article className="task-home-kpi-card task-home-kpi-card--total">
+            <p className="task-home-kpi-label">Total tasks</p>
+            <p className="task-home-kpi-value">{totalTasks}</p>
+            <p className="task-home-kpi-meta">
+              {parentTasks} parent • {subtaskTasks} subtask
+              {subtaskTasks === 1 ? "" : "s"}
+            </p>
+          </article>
+          <article className="task-home-kpi-card task-home-kpi-card--ready">
+            <p className="task-home-kpi-label">Ready tasks</p>
+            <p className="task-home-kpi-value">{readyTasks}</p>
+            <p className="task-home-kpi-meta">ready for agent pickup</p>
+          </article>
+          <article className="task-home-kpi-card task-home-kpi-card--attention">
+            <p className="task-home-kpi-label">Critical</p>
+            <p className="task-home-kpi-value">{criticalTasks}</p>
+            <p className="task-home-kpi-meta">needs attention</p>
+          </article>
+        </section>
 
-      <TaskListSection
-        actions={
-          <button
-            type="button"
-            className="task-home-new-task-btn"
-            onClick={app.openCreateModal}
-            disabled={app.createModalOpen}
-          >
-            New task
-          </button>
-        }
-        tasks={app.tasks}
-        rootTasksOnPage={app.rootTasksOnPage}
-        loading={app.loading}
-        refreshing={app.listRefreshing}
-        saving={app.saving}
-        hideBackgroundRefreshHint={app.sseLive}
-        listPage={app.taskListPage}
-        listPageSize={app.taskListPageSize}
-        onListPageChange={app.setTaskListPage}
-        onListFiltersChange={app.resetTaskListPage}
-        hasNextPage={app.hasNextTaskPage}
-        hasPrevPage={app.hasPrevTaskPage}
-        onEdit={app.openEdit}
-        onRequestDelete={app.requestDelete}
-      />
+        <TaskListSection
+          actions={
+            <button
+              type="button"
+              className="task-home-new-task-btn"
+              onClick={app.openCreateModal}
+              disabled={app.createModalOpen}
+            >
+              New task
+            </button>
+          }
+          tasks={app.tasks}
+          rootTasksOnPage={app.rootTasksOnPage}
+          loading={app.loading}
+          refreshing={app.listRefreshing}
+          saving={app.saving}
+          hideBackgroundRefreshHint={app.sseLive}
+          listPage={app.taskListPage}
+          listPageSize={app.taskListPageSize}
+          onListPageChange={app.setTaskListPage}
+          onListFiltersChange={app.resetTaskListPage}
+          hasNextPage={app.hasNextTaskPage}
+          hasPrevPage={app.hasPrevTaskPage}
+          onEdit={app.openEdit}
+          onRequestDelete={app.requestDelete}
+        />
+      </div>
     </>
   );
 }

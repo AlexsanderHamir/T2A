@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
@@ -31,6 +32,39 @@ function renderEventPage(initialPath: string) {
 describe("TaskEventDetailPage", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("shows event load error with retry and refetches successfully", async () => {
+    const user = userEvent.setup();
+    let calls = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t1/events/2") {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("fail", { status: 500 });
+        }
+        return Response.json({
+          task_id: "t1",
+          seq: 2,
+          at: "2026-03-01T10:00:00.000Z",
+          type: "message_added",
+          by: "agent",
+          data: {},
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderEventPage("/tasks/t1/events/2");
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: /event #2/i }),
+    ).toBeInTheDocument();
+    expect(calls).toBe(2);
   });
 
   it("loads one event and shows type, time, actor, and JSON data", async () => {

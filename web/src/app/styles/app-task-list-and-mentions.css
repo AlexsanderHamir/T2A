@@ -806,25 +806,25 @@
 .mention-file-preview-code .token.operator,
 .mention-file-preview-code .token.atrule,
 .mention-file-preview-code .token.tag {
-  color: #7c5cff;
+  color: var(--mention-syntax-keyword);
 }
 
 .mention-file-preview-code .token.string,
 .mention-file-preview-code .token.attr-value,
 .mention-file-preview-code .token.char,
 .mention-file-preview-code .token.inserted {
-  color: #0f8f67;
+  color: var(--mention-syntax-string);
 }
 
 .mention-file-preview-code .token.number,
 .mention-file-preview-code .token.boolean,
 .mention-file-preview-code .token.constant {
-  color: #1e6fd6;
+  color: var(--mention-syntax-number);
 }
 
 .mention-file-preview-code .token.function,
 .mention-file-preview-code .token.class-name {
-  color: #b35000;
+  color: var(--mention-syntax-function);
 }
 
 .mention-file-preview-code .token.punctuation {
@@ -833,32 +833,36 @@
 
 @media (prefers-color-scheme: dark) {
   .mention-file-preview-code {
-    background: color-mix(in srgb, var(--bg-elevated) 88%, #0f1624);
+    background: color-mix(
+      in srgb,
+      var(--bg-elevated) 88%,
+      var(--mention-code-bg-mix)
+    );
   }
 
   .mention-file-preview-code .token.keyword,
   .mention-file-preview-code .token.operator,
   .mention-file-preview-code .token.atrule,
   .mention-file-preview-code .token.tag {
-    color: #b19cff;
+    color: var(--mention-syntax-keyword);
   }
 
   .mention-file-preview-code .token.string,
   .mention-file-preview-code .token.attr-value,
   .mention-file-preview-code .token.char,
   .mention-file-preview-code .token.inserted {
-    color: #69d3a8;
+    color: var(--mention-syntax-string);
   }
 
   .mention-file-preview-code .token.number,
   .mention-file-preview-code .token.boolean,
   .mention-file-preview-code .token.constant {
-    color: #7fb1ff;
+    color: var(--mention-syntax-number);
   }
 
   .mention-file-preview-code .token.function,
   .mention-file-preview-code .token.class-name {
-    color: #ffbe7a;
+    color: var(--mention-syntax-function);
   }
 }
 

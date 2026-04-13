@@ -283,6 +283,39 @@ describe("TaskDetailPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows task load error with retry and refetches successfully", async () => {
+    const user = userEvent.setup();
+    const task = taskDetail("t1", "Recovered title");
+    let taskGets = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === `/tasks/${task.id}`) {
+        taskGets += 1;
+        if (taskGets === 1) {
+          return new Response("fail", { status: 500 });
+        }
+        return Response.json(task);
+      }
+      if (url === `/tasks/${task.id}/checklist`) {
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith(`/tasks/${task.id}/events`)) {
+        return Response.json(emptyEventsPayload(task.id));
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail("/tasks/t1", mockApp());
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: /^recovered title$/i }),
+    ).toBeInTheDocument();
+    expect(taskGets).toBe(2);
+  });
+
   it("collapses initial prompt by default and expands on demand", async () => {
     const user = userEvent.setup();
     mockTaskDetailFetch(

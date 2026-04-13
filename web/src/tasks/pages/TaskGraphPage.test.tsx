@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubEventSource } from "../../test/browserMocks";
@@ -27,6 +28,75 @@ describe("TaskGraphPage", () => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("shows graph skeleton while task data is loading", async () => {
+    stubEventSource();
+    vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "");
+    let resolveLoad!: (value: Response) => void;
+    const loadPromise = new Promise<Response>((resolve) => {
+      resolveLoad = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/groot") {
+        return loadPromise;
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderGraph("/tasks/groot/graph");
+
+    expect(screen.getByRole("status", { name: /loading task graph/i })).toBeInTheDocument();
+    expect(document.querySelector(".task-graph-skeleton-viewport")).not.toBeNull();
+
+    resolveLoad(
+      Response.json({
+        id: "groot",
+        title: "Graph root",
+        initial_prompt: "",
+        status: "ready",
+        priority: "high",
+        checklist_inherit: false,
+        children: [],
+      }),
+    );
+
+    expect(await screen.findByRole("heading", { name: /task graph/i })).toBeInTheDocument();
+  });
+
+  it("shows error with retry and refetches on success", async () => {
+    const user = userEvent.setup();
+    stubEventSource();
+    vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "");
+    let calls = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/groot") {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("fail", { status: 500 });
+        }
+        return Response.json({
+          id: "groot",
+          title: "Graph root",
+          initial_prompt: "",
+          status: "ready",
+          priority: "high",
+          checklist_inherit: false,
+          children: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderGraph("/tasks/groot/graph");
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(await screen.findByRole("heading", { name: /task graph/i })).toBeInTheDocument();
+    expect(calls).toBe(2);
   });
 
   it("renders virtualized graph with node count and links", async () => {

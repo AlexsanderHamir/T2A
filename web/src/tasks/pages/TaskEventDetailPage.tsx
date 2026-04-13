@@ -82,19 +82,26 @@ export function TaskEventDetailPage() {
   if (q.isError) {
     return (
       <section className="panel task-detail-panel">
-        <p className="err-inline" role="alert">
-          {q.error instanceof Error
-            ? q.error.message
-            : "Could not load event."}
-        </p>
-        <p>
-          <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
-            ← Back to task
-          </Link>
-        </p>
-        <p>
-          <Link to="/">← All tasks</Link>
-        </p>
+        <div role="alert">
+          <p className="err-inline">
+            {q.error instanceof Error
+              ? q.error.message
+              : "Could not load event."}
+          </p>
+          <div className="task-detail-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void q.refetch()}
+            >
+              Try again
+            </button>
+            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
+              ← Back to task
+            </Link>
+            <Link to="/">← All tasks</Link>
+          </div>
+        </div>
       </section>
     );
   }
@@ -105,7 +112,7 @@ export function TaskEventDetailPage() {
   const awaitingUser = needsInput && awaitingUserReply(ev);
 
   return (
-    <section className="panel task-detail-panel task-event-detail-panel">
+    <section className="panel task-detail-panel task-event-detail-panel task-detail-content--enter">
       <nav className="task-detail-nav" aria-label="Event navigation">
         <Link to="/" className="task-detail-back">
           ← All tasks

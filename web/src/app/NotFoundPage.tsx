@@ -6,7 +6,7 @@ export function NotFoundPage() {
 
   return (
     <section
-      className="panel task-detail-panel"
+      className="panel task-detail-panel task-detail-content--enter"
       aria-labelledby="not-found-heading"
     >
       <h2 className="task-detail-title" id="not-found-heading">
