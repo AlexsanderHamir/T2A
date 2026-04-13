@@ -24,6 +24,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/
 | Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. |
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
+| Agent hooks | `pkgs/agents/` | Optional in-process user-task queue when `T2A_USER_TASK_AGENT_QUEUE_CAP` set; see `docs/DESIGN.md`. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/DESIGN.md`. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. |

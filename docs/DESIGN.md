@@ -50,6 +50,8 @@ The handler exposes REST routes and `GET /events` (SSE). After a successful writ
 
 The SSE hub is in-memory only: it is not durable and not shared across OS processes. It only notifies clients connected to this server instance.
 
+Optionally, when **`T2A_USER_TASK_AGENT_QUEUE_CAP`** is a positive integer, `taskapi` wires **`pkgs/agents`**: after a successful **`POST /tasks`** attributed to the **user** actor (default `X-Actor` or `X-Actor: user`), the handler enqueues a **`domain.Task`** snapshot into a bounded in-memory FIFO for in-process consumers. The HTTP response still succeeds if the queue is full (**`Warn`** log, same semantics as an overloaded SSE subscriber). This queue is **not** durable and **not** shared across replicas—see package **`pkgs/agents`** for tradeoffs and future alternatives (outbox, broker).
+
 When `REPO_ROOT` is set, `taskapi` also opens `pkgs/repo` for read-only workspace search and line-range checks used by the UI; see [Optional workspace repo](#optional-workspace-repo-repo_root).
 
 ### Go package dependencies (high level)
@@ -69,6 +71,7 @@ flowchart TB
     PG[tasks/postgres]
     DM[tasks/domain]
     RP[repo]
+    AG[agents]
   end
 
   TA --> EL
@@ -79,6 +82,8 @@ flowchart TB
   DC --> PG
   H --> ST
   H --> RP
+  TA --> AG
+  H --> AG
   ST --> DM
   PG --> DM
 ```
@@ -152,7 +157,7 @@ Environment loading: `taskapi` uses `internal/envload.Load`. `dbcheck` does not 
 2. `envload.Load` — resolve `.env` (repo root or `-env`), load with `godotenv.Overload`, require `DATABASE_URL`.
 3. `postgres.Open` — GORM connection to Postgres; rejects empty/whitespace DSN; configures the underlying `database/sql` pool (max open/idle, connection lifetime). No startup `Ping` (unlike `dbcheck`).
 4. `postgres.Migrate` — `AutoMigrate` for `domain.Task` and `domain.TaskEvent` on every startup (keeps schema aligned with models), under **`postgres.DefaultMigrateTimeout`** (currently **120s**) so startup cannot hang indefinitely on a stuck database.
-5. `store.NewStore`, `handler.NewSSEHub`, optional `repo.OpenRoot(REPO_ROOT)` when the env var is non-empty, then `handler.NewHandler(store, hub, rep)` — `rep` may be nil when `REPO_ROOT` is unset (no repo routes beyond 503). The API mux is wrapped with `handler.WithAccessLog` (request id, one completion line per request) and `handler.WithRecovery` (panic → 500 JSON).
+5. `store.NewStore`, `handler.NewSSEHub`, optional `repo.OpenRoot(REPO_ROOT)` when the env var is non-empty, then `handler.NewHandler(store, hub, rep, …)` with optional **`handler.WithUserTaskAgentNotifier`** when **`T2A_USER_TASK_AGENT_QUEUE_CAP`** > 0 — `rep` may be nil when `REPO_ROOT` is unset (no repo routes beyond 503). The API mux is wrapped with `handler.WithAccessLog` (request id, one completion line per request) and `handler.WithRecovery` (panic → 500 JSON).
 6. `http.Server` on `-port` (default 8080): `ReadHeaderTimeout` and `ReadTimeout` bound slow clients; `IdleTimeout` caps idle keep-alive; `MaxHeaderBytes` caps request headers (~1 MiB). `WriteTimeout` is not set so long-lived `GET /events` streams are not cut off.
 
 ### Graceful shutdown
@@ -200,6 +205,7 @@ sequenceDiagram
 | `T2A_IDEMPOTENCY_MAX_ENTRIES` | No | Max in-process idempotency cache entries. Default when unset: **2048**. Invalid or negative values fall back to **2048**. **`0`** disables entry-count bounding. |
 | `T2A_IDEMPOTENCY_MAX_BYTES` | No | Max in-process idempotency cache memory budget (stored response-body bytes). Default when unset: **8388608** (8 MiB). Invalid or negative values fall back to **8388608**. **`0`** disables byte-size bounding. |
 | `T2A_MAX_REQUEST_BODY_BYTES` | No | Rejects request bodies larger than this many bytes with **`413`** JSON `{"error":"request body too large"}` (checks **`Content-Length`** when present, and **`http.MaxBytesReader`** so the stream cannot exceed the cap). Default when unset or invalid: **1 MiB** (`1048576`). Set **`0`** to disable the cap explicitly. |
+| `T2A_USER_TASK_AGENT_QUEUE_CAP` | No | When set to a **positive integer**, enables an in-process **`pkgs/agents`** queue of that capacity for **user**-created tasks after **`POST /tasks`** succeeds. When unset, zero, or invalid, the queue is disabled. Not durable; not shared across `taskapi` processes. |
 
 
 `dbcheck` uses the same `.env` discovery for `DATABASE_URL` only; it does not use `REPO_ROOT`.

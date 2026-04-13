@@ -4,6 +4,7 @@
 // Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/DESIGN.md).
 // Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/DESIGN.md).
 // Max request body: max_body.go (WithMaxRequestBody; optional T2A_MAX_REQUEST_BODY_BYTES in docs/DESIGN.md).
+// User task agent queue: handler.go (optional WithUserTaskAgentNotifier; T2A_USER_TASK_AGENT_QUEUE_CAP in docs/DESIGN.md; pkgs/agents).
 // Request timeout: request_timeout.go (WithRequestTimeout; optional T2A_HTTP_REQUEST_TIMEOUT in docs/DESIGN.md; GET /events exempt).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): calllog.go — use withCallRoot on each handler, PushCall inside helpers.

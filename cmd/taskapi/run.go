@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
@@ -166,7 +167,15 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))))
+	handlerOpts := []handler.HandlerOption(nil)
+	if qcap := userTaskAgentQueueCap(); qcap > 0 {
+		handlerOpts = append(handlerOpts, handler.WithUserTaskAgentNotifier(agents.NewMemoryQueue(qcap)))
+		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", true, "cap", qcap)
+	} else {
+		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", false)
+	}
+
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep, handlerOpts...)))))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {

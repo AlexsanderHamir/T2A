@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -25,13 +26,34 @@ type Handler struct {
 	store *store.Store
 	hub   *SSEHub
 	repo  *repo.Root
+	// userTaskAgents is optional: when set, user-originated POST /tasks enqueues a task snapshot after persistence.
+	userTaskAgents agents.UserTaskCreatedNotifier
+}
+
+// HandlerOption configures NewHandler.
+type HandlerOption func(*Handler)
+
+// WithUserTaskAgentNotifier registers n for user-created tasks (see pkgs/agents). When nil, the option is a no-op.
+func WithUserTaskAgentNotifier(n agents.UserTaskCreatedNotifier) HandlerOption {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithUserTaskAgentNotifier")
+	return func(h *Handler) {
+		if h == nil || n == nil {
+			return
+		}
+		h.userTaskAgents = n
+	}
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
 // rep is optional: when nil, /repo routes return 503 and initial_prompt is not validated for file mentions.
-func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
+func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOption) http.Handler {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.NewHandler")
 	h := &Handler{store: s, hub: hub, repo: rep}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(h)
+		}
+	}
 	m := http.NewServeMux()
 	m.Handle("GET /health", http.HandlerFunc(health))
 	m.Handle("GET /health/live", http.HandlerFunc(healthLive))
