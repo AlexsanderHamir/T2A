@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -71,11 +72,9 @@ func (q *MemoryQueue) Receive(ctx context.Context) (domain.Task, error) {
 	}
 }
 
-// NotifyUserTaskCreated implements UserTaskCreatedNotifier. It never blocks: if the buffer is
-// full it returns ErrQueueFull. If the task id is already pending it returns ErrAlreadyQueued.
-func (q *MemoryQueue) NotifyUserTaskCreated(ctx context.Context, task domain.Task) error {
-	_ = ctx
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyUserTaskCreated", "task_id", task.ID)
+// tryEnqueue adds task to the buffer when there is capacity and the id is not already pending.
+func (q *MemoryQueue) tryEnqueue(task domain.Task) error {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.tryEnqueue", "task_id", task.ID)
 	if q == nil {
 		return nil
 	}
@@ -94,4 +93,34 @@ func (q *MemoryQueue) NotifyUserTaskCreated(ctx context.Context, task domain.Tas
 	default:
 		return ErrQueueFull
 	}
+}
+
+// NotifyUserTaskCreated implements UserTaskCreatedNotifier. It never blocks: if the buffer is
+// full it returns ErrQueueFull. If the task id is already pending it returns ErrAlreadyQueued.
+func (q *MemoryQueue) NotifyUserTaskCreated(ctx context.Context, task domain.Task) error {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyUserTaskCreated", "task_id", task.ID)
+	if err := notifyContextErr(ctx); err != nil {
+		return err
+	}
+	return q.tryEnqueue(task)
+}
+
+// NotifyReadyTask is the hook used by pkgs/tasks/store.ReadyTaskNotifier wiring. Same enqueue semantics as NotifyUserTaskCreated.
+func (q *MemoryQueue) NotifyReadyTask(ctx context.Context, task domain.Task) error {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyReadyTask", "task_id", task.ID)
+	if err := notifyContextErr(ctx); err != nil {
+		return err
+	}
+	return q.tryEnqueue(task)
+}
+
+func notifyContextErr(ctx context.Context) error {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.notifyContextErr")
+	if ctx == nil {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("agents: context done before notify: %w", err)
+	}
+	return nil
 }

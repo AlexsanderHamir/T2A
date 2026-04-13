@@ -19,7 +19,8 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 	if taskID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var prevStatus domain.Status
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var t domain.Task
 		if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -27,6 +28,7 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 			}
 			return fmt.Errorf("load task: %w", err)
 		}
+		prevStatus = t.Status
 		up := map[string]any{}
 		switch typ {
 		case domain.EventStatusChanged:
@@ -92,6 +94,17 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	nt, gerr := s.Get(ctx, taskID)
+	if gerr != nil {
+		return fmt.Errorf("reload after mirror: %w", gerr)
+	}
+	if nt.Status == domain.StatusReady && prevStatus != domain.StatusReady {
+		s.notifyReadyTask(ctx, *nt)
+	}
+	return nil
 }
 
 func pairFromJSON(data []byte) (map[string]string, error) {

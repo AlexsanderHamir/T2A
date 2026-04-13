@@ -24,7 +24,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `11-api-contracts` (HTTP/
 | Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. |
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
-| Agent hooks | `pkgs/agents/` | Optional in-process user-task queue when `T2A_USER_TASK_AGENT_QUEUE_CAP` set; startup/interval reconcile vs Postgres; see `docs/DESIGN.md`. |
+| Agent hooks | `pkgs/agents/` | In-process ready-task queue always wired from `taskapi` (`store.SetReadyTaskNotifier`); defaults **256** cap and **5m** reconcile interval (env overrides); see `docs/DESIGN.md`. |
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default store/handler/agent tests (`tasktestdb.OpenSQLite`). |

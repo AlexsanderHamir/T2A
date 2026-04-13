@@ -21,11 +21,11 @@ type ReconcileResult struct {
 	StoppedOnQueueFull bool
 }
 
-// ReconcileReadyUserTasksNotQueued loads ready user-created tasks from the store and enqueues
-// any whose ids are not already pending in q. Pagination uses store.ListReadyTasksUserCreated with
-// after_id until a short page or an empty page.
-func ReconcileReadyUserTasksNotQueued(ctx context.Context, st *store.Store, q *MemoryQueue, pageSize int) (ReconcileResult, error) {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.ReconcileReadyUserTasksNotQueued")
+// ReconcileReadyTasksNotQueued loads ready tasks from the store and enqueues any whose ids are
+// not already pending in q. Pagination uses store.ListReadyTaskQueueCandidates (FIFO by
+// task_created time, then id) so older backlog is offered slots before lexicographic id order alone would.
+func ReconcileReadyTasksNotQueued(ctx context.Context, st *store.Store, q *MemoryQueue, pageSize int) (ReconcileResult, error) {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.ReconcileReadyTasksNotQueued")
 	var res ReconcileResult
 	if st == nil {
 		return res, errors.New("agents: nil store")
@@ -36,18 +36,18 @@ func ReconcileReadyUserTasksNotQueued(ctx context.Context, st *store.Store, q *M
 	if pageSize <= 0 {
 		pageSize = 200
 	}
-	afterID := ""
+	var pageCursor *store.ReadyTaskQueueCursor
 	for {
-		batch, err := st.ListReadyTasksUserCreated(ctx, pageSize, afterID)
+		batch, err := st.ListReadyTaskQueueCandidates(ctx, pageSize, pageCursor)
 		if err != nil {
 			return res, fmt.Errorf("agents reconcile: %w", err)
 		}
 		if len(batch) == 0 {
 			break
 		}
-		for _, t := range batch {
+		for _, row := range batch {
 			res.Scanned++
-			err := q.NotifyUserTaskCreated(ctx, t)
+			err := q.NotifyReadyTask(ctx, row.Task)
 			switch {
 			case err == nil:
 				res.Enqueued++
@@ -63,22 +63,27 @@ func ReconcileReadyUserTasksNotQueued(ctx context.Context, st *store.Store, q *M
 		if len(batch) < pageSize {
 			break
 		}
-		afterID = batch[len(batch)-1].ID
+		last := batch[len(batch)-1]
+		pageCursor = &store.ReadyTaskQueueCursor{
+			AfterTaskCreatedAt: last.TaskCreatedAt,
+			AfterTaskID:        last.Task.ID,
+			AfterEventRowID:    last.EventRowID,
+		}
 	}
 	return res, nil
 }
 
-// RunReconcileLoop invokes ReconcileReadyUserTasksNotQueued once immediately, then every tickInterval
+// RunReconcileLoop invokes ReconcileReadyTasksNotQueued once immediately, then every tickInterval
 // while ctx is active. When tickInterval <= 0, only the initial run executes.
 func RunReconcileLoop(ctx context.Context, st *store.Store, q *MemoryQueue, tickInterval time.Duration) {
 	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.RunReconcileLoop", "tick_interval", tickInterval.String())
 	runOnce := func() {
-		res, err := ReconcileReadyUserTasksNotQueued(ctx, st, q, 200)
+		res, err := ReconcileReadyTasksNotQueued(ctx, st, q, 200)
 		if err != nil {
-			slog.Warn("user task agent reconcile failed", "cmd", agentsLogCmd, "operation", "agents.reconcile_once", "err", err)
+			slog.Warn("ready task agent reconcile failed", "cmd", agentsLogCmd, "operation", "agents.reconcile_once", "err", err)
 			return
 		}
-		slog.Info("user task agent reconcile done", "cmd", agentsLogCmd, "operation", "agents.reconcile_once",
+		slog.Info("ready task agent reconcile done", "cmd", agentsLogCmd, "operation", "agents.reconcile_once",
 			"scanned", res.Scanned, "enqueued", res.Enqueued, "skipped_already_queued", res.SkippedAlreadyQueued,
 			"stopped_on_queue_full", res.StoppedOnQueueFull)
 	}

@@ -2,6 +2,7 @@ package store
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/gorm"
@@ -11,6 +12,9 @@ const storeLogCmd = "taskapi"
 
 type Store struct {
 	db *gorm.DB
+
+	notifyMu      sync.RWMutex
+	readyNotifier ReadyTaskNotifier
 }
 
 func NewStore(db *gorm.DB) *Store {

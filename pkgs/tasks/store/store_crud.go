@@ -75,6 +75,9 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 		}
 		return nil, fmt.Errorf("update task: %w", err)
 	}
+	if updated != nil && updated.Status == domain.StatusReady && origStatus != domain.StatusReady {
+		s.notifyReadyTask(ctx, *updated)
+	}
 	return updated, nil
 }
 

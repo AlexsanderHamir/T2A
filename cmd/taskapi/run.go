@@ -167,17 +167,19 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	handlerOpts := []handler.HandlerOption(nil)
-	var agentQueue *agents.MemoryQueue
-	if qcap := userTaskAgentQueueCap(); qcap > 0 {
-		agentQueue = agents.NewMemoryQueue(qcap)
-		handlerOpts = append(handlerOpts, handler.WithUserTaskAgentNotifier(agentQueue))
-		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", true, "cap", qcap)
-	} else {
-		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", false)
-	}
+	qcap := userTaskAgentQueueCap()
+	agentQueue := agents.NewMemoryQueue(qcap)
+	taskStore.SetReadyTaskNotifier(agentQueue)
+	iv := userTaskAgentReconcileInterval()
+	slog.Info("ready task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "cap", qcap)
+	slog.Info("ready task agent reconcile", "cmd", cmdName, "operation", "taskapi.agent_reconcile",
+		"tick_interval", iv.String(), "periodic", iv > 0)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep, handlerOpts...)))))))))
+	reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
+	defer reconcileCancel()
+	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
+
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))))
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
@@ -205,15 +207,6 @@ func run() int {
 		slog.Info("sse dev config", "cmd", cmdName, "operation", "taskapi.sse_dev", "enabled", false)
 	}
 	mux.Handle("/", api)
-
-	if agentQueue != nil {
-		reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
-		defer reconcileCancel()
-		iv := userTaskAgentReconcileInterval()
-		slog.Info("user task agent reconcile", "cmd", cmdName, "operation", "taskapi.agent_reconcile",
-			"tick_interval", iv.String(), "periodic", iv > 0)
-		go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
-	}
 
 	listenHost := resolveListenHost(*host)
 	ln, err := net.Listen("tcp", net.JoinHostPort(listenHost, *port))

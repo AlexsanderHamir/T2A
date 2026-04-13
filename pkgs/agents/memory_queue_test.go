@@ -8,6 +8,17 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+func TestMemoryQueue_NotifyReadyTask_rejectsCancelledContext(t *testing.T) {
+	q := NewMemoryQueue(2)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	err := q.NotifyReadyTask(ctx, t1)
+	if err == nil || !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v want context.Canceled", err)
+	}
+}
+
 func TestMemoryQueue_deliversTask(t *testing.T) {
 	q := NewMemoryQueue(2)
 	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}

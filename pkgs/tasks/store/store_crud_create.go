@@ -144,5 +144,8 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
 	}
+	if t.Status == domain.StatusReady {
+		s.notifyReadyTask(ctx, *t)
+	}
 	return t, nil
 }

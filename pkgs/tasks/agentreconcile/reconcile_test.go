@@ -11,7 +11,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-func TestReconcileReadyUserTasksNotQueued_enqueuesMissing(t *testing.T) {
+func TestReconcileReadyTasksNotQueued_enqueuesMissing(t *testing.T) {
 	ctx := context.Background()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
@@ -24,11 +24,11 @@ func TestReconcileReadyUserTasksNotQueued_enqueuesMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := q.NotifyUserTaskCreated(ctx, *t1); err != nil {
+	if err := q.NotifyReadyTask(ctx, *t1); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := agents.ReconcileReadyUserTasksNotQueued(ctx, st, q, 50)
+	res, err := agents.ReconcileReadyTasksNotQueued(ctx, st, q, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,14 +57,14 @@ func TestReconcileReadyUserTasksNotQueued_enqueuesMissing(t *testing.T) {
 	}
 }
 
-func TestReconcileReadyUserTasksNotQueued_nilStore(t *testing.T) {
-	_, err := agents.ReconcileReadyUserTasksNotQueued(context.Background(), nil, agents.NewMemoryQueue(2), 10)
+func TestReconcileReadyTasksNotQueued_nilStore(t *testing.T) {
+	_, err := agents.ReconcileReadyTasksNotQueued(context.Background(), nil, agents.NewMemoryQueue(2), 10)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
-func TestReconcileReadyUserTasksNotQueued_stopsOnFull(t *testing.T) {
+func TestReconcileReadyTasksNotQueued_stopsOnFull(t *testing.T) {
 	ctx := context.Background()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(1)
@@ -74,11 +74,11 @@ func TestReconcileReadyUserTasksNotQueued_stopsOnFull(t *testing.T) {
 	if _, err := st.Create(ctx, store.CreateTaskInput{Title: "b", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
-	if err := q.NotifyUserTaskCreated(ctx, domain.Task{ID: "00000000-0000-4000-8000-000000000001", Title: "stub", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}); err != nil {
+	if err := q.NotifyReadyTask(ctx, domain.Task{ID: "00000000-0000-4000-8000-000000000001", Title: "stub", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := agents.ReconcileReadyUserTasksNotQueued(ctx, st, q, 50)
+	res, err := agents.ReconcileReadyTasksNotQueued(ctx, st, q, 50)
 	if err != nil {
 		t.Fatal(err)
 	}

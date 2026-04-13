@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
@@ -66,20 +64,6 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.notifyChange(TaskCreated, t.ID)
 	if t.ParentID != nil && *t.ParentID != "" {
 		h.notifyChange(TaskUpdated, *t.ParentID)
-	}
-	if by == domain.ActorUser && h.userTaskAgents != nil {
-		if err := h.userTaskAgents.NotifyUserTaskCreated(r.Context(), *t); err != nil {
-			switch {
-			case errors.Is(err, agents.ErrAlreadyQueued):
-				// Extremely unlikely on fresh create; skip noise.
-			case errors.Is(err, agents.ErrQueueFull):
-				slog.Warn("user task agent notify failed", "cmd", httpLogCmd, "operation", op, "task_id", t.ID, "err", err,
-					"queue_full", true)
-			default:
-				slog.Warn("user task agent notify failed", "cmd", httpLogCmd, "operation", op, "task_id", t.ID, "err", err,
-					"queue_full", false)
-			}
-		}
 	}
 	writeJSON(w, r, op, http.StatusCreated, tree)
 }

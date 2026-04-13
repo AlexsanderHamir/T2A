@@ -12,7 +12,7 @@ type Task struct {
 	ID               string   `json:"id" gorm:"primaryKey"`
 	Title            string   `json:"title" gorm:"not null"`
 	InitialPrompt    string   `json:"initial_prompt" gorm:"type:text;not null"`
-	Status           Status   `json:"status" gorm:"not null;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
+	Status           Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
 	Priority         Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType         TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ParentID         *string  `json:"parent_id,omitempty" gorm:"index"`

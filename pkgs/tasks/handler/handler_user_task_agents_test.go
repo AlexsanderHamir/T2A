@@ -17,7 +17,9 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 	t.Parallel()
 	db := tasktestdb.OpenSQLite(t)
 	q := agents.NewMemoryQueue(8)
-	h := NewHandler(store.NewStore(db), NewSSEHub(), nil, WithUserTaskAgentNotifier(q))
+	st := store.NewStore(db)
+	st.SetReadyTaskNotifier(q)
+	h := NewHandler(st, NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
@@ -44,11 +46,13 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 	}
 }
 
-func TestAgentActorCreateDoesNotEnqueue(t *testing.T) {
+func TestAgentActorCreateEnqueuesWhenReady(t *testing.T) {
 	t.Parallel()
 	db := tasktestdb.OpenSQLite(t)
 	q := agents.NewMemoryQueue(8)
-	h := NewHandler(store.NewStore(db), NewSSEHub(), nil, WithUserTaskAgentNotifier(q))
+	st := store.NewStore(db)
+	st.SetReadyTaskNotifier(q)
+	h := NewHandler(st, NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
@@ -69,7 +73,11 @@ func TestAgentActorCreateDoesNotEnqueue(t *testing.T) {
 
 	select {
 	case got := <-q.Recv():
-		t.Fatalf("unexpected queue item %+v", got)
-	case <-time.After(150 * time.Millisecond):
+		q.AckAfterRecv(got.ID)
+		if got.Title != "from-agent" {
+			t.Fatalf("title %q", got.Title)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for queued task")
 	}
 }
