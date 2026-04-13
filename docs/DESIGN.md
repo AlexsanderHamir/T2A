@@ -280,6 +280,16 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 - `offset value too long` — raw `offset` query value exceeds **32** bytes.
 - `after_id too long` — raw `after_id` value exceeds **128** bytes.
 
+**`GET /tasks/{id}/events` — documented `400` JSON `error` strings** (query validation when any of `limit`, `before_seq`, or `after_seq` is present — i.e. keyset paging mode; task must exist or the handler returns **404** first):
+
+- `offset is not supported for task events; use before_seq or after_seq` — the query string includes a non-empty `offset` value.
+- `before_seq and after_seq cannot both be set` — both cursors are non-empty after trim.
+- `before_seq or after_seq too long` — trimmed `before_seq` or trimmed `after_seq` value exceeds **32** bytes.
+- `limit too long` — raw `limit` query value exceeds **32** bytes (abuse guard; not the same wording as `GET /tasks`).
+- `limit must be integer 0..200` — `limit` is present but not a decimal integer in **0–200** (includes values **> 200** and non-numeric values such as `nope`).
+- `before_seq must be a positive integer` — `before_seq` is non-empty after trim but not a valid integer **≥ 1**.
+- `after_seq must be a positive integer` — same for `after_seq`.
+
 **Checklist `PATCH` — documented `400` JSON `error` strings** (stable client-facing messages for the one-of body rule and store validation; malformed JSON still follows generic decode errors):
 
 - `send exactly one of text or done` — body included both `text` and `done`, or neither field was provided for the one-of choice.

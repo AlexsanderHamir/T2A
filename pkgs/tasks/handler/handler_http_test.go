@@ -309,7 +309,7 @@ func TestHTTP_get_task_event(t *testing.T) {
 	}
 }
 
-func TestHTTP_task_events_reject_overlong_query_params(t *testing.T) {
+func TestHTTP_task_events_query_validation_error_messages(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
@@ -332,33 +332,64 @@ func TestHTTP_task_events_reject_overlong_query_params(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	getErr := func(rawURL string) string {
+		t.Helper()
+		res, err := http.Get(rawURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(res.Body)
+		if cerr := res.Body.Close(); cerr != nil {
+			t.Fatal(cerr)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("%s: status %d body %s", rawURL, res.StatusCode, body)
+		}
+		var out jsonErrorBody
+		if err := json.Unmarshal(body, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.Error
+	}
+
+	base := srv.URL + "/tasks/" + created.ID + "/events"
 	long := strings.Repeat("1", maxTaskEventSeqParamBytes+1)
 
-	resBefore, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=5&before_seq=" + long)
-	if err != nil {
-		t.Fatal(err)
+	if got := getErr(base + "?limit=5&offset=0"); got != "offset is not supported for task events; use before_seq or after_seq" {
+		t.Fatalf("offset: %q", got)
 	}
-	defer resBefore.Body.Close()
-	if resBefore.StatusCode != http.StatusBadRequest {
-		t.Fatalf("before_seq too long: status %d want %d", resBefore.StatusCode, http.StatusBadRequest)
+	if got := getErr(base + "?limit=5&before_seq=1&after_seq=1"); got != "before_seq and after_seq cannot both be set" {
+		t.Fatalf("both cursors: %q", got)
 	}
-
-	resAfter, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=5&after_seq=" + long)
-	if err != nil {
-		t.Fatal(err)
+	if got := getErr(base + "?limit=5&before_seq=" + long); got != "before_seq or after_seq too long" {
+		t.Fatalf("long before_seq: %q", got)
 	}
-	defer resAfter.Body.Close()
-	if resAfter.StatusCode != http.StatusBadRequest {
-		t.Fatalf("after_seq too long: status %d want %d", resAfter.StatusCode, http.StatusBadRequest)
+	if got := getErr(base + "?limit=5&after_seq=" + long); got != "before_seq or after_seq too long" {
+		t.Fatalf("long after_seq: %q", got)
 	}
-
-	resLimit, err := http.Get(srv.URL + "/tasks/" + created.ID + "/events?limit=" + long)
-	if err != nil {
-		t.Fatal(err)
+	if got := getErr(base + "?limit=" + long); got != "limit too long" {
+		t.Fatalf("long limit: %q", got)
 	}
-	defer resLimit.Body.Close()
-	if resLimit.StatusCode != http.StatusBadRequest {
-		t.Fatalf("limit too long: status %d want %d", resLimit.StatusCode, http.StatusBadRequest)
+	if got := getErr(base + "?limit=999"); got != "limit must be integer 0..200" {
+		t.Fatalf("limit 999: %q", got)
+	}
+	if got := getErr(base + "?limit=nope&before_seq=1"); got != "limit must be integer 0..200" {
+		t.Fatalf("limit nope: %q", got)
+	}
+	if got := getErr(base + "?limit=10&before_seq=0"); got != "before_seq must be a positive integer" {
+		t.Fatalf("before_seq 0: %q", got)
+	}
+	if got := getErr(base + "?limit=10&after_seq=-1"); got != "after_seq must be a positive integer" {
+		t.Fatalf("after_seq -1: %q", got)
+	}
+	if got := getErr(base + "?limit=10&before_seq=nope"); got != "before_seq must be a positive integer" {
+		t.Fatalf("before_seq nope: %q", got)
+	}
+	if got := getErr(base + "?limit=10&after_seq=xyz"); got != "after_seq must be a positive integer" {
+		t.Fatalf("after_seq xyz: %q", got)
 	}
 }
 
