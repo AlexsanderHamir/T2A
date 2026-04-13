@@ -112,6 +112,7 @@ func (s *Store) ListRootForestAfter(ctx context.Context, limit int, afterID stri
 }
 
 func (s *Store) rootsToForest(ctx context.Context, roots []domain.Task) ([]TaskNode, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.rootsToForest")
 	if len(roots) == 0 {
 		return []TaskNode{}, nil
 	}

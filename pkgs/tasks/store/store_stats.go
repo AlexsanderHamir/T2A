@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
@@ -18,6 +19,7 @@ type TaskStats struct {
 
 // TaskStats returns global counters across all tasks.
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskStats")
 	type row struct {
 		Total        int64
 		Ready        int64

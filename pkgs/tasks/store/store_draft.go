@@ -124,6 +124,7 @@ func (s *Store) DeleteDraft(ctx context.Context, id string) error {
 }
 
 func deleteDraftByIDTx(tx *gorm.DB, id string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.deleteDraftByIDTx")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil
@@ -135,6 +136,7 @@ func deleteDraftByIDTx(tx *gorm.DB, id string) error {
 }
 
 func mapDBNotFound(err error) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.mapDBNotFound")
 	if err == nil {
 		return nil
 	}
