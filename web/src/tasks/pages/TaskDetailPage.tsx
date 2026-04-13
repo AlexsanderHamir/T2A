@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getTask, listChecklist, listTaskEvents } from "@/api";
+import { getTask, listChecklist } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
 import { SubtaskTree } from "../components/SubtaskTree";
@@ -12,12 +12,12 @@ import { TaskDetailSubtasksHead } from "../components/TaskDetailSubtasksHead";
 import { TaskDetailPromptSection } from "../components/TaskDetailPromptSection";
 import { TaskDetailUpdatesSection } from "../components/TaskDetailUpdatesSection";
 import { sanitizePromptHtml } from "../promptFormat";
-import { TASK_EVENTS_PAGE_SIZE } from "../paging";
 import { userAttention } from "../taskAttention";
 import { TaskDetailPageSkeleton } from "../components/taskLoadingSkeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
+import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
 import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
-import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
+import { taskQueryKeys } from "../queryKeys";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {
@@ -69,16 +69,8 @@ export function TaskDetailPage({ app }: Props) {
     deleteChecklistMutation,
   } = useTaskDetailChecklist(taskId, queryClient);
 
-  const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({
-    k: "head",
-  });
-
   useEffect(() => {
     navigatedAfterDelete.current = false;
-  }, [taskId]);
-
-  useEffect(() => {
-    setEventsCursor({ k: "head" });
   }, [taskId]);
 
   const taskQuery = useQuery({
@@ -87,25 +79,17 @@ export function TaskDetailPage({ app }: Props) {
     enabled: Boolean(taskId),
   });
 
+  const {
+    eventsQuery,
+    timelineEvents,
+    eventsTotal,
+    onEventsPagerPrev,
+    onEventsPagerNext,
+  } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
+
   const checklistQuery = useQuery({
     queryKey: taskQueryKeys.checklist(taskId),
     queryFn: ({ signal }) => listChecklist(taskId, { signal }),
-    enabled: Boolean(taskId) && taskQuery.isSuccess,
-  });
-
-  const eventsQuery = useQuery({
-    queryKey: taskQueryKeys.events(taskId, eventsCursor),
-    queryFn: ({ signal }) => {
-      const opts: {
-        signal?: AbortSignal;
-        limit: number;
-        beforeSeq?: number;
-        afterSeq?: number;
-      } = { signal, limit: TASK_EVENTS_PAGE_SIZE };
-      if (eventsCursor.k === "before") opts.beforeSeq = eventsCursor.seq;
-      if (eventsCursor.k === "after") opts.afterSeq = eventsCursor.seq;
-      return listTaskEvents(taskId, opts);
-    },
     enabled: Boolean(taskId) && taskQuery.isSuccess,
   });
 
@@ -184,13 +168,9 @@ export function TaskDetailPage({ app }: Props) {
   const checklistItems = checklistQuery.data?.items ?? [];
   const checklistDoneCount = checklistItems.filter((i) => i.done).length;
   const checklistTotal = checklistItems.length;
-  const events = eventsQuery.data?.events ?? [];
-  const eventsTotal = eventsQuery.data?.total ?? 0;
   const attention = userAttention(task, {
     approvalPending: eventsQuery.data?.approval_pending ?? false,
   });
-  /** API returns newest first when paged. */
-  const timelineEvents = events;
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
 
   return (
@@ -271,16 +251,8 @@ export function TaskDetailPage({ app }: Props) {
         eventsQuery={eventsQuery}
         timelineEvents={timelineEvents}
         eventsTotal={eventsTotal}
-        onEventsPagerPrev={() => {
-          if (events.length === 0) return;
-          const maxSeq = Math.max(...events.map((e) => e.seq));
-          setEventsCursor({ k: "after", seq: maxSeq });
-        }}
-        onEventsPagerNext={() => {
-          if (events.length === 0) return;
-          const minSeq = Math.min(...events.map((e) => e.seq));
-          setEventsCursor({ k: "before", seq: minSeq });
-        }}
+        onEventsPagerPrev={onEventsPagerPrev}
+        onEventsPagerNext={onEventsPagerNext}
       />
     </section>
   );

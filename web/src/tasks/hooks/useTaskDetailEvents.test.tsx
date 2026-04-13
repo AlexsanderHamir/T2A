@@ -90,13 +90,12 @@ describe("useTaskDetailEvents", () => {
 
     rerender({ id: TASK_B, en: true });
     await waitFor(() => {
-      expect(mockListEvents).toHaveBeenCalledWith(
-        TASK_B,
-        expect.not.objectContaining({
-          beforeSeq: expect.anything(),
-          afterSeq: expect.anything(),
-        }),
-      );
+      expect(mockListEvents).toHaveBeenCalled();
+      const last = mockListEvents.mock.calls.at(-1);
+      expect(last?.[0]).toBe(TASK_B);
+      const opts = last?.[1] as Record<string, unknown>;
+      expect(opts?.beforeSeq).toBeUndefined();
+      expect(opts?.afterSeq).toBeUndefined();
     });
   });
 
