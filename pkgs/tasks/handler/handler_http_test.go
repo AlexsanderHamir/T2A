@@ -1237,6 +1237,17 @@ func TestHTTP_list_bad_limit(t *testing.T) {
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d", res.StatusCode)
 	}
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out jsonErrorBody
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Error != "limit must be integer 0..200" {
+		t.Fatalf("error %q", out.Error)
+	}
 }
 
 func TestHTTP_get_task_rejects_overlong_path_id(t *testing.T) {
@@ -1254,37 +1265,60 @@ func TestHTTP_get_task_rejects_overlong_path_id(t *testing.T) {
 	}
 }
 
-func TestHTTP_list_overlong_query_params(t *testing.T) {
+func TestHTTP_list_query_validation_error_messages(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
+	getErr := func(rawURL string) string {
+		t.Helper()
+		res, err := http.Get(rawURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := io.ReadAll(res.Body)
+		if cerr := res.Body.Close(); cerr != nil {
+			t.Fatal(cerr)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("%s: status %d body %s", rawURL, res.StatusCode, b)
+		}
+		var out jsonErrorBody
+		if err := json.Unmarshal(b, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.Error
+	}
+
+	base := srv.URL + "/tasks"
+	if got := getErr(base + "?limit=999"); got != "limit must be integer 0..200" {
+		t.Fatalf("limit 999: %q", got)
+	}
+	if got := getErr(base + "?limit=nope"); got != "limit must be integer 0..200" {
+		t.Fatalf("limit nope: %q", got)
+	}
+	if got := getErr(base + "?offset=-1"); got != "offset must be non-negative integer" {
+		t.Fatalf("offset -1: %q", got)
+	}
+	id := "11111111-1111-4111-8111-111111111111"
+	if got := getErr(base + "?after_id=" + id + "&offset=0"); got != "offset cannot be used with after_id" {
+		t.Fatalf("after_id+offset: %q", got)
+	}
+	if got := getErr(base + "?after_id=not-a-uuid"); got != "after_id must be a UUID" {
+		t.Fatalf("bad uuid: %q", got)
+	}
 	long := strings.Repeat("1", maxListIntQueryParamBytes+1)
-	res, err := http.Get(srv.URL + "/tasks?limit=" + long)
-	if err != nil {
-		t.Fatal(err)
+	if got := getErr(base + "?limit=" + long); got != "limit value too long" {
+		t.Fatalf("long limit: %q", got)
 	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("overlong limit: status %d want %d", res.StatusCode, http.StatusBadRequest)
+	if got := getErr(base + "?offset=" + long); got != "offset value too long" {
+		t.Fatalf("long offset: %q", got)
 	}
-
-	res2, err := http.Get(srv.URL + "/tasks?offset=" + long)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res2.Body.Close()
-	if res2.StatusCode != http.StatusBadRequest {
-		t.Fatalf("overlong offset: status %d want %d", res2.StatusCode, http.StatusBadRequest)
-	}
-
 	longAfter := strings.Repeat("a", maxListAfterIDParamBytes+1)
-	res3, err := http.Get(srv.URL + "/tasks?after_id=" + longAfter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res3.Body.Close()
-	if res3.StatusCode != http.StatusBadRequest {
-		t.Fatalf("overlong after_id: status %d want %d", res3.StatusCode, http.StatusBadRequest)
+	if got := getErr(base + "?after_id=" + longAfter); got != "after_id too long" {
+		t.Fatalf("long after_id: %q", got)
 	}
 }
 

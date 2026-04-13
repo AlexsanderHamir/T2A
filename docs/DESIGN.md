@@ -270,6 +270,16 @@ There is **no authentication** on `/metrics`; restrict at the network or reverse
 | Partial update | `PATCH /tasks/{id}`      | At least one of: `title`, `initial_prompt`, `status`, `priority`, `checklist_inherit`, `parent_id`. JSON `null` for `parent_id` clears the parent (orphan). `checklist_inherit` true requires a parent. Setting status to `done` is rejected until every descendant is `done` and every checklist item for this task (including inherited definitions) has `done: true` for this task. Response is a task tree. When `REPO_ROOT` is configured, `initial_prompt` is checked for `@` mentions. |
 | Delete task    | `DELETE /tasks/{id}`     | 204, empty body. Empty `id` → 400. Rejected (400) if the task still has subtasks (`parent_id` pointing to this id).                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
+**`GET /tasks` — documented `400` JSON `error` strings** (query validation for `limit`, `offset`, and `after_id`; abuse guards match the byte caps in the list-tasks row above):
+
+- `limit must be integer 0..200` — `limit` is present but not a decimal integer in **0–200** (includes values **> 200** and non-numeric values such as `nope`).
+- `offset must be non-negative integer` — `offset` is present but negative or not a valid integer.
+- `offset cannot be used with after_id` — `after_id` is set and the query string also includes an `offset` key (even `offset=0`).
+- `after_id must be a UUID` — `after_id` is non-empty but not a valid UUID string.
+- `limit value too long` — raw `limit` query value exceeds **32** bytes.
+- `offset value too long` — raw `offset` query value exceeds **32** bytes.
+- `after_id too long` — raw `after_id` value exceeds **128** bytes.
+
 **Checklist `PATCH` — documented `400` JSON `error` strings** (stable client-facing messages for the one-of body rule and store validation; malformed JSON still follows generic decode errors):
 
 - `send exactly one of text or done` — body included both `text` and `done`, or neither field was provided for the one-of choice.
