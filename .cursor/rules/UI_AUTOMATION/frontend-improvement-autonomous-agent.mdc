@@ -5,7 +5,7 @@ description: >-
   with zero user input; ends with git commit and push of tracked changes.
   Invoke 20+ times consecutively to compound quality.
   Loads pattern files on-demand per priority tier. Enforces
-  16-ui-ux-iteration.mdc as the visual quality bar.
+  web-ui-engineering-bar.mdc as the engineering quality bar.
 globs:
   - "**/*.tsx"
   - "**/*.jsx"
@@ -29,7 +29,7 @@ This agent depends on a system of reference files. Know where everything lives:
 ```
 .cursor/rules/UI_AUTOMATION/
 ├── frontend-improvement-autonomous-agent.mdc   ← YOU (this file — the loop)
-├── 16-ui-ux-iteration.mdc                      ← design system: tokens, specs, quality bar
+├── web-ui-engineering-bar.mdc                 ← tokens, layout, a11y, motion, quality bar
 ├── data-fetching.mdc             ← fetch wrappers, abort, caching, loading/error/empty templates
 ├── skeleton-loading.mdc          ← skeleton components, shimmer CSS, crossfade transitions
 ├── animation-transitions.mdc     ← enter/exit/stagger/route/reduced-motion patterns
@@ -70,8 +70,8 @@ Execute phases **1 → 6** in strict order (including **PHASE 6 — COMMIT & PUS
 - If `.agent/` doesn't exist, create it. Add `.agent/` to `.gitignore`. This is Session 1.
 - If log exists, read the **last 3 sessions only** (not the entire file — preserve context window). The most recent `NEXT_SESSION_QUEUE` is your starting point.
 
-**Step 3 — Load the design system:**
-- Read `16-ui-ux-iteration.mdc` — but **only the sections relevant to your queue or scan**. If the queue says "P2 — missing skeletons on dashboard", read §8 (Motion) and §11 (Feedback/Loading). Don't ingest all 20 sections.
+**Step 3 — Load the engineering bar:**
+- Read `web-ui-engineering-bar.mdc` — but **only the sections relevant to your queue or scan**. If the queue says "P2 — missing skeletons on dashboard", read §7 (Motion) and §9 (Feedback/Loading). Don't read the entire bar every session.
 - If this is Session 1, skim the full file once to build awareness, then reference specific sections during execution.
 
 ---
@@ -117,8 +117,8 @@ Install Vitest (or project's declared runner). Create test config. Write one smo
 
 **The rule:** Every data-fetching component gets three states. No exceptions:
 1. **Loading** → skeleton matching real content layout (from `skeleton-loading.mdc`)
-2. **Error** → retry-able message using `--color-error-subtle` (from `16-ui-ux-iteration.mdc` §11)
-3. **Empty** → designed state with icon + headline + CTA (from `16-ui-ux-iteration.mdc` §11)
+2. **Error** → retry-able message using `--color-error-subtle` (from `web-ui-engineering-bar.mdc` §9)
+3. **Empty** → designed state with icon + headline + CTA (from `web-ui-engineering-bar.mdc` §9)
 
 ---
 
@@ -136,7 +136,7 @@ Install Vitest (or project's declared runner). Create test config. Write one smo
 **Before fixing, read:**
 - `animation-transitions.mdc` — enter/exit/stagger recipes, route transitions, reduced-motion
 - `skeleton-loading.mdc` — if replacing spinners with skeletons
-- `16-ui-ux-iteration.mdc` §7 (Interactive Components), §8 (Motion), §13 (Accessibility)
+- `web-ui-engineering-bar.mdc` §6 (Interactive components), §7 (Motion), §11 (Accessibility)
 
 ---
 
@@ -166,7 +166,7 @@ Install Vitest (or project's declared runner). Create test config. Write one smo
 5. Check `<head>` or layout root for font preloading, `font-display: swap`
 
 **Before fixing, read:**
-- `16-ui-ux-iteration.mdc` §18 (Performance & Perception)
+- `web-ui-engineering-bar.mdc` §14 (Performance and perception)
 
 ---
 
@@ -181,7 +181,7 @@ Install Vitest (or project's declared runner). Create test config. Write one smo
 5. Spot-check 3-5 components for spacing values not on 4px grid
 
 **Before fixing, read:**
-- `16-ui-ux-iteration.mdc` §2-§6 (Typography, Color, Spacing, Radius, Shadows)
+- `web-ui-engineering-bar.mdc` §2–§5 (Tokens through elevation)
 
 ---
 
@@ -222,7 +222,7 @@ Apply the fix. The plan is implicit in the diagnosis — don't waste tokens writ
 
 7. **No layout shift.** Reserve space with skeletons or `min-height`.
 
-8. **Accessible by default.** Per `16-ui-ux-iteration.mdc` §13:
+8. **Accessible by default.** Per `web-ui-engineering-bar.mdc` §11:
    - `<button>` not `<div onClick>`, `<nav>`, `<main>`, `<aside>`
    - `aria-label` on elements without visible text
    - `<label>` on every form input
@@ -317,14 +317,14 @@ Inviolable. Breaking any means the session failed.
 
 Quick reference — which files to read for each priority:
 
-| Priority | Pattern files to load | Design system sections |
+| Priority | Pattern files to load | Engineering bar sections |
 |----------|----------------------|----------------------|
 | P0 | `testing-recipes.mdc`, `error-boundaries.mdc` | — |
-| P1 | `data-fetching.mdc`, `skeleton-loading.mdc` | §11 |
-| P2 | `animation-transitions.mdc`, `skeleton-loading.mdc` | §7, §8, §13 |
+| P1 | `data-fetching.mdc`, `skeleton-loading.mdc` | §9 |
+| P2 | `animation-transitions.mdc`, `skeleton-loading.mdc` | §6, §7, §11 |
 | P3 | `component-architecture.mdc` | §3, §4 |
-| P4 | — | §18 |
-| P5 | — | §2–§6 |
+| P4 | — | §14 |
+| P5 | — | §2–§5 |
 | P6 | — | — |
 
 ---

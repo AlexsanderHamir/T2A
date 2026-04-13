@@ -19,7 +19,7 @@ Reference file for the frontend improvement agent. When fixing **P2 — UX & Int
 
 ## 1. TOKEN REFERENCE
 
-These are defined in `16-ui-ux-iteration.mdc` §8. Use them by name — never hardcode values.
+These are defined in `web-ui-engineering-bar.mdc` §7. Use them by name — never hardcode values.
 
 ```css
 /* Easing */

@@ -4,7 +4,7 @@ description: >-
   or "improve backend". Executes one orient → diagnose → fix → verify → log
   cycle per invocation with zero user input; ends with git commit and push
   of tracked changes. Loads pattern files on-demand per
-  priority tier. Enforces 17-backend-engineering-bar.mdc as the engineering
+  priority tier. Enforces backend-engineering-bar.mdc as the engineering
   quality bar for pkgs/, internal/, cmd/.
 globs:
   - "**/*.go"
@@ -22,7 +22,7 @@ You are an autonomous backend quality agent for this repository (`taskapi`, `pkg
 ```
 .cursor/rules/BACKEND_AUTOMATION/
 ├── backend-improvement-autonomous-agent.mdc   ← YOU (this file — the loop)
-├── 17-backend-engineering-bar.mdc             ← layering, errors, context, security bar
+├── backend-engineering-bar.mdc             ← layering, errors, context, security bar
 ├── http-handler-sse.mdc                       ← REST + SSE handler patterns, status codes
 ├── domain-store-contracts.mdc                 ← domain ↔ store boundaries, mapped errors
 ├── go-testing-recipes.mdc                     ← httptest, SQLite test DB, table-driven tests
@@ -65,7 +65,7 @@ Execute phases **1 → 6** in strict order (including **PHASE 6 — COMMIT & PUS
 
 **Step 3 — Load the engineering bar:**
 
-- Read `17-backend-engineering-bar.mdc` — **only sections** relevant to your queue or scan. On Session 1, skim once; thereafter pull targeted sections
+- Read `backend-engineering-bar.mdc` — **only sections** relevant to your queue or scan. On Session 1, skim once; thereafter pull targeted sections
 
 ---
 
@@ -106,7 +106,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 **Before fixing, read:**
 
 - `http-handler-sse.mdc`
-- `17-backend-engineering-bar.mdc` (boundary / JSON section)
+- `backend-engineering-bar.mdc` (boundary / JSON section)
 
 **Rule:** If you change a public route, body, or status code, **update `docs/DESIGN.md`** in the same session
 
@@ -142,7 +142,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 **Before fixing, read:**
 
 - `http-handler-sse.mdc` (SSE lifecycle)
-- `17-backend-engineering-bar.mdc` (concurrency section)
+- `backend-engineering-bar.mdc` (concurrency section)
 
 ---
 
@@ -174,7 +174,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 
 **Before fixing, read:**
 
-- `17-backend-engineering-bar.mdc` (security section)
+- `backend-engineering-bar.mdc` (security section)
 - `http-handler-sse.mdc` (input validation at boundary)
 
 ---
@@ -189,7 +189,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 2. Exported symbols without minimal godoc where the API is public
 3. Dead code or unused parameters surfaced by vet/linter
 
-**Before fixing, read:** Nothing extra — apply `17-backend-engineering-bar.mdc` hygiene rules
+**Before fixing, read:** Nothing extra — apply `backend-engineering-bar.mdc` hygiene rules
 
 ---
 
@@ -279,12 +279,12 @@ If the working tree is clean but you believe you shipped code changes, re-check 
 
 | Priority | Pattern files to load |
 |----------|------------------------|
-| P0 | `go-testing-recipes.mdc`, `17-backend-engineering-bar.mdc` |
-| P1 | `http-handler-sse.mdc`, `17-backend-engineering-bar.mdc` |
+| P0 | `go-testing-recipes.mdc`, `backend-engineering-bar.mdc` |
+| P1 | `http-handler-sse.mdc`, `backend-engineering-bar.mdc` |
 | P2 | `domain-store-contracts.mdc`, `persistence-gorm.mdc` |
-| P3 | `http-handler-sse.mdc`, `17-backend-engineering-bar.mdc` |
+| P3 | `http-handler-sse.mdc`, `backend-engineering-bar.mdc` |
 | P4 | `observability-logging.mdc` |
-| P5 | `17-backend-engineering-bar.mdc`, `http-handler-sse.mdc` |
+| P5 | `backend-engineering-bar.mdc`, `http-handler-sse.mdc` |
 | P6 | — |
 
 ---
