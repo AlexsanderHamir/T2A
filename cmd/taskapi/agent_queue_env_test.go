@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func TestUserTaskAgentQueueCap(t *testing.T) {
@@ -24,5 +25,24 @@ func TestUserTaskAgentQueueCap(t *testing.T) {
 	t.Setenv(userTaskAgentQueueCapEnv, "nope")
 	if userTaskAgentQueueCap() != 0 {
 		t.Fatal("invalid should disable")
+	}
+}
+
+func TestUserTaskAgentReconcileInterval(t *testing.T) {
+	t.Setenv(userTaskAgentReconcileIntervalEnv, "")
+	if userTaskAgentReconcileInterval() != 0 {
+		t.Fatal("unset should be 0")
+	}
+	t.Setenv(userTaskAgentReconcileIntervalEnv, "5m")
+	if userTaskAgentReconcileInterval() != 5*time.Minute {
+		t.Fatalf("got %v", userTaskAgentReconcileInterval())
+	}
+	t.Setenv(userTaskAgentReconcileIntervalEnv, "0")
+	if userTaskAgentReconcileInterval() != 0 {
+		t.Fatal("zero should disable periodic")
+	}
+	t.Setenv(userTaskAgentReconcileIntervalEnv, "nope")
+	if userTaskAgentReconcileInterval() != 0 {
+		t.Fatal("invalid should be 0")
 	}
 }

@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -14,8 +15,20 @@ func TestMemoryQueue_deliversTask(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := <-q.Recv()
+	q.AckAfterRecv(got.ID)
 	if got.ID != t1.ID || got.Title != t1.Title {
 		t.Fatalf("got %+v want %+v", got, t1)
+	}
+}
+
+func TestMemoryQueue_ErrAlreadyQueued(t *testing.T) {
+	q := NewMemoryQueue(2)
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	if err := q.NotifyUserTaskCreated(context.Background(), t1); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.NotifyUserTaskCreated(context.Background(), t1); !errors.Is(err, ErrAlreadyQueued) {
+		t.Fatalf("want ErrAlreadyQueued got %v", err)
 	}
 }
 
@@ -29,11 +42,13 @@ func TestMemoryQueue_fullReturnsErrQueueFull(t *testing.T) {
 	if err := q.NotifyUserTaskCreated(context.Background(), t2); err != ErrQueueFull {
 		t.Fatalf("want ErrQueueFull got %v", err)
 	}
-	<-q.Recv()
+	got1 := <-q.Recv()
+	q.AckAfterRecv(got1.ID)
 	if err := q.NotifyUserTaskCreated(context.Background(), t2); err != nil {
 		t.Fatal(err)
 	}
 	got := <-q.Recv()
+	q.AckAfterRecv(got.ID)
 	if got.ID != t2.ID {
 		t.Fatalf("got id %q", got.ID)
 	}

@@ -69,8 +69,16 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	if by == domain.ActorUser && h.userTaskAgents != nil {
 		if err := h.userTaskAgents.NotifyUserTaskCreated(r.Context(), *t); err != nil {
-			slog.Warn("user task agent notify failed", "cmd", httpLogCmd, "operation", op, "task_id", t.ID, "err", err,
-				"queue_full", errors.Is(err, agents.ErrQueueFull))
+			switch {
+			case errors.Is(err, agents.ErrAlreadyQueued):
+				// Extremely unlikely on fresh create; skip noise.
+			case errors.Is(err, agents.ErrQueueFull):
+				slog.Warn("user task agent notify failed", "cmd", httpLogCmd, "operation", op, "task_id", t.ID, "err", err,
+					"queue_full", true)
+			default:
+				slog.Warn("user task agent notify failed", "cmd", httpLogCmd, "operation", op, "task_id", t.ID, "err", err,
+					"queue_full", false)
+			}
 		}
 	}
 	writeJSON(w, r, op, http.StatusCreated, tree)

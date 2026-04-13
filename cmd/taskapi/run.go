@@ -168,8 +168,10 @@ func run() int {
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
 	handlerOpts := []handler.HandlerOption(nil)
+	var agentQueue *agents.MemoryQueue
 	if qcap := userTaskAgentQueueCap(); qcap > 0 {
-		handlerOpts = append(handlerOpts, handler.WithUserTaskAgentNotifier(agents.NewMemoryQueue(qcap)))
+		agentQueue = agents.NewMemoryQueue(qcap)
+		handlerOpts = append(handlerOpts, handler.WithUserTaskAgentNotifier(agentQueue))
 		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", true, "cap", qcap)
 	} else {
 		slog.Info("user task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "enabled", false)
@@ -203,6 +205,15 @@ func run() int {
 		slog.Info("sse dev config", "cmd", cmdName, "operation", "taskapi.sse_dev", "enabled", false)
 	}
 	mux.Handle("/", api)
+
+	if agentQueue != nil {
+		reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
+		defer reconcileCancel()
+		iv := userTaskAgentReconcileInterval()
+		slog.Info("user task agent reconcile", "cmd", cmdName, "operation", "taskapi.agent_reconcile",
+			"tick_interval", iv.String(), "periodic", iv > 0)
+		go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
+	}
 
 	listenHost := resolveListenHost(*host)
 	ln, err := net.Listen("tcp", net.JoinHostPort(listenHost, *port))

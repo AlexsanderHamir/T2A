@@ -13,4 +13,10 @@
 // Alternatives deferred here: a Postgres outbox or external broker (Redis, NATS) for durability and
 // multi-instance fan-out; webhook delivery; or consuming only GET /events (SSE carries task ids, not
 // full task rows, and is not ideal for offline workers).
+//
+// Reconciliation: after restarts or if the queue dropped work, ReconcileReadyUserTasksNotQueued
+// compares Postgres (ready tasks whose first audit event is user task_created) against the queue's
+// pending set and enqueues missing rows. taskapi runs this once at startup when the queue is enabled,
+// and optionally on a ticker (T2A_USER_TASK_AGENT_RECONCILE_INTERVAL). Consumers must call AckAfterRecv
+// after reading from Recv, or use Receive, so pending ids match the real buffer.
 package agents

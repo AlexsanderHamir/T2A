@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/internal/testdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 	t.Parallel()
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	q := agents.NewMemoryQueue(8)
 	h := NewHandler(store.NewStore(db), NewSSEHub(), nil, WithUserTaskAgentNotifier(q))
 	srv := httptest.NewServer(h)
@@ -32,6 +32,7 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 
 	select {
 	case got := <-q.Recv():
+		q.AckAfterRecv(got.ID)
 		if got.Title != "from-user" {
 			t.Fatalf("title %q", got.Title)
 		}
@@ -45,7 +46,7 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 
 func TestAgentActorCreateDoesNotEnqueue(t *testing.T) {
 	t.Parallel()
-	db := testdb.OpenSQLite(t)
+	db := tasktestdb.OpenSQLite(t)
 	q := agents.NewMemoryQueue(8)
 	h := NewHandler(store.NewStore(db), NewSSEHub(), nil, WithUserTaskAgentNotifier(q))
 	srv := httptest.NewServer(h)
