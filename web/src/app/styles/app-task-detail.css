@@ -831,9 +831,19 @@ button.task-detail-checklist-remove:focus-visible {
 }
 
 @container task-graph-viewport (max-width: var(--task-graph-cq-max)) {
+  .task-graph-edges path {
+    stroke: var(--border-chrome-soft);
+    stroke-width: 1.55;
+  }
+
   .task-graph-node {
     padding: 0.5rem 0.6rem;
     gap: 0.35rem;
+  }
+
+  .task-graph-node-link {
+    letter-spacing: -0.0125em;
+    line-height: 1.3;
   }
 
   .task-graph-node-meta {
