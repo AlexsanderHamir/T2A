@@ -1,0 +1,48 @@
+---
+description: >-
+  Structured logging (slog), metrics, and correlation patterns for taskapi.
+  Aligns with docs/OBSERVABILITY.md.
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# Observability and logging
+
+Primary reference: **`docs/OBSERVABILITY.md`**. This file is a **short implementation guide** for agents touching **`cmd/taskapi`**, **`pkgs/tasks/handler`**, and related packages.
+
+---
+
+## Structured logs (`log/slog`)
+
+- Use **constant attribute keys** (strings in one place or const) so log queries stay stable.
+- **Levels:** errors that need operator action → **`Error`**; expected client mistakes → usually **`Info`/`Warn`** at boundary without stack noise; **debug** only behind verbosity if the project supports it.
+- **Never log:** passwords, tokens, full `Authorization` headers, or raw **`DATABASE_URL`**. Redact PII unless explicitly required and documented.
+
+---
+
+## HTTP access and metrics
+
+- **Request metrics** should use **bounded cardinality** labels (route template or method+pattern), not raw URLs with IDs in path.
+- **Duration histograms** should cover the same routes the SLO cares about; adding a new significant endpoint → add or extend metrics in the same change when ops-relevant.
+- **Access logs:** method, path template, status, duration, correlation id (if present) — follow existing middleware patterns.
+
+---
+
+## Correlation
+
+- If the design specifies **request IDs** or trace fields, propagate them through **`context`** and attach to slog records consistently.
+
+---
+
+## Health and readiness
+
+- **`/health`**, **`/health/live`**, **`/health/ready`** responses must match **`docs/DESIGN.md`** and existing tests (database check naming, degraded behavior when DB is closed, etc.).
+
+---
+
+## Checklist
+
+1. New failure paths: **log once** with enough context to debug (task id, operation), not enough to exfiltrate secrets.
+2. Hot paths: avoid **per-row Debug** logging in tight loops.
+3. Metrics: verify **`GET /metrics`** still scrapes after middleware changes.

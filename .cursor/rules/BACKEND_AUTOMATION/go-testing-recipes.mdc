@@ -1,0 +1,76 @@
+---
+description: >-
+  Go testing recipes for this repo: httptest, SQLite test DB helpers,
+  table-driven tests, and constraints (no real Postgres/network by default).
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# Go testing recipes (T2A)
+
+---
+
+## Defaults (from `AGENTS.md` and project norms)
+
+- **`go test ./... -count=1`** must pass before finishing work.
+- Default tests **must not** require real Postgres, outbound network, or a running `taskapi` binary.
+- Use **`go vet ./...`** on touched code.
+
+---
+
+## HTTP handler tests
+
+- Use **`net/http/httptest`** — see **`pkgs/tasks/handler/handler_http_test.go`** for patterns:
+  - **`newTaskTestServer(t)`** — SQLite + store + handler + SSE hub
+  - **`newTaskTestServerWithStore`** when tests need direct store access
+  - **`newTaskTestServerWithRepo`** when `REPO_ROOT`-style behavior is under test
+- Always **`t.Helper()`** in constructors that set up DB or server.
+- Assert **status code**, then decode JSON into **small structs** or **`domain` types** as appropriate.
+- For error bodies, assert **stable `error` field** or documented shape — avoid brittle full-string equality on driver text.
+
+---
+
+## Store / DB tests
+
+- Open test DB with **`pkgs/tasks/internal/testdb.OpenSQLite(t)`** (or current equivalent in repo).
+- Run migrations or schema setup the helper expects; do not duplicate migration logic ad hoc in each test file unless an existing pattern does so.
+- Use **transactions or cleanup** patterns already in the package so tests do not leak state when run in parallel (`t.Parallel()` only when safe — often disabled for DB-heavy tests).
+
+---
+
+## Table-driven tests
+
+```go
+tests := []struct {
+	name       string
+	body       string
+	wantStatus int
+}{ /* ... */ }
+for _, tt := range tests {
+	t.Run(tt.name, func(t *testing.T) {
+		// arrange / act / assert
+	})
+}
+```
+
+- Put **shared setup** outside the loop; put **per-case** differences inside `t.Run`.
+
+---
+
+## Fakes and interfaces
+
+- When testing a component that needs **`store`**, prefer **real SQLite store** in this repo over heavy mocks unless isolation demands a small `interface{}` fake.
+- If you introduce an interface for testability, keep it **narrow** (one behavior) and close to the consumer.
+
+---
+
+## Integration / Postgres
+
+- If you add true Postgres integration tests, **gate with build tags** (e.g. `//go:build integration`) and document how to run in `docs/` or README — do not break default **`go test ./...`**.
+
+---
+
+## Race detector
+
+- For concurrency changes (SSE hub, mutex-protected maps), run **`go test -race ./...`** on affected packages when feasible; fix races before merge.

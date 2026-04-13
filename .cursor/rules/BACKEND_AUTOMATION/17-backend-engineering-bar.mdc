@@ -1,0 +1,99 @@
+---
+description: >-
+  Go / taskapi engineering quality bar: layering (cmd → handler → store →
+  domain), errors, context, HTTP boundaries, security, and testability. Use with
+  BACKEND_AUTOMATION agent or when editing pkgs/, internal/, cmd/.
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# Backend engineering bar (Go / taskapi)
+
+You ship production-grade Go: predictable HTTP behavior, honest errors, clear package boundaries, and tests that run without external services by default.
+
+**Repo map:** See `AGENTS.md`. **HTTP/SSE contracts:** `docs/DESIGN.md`. **Logs/metrics:** `docs/OBSERVABILITY.md`.
+
+---
+
+## 1. LAYERING
+
+- **`cmd/`** — wiring only: config, listen, signal handling, dependency construction. No business rules.
+- **`pkgs/tasks/handler/`** — HTTP/SSE: decode/encode, status codes, call store, map domain errors to responses, notify SSE when appropriate. No SQL.
+- **`pkgs/tasks/store/`** (and related) — persistence orchestration: validate inputs against domain rules where that is the single place of truth, call GORM/repo, map DB errors to **`domain.ErrNotFound`**, **`domain.ErrInvalidInput`**, etc.
+- **`pkgs/tasks/domain/`** — types, enums, invariants that do not depend on HTTP or GORM.
+- **`pkgs/repo/`** — read-only workspace access when `REPO_ROOT` is set; never trust caller paths without repo package guardrails.
+
+**Dependency direction:** inner packages must not import `handler`. `domain` must not import `store` or `postgres`.
+
+---
+
+## 2. ERRORS
+
+- Use **`fmt.Errorf("...: %w", err)`** when wrapping; callers may use `errors.Is` / `errors.As`.
+- At the **HTTP boundary**, map known domain/store errors to stable JSON and correct status codes (e.g. not found → 404 with documented body shape).
+- Do not leak internal details (SQL driver messages, file paths) to clients in production error JSON.
+- **`panic`** is not a control-flow tool on the request path; use `http.Server` recovery middleware where appropriate, but prefer explicit error returns.
+
+---
+
+## 3. CONTEXT
+
+- The first parameter of functions that do I/O or respect deadlines should be **`context.Context`**.
+- On the request path, prefer **`r.Context()`** over `context.Background()` so cancellation propagates to the store/DB when the client disconnects (where the driver supports it).
+
+---
+
+## 4. HTTP / JSON BOUNDARY
+
+- Set **`Content-Type`** correctly for JSON bodies; reject unknown JSON fields when the API promises strict decoding (match existing handler behavior and docs).
+- Use consistent **success and error** envelope shapes documented in `docs/DESIGN.md`.
+- After successful writes that should drive live UI, ensure **SSE notification** behavior matches design (same process, in-memory hub — document limitations).
+- **SSE:** correct headers, flush behavior, and graceful handling of slow clients where implemented.
+
+---
+
+## 5. SECURITY AND ROBUSTNESS
+
+- **Parameterized queries** via GORM; never format untrusted input into raw SQL strings.
+- **Path and query validation:** reject absurd limits, overlong IDs, and malformed filters with **400**; distinguish from **404**.
+- **Rate limits and request size:** respect configured limits; document env vars when adding new ones.
+- **Headers:** maintain baseline security headers expected by tests and deployment guides.
+- **Secrets:** never log tokens, passwords, or `DATABASE_URL`; redact or omit.
+
+---
+
+## 6. CONCURRENCY
+
+- Shared maps or subscriber registries (**SSE hub**, caches) need explicit **synchronization** (mutex or channel design); document invariants.
+- Long-lived **goroutines** must exit on context cancellation or server shutdown.
+- Avoid data races: run **`go test -race`** when you touch concurrent code paths (or note in log if race detector is deferred to CI).
+
+---
+
+## 7. OBSERVABILITY
+
+- Use structured **`log/slog`** (or project standard) with stable attribute keys; include useful correlation where the design specifies it.
+- **Metrics:** keep cardinality bounded; label dimensions should not include unbounded user strings (use path template or route name, not raw URL).
+
+---
+
+## 8. TESTABILITY
+
+- Table-driven tests where there are multiple cases; use **`t.Helper()`** in test constructors.
+- Prefer **`httptest.Server`** for HTTP-level assertions; use the project's **`testdb.OpenSQLite`** (or equivalent) for store/handler integration without Postgres unless explicitly building tagged integration tests.
+- Tests must be **deterministic**: no wall-clock flakiness; use injected clocks or tight tolerances only when unavoidable and documented.
+
+---
+
+## 9. HYGIENE
+
+- **`gofmt`** on every touched file.
+- Exported identifiers need **godoc** when they are part of a public API surface.
+- Remove dead code and misleading comments when you touch a file; do not expand scope to repo-wide cleanups in the same change as a feature fix unless the session goal is hygiene.
+
+---
+
+## 10. WHEN IN DOUBT
+
+Ask: **Would this change surprise the SPA or an API client?** If yes, update **`docs/DESIGN.md`** (and **`docs/WEB.md`** if the web client must change) in the same change.

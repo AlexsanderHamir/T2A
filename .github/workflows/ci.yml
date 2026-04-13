@@ -34,6 +34,9 @@ jobs:
       - name: Run backend tests
         run: go test ./... -count=1
 
+      - name: Per-function slog audit (funclogmeasure)
+        run: go run ./cmd/funclogmeasure -enforce
+
   web:
     runs-on: ubuntu-latest
     steps:

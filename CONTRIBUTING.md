@@ -22,7 +22,7 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 
 ## Before opening a PR
 
-From the repo root, run the full bar (same as CI):
+From the repo root, run the full bar (covers what CI enforces across the **backend** and **web** jobs in `.github/workflows/ci.yml`):
 
 ```bash
 (cd web && npm ci)   # first time or after lockfile changes

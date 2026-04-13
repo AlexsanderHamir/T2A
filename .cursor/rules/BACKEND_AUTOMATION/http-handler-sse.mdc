@@ -1,0 +1,61 @@
+---
+description: >-
+  HTTP + SSE handler patterns for taskapi: httptest, status codes, JSON decode
+  strictness, middleware, and write-path → notify semantics. Companion to
+  docs/DESIGN.md.
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# HTTP and SSE handler patterns
+
+Authoritative routes, bodies, and query parameters live in **`docs/DESIGN.md`**. This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** (and related middleware in the same area).
+
+---
+
+## REST handlers
+
+- **Method + path** registration must match the design doc (including subtle choices like `GET /health/ready` vs live checks).
+- **Status codes:** create → **201** with body where documented; idempotent deletes → **204**; validation failures → **400** with stable error JSON; missing resources → **404**; conflicts → **409** only if documented.
+- **Decode:** reject malformed JSON and unknown fields if the API specifies strict JSON (follow existing patterns in `handler` tests such as unknown field rejection).
+- **Encode:** use shared JSON helpers where the package provides them; set **`Content-Type: application/json`** for JSON responses.
+- **Request body:** always **`defer res.Body.Close()`** (or equivalent) on outbound client calls in tests; in handlers, read with limits if accepting large bodies.
+
+---
+
+## SSE (`GET /events`)
+
+- Response must use **SSE headers** (`Content-Type: text/event-stream`, caching disabled, appropriate **`Cache-Control`**) per design.
+- **Heartbeat / keep-alive** behavior should match docs and tests.
+- **Backpressure:** slow clients must not block the whole server; hub design should drop or disconnect according to existing semantics — do not change fan-out guarantees without updating docs.
+- **Context cancellation:** when the request context is done, subscriber goroutines and registrations must clean up.
+
+---
+
+## Write path → notify
+
+- After a successful **mutating** operation that should surface to subscribers, follow the established **`notifyChange`** (or equivalent) pattern so UI/agents can refetch.
+- Ordering: **persist first**, then notify, unless design explicitly documents otherwise (avoid announcing changes that are not committed).
+
+---
+
+## Middleware chain
+
+- When wrapping the handler (**recovery**, **access log**, **metrics**), preserve handler behavior and header expectations covered by tests (e.g. metrics scrape, security headers).
+- **Panic recovery** should log stack or request id as appropriate; return **500** without leaking internals to clients.
+
+---
+
+## Testing snippets (align with repo)
+
+- Construct servers with **`httptest.NewServer`** wrapping the same mux/handler production uses (see **`handler_http_test.go`** helpers like `newTaskTestServer`).
+- For metrics tests, mirror the **mux + middleware** arrangement used in existing tests so `GET /metrics` remains reachable and labeled correctly.
+
+---
+
+## Checklist before merging handler changes
+
+1. `go test ./pkgs/tasks/handler/... -count=1` (and broader `./...` if shared types changed)
+2. `docs/DESIGN.md` updated if any observable HTTP or SSE behavior changed
+3. New failure modes have **structured logs** at appropriate level (not noisy on hot paths)

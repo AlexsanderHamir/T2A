@@ -291,6 +291,7 @@ func resolveSSETestTickerInterval() time.Duration {
 }
 
 func resolveListenHost(flagHost string) string {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.resolveListenHost")
 	s := strings.TrimSpace(flagHost)
 	if s == "" {
 		s = strings.TrimSpace(os.Getenv("T2A_LISTEN_HOST"))
@@ -313,6 +314,7 @@ func emitTaskAPIFileLoggingConfig(minLevel slog.Level) {
 // If flagLevel is non-empty after TrimSpace, it wins; otherwise T2A_LOG_LEVEL is used.
 // When both are empty, the default is info (no Debug trace lines; lighter for production).
 func resolveTaskAPILogLevel(flagLevel string) (slog.Level, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.resolveTaskAPILogLevel")
 	s := strings.TrimSpace(flagLevel)
 	if s == "" {
 		s = strings.TrimSpace(os.Getenv("T2A_LOG_LEVEL"))

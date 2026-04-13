@@ -1,0 +1,48 @@
+---
+description: >-
+  Persistence notes for taskapi: GORM usage, SQLite tests vs Postgres prod,
+  transactions, and error mapping at the DB boundary.
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# Persistence (GORM / SQL)
+
+---
+
+## Production vs tests
+
+- **Production** targets **PostgreSQL** per `docs/DESIGN.md` and `DATABASE_URL`.
+- **Default tests** use **SQLite** via **`testdb.OpenSQLite`** — keep SQL compatible with both where the project already does, or isolate dialect-specific code clearly.
+
+---
+
+## GORM practices
+
+- Prefer **explicit column** scans and model structs aligned with **`domain`** types; avoid anonymous maps crossing package boundaries.
+- Use **`context.Context`** on DB calls when signatures allow.
+- **Transactions:** group create + audit append + related rows in a single transaction when the design requires atomicity; use repo patterns already in **`pkgs/tasks/store`** / **`postgres`**.
+- **Migrations:** follow the repo's established migration path (`pkgs/tasks/postgres` / `cmd` tooling); document new env flags or migration steps in **`docs/DESIGN.md`** or **`README.md`** when users must act.
+
+---
+
+## Error mapping
+
+- Translate **GORM `ErrRecordNotFound`** and driver-specific not-found cases to **`domain.ErrNotFound`** in the store layer (not scattered in handlers).
+- **Unique violations** → **`domain.ErrInvalidInput`** or a dedicated conflict error if the API documents **409**.
+- **Timeout / connection** errors → log and return **500** (or **503** if readiness should flip — match existing health semantics).
+
+---
+
+## Queries
+
+- **No string-concatenated SQL** with user input. Use **parameterized** queries, GORM chain methods, or vetted raw SQL with bound parameters.
+- **Pagination:** enforce **max limit** at handler or store per API contract; use indexed columns for ordering.
+
+---
+
+## Performance (when touching hot queries)
+
+- Add or reuse **indexes** via migrations when introducing new filters or sort orders on large tables.
+- Avoid **N+1** loads: preload or join where the handler needs nested data — verify with tests and, when appropriate, explain in commit message.

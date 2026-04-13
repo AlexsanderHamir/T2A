@@ -94,6 +94,8 @@ Or: `go run ./cmd/funclogmeasure` with optional flags:
 | `-max N` | Cap printed violation lines (default 200; `0` = unlimited). |
 | `-include-tool` | Include `cmd/funclogmeasure` in the scan. |
 
+**CI and `scripts/check`:** after a successful `go test ./...`, `./scripts/check.sh` and `.\scripts\check.ps1` run `go run ./cmd/funclogmeasure -enforce` unless **`CHECK_SKIP_FUNCLOG=1`** is set (local escape hatch only; GitHub Actions always enforces).
+
 ### B. Test coverage (dynamic)
 
 | OS | Command |

@@ -1,0 +1,47 @@
+---
+description: >-
+  Domain vs store responsibilities, error mapping (ErrNotFound,
+  ErrInvalidInput), and audit/event expectations for pkgs/tasks.
+globs:
+  - "**/*.go"
+alwaysApply: false
+---
+
+# Domain and store contracts
+
+---
+
+## Domain (`pkgs/tasks/domain`)
+
+- Holds **task model**, status/priority enums, and validation that is **storage-agnostic**.
+- Defines sentinel errors consumed by **`store`** and **`handler`**, e.g. **`ErrNotFound`**, **`ErrInvalidInput`** — names and meanings must stay stable for HTTP mapping.
+- No imports from **`database/sql`**, GORM, or HTTP packages.
+
+---
+
+## Store (`pkgs/tasks/store` and persistence adapters)
+
+- **Single place** for transactional rules: create/update/delete and append-only **`task_events`** (or equivalent) per **`docs/DESIGN.md`**.
+- **Map driver errors** to domain errors: not found → **`domain.ErrNotFound`**; constraint / validation → **`domain.ErrInvalidInput`** (or dedicated errors if design adds them). Handlers should not inspect `pq` or SQLite error strings directly unless isolated in store.
+- **Input validation:** reject impossible state transitions and bad data before write; prefer returning **`domain.ErrInvalidInput`** with clear cause for 400 responses.
+- **IDs and timestamps:** follow existing UUID and time semantics; do not fork conventions without migration plan.
+
+---
+
+## Handler consumption
+
+- Handlers call **store** methods; they **switch on errors** using `errors.Is` to pick HTTP status and JSON error message.
+- Do not **re-validate** the same business rule in handler and store unless one layer is purely HTTP-shaped (e.g. query param parsing) and the other is domain-shaped.
+
+---
+
+## Audit / events
+
+- Any user-visible field change that the design says is audited must produce the correct **event type** and payload shape for **`task_events`** and downstream SSE consumers.
+
+---
+
+## Tests
+
+- Store tests use **`testdb.OpenSQLite`** (or project helper) — no real Postgres in default `go test`.
+- When asserting errors, use **`errors.Is`** against domain sentinels, not string contains on `err.Error()` unless the test is explicitly about a user-facing message.

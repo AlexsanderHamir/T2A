@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Full local verification: gofmt (check), go vet, go test, web npm test + build.
+# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce, web npm test + build.
 # Usage from repo root: ./scripts/check.sh
 # Skip web: CHECK_SKIP_WEB=1 ./scripts/check.sh
+# Skip per-function slog audit: CHECK_SKIP_FUNCLOG=1 ./scripts/check.sh
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo"
@@ -19,6 +20,11 @@ go vet ./...
 
 echo "go test..."
 go test ./... -count=1
+
+if [[ "${CHECK_SKIP_FUNCLOG:-}" != "1" ]]; then
+  echo "funclogmeasure (-enforce)..."
+  go run ./cmd/funclogmeasure -enforce
+fi
 
 if [[ "${CHECK_SKIP_WEB:-}" == "1" ]]; then
   echo "check OK (web skipped)"
