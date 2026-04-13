@@ -371,7 +371,7 @@ Repo routes use JSON for both success and error bodies, unlike task CRUD errors 
 
 Connected clients receive `text/event-stream`. The stream tells them a task id changed so they can call REST again for full rows.
 
-Responses also set `Cache-Control: no-cache`, `Connection: keep-alive`, and `X-Accel-Buffering: no` so reverse proxies (e.g. nginx) disable response buffering for SSE.
+Responses also set `Cache-Control: no-store` (same baseline as JSON API responses), `Connection: keep-alive`, and `X-Accel-Buffering: no` so reverse proxies (e.g. nginx) disable response buffering for SSE.
 
 Failure modes: if the handler was constructed with a nil hub, the server returns 503 `event stream unavailable`. If the `ResponseWriter` does not implement `http.Flusher`, the server returns 500 `streaming unsupported` (unusual with `net/http` defaults).
 

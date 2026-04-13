@@ -2,7 +2,9 @@ package handler
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,6 +42,41 @@ func TestSSEHub_Publish_nonBlockingSlowConsumer(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		h.Publish(TaskChangeEvent{Type: TaskUpdated, ID: "x"})
 	}
+}
+
+func TestHTTP_SSE_responseHeaders(t *testing.T) {
+	db := testdb.OpenSQLite(t)
+	h := NewHandler(store.NewStore(db), NewSSEHub(), nil)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/events", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	if got := res.Header.Get("Content-Type"); got != "text/event-stream" {
+		t.Errorf("Content-Type = %q want text/event-stream", got)
+	}
+	if got := res.Header.Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q want no-store (docs/DESIGN.md SSE)", got)
+	}
+	if got := res.Header.Get("Connection"); got != "keep-alive" {
+		t.Errorf("Connection = %q want keep-alive", got)
+	}
+	if got := res.Header.Get("X-Accel-Buffering"); got != "no" {
+		t.Errorf("X-Accel-Buffering = %q want no", got)
+	}
+	_, _ = io.Copy(io.Discard, res.Body)
 }
 
 func TestHTTP_SSE_receivesEventAfterCreate(t *testing.T) {
