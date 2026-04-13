@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -11,6 +12,7 @@ import (
 const maxTaskPathIDBytes = 128
 
 func parseTaskPathID(id string) (string, error) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseTaskPathID")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -22,6 +24,7 @@ func parseTaskPathID(id string) (string, error) {
 }
 
 func parseTaskPathItemID(id string) (string, error) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseTaskPathItemID")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return "", fmt.Errorf("%w: item id", domain.ErrInvalidInput)

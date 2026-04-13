@@ -11,15 +11,18 @@ import (
 const authorizationHeader = "Authorization"
 
 func apiTokenConfigured() string {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.apiTokenConfigured")
 	return strings.TrimSpace(os.Getenv("T2A_API_TOKEN"))
 }
 
 // APIAuthEnabled reports whether API bearer-token auth is enabled.
 func APIAuthEnabled() bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.APIAuthEnabled")
 	return apiTokenConfigured() != ""
 }
 
 func omitAPIAuth(r *http.Request) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitAPIAuth")
 	if r.Method != http.MethodGet {
 		return false
 	}
@@ -32,6 +35,7 @@ func omitAPIAuth(r *http.Request) bool {
 }
 
 func hasValidBearerToken(rawAuth, configuredToken string) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.hasValidBearerToken")
 	rawAuth = strings.TrimSpace(rawAuth)
 	if rawAuth == "" {
 		return false

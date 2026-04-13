@@ -20,6 +20,23 @@ func TestShouldSkipSlogRequirement_repoIsMentionDelimiter(t *testing.T) {
 	}
 }
 
+func TestShouldSkipSlogRequirement_handlerHotHelpers(t *testing.T) {
+	for _, tt := range []struct {
+		pkg, fn string
+	}{
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "applyAPISecurityHeaders"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "ServerVersion"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.WriteHeader"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.Write"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.Flush"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.statusCode"},
+	} {
+		if !shouldSkipSlogRequirement(tt.pkg, tt.fn) {
+			t.Fatalf("expected skip %s.%s", tt.pkg, tt.fn)
+		}
+	}
+}
+
 func TestMiniMod_typeResolvedSlog(t *testing.T) {
 	dir := filepath.Join("testdata", "minimod")
 	rep, err := buildReport(dir, analyzeOpts{includeTool: true})

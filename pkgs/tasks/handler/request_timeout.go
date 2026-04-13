@@ -15,6 +15,7 @@ const (
 )
 
 func requestTimeoutConfigured() time.Duration {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.requestTimeoutConfigured")
 	raw := strings.TrimSpace(os.Getenv(requestTimeoutEnv))
 	if raw == "" {
 		return defaultRequestTimeout
@@ -32,10 +33,12 @@ func requestTimeoutConfigured() time.Duration {
 // RequestTimeout returns the effective request execution timeout.
 // Default is 30s, invalid values fall back to 30s, and 0 disables.
 func RequestTimeout() time.Duration {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.RequestTimeout")
 	return requestTimeoutConfigured()
 }
 
 func omitRequestTimeout(r *http.Request) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitRequestTimeout")
 	return r.Method == http.MethodGet && r.URL.Path == "/events"
 }
 

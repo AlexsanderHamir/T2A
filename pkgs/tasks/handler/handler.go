@@ -62,15 +62,19 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
 }
 
 func health(w http.ResponseWriter, r *http.Request) {
-	writeLiveness(w, r, "health")
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health")
+	const op = "health"
+	r = withCallRoot(r, op)
+	debugHTTPRequest(r, op)
+	writeJSON(w, r, op, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"version": ServerVersion(),
+	})
 }
 
 func healthLive(w http.ResponseWriter, r *http.Request) {
-	writeLiveness(w, r, "health.live")
-}
-
-func writeLiveness(w http.ResponseWriter, r *http.Request, op string) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler."+op)
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health.live")
+	const op = "health.live"
 	r = withCallRoot(r, op)
 	debugHTTPRequest(r, op)
 	writeJSON(w, r, op, http.StatusOK, map[string]string{
@@ -192,6 +196,7 @@ func setAPISecurityHeaders(w http.ResponseWriter) {
 // Scrapers ignore these headers; they help when /metrics is opened in a browser.
 // Per-scrape debug trace is omitted so metrics polling does not flood logs at level debug.
 func WrapPrometheusHandler(next http.Handler) http.Handler {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WrapPrometheusHandler")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		applyAPISecurityHeaders(w)
 		next.ServeHTTP(w, r)

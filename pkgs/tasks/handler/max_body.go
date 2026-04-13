@@ -14,6 +14,7 @@ const defaultMaxRequestBodyBytes = 1 << 20 // 1 MiB
 // MaxRequestBodyBytesConfigured returns the max request body size from T2A_MAX_REQUEST_BODY_BYTES.
 // Unset defaults to 1 MiB. 0 means no limit (explicit opt-out). Invalid or negative values use the default.
 func MaxRequestBodyBytesConfigured() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.MaxRequestBodyBytesConfigured")
 	s := strings.TrimSpace(os.Getenv(maxRequestBodyEnv))
 	if s == "" {
 		return defaultMaxRequestBodyBytes

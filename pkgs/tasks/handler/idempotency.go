@@ -68,6 +68,7 @@ var (
 )
 
 func idempotencyTTLConfigured() time.Duration {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyTTLConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_TTL"))
 	if s == "" {
 		return defaultIdempotencyTTL
@@ -83,6 +84,7 @@ func idempotencyTTLConfigured() time.Duration {
 }
 
 func idempotencyMaxEntriesConfigured() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMaxEntriesConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_ENTRIES"))
 	if s == "" {
 		return defaultIdempotencyMaxEntries
@@ -95,6 +97,7 @@ func idempotencyMaxEntriesConfigured() int {
 }
 
 func idempotencyMaxBytesConfigured() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMaxBytesConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_BYTES"))
 	if s == "" {
 		return defaultIdempotencyMaxBytes
@@ -109,16 +112,19 @@ func idempotencyMaxBytesConfigured() int {
 // IdempotencyTTL returns the effective in-process idempotency cache TTL from
 // T2A_IDEMPOTENCY_TTL (same as WithIdempotency): default 24h, 0 disables caching.
 func IdempotencyTTL() time.Duration {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.IdempotencyTTL")
 	return idempotencyTTLConfigured()
 }
 
 // IdempotencyCacheLimits returns effective in-process idempotency cache limits.
 // 0 means disabled for the respective bound.
 func IdempotencyCacheLimits() (maxEntries int, maxBytes int) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.IdempotencyCacheLimits")
 	return idempotencyMaxEntriesConfigured(), idempotencyMaxBytesConfigured()
 }
 
 func idempotencyMutatingMethod(method string) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMutatingMethod")
 	switch method {
 	case http.MethodPost, http.MethodPatch, http.MethodDelete:
 		return true
@@ -128,6 +134,7 @@ func idempotencyMutatingMethod(method string) bool {
 }
 
 func shouldCacheIdempotentStatus(code int) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.shouldCacheIdempotentStatus")
 	switch code {
 	case http.StatusOK, http.StatusCreated, http.StatusNoContent:
 		return true
@@ -137,6 +144,7 @@ func shouldCacheIdempotentStatus(code int) bool {
 }
 
 func cloneIdempotentResponseHeaders(src http.Header) http.Header {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.cloneIdempotentResponseHeaders")
 	dst := make(http.Header)
 	for _, k := range []string{"Content-Type", "X-Content-Type-Options"} {
 		if v := src.Get(k); v != "" {
@@ -147,6 +155,7 @@ func cloneIdempotentResponseHeaders(src http.Header) http.Header {
 }
 
 func captureIdempotentResponse(rec *httptest.ResponseRecorder) idempotencyCaptured {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.captureIdempotentResponse")
 	status := rec.Code
 	if status == 0 {
 		status = http.StatusOK
@@ -159,6 +168,7 @@ func captureIdempotentResponse(rec *httptest.ResponseRecorder) idempotencyCaptur
 }
 
 func replayIdempotentResponse(w http.ResponseWriter, cap idempotencyCaptured) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.replayIdempotentResponse")
 	setAPISecurityHeaders(w)
 	if v := cap.headers.Get("Content-Type"); v != "" {
 		w.Header().Set("Content-Type", v)
@@ -170,6 +180,7 @@ func replayIdempotentResponse(w http.ResponseWriter, cap idempotencyCaptured) {
 }
 
 func (c *idempotencyCache) get(key string) (idempotencyCaptured, bool) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.get")
 	now := time.Now()
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -214,6 +225,7 @@ func (c *idempotencyCache) set(key string, cap idempotencyCaptured, until time.T
 }
 
 func (c *idempotencyCache) pruneLocked(now time.Time) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.pruneLocked")
 	for k, e := range c.items {
 		if now.After(e.until) {
 			c.totalBytes -= e.size
@@ -226,6 +238,7 @@ func (c *idempotencyCache) pruneLocked(now time.Time) {
 }
 
 func (c *idempotencyCache) enforceLimitsLocked() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.enforceLimitsLocked")
 	maxEntries, maxBytes := IdempotencyCacheLimits()
 	if maxEntries == 0 && maxBytes == 0 {
 		return 0
@@ -261,6 +274,7 @@ func (c *idempotencyCache) enforceLimitsLocked() int {
 
 // clearIdempotencyStateForTest resets in-memory idempotency state (handler package tests only).
 func clearIdempotencyStateForTest() {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.clearIdempotencyStateForTest")
 	idempCache.mu.Lock()
 	idempCache.items = make(map[string]idempotencyEntry)
 	idempCache.sets = 0
@@ -301,6 +315,7 @@ func bodyFingerprintFromRequest(r *http.Request, w http.ResponseWriter) (string,
 }
 
 func prepareIdempotencyRequest(r *http.Request, w http.ResponseWriter) (idempotencyPreparedRequest, bool) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.prepareIdempotencyRequest")
 	rawKey := strings.TrimSpace(r.Header.Get(idempotencyHeader))
 	if rawKey == "" {
 		return idempotencyPreparedRequest{}, false

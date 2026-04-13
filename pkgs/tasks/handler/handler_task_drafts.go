@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.listTaskDrafts")
 	const op = "task_drafts.list"
 	r = withCallRoot(r, op)
 	limit := 50
@@ -34,6 +36,7 @@ func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.saveTaskDraft")
 	const op = "task_drafts.save"
 	r = withCallRoot(r, op)
 	var body taskDraftSaveJSON
@@ -50,6 +53,7 @@ func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.getTaskDraft")
 	const op = "task_drafts.get"
 	r = withCallRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
@@ -66,6 +70,7 @@ func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteTaskDraft(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.deleteTaskDraft")
 	const op = "task_drafts.delete"
 	r = withCallRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))

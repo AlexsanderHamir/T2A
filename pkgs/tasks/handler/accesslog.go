@@ -63,6 +63,7 @@ func WithAccessLog(h http.Handler) http.Handler {
 }
 
 func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Request {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.resolveAndAttachRequestID")
 	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 	if id == "" {
 		id = uuid.NewString()

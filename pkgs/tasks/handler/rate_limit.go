@@ -32,10 +32,12 @@ var taskapiHTTPRateLimitedTotal = promauto.NewCounter(prometheus.CounterOpts{
 // (requests per minute). Unset uses defaultRateLimitPerMin. Invalid or negative values use the default.
 // Zero disables rate limiting (WithRateLimit becomes a no-op).
 func RateLimitPerMinuteConfigured() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.RateLimitPerMinuteConfigured")
 	return parseRateLimitPerMinFromEnv()
 }
 
 func parseRateLimitPerMinFromEnv() int {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseRateLimitPerMinFromEnv")
 	s := strings.TrimSpace(os.Getenv("T2A_RATE_LIMIT_PER_MIN"))
 	if s == "" {
 		return defaultRateLimitPerMin
@@ -61,6 +63,7 @@ func omitRateLimit(r *http.Request) bool {
 }
 
 func clientIPForRateLimit(r *http.Request) string {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.clientIPForRateLimit")
 	addr := strings.TrimSpace(r.RemoteAddr)
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -81,6 +84,7 @@ type ipRateLimiter struct {
 }
 
 func newIPRateLimiter(perMin int) *ipRateLimiter {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.newIPRateLimiter")
 	return &ipRateLimiter{
 		perMin:   perMin,
 		visitors: make(map[string]*rateLimitVisitor),
@@ -88,6 +92,7 @@ func newIPRateLimiter(perMin int) *ipRateLimiter {
 }
 
 func (il *ipRateLimiter) allow(ip string) bool {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ipRateLimiter.allow")
 	il.mu.Lock()
 	defer il.mu.Unlock()
 	now := time.Now()
@@ -114,6 +119,7 @@ func (il *ipRateLimiter) allow(ip string) bool {
 }
 
 func (il *ipRateLimiter) pruneLocked(now time.Time) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ipRateLimiter.pruneLocked")
 	for ip, v := range il.visitors {
 		if now.Sub(v.lastSeen) > rateLimitVisitorTTL {
 			delete(il.visitors, ip)
