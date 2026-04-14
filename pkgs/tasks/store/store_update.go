@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -39,146 +38,27 @@ func wouldCreateParentCycle(tx *gorm.DB, taskID, newParent string) (bool, error)
 
 func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateTaskInput, by domain.Actor, seq int64) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTaskPatches")
-	if in.Title != nil {
-		v := strings.TrimSpace(*in.Title)
-		if v == "" {
-			return fmt.Errorf("%w: title", domain.ErrInvalidInput)
-		}
-		if v != cur.Title {
-			b, err := eventPairJSON(cur.Title, v)
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventMessageAdded, by, b); err != nil {
-				return err
-			}
-			seq++
-			cur.Title = v
-		}
+	seqPtr := seq
+	if err := applyTitlePatch(tx, taskID, cur, in.Title, by, &seqPtr); err != nil {
+		return err
 	}
-	if in.InitialPrompt != nil {
-		if *in.InitialPrompt != cur.InitialPrompt {
-			b, err := eventPairJSON(cur.InitialPrompt, *in.InitialPrompt)
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventPromptAppended, by, b); err != nil {
-				return err
-			}
-			seq++
-			cur.InitialPrompt = *in.InitialPrompt
-		}
+	if err := applyInitialPromptPatch(tx, taskID, cur, in.InitialPrompt, by, &seqPtr); err != nil {
+		return err
 	}
-	if in.Parent != nil {
-		var prevStr string
-		if cur.ParentID != nil {
-			prevStr = *cur.ParentID
-		}
-		var nextStr string
-		var nextPtr *string
-		if in.Parent.Clear {
-			nextPtr = nil
-		} else {
-			pid := strings.TrimSpace(in.Parent.ID)
-			if pid == "" {
-				return fmt.Errorf("%w: parent_id", domain.ErrInvalidInput)
-			}
-			if pid == taskID {
-				return fmt.Errorf("%w: task cannot be its own parent", domain.ErrInvalidInput)
-			}
-			var n int64
-			if err := tx.Model(&domain.Task{}).Where("id = ?", pid).Count(&n).Error; err != nil {
-				return fmt.Errorf("parent lookup: %w", err)
-			}
-			if n == 0 {
-				return fmt.Errorf("%w: parent not found", domain.ErrInvalidInput)
-			}
-			cycle, err := wouldCreateParentCycle(tx, taskID, pid)
-			if err != nil {
-				return err
-			}
-			if cycle {
-				return fmt.Errorf("%w: parent would create a cycle", domain.ErrInvalidInput)
-			}
-			nextPtr = &pid
-			nextStr = pid
-		}
-		if prevStr != nextStr {
-			b, err := json.Marshal(map[string]string{
-				"parent_id":          nextStr,
-				"previous_parent_id": prevStr,
-			})
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventSubtaskAdded, by, b); err != nil {
-				return err
-			}
-			seq++
-		}
-		cur.ParentID = nextPtr
+	if err := applyParentPatch(tx, taskID, cur, in.Parent, by, &seqPtr); err != nil {
+		return err
 	}
-	if in.ChecklistInherit != nil {
-		was := cur.ChecklistInherit
-		want := *in.ChecklistInherit
-		if want && !was {
-			if err := deleteOwnedChecklistItemsTx(tx, taskID); err != nil {
-				return err
-			}
-		}
-		if want != was {
-			b, err := json.Marshal(map[string]bool{"from": was, "to": want})
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventChecklistInheritChanged, by, b); err != nil {
-				return err
-			}
-			seq++
-		}
-		cur.ChecklistInherit = want
+	if err := applyChecklistInheritPatch(tx, taskID, cur, in.ChecklistInherit, by, &seqPtr); err != nil {
+		return err
 	}
-	if in.Priority != nil {
-		if !validPriority(*in.Priority) {
-			return fmt.Errorf("%w: priority", domain.ErrInvalidInput)
-		}
-		if *in.Priority != cur.Priority {
-			b, err := eventPairJSON(string(cur.Priority), string(*in.Priority))
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventPriorityChanged, by, b); err != nil {
-				return err
-			}
-			seq++
-			cur.Priority = *in.Priority
-		}
+	if err := applyPriorityPatch(tx, taskID, cur, in.Priority, by, &seqPtr); err != nil {
+		return err
 	}
-	if in.TaskType != nil {
-		if !validTaskType(*in.TaskType) {
-			return fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
-		}
-		cur.TaskType = *in.TaskType
+	if err := applyTaskTypePatch(cur, in.TaskType); err != nil {
+		return err
 	}
-	if in.Status != nil {
-		if !validStatus(*in.Status) {
-			return fmt.Errorf("%w: status", domain.ErrInvalidInput)
-		}
-		if *in.Status != cur.Status {
-			if *in.Status == domain.StatusDone {
-				if err := validateCanMarkDoneTx(tx, taskID); err != nil {
-					return err
-				}
-			}
-			b, err := eventPairJSON(string(cur.Status), string(*in.Status))
-			if err != nil {
-				return err
-			}
-			if err := appendEvent(tx, taskID, seq, domain.EventStatusChanged, by, b); err != nil {
-				return err
-			}
-			cur.Status = *in.Status
-		}
+	if err := applyStatusPatch(tx, taskID, cur, in.Status, by, &seqPtr); err != nil {
+		return err
 	}
 	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
 		return fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)

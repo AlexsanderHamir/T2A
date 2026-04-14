@@ -120,18 +120,26 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if q.Get("limit") == "" && q.Get("before_seq") == "" && q.Get("after_seq") == "" {
-		evs, err := h.store.ListTaskEvents(r.Context(), id)
-		if err != nil {
-			writeStoreError(w, r, op, err)
-			return
-		}
-		writeJSON(w, r, op, http.StatusOK, taskEventsResponse{
-			TaskID:          id,
-			Events:          taskEventLines(evs),
-			ApprovalPending: pending,
-		})
+		h.writeTaskEventsFullList(w, r, op, id, pending)
 		return
 	}
+	h.writeTaskEventsCursorPage(w, r, op, id, pending, q)
+}
+
+func (h *Handler) writeTaskEventsFullList(w http.ResponseWriter, r *http.Request, op, id string, pending bool) {
+	evs, err := h.store.ListTaskEvents(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, taskEventsResponse{
+		TaskID:          id,
+		Events:          taskEventLines(evs),
+		ApprovalPending: pending,
+	})
+}
+
+func (h *Handler) writeTaskEventsCursorPage(w http.ResponseWriter, r *http.Request, op, id string, pending bool, q url.Values) {
 	beforeStr := strings.TrimSpace(q.Get("before_seq"))
 	afterStr := strings.TrimSpace(q.Get("after_seq"))
 	if beforeStr != "" && afterStr != "" {

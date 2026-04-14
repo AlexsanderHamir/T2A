@@ -29,64 +29,11 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 			return fmt.Errorf("load task: %w", err)
 		}
 		prevStatus = t.Status
-		up := map[string]any{}
-		switch typ {
-		case domain.EventStatusChanged:
-			m, err := pairFromJSON(data)
-			if err != nil {
-				return err
-			}
-			st := domain.Status(m["to"])
-			if validStatus(st) && st != t.Status {
-				if st == domain.StatusDone {
-					if err := validateCanMarkDoneTx(tx, taskID); err != nil {
-						return err
-					}
-				}
-				up["status"] = string(st)
-			}
-		case domain.EventPriorityChanged:
-			m, err := pairFromJSON(data)
-			if err != nil {
-				return err
-			}
-			pr := domain.Priority(m["to"])
-			if validPriority(pr) && pr != t.Priority {
-				up["priority"] = string(pr)
-			}
-		case domain.EventPromptAppended:
-			m, err := pairFromJSON(data)
-			if err != nil {
-				return err
-			}
-			to := m["to"]
-			if to != "" && to != t.InitialPrompt {
-				up["initial_prompt"] = to
-			}
-		case domain.EventMessageAdded:
-			m, err := pairFromJSON(data)
-			if err != nil {
-				return err
-			}
-			to := strings.TrimSpace(m["to"])
-			if to != "" && to != t.Title {
-				up["title"] = to
-			}
-		case domain.EventTaskCompleted:
-			if err := validateCanMarkDoneTx(tx, taskID); err != nil {
-				return err
-			}
-			if t.Status != domain.StatusDone {
-				up["status"] = string(domain.StatusDone)
-			}
-		case domain.EventTaskFailed:
-			if t.Status != domain.StatusFailed {
-				up["status"] = string(domain.StatusFailed)
-			}
-		default:
-			return nil
+		up, uerr := devMirrorRowUpdates(tx, taskID, &t, typ, data)
+		if uerr != nil {
+			return uerr
 		}
-		if len(up) == 0 {
+		if up == nil || len(up) == 0 {
 			return nil
 		}
 		if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Updates(up).Error; err != nil {

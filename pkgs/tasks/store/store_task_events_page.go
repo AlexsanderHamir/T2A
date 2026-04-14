@@ -29,24 +29,10 @@ type TaskEventsPage struct {
 // Limit is coerced: ≤0 becomes 50; >200 capped at 200. beforeSeq and afterSeq must not both be set.
 func (s *Store) ListTaskEventsPageCursor(ctx context.Context, taskID string, limit int, beforeSeq, afterSeq *int64) (*TaskEventsPage, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskEventsPageCursor")
-	taskID = strings.TrimSpace(taskID)
-	if taskID == "" {
-		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
-	}
-	if beforeSeq != nil && afterSeq != nil {
-		return nil, fmt.Errorf("%w: before_seq and after_seq are mutually exclusive", domain.ErrInvalidInput)
-	}
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > 200 {
-		limit = 200
-	}
-	if beforeSeq != nil && *beforeSeq < 1 {
-		return nil, fmt.Errorf("%w: before_seq must be a positive integer", domain.ErrInvalidInput)
-	}
-	if afterSeq != nil && *afterSeq < 1 {
-		return nil, fmt.Errorf("%w: after_seq must be a positive integer", domain.ErrInvalidInput)
+	var err error
+	taskID, limit, err = validateListTaskEventsPageInputs(taskID, limit, beforeSeq, afterSeq)
+	if err != nil {
+		return nil, err
 	}
 
 	var total int64
@@ -61,35 +47,15 @@ func (s *Store) ListTaskEventsPageCursor(ctx context.Context, taskID string, lim
 		q = q.Where("seq > ?", *afterSeq)
 	}
 	var events []domain.TaskEvent
-	err := q.Order("seq DESC").Limit(limit).Find(&events).Error
+	err = q.Order("seq DESC").Limit(limit).Find(&events).Error
 	if err != nil {
 		return nil, fmt.Errorf("list task events page: %w", err)
 	}
 
 	out := &TaskEventsPage{Events: events, Total: total}
-	if len(events) == 0 {
-		return out, nil
+	if err := s.fillTaskEventsPageBounds(ctx, taskID, out, events); err != nil {
+		return nil, err
 	}
-	maxSeq := events[0].Seq
-	minSeq := events[len(events)-1].Seq
-
-	var newerThanMax int64
-	if err := s.db.WithContext(ctx).Model(&domain.TaskEvent{}).
-		Where("task_id = ? AND seq > ?", taskID, maxSeq).
-		Count(&newerThanMax).Error; err != nil {
-		return nil, fmt.Errorf("count newer task events: %w", err)
-	}
-	var olderThanMin int64
-	if err := s.db.WithContext(ctx).Model(&domain.TaskEvent{}).
-		Where("task_id = ? AND seq < ?", taskID, minSeq).
-		Count(&olderThanMin).Error; err != nil {
-		return nil, fmt.Errorf("count older task events: %w", err)
-	}
-
-	out.RangeStart = newerThanMax + 1
-	out.RangeEnd = newerThanMax + int64(len(events))
-	out.HasMoreNewer = newerThanMax > 0
-	out.HasMoreOlder = olderThanMin > 0
 	return out, nil
 }
 

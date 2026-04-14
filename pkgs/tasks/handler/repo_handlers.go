@@ -106,6 +106,10 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusBadRequest, "start and end must be integers")
 		return
 	}
+	h.writeRepoValidateRangeOutcome(w, r, op, path, start, end)
+}
+
+func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.Request, op, path string, start, end int) {
 	abs, err := h.repo.Resolve(path)
 	if err != nil {
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
