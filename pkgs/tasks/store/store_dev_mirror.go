@@ -34,7 +34,7 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 		if uerr != nil {
 			return uerr
 		}
-		if up == nil || len(up) == 0 {
+		if len(up) == 0 {
 			return nil
 		}
 		if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Updates(up).Error; err != nil {
