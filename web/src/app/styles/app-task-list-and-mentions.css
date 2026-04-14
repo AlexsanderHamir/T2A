@@ -982,12 +982,6 @@
   }
 }
 
-.mention-warn {
-  margin: 0.5rem 0 0;
-  font-size: var(--text-sm);
-  color: var(--warning-ink);
-}
-
 .mention-repo-hint {
   margin: 0.65rem 0 0;
   padding: 0.65rem 0.85rem;

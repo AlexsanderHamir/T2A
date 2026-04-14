@@ -295,7 +295,7 @@ export function MentionRangePanel({
       ) : null}
 
       {rangeWarning ? (
-        <p className="mention-warn" role="alert">
+        <p className="mention-range-banner" role="status">
           {rangeWarning}
         </p>
       ) : null}

@@ -116,7 +116,7 @@ describe("MentionRangePanel", () => {
     );
 
     await screen.findByRole("textbox", { name: /preview/i });
-    expect(screen.getByRole("alert")).toHaveTextContent("Bad range");
+    expect(screen.getByText("Bad range")).toBeInTheDocument();
   });
 
   it("shows loading preview skeleton then file content", async () => {
