@@ -11,6 +11,7 @@ import {
   type TaskListClientPriorityFilter,
   type TaskListClientStatusFilter,
 } from "./taskListClientFilter";
+import { taskListPagerSummary } from "./taskListPagerSummary";
 import { TaskListTableSkeleton } from "./TaskListTableSkeleton";
 
 type Props = {
@@ -150,15 +151,13 @@ export function TaskListSection({
           {showTaskPager ? (
             <TaskPager
               navLabel="Task list pages"
-              summary={
-                tasks.length === 0
-                  ? `Page ${listPage + 1} (no tasks on this page)`
-                  : (() => {
-                      const start = listPage * listPageSize + 1;
-                      const end = listPage * listPageSize + rootTasksOnPage;
-                      return `${start}–${end}${hasNextPage ? "+" : ""}`;
-                    })()
-              }
+              summary={taskListPagerSummary({
+                tasksLength: tasks.length,
+                listPage,
+                listPageSize,
+                rootTasksOnPage,
+                hasNextPage,
+              })}
               onPrev={() => onListPageChange(listPage - 1)}
               onNext={() => onListPageChange(listPage + 1)}
               disablePrev={!hasPrevPage}
