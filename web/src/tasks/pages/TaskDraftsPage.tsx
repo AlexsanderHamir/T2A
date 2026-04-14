@@ -74,15 +74,23 @@ export function TaskDraftsPage({ app }: Props) {
     <section className="panel task-detail-content--enter">
       <h2>Task drafts</h2>
       <p className="muted">Continue previous drafts or remove ones you no longer need.</p>
-      {resumeError ? <p role="alert">{resumeError}</p> : null}
-      {deleteError ? <p role="alert">{deleteError}</p> : null}
+      {resumeError ? (
+        <div className="err" role="alert">
+          <p>{resumeError}</p>
+        </div>
+      ) : null}
+      {deleteError ? (
+        <div className="err" role="alert">
+          <p>{deleteError}</p>
+        </div>
+      ) : null}
       <div className="stack">
         {loading && showDraftsSkeleton ? <TaskDraftsListSkeleton /> : null}
         {!loading ? (
           <div className="stack task-list-content task-list-content--enter">
             {error ? (
-              <div role="alert">
-                <p className="err-inline">{error}</p>
+              <div className="err" role="alert">
+                <p>{error}</p>
                 <div className="task-detail-error-actions">
                   <button
                     type="button"

@@ -62,15 +62,15 @@ export function TaskEventDetailPage() {
 
   if (!seqValid) {
     return (
-      <section className="panel task-detail-panel">
-        <p className="err-inline" role="alert">
-          Invalid event sequence in the URL.
-        </p>
-        <p>
-          <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
-            ← Back to task
-          </Link>
-        </p>
+      <section className="panel task-detail-panel task-detail-content--enter">
+        <div className="err" role="alert">
+          <p>Invalid event sequence in the URL.</p>
+          <div className="task-detail-error-actions">
+            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
+              ← Back to task
+            </Link>
+          </div>
+        </div>
       </section>
     );
   }
@@ -81,9 +81,9 @@ export function TaskEventDetailPage() {
 
   if (q.isError) {
     return (
-      <section className="panel task-detail-panel">
-        <div role="alert">
-          <p className="err-inline">
+      <section className="panel task-detail-panel task-detail-content--enter">
+        <div className="err" role="alert">
+          <p>
             {q.error instanceof Error
               ? q.error.message
               : "Could not load event."}
@@ -187,11 +187,13 @@ export function TaskEventDetailPage() {
             Each send appends to this conversation and appears on the task timeline.
           </p>
           {saveMutation.isError ? (
-            <p className="err-inline" role="alert">
-              {saveMutation.error instanceof Error
-                ? saveMutation.error.message
-                : "Could not send message."}
-            </p>
+            <div className="err" role="alert">
+              <p>
+                {saveMutation.error instanceof Error
+                  ? saveMutation.error.message
+                  : "Could not send message."}
+              </p>
+            </div>
           ) : null}
           <textarea
             id="task-event-user-response"

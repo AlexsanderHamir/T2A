@@ -599,6 +599,11 @@ textarea::placeholder {
   box-shadow: none;
 }
 
+.err > p {
+  margin: 0;
+  color: inherit;
+}
+
 .err.error-banner {
   display: flex;
   align-items: flex-start;

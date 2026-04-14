@@ -34,10 +34,10 @@ export function TaskHome({ app }: Props) {
   return (
     <>
       {app.createEntryDraftErrorHint ? (
-        <div className="row stack-row-actions">
-          <p role="alert">
+        <div className="err error-banner" role="alert">
+          <span className="error-banner__text">
             Saved drafts are unavailable right now, so a fresh task form was opened.
-          </p>
+          </span>
           <button
             type="button"
             className="secondary"

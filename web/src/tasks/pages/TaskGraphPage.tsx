@@ -226,9 +226,9 @@ export function TaskGraphPage() {
         ? taskQuery.error.message
         : "Could not load task graph.";
     return (
-      <section className="panel task-graph-page">
-        <div role="alert">
-          <p className="err-inline">{message}</p>
+      <section className="panel task-graph-page task-graph-content--enter">
+        <div className="err" role="alert">
+          <p>{message}</p>
           <div className="task-graph-error-actions">
             <button
               type="button"

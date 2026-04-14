@@ -115,9 +115,9 @@ export function TaskDetailPage({ app }: Props) {
 
   if (taskQuery.isError) {
     return (
-      <section className="panel task-detail-panel">
-        <div role="alert">
-          <p className="err-inline">
+      <section className="panel task-detail-panel task-detail-content--enter">
+        <div className="err" role="alert">
+          <p>
             {taskQuery.error instanceof Error
               ? taskQuery.error.message
               : "Could not load task."}
