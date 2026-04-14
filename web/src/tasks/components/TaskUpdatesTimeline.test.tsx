@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { TaskUpdatesTimeline } from "./TaskUpdatesTimeline";
 
@@ -95,6 +96,36 @@ describe("TaskUpdatesTimeline", () => {
       />,
     );
     expect(screen.getByText(/no updates yet/i)).toBeInTheDocument();
+  });
+
+  it("shows error callout and optional retry", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    const { rerender } = render(
+      <TaskUpdatesTimeline
+        isPending={false}
+        isError
+        error={new Error("timeline failed")}
+        isEmpty={false}
+        timelineEvents={[]}
+      />,
+    );
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/timeline failed/i);
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+
+    rerender(
+      <TaskUpdatesTimeline
+        isPending={false}
+        isError
+        error={new Error("timeline failed")}
+        isEmpty={false}
+        timelineEvents={[]}
+        onRetry={onRetry}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   it("uses one list for mixed events and marks needs-user rows", () => {

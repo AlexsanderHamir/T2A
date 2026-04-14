@@ -50,6 +50,9 @@ export function TaskDetailUpdatesSection({
           eventsTotal === 0
         }
         taskIdForLinks={taskId}
+        onRetry={() => {
+          void eventsQuery.refetch();
+        }}
       />
       {showPager ? (
         <TaskPager

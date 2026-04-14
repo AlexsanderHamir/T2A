@@ -79,9 +79,9 @@ export function DraftResumeModal({
         <h2 id="draft-resume-modal-title">Resume a draft or start fresh</h2>
         <p className="muted">Pick an existing draft to continue, or start a new one.</p>
         {loadError ? (
-          <div className="row stack-row-actions">
-            <p role="alert">{loadError}</p>
-            {onRetryLoad ? (
+          onRetryLoad ? (
+            <div className="err error-banner" role="alert">
+              <span className="error-banner__text">{loadError}</span>
               <button
                 type="button"
                 className="secondary"
@@ -90,10 +90,18 @@ export function DraftResumeModal({
               >
                 Retry loading drafts
               </button>
-            ) : null}
+            </div>
+          ) : (
+            <div className="err" role="alert">
+              <p>{loadError}</p>
+            </div>
+          )
+        ) : null}
+        {resumeError ? (
+          <div className="err" role="alert">
+            <p>{resumeError}</p>
           </div>
         ) : null}
-        {resumeError ? <p role="alert">{resumeError}</p> : null}
         <div className={`stack draft-resume-state draft-resume-state--${draftListState}`} aria-live="polite">
           <div className="draft-resume-crossfade">
             <div

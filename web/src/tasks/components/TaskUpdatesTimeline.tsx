@@ -19,6 +19,8 @@ export type TaskUpdatesTimelineProps = {
   isEmpty: boolean;
   /** When set, each row links to `/tasks/{id}/events/{seq}`. */
   taskIdForLinks?: string;
+  /** Refetch handler shown on the error callout (e.g. `query.refetch`). */
+  onRetry?: () => void;
 };
 
 export function TaskUpdatesTimeline({
@@ -28,6 +30,7 @@ export function TaskUpdatesTimeline({
   timelineEvents,
   isEmpty,
   taskIdForLinks,
+  onRetry,
 }: TaskUpdatesTimelineProps) {
   return (
     <div className="task-detail-section task-detail-timeline">
@@ -37,9 +40,18 @@ export function TaskUpdatesTimeline({
       {isPending ? (
         <TaskTimelineSkeleton />
       ) : isError ? (
-        <p className="err-inline" role="alert">
-          {error instanceof Error ? error.message : "Could not load updates."}
-        </p>
+        <div className="err" role="alert">
+          <p>
+            {error instanceof Error ? error.message : "Could not load updates."}
+          </p>
+          {onRetry ? (
+            <div className="task-detail-error-actions">
+              <button type="button" className="secondary" onClick={onRetry}>
+                Try again
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : isEmpty ? (
         <EmptyState
           icon={<EmptyStateTimelineGlyph />}

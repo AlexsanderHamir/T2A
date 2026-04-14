@@ -1,5 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskEvent, TaskEventsResponse } from "@/types";
@@ -40,6 +41,31 @@ describe("TaskDetailUpdatesSection", () => {
     );
 
     expect(screen.getByRole("status", { name: /loading updates/i })).toBeInTheDocument();
+  });
+
+  it("shows updates error callout with retry wired to refetch", async () => {
+    const user = userEvent.setup();
+    const refetch = vi.fn().mockResolvedValue({ data: undefined });
+    render(
+      <TaskDetailUpdatesSection
+        taskId="t1"
+        eventsQuery={asEventsQuery({
+          isPending: false,
+          isError: true,
+          error: new Error("events unavailable"),
+          data: undefined,
+          refetch,
+        })}
+        timelineEvents={[]}
+        eventsTotal={0}
+        onEventsPagerPrev={vi.fn()}
+        onEventsPagerNext={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/events unavailable/i);
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it("shows pager when the server reports more pages", () => {
