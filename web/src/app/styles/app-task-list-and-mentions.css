@@ -633,6 +633,56 @@
   color: var(--text-secondary);
 }
 
+.mention-range-loading {
+  pointer-events: none;
+}
+
+.mention-range-loading-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.mention-range-loading-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  min-height: 14rem;
+  max-height: min(50vh, 26rem);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--neutral-fill-subtle));
+  overflow: hidden;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n + 1) {
+  width: 72%;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n + 2) {
+  width: 88%;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n) {
+  width: 64%;
+}
+
+.mention-range-loading-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.mention-range-loading-inputs .skeleton-block {
+  width: 6.5rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+}
+
 .mention-range-banner {
   margin: 0 0 var(--space-3);
   padding: var(--space-2) var(--space-3);

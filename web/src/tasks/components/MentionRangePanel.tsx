@@ -29,6 +29,7 @@ export function MentionRangePanel({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [file, setFile] = useState<RepoFileResult | null>(null);
+  const [loadRetryTick, setLoadRetryTick] = useState(0);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const codeContentRef = useRef<HTMLElement>(null);
   const [selStart, setSelStart] = useState(0);
@@ -38,13 +39,14 @@ export function MentionRangePanel({
   const [insertError, setInsertError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
+    const ac = new AbortController();
     setLoading(true);
     setLoadError(null);
     setFile(null);
-    void fetchRepoFile(path)
+    void fetchRepoFile(path, { signal: ac.signal })
       .then((r) => {
-        if (cancelled) return;
+        if (!active) return;
         if (r === null) {
           setLoadError("File preview is unavailable.");
           return;
@@ -52,16 +54,17 @@ export function MentionRangePanel({
         setFile(r);
       })
       .catch((e: unknown) => {
-        if (!cancelled)
-          setLoadError(e instanceof Error ? e.message : "Load failed");
+        if (!active || ac.signal.aborted) return;
+        setLoadError(e instanceof Error ? e.message : "Load failed");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (active) setLoading(false);
       });
     return () => {
-      cancelled = true;
+      active = false;
+      ac.abort();
     };
-  }, [path]);
+  }, [path, loadRetryTick]);
 
   const syncSelection = useCallback(() => {
     const ta = taRef.current;
@@ -152,15 +155,43 @@ export function MentionRangePanel({
       </div>
 
       {loading ? (
-        <p className="mention-range-status" role="status">
-          Loading file…
-        </p>
+        <div
+          className="mention-range-content mention-range-loading"
+          role="status"
+          aria-busy="true"
+          aria-label="Loading file from repository"
+        >
+          <div className="mention-range-loading-label-row" aria-hidden="true">
+            <span className="skeleton-block skeleton-block--title" />
+            <span className="skeleton-block skeleton-block--pill-narrow" />
+          </div>
+          <div className="mention-range-loading-shell" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, i) => (
+              <span key={`mention-load-skel-${i}`} className="skeleton-block" />
+            ))}
+          </div>
+          <div className="mention-range-loading-inputs" aria-hidden="true">
+            <span className="skeleton-block" />
+            <span className="skeleton-block" />
+          </div>
+        </div>
       ) : null}
 
       {loadError ? (
-        <p className="mention-warn" role="alert">
-          {loadError}
-        </p>
+        <div className="err" role="alert">
+          <p>{loadError}</p>
+          <div className="task-detail-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setLoadRetryTick((t) => t + 1);
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {!loading && file?.warning ? (
@@ -269,9 +300,9 @@ export function MentionRangePanel({
         </p>
       ) : null}
       {insertError ? (
-        <p className="mention-warn" role="alert">
-          {insertError}
-        </p>
+        <div className="err" role="alert">
+          <p>{insertError}</p>
+        </div>
       ) : null}
 
       <div className="row stack-row-actions mention-range-actions">
