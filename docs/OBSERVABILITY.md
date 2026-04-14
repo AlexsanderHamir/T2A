@@ -1,6 +1,6 @@
 # Observability standard (T2A)
 
-This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub, plus `.cursor/rules/04-structured-logging.mdc` (log shape and safety). **Phased observability improvements** (Prometheus, SLOs, tracing): [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md).
+This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub, plus `.cursor/rules/04-structured-logging.mdc` (log shape and safety). **Phased observability improvements** (Prometheus, SLOs, tracing): [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md). **Starter SLIs / SLOs** (30d window, error budget framing): § **SLIs and SLOs** below.
 
 ## Goals
 
@@ -70,6 +70,22 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |
 
 **Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Use recording rules later if these queries are heavy ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
+
+### SLIs and SLOs (roadmap B1)
+
+**Definitions:** an **SLI** is a measurable signal (ratio, quantile, or probe outcome). An **SLO** is a target for that SLI over a **time window** (here: **30 rolling calendar days** unless your org standard differs). The **error budget** is how much “bad” SLI you can spend in that window before the SLO is at risk (e.g. for 99.9% success, budget ≈ **0.1%** bad events).
+
+The three SLIs below are **defaults for `taskapi`** — adjust targets and queries for your traffic, regions, and Postgres tier. Product / SRE owns the final numbers.
+
+| # | SLI | What we measure | Example expression | Starting SLO target |
+|---|-----|------------------|--------------------|---------------------|
+| **1** | **HTTP success** (no server `5xx`) | Share of responses that are not `5xx`, from `taskapi_http_requests_total`. | Good ratio over a range: `1 - (sum(rate(taskapi_http_requests_total{code=~"5.."}[5m])) / sum(rate(taskapi_http_requests_total[5m])))` | **99.9%** of requests not `5xx` over **30d** (budget ≈ **0.1%** `5xx`; excludes clients you do not count—define explicitly). |
+| **2** | **Mutating API latency** | **p99** request duration for `POST` / `PATCH` / `DELETE` (task and related routes share the same histogram labels). | `histogram_quantile(0.99, sum(rate(taskapi_http_request_duration_seconds_bucket{method=~"POST|PATCH|DELETE"}[5m])) by (le))` | **p99 < 2s** over **30d** (tighten when store and DB are sized; see slow-query logs for grounding). |
+| **3** | **Dependency readiness** | **`GET /health/ready`** returns **200** with `checks.database` (and `workspace_repo` when configured) — usually measured with a **blackbox** or synthetic probe, not from `taskapi_http_*` alone (health is omitted from that histogram). | Probe success rate from your checker (e.g. Prometheus **blackbox_exporter** HTTP prober, or k8s readiness success). | **99.5%** successful ready checks over **30d** (raise when DB or disk is critical path). |
+
+**Alternative third SLI (Prometheus-native):** if you do not yet have blackbox metrics, use **DB pool health**: e.g. alert when `rate(taskapi_db_pool_wait_count_total[5m])` is sustained above a small threshold (tune per pool size); document the threshold as the SLO.
+
+**Error budget in practice:** roll a **30d** window in Grafana or Mimir; use **multi-window, multi-burn-rate** alerts so short spikes do not page while slow burns do ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase **B2**). Example: for SLI 1 at 99.9%, a **5m** burn at 10× normal `5xx` rate consumes budget quickly — encode in alert rules when you add them.
 
 ### 5xx and `request failed` logging (roadmap A5)
 
