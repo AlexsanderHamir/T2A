@@ -17,6 +17,19 @@ function RecoverAfterReset() {
   );
 }
 
+function findScopedBoundaryLogMessage(calls: unknown[][]): string | undefined {
+  for (const c of calls) {
+    const first = c[0];
+    if (
+      typeof first === "string" &&
+      first.includes("[AppErrorBoundary:")
+    ) {
+      return first;
+    }
+  }
+  return undefined;
+}
+
 describe("AppErrorBoundary", () => {
   it("renders children when there is no render error", () => {
     render(
@@ -37,6 +50,23 @@ describe("AppErrorBoundary", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Custom crash note.");
+    const customMsg = findScopedBoundaryLogMessage(errorSpy.mock.calls);
+    expect(customMsg).toBeDefined();
+    expect(customMsg).toContain("[AppErrorBoundary:app-root]");
+    errorSpy.mockRestore();
+  });
+
+  it("logs route-outlet scope when variant is route-outlet", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <AppErrorBoundary variant="route-outlet">
+        <CrashOnRender />
+      </AppErrorBoundary>,
+    );
+
+    const routeMsg = findScopedBoundaryLogMessage(errorSpy.mock.calls);
+    expect(routeMsg).toBeDefined();
+    expect(routeMsg).toContain("[AppErrorBoundary:route-outlet]");
     errorSpy.mockRestore();
   });
 

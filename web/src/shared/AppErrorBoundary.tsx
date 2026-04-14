@@ -9,6 +9,8 @@ type AppErrorBoundaryProps = {
   onRecover?: () => void;
   /** User-visible headline in the fallback callout (defaults to full-app copy). */
   fallbackMessage?: string;
+  /** `componentDidCatch` log prefix; default `app-root` (full SPA shell in `main.tsx`). */
+  variant?: "app-root" | "route-outlet";
 };
 
 type AppErrorBoundaryState = {
@@ -28,7 +30,8 @@ export class AppErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("[AppErrorBoundary] unhandled render error", {
+    const scope = this.props.variant ?? "app-root";
+    console.error(`[AppErrorBoundary:${scope}] unhandled render error`, {
       error,
       componentStack: errorInfo.componentStack,
     });
