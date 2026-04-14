@@ -2,7 +2,7 @@
 description: >-
   HTTP + SSE handler patterns for taskapi: httptest, status codes, JSON decode
   strictness, middleware, and write-path → notify semantics. Companion to
-  docs/DESIGN.md.
+  docs/API-HTTP.md and docs/API-SSE.md.
 globs:
   - "**/*.go"
 alwaysApply: false
@@ -10,7 +10,7 @@ alwaysApply: false
 
 # HTTP and SSE handler patterns
 
-Authoritative routes, bodies, and query parameters live in **`docs/DESIGN.md`**. This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** (and related middleware in the same area).
+Authoritative routes, bodies, and query parameters live in **`docs/API-HTTP.md`** (REST) and **`docs/API-SSE.md`** (SSE). This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** (and related middleware in the same area).
 
 ---
 
@@ -57,5 +57,5 @@ Authoritative routes, bodies, and query parameters live in **`docs/DESIGN.md`**.
 ## Checklist before merging handler changes
 
 1. `go test ./pkgs/tasks/handler/... -count=1` (and broader `./...` if shared types changed)
-2. `docs/DESIGN.md` updated if any observable HTTP or SSE behavior changed
+2. `docs/API-HTTP.md` / `docs/API-SSE.md` (and `docs/DESIGN.md` hub if limitations change) updated if any observable HTTP or SSE behavior changed
 3. New failure modes have **structured logs** at appropriate level (not noisy on hot paths)

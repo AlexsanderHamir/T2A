@@ -37,7 +37,7 @@ Primary reference: **`docs/OBSERVABILITY.md`**. This file is a **short implement
 
 ## Health and readiness
 
-- **`/health`**, **`/health/live`**, **`/health/ready`** responses must match **`docs/DESIGN.md`** and existing tests (database check naming, degraded behavior when DB is closed, etc.).
+- **`/health`**, **`/health/live`**, **`/health/ready`** responses must match **`docs/API-HTTP.md`** and existing tests (database check naming, degraded behavior when DB is closed, etc.).
 
 ---
 

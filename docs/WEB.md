@@ -1,12 +1,12 @@
 # Browser client (`web/`)
 
-Canonical description of the optional Vite + React + TypeScript SPA. Server contracts (`/tasks`, `/events`, `/repo`) are in [docs/DESIGN.md](./DESIGN.md). Where this doc sits in the tree: [docs/README.md](./README.md).
+Canonical description of the optional Vite + React + TypeScript SPA. Server contracts (`/tasks`, `/events`, `/repo`) are in [docs/API-HTTP.md](./API-HTTP.md), [docs/API-SSE.md](./API-SSE.md), and the [docs/DESIGN.md](./DESIGN.md) hub. Where this doc sits in the tree: [docs/README.md](./README.md).
 
 ## Scope
 
-Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see DESIGN); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see DESIGN). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
+Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `REPO_ROOT` is set (see [API-HTTP.md](./API-HTTP.md#optional-workspace-repo-repo_root)). If `REPO_ROOT` is unset, typing `@` shows a hint that no repo is configured for search.
 
-Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — DESIGN, limitations).
+Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — [DESIGN.md](./DESIGN.md) limitations).
 
 ## Stack
 
@@ -103,7 +103,7 @@ sequenceDiagram
 
 ## JSON boundary
 
-Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in `api/parseTaskApi.test.ts` and `api/tasks.test.ts`. JSON error bodies from `taskapi` may include optional `request_id` (see [DESIGN.md](./DESIGN.md)); `api/shared.ts` `readError` appends it to the message so UI errors stay correlated with `X-Request-ID` / access logs.
+Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in `api/parseTaskApi.test.ts` and `api/tasks.test.ts`. JSON error bodies from `taskapi` may include optional `request_id` (see [API-HTTP.md](./API-HTTP.md)); `api/shared.ts` `readError` appends it to the message so UI errors stay correlated with `X-Request-ID` / access logs.
 
 ## Testing
 

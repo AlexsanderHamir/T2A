@@ -12,7 +12,7 @@ Fix: Use a current `web/vite.config.ts` (it bypasses the proxy when `Accept` inc
 
 Cause: Without the dev ticker, `task_updated` SSE only fires after real writes. The timeline rows come from `GET /tasks/{id}/events`, not from parsing SSE bodies.
 
-Fix: For synthetic activity in dev, set `T2A_SSE_TEST=1` in `.env` and restart `taskapi` (see [docs/DESIGN.md](./DESIGN.md)). Use `T2A_SSE_TEST_EVENTS_PER_TICK` for faster timeline churn, `T2A_SSE_TEST_SYNC_ROW=1` so task headers match synthetic audit rows, and `T2A_SSE_TEST_LIFECYCLE=1` for `task_created` / `task_deleted` hints. Ensure React Query refetches (the app invalidates on SSE `onmessage`).
+Fix: For synthetic activity in dev, set `T2A_SSE_TEST=1` in `.env` and restart `taskapi` (see [docs/API-SSE.md](./API-SSE.md)). Use `T2A_SSE_TEST_EVENTS_PER_TICK` for faster timeline churn, `T2A_SSE_TEST_SYNC_ROW=1` so task headers match synthetic audit rows, and `T2A_SSE_TEST_LIFECYCLE=1` for `task_created` / `task_deleted` hints. Ensure React Query refetches (the app invalidates on SSE `onmessage`).
 
 ## `No repository is configured for file search` in the rich prompt
 
@@ -30,7 +30,7 @@ Fix: Default API is `http://127.0.0.1:8080`. If you change the API port, set `VI
 
 When the UI or `curl` shows an error, you can tie it to JSONL and confirm which binary handled traffic without a separate analytics stack.
 
-- **Request id:** Task API JSON errors may include **`request_id`** in the body (and the response may echo **`X-Request-ID`**). The same value appears on structured **`http.access`** lines and related handler logs when access middleware ran — see [DESIGN.md](./DESIGN.md) (errors + headers) and [WEB.md](./WEB.md) (`readError` appends the id for thrown errors).
+- **Request id:** Task API JSON errors may include **`request_id`** in the body (and the response may echo **`X-Request-ID`**). The same value appears on structured **`http.access`** lines and related handler logs when access middleware ran — see [API-HTTP.md](./API-HTTP.md) (headers + errors) and [WEB.md](./WEB.md) (`readError` appends the id for thrown errors).
 - **Build version:** **`GET /health`**, **`/health/live`**, and **`/health/ready`** return JSON **`version`**. `taskapi` logs that same string on the **`listening`** line (`operation` **`taskapi.serve`**); **`dbcheck`** logs **`version`** on **`dbcheck.start`**. Details: [OBSERVABILITY.md](./OBSERVABILITY.md) (build identity row).
 
 ## Tests fail with “database” or connection errors

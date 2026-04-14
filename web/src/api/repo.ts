@@ -1,6 +1,6 @@
 import { readError } from "./shared";
 
-/** Match pkgs/tasks/handler/repo_handlers.go and docs/DESIGN.md (abuse guards). */
+/** Match pkgs/tasks/handler/repo_handlers.go and docs/API-HTTP.md (abuse guards). */
 export const maxRepoPathQueryBytes = 4096;
 export const maxRepoSearchQueryBytes = 512;
 export const maxRepoLineQueryParamBytes = 32;

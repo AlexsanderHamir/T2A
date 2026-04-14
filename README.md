@@ -38,7 +38,7 @@ chmod +x ./scripts/dev.sh   # once if needed
 ./scripts/dev.sh
 ```
 
-By default `taskapi` listens on `http://127.0.0.1:8080` with REST `/tasks` and SSE `/events`. For **synthetic SSE** during UI work, set `T2A_SSE_TEST=1` and optional `T2A_SSE_TEST_INTERVAL` (default `3s`; `0` disables the ticker). Behavior and limits: [docs/DESIGN.md](docs/DESIGN.md).
+By default `taskapi` listens on `http://127.0.0.1:8080` with REST `/tasks` and SSE `/events`. For **synthetic SSE** during UI work, set `T2A_SSE_TEST=1` and optional `T2A_SSE_TEST_INTERVAL` (default `3s`; `0` disables the ticker). Behavior: [docs/API-SSE.md](docs/API-SSE.md) (synthetic SSE); limits: [docs/DESIGN.md](docs/DESIGN.md) hub.
 
 Windows PowerShell: use `curl.exe` and single-quoted JSON:
 
@@ -70,14 +70,14 @@ Opens Vite (often `http://localhost:5173`). Proxy targets `/tasks`, `/events`, `
 | `npm run build` | Typecheck → `web/dist/` |
 | `npm run preview` | Preview `dist` (you still need API routing) |
 
-Production: build static assets; serve `dist` same-origin as the API or behind a reverse proxy (`taskapi` does not serve `dist`). No CORS in the binary — [docs/DESIGN.md](docs/DESIGN.md) (limitations).
+Production: build static assets; serve `dist` same-origin as the API or behind a reverse proxy (`taskapi` does not serve `dist`). No CORS in the binary — [docs/DESIGN.md](docs/DESIGN.md#limitations).
 
 ## For developers
 
 - [AGENTS.md](AGENTS.md) — repo map, checks, pitfalls  
 - [CONTRIBUTING.md](CONTRIBUTING.md) — PRs, API / `parseTaskApi` sync  
-- Extend the tasks stack: [docs/DESIGN.md](docs/DESIGN.md) (Extensibility) and `.cursor/rules/13-tasks-stack-extensibility.mdc`  
-- Workspace repo (`REPO_ROOT`, `/repo`): [docs/DESIGN.md](docs/DESIGN.md) (Optional workspace repo), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
+- Extend the tasks stack: [docs/EXTENSIBILITY.md](docs/EXTENSIBILITY.md) and `.cursor/rules/13-tasks-stack-extensibility.mdc`  
+- Workspace repo (`REPO_ROOT`, `/repo`): [docs/API-HTTP.md](docs/API-HTTP.md#optional-workspace-repo-repo_root), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
 - Large Cursor-assisted edits: `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING)
 
 ```bash

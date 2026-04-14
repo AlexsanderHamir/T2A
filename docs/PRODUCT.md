@@ -10,4 +10,4 @@ T2A is a **control plane** for agent-heavy workflows. As agents take over execut
 
 ## Where to go next
 
-Technical routes, env vars, and limits: [docs/DESIGN.md](./DESIGN.md). Browser client: [docs/WEB.md](./WEB.md). Build and run: root [README](../README.md).
+Technical routes: [docs/API-HTTP.md](./API-HTTP.md) and [docs/API-SSE.md](./API-SSE.md). Env and startup: [docs/RUNTIME-ENV.md](./RUNTIME-ENV.md). Architecture and limits: [docs/DESIGN.md](./DESIGN.md). Browser client: [docs/WEB.md](./WEB.md). Build and run: root [README](../README.md).

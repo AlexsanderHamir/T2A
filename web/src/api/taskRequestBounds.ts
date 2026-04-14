@@ -1,4 +1,4 @@
-/** Match pkgs/tasks/handler path and query abuse guards (see docs/DESIGN.md). */
+/** Match pkgs/tasks/handler path and query abuse guards (see docs/API-HTTP.md). */
 
 export const maxTaskPathIDBytes = 128;
 export const maxListAfterIDParamBytes = 128;

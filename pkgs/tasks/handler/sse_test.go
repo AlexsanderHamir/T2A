@@ -82,7 +82,7 @@ func TestHTTP_SSE_responseHeaders(t *testing.T) {
 		t.Errorf("Content-Type = %q want text/event-stream", got)
 	}
 	if got := res.Header.Get("Cache-Control"); got != "no-store" {
-		t.Errorf("Cache-Control = %q want no-store (docs/DESIGN.md SSE)", got)
+		t.Errorf("Cache-Control = %q want no-store (docs/API-SSE.md)", got)
 	}
 	if got := res.Header.Get("Connection"); got != "keep-alive" {
 		t.Errorf("Connection = %q want keep-alive", got)

@@ -17,6 +17,6 @@
 // Reconciliation: after restarts or if the queue dropped work, ReconcileReadyTasksNotQueued
 // compares Postgres (all ready tasks) against the queue's
 // pending set and enqueues missing rows. taskapi runs this once at startup and on a ticker by default
-// (see T2A_USER_TASK_AGENT_RECONCILE_INTERVAL in docs/DESIGN.md). Consumers must call AckAfterRecv
+// (see T2A_USER_TASK_AGENT_RECONCILE_INTERVAL in docs/RUNTIME-ENV.md and docs/AGENT-QUEUE.md). Consumers must call AckAfterRecv
 // after reading from Recv, or use Receive, so pending ids match the real buffer.
 package agents

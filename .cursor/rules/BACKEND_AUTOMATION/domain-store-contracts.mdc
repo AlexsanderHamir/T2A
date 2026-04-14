@@ -21,7 +21,7 @@ alwaysApply: false
 
 ## Store (`pkgs/tasks/store` and persistence adapters)
 
-- **Single place** for transactional rules: create/update/delete and append-only **`task_events`** (or equivalent) per **`docs/DESIGN.md`**.
+- **Single place** for transactional rules: create/update/delete and append-only **`task_events`** (or equivalent) per **`docs/PERSISTENCE.md`** and **`docs/API-HTTP.md`** (task behavior at the boundary).
 - **Map driver errors** to domain errors: not found → **`domain.ErrNotFound`**; constraint / validation → **`domain.ErrInvalidInput`** (or dedicated errors if design adds them). Handlers should not inspect `pq` or SQLite error strings directly unless isolated in store.
 - **Input validation:** reject impossible state transitions and bad data before write; prefer returning **`domain.ErrInvalidInput`** with clear cause for 400 responses.
 - **IDs and timestamps:** follow existing UUID and time semantics; do not fork conventions without migration plan.

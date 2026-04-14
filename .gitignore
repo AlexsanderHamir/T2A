@@ -17,3 +17,4 @@ web/.env.*.local
 web/public/mock-data/graphs/*.json
 work_technique/*.md
 .agent/
+moat.md

@@ -32,7 +32,7 @@ You are an autonomous backend quality agent for this repository (`taskapi`, `pkg
 
 **Loading rule:** Do **not** read all pattern files every session. Read **only** the pattern file(s) mapped to the priority tier you are fixing.
 
-**Repo contracts:** `docs/DESIGN.md` (HTTP, SSE, env, persistence), `docs/OBSERVABILITY.md`, `AGENTS.md` (commands, map). If behavior or JSON at the boundary changes, update `docs/DESIGN.md` (and `docs/WEB.md` / README if user-facing).
+**Repo contracts:** `docs/API-HTTP.md`, `docs/API-SSE.md`, `docs/RUNTIME-ENV.md`, `docs/PERSISTENCE.md`, `docs/DESIGN.md` (hub), `docs/OBSERVABILITY.md`, `AGENTS.md` (commands, map). If behavior or JSON at the boundary changes, update the relevant contract doc (and `docs/WEB.md` / README if user-facing).
 
 ---
 
@@ -99,7 +99,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 
 **How to scan:**
 
-1. Re-read relevant sections of `docs/DESIGN.md` (routes, query params, bodies, SSE event shapes)
+1. Re-read relevant sections of `docs/API-HTTP.md` / `docs/API-SSE.md` (routes, query params, bodies, SSE event shapes)
 2. Compare handler responses and status codes to documented behavior
 3. Search handlers for ad-hoc JSON field names or status codes that contradict docs
 
@@ -108,7 +108,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 - `http-handler-sse.mdc`
 - `backend-engineering-bar.mdc` (boundary / JSON section)
 
-**Rule:** If you change a public route, body, or status code, **update `docs/DESIGN.md`** in the same session
+**Rule:** If you change a public route, body, or status code, **update `docs/API-HTTP.md` or `docs/API-SSE.md`** in the same session
 
 ---
 
@@ -120,7 +120,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 
 1. Handlers importing driver-specific types or building SQL — red flag
 2. `store` returning raw DB errors instead of `domain.ErrNotFound` / `domain.ErrInvalidInput` where applicable
-3. Duplicate validation in handler and store — consolidate toward domain/store per `docs/DESIGN.md`
+3. Duplicate validation in handler and store — consolidate toward domain/store per `docs/EXTENSIBILITY.md`
 
 **Before fixing, read:**
 
@@ -267,7 +267,7 @@ If the working tree is clean but you believe you shipped code changes, re-check 
 - **Never ask the user a question** — infer from code and docs; document reasoning in the log
 - **Never produce a plan-only session** — ship code (or test-only) changes every session
 - **Never weaken tests** to green without fixing the underlying bug
-- **Never change public HTTP JSON or routes** without updating `docs/DESIGN.md`
+- **Never change public HTTP JSON or routes** without updating `docs/API-HTTP.md` / `docs/API-SSE.md`
 - **One primary category per session** — batch only tightly related edits
 - **Load only pattern files you need** for the active tier
 - **Read only the last 3 log sessions** for queue context
@@ -300,7 +300,7 @@ End every session with exactly:
 **Category**: P[0-6] — [name]
 **Files changed**: [list]
 **Tests**: go test ./... [pass + note if new tests]
-**Contract/docs**: [updated DESIGN.md / WEB.md / none]
+**Contract/docs**: [updated API-HTTP.md / API-SSE.md / RUNTIME-ENV.md / WEB.md / none]
 **Git**: [branch] commit [short SHA] | push [ok / failed: reason]
 **Next up**: [top queue item]
 ```

@@ -37,7 +37,7 @@ export type TaskListResponse = {
   tasks: Task[];
   limit: number;
   offset: number;
-  /** True when the server may have more root tasks (see GET /tasks in docs/DESIGN.md). */
+  /** True when the server may have more root tasks (see GET /tasks in docs/API-HTTP.md). */
   has_more: boolean;
 };
 

@@ -13,7 +13,7 @@ alwaysApply: false
 
 ## Production vs tests
 
-- **Production** targets **PostgreSQL** per `docs/DESIGN.md` and `DATABASE_URL`.
+- **Production** targets **PostgreSQL** per `docs/PERSISTENCE.md` / `docs/RUNTIME-ENV.md` and `DATABASE_URL`.
 - **Default tests** use **SQLite** via **`tasktestdb.OpenSQLite`** — keep SQL compatible with both where the project already does, or isolate dialect-specific code clearly.
 
 ---
@@ -23,7 +23,7 @@ alwaysApply: false
 - Prefer **explicit column** scans and model structs aligned with **`domain`** types; avoid anonymous maps crossing package boundaries.
 - Use **`context.Context`** on DB calls when signatures allow.
 - **Transactions:** group create + audit append + related rows in a single transaction when the design requires atomicity; use repo patterns already in **`pkgs/tasks/store`** / **`postgres`**.
-- **Migrations:** follow the repo's established migration path (`pkgs/tasks/postgres` / `cmd` tooling); document new env flags or migration steps in **`docs/DESIGN.md`** or **`README.md`** when users must act.
+- **Migrations:** follow the repo's established migration path (`pkgs/tasks/postgres` / `cmd` tooling); document new env flags or migration steps in **`docs/RUNTIME-ENV.md`** / **`docs/PERSISTENCE.md`** or **`README.md`** when users must act.
 
 ---
 

@@ -10,7 +10,7 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
 2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL` (and optionally `REPO_ROOT`). Never commit `.env`.
-3. Authoritative HTTP/SSE/JSON behavior: [docs/DESIGN.md](docs/DESIGN.md) · optional UI client: [docs/WEB.md](docs/WEB.md).
+3. Authoritative HTTP/SSE/JSON behavior: [docs/API-HTTP.md](docs/API-HTTP.md), [docs/API-SSE.md](docs/API-SSE.md), [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md); architecture and limitations: [docs/DESIGN.md](docs/DESIGN.md) · optional UI client: [docs/WEB.md](docs/WEB.md).
 4. For who T2A is for and how we choose scope (large features or roadmap debates), see [docs/PRODUCT.md](docs/PRODUCT.md).
 
 ## Local setup
@@ -41,15 +41,15 @@ Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
 When you change REST paths, query params, response shapes, SSE payload types, or audit event types:
 
-- Update `docs/DESIGN.md` (and `README.md` / `docs/WEB.md` if user-facing commands or Vite env change).
+- Update the relevant contract doc (`docs/API-HTTP.md`, `docs/API-SSE.md`, and/or `docs/RUNTIME-ENV.md`) plus `docs/DESIGN.md` when limitations or hub links change (`README.md` / `docs/WEB.md` if user-facing commands or Vite env change).
 - Update `web/src/api/parseTaskApi.ts` (and `web/src/types/` if needed) and tests.
 - Update Go handler/store tests so defaults still pass without real Postgres or network.
 
-See `.cursor/rules/11-api-contracts.mdc` for a compact checklist.
+See `docs/API-HTTP.md` / `docs/API-SSE.md` and `docs/README.md` (“Where to put updates”) when changing contracts.
 
 ## Adding features (layering)
 
-Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-tasks-stack-extensibility.mdc`. Human summary: `docs/DESIGN.md` (section Extensibility).
+Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-tasks-stack-extensibility.mdc`. Human summary: `docs/EXTENSIBILITY.md`.
 
 ## Cursor / AI rules
 

@@ -1,4 +1,4 @@
-/** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/DESIGN.md). */
+/** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/API-SSE.md). */
 export function collectTaskIdFromSSEData(data: string, into: Set<string>): void {
   const trimmed = data.trim();
   if (trimmed === "") {
