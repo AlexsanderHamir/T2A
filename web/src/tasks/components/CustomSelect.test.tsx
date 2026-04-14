@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
+import { CustomSelect, type CustomSelectOption } from "./custom-select/CustomSelect";
 
 const OPTIONS: CustomSelectOption[] = [
   { value: "ready", label: "Ready" },

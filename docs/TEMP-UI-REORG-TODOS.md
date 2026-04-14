@@ -16,7 +16,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 - [ ] Create `web/src/tasks/components/task-create-modal/`
 - [x] Create `web/src/tasks/components/task-list/`
-- [ ] Create `web/src/tasks/components/custom-select/`
+- [x] Create `web/src/tasks/components/custom-select/`
 - [ ] Create `web/src/tasks/components/rich-prompt/`
 - [ ] Create `web/src/tasks/components/skeletons/`
 - [ ] Keep one-off components in `components/` root only when truly standalone
@@ -55,12 +55,12 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 4) Custom Select Family
 
-- [ ] Move `CustomSelect.tsx` into `custom-select/`
-- [ ] Move `CustomSelectDropdown.tsx`
-- [ ] Move `CustomSelectRowBody.tsx`
-- [ ] Move `customSelectModel.ts`
-- [ ] Move/adjust tests: `CustomSelect.test.tsx`
-- [ ] Add `custom-select/index.ts` barrel exports
+- [x] Move `CustomSelect.tsx` into `custom-select/`
+- [x] Move `CustomSelectDropdown.tsx`
+- [x] Move `CustomSelectRowBody.tsx`
+- [x] Move `customSelectModel.ts`
+- [x] Move/adjust tests: `CustomSelect.test.tsx`
+- [x] Add `custom-select/index.ts` barrel exports
 
 ## 5) Rich Prompt Family
 
@@ -91,7 +91,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [ ] Targeted tests for moved family
   - [ ] `TaskCreateModal.test.tsx`
   - [x] `TaskListSection.test.tsx`
-  - [ ] `CustomSelect.test.tsx`
+  - [x] `CustomSelect.test.tsx`
   - [ ] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
 - [x] Spot-check lint diagnostics for moved files
 
