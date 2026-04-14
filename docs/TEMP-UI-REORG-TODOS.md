@@ -42,16 +42,16 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 3) Task List Family
 
-- [ ] Move `TaskListSection.tsx` into `task-list/`
-- [ ] Move `TaskListSectionHeading.tsx`
-- [ ] Move `TaskListFilters.tsx`
-- [ ] Move `TaskListDataTable.tsx`
-- [ ] Move `TaskListTableSkeleton.tsx`
+- [x] Move `TaskListSection.tsx` into `task-list/`
+- [x] Move `TaskListSectionHeading.tsx`
+- [x] Move `TaskListFilters.tsx`
+- [x] Move `TaskListDataTable.tsx`
+- [x] Move `TaskListTableSkeleton.tsx`
 - [x] Move `taskListClientFilter.ts`
 - [x] Move `taskListFilterSelectOptions.ts`
 - [x] Move `taskListPagerSummary.ts`
-- [ ] Move/adjust tests: `TaskListSection.test.tsx`
-- [ ] Add `task-list/index.ts` barrel exports
+- [x] Move/adjust tests: `TaskListSection.test.tsx`
+- [x] Add `task-list/index.ts` barrel exports
 
 ## 4) Custom Select Family
 

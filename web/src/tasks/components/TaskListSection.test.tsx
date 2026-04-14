@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
-import { TaskListSection } from "./TaskListSection";
+import { TaskListSection } from "./task-list/TaskListSection";
 
 function renderWithRouter(ui: ReactElement) {
   return render(
