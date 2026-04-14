@@ -14,7 +14,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 1) Target Structure
 
-- [ ] Create `web/src/tasks/components/task-create-modal/`
+- [x] Create `web/src/tasks/components/task-create-modal/`
 - [x] Create `web/src/tasks/components/task-list/`
 - [x] Create `web/src/tasks/components/custom-select/`
 - [x] Create `web/src/tasks/components/rich-prompt/`
@@ -34,11 +34,11 @@ Scope: `web/src/tasks` (focus on component organization)
 - [ ] Move `TaskCreateModalEvaluationSummary.tsx`
 - [ ] Move `TaskCreateModalFooterActions.tsx`
 - [ ] Move `TaskCreateModalNestedSubtaskModal.tsx`
-- [ ] Move `useTaskCreateModalNestedDraft.ts`
-- [ ] Move `taskCreateModalBusyLabel.ts`
-- [ ] Move `taskCreateModalDmapReady.ts`
+- [x] Move `useTaskCreateModalNestedDraft.ts`
+- [x] Move `taskCreateModalBusyLabel.ts`
+- [x] Move `taskCreateModalDmapReady.ts`
 - [ ] Move/adjust tests: `TaskCreateModal.test.tsx`
-- [ ] Add `task-create-modal/index.ts` barrel exports
+- [x] Add `task-create-modal/index.ts` barrel exports
 
 ## 3) Task List Family
 
@@ -89,7 +89,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 - [x] `npx tsc --noEmit` in `web/`
 - [ ] Targeted tests for moved family
-  - [ ] `TaskCreateModal.test.tsx`
+  - [x] `TaskCreateModal.test.tsx`
   - [x] `TaskListSection.test.tsx`
   - [x] `CustomSelect.test.tsx`
   - [x] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
