@@ -43,11 +43,15 @@ func (h *SSEHub) Subscribe() (<-chan string, func()) {
 	ch := make(chan string, 32)
 	h.mu.Lock()
 	h.subs[ch] = struct{}{}
+	n := len(h.subs)
 	h.mu.Unlock()
+	recordSSESubscriberGauge(n)
 	return ch, func() {
 		h.mu.Lock()
 		delete(h.subs, ch)
+		n := len(h.subs)
 		h.mu.Unlock()
+		recordSSESubscriberGauge(n)
 	}
 }
 

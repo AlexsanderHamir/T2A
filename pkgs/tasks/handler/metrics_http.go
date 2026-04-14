@@ -33,7 +33,18 @@ var (
 		},
 		[]string{"method", "route"},
 	)
+	taskapiSSESubscribers = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "taskapi",
+		Name:      "sse_subscribers",
+		Help:      "Number of connected GET /events SSE clients in this process.",
+	})
 )
+
+// recordSSESubscriberGauge sets the process-wide SSE subscriber gauge (one hub per taskapi).
+func recordSSESubscriberGauge(n int) {
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.recordSSESubscriberGauge", "n", n)
+	taskapiSSESubscribers.Set(float64(n))
+}
 
 func omitHTTPMetrics(r *http.Request) bool {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitHTTPMetrics")
