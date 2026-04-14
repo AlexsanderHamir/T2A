@@ -82,7 +82,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 - [x] Update relative imports after each move batch
 - [x] Prefer local barrels to reduce long relative paths
-- [ ] Ensure no duplicate files remain in old locations
+- [x] Ensure no duplicate files remain in old locations
 - [ ] Ensure no circular import introduced by barrels
 
 ## 8) Validation Checklist (run after each batch)
@@ -97,15 +97,15 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 9) Final Cleanup
 
-- [ ] Remove temporary compatibility imports if any were added
+- [x] Remove temporary compatibility imports if any were added
 - [ ] Remove unused exports and dead files
 - [ ] Verify no stale references in docs
 - [ ] Delete this temporary file (`docs/TEMP-UI-REORG-TODOS.md`)
 
 ## 10) Suggested Commit Batches
 
-- [ ] Batch A: create folders + move task-create-modal family
-- [ ] Batch B: move task-list family
-- [ ] Batch C: move custom-select family
-- [ ] Batch D: move rich-prompt family
-- [ ] Batch E: move skeletons + final import cleanup
+- [x] Batch A: create folders + move task-create-modal family
+- [x] Batch B: move task-list family
+- [x] Batch C: move custom-select family
+- [x] Batch D: move rich-prompt family
+- [x] Batch E: move skeletons + final import cleanup

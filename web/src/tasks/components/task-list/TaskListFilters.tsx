@@ -1,4 +1,4 @@
-import { CustomSelect } from "../CustomSelect";
+import { CustomSelect } from "../custom-select/CustomSelect";
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   TASK_LIST_STATUS_FILTER_OPTIONS,

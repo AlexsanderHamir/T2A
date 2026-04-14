@@ -1,4 +1,4 @@
-import type { CustomSelectOption } from "../customSelectModel";
+import type { CustomSelectOption } from "../custom-select/customSelectModel";
 import { PRIORITIES, STATUSES } from "@/types";
 import { priorityPillClass, statusPillClass } from "../../taskPillClasses";
 import { statusNeedsUserInput } from "../../taskStatusNeedsUser";
