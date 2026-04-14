@@ -8,6 +8,7 @@ import { NestedSubtaskDraftModal } from "./NestedSubtaskDraftModal";
 import { ParentTaskSelect } from "./ParentTaskSelect";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
+import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {
@@ -183,29 +184,13 @@ export function TaskCreateModal({
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <div className="field grow">
-              <label htmlFor="task-draft-name">Draft name</label>
-              <input
-                id="task-draft-name"
-                value={draftName}
-                onChange={(ev) => onDraftNameChange(ev.target.value)}
-                placeholder="Name this draft"
-                disabled={disabled}
-              />
-              {draftSaveLabel ? (
-                <p
-                  className={[
-                    "task-create-draft-status",
-                    draftSaveError ? "task-create-draft-status--error" : "muted",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-live={draftSaveError ? "assertive" : "polite"}
-                >
-                  {draftSaveLabel}
-                </p>
-              ) : null}
-            </div>
+            <TaskCreateModalDraftNameField
+              draftName={draftName}
+              onDraftNameChange={onDraftNameChange}
+              disabled={disabled}
+              draftSaveLabel={draftSaveLabel}
+              draftSaveError={draftSaveError}
+            />
             <div className="task-create-parent-field grow">
               {parentOptionsLoading ? (
                 <div
