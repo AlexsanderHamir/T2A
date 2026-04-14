@@ -32,6 +32,20 @@ Cap on incoming body size for all routes on the API stack (including JSON bodies
 
 At process start, **`taskapi`** also registers the standard Prometheus **Go** and **Process** collectors on that registry (`go_*` for goroutines, GC, and memory stats; `process_*` for CPU seconds, open FDs, resident memory, start time). They are the usual upstream metric names from `client_golang` (`collectors.NewGoCollector`, `collectors.NewProcessCollector`).
 
+After a successful DB open, **`taskapi`** registers a custom collector that reads **[`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats)** on each scrape (no separate polling goroutine). Names use the `taskapi_db_pool_*` prefix:
+
+| Metric | Type | Labels | Notes |
+| ------ | ---- | ------ | ----- |
+| `taskapi_db_pool_max_open_connections` | Gauge | — | Pool cap from `SetMaxOpenConns`. |
+| `taskapi_db_pool_open_connections` | Gauge | — | Open connections (in use + idle). |
+| `taskapi_db_pool_in_use_connections` | Gauge | — | Connections currently running a query. |
+| `taskapi_db_pool_idle_connections` | Gauge | — | Idle connections in the pool. |
+| `taskapi_db_pool_wait_count_total` | Counter | — | Cumulative waits for a connection from the pool. |
+| `taskapi_db_pool_wait_duration_seconds_total` | Counter | — | Cumulative seconds blocked waiting for a connection. |
+| `taskapi_db_pool_connections_closed_max_idle_total` | Counter | — | Cumulative closes due to `SetMaxIdleConns`. |
+| `taskapi_db_pool_connections_closed_max_idle_time_total` | Counter | — | Cumulative closes due to `SetConnMaxIdleTime`. |
+| `taskapi_db_pool_connections_closed_max_lifetime_total` | Counter | — | Cumulative closes due to `SetConnMaxLifetime`. |
+
 HTTP traffic that **does** pass through the API stack records:
 
 | Metric | Type | Labels | Notes |

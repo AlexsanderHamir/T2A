@@ -118,6 +118,7 @@ func run() int {
 		"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
 
 	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)
+	taskapi.RegisterSQLDBPoolCollector(db)
 
 	slog.Info("http server limits", "cmd", cmdName, "operation", "taskapi.http_limits",
 		"read_header_timeout_sec", int(readHeaderTimeout.Seconds()),

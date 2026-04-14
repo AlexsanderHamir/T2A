@@ -54,6 +54,9 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/handlertest\tNewServerWithStore":           {},
 	"github.com/AlexsanderHamir/T2A/internal/handlertest\tNewServerWithRepo":            {},
 	"github.com/AlexsanderHamir/T2A/internal/httpsecurityexpect\tAssertBaselineHeaders": {},
+	// Prometheus Collector hooks; no per-scrape slog (scrapes can be frequent).
+	"github.com/AlexsanderHamir/T2A/internal/taskapi\t*sqlDBStatsCollector.Describe": {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi\t*sqlDBStatsCollector.Collect":  {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

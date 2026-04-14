@@ -7,7 +7,7 @@ Industry-aligned plan for **logs + Prometheus + (later) tracing**: RED-style HTT
 Use this list in order unless a later item unblocks an incident.
 
 - [x] **A2 — Runtime / process metrics:** Register Prometheus `GoCollector` and `ProcessCollector` on the default registry so `GET /metrics` exposes GC, goroutines, memory, and process RSS/CPU (see implementation in `internal/taskapi` + `cmd/taskapi/run.go`).
-- [ ] **A3 — DB pool metrics:** Periodically publish `sql.DBStats` (via GORM `db.DB()`) as gauges/counters — `WaitCount`, `WaitDuration`, open/idle/in-use connections.
+- [x] **A3 — DB pool metrics:** Custom Prometheus collector reads [`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats) on each scrape (`taskapi_db_pool_*` on `GET /metrics`); wired from `cmd/taskapi` via `taskapi.RegisterSQLDBPoolCollector` ([`internal/taskapi/db_pool_collector.go`](../internal/taskapi/db_pool_collector.go)).
 - [ ] **A4 — Histogram buckets:** Replace default HTTP latency buckets with SLO-tuned buckets; document in [API-HTTP.md](./API-HTTP.md) and [OBSERVABILITY.md](./OBSERVABILITY.md).
 - [ ] **A1 — Operator PromQL:** Add a short “Grafana / PromQL” section to [OBSERVABILITY.md](./OBSERVABILITY.md) — p95 by `route`, 5xx rate, SSE gauge, rate-limit counter rate; note `/metrics` scrape authz.
 - [ ] **A5 — Log audit:** Checklist pass so every `5xx` path logs `request_id`, `operation`, `route`, `duration_ms` where applicable.
