@@ -67,7 +67,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `RichPromptEditor.tsx` into `rich-prompt/`
 - [x] Move `RichPromptMenuBar.tsx`
 - [x] Move `RichPromptRepoHints.tsx`
-- [ ] Move `MentionRangePanel.tsx` (and related helpers/tests)
+- [x] Move `MentionRangePanel.tsx` (and related helpers/tests)
 - [ ] Keep extension files under `tasks/extensions/` unless explicitly re-scoped
 - [x] Add `rich-prompt/index.ts` barrel exports if helpful
 
@@ -92,7 +92,7 @@ Scope: `web/src/tasks` (focus on component organization)
   - [ ] `TaskCreateModal.test.tsx`
   - [x] `TaskListSection.test.tsx`
   - [x] `CustomSelect.test.tsx`
-  - [ ] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
+  - [x] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
 - [x] Spot-check lint diagnostics for moved files
 
 ## 9) Final Cleanup

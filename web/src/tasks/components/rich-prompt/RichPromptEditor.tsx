@@ -17,7 +17,7 @@ import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
 } from "../../promptFormat";
-import { MentionRangePanel } from "../MentionRangePanel";
+import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
 import { RichPromptRepoHints } from "./RichPromptRepoHints";
 import { Modal } from "@/shared/Modal";

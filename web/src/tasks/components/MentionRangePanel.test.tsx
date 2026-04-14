@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchRepoFile } from "@/api/repo";
-import { MentionRangePanel } from "./MentionRangePanel";
+import { MentionRangePanel } from "./rich-prompt/MentionRangePanel";
 
 vi.mock("@/api/repo", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/api/repo")>();
