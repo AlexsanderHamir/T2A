@@ -15,6 +15,8 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 
+**`cmd/taskapi` wiring (code, not prose contracts):** startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`internal/taskapi`](../internal/taskapi) (`NewHTTPHandler`); REST/SSE handlers in [`pkgs/tasks/handler`](../pkgs/tasks/handler) ([`README.md`](../pkgs/tasks/handler/README.md)).
+
 ## Goals
 
 - Support mass delegation: lots of tasks in flight, with agents and people acting through the same system without ad-hoc state.

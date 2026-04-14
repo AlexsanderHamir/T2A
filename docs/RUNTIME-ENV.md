@@ -2,7 +2,7 @@
 
 Binaries, startup sequence, graceful shutdown, HTTP timeout constants, and **environment variables** for `taskapi` and `dbcheck`. REST and SSE contracts live in [API-HTTP.md](./API-HTTP.md) and [API-SSE.md](./API-SSE.md). Architecture hub: [DESIGN.md](./DESIGN.md).
 
-**Implementation:** `taskapi`-only parsing for listen host, JSON log level / minimized logging, agent queue/reconcile interval, and dev SSE ticker interval is in [`internal/taskapiconfig`](../internal/taskapiconfig) (`go doc`); rate limits, idempotency, and most HTTP knobs are read inside `pkgs/tasks/handler` at middleware init.
+**Implementation:** `taskapi`-only parsing for listen host, JSON log level / minimized logging, agent queue/reconcile interval, and dev SSE ticker interval is in [`internal/taskapiconfig`](../internal/taskapiconfig) (`go doc`). The **`With*`** middleware stack around `handler.NewHandler` is built in [`internal/taskapi`](../internal/taskapi) (`NewHTTPHandler`). Rate limits, idempotency caps, and other HTTP knobs are still read from env inside `pkgs/tasks/handler` when those middlewares initialize.
 
 ## Binaries (`cmd`)
 

@@ -1,6 +1,6 @@
 # taskapi — HTTP API (REST)
 
-Authoritative routes, query/body limits, status codes, and JSON error shapes for `taskapi`. **Go layout** (which file owns which route/middleware): [`pkgs/tasks/handler/README.md`](../pkgs/tasks/handler/README.md). **SSE** (`GET /events`): [API-SSE.md](./API-SSE.md). **Environment variables** and startup: [RUNTIME-ENV.md](./RUNTIME-ENV.md). **Persistence:** [PERSISTENCE.md](./PERSISTENCE.md). Architecture hub: [DESIGN.md](./DESIGN.md).
+Authoritative routes, query/body limits, status codes, and JSON error shapes for `taskapi`. **Go layout:** routes and per-feature files in [`pkgs/tasks/handler/README.md`](../pkgs/tasks/handler/README.md); **`taskapi`** middleware assembly in [`internal/taskapi`](../internal/taskapi). **SSE** (`GET /events`): [API-SSE.md](./API-SSE.md). **Environment variables** and startup: [RUNTIME-ENV.md](./RUNTIME-ENV.md). **Persistence:** [PERSISTENCE.md](./PERSISTENCE.md). Architecture hub: [DESIGN.md](./DESIGN.md).
 
 The mux is mounted at `/` (no `/api` prefix). Registered families: tasks, SSE, health endpoints (plain JSON), **`GET /metrics`** (Prometheus text), and optionally repo (see below).
 

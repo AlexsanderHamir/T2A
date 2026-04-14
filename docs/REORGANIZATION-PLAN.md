@@ -163,6 +163,8 @@ pkgs/tasks/store/
 
 **Stop line:** if M1–M3 achieve clarity for Cursor CLI work, **pause** M4 until the CLI stresses the layout.
 
+**Post-reorg polish (ongoing):** keep `docs/DESIGN.md` hub, `RUNTIME-ENV.md`, `API-HTTP.md`, and `CONTRIBUTING.md` pointing at `internal/taskapi` / `internal/taskapiconfig` whenever wiring moves.
+
 ## 10. What not to do
 
 - Do not rename `module` path or move `domain` types casually (breaks importers and mental model).
