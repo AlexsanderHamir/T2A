@@ -21,6 +21,7 @@ import {
   nextSelectable,
   prevSelectable,
 } from "./customSelectModel";
+import { CustomSelectRowBody } from "./CustomSelectRowBody";
 
 export type { CustomSelectOption } from "./customSelectModel";
 export { isCustomSelectHeader } from "./customSelectModel";
@@ -281,47 +282,13 @@ export function CustomSelect({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => pick(o.value)}
             >
-              {o.pillClass ? (
-                <span
-                  className={[
-                    "custom-select-option-row",
-                    o.rowTag ? "custom-select-row--tagged" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {o.rowTag ? (
-                    <span className="custom-select-option-tag">{o.rowTag}</span>
-                  ) : null}
-                  <span
-                    className={`custom-select-option-pill ${o.pillClass}`}
-                  >
-                    {o.label}
-                  </span>
-                </span>
-              ) : (
-                <span
-                  className={[
-                    "custom-select-option-row",
-                    o.rowTag ? "custom-select-row--tagged" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {o.rowTag ? (
-                    <span className="custom-select-option-tag">{o.rowTag}</span>
-                  ) : null}
-                  <span
-                    className={
-                      o.depth != null && o.depth > 0
-                        ? "custom-select-option-neutral custom-select-option-neutral--nested"
-                        : "custom-select-option-neutral"
-                    }
-                  >
-                    {o.label}
-                  </span>
-                </span>
-              )}
+              <CustomSelectRowBody
+                variant="option"
+                rowTag={o.rowTag}
+                label={o.label}
+                pillClass={o.pillClass}
+                depth={o.depth}
+              />
             </li>
           ),
         )}
@@ -359,45 +326,13 @@ export function CustomSelect({
         }}
         onKeyDown={onButtonKeyDown}
       >
-        {current.pillClass ? (
-          <span
-            className={[
-              "custom-select-value-row",
-              current.rowTag ? "custom-select-row--tagged" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {current.rowTag ? (
-              <span className="custom-select-value-tag">{current.rowTag}</span>
-            ) : null}
-            <span className={`custom-select-value-pill ${current.pillClass}`}>
-              {current.label}
-            </span>
-          </span>
-        ) : (
-          <span
-            className={[
-              "custom-select-value-row",
-              current.rowTag ? "custom-select-row--tagged" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {current.rowTag ? (
-              <span className="custom-select-value-tag">{current.rowTag}</span>
-            ) : null}
-            <span
-              className={
-                current.value === ""
-                  ? "custom-select-value-neutral custom-select-value-neutral--placeholder"
-                  : "custom-select-value-neutral"
-              }
-            >
-              {current.label}
-            </span>
-          </span>
-        )}
+        <CustomSelectRowBody
+          variant="value"
+          rowTag={current.rowTag}
+          label={current.label}
+          pillClass={current.pillClass}
+          valueEmpty={current.value === ""}
+        />
         <span className="custom-select-chevron" aria-hidden="true">
           ▾
         </span>
