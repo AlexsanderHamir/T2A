@@ -9,64 +9,15 @@ import type { Instance as TippyInstance } from "tippy.js";
 import tippy from "tippy.js";
 import { PluginKey } from "@tiptap/pm/state";
 import { searchRepoFiles } from "../../api";
+import { RepoFileSuggestionList, type RepoSuggestionItem } from "./repoFileSuggestionList";
+import {
+  MENTION_POPOVER_Z_INDEX,
+  referenceRectForSuggestion,
+} from "./repoFileSuggestionReferenceRect";
 
-/** Keep in sync with `--z-portal-popover` / `--z-mention-popover` in app-design-tokens.css */
-const MENTION_POPOVER_Z_INDEX = 13000;
-
-export type RepoSuggestionItem = { path: string };
-
-type ListProps = {
-  items: RepoSuggestionItem[];
-  command: (item: RepoSuggestionItem) => void;
-};
-
-function SuggestionList({ items, command }: ListProps) {
-  return (
-    <div className="mention-dropdown tiptap-suggestion-list">
-      <div className="tiptap-suggestion-list__head" aria-hidden="true">
-        Repository files
-      </div>
-      <ul role="listbox" aria-label="Matching repository files">
-        {items.length === 0 ? (
-          <li className="tiptap-suggestion-list__empty" role="presentation">
-            No matching files
-          </li>
-        ) : (
-          items.map((item) => (
-            <li key={item.path} className="mention-option" role="option">
-              <button type="button" onClick={() => command(item)}>
-                <span className="tiptap-suggestion-list__path">{item.path}</span>
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
-  );
-}
+export type { RepoSuggestionItem } from "./repoFileSuggestionList";
 
 export const repoFileSuggestionPluginKey = new PluginKey("repoFileSuggestion");
-
-/** TipTap may pass a clientRect that returns null or 0×0 before the suggestion decoration is in the DOM — fall back to coords at the match range. */
-function referenceRectForSuggestion(
-  props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
-): DOMRect {
-  const r = props.clientRect?.() ?? null;
-  if (r && (r.width > 0 || r.height > 0)) {
-    return r;
-  }
-  try {
-    const coords = props.editor.view.coordsAtPos(props.range.from);
-    return new DOMRect(
-      coords.left,
-      coords.top,
-      coords.right - coords.left,
-      coords.bottom - coords.top,
-    );
-  } catch {
-    return new DOMRect(0, 0, 0, 0);
-  }
-}
 
 export type RepoFilePickedPayload = {
   /** Path relative to REPO_ROOT (forward slashes). */
@@ -182,7 +133,7 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
               props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
             ) {
               latestProps = props;
-              component = new ReactRenderer(SuggestionList, {
+              component = new ReactRenderer(RepoFileSuggestionList, {
                 props: {
                   items: props.items,
                   command: (item: RepoSuggestionItem) => {
