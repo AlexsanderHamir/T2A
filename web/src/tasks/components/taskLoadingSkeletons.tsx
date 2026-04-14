@@ -1,5 +1,7 @@
-const CHECKLIST_SKELETON_ROWS = 3;
-const TIMELINE_SKELETON_ITEMS = 4;
+import { TaskChecklistSkeletonRows, TaskTimelineSkeletonItems } from "./taskLoadingSkeletonChunks";
+
+const TASK_GRAPH_SKELETON_CARDS = 4;
+const TASK_DRAFTS_LIST_SKELETON_ROWS = 4;
 
 export function TaskChecklistSkeleton() {
   return (
@@ -9,12 +11,7 @@ export function TaskChecklistSkeleton() {
       className="task-checklist-skeleton-wrap task-checklist-surface-pad"
     >
       <div className="task-checklist-skeleton" aria-hidden="true">
-        {Array.from({ length: CHECKLIST_SKELETON_ROWS }, (_, i) => (
-          <div key={i} className="task-checklist-skeleton-row">
-            <span className="skeleton-block task-checklist-skeleton-check" />
-            <span className="skeleton-block task-checklist-skeleton-text" />
-          </div>
-        ))}
+        <TaskChecklistSkeletonRows />
       </div>
     </div>
   );
@@ -24,16 +21,7 @@ export function TaskTimelineSkeleton() {
   return (
     <div role="status" aria-label="Loading updates" className="task-timeline-skeleton-root">
       <ol className="task-timeline-skeleton" aria-hidden="true">
-        {Array.from({ length: TIMELINE_SKELETON_ITEMS }, (_, i) => (
-          <li key={i} className="task-timeline-skeleton-item">
-            <div className="task-timeline-skeleton-head">
-              <span className="skeleton-block skeleton-block--detail-time" />
-              <span className="skeleton-block skeleton-block--detail-type-pill" />
-              <span className="skeleton-block skeleton-block--detail-by" />
-            </div>
-            <span className="skeleton-block skeleton-block--detail-data" />
-          </li>
-        ))}
+        <TaskTimelineSkeletonItems />
       </ol>
     </div>
   );
@@ -123,12 +111,7 @@ export function TaskDetailPageSkeleton() {
             <span className="skeleton-block skeleton-block--btn" />
           </div>
           <div className="task-checklist-skeleton" aria-hidden="true">
-            {Array.from({ length: CHECKLIST_SKELETON_ROWS }, (_, i) => (
-              <div key={i} className="task-checklist-skeleton-row">
-                <span className="skeleton-block task-checklist-skeleton-check" />
-                <span className="skeleton-block task-checklist-skeleton-text" />
-              </div>
-            ))}
+            <TaskChecklistSkeletonRows />
           </div>
         </div>
 
@@ -140,27 +123,13 @@ export function TaskDetailPageSkeleton() {
         <div className="task-detail-skeleton-section task-detail-skeleton-timeline-wrap">
           <span className="skeleton-block skeleton-block--detail-heading" />
           <ol className="task-timeline-skeleton" aria-hidden="true">
-            {Array.from({ length: TIMELINE_SKELETON_ITEMS }, (_, i) => (
-              <li key={i} className="task-timeline-skeleton-item">
-                <div className="task-timeline-skeleton-head">
-                  <span className="skeleton-block skeleton-block--detail-time" />
-                  <span className="skeleton-block skeleton-block--detail-type-pill" />
-                  <span className="skeleton-block skeleton-block--detail-by" />
-                </div>
-                <span className="skeleton-block skeleton-block--detail-data" />
-              </li>
-            ))}
+            <TaskTimelineSkeletonItems />
           </ol>
         </div>
       </div>
     </section>
   );
 }
-
-const TASK_GRAPH_SKELETON_CARDS = 4;
-
-/** Task graph route while the graph query is pending (DS §11). */
-const TASK_DRAFTS_LIST_SKELETON_ROWS = 4;
 
 /** Drafts list route while the drafts query is pending (layout matches `.draft-list-row`). */
 export function TaskDraftsListSkeleton() {
@@ -181,6 +150,7 @@ export function TaskDraftsListSkeleton() {
   );
 }
 
+/** Task graph route while the graph query is pending (DS §11). */
 export function TaskGraphPageSkeleton() {
   return (
     <section
