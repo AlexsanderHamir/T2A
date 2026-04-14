@@ -206,6 +206,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	if parentNotify != "" {
 		h.notifyChange(TaskUpdated, parentNotify)
 	}
+	taskapiDomainTasksDeletedTotal.Inc()
 	debugHTTPOut(r.Context(), op, http.StatusNoContent, "task_id", id, "response_empty", true)
 	w.WriteHeader(http.StatusNoContent)
 }

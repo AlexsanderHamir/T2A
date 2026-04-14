@@ -59,6 +59,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_http_idempotency_cache_evictions_total` | Counter | — | Cache entries evicted to satisfy **`T2A_IDEMPOTENCY_MAX_ENTRIES`** / **`T2A_IDEMPOTENCY_MAX_BYTES`** (oldest-first). |
 | `taskapi_domain_tasks_created_total` | Counter | — | Successful **`POST /tasks`** after persistence (**201**). |
 | `taskapi_domain_tasks_updated_total` | Counter | — | Successful **`PATCH /tasks/{id}`** (**200**). |
+| `taskapi_domain_tasks_deleted_total` | Counter | — | Successful **`DELETE /tasks/{id}`** (**204**). |
 | `taskapi_agent_queue_depth` | Gauge | — | Ready-task snapshots buffered in the in-process agent queue. |
 | `taskapi_agent_queue_capacity` | Gauge | — | Max buffer size from **`T2A_USER_TASK_AGENT_QUEUE_CAP`** (see [RUNTIME-ENV.md](./RUNTIME-ENV.md)). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |

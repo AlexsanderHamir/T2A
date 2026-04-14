@@ -3,7 +3,7 @@
 # Runbooks: docs/runbooks/
 #
 # Expected metric names: taskapi_http_* , taskapi_db_pool_* , taskapi_sse_subscribers ,
-# taskapi_build_info{version,revision,go_version} , taskapi_domain_* , taskapi_agent_queue_* ,
+# taskapi_build_info{version,revision,go_version} , taskapi_domain_* (incl. deleted) , taskapi_agent_queue_* ,
 # taskapi_http_idempotency_cache_evictions_total
 # (see docs/API-HTTP.md and docs/OBSERVABILITY.md).
 

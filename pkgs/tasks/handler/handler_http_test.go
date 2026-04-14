@@ -380,3 +380,40 @@ func TestHTTP_domain_tasks_created_and_updated_counters(t *testing.T) {
 		t.Fatalf("updated counter did not increment (before=%v after=%v)", beforeU, testutil.ToFloat64(taskapiDomainTasksUpdatedTotal))
 	}
 }
+
+func TestHTTP_domain_tasks_deleted_counter(t *testing.T) {
+	beforeD := testutil.ToFloat64(taskapiDomainTasksDeletedTotal)
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"to-delete","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("create status %d: %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/tasks/"+created.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusNoContent {
+		b, _ := io.ReadAll(res2.Body)
+		t.Fatalf("delete status %d: %s", res2.StatusCode, b)
+	}
+	if testutil.ToFloat64(taskapiDomainTasksDeletedTotal) < beforeD+1 {
+		t.Fatalf("deleted counter did not increment (before=%v after=%v)", beforeD, testutil.ToFloat64(taskapiDomainTasksDeletedTotal))
+	}
+}

@@ -69,6 +69,7 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **Idempotency evictions / s** | `rate(taskapi_http_idempotency_cache_evictions_total[5m])` |
 | **Tasks created / s** | `rate(taskapi_domain_tasks_created_total[5m])` |
 | **Tasks updated / s** | `rate(taskapi_domain_tasks_updated_total[5m])` |
+| **Tasks deleted / s** | `rate(taskapi_domain_tasks_deleted_total[5m])` |
 | **Agent queue fill ratio** | `taskapi_agent_queue_depth / clamp_min(taskapi_agent_queue_capacity, 1)` |
 | **DB pool waits / s** | `rate(taskapi_db_pool_wait_count_total[5m])` |
 | **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |

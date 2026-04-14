@@ -16,4 +16,9 @@ var (
 		Name:      "domain_tasks_updated_total",
 		Help:      "Tasks successfully updated via PATCH /tasks/{id} (HTTP 200).",
 	})
+	taskapiDomainTasksDeletedTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "domain_tasks_deleted_total",
+		Help:      "Tasks successfully removed via DELETE /tasks/{id} (HTTP 204).",
+	})
 )
