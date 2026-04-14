@@ -604,7 +604,9 @@ describe("App", () => {
     );
 
     expect(await screen.findByRole("heading", { name: /^task drafts$/i })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/loading drafts/i);
+    expect(
+      await screen.findByRole("status", { name: /loading drafts/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows an error on drafts page when draft list request fails", async () => {
@@ -640,6 +642,104 @@ describe("App", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
+    expect(
+      screen.getByRole("button", { name: /^try again$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("retries draft list from drafts page after an error", async () => {
+    const user = userEvent.setup();
+    let draftAttempts = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        draftAttempts += 1;
+        if (draftAttempts === 1) {
+          return new Response(
+            JSON.stringify({ error: "drafts unavailable" }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return Response.json({
+          drafts: [
+            {
+              id: "d1",
+              name: "Recovered",
+              created_at: "2026-04-07T10:00:00Z",
+              updated_at: "2026-04-07T10:05:00Z",
+            },
+          ],
+        });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
+    await user.click(screen.getByRole("button", { name: /^try again$/i }));
+    expect(
+      await screen.findByRole("button", {
+        name: /open draft recovered in create form/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers create task from drafts page when there are no drafts", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url.startsWith("/tasks?")) {
+        return Response.json({ tasks: [], limit: 200, offset: 0 });
+      }
+      if (url.startsWith("/task-drafts?")) {
+        return Response.json({ drafts: [] });
+      }
+      if (url.startsWith("/repo/")) {
+        return new Response(
+          JSON.stringify({ error: "repo not configured" }),
+          { status: 503 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={["/drafts"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: /^task drafts$/i });
+    await user.click(
+      await screen.findByRole("button", { name: /^create a task$/i }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: /^new task$/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows loading status in draft picker modal from home", async () => {

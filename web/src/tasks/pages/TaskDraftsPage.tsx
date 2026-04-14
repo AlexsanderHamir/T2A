@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { TASK_TIMINGS } from "@/constants/tasks";
+import { useDelayedTrue } from "@/lib/useDelayedTrue";
+import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNavigate } from "react-router-dom";
+import { TaskDraftsListSkeleton } from "../components/taskLoadingSkeletons";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {
@@ -49,6 +52,10 @@ export function TaskDraftsPage({ app }: Props) {
   const resumeError = app.resumeDraftError;
   const deletePending = app.deleteDraftPending;
   const deleteError = app.deleteDraftError;
+  const showDraftsSkeleton = useDelayedTrue(
+    loading,
+    TASK_TIMINGS.draftResumeMinLoadingMs,
+  );
 
   useEffect(() => {
     const draftIds = new Set(drafts.map((d) => d.id));
@@ -70,49 +77,79 @@ export function TaskDraftsPage({ app }: Props) {
       {resumeError ? <p role="alert">{resumeError}</p> : null}
       {deleteError ? <p role="alert">{deleteError}</p> : null}
       <div className="stack">
-        {loading ? (
-          <p className="muted" role="status" aria-live="polite">
-            Loading drafts…
-          </p>
-        ) : error ? (
-          <p role="alert">{error}</p>
-        ) : drafts.length === 0 ? (
-          <p className="muted">No saved drafts.</p>
-        ) : (
-          drafts.map((d) => (
-            <div
-              key={d.id}
-              className={[
-                "row",
-                "stack-row-actions",
-                "draft-list-row",
-                exitingDraftIds.includes(d.id) ? "draft-list-row--exit" : "",
-              ].join(" ")}
-            >
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void openDraftInCreateForm(d.id)}
-                aria-label={`Open draft ${d.name} in create form`}
-                disabled={
-                  resumePending || deletePending || exitingDraftIds.includes(d.id)
-                }
-              >
-                {resumePending ? "Opening draft…" : `Resume: ${d.name}`}
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void deleteDraft(d.id)}
-                disabled={
-                  resumePending || deletePending || exitingDraftIds.includes(d.id)
-                }
-              >
-                {deletingDraftId === d.id ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          ))
-        )}
+        {loading && showDraftsSkeleton ? <TaskDraftsListSkeleton /> : null}
+        {!loading ? (
+          <div className="stack task-list-content task-list-content--enter">
+            {error ? (
+              <div role="alert">
+                <p className="err-inline">{error}</p>
+                <div className="task-detail-error-actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      void app.retryDraftList();
+                    }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            ) : drafts.length === 0 ? (
+              <EmptyState
+                title="No saved drafts"
+                description="Create a task from home and your work can be saved as a draft automatically."
+                action={{
+                  label: "Create a task",
+                  onClick: () => {
+                    navigate("/");
+                    app.openCreateModal();
+                  },
+                }}
+              />
+            ) : (
+              drafts.map((d) => (
+                <div
+                  key={d.id}
+                  className={[
+                    "row",
+                    "stack-row-actions",
+                    "draft-list-row",
+                    exitingDraftIds.includes(d.id) ? "draft-list-row--exit" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void openDraftInCreateForm(d.id)}
+                    aria-label={`Open draft ${d.name} in create form`}
+                    disabled={
+                      resumePending ||
+                      deletePending ||
+                      exitingDraftIds.includes(d.id)
+                    }
+                  >
+                    {resumePending ? "Opening draft…" : `Resume: ${d.name}`}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void deleteDraft(d.id)}
+                    disabled={
+                      resumePending ||
+                      deletePending ||
+                      exitingDraftIds.includes(d.id)
+                    }
+                  >
+                    {deletingDraftId === d.id ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );
