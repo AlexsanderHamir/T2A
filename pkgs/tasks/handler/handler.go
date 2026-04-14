@@ -8,7 +8,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-// Task routes: handler_tasks.go. /repo: repo_handlers.go. SSE: sse.go.
+// Task routes: see README.md (handler_task_*.go). /repo: repo_handlers.go. SSE: sse.go.
 
 const httpLogCmd = "taskapi"
 

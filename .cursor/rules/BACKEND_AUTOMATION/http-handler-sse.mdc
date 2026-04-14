@@ -10,7 +10,7 @@ alwaysApply: false
 
 # HTTP and SSE handler patterns
 
-Authoritative routes, bodies, and query parameters live in **`docs/API-HTTP.md`** (REST) and **`docs/API-SSE.md`** (SSE). This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** (and related middleware in the same area).
+Authoritative routes, bodies, and query parameters live in **`docs/API-HTTP.md`** (REST) and **`docs/API-SSE.md`** (SSE). **`pkgs/tasks/handler/README.md`** maps `*.go` files to routes vs middleware. This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** (and related middleware in the same area).
 
 ---
 
