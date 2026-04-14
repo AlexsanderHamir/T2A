@@ -50,6 +50,7 @@ API contracts (paths, query params, JSON shapes) are authoritative in `docs/API-
 
 | Change | Command |
 |--------|---------|
+| **Agent session produced git changes** | Before ending the turn: `git status` → `git add` (scoped) → `git commit` (conventional message, one logical concern) → `git push origin` on the current branch (often `main`). Skip only if the user opted out or push is not possible (no remote, no auth). |
 | Full bar (recommended) | From repo root: `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). Go-only fast path: set `CHECK_SKIP_WEB=1` (bash) or `$env:CHECK_SKIP_WEB='1'` (PowerShell) to skip `web/` steps. After `go test`, the check scripts run `go run ./cmd/funclogmeasure -enforce` (see `docs/OBSERVABILITY.md`); set `CHECK_SKIP_FUNCLOG=1` to skip that audit locally if needed. |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1` (from repo root); format touched `*.go` with `gofmt` or `go fmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run build` |
@@ -65,7 +66,8 @@ Default tests must not require real Postgres, real outbound network, or a runnin
 - New tasks API features: follow `docs/EXTENSIBILITY.md` (domain → store → handler → optional `web/`). Rule `.cursor/rules/13-tasks-stack-extensibility.mdc` expands the same slice for agents.
 - JSON at the boundary: Web treats responses as `unknown` until `parseTaskApi` validates; keep that pipeline when adding fields.
 - Same-origin in prod: `taskapi` does not add CORS; dev uses Vite proxy (`web/vite.config.ts`).
-- Atomic commits: `.cursor/rules/08-atomic-commits.mdc` — one logical concern per commit, conventional message style; push after committing unless the user opts out or push is not possible.
+- Atomic commits: `.cursor/rules/08-atomic-commits.mdc` (when present) — one logical concern per commit, conventional message style; **push after commit** unless the user opts out or push is not possible.
+- **End of each coding/agent chat:** if tracked files changed, **commit and push** as above before finishing (so `main` and teammates stay in sync); combine with the “Commands to run before you finish” table for checks.
 - Docs: When you change flags, routes, or env vars, update the focused doc (`docs/RUNTIME-ENV.md`, `docs/API-HTTP.md`, `docs/API-SSE.md`, or `docs/DESIGN.md` hub for limitations) and `docs/WEB.md` / root `README.md` if user-facing commands change; see `docs/README.md` “Where to put updates”.
 
 ## Quick pitfalls
