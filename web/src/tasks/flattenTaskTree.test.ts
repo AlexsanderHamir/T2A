@@ -29,6 +29,54 @@ describe("flattenTaskTree", () => {
     expect(flat[0]).not.toHaveProperty("children");
     expect(flat[1]).not.toHaveProperty("children");
   });
+
+  it("returns an empty array for an empty tree", () => {
+    expect(flattenTaskTree([])).toEqual([]);
+  });
+
+  it("walks multiple roots and grandchildren depth-first", () => {
+    const grand = {
+      id: "g1",
+      title: "Grand",
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "medium" as const,
+      checklist_inherit: false as const,
+    };
+    const mid = {
+      id: "m1",
+      title: "Mid",
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "medium" as const,
+      checklist_inherit: false as const,
+      children: [grand],
+    };
+    const top = {
+      id: "t1",
+      title: "Top",
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "medium" as const,
+      checklist_inherit: false as const,
+      children: [mid],
+    };
+    const other = {
+      id: "t2",
+      title: "Other root",
+      initial_prompt: "",
+      status: "done" as const,
+      priority: "low" as const,
+      checklist_inherit: false as const,
+    };
+    const flat = flattenTaskTree([top, other]);
+    expect(flat.map((t) => ({ id: t.id, depth: t.depth }))).toEqual([
+      { id: "t1", depth: 0 },
+      { id: "m1", depth: 1 },
+      { id: "g1", depth: 2 },
+      { id: "t2", depth: 0 },
+    ]);
+  });
 });
 
 describe("flattenTaskTreeRoots", () => {
@@ -37,5 +85,33 @@ describe("flattenTaskTreeRoots", () => {
     expect(flat).toHaveLength(1);
     expect(flat[0]).toMatchObject({ id: "r1", depth: 0 });
     expect(flat[0]).not.toHaveProperty("children");
+  });
+
+  it("returns an empty array for an empty list", () => {
+    expect(flattenTaskTreeRoots([])).toEqual([]);
+  });
+
+  it("strips children from every root and preserves order", () => {
+    const a = {
+      id: "a",
+      title: "A",
+      initial_prompt: "",
+      status: "ready" as const,
+      priority: "low" as const,
+      checklist_inherit: false as const,
+    };
+    const b = {
+      id: "b",
+      title: "B",
+      initial_prompt: "",
+      status: "done" as const,
+      priority: "high" as const,
+      checklist_inherit: false as const,
+      children: [child],
+    };
+    const flat = flattenTaskTreeRoots([a, b]);
+    expect(flat.map((t) => t.id)).toEqual(["a", "b"]);
+    expect(flat.every((t) => t.depth === 0)).toBe(true);
+    expect(flat.every((t) => !("children" in t))).toBe(true);
   });
 });
