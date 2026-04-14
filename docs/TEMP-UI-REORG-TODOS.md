@@ -23,7 +23,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 2) Task Create Modal Family
 
-- [ ] Move `TaskCreateModal.tsx` into `task-create-modal/`
+- [x] Move `TaskCreateModal.tsx` into `task-create-modal/`
 - [x] Move `TaskCreateModalPrimaryFields.tsx`
 - [x] Move `TaskCreateModalDmapTitleRow.tsx`
 - [x] Move `TaskCreateModalDmapSection.tsx`
@@ -37,7 +37,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `useTaskCreateModalNestedDraft.ts`
 - [x] Move `taskCreateModalBusyLabel.ts`
 - [x] Move `taskCreateModalDmapReady.ts`
-- [ ] Move/adjust tests: `TaskCreateModal.test.tsx`
+- [x] Move/adjust tests: `TaskCreateModal.test.tsx`
 - [x] Add `task-create-modal/index.ts` barrel exports
 
 ## 3) Task List Family

@@ -3,7 +3,7 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { TaskCreateModal } from "./TaskCreateModal";
+import { TaskCreateModal } from "./task-create-modal/TaskCreateModal";
 
 function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
   const base: ComponentProps<typeof TaskCreateModal> = {

@@ -11,3 +11,4 @@ export * from "./TaskCreateModalPendingSubtasksField";
 export * from "./TaskCreateModalEvaluationSummary";
 export * from "./TaskCreateModalFooterActions";
 export * from "./TaskCreateModalNestedSubtaskModal";
+export * from "./TaskCreateModal";
