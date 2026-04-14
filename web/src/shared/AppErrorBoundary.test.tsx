@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AppErrorBoundary } from "./AppErrorBoundary";
 
@@ -25,9 +25,13 @@ describe("AppErrorBoundary", () => {
       </AppErrorBoundary>,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(
       "Something went wrong while rendering this page.",
     );
+    expect(
+      within(alert).getByRole("button", { name: /^reload page$/i }),
+    ).toBeInTheDocument();
     errorSpy.mockRestore();
   });
 });

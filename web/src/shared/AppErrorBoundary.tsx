@@ -31,7 +31,18 @@ export class AppErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="err error-banner" role="alert" aria-live="assertive">
-          Something went wrong while rendering this page.
+          <span className="error-banner__text">
+            Something went wrong while rendering this page.
+          </span>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              window.location.reload();
+            }}
+          >
+            Reload page
+          </button>
         </div>
       );
     }
