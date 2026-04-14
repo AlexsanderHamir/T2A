@@ -1,4 +1,4 @@
-import { promptHasVisibleContent } from "../promptFormat";
+import { promptHasVisibleContent } from "../../promptFormat";
 
 type TaskDetailPromptSectionProps = {
   initialPrompt: string;

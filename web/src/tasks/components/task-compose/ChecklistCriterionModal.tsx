@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { FieldLabel } from "@/shared/FieldLabel";
-import { Modal } from "../../shared/Modal";
+import { Modal } from "../../../shared/Modal";
 
 type Props = {
   mode: "add" | "edit";

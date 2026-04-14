@@ -1,8 +1,8 @@
 import type { FormEvent } from "react";
 import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
-import { Modal } from "../../shared/Modal";
-import { TaskComposeFields } from "./TaskComposeFields";
+import { Modal } from "../../../shared/Modal";
+import { TaskComposeFields } from "../task-compose/TaskComposeFields";
 
 type Props = {
   taskId: string;

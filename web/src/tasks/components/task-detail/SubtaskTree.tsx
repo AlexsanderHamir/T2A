@@ -4,7 +4,7 @@ import {
   EmptyState,
   EmptyStateSubtasksGlyph,
 } from "@/shared/EmptyState";
-import { priorityPillClass, statusPillClass } from "../taskPillClasses";
+import { priorityPillClass, statusPillClass } from "../../taskPillClasses";
 
 export function SubtaskTree({
   nodes,

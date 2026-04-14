@@ -1,5 +1,5 @@
 import type { PriorityChoice, TaskType } from "@/types";
-import { TaskComposeFields } from "../TaskComposeFields";
+import { TaskComposeFields } from "../task-compose/TaskComposeFields";
 import { TaskCreateModalDmapSection } from "./TaskCreateModalDmapSection";
 import { TaskCreateModalDmapTitleRow } from "./TaskCreateModalDmapTitleRow";
 

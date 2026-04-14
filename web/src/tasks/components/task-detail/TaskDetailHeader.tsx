@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Task } from "@/types";
-import { priorityPillClass, statusPillClass } from "../taskPillClasses";
-import { statusNeedsUserInput } from "../taskStatusNeedsUser";
+import { priorityPillClass, statusPillClass } from "../../taskPillClasses";
+import { statusNeedsUserInput } from "../../taskStatusNeedsUser";
 
 type TaskDetailHeaderTask = Pick<Task, "title" | "status" | "priority">;
 

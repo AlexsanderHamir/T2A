@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { TaskEvent, TaskEventsResponse } from "@/types";
-import { TaskPager } from "./TaskPager";
+import { TaskPager } from "../task-list/TaskPager";
 import { TaskUpdatesTimeline } from "./TaskUpdatesTimeline";
 
 type Props = {

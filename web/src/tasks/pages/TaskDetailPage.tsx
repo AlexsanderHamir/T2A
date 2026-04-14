@@ -2,14 +2,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
-import { SubtaskCreateModal } from "../components/SubtaskCreateModal";
-import { SubtaskTree } from "../components/SubtaskTree";
-import { TaskDetailAttentionBar } from "../components/TaskDetailAttentionBar";
-import { TaskDetailChecklistSection } from "../components/TaskDetailChecklistSection";
-import { TaskDetailHeader } from "../components/TaskDetailHeader";
-import { TaskDetailSubtasksHead } from "../components/TaskDetailSubtasksHead";
-import { TaskDetailPromptSection } from "../components/TaskDetailPromptSection";
-import { TaskDetailUpdatesSection } from "../components/TaskDetailUpdatesSection";
+import {
+  SubtaskCreateModal,
+  SubtaskTree,
+  TaskDetailAttentionBar,
+  TaskDetailChecklistSection,
+  TaskDetailHeader,
+  TaskDetailPromptSection,
+  TaskDetailSubtasksHead,
+  TaskDetailUpdatesSection,
+} from "../components/task-detail";
 import { sanitizePromptHtml } from "../promptFormat";
 import { userAttention } from "../taskAttention";
 import { TaskDetailPageSkeleton } from "../components/skeletons";

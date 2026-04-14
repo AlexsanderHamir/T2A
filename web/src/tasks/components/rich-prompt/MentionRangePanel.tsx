@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRepoFile, type RepoFileResult } from "@/api/repo";
 import { lineRangeFromSelection } from "@/lib/lineRangeFromSelection";
-import { filePreviewLanguageFromPath } from "../filePreviewLanguage";
-import { highlightPreviewContent } from "../filePreviewHighlight";
+import {
+  filePreviewLanguageFromPath,
+  highlightPreviewContent,
+} from "../file-preview";
 
 export type MentionRangePanelProps = {
   id: string;

@@ -1,5 +1,5 @@
 import type { PendingSubtaskDraft } from "../../pendingSubtaskDraft";
-import { NestedSubtaskDraftModal } from "../NestedSubtaskDraftModal";
+import { NestedSubtaskDraftModal } from "../task-compose/NestedSubtaskDraftModal";
 
 type Props = {
   open: boolean;

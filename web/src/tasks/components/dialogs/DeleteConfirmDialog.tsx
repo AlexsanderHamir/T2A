@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Modal } from "../../shared/Modal";
+import { Modal } from "../../../shared/Modal";
 
 type Props = {
   taskTitle: string;

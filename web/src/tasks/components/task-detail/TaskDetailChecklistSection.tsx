@@ -6,9 +6,9 @@ import {
   EmptyState,
   EmptyStateChecklistGlyph,
 } from "@/shared/EmptyState";
-import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
+import { ChecklistCriterionModal } from "../task-compose/ChecklistCriterionModal";
 import { TaskDetailChecklistItemList } from "./TaskDetailChecklistItemList";
-import { TaskChecklistSkeleton } from "./skeletons";
+import { TaskChecklistSkeleton } from "../skeletons";
 
 export type TaskDetailChecklistSectionProps = {
   checklistInherit: boolean;

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskEvent, TaskEventsResponse } from "@/types";
-import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
+import { ROUTER_FUTURE_FLAGS } from "../../../lib/routerFutureFlags";
 import { TaskDetailUpdatesSection } from "./TaskDetailUpdatesSection";
 
 function asEventsQuery(

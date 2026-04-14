@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
+import { ROUTER_FUTURE_FLAGS } from "../../../lib/routerFutureFlags";
 import { TaskDetailSubtasksHead } from "./TaskDetailSubtasksHead";
 
 describe("TaskDetailSubtasksHead", () => {

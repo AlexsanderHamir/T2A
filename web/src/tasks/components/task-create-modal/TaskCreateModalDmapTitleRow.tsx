@@ -1,7 +1,6 @@
 import type { PriorityChoice, TaskType } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
-import { PrioritySelect } from "../PrioritySelect";
-import { TaskTypeSelect } from "../TaskTypeSelect";
+import { PrioritySelect, TaskTypeSelect } from "../task-compose";
 
 type Props = {
   title: string;

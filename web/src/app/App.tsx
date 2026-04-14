@@ -1,7 +1,6 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
-import { DeleteConfirmDialog } from "../tasks/components/DeleteConfirmDialog";
-import { StreamStatusHint } from "../tasks/components/StreamStatusHint";
-import { TaskEditForm } from "../tasks/components/TaskEditForm";
+import { DeleteConfirmDialog, StreamStatusHint } from "../tasks/components/dialogs";
+import { TaskEditForm } from "../tasks/components/task-detail";
 import { useTasksApp } from "../tasks/hooks/useTasksApp";
 import { TaskDetailPage } from "../tasks/pages/TaskDetailPage";
 import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";

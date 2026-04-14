@@ -1,5 +1,5 @@
 import type { TaskWithDepth } from "../../flattenTaskTree";
-import { ParentTaskSelect } from "../ParentTaskSelect";
+import { ParentTaskSelect } from "../task-compose/ParentTaskSelect";
 
 type Props = {
   parentOptionsLoading: boolean;

@@ -1,5 +1,5 @@
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
-import { DraftResumeModal } from "../components/DraftResumeModal";
+import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";

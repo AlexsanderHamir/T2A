@@ -3,7 +3,7 @@ import type { PriorityChoice, TaskType } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskTypeSelect } from "./TaskTypeSelect";
-import { RichPromptEditor } from "./rich-prompt";
+import { RichPromptEditor } from "../rich-prompt";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
 import { TaskComposeChecklistFields } from "./TaskComposeChecklistFields";
 

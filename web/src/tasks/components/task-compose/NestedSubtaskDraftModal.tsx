@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
-import { Modal } from "../../shared/Modal";
-import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
+import { Modal } from "../../../shared/Modal";
+import type { PendingSubtaskDraft } from "../../pendingSubtaskDraft";
 import { TaskComposeFields } from "./TaskComposeFields";
 
 type Props = {

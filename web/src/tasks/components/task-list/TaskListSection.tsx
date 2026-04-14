@@ -3,7 +3,7 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TaskListDataTable } from "./TaskListDataTable";
 import { TaskListFilters } from "./TaskListFilters";
 import { TaskListSectionHeading } from "./TaskListSectionHeading";
-import { TaskPager } from "../TaskPager";
+import { TaskPager } from "./TaskPager";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../flattenTaskTree";
 import type { EmptyStateAction } from "@/shared/EmptyState";

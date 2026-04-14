@@ -1,3 +1,4 @@
+export * from "./TaskPager";
 export * from "./TaskListSection";
 export * from "./TaskListSectionHeading";
 export * from "./TaskListFilters";
