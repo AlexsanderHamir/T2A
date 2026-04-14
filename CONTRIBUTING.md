@@ -52,6 +52,8 @@ See `docs/API-HTTP.md` / `docs/API-SSE.md` and `docs/README.md` (“Where to put
 
 Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-tasks-stack-extensibility.mdc`. Human summary: `docs/EXTENSIBILITY.md`.
 
+For **task UI** under `web/src/tasks/`, keep new pieces in the right family folder and import through its `index.ts` barrel where one exists; conventions are summarized under **`tasks/components/` layout** in [docs/WEB.md](docs/WEB.md).
+
 ## Cursor / AI rules
 
 Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), tasks stack extensibility (`13-tasks-stack-extensibility.mdc`), workspace repo extensibility (`14-repo-workspace-extensibility.mdc`), and database schema / AutoMigrate (`15-database-schema.mdc`).
