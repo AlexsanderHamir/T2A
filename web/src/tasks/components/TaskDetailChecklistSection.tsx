@@ -7,6 +7,7 @@ import {
   EmptyStateChecklistGlyph,
 } from "@/shared/EmptyState";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
+import { TaskDetailChecklistItemList } from "./TaskDetailChecklistItemList";
 import { TaskChecklistSkeleton } from "./taskLoadingSkeletons";
 
 export type TaskDetailChecklistSectionProps = {
@@ -161,56 +162,15 @@ export function TaskDetailChecklistSection({
             }
           />
         ) : (
-          <div className="task-checklist-surface">
-            <ul className="task-checklist-list task-checklist-list--grouped">
-              {(checklistQuery.data?.items ?? []).map((item) => (
-                <li key={item.id} className="task-checklist-row">
-                  <div className="task-checklist-row-main">
-                    <span
-                      className={
-                        item.done
-                          ? "task-checklist-status task-checklist-status--done"
-                          : "task-checklist-status task-checklist-status--pending"
-                      }
-                      role="img"
-                      aria-label={
-                        item.done ? "Satisfied" : "Not satisfied yet"
-                      }
-                    >
-                      {item.done ? "✓" : null}
-                    </span>
-                    <span className="task-checklist-text">{item.text}</span>
-                  </div>
-                  {!checklistInherit ? (
-                    <div className="task-checklist-row-actions">
-                      <button
-                        type="button"
-                        className="task-detail-checklist-edit"
-                        disabled={
-                          editCriterionPending ||
-                          removeItemPending ||
-                          addCriterionPending
-                        }
-                        onClick={() =>
-                          onOpenEditCriterionModal(item.id, item.text)
-                        }
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="task-detail-checklist-remove"
-                        disabled={removeItemPending}
-                        onClick={() => onRemoveChecklistItem(item.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <TaskDetailChecklistItemList
+            items={checklistQuery.data?.items ?? []}
+            checklistInherit={checklistInherit}
+            editCriterionPending={editCriterionPending}
+            removeItemPending={removeItemPending}
+            addCriterionPending={addCriterionPending}
+            onOpenEditCriterionModal={onOpenEditCriterionModal}
+            onRemoveChecklistItem={onRemoveChecklistItem}
+          />
         )}
       </div>
       {modalOpen && !checklistInherit ? (
