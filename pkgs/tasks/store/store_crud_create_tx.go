@@ -3,12 +3,14 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/gorm"
 )
 
 func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateTaskInput, by domain.Actor, title string, parentID *string, st domain.Status) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.createTaskInTx")
 	if parentID != nil {
 		var n int64
 		if err := tx.Model(&domain.Task{}).Where("id = ?", *parentID).Count(&n).Error; err != nil {

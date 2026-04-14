@@ -220,6 +220,7 @@ func closeSQLDBOrLog(db *gorm.DB) (dbClosed bool, err error) {
 }
 
 func openTaskAPILogging(logDir, logLevelFlag string, disableLogging bool) (minLevel slog.Level, logFile *os.File, logPath string, minimized bool, err error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.openTaskAPILogging")
 	minLevel, err = taskapiconfig.ResolveLogLevel(logLevelFlag)
 	if err != nil {
 		return minLevel, nil, "", false, err
@@ -237,6 +238,7 @@ func openTaskAPILogging(logDir, logLevelFlag string, disableLogging bool) (minLe
 }
 
 func deferCloseTaskAPILogFile(logFile *os.File) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.deferCloseTaskAPILogFile")
 	if logFile == nil {
 		return
 	}
@@ -290,6 +292,7 @@ type taskAPIApp struct {
 }
 
 func buildTaskAPIApp(db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.buildTaskAPIApp")
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
 	rep, err := openOptionalRepoRoot()

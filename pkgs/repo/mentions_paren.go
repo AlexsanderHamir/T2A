@@ -1,11 +1,13 @@
 package repo
 
 import (
+	"log/slog"
 	"strconv"
 	"strings"
 )
 
 func parseMentionLineRangeInner(inner string) (startLine, endLine int, ok bool) {
+	slog.Debug("trace", "operation", "repo.parseMentionLineRangeInner")
 	dash := strings.IndexByte(inner, '-')
 	if dash < 0 {
 		return 0, 0, false
@@ -29,6 +31,7 @@ func handleMentionOpenParen(s string, i, pathStart, rawStart int) (
 	restartFrom int,
 	restartOuter bool,
 ) {
+	slog.Debug("trace", "operation", "repo.handleMentionOpenParen")
 	closeRel := strings.IndexByte(s[i:], ')')
 	if closeRel < 0 {
 		return i + 1, nil, false, 0, false

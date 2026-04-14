@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"strings"
@@ -14,6 +15,7 @@ import (
 )
 
 func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *DraftTaskEvaluation {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildDraftTaskEvaluationModel")
 	titleScore := scoreTitle(strings.TrimSpace(in.Title))
 	promptScore := scorePrompt(strings.TrimSpace(in.InitialPrompt))
 	priorityScore := scorePriority(in.Priority)
@@ -65,6 +67,7 @@ func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *D
 }
 
 func (s *Store) persistDraftEvaluationRow(ctx context.Context, in EvaluateDraftTaskInput, by domain.Actor, out *DraftTaskEvaluation) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.persistDraftEvaluationRow")
 	inputJSON, err := json.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("marshal evaluation input: %w", err)

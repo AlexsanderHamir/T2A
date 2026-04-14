@@ -2,7 +2,10 @@ package apijson
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 type jsonErrorBody struct {
@@ -14,6 +17,7 @@ type jsonErrorBody struct {
 // Security + JSON content-type headers match the main API. When callPath is non-nil and Debug is
 // enabled, emits the same http.io debug shape as handler paths (including call_path when known).
 func WriteJSONError(w http.ResponseWriter, r *http.Request, op string, code int, msg string, callPath func(context.Context) string) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "apijson.WriteJSONError")
 	ApplySecurityHeaders(w)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 

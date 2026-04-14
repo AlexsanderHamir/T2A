@@ -110,6 +110,7 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.Request, op, path string, start, end int) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.writeRepoValidateRangeOutcome")
 	abs, err := h.repo.Resolve(path)
 	if err != nil {
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{

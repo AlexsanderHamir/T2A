@@ -127,6 +127,7 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) writeTaskEventsFullList(w http.ResponseWriter, r *http.Request, op, id string, pending bool) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.writeTaskEventsFullList")
 	evs, err := h.store.ListTaskEvents(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -140,6 +141,7 @@ func (h *Handler) writeTaskEventsFullList(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) writeTaskEventsCursorPage(w http.ResponseWriter, r *http.Request, op, id string, pending bool, q url.Values) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.writeTaskEventsCursorPage")
 	beforeStr := strings.TrimSpace(q.Get("before_seq"))
 	afterStr := strings.TrimSpace(q.Get("after_seq"))
 	if beforeStr != "" && afterStr != "" {

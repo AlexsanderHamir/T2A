@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
@@ -16,6 +17,7 @@ type taskStatsTotalsRow struct {
 }
 
 func (s *Store) scanTaskStatsTotals(ctx context.Context) (taskStatsTotalsRow, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsTotals")
 	var r taskStatsTotalsRow
 	err := s.db.WithContext(ctx).Model(&domain.Task{}).
 		Select(
@@ -40,6 +42,7 @@ type statusCountRow struct {
 }
 
 func (s *Store) scanTaskStatsByStatus(ctx context.Context) ([]statusCountRow, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsByStatus")
 	var statusRows []statusCountRow
 	if err := s.db.WithContext(ctx).Model(&domain.Task{}).
 		Select("status, COUNT(*) AS count").
@@ -56,6 +59,7 @@ type priorityCountRow struct {
 }
 
 func (s *Store) scanTaskStatsByPriority(ctx context.Context) ([]priorityCountRow, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsByPriority")
 	var priorityRows []priorityCountRow
 	if err := s.db.WithContext(ctx).Model(&domain.Task{}).
 		Select("priority, COUNT(*) AS count").

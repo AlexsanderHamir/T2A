@@ -3,12 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
 )
 
 func run() int {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.run")
 	port := flag.String("port", "8080", "HTTP listen port")
 	host := flag.String("host", "", "HTTP listen host/IP (default: T2A_LISTEN_HOST or 127.0.0.1)")
 	envPath := flag.String("env", "", "path to .env (default: <repo-root>/.env)")

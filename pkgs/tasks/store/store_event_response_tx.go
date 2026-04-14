@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 func appendResponseMessageInTx(tx *gorm.DB, tid string, seq int64, text string, by domain.Actor) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.appendResponseMessageInTx")
 	var ev domain.TaskEvent
 	q := tx.Where("task_id = ? AND seq = ?", tid, seq)
 	if tx.Dialector.Name() != "sqlite" {

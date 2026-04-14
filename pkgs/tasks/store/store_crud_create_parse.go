@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -9,6 +10,7 @@ import (
 )
 
 func buildCreateTaskFromInput(in CreateTaskInput, by domain.Actor) (t *domain.Task, title string, parentID *string, st domain.Status, err error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildCreateTaskFromInput")
 	if err := validateActor(by); err != nil {
 		return nil, "", nil, "", err
 	}

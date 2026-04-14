@@ -1,6 +1,7 @@
 package store
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -8,6 +9,7 @@ import (
 )
 
 func devMirrorStatusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []byte) (map[string]any, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorStatusChanged")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -26,6 +28,7 @@ func devMirrorStatusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []b
 }
 
 func devMirrorPriorityChanged(t *domain.Task, data []byte) (map[string]any, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorPriorityChanged")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -39,6 +42,7 @@ func devMirrorPriorityChanged(t *domain.Task, data []byte) (map[string]any, erro
 }
 
 func devMirrorPromptOrTitle(t *domain.Task, data []byte, field string) (map[string]any, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorPromptOrTitle")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -59,6 +63,7 @@ func devMirrorPromptOrTitle(t *domain.Task, data []byte, field string) (map[stri
 }
 
 func devMirrorTaskCompleted(tx *gorm.DB, taskID string, t *domain.Task) (map[string]any, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorTaskCompleted")
 	if err := validateCanMarkDoneTx(tx, taskID); err != nil {
 		return nil, err
 	}
@@ -70,6 +75,7 @@ func devMirrorTaskCompleted(tx *gorm.DB, taskID string, t *domain.Task) (map[str
 }
 
 func devMirrorTaskFailed(t *domain.Task) map[string]any {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorTaskFailed")
 	up := map[string]any{}
 	if t.Status != domain.StatusFailed {
 		up["status"] = string(domain.StatusFailed)

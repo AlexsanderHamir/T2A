@@ -13,6 +13,7 @@ import (
 )
 
 func requestOrBackgroundContext(r *http.Request) context.Context {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "apijson.requestOrBackgroundContext")
 	if r == nil {
 		return context.Background()
 	}
@@ -20,6 +21,7 @@ func requestOrBackgroundContext(r *http.Request) context.Context {
 }
 
 func buildJSONErrorBody(ctx context.Context, r *http.Request, msg string) jsonErrorBody {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "apijson.buildJSONErrorBody")
 	body := jsonErrorBody{Error: msg}
 	if r != nil {
 		if rid := logctx.RequestIDFromContext(ctx); rid != "" {
@@ -30,6 +32,7 @@ func buildJSONErrorBody(ctx context.Context, r *http.Request, msg string) jsonEr
 }
 
 func marshalJSONErrorBody(ctx context.Context, op string, r *http.Request, body jsonErrorBody) ([]byte, error) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "apijson.marshalJSONErrorBody")
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -64,6 +67,7 @@ func logJSONEncodeError(ctx context.Context, op string, r *http.Request, err err
 }
 
 func writeJSONEncodeFailure(w http.ResponseWriter) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "apijson.writeJSONEncodeFailure")
 	w.WriteHeader(http.StatusInternalServerError)
 	_, _ = io.WriteString(w, "{\"error\":\"internal server error\"}\n")
 }

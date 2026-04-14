@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -11,6 +12,7 @@ import (
 )
 
 func deleteTaskInTx(tx *gorm.DB, id string, by domain.Actor) (parentToNotify string, err error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.deleteTaskInTx")
 	var t domain.Task
 	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

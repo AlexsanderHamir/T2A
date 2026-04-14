@@ -3,12 +3,14 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 func (s *Store) fillTaskEventsPageBounds(ctx context.Context, taskID string, out *TaskEventsPage, events []domain.TaskEvent) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.fillTaskEventsPageBounds")
 	if len(events) == 0 {
 		return nil
 	}
@@ -36,6 +38,7 @@ func (s *Store) fillTaskEventsPageBounds(ctx context.Context, taskID string, out
 }
 
 func validateListTaskEventsPageInputs(taskID string, limit int, beforeSeq, afterSeq *int64) (string, int, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validateListTaskEventsPageInputs")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return "", 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)

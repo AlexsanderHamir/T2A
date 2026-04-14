@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -10,6 +11,7 @@ import (
 )
 
 func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTitlePatch")
 	if title == nil {
 		return nil
 	}
@@ -33,6 +35,7 @@ func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string
 }
 
 func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, prompt *string, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyInitialPromptPatch")
 	if prompt == nil {
 		return nil
 	}
@@ -52,6 +55,7 @@ func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, promp
 }
 
 func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *ParentFieldPatch, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyParentPatch")
 	if parent == nil {
 		return nil
 	}
@@ -106,6 +110,7 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 }
 
 func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, inherit *bool, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyChecklistInheritPatch")
 	if inherit == nil {
 		return nil
 	}
@@ -131,6 +136,7 @@ func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, in
 }
 
 func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain.Priority, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyPriorityPatch")
 	if pr == nil {
 		return nil
 	}
@@ -153,6 +159,7 @@ func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain
 }
 
 func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTaskTypePatch")
 	if tt == nil {
 		return nil
 	}
@@ -164,6 +171,7 @@ func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
 }
 
 func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.Status, by domain.Actor, seq *int64) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyStatusPatch")
 	if st == nil {
 		return nil
 	}
