@@ -12,8 +12,8 @@ Use this list in order unless a later item unblocks an incident.
 - [x] **A1 — Operator PromQL:** [OBSERVABILITY.md](./OBSERVABILITY.md) § **Grafana / PromQL** — example queries (p95 overall and by `route`, 5xx ratio, rate limit / idempotency rates, SSE gauge, DB pool); `/metrics` scrape authz called out.
 - [x] **A5 — Log audit:** `WithRecovery` assigns **`request_id`** before inner handlers; panic logs include **`request_id`**, **`route`**, **`duration_ms`**; **`logRequestFailure`** / JSON encode / idempotency **`5xx`** paths log **`request_id`** + **`route`**; **`http.access`** supplies **`duration_ms`** for completed requests ([OBSERVABILITY.md](./OBSERVABILITY.md) § **5xx and `request failed` logging**).
 - [x] **B1 — SLIs / SLOs:** [OBSERVABILITY.md](./OBSERVABILITY.md) § **SLIs and SLOs** — three starter SLIs (HTTP success vs `5xx`, mutating p99 latency, readiness / optional DB pool), **30d** window, error budget framing; targets are defaults to tune.
-- [ ] **B2 — Alerting:** Prometheus `rules.yml` (recording + alerts): high 5xx, p99 regression, in-flight sustained high, pool wait spikes, readiness failures; link runbooks.
-- [ ] **B3 — Runbooks:** One page per alert: graphs, log queries, mitigations.
+- [x] **B2 — Alerting:** [`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml) — recording rules + alerts (5xx ratio, mutating p99, in-flight, DB pool wait); readiness example commented; **`runbook_url`** → [`docs/runbooks/`](../docs/runbooks/).
+- [ ] **B3 — Runbooks:** Expand [`docs/runbooks/`](../docs/runbooks/) stubs (graphs, exact log queries, escalation); B2 added minimal pages per alert.
 - [ ] **C1 — Domain metrics:** Low-cardinality counters (tasks created/updated, agent queue depth, idempotency evictions) as needed from real incidents.
 - [ ] **C2 — Store latency:** Optional labeled histogram for store ops (`op` from a small fixed set), not per-SQL-string.
 - [ ] **C3 — Build info:** `taskapi_build_info{version="...",revision="..."} = 1` gauge for deploy correlation on dashboards.

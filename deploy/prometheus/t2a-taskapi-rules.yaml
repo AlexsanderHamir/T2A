@@ -1,0 +1,94 @@
+# Prometheus recording + alerting rules for taskapi HTTP metrics (GET /metrics).
+# Apply with rule_files in prometheus.yml; tune thresholds for your traffic and SLOs.
+# Runbooks: docs/runbooks/
+#
+# Expected metric names: taskapi_http_* , taskapi_db_pool_* , taskapi_sse_subscribers
+# (see docs/API-HTTP.md and docs/OBSERVABILITY.md).
+
+groups:
+  - name: t2a_taskapi_recording
+    interval: 1m
+    rules:
+      # Ratio of 5xx responses to all HTTP responses (exemplar SLI 1 in docs/OBSERVABILITY.md).
+      - record: taskapi:http:5xx_ratio5m
+        expr: |
+          sum(rate(taskapi_http_requests_total{code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(taskapi_http_requests_total[5m])), 1e-12)
+
+      # p99 latency (seconds) for mutating methods (SLI 2).
+      - record: taskapi:http:mutating_p99_seconds
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(taskapi_http_request_duration_seconds_bucket{method=~"POST|PATCH|DELETE"}[5m])) by (le)
+          )
+
+      # Global p95 latency (seconds) for dashboards.
+      - record: taskapi:http:p95_seconds
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(taskapi_http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+  - name: t2a_taskapi_alerts
+    rules:
+      - alert: TaskAPIHighHTTP5xxRate
+        expr: |
+          (
+            sum(rate(taskapi_http_requests_total{code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(taskapi_http_requests_total[5m])), 1e-12)
+          ) > 0.02
+          and
+          sum(rate(taskapi_http_requests_total[5m])) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "taskapi HTTP 5xx ratio above 2% (15m)"
+          description: "Elevated server-side error rate while traffic is non-trivial. Inspect logs (operation http.recover, request failed) and GET /health/ready."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-http-5xx.md"
+
+      - alert: TaskAPIHighMutatingLatencyP99
+        expr: taskapi:http:mutating_p99_seconds > 5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "taskapi mutating API p99 latency above 5s (15m)"
+          description: "POST/PATCH/DELETE p99 from taskapi_http_request_duration_seconds is {{ $value }}s. Check DB slow-query logs and pool metrics."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-mutating-latency.md"
+
+      - alert: TaskAPIHTTPInFlightHigh
+        expr: taskapi_http_in_flight > 200
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "taskapi http_in_flight sustained high"
+          description: "Many concurrent in-flight HTTP requests ({{ $value }}). Check for slow handlers, DB stalls, or client retry storms."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-in-flight-high.md"
+
+      - alert: TaskAPIDatabasePoolWaitElevated
+        expr: rate(taskapi_db_pool_wait_count_total[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "taskapi DB pool wait rate elevated"
+          description: "Connections are waiting on the pool (rate > 5/s for 10m). Check taskapi_db_pool_* gauges and Postgres capacity."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-db-pool-wait.md"
+
+      # Readiness is usually probed outside taskapi metrics (blackbox / k8s). Example expr
+      # when you export probe_success{job="blackbox-taskapi-ready"}:
+      #
+      # - alert: TaskAPIReadinessProbeFailing
+      #   expr: probe_success{job="blackbox-taskapi-ready"} == 0
+      #   for: 5m
+      #   labels:
+      #     severity: critical
+      #   annotations:
+      #     summary: "taskapi /health/ready probe failing"
+      #     runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-readiness.md"

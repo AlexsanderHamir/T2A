@@ -69,7 +69,7 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **DB pool waits / s** | `rate(taskapi_db_pool_wait_count_total[5m])` |
 | **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |
 
-**Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Use recording rules later if these queries are heavy ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
+**Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Prefer the **recording rules** in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml) for heavy dashboards ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
 
 ### SLIs and SLOs (roadmap B1)
 
@@ -86,6 +86,15 @@ The three SLIs below are **defaults for `taskapi`** — adjust targets and queri
 **Alternative third SLI (Prometheus-native):** if you do not yet have blackbox metrics, use **DB pool health**: e.g. alert when `rate(taskapi_db_pool_wait_count_total[5m])` is sustained above a small threshold (tune per pool size); document the threshold as the SLO.
 
 **Error budget in practice:** roll a **30d** window in Grafana or Mimir; use **multi-window, multi-burn-rate** alerts so short spikes do not page while slow burns do ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase **B2**). Example: for SLI 1 at 99.9%, a **5m** burn at 10× normal `5xx` rate consumes budget quickly — encode in alert rules when you add them.
+
+### Prometheus alerting (roadmap B2)
+
+Shipped **recording rules** and **warning**-level **alerts** for `taskapi` HTTP metrics in **[`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml)** (see **[`deploy/prometheus/README.md`](../deploy/prometheus/README.md)** for `rule_files` wiring). Includes:
+
+- **`taskapi:http:5xx_ratio5m`**, **`taskapi:http:mutating_p99_seconds`**, **`taskapi:http:p95_seconds`** (recording).
+- **Alerts:** high **`5xx`** ratio, high mutating **p99** latency, sustained **`http_in_flight`**, elevated **DB pool wait** rate; **readiness** left as a commented example for **blackbox** / platform probes.
+
+Each alert sets **`runbook_url`** to this repo’s **[`docs/runbooks/`](./runbooks/)** (minimal pages—expand in roadmap **B3**).
 
 ### 5xx and `request failed` logging (roadmap A5)
 
