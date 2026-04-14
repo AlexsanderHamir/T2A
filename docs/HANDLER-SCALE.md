@@ -20,7 +20,7 @@ See [`pkgs/tasks/handler/README.md`](../pkgs/tasks/handler/README.md) for the fi
 1. **Prefer small, vertical slices** when adding behavior: `domain` → `store` → `handler` route + tests, per [`EXTENSIBILITY.md`](./EXTENSIBILITY.md).
 2. **New tests**
    - **Whitebox** (need unexported symbols, `decodeJSON`, path helpers, fixtures next to `testdata/`): keep **`package handler`** in `pkgs/tasks/handler/`.
-   - **Black-box HTTP** (only `NewHandler`, `With*`, `httptest`, `http.Client`): prefer **`internal/handlertest`** (same pattern as `internal/middlewaretest`) once that package exists; until then, colocated `handler` tests are fine.
+   - **Black-box HTTP** (only `NewHandler`, `With*`, `httptest`, `http.Client`): prefer **[`internal/handlertest`](../internal/handlertest/)** (same pattern as [`internal/middlewaretest`](../internal/middlewaretest/)); migrate older colocated tests when you touch them.
 3. **Do not** create `handler/subpkg` with `package handler` — Go does not allow it. A subdirectory must be a **new import path** (e.g. `pkgs/tasks/taskjson`) with explicit exports and wiring.
 
 ## Sensible next extractions (ordered)
@@ -29,7 +29,7 @@ When a slice of `handler` has **stable boundaries** and **minimal coupling** to 
 
 1. **Task JSON DTOs + encode/decode helpers** → e.g. `pkgs/tasks/taskjson` (types like `taskCreateJSON`, list params, tree encoding). `handler` would import it; tests that only touch JSON move with the package or stay as `taskjson` tests.
 2. **Repo HTTP surface** → thin `pkgs/tasks/repohandler` or keep in `repo_handlers.go` until file size forces a split (see backend bar: avoid 800+ line files).
-3. **More black-box tests** → `internal/handlertest` + a tiny shared `NewTaskTestServer(t)` helper there (duplicate of `newTaskTestServer` is acceptable to avoid exporting test-only hooks from `handler`).
+3. **More black-box tests** → [`internal/handlertest`](../internal/handlertest/) + `NewServer` / `NewServerWithStore` / `NewServerWithRepo` (duplicate of `newTaskTestServer*` is intentional). Baseline header checks use [`internal/httpsecurityexpect`](../internal/httpsecurityexpect/) so `handler` tests do not import `handlertest` (that would cycle: `handler` tests → `handlertest` → `handler`).
 
 Large refactors should ship in **small PRs** (one extraction or one test-directory move at a time) with `go test ./...` and contract doc updates when behavior or JSON changes.
 

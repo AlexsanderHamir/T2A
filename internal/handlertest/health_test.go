@@ -1,4 +1,4 @@
-package handler
+package handlertest
 
 import (
 	"bytes"
@@ -9,14 +9,16 @@ import (
 	"os"
 	"testing"
 
+	"github.com/AlexsanderHamir/T2A/internal/httpsecurityexpect"
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func TestHTTP_health(t *testing.T) {
-	srv := newTaskTestServer(t)
+	srv := NewServer(t)
 	defer srv.Close()
 
 	for _, path := range []string{"/health", "/health/live"} {
@@ -47,7 +49,7 @@ func TestHTTP_health(t *testing.T) {
 }
 
 func TestHTTP_health_ready_ok(t *testing.T) {
-	srv := newTaskTestServer(t)
+	srv := NewServer(t)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + "/health/ready")
@@ -73,9 +75,9 @@ func TestHTTP_health_ready_ok(t *testing.T) {
 
 func TestHTTP_metrics_scrape(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
-	api := WithRecovery(WithHTTPMetrics(WithAccessLog(NewHandler(store.NewStore(db), NewSSEHub(), nil))))
+	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.NewHandler(store.NewStore(db), handler.NewSSEHub(), nil))))
 	mux := http.NewServeMux()
-	mux.Handle("GET /metrics", WrapPrometheusHandler(promhttp.Handler()))
+	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	mux.Handle("/", api)
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -94,7 +96,7 @@ func TestHTTP_metrics_scrape(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status %d", res.StatusCode)
 	}
-	assertBaselineSecurityHeaders(t, res.Header)
+	httpsecurityexpect.AssertBaselineHeaders(t, res.Header)
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +109,7 @@ func TestHTTP_metrics_scrape(t *testing.T) {
 func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
-	srv := httptest.NewServer(NewHandler(st, NewSSEHub(), nil))
+	srv := httptest.NewServer(handler.NewHandler(st, handler.NewSSEHub(), nil))
 	defer srv.Close()
 
 	sqlDB, err := db.DB()
@@ -141,7 +143,7 @@ func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
 
 func TestHTTP_health_ready_workspace_repo_ok(t *testing.T) {
 	root := t.TempDir()
-	srv := newTaskTestServerWithRepo(t, root)
+	srv := NewServerWithRepo(t, root)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + "/health/ready")
@@ -172,7 +174,7 @@ func TestHTTP_health_ready_workspace_repo_fail_when_root_removed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(NewHandler(store.NewStore(db), NewSSEHub(), rep))
+	srv := httptest.NewServer(handler.NewHandler(store.NewStore(db), handler.NewSSEHub(), rep))
 	defer srv.Close()
 
 	if err := os.RemoveAll(root); err != nil {
@@ -198,4 +200,15 @@ func TestHTTP_health_ready_workspace_repo_fail_when_root_removed(t *testing.T) {
 	if body.Status != "degraded" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "fail" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
+}
+
+func TestHTTP_health_includes_security_headers(t *testing.T) {
+	srv := NewServer(t)
+	t.Cleanup(srv.Close)
+	res, err := http.Get(srv.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	httpsecurityexpect.AssertBaselineHeaders(t, res.Header)
 }

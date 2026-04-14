@@ -170,7 +170,7 @@ Scan priorities **P0 → P6** in order. Stop at the **first** tier with actionab
 
 1. User-controlled strings → filesystem, shell, or SQL — must go through approved abstractions (`pkgs/repo`, GORM parameterized queries)
 2. Request size limits, path length checks, rate limiting config (`T2A_RATE_LIMIT_PER_MIN` and handler behavior)
-3. Security headers on HTTP responses (see existing tests such as `assertBaselineSecurityHeaders`)
+3. Security headers on HTTP responses (see `internal/httpsecurityexpect.AssertBaselineHeaders` and `internal/handlertest` health tests)
 
 **Before fixing, read:**
 

@@ -63,9 +63,13 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 
 ## Tests
 
-`handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). **`stack_test.go`** asserts the production **`middleware.Stack(..., calltrace.Path)`** wiring (panic → JSON 500, happy path). Call-stack unit tests live in **`pkgs/tasks/calltrace`**. Integration-style tests may use `handler_http_testserver_test.go` helpers.
+| Where | What |
+|-------|------|
+| **[`internal/handlertest`](../../internal/handlertest/)** | Black-box HTTP against exported `NewHandler` / `With*` only (health, metrics scrape, health security headers). Helpers: `handlertest.NewServer`, `NewServerWithStore`, `NewServerWithRepo`. |
+| **[`internal/httpsecurityexpect`](../../internal/httpsecurityexpect/)** | Shared `AssertBaselineHeaders` for handler whitebox tests and `handlertest` (avoids import cycles). |
+| **`pkgs/tasks/handler/*_test.go`** | Whitebox tests (unexported helpers, `decodeJSON`, path parsing, SSE handler internals). `handler_http_*_test.go` beside the route area; **`handler_http_testserver_test.go`** has `newTaskTestServer*` for tests not yet moved. **`stack_test.go`** asserts production **`middleware.Stack(..., calltrace.Path)`**. Call-stack unit tests live in **`pkgs/tasks/calltrace`**. |
 
-When adding a **new** route or middleware file, extend this README in the same PR.
+When adding a **new** route or middleware file, extend this README in the same PR. Prefer **`internal/handlertest`** for new black-box HTTP tests.
 
 ## Scaling this package
 

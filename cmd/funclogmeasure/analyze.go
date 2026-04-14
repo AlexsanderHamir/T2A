@@ -49,6 +49,11 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tIdempotencyCacheLimits":        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tclearIdempotencyStateForTest":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tHasValidBearerToken":           {},
+	// Test-only httptest wiring for black-box handler tests (no production logging).
+	"github.com/AlexsanderHamir/T2A/internal/handlertest\tNewServer":                    {},
+	"github.com/AlexsanderHamir/T2A/internal/handlertest\tNewServerWithStore":           {},
+	"github.com/AlexsanderHamir/T2A/internal/handlertest\tNewServerWithRepo":            {},
+	"github.com/AlexsanderHamir/T2A/internal/httpsecurityexpect\tAssertBaselineHeaders": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

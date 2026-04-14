@@ -37,6 +37,8 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | taskapi startup env | `internal/taskapiconfig/` | Listen host, log level / minimized logging, agent queue + reconcile interval, dev SSE ticker interval (see `cmd/taskapi/run.go`). |
 | taskapi HTTP stack | `pkgs/tasks/middleware/` + `pkgs/tasks/handler/middleware_shim.go` + `internal/taskapi/` | `middleware.Stack(inner, calltrace.Path)` composes `With*` layers; `internal/taskapi.NewHTTPHandler` wires store/hub/repo into `handler.NewHandler` then applies the stack (see `cmd/taskapi/run.go`). File map + env table: `pkgs/tasks/middleware/README.md`. Handler tests and `handler.With*` shims re-export middleware for the same package. |
 | Middleware black-box tests | `internal/middlewaretest/` | Exported-API-only tests for `pkgs/tasks/middleware` (keeps the middleware package tree smaller; see `middleware/README.md` Tests). |
+| Handler black-box HTTP tests | `internal/handlertest/` | Health, metrics scrape, and similar tests using only exported `handler` + `httptest` (see `internal/handlertest/README.md`). |
+| HTTP baseline header assertions | `internal/httpsecurityexpect/` | Shared test helper for security headers; imported by `handlertest` and `handler` tests (no import cycle with `handler`). |
 | SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default store/handler/agent tests (`tasktestdb.OpenSQLite`). |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/API-SSE.md`. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |
