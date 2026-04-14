@@ -18,6 +18,7 @@ type TaskStats struct {
 
 // TaskStats returns global counters across all tasks.
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {
+	defer deferStoreLatency(storeOpTaskStats)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskStats")
 	r, err := s.scanTaskStatsTotals(ctx)
 	if err != nil {

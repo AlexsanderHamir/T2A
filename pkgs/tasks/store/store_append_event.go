@@ -13,6 +13,7 @@ import (
 
 // AppendTaskEvent appends one task_events row if the task exists.
 func (s *Store) AppendTaskEvent(ctx context.Context, taskID string, typ domain.EventType, by domain.Actor, data []byte) error {
+	defer deferStoreLatency(storeOpAppendTaskEvent)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendTaskEvent")
 	if err := validateActor(by); err != nil {
 		return err

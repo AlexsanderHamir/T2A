@@ -31,6 +31,7 @@ type DraftDetail struct {
 }
 
 func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.RawMessage) (*DraftSummary, error) {
+	defer deferStoreLatency(storeOpSaveDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SaveDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -65,6 +66,7 @@ func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.Raw
 }
 
 func (s *Store) ListDrafts(ctx context.Context, limit int) ([]DraftSummary, error) {
+	defer deferStoreLatency(storeOpListDrafts)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDrafts")
 	if limit <= 0 {
 		limit = 50
@@ -89,6 +91,7 @@ func (s *Store) ListDrafts(ctx context.Context, limit int) ([]DraftSummary, erro
 }
 
 func (s *Store) GetDraft(ctx context.Context, id string) (*DraftDetail, error) {
+	defer deferStoreLatency(storeOpGetDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -108,6 +111,7 @@ func (s *Store) GetDraft(ctx context.Context, id string) (*DraftDetail, error) {
 }
 
 func (s *Store) DeleteDraft(ctx context.Context, id string) error {
+	defer deferStoreLatency(storeOpDeleteDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {

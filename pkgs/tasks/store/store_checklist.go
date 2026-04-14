@@ -21,6 +21,7 @@ type ChecklistItemView struct {
 
 // DefinitionSourceTaskID returns the task id that owns checklist item definitions for id.
 func (s *Store) DefinitionSourceTaskID(ctx context.Context, taskID string) (string, error) {
+	defer deferStoreLatency(storeOpDefinitionSourceTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DefinitionSourceTaskID")
 	return definitionSourceTaskIDTx(s.db.WithContext(ctx), taskID)
 }
@@ -57,6 +58,7 @@ func definitionSourceTaskIDTx(tx *gorm.DB, taskID string) (string, error) {
 
 // ListChecklistForSubject returns definition items for taskID with done flags for that same task.
 func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]ChecklistItemView, error) {
+	defer deferStoreLatency(storeOpListChecklist)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListChecklistForSubject")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

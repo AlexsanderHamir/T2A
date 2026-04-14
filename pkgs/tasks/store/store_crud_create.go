@@ -31,6 +31,7 @@ func isDuplicateTaskPrimaryKey(err error) bool {
 }
 
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
+	defer deferStoreLatency(storeOpCreateTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Create")
 	t, title, parentID, st, err := buildCreateTaskFromInput(in, by)
 	if err != nil {

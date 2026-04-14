@@ -13,6 +13,7 @@ import (
 // task_created by user (matches the user-task agent queue policy). Results are ordered by id ascending.
 // afterID, when non-empty after trim, restricts to tasks.id > afterID for pagination.
 func (s *Store) ListReadyTasksUserCreated(ctx context.Context, limit int, afterID string) ([]domain.Task, error) {
+	defer deferStoreLatency(storeOpListReadyUserCreated)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListReadyTasksUserCreated")
 	if limit <= 0 {
 		limit = 200

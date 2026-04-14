@@ -60,6 +60,8 @@ var skipSlogRequirement = map[string]struct{}{
 	// Prometheus Collector hooks; no per-scrape slog (scrapes can be frequent).
 	"github.com/AlexsanderHamir/T2A/internal/taskapi\t*sqlDBStatsCollector.Describe": {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi\t*sqlDBStatsCollector.Collect":  {},
+	// Store Prometheus latency helper; per-call slog would flood and duplicate SQL traces.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store\tdeferStoreLatency": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

@@ -13,6 +13,7 @@ import (
 )
 
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
+	defer deferStoreLatency(storeOpGetTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -30,6 +31,7 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 }
 
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
+	defer deferStoreLatency(storeOpUpdateTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
 	if err := validateActor(by); err != nil {
 		return nil, err
@@ -83,6 +85,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 // Delete removes a task with no children. When the task had a parent, appends
 // subtask_removed on the parent and returns that parent id (for SSE); otherwise returns "".
 func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) (string, error) {
+	defer deferStoreLatency(storeOpDeleteTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
 	if err := validateActor(by); err != nil {
 		return "", err

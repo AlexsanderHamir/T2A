@@ -11,6 +11,7 @@ import (
 
 // ListDevsimTasks returns tasks whose id matches a SQL LIKE pattern (dev simulation only).
 func (s *Store) ListDevsimTasks(ctx context.Context, idLikePattern string) ([]domain.Task, error) {
+	defer deferStoreLatency(storeOpListDevsimTasks)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDevsimTasks")
 	p := strings.TrimSpace(idLikePattern)
 	if p == "" {

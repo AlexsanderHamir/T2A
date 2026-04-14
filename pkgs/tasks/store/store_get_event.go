@@ -13,6 +13,7 @@ import (
 
 // GetTaskEvent returns one task_events row by composite key, or ErrNotFound.
 func (s *Store) GetTaskEvent(ctx context.Context, taskID string, seq int64) (*domain.TaskEvent, error) {
+	defer deferStoreLatency(storeOpGetTaskEvent)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskEvent")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

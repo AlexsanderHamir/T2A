@@ -60,6 +60,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_domain_tasks_created_total` | Counter | — | Successful **`POST /tasks`** after persistence (**201**). |
 | `taskapi_domain_tasks_updated_total` | Counter | — | Successful **`PATCH /tasks/{id}`** (**200**). |
 | `taskapi_domain_tasks_deleted_total` | Counter | — | Successful **`DELETE /tasks/{id}`** (**204**). |
+| `taskapi_store_operation_duration_seconds` | Histogram | `op` | Wall time for each **`pkgs/tasks/store`** entrypoint (`op` is a fixed name such as `create_task`, `list_flat`, `ready` — not raw SQL). Buckets favor sub-100ms resolution with tail to **10s**. |
 | `taskapi_agent_queue_depth` | Gauge | — | Ready-task snapshots buffered in the in-process agent queue. |
 | `taskapi_agent_queue_capacity` | Gauge | — | Max buffer size from **`T2A_USER_TASK_AGENT_QUEUE_CAP`** (see [RUNTIME-ENV.md](./RUNTIME-ENV.md)). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |

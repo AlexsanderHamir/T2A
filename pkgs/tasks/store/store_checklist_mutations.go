@@ -17,6 +17,7 @@ import (
 
 // AddChecklistItem appends a definition row; task must exist and not use checklist_inherit.
 func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+	defer deferStoreLatency(storeOpAddChecklistItem)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
 	if err := validateActor(by); err != nil {
 		return nil, err
@@ -71,6 +72,7 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 
 // DeleteChecklistItem removes a definition row owned by taskID.
 func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, by domain.Actor) error {
+	defer deferStoreLatency(storeOpDeleteChecklistItem)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteChecklistItem")
 	if err := validateActor(by); err != nil {
 		return err
@@ -116,6 +118,7 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 // UpdateChecklistItemText updates the definition text for an item owned by taskID.
 // Rejected when the task uses checklist_inherit or the item is not on that task.
 func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, text string, by domain.Actor) error {
+	defer deferStoreLatency(storeOpUpdateChecklistItemText)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemText")
 	if err := validateActor(by); err != nil {
 		return err
@@ -159,6 +162,7 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 // SetChecklistItemDone sets or clears completion for subjectTaskID on an item from its definition source.
 // Only [domain.ActorAgent] may change completion; the human user records criteria (POST) but does not toggle done.
 func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
+	defer deferStoreLatency(storeOpSetChecklistItemDone)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
 	if err := validateActor(by); err != nil {
 		return err

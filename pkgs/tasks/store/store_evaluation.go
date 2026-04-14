@@ -49,6 +49,7 @@ type DraftTaskEvaluation struct {
 
 // EvaluateDraftTask scores task-creation input and persists each evaluation.
 func (s *Store) EvaluateDraftTask(ctx context.Context, in EvaluateDraftTaskInput, by domain.Actor) (*DraftTaskEvaluation, error) {
+	defer deferStoreLatency(storeOpEvaluateDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.EvaluateDraftTask")
 	if err := validateActor(by); err != nil {
 		return nil, err
@@ -70,6 +71,7 @@ func (s *Store) EvaluateDraftTask(ctx context.Context, in EvaluateDraftTaskInput
 }
 
 func (s *Store) ListDraftEvaluations(ctx context.Context, draftID string, limit int) ([]domain.TaskDraftEvaluation, error) {
+	defer deferStoreLatency(storeOpListDraftEvaluations)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDraftEvaluations")
 	draftID = strings.TrimSpace(draftID)
 	if draftID == "" {

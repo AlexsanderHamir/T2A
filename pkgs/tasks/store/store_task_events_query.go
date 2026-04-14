@@ -11,6 +11,7 @@ import (
 
 // ListTaskEvents returns audit events for a task in ascending sequence order.
 func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.TaskEvent, error) {
+	defer deferStoreLatency(storeOpListTaskEvents)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskEvents")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
@@ -29,6 +30,7 @@ func (s *Store) ListTaskEvents(ctx context.Context, taskID string) ([]domain.Tas
 
 // TaskEventCount returns how many audit rows exist for the task.
 func (s *Store) TaskEventCount(ctx context.Context, taskID string) (int64, error) {
+	defer deferStoreLatency(storeOpTaskEventCount)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskEventCount")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
@@ -44,6 +46,7 @@ func (s *Store) TaskEventCount(ctx context.Context, taskID string) (int64, error
 
 // LastEventSeq returns the highest seq for the task, or 0 when there are no events.
 func (s *Store) LastEventSeq(ctx context.Context, taskID string) (int64, error) {
+	defer deferStoreLatency(storeOpLastEventSeq)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.LastEventSeq")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
