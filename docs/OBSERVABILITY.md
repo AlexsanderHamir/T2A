@@ -50,6 +50,27 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 | **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_*`, `taskapi_sse_subscribers`, and **`taskapi_db_pool_*`** ([`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats) on scrape) as in [API-HTTP.md](./API-HTTP.md); plus standard **`go_*`** and **`process_*`** collectors from `taskapi` startup ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phases A2–A3). **`taskapi_http_request_duration_seconds`** uses **SLO-tuned** histogram buckets (finer below 1s; tail to 10s) — see [API-HTTP.md](./API-HTTP.md) Prometheus table and `pkgs/tasks/middleware/metrics_http.go` (`httpRequestDurationSecondsBuckets`). Health paths excluded from HTTP latency series where documented. Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Idempotency cache TTL: **`T2A_IDEMPOTENCY_TTL`**. Responses include the same baseline security headers as the API (`handler.WrapPrometheusHandler`, headers only—no per-scrape `handler.setAPISecurityHeaders` debug trace). Restrict scrapes in production. |
 | **Distributed traces** | Span graphs across services | Not in scope for single-process `taskapi` unless we adopt OpenTelemetry later. |
 
+## Grafana / PromQL (`GET /metrics`)
+
+Scrape **`taskapi`** from Prometheus (or query the text exposition with **`promtool`** in CI). Metric names and labels match [API-HTTP.md](./API-HTTP.md) (Prometheus section).
+
+**Scrape security:** **`GET /metrics`** has **no app-level authentication** — restrict by network, reverse-proxy allowlist, or mTLS in production (see [API-HTTP.md](./API-HTTP.md) and [SECURITY.md](../SECURITY.md)).
+
+Example queries (adjust `[5m]` to your scrape interval and range habits; `job` / `instance` labels depend on your Prometheus `scrape_configs`):
+
+| Goal | PromQL (illustrative) |
+|------|------------------------|
+| **p95 latency** (all routes) | `histogram_quantile(0.95, sum(rate(taskapi_http_request_duration_seconds_bucket[5m])) by (le))` |
+| **p95 latency by `route`** | `histogram_quantile(0.95, sum(rate(taskapi_http_request_duration_seconds_bucket[5m])) by (le, route))` |
+| **HTTP 5xx rate** (fraction of requests) | `sum(rate(taskapi_http_requests_total{code=~"5.."}[5m])) / sum(rate(taskapi_http_requests_total[5m]))` |
+| **429 rate limit events / s** | `rate(taskapi_http_rate_limited_total[5m])` |
+| **SSE subscribers** (instant) | `taskapi_sse_subscribers` |
+| **Idempotent replays / s** | `rate(taskapi_http_idempotent_replay_total[5m])` |
+| **DB pool waits / s** | `rate(taskapi_db_pool_wait_count_total[5m])` |
+| **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |
+
+**Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Use recording rules later if these queries are heavy ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
+
 ## Checklist: increasing observability
 
 When you add or materially change behavior, use this list (copy into a PR description if helpful).
