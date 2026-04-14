@@ -22,7 +22,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/version\tString":      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter": {},
 	// Header-only helper on every response; JSON paths log via setJSONHeaders / setAPISecurityHeaders.
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tapplyAPISecurityHeaders": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tApplySecurityHeaders": {},
 	// Thin wrapper over internal/version.String (already excluded); health and JSON embed version without duplicating logs here.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tServerVersion": {},
 	// Prometheus metrics wrapper: per-chunk Write / Flush must not allocate log attrs on hot paths.

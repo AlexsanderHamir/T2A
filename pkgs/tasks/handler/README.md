@@ -58,6 +58,7 @@ The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only)
 | `observe.go` | `RunObserved` for structured helper in/out pairs. |
 | `httplog_io.go` | `http.io` / `helper.io` debug summaries. |
 | (sibling package) | **[`pkgs/tasks/logctx`](../logctx/)** — `ContextWithLogSeq`, `ContextWithRequestID`, `RequestIDFromContext`, slog wrappers (`WrapSlogHandlerWithLogSequence`, `WrapSlogHandlerWithRequestContext`). Used from `accesslog.go`, `handler_http_json.go`, and `cmd/taskapi/run.go` (no import cycle). |
+| (sibling package) | **[`pkgs/tasks/apijson`](../apijson/)** — `ApplySecurityHeaders`, `WriteJSONError` (JSON `{"error", "request_id"}` + `http.io` debug). `handler` wraps `WriteJSONError` with `CallPath`; future middleware can call `apijson` directly with `callPath` nil. |
 
 ## Tests
 

@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 func actorFromRequest(r *http.Request) (a domain.Actor) {
@@ -60,39 +60,27 @@ func decodeJSON(ctx context.Context, r io.Reader, dst any) (err error) {
 	return err
 }
 
-// applyAPISecurityHeaders sets baseline hardening headers without logging.
-// High-frequency paths (for example Prometheus scrapes) use this alone; JSON uses it from setJSONHeaders
-// so each response does not emit both setJSONHeaders and setAPISecurityHeaders trace lines.
-func applyAPISecurityHeaders(w http.ResponseWriter) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Referrer-Policy", "no-referrer")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
-}
-
 // setAPISecurityHeaders sets baseline hardening headers for browser-facing HTTP responses (SSE, plain-text errors, idempotency replay).
 func setAPISecurityHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setAPISecurityHeaders")
-	applyAPISecurityHeaders(w)
+	apijson.ApplySecurityHeaders(w)
 }
 
 // WrapPrometheusHandler applies the same baseline response hardening as API routes
-// (see applyAPISecurityHeaders) before delegating to the Prometheus registry handler.
+// (see apijson.ApplySecurityHeaders) before delegating to the Prometheus registry handler.
 // Scrapers ignore these headers; they help when /metrics is opened in a browser.
 // Per-scrape debug trace is omitted so metrics polling does not flood logs at level debug.
 func WrapPrometheusHandler(next http.Handler) http.Handler {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WrapPrometheusHandler")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		applyAPISecurityHeaders(w)
+		apijson.ApplySecurityHeaders(w)
 		next.ServeHTTP(w, r)
 	})
 }
 
 func setJSONHeaders(w http.ResponseWriter) {
 	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.setJSONHeaders")
-	applyAPISecurityHeaders(w)
+	apijson.ApplySecurityHeaders(w)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 }
 
@@ -129,36 +117,8 @@ func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v an
 }
 
 func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int, msg string) {
-	setJSONHeaders(w)
-	ctx := context.Background()
-	if r != nil {
-		ctx = r.Context()
-	}
-	body := jsonErrorBody{Error: msg}
-	if r != nil {
-		if rid := logctx.RequestIDFromContext(ctx); rid != "" {
-			body.RequestID = rid
-		}
-	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(body); err != nil {
-		slog.Error("response encode failed", "cmd", httpLogCmd, "operation", op, "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = io.WriteString(w, "{\"error\":\"internal server error\"}\n")
-		return
-	}
-	payload := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
-	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
-		preview := truncateUTF8ByBytes(string(payload), maxHTTPLogJSONPreviewBytes)
-		slog.Log(ctx, slog.LevelDebug, "http.io",
-			"cmd", httpLogCmd, "obs_category", "http_io", "operation", op, "call_path", CallPath(ctx), "phase", "out",
-			"http_status", code, "response_json_bytes", len(payload), "response_body", preview)
-	}
-	w.WriteHeader(code)
-	_, _ = w.Write(payload)
-	_, _ = w.Write([]byte("\n"))
+	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.writeJSONError", "http_op", op, "http_status", code)
+	apijson.WriteJSONError(w, r, op, code, msg, CallPath)
 }
 
 func userFacingJSONError(err error) string {

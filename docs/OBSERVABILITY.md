@@ -27,7 +27,7 @@ From production logs (and future metrics if we add them), we want to answer:
 - Functions in files with **no** successful type check for their package may be skipped (a warning is logged to stderr).
 - Helpers that **only** call non-`slog` wrappers (for example pure `writeStoreError` without a `slog` call inside **this** function) do **not** count.
 - **`cmd/funclogmeasure`** is **skipped by default**; use `-include-tool` to audit it too.
-- A **tiny allowlist** in `cmd/funclogmeasure` excludes helpers where a per-call `slog` trace would be misleading or hot-path expensive (today: `internal/version.String`; `pkgs/repo.isMentionDelimiter` inside `ParseFileMentions`; `handler.applyAPISecurityHeaders` on every response; `handler.ServerVersion` as a thin wrapper over `internal/version.String`; `handler.(*metricsHTTPResponseWriter).{WriteHeader,Write,Flush,statusCode}` on the Prometheus metrics wrapper).
+- A **tiny allowlist** in `cmd/funclogmeasure` excludes helpers where a per-call `slog` trace would be misleading or hot-path expensive (today: `internal/version.String`; `pkgs/repo.isMentionDelimiter` inside `ParseFileMentions`; `apijson.ApplySecurityHeaders` on every response / scrape; `handler.ServerVersion` as a thin wrapper over `internal/version.String`; `handler.(*metricsHTTPResponseWriter).{WriteHeader,Write,Flush,statusCode}` on the Prometheus metrics wrapper).
 
 We do **not** treat a single percentage as a product SLO. Use the **checklists** below, **`funclogmeasure`** for the per-function log target, and **test coverage** scripts where they still help.
 

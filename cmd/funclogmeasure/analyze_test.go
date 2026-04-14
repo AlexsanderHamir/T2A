@@ -43,7 +43,7 @@ func TestShouldSkipSlogRequirement_handlerHotHelpers(t *testing.T) {
 	for _, tt := range []struct {
 		pkg, fn string
 	}{
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "applyAPISecurityHeaders"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson", "ApplySecurityHeaders"},
 		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "ServerVersion"},
 		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.WriteHeader"},
 		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.Write"},
