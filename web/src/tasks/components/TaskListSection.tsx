@@ -11,8 +11,8 @@ import {
   filterTasksForListView,
   type TaskListClientPriorityFilter,
   type TaskListClientStatusFilter,
-} from "./taskListClientFilter";
-import { taskListPagerSummary } from "./taskListPagerSummary";
+} from "./task-list/taskListClientFilter";
+import { taskListPagerSummary } from "./task-list/taskListPagerSummary";
 import { TaskListTableSkeleton } from "./TaskListTableSkeleton";
 
 type Props = {

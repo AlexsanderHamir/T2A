@@ -2,7 +2,7 @@ import { CustomSelect } from "./CustomSelect";
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   TASK_LIST_STATUS_FILTER_OPTIONS,
-} from "./taskListFilterSelectOptions";
+} from "./task-list/taskListFilterSelectOptions";
 
 type Props = {
   statusFilter: string;

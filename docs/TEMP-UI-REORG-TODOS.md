@@ -15,7 +15,7 @@ Scope: `web/src/tasks` (focus on component organization)
 ## 1) Target Structure
 
 - [ ] Create `web/src/tasks/components/task-create-modal/`
-- [ ] Create `web/src/tasks/components/task-list/`
+- [x] Create `web/src/tasks/components/task-list/`
 - [ ] Create `web/src/tasks/components/custom-select/`
 - [ ] Create `web/src/tasks/components/rich-prompt/`
 - [ ] Create `web/src/tasks/components/skeletons/`
@@ -47,9 +47,9 @@ Scope: `web/src/tasks` (focus on component organization)
 - [ ] Move `TaskListFilters.tsx`
 - [ ] Move `TaskListDataTable.tsx`
 - [ ] Move `TaskListTableSkeleton.tsx`
-- [ ] Move `taskListClientFilter.ts`
-- [ ] Move `taskListFilterSelectOptions.ts`
-- [ ] Move `taskListPagerSummary.ts`
+- [x] Move `taskListClientFilter.ts`
+- [x] Move `taskListFilterSelectOptions.ts`
+- [x] Move `taskListPagerSummary.ts`
 - [ ] Move/adjust tests: `TaskListSection.test.tsx`
 - [ ] Add `task-list/index.ts` barrel exports
 
@@ -87,13 +87,13 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 8) Validation Checklist (run after each batch)
 
-- [ ] `npx tsc --noEmit` in `web/`
+- [x] `npx tsc --noEmit` in `web/`
 - [ ] Targeted tests for moved family
   - [ ] `TaskCreateModal.test.tsx`
-  - [ ] `TaskListSection.test.tsx`
+  - [x] `TaskListSection.test.tsx`
   - [ ] `CustomSelect.test.tsx`
   - [ ] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
-- [ ] Spot-check lint diagnostics for moved files
+- [x] Spot-check lint diagnostics for moved files
 
 ## 9) Final Cleanup
 
