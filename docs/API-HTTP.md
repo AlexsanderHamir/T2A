@@ -32,11 +32,14 @@ Cap on incoming body size for all routes on the API stack (including JSON bodies
 
 At process start, **`taskapi`** registers the standard Prometheus **Go** and **Process** collectors on that registry (`go_*` for goroutines, GC, and memory stats; `process_*` for CPU seconds, open FDs, resident memory, start time; upstream names from `collectors.NewGoCollector`, `collectors.NewProcessCollector`), plus **`taskapi_build_info`** (gauge **1**, labels **`version`**, **`revision`**, **`go_version`**) so dashboards can match scrapes to **`GET /health`** JSON **`version`** and short **`vcs.revision`** (`internal/version.PrometheusBuildInfoLabels`).
 
+| Metric | Type | Labels | Notes |
+| ------ | ---- | ------ | ----- |
+| `taskapi_build_info` | Gauge | `version`, `revision`, `go_version` | Constant **1**; **`version`** matches health JSON; **`revision`** is short `vcs.revision` when embedded, else **`unknown`**. |
+
 After a successful DB open, **`taskapi`** registers a custom collector that reads **[`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats)** on each scrape (no separate polling goroutine). Names use the `taskapi_db_pool_*` prefix:
 
 | Metric | Type | Labels | Notes |
 | ------ | ---- | ------ | ----- |
-| `taskapi_build_info` | Gauge | `version`, `revision`, `go_version` | Constant **1**; **`version`** matches health JSON; **`revision`** is short `vcs.revision` when embedded, else **`unknown`**. |
 | `taskapi_db_pool_max_open_connections` | Gauge | — | Pool cap from `SetMaxOpenConns`. |
 | `taskapi_db_pool_open_connections` | Gauge | — | Open connections (in use + idle). |
 | `taskapi_db_pool_in_use_connections` | Gauge | — | Connections currently running a query. |
@@ -60,7 +63,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_domain_tasks_created_total` | Counter | — | Successful **`POST /tasks`** after persistence (**201**). |
 | `taskapi_domain_tasks_updated_total` | Counter | — | Successful **`PATCH /tasks/{id}`** (**200**). |
 | `taskapi_domain_tasks_deleted_total` | Counter | — | Successful **`DELETE /tasks/{id}`** (**204**). |
-| `taskapi_store_operation_duration_seconds` | Histogram | `op` | Wall time for each **`pkgs/tasks/store`** entrypoint (`op` is a fixed name such as `create_task`, `list_flat`, `ready` — not raw SQL). Buckets favor sub-100ms resolution with tail to **10s**. |
+| `taskapi_store_operation_duration_seconds` | Histogram | `op` | Wall time for each **`pkgs/tasks/store`** entrypoint (`op` is a fixed name such as `create_task`, `list_flat`, `ready` — not raw SQL). Histogram upper bounds (seconds): `0.0005`, `0.001`, `0.0025`, `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10` (+Inf) — see `storeOpDurationBuckets` in [`pkgs/tasks/store/store_metrics.go`](../pkgs/tasks/store/store_metrics.go). |
 | `taskapi_agent_queue_depth` | Gauge | — | Ready-task snapshots buffered in the in-process agent queue. |
 | `taskapi_agent_queue_capacity` | Gauge | — | Max buffer size from **`T2A_USER_TASK_AGENT_QUEUE_CAP`** (see [RUNTIME-ENV.md](./RUNTIME-ENV.md)). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |
