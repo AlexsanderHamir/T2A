@@ -1,4 +1,5 @@
 // Command taskapi is an HTTP server for task CRUD backed by Postgres.
+// File map for this directory: README.md in the same folder.
 //
 // Taskapi-specific startup env parsing (listen host, log level, agent queue cap, dev SSE interval)
 // lives in package github.com/AlexsanderHamir/T2A/internal/taskapiconfig; shared .env discovery is internal/envload.

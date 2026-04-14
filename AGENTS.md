@@ -35,7 +35,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | taskapi HTTP stack | `internal/taskapi/` | `NewHTTPHandler`: middleware chain around `handler.NewHandler` (see `cmd/taskapi/run.go`). |
 | SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default store/handler/agent tests (`tasktestdb.OpenSQLite`). |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/API-SSE.md`. |
-| Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. |
+| Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |
 | Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. Global styles: `web/src/app/App.css` `@import`s partials under `web/src/app/styles/`. |
 
 API contracts (paths, query params, JSON shapes) are authoritative in `docs/API-HTTP.md`, `docs/API-SSE.md`, and `docs/WEB.md` (SPA), not only in prose comments. The `docs/DESIGN.md` hub links limitations and architecture.
