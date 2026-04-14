@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 func actorFromRequest(r *http.Request) (a domain.Actor) {
@@ -135,7 +136,7 @@ func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int,
 	}
 	body := jsonErrorBody{Error: msg}
 	if r != nil {
-		if rid := RequestIDFromContext(ctx); rid != "" {
+		if rid := logctx.RequestIDFromContext(ctx); rid != "" {
 			body.RequestID = rid
 		}
 	}

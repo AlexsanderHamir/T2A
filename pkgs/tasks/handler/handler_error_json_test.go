@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 func TestWriteJSONError_includes_request_id_from_context(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(ContextWithRequestID(req.Context(), "unit-rid-1"))
+	req = req.WithContext(logctx.ContextWithRequestID(req.Context(), "unit-rid-1"))
 	writeJSONError(rec, req, "test.op", http.StatusBadRequest, "bad")
 	var out struct {
 		Error     string `json:"error"`

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 func TestRunObserved_successEmitsHelperInThenOut(t *testing.T) {
@@ -16,10 +18,10 @@ func TestRunObserved_successEmitsHelperInThenOut(t *testing.T) {
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	var processSeq atomic.Uint64
-	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+	base := logctx.WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(slog.New(logctx.WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
-	ctx := ContextWithRequestID(ContextWithLogSeq(context.Background()), "obs-rid")
+	ctx := logctx.ContextWithRequestID(logctx.ContextWithLogSeq(context.Background()), "obs-rid")
 	err := RunObserved(ctx, "unitObserved", []any{"in_k", "in_v"}, func(ctx context.Context) ([]any, error) {
 		return []any{"out_k", 42}, nil
 	})
@@ -66,10 +68,10 @@ func TestRunObserved_errorAppendsErrOnOut(t *testing.T) {
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	var processSeq atomic.Uint64
-	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+	base := logctx.WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(slog.New(logctx.WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
-	ctx := ContextWithRequestID(ContextWithLogSeq(context.Background()), "obs-err")
+	ctx := logctx.ContextWithRequestID(logctx.ContextWithLogSeq(context.Background()), "obs-err")
 	sentinel := errors.New("boom")
 	err := RunObserved(ctx, "unitFail", nil, func(ctx context.Context) ([]any, error) {
 		return nil, sentinel

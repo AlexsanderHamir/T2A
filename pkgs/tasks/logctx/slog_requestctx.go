@@ -1,4 +1,4 @@
-package handler
+package logctx
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 )
 
 // WrapSlogHandlerWithRequestContext returns h wrapped so each record includes request_id when
-// the log is emitted with a context from WithAccessLog (or any context carrying a request id).
+// the log is emitted with a context carrying a request id (for example from access middleware).
 // GORM SQL traces use the same context as store calls, so they correlate with HTTP requests.
 func WrapSlogHandlerWithRequestContext(h slog.Handler) slog.Handler {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WrapSlogHandlerWithRequestContext")
+	slog.Debug("trace", "cmd", TraceCmd, "operation", "logctx.WrapSlogHandlerWithRequestContext")
 	if h == nil {
 		return nil
 	}

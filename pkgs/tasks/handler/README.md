@@ -57,7 +57,7 @@ The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only)
 | `calllog.go` | `withCallRoot`, `PushCall`, `call_path` for nested handler/helper traces. |
 | `observe.go` | `RunObserved` for structured helper in/out pairs. |
 | `httplog_io.go` | `http.io` / `helper.io` debug summaries. |
-| `log_seq.go`, `requestctx.go`, `slog_requestctx.go` | Per-request log sequence and context wiring. |
+| (sibling package) | **[`pkgs/tasks/logctx`](../logctx/)** — `ContextWithLogSeq`, `ContextWithRequestID`, `RequestIDFromContext`, slog wrappers (`WrapSlogHandlerWithLogSequence`, `WrapSlogHandlerWithRequestContext`). Used from `accesslog.go`, `handler_http_json.go`, and `cmd/taskapi/run.go` (no import cycle). |
 
 ## Tests
 

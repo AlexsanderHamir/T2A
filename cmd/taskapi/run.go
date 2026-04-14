@@ -22,6 +22,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -79,8 +80,8 @@ func run() int {
 		baseHandler = slog.NewJSONHandler(logFile, &slog.HandlerOptions{Level: minLevel})
 	}
 	var processLogSeq atomic.Uint64
-	slog.SetDefault(slog.New(handler.WrapSlogHandlerWithLogSequence(
-		handler.WrapSlogHandlerWithRequestContext(baseHandler),
+	slog.SetDefault(slog.New(logctx.WrapSlogHandlerWithLogSequence(
+		logctx.WrapSlogHandlerWithRequestContext(baseHandler),
 		&processLogSeq,
 	)))
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.run")

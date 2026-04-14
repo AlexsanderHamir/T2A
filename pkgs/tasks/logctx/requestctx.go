@@ -1,4 +1,4 @@
-package handler
+package logctx
 
 import (
 	"context"
@@ -9,11 +9,12 @@ type ctxKey int
 
 const ctxKeyRequestID ctxKey = 1
 
-const maxIncomingRequestIDLen = 128
+// MaxIncomingRequestIDLen caps the length of an incoming X-Request-ID header (trimmed, then truncated).
+const MaxIncomingRequestIDLen = 128
 
 // ContextWithRequestID returns ctx with the HTTP request id attached for slog and correlation.
 func ContextWithRequestID(ctx context.Context, id string) context.Context {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ContextWithRequestID")
+	slog.Debug("trace", "cmd", TraceCmd, "operation", "logctx.ContextWithRequestID")
 	if id == "" {
 		return ctx
 	}

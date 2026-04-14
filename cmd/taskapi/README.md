@@ -7,7 +7,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | File | Role |
 |------|------|
 | `main.go` | `main()` → `run()`; process-wide HTTP server constants (read header/read/idle timeouts, shutdown, max headers). |
-| `run.go` | Flag parse, `.env` preload, JSON log bootstrap, DB open/migrate, store + SSE hub + optional repo, agent queue + reconcile goroutine, **`internal/taskapi.NewHTTPHandler`**, devsim ticker, mux (`/` + `GET /metrics`), `ListenAndServe`, graceful shutdown. |
+| `run.go` | Flag parse, `.env` preload, JSON log bootstrap (**`pkgs/tasks/logctx`** wraps the JSON `slog` handler), DB open/migrate, store + SSE hub + optional repo, agent queue + reconcile goroutine, **`internal/taskapi.NewHTTPHandler`**, devsim ticker, mux (`/` + `GET /metrics`), `ListenAndServe`, graceful shutdown. |
 | `run_helpers.go` | `emitTaskAPIFileLoggingConfig` (structured line after JSON handler is live). |
 | `logfile.go` | Create log directory and open per-run `taskapi-*.jsonl` (`-logdir` / `T2A_LOG_DIR`). |
 | `logging_startup_test.go` | Logging config line shape. |
@@ -23,6 +23,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | [`pkgs/tasks/postgres`](../../pkgs/tasks/postgres) | GORM open + `AutoMigrate`. |
 | [`pkgs/tasks/store`](../../pkgs/tasks/store) | Persistence; `SetReadyTaskNotifier` for the agent queue. |
 | [`pkgs/tasks/handler`](../../pkgs/tasks/handler) | REST + SSE inner mux; see [`handler/README.md`](../../pkgs/tasks/handler/README.md). |
+| [`pkgs/tasks/logctx`](../../pkgs/tasks/logctx) | Request id + `log_seq` context and `slog` handler wrappers for JSONL correlation (used in `run.go` and handler). |
 | [`pkgs/agents`](../../pkgs/agents) | `MemoryQueue` + reconcile loop. |
 | [`pkgs/repo`](../../pkgs/repo) | Optional workspace when `REPO_ROOT` is set. |
 | [`pkgs/tasks/devsim`](../../pkgs/tasks/devsim) | Synthetic SSE / audit ticker when `T2A_SSE_TEST=1`. |

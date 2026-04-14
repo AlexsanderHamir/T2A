@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +25,7 @@ func WithAccessLog(h http.Handler) http.Handler {
 			return
 		}
 
-		ctx := ContextWithLogSeq(r.Context())
+		ctx := logctx.ContextWithLogSeq(r.Context())
 		r = r.WithContext(ctx)
 
 		aw := &accessLogWriter{ResponseWriter: w}
@@ -67,11 +68,11 @@ func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Req
 	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 	if id == "" {
 		id = uuid.NewString()
-	} else if len(id) > maxIncomingRequestIDLen {
-		id = id[:maxIncomingRequestIDLen]
+	} else if len(id) > logctx.MaxIncomingRequestIDLen {
+		id = id[:logctx.MaxIncomingRequestIDLen]
 	}
 	w.Header().Set("X-Request-ID", id)
-	ctx := ContextWithRequestID(r.Context(), id)
+	ctx := logctx.ContextWithRequestID(r.Context(), id)
 	return r.WithContext(ctx)
 }
 

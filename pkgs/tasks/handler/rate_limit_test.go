@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 func TestRateLimitPerMinuteConfigured(t *testing.T) {
@@ -56,8 +58,8 @@ func TestWithAccessLog_rateLimitWarn_carriesRequestID(t *testing.T) {
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	var processSeq atomic.Uint64
-	base := WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	slog.SetDefault(slog.New(WrapSlogHandlerWithLogSequence(base, &processSeq)))
+	base := logctx.WrapSlogHandlerWithRequestContext(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	slog.SetDefault(slog.New(logctx.WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
