@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"unicode/utf8"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
@@ -45,12 +44,10 @@ func ReadFilePreview(absPath string) (*FilePreview, error) {
 		return nil, err
 	}
 	defer f.Close()
-	sniff := make([]byte, binarySniffBytes)
-	nSniff, sniffErr := io.ReadFull(f, sniff)
-	if sniffErr != nil && sniffErr != io.EOF && sniffErr != io.ErrUnexpectedEOF {
-		return nil, sniffErr
+	sniff, err := readBinarySniffPrefix(f)
+	if err != nil {
+		return nil, err
 	}
-	sniff = sniff[:nSniff]
 	if isBinaryData(sniff) {
 		out.Binary = true
 		return out, nil
@@ -58,25 +55,14 @@ func ReadFilePreview(absPath string) (*FilePreview, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
-	data, err := io.ReadAll(io.LimitReader(f, maxFileReadBytes+1))
+	data, cappedTrunc, err := readCappedUTF8Content(f)
 	if err != nil {
 		return nil, err
 	}
-	if int64(len(data)) > maxFileReadBytes {
-		data = data[:maxFileReadBytes]
+	if cappedTrunc {
 		out.Truncated = true
 	}
-	if isBinaryData(data) {
-		out.Binary = true
-		return out, nil
-	}
-	if !utf8.Valid(data) {
-		out.Binary = true
-		return out, nil
-	}
-	s := string(data)
-	out.Content = s
-	out.LineCount = lineCountFromBytes(data)
+	applyBytesToPreview(out, data)
 	return out, nil
 }
 

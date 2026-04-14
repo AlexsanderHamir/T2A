@@ -2,7 +2,6 @@ package repo
 
 import (
 	"log/slog"
-	"strconv"
 	"strings"
 )
 
@@ -34,49 +33,17 @@ outer:
 		for i < len(s) {
 			c := s[i]
 			if c == '(' {
-				closeIdx := strings.IndexByte(s[i:], ')')
-				if closeIdx < 0 {
-					i++
-					continue
-				}
-				inner := strings.TrimSpace(s[i+1 : i+closeIdx])
-				dash := strings.IndexByte(inner, '-')
-				var startLine, endLine int
-				hasRange := false
-				if dash >= 0 {
-					a, err1 := strconv.Atoi(strings.TrimSpace(inner[:dash]))
-					b, err2 := strconv.Atoi(strings.TrimSpace(inner[dash+1:]))
-					if err1 == nil && err2 == nil {
-						startLine, endLine = a, b
-						hasRange = true
-					}
-				}
-				if !hasRange {
-					// Parentheses in filenames are valid; only treat "(start-end)" as a range.
-					i++
-					continue
-				}
-				afterClose := i + closeIdx + 1
-				if afterClose < len(s) && !isMentionDelimiter(s[afterClose]) {
-					// Reject range parsing when ')' is followed by path chars, e.g. file(1-2).txt.
-					i++
-					continue
-				}
-				path := strings.TrimSpace(s[pathStart:i])
-				if path == "" {
-					i = rawStart + 1
+				newI, mention, contOuter, restartFrom, restartOuter := handleMentionOpenParen(s, i, pathStart, rawStart)
+				if restartOuter {
+					i = restartFrom
 					continue outer
 				}
-				i += closeIdx + 1
-				out = append(out, Mention{
-					Path:      path,
-					StartLine: startLine,
-					EndLine:   endLine,
-					HasRange:  hasRange,
-					RawStart:  rawStart,
-					RawEnd:    i,
-				})
-				continue outer
+				i = newI
+				if contOuter && mention != nil {
+					out = append(out, *mention)
+					continue outer
+				}
+				continue
 			}
 			if c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '@' {
 				break

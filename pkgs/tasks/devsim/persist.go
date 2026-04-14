@@ -45,63 +45,10 @@ var EventCycle = []domain.EventType{
 
 func samplePayload(typ domain.EventType) ([]byte, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.samplePayload", "type", typ)
-	switch typ {
-	case domain.EventStatusChanged:
-		return json.Marshal(map[string]string{"from": "ready", "to": "running"})
-	case domain.EventPriorityChanged:
-		return json.Marshal(map[string]string{"from": "medium", "to": "high"})
-	case domain.EventPromptAppended:
-		return json.Marshal(map[string]string{"from": "<p>a</p>", "to": "<p>a</p><p>b</p>"})
-	case domain.EventMessageAdded:
-		return json.Marshal(map[string]string{"from": "Title A", "to": "Title B"})
-	case domain.EventContextAdded:
-		return json.Marshal(map[string]string{"summary": "Repo layout", "detail": "Tasks live under pkgs/tasks."})
-	case domain.EventConstraintAdded:
-		return json.Marshal(map[string]string{"text": "Must keep default go test ./... green."})
-	case domain.EventSuccessCriterionAdded:
-		return json.Marshal(map[string]string{"text": "UI timeline renders without console errors."})
-	case domain.EventNonGoalAdded:
-		return json.Marshal(map[string]string{"text": "No production deploy in this iteration."})
-	case domain.EventPlanAdded:
-		return json.Marshal(map[string]any{
-			"title": "Dev sim plan",
-			"steps": []string{"Sketch", "Implement", "Verify"},
-		})
-	case domain.EventSubtaskAdded:
-		return json.Marshal(map[string]string{
-			"child_task_id": "00000000-0000-0000-0000-000000000099",
-			"title":         "Child (synthetic id)",
-		})
-	case domain.EventSubtaskRemoved:
-		return json.Marshal(map[string]string{
-			"child_task_id": "00000000-0000-0000-0000-000000000099",
-			"title":         "Removed child (synthetic)",
-		})
-	case domain.EventChecklistItemAdded:
-		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Run go test ./..."})
-	case domain.EventChecklistItemToggled:
-		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "done": "true"})
-	case domain.EventChecklistItemUpdated:
-		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Run go test ./... (updated)"})
-	case domain.EventChecklistItemRemoved:
-		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Removed criterion (synthetic)"})
-	case domain.EventChecklistInheritChanged:
-		return json.Marshal(map[string]bool{"from": false, "to": true})
-	case domain.EventArtifactAdded:
-		return json.Marshal(map[string]string{"name": "notes.md", "uri": "file:///tmp/t2a-devsim"})
-	case domain.EventApprovalRequested:
-		return json.Marshal(map[string]string{"reason": "Checkpoint ready", "checkpoint": "plan_review"})
-	case domain.EventApprovalGranted:
-		return json.Marshal(map[string]string{"grantor": "lead", "note": "LGTM (synthetic)"})
-	case domain.EventTaskCompleted:
-		return json.Marshal(map[string]string{"summary": "Synthetic completion."})
-	case domain.EventTaskFailed:
-		return json.Marshal(map[string]string{"error": "Simulated failure", "retryable": "true"})
-	case domain.EventSyncPing:
-		return json.Marshal(map[string]string{"source": "devsim"})
-	default:
-		return json.Marshal(map[string]string{"dev_sample": string(typ)})
+	if f, ok := samplePayloadByType[typ]; ok {
+		return f()
 	}
+	return json.Marshal(map[string]string{"dev_sample": string(typ)})
 }
 
 func nextEventTypeFromCount(n int64) domain.EventType {
