@@ -5,7 +5,7 @@ import { TaskListFilters } from "../filters/TaskListFilters";
 import { TaskListSectionHeading } from "./TaskListSectionHeading";
 import { TaskPager } from "../pager/TaskPager";
 import type { Task } from "@/types";
-import type { TaskWithDepth } from "../../../flattenTaskTree";
+import type { TaskWithDepth } from "../../../task-tree";
 import type { EmptyStateAction } from "@/shared/EmptyState";
 import {
   filterTasksForListView,

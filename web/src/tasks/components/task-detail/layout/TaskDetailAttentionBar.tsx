@@ -1,4 +1,4 @@
-/** Matches `userAttention` return shape from `taskAttention.ts`. */
+/** Matches `userAttention` return shape from `task-display/taskAttention.ts`. */
 export type TaskDetailAttention = {
   show: boolean;
   headline: string;

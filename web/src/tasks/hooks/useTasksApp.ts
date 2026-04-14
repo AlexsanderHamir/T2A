@@ -13,10 +13,13 @@ import {
   patchTask,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
-import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
-import { flattenTaskTree, flattenTaskTreeRoots } from "../flattenTaskTree";
-import { TASK_LIST_PAGE_SIZE } from "../paging";
-import { taskQueryKeys } from "../queryKeys";
+import {
+  flattenTaskTree,
+  flattenTaskTreeRoots,
+  type PendingSubtaskDraft,
+} from "../task-tree";
+import { TASK_LIST_PAGE_SIZE } from "../task-paging";
+import { taskQueryKeys } from "../task-query";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,

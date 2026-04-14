@@ -1,5 +1,5 @@
 import type { Priority, Status } from "@/types";
-import type { TaskWithDepth } from "../../../flattenTaskTree";
+import type { TaskWithDepth } from "../../../task-tree";
 
 export type TaskListClientStatusFilter = "all" | Status;
 export type TaskListClientPriorityFilter = "all" | Priority;

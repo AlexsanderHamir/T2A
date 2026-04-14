@@ -2,7 +2,7 @@ import type { Status } from "@/types";
 
 /**
  * Statuses where an agent typically needs something from a person soon
- * (review, unblock, recover). Align with `userAttention` in `taskAttention.ts`.
+ * (review, unblock, recover). Align with `userAttention` in `task-display/taskAttention.ts`.
  * Extend when new Status values imply the agent is waiting on a person.
  */
 const NEEDS_USER_INPUT: ReadonlySet<Status> = new Set([

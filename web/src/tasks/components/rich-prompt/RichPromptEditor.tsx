@@ -16,7 +16,7 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
-} from "../../promptFormat";
+} from "../../task-prompt";
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
 import { RichPromptRepoHints } from "./RichPromptRepoHints";

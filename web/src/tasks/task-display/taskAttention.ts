@@ -2,7 +2,7 @@ import type { Task } from "@/types";
 
 /**
  * Whether agents are waiting on a person soon, from task status and server `approval_pending` on events.
- * Status cases that set `show: true` match `statusNeedsUserInput` in `taskStatusNeedsUser.ts`.
+ * Status cases that set `show: true` match `statusNeedsUserInput` in `task-display/taskStatusNeedsUser.ts`.
  */
 export function userAttention(
   task: Task,

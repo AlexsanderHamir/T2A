@@ -1,5 +1,5 @@
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
-import type { PendingSubtaskDraft } from "../../../pendingSubtaskDraft";
+import type { PendingSubtaskDraft } from "../../../task-tree";
 
 type Props = {
   pendingSubtasks: PendingSubtaskDraft[];

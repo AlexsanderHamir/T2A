@@ -1,7 +1,10 @@
 import type { CustomSelectOption } from "../../custom-select";
 import { PRIORITIES, STATUSES } from "@/types";
-import { priorityPillClass, statusPillClass } from "../../../taskPillClasses";
-import { statusNeedsUserInput } from "../../../taskStatusNeedsUser";
+import {
+  priorityPillClass,
+  statusNeedsUserInput,
+  statusPillClass,
+} from "../../../task-display";
 
 const needsUserStatuses = STATUSES.filter((s) => statusNeedsUserInput(s));
 const otherStatuses = STATUSES.filter((s) => !statusNeedsUserInput(s));

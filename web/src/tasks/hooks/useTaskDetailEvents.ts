@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listTaskEvents } from "@/api";
-import { TASK_EVENTS_PAGE_SIZE } from "../paging";
-import { taskQueryKeys, type TaskEventsCursorKey } from "../queryKeys";
+import { TASK_EVENTS_PAGE_SIZE } from "../task-paging";
+import { taskQueryKeys, type TaskEventsCursorKey } from "../task-query";
 
 export function useTaskDetailEvents(taskId: string, enabled: boolean) {
   const [eventsCursor, setEventsCursor] = useState<TaskEventsCursorKey>({

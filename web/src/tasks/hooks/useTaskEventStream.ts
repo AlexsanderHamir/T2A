@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { taskQueryKeys } from "../queryKeys";
-import { collectTaskIdFromSSEData } from "../sseInvalidate";
+import { collectTaskIdFromSSEData, taskQueryKeys } from "../task-query";
 
 const SSE_INVALIDATE_MS = 400;
 

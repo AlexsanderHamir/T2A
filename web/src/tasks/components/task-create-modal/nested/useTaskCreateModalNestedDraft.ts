@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { PendingSubtaskDraft } from "../../../pendingSubtaskDraft";
+import type { PendingSubtaskDraft } from "../../../task-tree";
 
 type Args = {
   pendingSubtasks: PendingSubtaskDraft[];

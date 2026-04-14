@@ -12,14 +12,14 @@ import {
   TaskDetailSubtasksHead,
   TaskDetailUpdatesSection,
 } from "../components/task-detail";
-import { sanitizePromptHtml } from "../promptFormat";
-import { userAttention } from "../taskAttention";
+import { sanitizePromptHtml } from "../task-prompt";
+import { userAttention } from "../task-display";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
 import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
-import { taskQueryKeys } from "../queryKeys";
+import { taskQueryKeys } from "../task-query";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {

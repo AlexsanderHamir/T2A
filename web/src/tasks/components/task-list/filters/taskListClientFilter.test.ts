@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TaskWithDepth } from "../../../flattenTaskTree";
+import type { TaskWithDepth } from "../../../task-tree";
 import { filterTasksForListView } from "./taskListClientFilter";
 
 function row(

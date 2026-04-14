@@ -7,7 +7,7 @@ import type { TaskEventType } from "@/types";
  * | Type | Agent needs input? | Notes |
  * |------|--------------------|--------|
  * | task_created | no | Task exists; no response required from this row alone |
- * | status_changed, priority_changed | no | State updates; status is classified separately (`taskStatusNeedsUser.ts`) |
+ * | status_changed, priority_changed | no | State updates; status is classified separately (`task-display/taskStatusNeedsUser.ts`) |
  * | prompt_appended | no | Prompt edits; follow in context |
  * | context_added, constraint_added, success_criterion_added, non_goal_added | no | Structured context/planning; informational |
  * | plan_added, subtask_added | no | Plan structure updates |

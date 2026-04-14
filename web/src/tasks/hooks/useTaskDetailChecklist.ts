@@ -5,7 +5,7 @@ import {
   deleteChecklistItem,
   patchChecklistItemText,
 } from "@/api";
-import { taskQueryKeys } from "../queryKeys";
+import { taskQueryKeys } from "../task-query";
 
 export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient) {
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);

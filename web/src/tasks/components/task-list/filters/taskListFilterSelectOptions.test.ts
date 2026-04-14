@@ -8,7 +8,7 @@ import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   TASK_LIST_STATUS_FILTER_OPTIONS,
 } from "./taskListFilterSelectOptions";
-import { statusNeedsUserInput } from "../../../taskStatusNeedsUser";
+import { statusNeedsUserInput } from "../../../task-display";
 
 function optionValues(opts: CustomSelectOption[]): string[] {
   return opts

@@ -1,7 +1,6 @@
 import type { FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import type { TaskWithDepth } from "../../flattenTaskTree";
-import type { PendingSubtaskDraft } from "../../pendingSubtaskDraft";
+import type { PendingSubtaskDraft, TaskWithDepth } from "../../task-tree";
 import { Modal } from "../../../shared/Modal";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";

@@ -7,7 +7,7 @@ import {
   type PriorityChoice,
   type TaskType,
 } from "@/types";
-import { taskQueryKeys } from "../queryKeys";
+import { taskQueryKeys } from "../task-query";
 
 export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) {
   const [subtaskTitle, setSubtaskTitle] = useState("");

@@ -1,4 +1,4 @@
-import type { TaskWithDepth } from "../../../flattenTaskTree";
+import type { TaskWithDepth } from "../../../task-tree";
 import { ParentTaskSelect } from "../../task-compose";
 
 type Props = {

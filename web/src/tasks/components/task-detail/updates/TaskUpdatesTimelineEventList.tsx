@@ -1,8 +1,10 @@
 import type { TaskEvent, TaskEventType } from "@/types";
 import { Link } from "react-router-dom";
-import { eventTypeLabel } from "../../../taskEventLabels";
-import { eventTypeNeedsUserInput } from "../../../taskEventNeedsUser";
-import { awaitingUserReply } from "../../../taskEventThread";
+import {
+  awaitingUserReply,
+  eventTypeLabel,
+  eventTypeNeedsUserInput,
+} from "../../../task-events";
 
 export function TaskUpdatesTimelineEventList({
   events,

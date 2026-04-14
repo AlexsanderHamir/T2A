@@ -4,11 +4,13 @@ import { Link, useParams } from "react-router-dom";
 import { getTaskEvent, patchTaskEventUserResponse } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
-import { eventTypeLabel } from "../taskEventLabels";
-import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
-import { awaitingUserReply } from "../taskEventThread";
+import {
+  awaitingUserReply,
+  eventTypeLabel,
+  eventTypeNeedsUserInput,
+} from "../task-events";
 import { TaskEventDetailSkeleton } from "../components/skeletons";
-import { taskQueryKeys } from "../queryKeys";
+import { taskQueryKeys } from "../task-query";
 
 export function TaskEventDetailPage() {
   const qc = useQueryClient();

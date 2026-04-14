@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import type { CSSProperties } from "react";
 import type { Task } from "@/types";
-import type { TaskWithDepth } from "../../../flattenTaskTree";
-import { previewTextFromPrompt } from "../../../promptFormat";
-import { priorityPillClass, statusPillClass } from "../../../taskPillClasses";
-import { statusNeedsUserInput } from "../../../taskStatusNeedsUser";
+import type { TaskWithDepth } from "../../../task-tree";
+import {
+  priorityPillClass,
+  statusNeedsUserInput,
+  statusPillClass,
+} from "../../../task-display";
+import { previewTextFromPrompt } from "../../../task-prompt";
 import {
   EmptyState,
   EmptyStateFilterGlyph,

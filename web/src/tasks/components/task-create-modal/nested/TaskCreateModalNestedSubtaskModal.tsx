@@ -1,4 +1,4 @@
-import type { PendingSubtaskDraft } from "../../../pendingSubtaskDraft";
+import type { PendingSubtaskDraft } from "../../../task-tree";
 import { NestedSubtaskDraftModal } from "../../task-compose";
 
 type Props = {
