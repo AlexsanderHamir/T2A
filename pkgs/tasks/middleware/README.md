@@ -27,7 +27,7 @@ Defined in **`stack.go`**. When changing order or adding a layer, update this RE
 |------|------|
 | `stack.go` | `Stack(inner, callPath)` composes the chain. |
 | `recovery.go` | Panic handler. |
-| `metrics_http.go` | HTTP metrics + SSE subscriber gauge (`RecordSSESubscriberGauge`). |
+| `metrics_http.go` | HTTP metrics + SSE subscriber gauge (`RecordSSESubscriberGauge`). HTTP latency histogram uses **SLO-tuned** buckets (`httpRequestDurationSecondsBuckets`, not `prometheus.DefBuckets`). |
 | `accesslog.go` | Access logging. |
 | `rate_limit.go` | Token-bucket rate limit. |
 | `api_auth.go` | Bearer token gate. |

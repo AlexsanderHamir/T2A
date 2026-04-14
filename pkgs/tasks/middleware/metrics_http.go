@@ -11,6 +11,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// httpRequestDurationSecondsBuckets are upper bounds (seconds) for
+// taskapi_http_request_duration_seconds. They prioritize resolution between
+// ~10ms and 1s for REST SLI work (p50/p95), with a tail to 10s for slow store
+// paths. Documented in docs/API-HTTP.md and docs/OBSERVABILITY.md.
+var httpRequestDurationSecondsBuckets = []float64{
+	0.01, 0.025, 0.05, 0.1, 0.15, 0.25, 0.35, 0.5, 0.75, 1,
+	1.5, 2.5, 5, 10,
+}
+
 var (
 	taskapiHTTPInFlight = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: "taskapi",
@@ -30,7 +39,7 @@ var (
 			Namespace: "taskapi",
 			Name:      "http_request_duration_seconds",
 			Help:      "HTTP request duration in seconds (excludes health probes).",
-			Buckets:   prometheus.DefBuckets,
+			Buckets:   httpRequestDurationSecondsBuckets,
 		},
 		[]string{"method", "route"},
 	)

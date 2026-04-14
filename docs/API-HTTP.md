@@ -52,7 +52,7 @@ HTTP traffic that **does** pass through the API stack records:
 | ------ | ---- | ------ | ----- |
 | `taskapi_http_in_flight` | Gauge | — | In-flight requests (health probe paths excluded). |
 | `taskapi_http_requests_total` | Counter | `method`, `route`, `code` | `route` is the matched mux pattern (e.g. `GET /tasks/{id}`) when set; otherwise **`other`** (limits cardinality on 404s). |
-| `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | Default buckets; health probe paths excluded. |
+| `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | **SLO-tuned** upper bounds (seconds): `0.01`, `0.025`, `0.05`, `0.1`, `0.15`, `0.25`, `0.35`, `0.5`, `0.75`, `1`, `1.5`, `2.5`, `5`, `10` (+Inf); denser below 1s for p50/p95 work. Health probe paths excluded. |
 | `taskapi_http_rate_limited_total` | Counter | — | Incremented when a request is rejected with **429** (per-IP limit). |
 | `taskapi_http_idempotent_replay_total` | Counter | — | Incremented when a response is served from the idempotency cache (not on singleflight coalescing alone). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |

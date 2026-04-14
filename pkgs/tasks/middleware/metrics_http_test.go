@@ -55,6 +55,27 @@ func TestWithHTTPMetrics(t *testing.T) {
 	})
 }
 
+func TestHTTPRequestDurationSecondsBuckets(t *testing.T) {
+	if len(httpRequestDurationSecondsBuckets) < 2 {
+		t.Fatal("need at least two buckets")
+	}
+	prev := httpRequestDurationSecondsBuckets[0]
+	if prev <= 0 {
+		t.Fatalf("first bucket must be > 0, got %v", prev)
+	}
+	for i := 1; i < len(httpRequestDurationSecondsBuckets); i++ {
+		cur := httpRequestDurationSecondsBuckets[i]
+		if cur <= prev {
+			t.Fatalf("buckets must be strictly increasing: index %d %v <= %v", i, cur, prev)
+		}
+		prev = cur
+	}
+	last := httpRequestDurationSecondsBuckets[len(httpRequestDurationSecondsBuckets)-1]
+	if last < 5 {
+		t.Fatalf("expected tail bucket at least 5s for slow paths, got %v", last)
+	}
+}
+
 func metricFamilyHasRouteLabel(mfs []*dto.MetricFamily, familyName, routeValue string) bool {
 	for _, mf := range mfs {
 		if mf.GetName() != familyName {
