@@ -10,15 +10,9 @@ import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
-import { CustomSelect, type CustomSelectOption } from "./CustomSelect";
+import { CustomSelect } from "./CustomSelect";
 import { TaskPager } from "./TaskPager";
-import {
-  PRIORITIES,
-  STATUSES,
-  type Priority,
-  type Status,
-  type Task,
-} from "@/types";
+import type { Priority, Status, Task } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import { statusNeedsUserInput } from "../taskStatusNeedsUser";
 import {
@@ -26,6 +20,10 @@ import {
   EmptyStateFilterGlyph,
   type EmptyStateAction,
 } from "@/shared/EmptyState";
+import {
+  TASK_LIST_PRIORITY_FILTER_OPTIONS,
+  TASK_LIST_STATUS_FILTER_OPTIONS,
+} from "./taskListFilterSelectOptions";
 
 type Props = {
   tasks: TaskWithDepth[];
@@ -98,38 +96,6 @@ export function TaskListSection({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [titleSearch, setTitleSearch] = useState("");
-
-  const statusSelectOptions: CustomSelectOption[] = useMemo(() => {
-    const needsUser = STATUSES.filter((s) => statusNeedsUserInput(s));
-    const other = STATUSES.filter((s) => !statusNeedsUserInput(s));
-    return [
-      { value: "all", label: "All" },
-      { type: "header", label: "Agent needs input" },
-      ...needsUser.map((s) => ({
-        value: s,
-        label: s,
-        pillClass: statusPillClass(s),
-      })),
-      { type: "header", label: "Other activity" },
-      ...other.map((s) => ({
-        value: s,
-        label: s,
-        pillClass: statusPillClass(s),
-      })),
-    ];
-  }, []);
-
-  const prioritySelectOptions: CustomSelectOption[] = useMemo(
-    () => [
-      { value: "all", label: "All" },
-      ...PRIORITIES.map((p) => ({
-        value: p,
-        label: p,
-        pillClass: priorityPillClass(p),
-      })),
-    ],
-    [],
-  );
 
   const filteredTasks = useMemo(() => {
     const q = titleSearch.trim().toLowerCase();
@@ -232,7 +198,7 @@ export function TaskListSection({
                 compact
                 listboxName="Filter by status"
                 value={statusFilter}
-                options={statusSelectOptions}
+                options={TASK_LIST_STATUS_FILTER_OPTIONS}
                 onChange={(v) => setStatusFilter(v as StatusFilter)}
               />
             </div>
@@ -243,7 +209,7 @@ export function TaskListSection({
                 compact
                 listboxName="Filter by priority"
                 value={priorityFilter}
-                options={prioritySelectOptions}
+                options={TASK_LIST_PRIORITY_FILTER_OPTIONS}
                 onChange={(v) => setPriorityFilter(v as PriorityFilter)}
               />
             </div>
