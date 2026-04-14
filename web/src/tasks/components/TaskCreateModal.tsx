@@ -10,6 +10,7 @@ import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
+import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -317,20 +318,11 @@ export function TaskCreateModal({
             )}
 
             {hasParent && !dmapMode ? (
-              <label className="checkbox-label task-create-inherit-field">
-                <input
-                  type="checkbox"
-                  checked={checklistInherit}
-                  onChange={(ev) =>
-                    onChecklistInheritChange(ev.target.checked)
-                  }
-                  disabled={disabled}
-                />
-                <span className="checkbox-label-body">
-                  <span>Inherit parent&apos;s checklist criteria</span>
-                  <FieldRequirementBadge requirement="optional" />
-                </span>
-              </label>
+              <TaskCreateModalInheritChecklistField
+                checklistInherit={checklistInherit}
+                disabled={disabled}
+                onChecklistInheritChange={onChecklistInheritChange}
+              />
             ) : null}
 
             {!hasParent && !dmapMode ? (
