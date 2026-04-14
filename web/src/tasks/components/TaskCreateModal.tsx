@@ -4,9 +4,9 @@ import { FieldLabel } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
+import { TaskCreateModalDmapTitleRow } from "./TaskCreateModalDmapTitleRow";
 import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
 import { TaskCreateModalPendingSubtasksField } from "./TaskCreateModalPendingSubtasksField";
-import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
@@ -18,7 +18,6 @@ import {
   type TaskCreateModalEvaluation,
 } from "./TaskCreateModalEvaluationSummary";
 import { TaskCreateModalFooterActions } from "./TaskCreateModalFooterActions";
-import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {
   pending: boolean;
@@ -202,34 +201,15 @@ export function TaskCreateModal({
 
             {dmapMode ? (
               <>
-                <div className="task-create-title-row">
-                  <div className="field grow">
-                    <FieldLabel htmlFor="task-new-title" requirement="required">
-                      Title
-                    </FieldLabel>
-                    <input
-                      id="task-new-title"
-                      value={title}
-                      onChange={(ev) => onTitleChange(ev.target.value)}
-                      placeholder="What should get done?"
-                      required
-                      aria-required="true"
-                      disabled={disabled}
-                    />
-                  </div>
-                  <PrioritySelect
-                    id="task-new-priority"
-                    value={priority}
-                    compact
-                    onChange={onPriorityChange}
-                  />
-                  <TaskTypeSelect
-                    id="task-new-task-type"
-                    value={taskType}
-                    onChange={onTaskTypeChange}
-                    disabled={disabled}
-                  />
-                </div>
+                <TaskCreateModalDmapTitleRow
+                  title={title}
+                  onTitleChange={onTitleChange}
+                  priority={priority}
+                  onPriorityChange={onPriorityChange}
+                  taskType={taskType}
+                  onTaskTypeChange={onTaskTypeChange}
+                  disabled={disabled}
+                />
                 <section
                   className="task-create-dmap"
                   aria-label="DMAP task configuration"
