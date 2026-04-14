@@ -4,7 +4,7 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNavigate } from "react-router-dom";
-import { TaskDraftsListSkeleton } from "../components/skeletons/taskLoadingSkeletons";
+import { TaskDraftsListSkeleton } from "../components/skeletons/taskSkeletons";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {

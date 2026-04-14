@@ -1,7 +1,7 @@
 import {
   TaskChecklistSkeletonRows,
   TaskTimelineSkeletonItems,
-} from "./taskLoadingSkeletonChunks";
+} from "./taskSkeletonChunks";
 
 const TASK_GRAPH_SKELETON_CARDS = 4;
 const TASK_DRAFTS_LIST_SKELETON_ROWS = 4;

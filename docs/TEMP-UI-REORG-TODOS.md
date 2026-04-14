@@ -73,10 +73,10 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 6) Skeletons Family
 
-- [x] Move `taskLoadingSkeletons.tsx` into `skeletons/`
-- [x] Move `taskLoadingSkeletonChunks.tsx`
+- [x] Move `taskLoadingSkeletons.tsx` into `skeletons/` (later renamed `taskSkeletons.tsx`)
+- [x] Move `taskLoadingSkeletonChunks.tsx` (later renamed `taskSkeletonChunks.tsx`)
 - [x] Update all imports in pages/components
-- [ ] Consider naming cleanup (`Task*Skeleton` consistency)
+- [x] Consider naming cleanup (`Task*Skeleton` consistency — module names align with `Task*` exports)
 
 ## 7) Import and Path Cleanup
 

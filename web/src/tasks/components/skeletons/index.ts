@@ -1,2 +1,2 @@
-export * from "./taskLoadingSkeletons";
-export * from "./taskLoadingSkeletonChunks";
+export * from "./taskSkeletons";
+export * from "./taskSkeletonChunks";

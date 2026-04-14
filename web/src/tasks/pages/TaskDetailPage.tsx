@@ -12,7 +12,7 @@ import { TaskDetailPromptSection } from "../components/TaskDetailPromptSection";
 import { TaskDetailUpdatesSection } from "../components/TaskDetailUpdatesSection";
 import { sanitizePromptHtml } from "../promptFormat";
 import { userAttention } from "../taskAttention";
-import { TaskDetailPageSkeleton } from "../components/skeletons/taskLoadingSkeletons";
+import { TaskDetailPageSkeleton } from "../components/skeletons/taskSkeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";

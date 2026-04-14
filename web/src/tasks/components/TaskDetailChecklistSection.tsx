@@ -8,7 +8,7 @@ import {
 } from "@/shared/EmptyState";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
 import { TaskDetailChecklistItemList } from "./TaskDetailChecklistItemList";
-import { TaskChecklistSkeleton } from "./skeletons/taskLoadingSkeletons";
+import { TaskChecklistSkeleton } from "./skeletons/taskSkeletons";
 
 export type TaskDetailChecklistSectionProps = {
   checklistInherit: boolean;
