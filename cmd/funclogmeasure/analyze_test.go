@@ -36,6 +36,15 @@ func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
 	}
 }
 
+func TestShouldSkipSlogRequirement_agentsQueueBufferAccessors(t *testing.T) {
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/agents", "*MemoryQueue.BufferDepth") {
+		t.Fatal("expected agents.MemoryQueue.BufferDepth skip")
+	}
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/agents", "*MemoryQueue.BufferCap") {
+		t.Fatal("expected agents.MemoryQueue.BufferCap skip")
+	}
+}
+
 func TestShouldSkipSlogRequirement_repoIsMentionDelimiter(t *testing.T) {
 	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/repo", "isMentionDelimiter") {
 		t.Fatal("expected pkgs/repo.isMentionDelimiter to be excluded (inner loop of ParseFileMentions)")

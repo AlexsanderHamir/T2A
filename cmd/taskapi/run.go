@@ -186,6 +186,7 @@ func run() int {
 	api := taskapi.NewHTTPHandler(taskStore, hub, rep)
 	taskapi.RegisterDefaultPrometheusCollectors()
 	taskapi.RegisterBuildInfoGauge()
+	taskapi.RegisterAgentQueueMetrics(agentQueue)
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {

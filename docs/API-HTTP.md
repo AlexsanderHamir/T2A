@@ -56,6 +56,11 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_http_request_duration_seconds` | Histogram | `method`, `route` | **SLO-tuned** upper bounds (seconds): `0.01`, `0.025`, `0.05`, `0.1`, `0.15`, `0.25`, `0.35`, `0.5`, `0.75`, `1`, `1.5`, `2.5`, `5`, `10` (+Inf); denser below 1s for p50/p95 work. Health probe paths excluded. |
 | `taskapi_http_rate_limited_total` | Counter | — | Incremented when a request is rejected with **429** (per-IP limit). |
 | `taskapi_http_idempotent_replay_total` | Counter | — | Incremented when a response is served from the idempotency cache (not on singleflight coalescing alone). |
+| `taskapi_http_idempotency_cache_evictions_total` | Counter | — | Cache entries evicted to satisfy **`T2A_IDEMPOTENCY_MAX_ENTRIES`** / **`T2A_IDEMPOTENCY_MAX_BYTES`** (oldest-first). |
+| `taskapi_domain_tasks_created_total` | Counter | — | Successful **`POST /tasks`** after persistence (**201**). |
+| `taskapi_domain_tasks_updated_total` | Counter | — | Successful **`PATCH /tasks/{id}`** (**200**). |
+| `taskapi_agent_queue_depth` | Gauge | — | Ready-task snapshots buffered in the in-process agent queue. |
+| `taskapi_agent_queue_capacity` | Gauge | — | Max buffer size from **`T2A_USER_TASK_AGENT_QUEUE_CAP`** (see [RUNTIME-ENV.md](./RUNTIME-ENV.md)). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |
 
 There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.

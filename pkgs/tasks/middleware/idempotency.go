@@ -36,6 +36,11 @@ var (
 		Name:      "http_idempotent_replay_total",
 		Help:      "Responses served from idempotency cache (same key, method, path, and body hash as first successful response).",
 	})
+	taskapiHTTPIdempotencyCacheEvictionsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "http_idempotency_cache_evictions_total",
+		Help:      "Idempotency cache entries evicted to satisfy max entry or byte limits (oldest-first).",
+	})
 )
 
 type idempotencyPreparedRequest struct {

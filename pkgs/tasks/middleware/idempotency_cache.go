@@ -71,6 +71,7 @@ func (c *idempotencyCache) set(ctx context.Context, key string, cap idempotencyC
 	}
 	evicted := c.enforceLimitsLocked()
 	if evicted > 0 {
+		taskapiHTTPIdempotencyCacheEvictionsTotal.Add(float64(evicted))
 		maxEntries, maxBytes := IdempotencyCacheLimits()
 		logCtx := ctx
 		if logCtx == nil {

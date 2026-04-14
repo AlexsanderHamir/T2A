@@ -43,6 +43,28 @@ func TestMemoryQueue_ErrAlreadyQueued(t *testing.T) {
 	}
 }
 
+func TestMemoryQueue_BufferCap_and_BufferDepth(t *testing.T) {
+	q := NewMemoryQueue(3)
+	if q.BufferCap() != 3 {
+		t.Fatalf("BufferCap: got %d", q.BufferCap())
+	}
+	if q.BufferDepth() != 0 {
+		t.Fatalf("empty depth: got %d", q.BufferDepth())
+	}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	if err := q.NotifyUserTaskCreated(context.Background(), t1); err != nil {
+		t.Fatal(err)
+	}
+	if q.BufferDepth() != 1 {
+		t.Fatalf("after enqueue depth: got %d", q.BufferDepth())
+	}
+	<-q.Recv()
+	q.AckAfterRecv(t1.ID)
+	if q.BufferDepth() != 0 {
+		t.Fatalf("after ack depth: got %d", q.BufferDepth())
+	}
+}
+
 func TestMemoryQueue_fullReturnsErrQueueFull(t *testing.T) {
 	q := NewMemoryQueue(1)
 	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}

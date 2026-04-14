@@ -66,6 +66,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if t.ParentID != nil && *t.ParentID != "" {
 		h.notifyChange(TaskUpdated, *t.ParentID)
 	}
+	taskapiDomainTasksCreatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusCreated, tree)
 }
 
@@ -181,6 +182,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
+	taskapiDomainTasksUpdatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusOK, tree)
 }
 

@@ -21,6 +21,8 @@ const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure
 var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/version\tString":                    {},
 	"github.com/AlexsanderHamir/T2A/internal/version\tPrometheusBuildInfoLabels": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents\t*MemoryQueue.BufferDepth":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents\t*MemoryQueue.BufferCap":         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter":               {},
 	// Header-only helper on every response; JSON paths log via setJSONHeaders / setAPISecurityHeaders.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tApplySecurityHeaders": {},
@@ -104,68 +106,75 @@ func buildReport(modRoot string, opts analyzeOpts) (*report, error) {
 
 	var rep report
 	for _, pkg := range pkgs {
-		for _, e := range pkg.Errors {
-			slog.Warn("package analysis issue", "pkg", pkg.PkgPath, "err", e)
-		}
-
-		if pkg.PkgPath == defaultToolImportPath && !opts.includeTool {
-			continue
-		}
-		if pkg.TypesInfo == nil {
-			slog.Warn("skipping package without types info", "pkg", pkg.PkgPath)
-			continue
-		}
-		if len(pkg.Syntax) != len(pkg.CompiledGoFiles) {
-			slog.Warn("syntax/compiled file count mismatch", "pkg", pkg.PkgPath,
-				"syntax", len(pkg.Syntax), "compiled", len(pkg.CompiledGoFiles))
-			continue
-		}
-
-		info := pkg.TypesInfo
-		for i, f := range pkg.Syntax {
-			path := pkg.CompiledGoFiles[i]
-			if isNPMWebNodeModulesGo(path) {
-				continue
-			}
-			if !opts.tests && strings.HasSuffix(path, "_test.go") {
-				continue
-			}
-			src, err := os.ReadFile(path)
-			if err != nil {
-				return nil, fmt.Errorf("read %s: %w", path, err)
-			}
-			if isGeneratedGo(src) {
-				continue
-			}
-
-			rep.FilesScanned++
-			for _, decl := range f.Decls {
-				fd, ok := decl.(*ast.FuncDecl)
-				if !ok || fd.Body == nil {
-					continue
-				}
-				name := formatFuncName(fd)
-				if shouldSkipSlogRequirement(pkg.PkgPath, name) {
-					continue
-				}
-				rep.FuncsConsidered++
-				if funcDeclBodyHasSlogCall(fd.Body, info) {
-					rep.FuncsWithSlog++
-				} else {
-					rep.FuncsMissingSlog++
-					pos := fset.Position(fd.Pos())
-					rep.Violations = append(rep.Violations, violation{
-						Pkg:      pkg.PkgPath,
-						File:     path,
-						Line:     pos.Line,
-						FuncName: name,
-					})
-				}
-			}
+		if err := accumulateViolationsFromPackage(pkg, fset, opts, &rep); err != nil {
+			return nil, err
 		}
 	}
 
 	return &rep, nil
+}
+
+func accumulateViolationsFromPackage(pkg *packages.Package, fset *token.FileSet, opts analyzeOpts, rep *report) error {
+	for _, e := range pkg.Errors {
+		slog.Warn("package analysis issue", "pkg", pkg.PkgPath, "err", e)
+	}
+
+	if pkg.PkgPath == defaultToolImportPath && !opts.includeTool {
+		return nil
+	}
+	if pkg.TypesInfo == nil {
+		slog.Warn("skipping package without types info", "pkg", pkg.PkgPath)
+		return nil
+	}
+	if len(pkg.Syntax) != len(pkg.CompiledGoFiles) {
+		slog.Warn("syntax/compiled file count mismatch", "pkg", pkg.PkgPath,
+			"syntax", len(pkg.Syntax), "compiled", len(pkg.CompiledGoFiles))
+		return nil
+	}
+
+	info := pkg.TypesInfo
+	for i, f := range pkg.Syntax {
+		path := pkg.CompiledGoFiles[i]
+		if isNPMWebNodeModulesGo(path) {
+			continue
+		}
+		if !opts.tests && strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
+		if isGeneratedGo(src) {
+			continue
+		}
+
+		rep.FilesScanned++
+		for _, decl := range f.Decls {
+			fd, ok := decl.(*ast.FuncDecl)
+			if !ok || fd.Body == nil {
+				continue
+			}
+			name := formatFuncName(fd)
+			if shouldSkipSlogRequirement(pkg.PkgPath, name) {
+				continue
+			}
+			rep.FuncsConsidered++
+			if funcDeclBodyHasSlogCall(fd.Body, info) {
+				rep.FuncsWithSlog++
+			} else {
+				rep.FuncsMissingSlog++
+				pos := fset.Position(fd.Pos())
+				rep.Violations = append(rep.Violations, violation{
+					Pkg:      pkg.PkgPath,
+					File:     path,
+					Line:     pos.Line,
+					FuncName: name,
+				})
+			}
+		}
+	}
+	return nil
 }
 
 func funcDeclBodyHasSlogCall(body *ast.BlockStmt, info *types.Info) bool {

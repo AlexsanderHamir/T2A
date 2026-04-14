@@ -16,6 +16,7 @@ const agentsLogCmd = "taskapi"
 // It tracks task ids currently buffered so reconciliation can skip ids already present.
 type MemoryQueue struct {
 	mu      sync.Mutex
+	bufCap  int
 	pending map[string]struct{}
 	ch      chan domain.Task
 }
@@ -28,9 +29,26 @@ func NewMemoryQueue(cap int) *MemoryQueue {
 		panic("agents: NewMemoryQueue cap must be positive")
 	}
 	return &MemoryQueue{
+		bufCap:  cap,
 		ch:      make(chan domain.Task, cap),
 		pending: make(map[string]struct{}),
 	}
+}
+
+// BufferCap returns the configured channel buffer size (max tasks without blocking producers).
+func (q *MemoryQueue) BufferCap() int {
+	if q == nil {
+		return 0
+	}
+	return q.bufCap
+}
+
+// BufferDepth returns how many tasks are currently queued (buffered channel length).
+func (q *MemoryQueue) BufferDepth() int {
+	if q == nil {
+		return 0
+	}
+	return len(q.ch)
 }
 
 // Recv exposes the receive side for a single consumer (or fan out in your own goroutines).

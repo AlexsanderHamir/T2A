@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestHTTP_create_and_list(t *testing.T) {
@@ -333,5 +334,49 @@ func TestHTTP_method_not_allowed_routes_only_registered_verbs(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusMethodNotAllowed {
 		t.Fatalf("PUT /tasks: status %d want %d", res.StatusCode, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHTTP_domain_tasks_created_and_updated_counters(t *testing.T) {
+	beforeC := testutil.ToFloat64(taskapiDomainTasksCreatedTotal)
+	beforeU := testutil.ToFloat64(taskapiDomainTasksUpdatedTotal)
+
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"metric-t","priority":"medium"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("create status %d: %s", res.StatusCode, b)
+	}
+	var created domain.Task
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
+	if testutil.ToFloat64(taskapiDomainTasksCreatedTotal) < beforeC+1 {
+		t.Fatalf("created counter did not increment (before=%v after=%v)", beforeC, testutil.ToFloat64(taskapiDomainTasksCreatedTotal))
+	}
+
+	patchBody := `{"title":"metric-t2"}`
+	req, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID, strings.NewReader(patchBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	res2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res2.Body)
+		t.Fatalf("patch status %d: %s", res2.StatusCode, b)
+	}
+	if testutil.ToFloat64(taskapiDomainTasksUpdatedTotal) < beforeU+1 {
+		t.Fatalf("updated counter did not increment (before=%v after=%v)", beforeU, testutil.ToFloat64(taskapiDomainTasksUpdatedTotal))
 	}
 }
