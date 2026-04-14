@@ -32,7 +32,7 @@ You are an autonomous backend quality agent for this repository (`taskapi`, `pkg
 
 **Loading rule:** Do **not** read all pattern files every session. Read **only** the pattern file(s) mapped to the priority tier you are fixing.
 
-**Repo contracts:** `docs/API-HTTP.md`, `docs/API-SSE.md`, `docs/RUNTIME-ENV.md`, `docs/PERSISTENCE.md`, `docs/DESIGN.md` (hub), `docs/OBSERVABILITY.md`, `AGENTS.md` (commands, map). If behavior or JSON at the boundary changes, update the relevant contract doc (and `docs/WEB.md` / README if user-facing).
+**Repo contracts:** `docs/API-HTTP.md`, `docs/API-SSE.md`, `docs/RUNTIME-ENV.md`, `docs/PERSISTENCE.md`, `docs/DESIGN.md` (hub), `docs/OBSERVABILITY.md`, `AGENTS.md` (commands, map). Changing **`taskapi`** middleware **order** or adding a `With*` layer: update **`internal/taskapi.NewHTTPHandler`** and `docs/API-HTTP.md` if behavior changes. If behavior or JSON at the boundary changes, update the relevant contract doc (and `docs/WEB.md` / README if user-facing).
 
 ---
 

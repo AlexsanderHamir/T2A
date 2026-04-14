@@ -2,7 +2,7 @@
 
 HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/API-HTTP.md](../../docs/API-HTTP.md), [docs/API-SSE.md](../../docs/API-SSE.md). **How to extend:** [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md).
 
-The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` wraps it with middleware; see **`cmd/taskapi/run.go`** for the current outer chain (`WithRecovery` → … → `NewHandler`). Taskapi-only env parsing used before/during that wiring lives in **`internal/taskapiconfig`**.
+The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind the standard middleware chain assembled in **`internal/taskapi`** (`NewHTTPHandler`). Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
 
 ## Middleware (`With*` — outer stack in `cmd/taskapi`)
 

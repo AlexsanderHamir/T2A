@@ -158,7 +158,7 @@ pkgs/tasks/store/
 | **M1** | Split `DESIGN.md` + update `docs/README.md` + `AGENTS.md` links | Low — **done** (hub `DESIGN.md` + `API-HTTP.md`, `API-SSE.md`, `RUNTIME-ENV.md`, `AGENT-QUEUE.md`, `PERSISTENCE.md`, `EXTENSIBILITY.md`; indexes and cross-links updated). |
 | **M2** | `docs/AGENT-QUEUE.md` + store `README` map | Low — **done** (`docs/AGENT-QUEUE.md` from M1; `pkgs/tasks/store/README.md` concern→file map + `doc.go` pointer; `docs/PERSISTENCE.md` link). |
 | **M3** | Handler file naming / grouping + package README map (Option B) | Medium — **README done** (`pkgs/tasks/handler/README.md`, `doc.go` + `handler.go` pointers). Optional **`mw_*` / `route_*` renames** deferred (high churn). |
-| **M4** | Extract `internal/taskapi` (Option A) OR defer if M3 suffices | Medium–High |
+| **M4** | Extract `internal/taskapi` (Option A) OR defer if M3 suffices | Medium–High — **slice 1 done** (`internal/taskapi.NewHTTPHandler` = middleware assembly moved out of `cmd/taskapi`; splitting `pkgs/tasks/handler` into subpackages still **deferred**). |
 | **M5** | Optional `internal/taskapiconfig` for env | Low — **done** (`internal/taskapiconfig`: agent queue, reconcile, listen host, log level, minimized logging, dev SSE interval; `cmd/taskapi` slimmed; tests moved). |
 
 **Stop line:** if M1–M3 achieve clarity for Cursor CLI work, **pause** M4 until the CLI stresses the layout.

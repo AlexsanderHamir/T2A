@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/internal/taskapi"
 	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
@@ -180,7 +181,7 @@ func run() int {
 	defer reconcileCancel()
 	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
 
-	api := handler.WithRecovery(handler.WithHTTPMetrics(handler.WithAccessLog(handler.WithRateLimit(handler.WithAPIAuth(handler.WithRequestTimeout(handler.WithMaxRequestBody(handler.WithIdempotency(handler.NewHandler(taskStore, hub, rep)))))))))
+	api := taskapi.NewHTTPHandler(taskStore, hub, rep)
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {

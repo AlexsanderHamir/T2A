@@ -2,6 +2,7 @@
 //
 // Taskapi-specific startup env parsing (listen host, log level, agent queue cap, dev SSE interval)
 // lives in package github.com/AlexsanderHamir/T2A/internal/taskapiconfig; shared .env discovery is internal/envload.
+// The instrumented HTTP stack (middleware wrapping handler.NewHandler) is github.com/AlexsanderHamir/T2A/internal/taskapi.
 //
 // It loads environment with envload.Load (repo-root .env or -env path), opens the database with
 // pkgs/tasks/postgres.Open, runs postgres.Migrate on every startup, constructs handler.NewSSEHub for
