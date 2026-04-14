@@ -75,7 +75,7 @@ Scope: `web/src/tasks` (focus on component organization)
 
 - [x] Move `taskLoadingSkeletons.tsx` into `skeletons/`
 - [x] Move `taskLoadingSkeletonChunks.tsx`
-- [ ] Update all imports in pages/components
+- [x] Update all imports in pages/components
 - [ ] Consider naming cleanup (`Task*Skeleton` consistency)
 
 ## 7) Import and Path Cleanup

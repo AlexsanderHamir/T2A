@@ -3,7 +3,7 @@ import {
   EmptyState,
   EmptyStateTimelineGlyph,
 } from "@/shared/EmptyState";
-import { TaskTimelineSkeleton } from "./taskLoadingSkeletons";
+import { TaskTimelineSkeleton } from "./skeletons/taskLoadingSkeletons";
 import { TaskUpdatesTimelineEventList } from "./TaskUpdatesTimelineEventList";
 
 export type TaskUpdatesTimelineProps = {
