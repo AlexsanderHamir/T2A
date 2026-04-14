@@ -4,13 +4,13 @@ import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
-import { NestedSubtaskDraftModal } from "./NestedSubtaskDraftModal";
 import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
+import { TaskCreateModalNestedSubtaskModal } from "./TaskCreateModalNestedSubtaskModal";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -405,14 +405,13 @@ export function TaskCreateModal({
         </section>
       </Modal>
 
-      {nestedOpen ? (
-        <NestedSubtaskDraftModal
-          instanceKey={nestedInstanceKey}
-          initialDraft={nestedInitial}
-          onClose={handleNestedClose}
-          onSave={handleNestedSave}
-        />
-      ) : null}
+      <TaskCreateModalNestedSubtaskModal
+        open={nestedOpen}
+        instanceKey={nestedInstanceKey}
+        initialDraft={nestedInitial}
+        onClose={handleNestedClose}
+        onSave={handleNestedSave}
+      />
     </>
   );
 }
