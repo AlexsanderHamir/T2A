@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TaskListDataTable } from "./TaskListDataTable";
 import { TaskListFilters } from "./TaskListFilters";
+import { TaskListSectionHeading } from "./TaskListSectionHeading";
 import { TaskPager } from "./TaskPager";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
@@ -108,14 +109,7 @@ export function TaskListSection({
 
   return (
     <section className="panel" aria-labelledby="task-list-heading">
-      {actions ? (
-        <div className="task-list-section-head">
-          <h2 id="task-list-heading">All tasks</h2>
-          <div className="task-list-section-actions">{actions}</div>
-        </div>
-      ) : (
-        <h2 id="task-list-heading">All tasks</h2>
-      )}
+      <TaskListSectionHeading actions={actions} />
       {refreshing && !loading && !hideBackgroundRefreshHint ? (
         <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…
