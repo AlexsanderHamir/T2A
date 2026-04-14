@@ -19,7 +19,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 |---------|------|
 | [`internal/envload`](../../internal/envload) | Resolve and load `.env`; require `DATABASE_URL`. |
 | [`internal/taskapiconfig`](../../internal/taskapiconfig) | Listen host, log level, minimized logging, agent queue cap, reconcile interval, dev SSE ticker interval. |
-| [`internal/taskapi`](../../internal/taskapi) | Assemble `WithRecovery` → … → `WithIdempotency` around `handler.NewHandler`. |
+| [`internal/taskapi`](../../internal/taskapi) | `NewHTTPHandler` → `handler.MiddlewareStack(handler.NewHandler(...))` (`handler/stack.go` defines the `With*` order). |
 | [`pkgs/tasks/postgres`](../../pkgs/tasks/postgres) | GORM open + `AutoMigrate`. |
 | [`pkgs/tasks/store`](../../pkgs/tasks/store) | Persistence; `SetReadyTaskNotifier` for the agent queue. |
 | [`pkgs/tasks/handler`](../../pkgs/tasks/handler) | REST + SSE inner mux; see [`handler/README.md`](../../pkgs/tasks/handler/README.md). |

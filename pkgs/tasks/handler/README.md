@@ -2,9 +2,9 @@
 
 HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/API-HTTP.md](../../docs/API-HTTP.md), [docs/API-SSE.md](../../docs/API-SSE.md). **How to extend:** [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md).
 
-The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind the standard middleware chain assembled in **`internal/taskapi`** (`NewHTTPHandler`). Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
+The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind the standard stack from **`handler.MiddlewareStack`**, invoked by **`internal/taskapi.NewHTTPHandler`**. Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
 
-## Middleware (`With*` — outer stack in `cmd/taskapi`)
+## Middleware (`With*` — outer stack from `MiddlewareStack`)
 
 | Middleware | File | Role |
 |------------|------|------|
@@ -16,6 +16,8 @@ The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only)
 | `WithRequestTimeout` | `request_timeout.go` | Context deadline on API routes; SSE exempt. |
 | `WithMaxRequestBody` | `max_body.go` | Body size cap (`T2A_MAX_REQUEST_BODY_BYTES`). |
 | `WithIdempotency` | `idempotency.go`, `idempotency_cache.go` | `Idempotency-Key` replay cache. |
+
+`stack.go` defines **`MiddlewareStack`**, which composes the `With*` layers in the order above.
 
 `GET /metrics` is registered on the **outer** mux in `cmd/taskapi` (not on the inner handler mux).
 

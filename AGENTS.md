@@ -32,7 +32,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | taskapi startup env | `internal/taskapiconfig/` | Listen host, log level / minimized logging, agent queue + reconcile interval, dev SSE ticker interval (see `cmd/taskapi/run.go`). |
-| taskapi HTTP stack | `internal/taskapi/` | `NewHTTPHandler`: middleware chain around `handler.NewHandler` (see `cmd/taskapi/run.go`). |
+| taskapi HTTP stack | `pkgs/tasks/handler/stack.go` + `internal/taskapi/` | `handler.MiddlewareStack` composes `With*` layers; `internal/taskapi.NewHTTPHandler` wires store/hub/repo into `handler.NewHandler` then applies the stack (see `cmd/taskapi/run.go`). |
 | SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default store/handler/agent tests (`tasktestdb.OpenSQLite`). |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/API-SSE.md`. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |

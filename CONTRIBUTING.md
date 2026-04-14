@@ -42,7 +42,7 @@ Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 When you change REST paths, query params, response shapes, SSE payload types, or audit event types:
 
 - Update the relevant contract doc (`docs/API-HTTP.md`, `docs/API-SSE.md`, and/or `docs/RUNTIME-ENV.md`) plus `docs/DESIGN.md` when limitations or hub links change (`README.md` / `docs/WEB.md` if user-facing commands or Vite env change).
-- Reorder or add `With*` middleware for `taskapi`: edit `internal/taskapi.NewHTTPHandler` and extend [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) if log fields or metrics change.
+- Reorder or add `With*` middleware for `taskapi`: edit `pkgs/tasks/handler.MiddlewareStack` (used by `internal/taskapi.NewHTTPHandler`) and extend [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) if log fields or metrics change.
 - Update `web/src/api/parseTaskApi.ts` (and `web/src/types/` if needed) and tests.
 - Update Go handler/store tests so defaults still pass without real Postgres or network.
 
