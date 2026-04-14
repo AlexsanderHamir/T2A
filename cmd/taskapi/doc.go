@@ -1,5 +1,8 @@
 // Command taskapi is an HTTP server for task CRUD backed by Postgres.
 //
+// Taskapi-specific startup env parsing (listen host, log level, agent queue cap, dev SSE interval)
+// lives in package github.com/AlexsanderHamir/T2A/internal/taskapiconfig; shared .env discovery is internal/envload.
+//
 // It loads environment with envload.Load (repo-root .env or -env path), opens the database with
 // pkgs/tasks/postgres.Open, runs postgres.Migrate on every startup, constructs handler.NewSSEHub for
 // task change notifications, optionally opens pkgs/repo from REPO_ROOT for GET /repo/* and prompt

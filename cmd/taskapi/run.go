@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/envload"
+	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
@@ -39,13 +40,13 @@ func run() int {
 		return 1
 	}
 
-	minLevel, err := resolveTaskAPILogLevel(*logLevelFlag)
+	minLevel, err := taskapiconfig.ResolveLogLevel(*logLevelFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, err)
 		return 1
 	}
 
-	minimized := taskAPILoggingMinimized(*disableLoggingFlag)
+	minimized := taskapiconfig.LoggingMinimized(*disableLoggingFlag)
 	var logFile *os.File
 	var logPath string
 	if !minimized {
@@ -70,7 +71,7 @@ func run() int {
 
 	var baseHandler slog.Handler
 	if minimized {
-		fmt.Fprintf(os.Stderr, "%s: logging minimized (no log file; errors only to stderr); set by -disable-logging or %s\n", cmdName, disableLoggingEnv)
+		fmt.Fprintf(os.Stderr, "%s: logging minimized (no log file; errors only to stderr); set by -disable-logging or %s\n", cmdName, taskapiconfig.EnvDisableLogging)
 		baseHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})
 	} else {
 		fmt.Fprintf(os.Stderr, "%s: writing structured logs to %s (min level %s)\n", cmdName, logPath, minLevel.String())
@@ -167,10 +168,10 @@ func run() int {
 		"enabled", idemTTL > 0, "ttl_sec", idemSec,
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 
-	qcap := userTaskAgentQueueCap()
+	qcap := taskapiconfig.UserTaskAgentQueueCap()
 	agentQueue := agents.NewMemoryQueue(qcap)
 	taskStore.SetReadyTaskNotifier(agentQueue)
-	iv := userTaskAgentReconcileInterval()
+	iv := taskapiconfig.UserTaskAgentReconcileInterval()
 	slog.Info("ready task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "cap", qcap)
 	slog.Info("ready task agent reconcile", "cmd", cmdName, "operation", "taskapi.agent_reconcile",
 		"tick_interval", iv.String(), "periodic", iv > 0)
@@ -183,7 +184,7 @@ func run() int {
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
-		d := resolveSSETestTickerInterval()
+		d := taskapiconfig.SSETestTickerInterval()
 		if d >= time.Second {
 			slog.Info("sse dev ticker enabled", "cmd", cmdName, "operation", "taskapi.sse_dev", "interval", d.String())
 			opts := devsim.LoadOptions()
@@ -208,7 +209,7 @@ func run() int {
 	}
 	mux.Handle("/", api)
 
-	listenHost := resolveListenHost(*host)
+	listenHost := taskapiconfig.ListenHost(*host)
 	ln, err := net.Listen("tcp", net.JoinHostPort(listenHost, *port))
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.listen", "err", err)

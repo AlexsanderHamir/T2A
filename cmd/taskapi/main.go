@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-const (
-	sseTestIntervalEnv     = "T2A_SSE_TEST_INTERVAL"
-	sseTestDefaultInterval = 3 * time.Second
-)
-
 const cmdName = "taskapi"
 
 // Server timeouts: WriteTimeout is left unset so long-lived SSE streams are not cut off.
