@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
@@ -13,6 +13,7 @@ import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { taskCreateModalDmapReady } from "./taskCreateModalDmapReady";
 import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
 import { TaskCreateModalNestedSubtaskModal } from "./TaskCreateModalNestedSubtaskModal";
+import { useTaskCreateModalNestedDraft } from "./useTaskCreateModalNestedDraft";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -116,53 +117,19 @@ export function TaskCreateModal({
     dmapDomain,
   );
 
-  const [nestedOpen, setNestedOpen] = useState(false);
-  const [nestedEditIndex, setNestedEditIndex] = useState<number | null>(null);
-  const [nestedInstanceKey, setNestedInstanceKey] = useState(0);
-  const [nestedInitial, setNestedInitial] = useState<PendingSubtaskDraft | null>(
-    null,
-  );
-
-  const openNestedNew = useCallback(() => {
-    setNestedEditIndex(null);
-    setNestedInitial(null);
-    setNestedInstanceKey((k) => k + 1);
-    setNestedOpen(true);
-  }, []);
-
-  const openNestedEdit = useCallback(
-    (index: number) => {
-      const d = pendingSubtasks[index];
-      setNestedEditIndex(index);
-      setNestedInitial({
-        title: d.title,
-        initial_prompt: d.initial_prompt,
-        priority: d.priority,
-        task_type: d.task_type,
-        checklistItems: [...d.checklistItems],
-        checklist_inherit: d.checklist_inherit,
-      });
-      setNestedInstanceKey((k) => k + 1);
-      setNestedOpen(true);
-    },
-    [pendingSubtasks],
-  );
-
-  const handleNestedClose = useCallback(() => {
-    setNestedOpen(false);
-  }, []);
-
-  const handleNestedSave = useCallback(
-    (d: PendingSubtaskDraft) => {
-      if (nestedEditIndex !== null) {
-        onUpdatePendingSubtask(nestedEditIndex, d);
-      } else {
-        onAddPendingSubtask(d);
-      }
-      setNestedOpen(false);
-    },
-    [nestedEditIndex, onAddPendingSubtask, onUpdatePendingSubtask],
-  );
+  const {
+    nestedOpen,
+    nestedInstanceKey,
+    nestedInitial,
+    openNestedNew,
+    openNestedEdit,
+    handleNestedClose,
+    handleNestedSave,
+  } = useTaskCreateModalNestedDraft({
+    pendingSubtasks,
+    onAddPendingSubtask,
+    onUpdatePendingSubtask,
+  });
 
   const busyLabel = taskCreateModalBusyLabel(hasParent, pendingSubtasks.length);
 
