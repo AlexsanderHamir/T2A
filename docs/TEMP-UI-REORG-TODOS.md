@@ -81,7 +81,7 @@ Scope: `web/src/tasks` (focus on component organization)
 ## 7) Import and Path Cleanup
 
 - [ ] Update relative imports after each move batch
-- [ ] Prefer local barrels to reduce long relative paths
+- [x] Prefer local barrels to reduce long relative paths
 - [ ] Ensure no duplicate files remain in old locations
 - [ ] Ensure no circular import introduced by barrels
 
