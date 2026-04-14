@@ -3,9 +3,14 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TaskListDataTable } from "./TaskListDataTable";
 import { TaskListFilters } from "./TaskListFilters";
 import { TaskPager } from "./TaskPager";
-import type { Priority, Status, Task } from "@/types";
+import type { Task } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { EmptyStateAction } from "@/shared/EmptyState";
+import {
+  filterTasksForListView,
+  type TaskListClientPriorityFilter,
+  type TaskListClientStatusFilter,
+} from "./taskListClientFilter";
 import { TaskListTableSkeleton } from "./TaskListTableSkeleton";
 
 type Props = {
@@ -44,9 +49,6 @@ type Props = {
   actions?: ReactNode;
 };
 
-type StatusFilter = "all" | Status;
-type PriorityFilter = "all" | Priority;
-
 const LOADING_STATUS_DELAY_MS = 220;
 
 const TASK_LIST_TABLE_CAPTION =
@@ -74,20 +76,22 @@ export function TaskListSection({
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<TaskListClientStatusFilter>("all");
+  const [priorityFilter, setPriorityFilter] =
+    useState<TaskListClientPriorityFilter>("all");
   const [titleSearch, setTitleSearch] = useState("");
 
-  const filteredTasks = useMemo(() => {
-    const q = titleSearch.trim().toLowerCase();
-    return tasks.filter((t) => {
-      if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (priorityFilter !== "all" && t.priority !== priorityFilter)
-        return false;
-      if (q && !t.title.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [tasks, statusFilter, priorityFilter, titleSearch]);
+  const filteredTasks = useMemo(
+    () =>
+      filterTasksForListView(
+        tasks,
+        statusFilter,
+        priorityFilter,
+        titleSearch,
+      ),
+    [tasks, statusFilter, priorityFilter, titleSearch],
+  );
 
   const skipFiltersResetOnMount = useRef(true);
   useEffect(() => {
@@ -123,10 +127,12 @@ export function TaskListSection({
         <div className="task-list-content task-list-content--enter">
           <TaskListFilters
             statusFilter={statusFilter}
-            onStatusFilterChange={(v) => setStatusFilter(v as StatusFilter)}
+            onStatusFilterChange={(v) =>
+              setStatusFilter(v as TaskListClientStatusFilter)
+            }
             priorityFilter={priorityFilter}
             onPriorityFilterChange={(v) =>
-              setPriorityFilter(v as PriorityFilter)
+              setPriorityFilter(v as TaskListClientPriorityFilter)
             }
             titleSearch={titleSearch}
             onTitleSearchChange={setTitleSearch}
