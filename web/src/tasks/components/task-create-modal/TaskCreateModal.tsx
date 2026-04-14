@@ -3,20 +3,20 @@ import type { PriorityChoice, TaskType } from "@/types";
 import type { TaskWithDepth } from "../../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../../pendingSubtaskDraft";
 import { Modal } from "../../../shared/Modal";
-import { TaskCreateModalPrimaryFields } from "./TaskCreateModalPrimaryFields";
-import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
-import { TaskCreateModalPendingSubtasksField } from "./TaskCreateModalPendingSubtasksField";
-import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
+import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
+import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";
+import { TaskCreateModalPendingSubtasksField } from "./fields/TaskCreateModalPendingSubtasksField";
+import { TaskCreateModalDraftNameField } from "./fields/TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
-import { taskCreateModalDmapReady } from "./taskCreateModalDmapReady";
-import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
-import { TaskCreateModalNestedSubtaskModal } from "./TaskCreateModalNestedSubtaskModal";
-import { useTaskCreateModalNestedDraft } from "./useTaskCreateModalNestedDraft";
-import { TaskCreateModalFooterActions } from "./TaskCreateModalFooterActions";
+import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
+import { TaskCreateModalInheritChecklistField } from "./fields/TaskCreateModalInheritChecklistField";
+import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNestedSubtaskModal";
+import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
+import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
-} from "./TaskCreateModalEvaluationSummary";
+} from "./fields/TaskCreateModalEvaluationSummary";
 
 type Props = {
   pending: boolean;

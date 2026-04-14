@@ -102,7 +102,7 @@ sequenceDiagram
 
 ### `tasks/components/` layout
 
-Larger UI slices live in family folders, each with an `index.ts` barrel (prefer `import { … } from "../components/task-list"` from pages, or `./task-list` from a sibling under `components/`): `task-create-modal/`, `task-list/` (includes `TaskPager`), `task-detail/` (detail page sections, timeline, subtasks, edit modal), `task-compose/` (shared fields and modals used by create + nested draft flows), `draft-resume/`, `dialogs/` (app-level delete + stream hint), `file-preview/` (mention preview highlighting), `custom-select/`, `rich-prompt/`, `skeletons/` (skeleton primitives in `taskSkeletons.tsx` / `taskSkeletonChunks.tsx`). Small shared pieces that do not belong to a family stay at `tasks/components/` root only when they are truly cross-cutting one-offs.
+Larger UI slices live in family folders, each with an `index.ts` barrel (prefer `import { … } from "../components/task-list"` from pages, or `./task-list` from a sibling under `components/`). **Subfolders** keep each family from growing a flat pile of files: `task-create-modal/` (`dmap/`, `fields/`, `nested/` + modal shell and busy-label helpers), `task-list/` (`section/`, `filters/`, `pager/`, `table/`), `task-detail/` (`layout/`, `prompt/`, `checklist/`, `subtasks/`, `updates/`, `edit/`), `task-compose/` (`modals/`, `fields/`), plus `draft-resume/`, `dialogs/`, `file-preview/`, `custom-select/`, `rich-prompt/`, `skeletons/` (skeleton primitives in `taskSkeletons.tsx` / `taskSkeletonChunks.tsx`). The only intentional loose file at `tasks/components/` root is `taskComponentBarrels.test.ts` (barrel smoke test).
 
 ## JSON boundary
 
