@@ -61,6 +61,6 @@ The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only)
 
 ## Tests
 
-`handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). Integration-style tests may use `handler_http_testserver_test.go` helpers.
+`handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). **`stack_test.go`** asserts the production **`MiddlewareStack`** (panic → JSON 500, happy path). Integration-style tests may use `handler_http_testserver_test.go` helpers.
 
 When adding a **new** route or middleware file, extend this README in the same PR.
