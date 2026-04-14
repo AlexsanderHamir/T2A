@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { previewTextFromPrompt } from "../promptFormat";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
-import { CustomSelect } from "./CustomSelect";
+import { TaskListFilters } from "./TaskListFilters";
 import { TaskPager } from "./TaskPager";
 import type { Priority, Status, Task } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
@@ -20,10 +20,6 @@ import {
   EmptyStateFilterGlyph,
   type EmptyStateAction,
 } from "@/shared/EmptyState";
-import {
-  TASK_LIST_PRIORITY_FILTER_OPTIONS,
-  TASK_LIST_STATUS_FILTER_OPTIONS,
-} from "./taskListFilterSelectOptions";
 import { TaskListTableSkeleton } from "./TaskListTableSkeleton";
 
 type Props = {
@@ -139,45 +135,16 @@ export function TaskListSection({
       ) : null}
       {!loading ? (
         <div className="task-list-content task-list-content--enter">
-          <div
-            className="task-list-filters"
-            role="search"
-            aria-label="Filter tasks"
-          >
-            <div className="task-list-filter-field">
-              <CustomSelect
-                id="task-list-filter-status"
-                label="Status"
-                compact
-                listboxName="Filter by status"
-                value={statusFilter}
-                options={TASK_LIST_STATUS_FILTER_OPTIONS}
-                onChange={(v) => setStatusFilter(v as StatusFilter)}
-              />
-            </div>
-            <div className="task-list-filter-field">
-              <CustomSelect
-                id="task-list-filter-priority"
-                label="Priority"
-                compact
-                listboxName="Filter by priority"
-                value={priorityFilter}
-                options={TASK_LIST_PRIORITY_FILTER_OPTIONS}
-                onChange={(v) => setPriorityFilter(v as PriorityFilter)}
-              />
-            </div>
-            <div className="field grow task-list-search-field">
-              <label htmlFor="task-list-search-title">Search titles</label>
-              <input
-                id="task-list-search-title"
-                type="search"
-                value={titleSearch}
-                onChange={(e) => setTitleSearch(e.target.value)}
-                placeholder="Search by title…"
-                autoComplete="off"
-              />
-            </div>
-          </div>
+          <TaskListFilters
+            statusFilter={statusFilter}
+            onStatusFilterChange={(v) => setStatusFilter(v as StatusFilter)}
+            priorityFilter={priorityFilter}
+            onPriorityFilterChange={(v) =>
+              setPriorityFilter(v as PriorityFilter)
+            }
+            titleSearch={titleSearch}
+            onTitleSearchChange={setTitleSearch}
+          />
           <div className="table-wrap task-list-table-wrap">
             <table className="task-list-table" aria-busy={refreshing}>
               <caption className="visually-hidden">
