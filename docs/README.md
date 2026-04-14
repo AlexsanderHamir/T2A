@@ -23,6 +23,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, `REPO_ROOT`, CI/local check failures. |
 | [OBSERVABILITY.md](./OBSERVABILITY.md) | How we standardize, measure, and extend logging and correlation for `taskapi` (checklists, coverage script). |
 | [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | **Planned** codebase and docs reorg (phased); execute before large new surfaces (e.g. Cursor CLI). |
+| [HANDLER-SCALE.md](./HANDLER-SCALE.md) | **Maintainability:** why `handler` is large, what already moved out (`middleware`, `calltrace`, `middlewaretest`), conventions for new tests, ordered next extractions. |
 
 Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkgs/repo`, `internal/envload`, `cmd/taskapi`, `cmd/dbcheck`.
 
@@ -32,7 +33,7 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 |--------|--------|
 | Product direction: who T2A is for, outcomes, horizons, explicit non-goals | `docs/PRODUCT.md`; keep `docs/DESIGN.md` (hub) Limitations / Out of scope in sync when strategy changes. |
 | Flags, env, `taskapi` startup/shutdown | `docs/RUNTIME-ENV.md` + `docs/DESIGN.md` (hub) if limitations change; `internal/taskapiconfig` for taskapi-only parsed env (listen host, log level, agent queue/reconcile, dev SSE interval); `cmd/taskapi/README.md` for binary file layout; relevant `doc.go`; root `README` only if command-line examples change. |
-| REST routes, bodies, query limits, `/repo` HTTP | `docs/API-HTTP.md` + `docs/DESIGN.md` (hub) if limitations change; contract changes also touch `web/src/api` / `parseTaskApi` per CONTRIBUTING. Handler layout: `pkgs/tasks/handler/README.md`; `taskapi` middleware assembly: `internal/taskapi`. |
+| REST routes, bodies, query limits, `/repo` HTTP | `docs/API-HTTP.md` + `docs/DESIGN.md` (hub) if limitations change; contract changes also touch `web/src/api` / `parseTaskApi` per CONTRIBUTING. Handler layout: `pkgs/tasks/handler/README.md`; scaling/split conventions: `docs/HANDLER-SCALE.md`; `taskapi` middleware assembly: `internal/taskapi`. |
 | SSE (`GET /events`), synthetic dev SSE | `docs/API-SSE.md`. |
 | New tasks API behavior (domain / store / handler / web) | `docs/EXTENSIBILITY.md` + `.cursor/rules/13-tasks-stack-extensibility.mdc`; HTTP/SSE contract files above; client sync per CONTRIBUTING. |
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |

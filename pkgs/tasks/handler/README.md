@@ -66,3 +66,7 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 `handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). **`stack_test.go`** asserts the production **`middleware.Stack(..., calltrace.Path)`** wiring (panic → JSON 500, happy path). Call-stack unit tests live in **`pkgs/tasks/calltrace`**. Integration-style tests may use `handler_http_testserver_test.go` helpers.
 
 When adding a **new** route or middleware file, extend this README in the same PR.
+
+## Scaling this package
+
+`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/HANDLER-SCALE.md`](../../docs/HANDLER-SCALE.md)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).

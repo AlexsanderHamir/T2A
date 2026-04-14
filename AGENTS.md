@@ -24,7 +24,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 
 | Area | Path | Notes |
 |------|------|--------|
-| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `REPO_ROOT` set; `GET /health`, `/health/live`, `/health/ready`; `GET /metrics` (Prometheus). File map: `pkgs/tasks/handler/README.md`. |
+| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `REPO_ROOT` set; `GET /health`, `/health/live`, `/health/ready`; `GET /metrics` (Prometheus). File map: `pkgs/tasks/handler/README.md`. Scaling and split conventions: `docs/HANDLER-SCALE.md`. |
 | Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs; used by `handler`, `middleware` (injected path), `internal/taskapi`. README: `pkgs/tasks/calltrace/README.md`. |
 | Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; imported by `handler` and `cmd/taskapi` (stdlib-only, no cycle with `handler`). |
 | JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. `handler` delegates `writeJSONError` here (passes `calltrace.Path` for debug). |

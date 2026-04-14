@@ -33,7 +33,7 @@ Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when
 
 Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
-**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests).
+**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see **`docs/HANDLER-SCALE.md`**.
 
 **Observability:** When you change HTTP middleware, correlation, or logging shape, follow [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md). Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
 
