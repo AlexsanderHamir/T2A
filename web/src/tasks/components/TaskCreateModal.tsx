@@ -13,6 +13,7 @@ import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
 } from "./TaskCreateModalEvaluationSummary";
+import { TaskCreateModalFooterActions } from "./TaskCreateModalFooterActions";
 import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {
@@ -428,39 +429,18 @@ export function TaskCreateModal({
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
 
-            <div className="row stack-row-actions task-create-modal-actions">
-              <button
-                type="button"
-                className="secondary"
-                disabled={disabled}
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={disabled || draftSaving}
-                onClick={onSaveDraft}
-              >
-                {draftSaving ? "Saving draft…" : "Save draft"}
-              </button>
-              <button
-                type="button"
-                className="secondary task-create-evaluate-btn"
-                disabled={!title.trim() || !priority || !dmapReady || disabled}
-                onClick={onEvaluate}
-              >
-                {evaluatePending ? "Evaluating…" : "Evaluate"}
-              </button>
-              <button
-                type="submit"
-                className="task-create-submit"
-                disabled={!title.trim() || !priority || !dmapReady || disabled}
-              >
-                {hasParent ? "Add subtask" : "Create"}
-              </button>
-            </div>
+            <TaskCreateModalFooterActions
+              disabled={disabled}
+              draftSaving={draftSaving}
+              title={title}
+              priority={priority}
+              dmapReady={dmapReady}
+              evaluatePending={evaluatePending}
+              hasParent={hasParent}
+              onClose={onClose}
+              onSaveDraft={onSaveDraft}
+              onEvaluate={onEvaluate}
+            />
           </form>
         </section>
       </Modal>
