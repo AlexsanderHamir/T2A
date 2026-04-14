@@ -3,11 +3,9 @@ import type { PriorityChoice, TaskType } from "@/types";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
-import { TaskCreateModalDmapSection } from "./TaskCreateModalDmapSection";
-import { TaskCreateModalDmapTitleRow } from "./TaskCreateModalDmapTitleRow";
+import { TaskCreateModalPrimaryFields } from "./TaskCreateModalPrimaryFields";
 import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
 import { TaskCreateModalPendingSubtasksField } from "./TaskCreateModalPendingSubtasksField";
-import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { taskCreateModalDmapReady } from "./taskCreateModalDmapReady";
@@ -166,47 +164,29 @@ export function TaskCreateModal({
               hasParent={hasParent}
             />
 
-            {dmapMode ? (
-              <>
-                <TaskCreateModalDmapTitleRow
-                  title={title}
-                  onTitleChange={onTitleChange}
-                  priority={priority}
-                  onPriorityChange={onPriorityChange}
-                  taskType={taskType}
-                  onTaskTypeChange={onTaskTypeChange}
-                  disabled={disabled}
-                />
-                <TaskCreateModalDmapSection
-                  dmapCommitLimit={dmapCommitLimit}
-                  dmapDomain={dmapDomain}
-                  dmapDescription={dmapDescription}
-                  onDmapCommitLimitChange={onDmapCommitLimitChange}
-                  onDmapDomainChange={onDmapDomainChange}
-                  onDmapDescriptionChange={onDmapDescriptionChange}
-                  disabled={disabled}
-                />
-              </>
-            ) : (
-              <TaskComposeFields
-                idsPrefix="task-new"
-                editorKey="create-prompt-modal"
-                title={title}
-                prompt={prompt}
-                priority={priority}
-                taskType={taskType}
-                checklistItems={checklistItems}
-                hideChecklist={hideComposeChecklist}
-                disabled={disabled}
-                onTitleChange={onTitleChange}
-                onPromptChange={onPromptChange}
-                onPriorityChange={onPriorityChange}
-                onTaskTypeChange={onTaskTypeChange}
-                onAppendChecklistCriterion={onAppendChecklistCriterion}
-                onUpdateChecklistRow={onUpdateChecklistRow}
-                onRemoveChecklistRow={onRemoveChecklistRow}
-              />
-            )}
+            <TaskCreateModalPrimaryFields
+              dmapMode={dmapMode}
+              disabled={disabled}
+              title={title}
+              onTitleChange={onTitleChange}
+              priority={priority}
+              onPriorityChange={onPriorityChange}
+              taskType={taskType}
+              onTaskTypeChange={onTaskTypeChange}
+              dmapCommitLimit={dmapCommitLimit}
+              dmapDomain={dmapDomain}
+              dmapDescription={dmapDescription}
+              onDmapCommitLimitChange={onDmapCommitLimitChange}
+              onDmapDomainChange={onDmapDomainChange}
+              onDmapDescriptionChange={onDmapDescriptionChange}
+              prompt={prompt}
+              checklistItems={checklistItems}
+              hideComposeChecklist={hideComposeChecklist}
+              onPromptChange={onPromptChange}
+              onAppendChecklistCriterion={onAppendChecklistCriterion}
+              onUpdateChecklistRow={onUpdateChecklistRow}
+              onRemoveChecklistRow={onRemoveChecklistRow}
+            />
 
             {hasParent && !dmapMode ? (
               <TaskCreateModalInheritChecklistField
