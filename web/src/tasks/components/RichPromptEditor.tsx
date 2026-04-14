@@ -19,6 +19,7 @@ import {
 } from "../promptFormat";
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
+import { RichPromptRepoHints } from "./RichPromptRepoHints";
 import { Modal } from "@/shared/Modal";
 
 type Props = {
@@ -237,47 +238,15 @@ export function RichPromptEditor({
           </section>
         </Modal>
       ) : null}
-      {showRepoMisconfigHint ? (
-        <p className="mention-repo-hint" role="status">
-          {workspaceProbe.state === "broken" ? (
-            <>
-              The workspace folder for <code>REPO_ROOT</code> is missing or not a
-              directory on the machine running <code>taskapi</code>. Fix the path
-              and restart <code>taskapi</code>.
-            </>
-          ) : workspaceProbe.state === "available" && fileSearchUnavailable ? (
-            <>
-              File search failed even though the server reports a workspace.
-              Restart <code>taskapi</code> or check server logs.
-            </>
-          ) : (
-            <>
-              No repository is configured for file search. Set{" "}
-              <code>REPO_ROOT</code> in the server environment (same{" "}
-              <code>.env</code> as <code>DATABASE_URL</code>) and restart{" "}
-              <code>taskapi</code> from the repo root so it loads that{" "}
-              <code>.env</code>.
-            </>
-          )}
-        </p>
-      ) : null}
-      {showRepoUnknownHint ? (
-        <p className="mention-repo-hint" role="status">
-          Could not verify workspace file search. For local dev, run{" "}
-          <code>taskapi</code> and the Vite dev server so <code>/health</code>{" "}
-          and <code>/repo</code> proxy to the API (see <code>web/vite.config</code>
-          ).
-        </p>
-      ) : null}
-      {showFileSearchSpinner ? (
-        <p
-          className="mention-repo-hint mention-repo-hint--pending"
-          role="status"
-          aria-live="polite"
-        >
-          Searching files…
-        </p>
-      ) : null}
+      <RichPromptRepoHints
+        showRepoMisconfigHint={showRepoMisconfigHint}
+        workspaceBroken={workspaceProbe.state === "broken"}
+        fileSearchFailedWhileAvailable={
+          workspaceProbe.state === "available" && fileSearchUnavailable
+        }
+        showRepoUnknownHint={showRepoUnknownHint}
+        showFileSearchSpinner={showFileSearchSpinner}
+      />
     </div>
   );
 }
