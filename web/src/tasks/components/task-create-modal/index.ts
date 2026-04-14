@@ -7,3 +7,7 @@ export * from "./TaskCreateModalDmapSection";
 export * from "./TaskCreateModalParentField";
 export * from "./TaskCreateModalDraftNameField";
 export * from "./TaskCreateModalInheritChecklistField";
+export * from "./TaskCreateModalPendingSubtasksField";
+export * from "./TaskCreateModalEvaluationSummary";
+export * from "./TaskCreateModalFooterActions";
+export * from "./TaskCreateModalNestedSubtaskModal";

@@ -30,10 +30,10 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `TaskCreateModalParentField.tsx`
 - [x] Move `TaskCreateModalDraftNameField.tsx`
 - [x] Move `TaskCreateModalInheritChecklistField.tsx`
-- [ ] Move `TaskCreateModalPendingSubtasksField.tsx`
-- [ ] Move `TaskCreateModalEvaluationSummary.tsx`
-- [ ] Move `TaskCreateModalFooterActions.tsx`
-- [ ] Move `TaskCreateModalNestedSubtaskModal.tsx`
+- [x] Move `TaskCreateModalPendingSubtasksField.tsx`
+- [x] Move `TaskCreateModalEvaluationSummary.tsx`
+- [x] Move `TaskCreateModalFooterActions.tsx`
+- [x] Move `TaskCreateModalNestedSubtaskModal.tsx`
 - [x] Move `useTaskCreateModalNestedDraft.ts`
 - [x] Move `taskCreateModalBusyLabel.ts`
 - [x] Move `taskCreateModalDmapReady.ts`
