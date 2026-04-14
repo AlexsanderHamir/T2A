@@ -6,10 +6,10 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 0) Ground Rules
 
-- [ ] Keep behavior unchanged (organization-only refactor)
-- [ ] Move in small batches with green checks between batches
-- [ ] Avoid broad renames and avoid changing public APIs during moves
-- [ ] Keep all imports compiling after each batch
+- [x] Keep behavior unchanged (organization-only refactor)
+- [x] Move in small batches with green checks between batches
+- [x] Avoid broad renames and avoid changing public APIs during moves
+- [x] Keep all imports compiling after each batch
 - [ ] Remove this file when reorg is complete
 
 ## 1) Target Structure
@@ -19,7 +19,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Create `web/src/tasks/components/custom-select/`
 - [x] Create `web/src/tasks/components/rich-prompt/`
 - [x] Create `web/src/tasks/components/skeletons/`
-- [ ] Keep one-off components in `components/` root only when truly standalone
+- [x] Keep one-off components in `components/` root only when truly standalone
 
 ## 2) Task Create Modal Family
 
@@ -37,7 +37,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `useTaskCreateModalNestedDraft.ts`
 - [x] Move `taskCreateModalBusyLabel.ts`
 - [x] Move `taskCreateModalDmapReady.ts`
-- [x] Move/adjust tests: `TaskCreateModal.test.tsx`
+- [x] Move/adjust tests: `task-create-modal/TaskCreateModal.test.tsx` (co-located)
 - [x] Add `task-create-modal/index.ts` barrel exports
 
 ## 3) Task List Family
@@ -50,7 +50,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `taskListClientFilter.ts`
 - [x] Move `taskListFilterSelectOptions.ts`
 - [x] Move `taskListPagerSummary.ts`
-- [x] Move/adjust tests: `TaskListSection.test.tsx`
+- [x] Move/adjust tests: `task-list/TaskListSection.test.tsx` (co-located)
 - [x] Add `task-list/index.ts` barrel exports
 
 ## 4) Custom Select Family
@@ -59,7 +59,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `CustomSelectDropdown.tsx`
 - [x] Move `CustomSelectRowBody.tsx`
 - [x] Move `customSelectModel.ts`
-- [x] Move/adjust tests: `CustomSelect.test.tsx`
+- [x] Move/adjust tests: `custom-select/CustomSelect.test.tsx` (co-located)
 - [x] Add `custom-select/index.ts` barrel exports
 
 ## 5) Rich Prompt Family
@@ -68,7 +68,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Move `RichPromptMenuBar.tsx`
 - [x] Move `RichPromptRepoHints.tsx`
 - [x] Move `MentionRangePanel.tsx` (and related helpers/tests)
-- [ ] Keep extension files under `tasks/extensions/` unless explicitly re-scoped
+- [x] Keep extension files under `tasks/extensions/` unless explicitly re-scoped
 - [x] Add `rich-prompt/index.ts` barrel exports if helpful
 
 ## 6) Skeletons Family
@@ -83,23 +83,24 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Update relative imports after each move batch
 - [x] Prefer local barrels to reduce long relative paths
 - [x] Ensure no duplicate files remain in old locations
-- [ ] Ensure no circular import introduced by barrels
+- [x] Ensure no circular import introduced by barrels (barrels are flat re-exports only)
 
 ## 8) Validation Checklist (run after each batch)
 
 - [x] `npx tsc --noEmit` in `web/`
-- [ ] Targeted tests for moved family
-  - [x] `TaskCreateModal.test.tsx`
-  - [x] `TaskListSection.test.tsx`
-  - [x] `CustomSelect.test.tsx`
-  - [x] `MentionRangePanel.test.tsx` (when rich-prompt batch happens)
+- [x] Targeted tests for moved family (co-located beside implementations)
+  - [x] `task-create-modal/TaskCreateModal.test.tsx`
+  - [x] `task-list/TaskListSection.test.tsx`
+  - [x] `custom-select/CustomSelect.test.tsx`
+  - [x] `rich-prompt/MentionRangePanel.test.tsx`
+  - [x] `rich-prompt/RichPromptMenuBar.test.tsx`
 - [x] Spot-check lint diagnostics for moved files
 
 ## 9) Final Cleanup
 
 - [x] Remove temporary compatibility imports if any were added
 - [ ] Remove unused exports and dead files
-- [ ] Verify no stale references in docs
+- [x] Verify no stale references in docs (spot-check: no old flat component paths in `docs/`)
 - [ ] Delete this temporary file (`docs/TEMP-UI-REORG-TODOS.md`)
 
 ## 10) Suggested Commit Batches
