@@ -24,12 +24,12 @@ Scope: `web/src/tasks` (focus on component organization)
 ## 2) Task Create Modal Family
 
 - [ ] Move `TaskCreateModal.tsx` into `task-create-modal/`
-- [ ] Move `TaskCreateModalPrimaryFields.tsx`
-- [ ] Move `TaskCreateModalDmapTitleRow.tsx`
-- [ ] Move `TaskCreateModalDmapSection.tsx`
-- [ ] Move `TaskCreateModalParentField.tsx`
-- [ ] Move `TaskCreateModalDraftNameField.tsx`
-- [ ] Move `TaskCreateModalInheritChecklistField.tsx`
+- [x] Move `TaskCreateModalPrimaryFields.tsx`
+- [x] Move `TaskCreateModalDmapTitleRow.tsx`
+- [x] Move `TaskCreateModalDmapSection.tsx`
+- [x] Move `TaskCreateModalParentField.tsx`
+- [x] Move `TaskCreateModalDraftNameField.tsx`
+- [x] Move `TaskCreateModalInheritChecklistField.tsx`
 - [ ] Move `TaskCreateModalPendingSubtasksField.tsx`
 - [ ] Move `TaskCreateModalEvaluationSummary.tsx`
 - [ ] Move `TaskCreateModalFooterActions.tsx`
