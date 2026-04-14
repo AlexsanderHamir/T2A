@@ -1,9 +1,14 @@
 import React, { type ErrorInfo } from "react";
 
+const DEFAULT_FALLBACK_MESSAGE =
+  "Something went wrong while rendering this page.";
+
 type AppErrorBoundaryProps = {
   children: React.ReactNode;
   /** Bump remount keys (e.g. on `<App key={…} />`) so a soft reset can replace the failing tree without a full page reload. */
   onRecover?: () => void;
+  /** User-visible headline in the fallback callout (defaults to full-app copy). */
+  fallbackMessage?: string;
 };
 
 type AppErrorBoundaryState = {
@@ -39,7 +44,7 @@ export class AppErrorBoundary extends React.Component<
       return (
         <div className="err error-banner" role="alert" aria-live="assertive">
           <span className="error-banner__text">
-            Something went wrong while rendering this page.
+            {this.props.fallbackMessage ?? DEFAULT_FALLBACK_MESSAGE}
           </span>
           <div className="task-detail-error-actions">
             <button

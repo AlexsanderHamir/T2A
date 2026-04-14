@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { DeleteConfirmDialog } from "../tasks/components/DeleteConfirmDialog";
 import { StreamStatusHint } from "../tasks/components/StreamStatusHint";
@@ -8,11 +9,26 @@ import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
 import { TaskGraphPage } from "../tasks/pages/TaskGraphPage";
 import { TaskDraftsPage } from "../tasks/pages/TaskDraftsPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
+import { AppErrorBoundary } from "../shared/AppErrorBoundary";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import "./App.css";
+
+function RoutedMainOutlet() {
+  const location = useLocation();
+  const [outletKey, setOutletKey] = useState(0);
+  return (
+    <AppErrorBoundary
+      key={location.pathname}
+      fallbackMessage="Something went wrong in this view."
+      onRecover={() => setOutletKey((k) => k + 1)}
+    >
+      <Outlet key={outletKey} />
+    </AppErrorBoundary>
+  );
+}
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
@@ -52,7 +68,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         {app.error ? <ErrorBanner message={app.error} /> : null}
 
         <main id="main-content" tabIndex={-1}>
-          <Outlet />
+          <RoutedMainOutlet />
 
           {app.deleteTarget ? (
             <DeleteConfirmDialog

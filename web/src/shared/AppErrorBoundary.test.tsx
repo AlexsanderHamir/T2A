@@ -28,6 +28,18 @@ describe("AppErrorBoundary", () => {
     expect(screen.getByText("Safe content")).toBeInTheDocument();
   });
 
+  it("renders custom fallback message when provided", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <AppErrorBoundary fallbackMessage="Custom crash note.">
+        <CrashOnRender />
+      </AppErrorBoundary>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Custom crash note.");
+    errorSpy.mockRestore();
+  });
+
   it("renders fallback UI when child render throws", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     render(
