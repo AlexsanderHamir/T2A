@@ -1,22 +1,28 @@
-package handler
+package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/google/uuid"
 )
+
+const maxHTTPLogQueryBytes = 1024
 
 // WithAccessLog wraps h to assign a request id, attach it to r.Context, echo X-Request-ID on
 // responses, and emit one structured line per request when it finishes (method, path, route,
 // status, duration, bytes written). GET /health, /health/live, and /health/ready skip the access
 // line to avoid probe noise but still assign and echo X-Request-ID (and request context) so probes
 // and any logs during readiness stay correlatable.
-func WithAccessLog(h http.Handler) http.Handler {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithAccessLog")
+//
+// callPath may be nil; when non-nil it supplies call_path on the access line (e.g. pkgs/tasks/calltrace.Path).
+func WithAccessLog(h http.Handler, callPath func(context.Context) string) http.Handler {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithAccessLog")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r = resolveAndAttachRequestID(w, r)
 
@@ -44,13 +50,17 @@ func WithAccessLog(h http.Handler) http.Handler {
 		}
 		q := r.URL.RawQuery
 		if len(q) > maxHTTPLogQueryBytes {
-			q = truncateUTF8ByBytes(q, maxHTTPLogQueryBytes)
+			q = apijson.TruncateUTF8ByBytes(q, maxHTTPLogQueryBytes)
+		}
+		cp := ""
+		if callPath != nil {
+			cp = callPath(ctx)
 		}
 		slog.Log(ctx, slog.LevelInfo, "http request complete",
-			"cmd", httpLogCmd,
+			"cmd", logctx.TraceCmd,
 			"obs_category", "http_access",
 			"operation", "http.access",
-			"call_path", CallPath(ctx),
+			"call_path", cp,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"route", route,
@@ -64,7 +74,7 @@ func WithAccessLog(h http.Handler) http.Handler {
 }
 
 func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Request {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.resolveAndAttachRequestID")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.resolveAndAttachRequestID")
 	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 	if id == "" {
 		id = uuid.NewString()
@@ -77,7 +87,7 @@ func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Req
 }
 
 func omitAccessLog(r *http.Request) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitAccessLog")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.omitAccessLog")
 	if r.Method != http.MethodGet {
 		return false
 	}
@@ -97,7 +107,7 @@ type accessLogWriter struct {
 }
 
 func (aw *accessLogWriter) WriteHeader(code int) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.accessLogWriter.WriteHeader")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.accessLogWriter.WriteHeader")
 	if !aw.wroteHeader {
 		aw.status = code
 		aw.wroteHeader = true
@@ -106,7 +116,7 @@ func (aw *accessLogWriter) WriteHeader(code int) {
 }
 
 func (aw *accessLogWriter) Write(b []byte) (int, error) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.accessLogWriter.Write")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.accessLogWriter.Write")
 	if !aw.wroteHeader {
 		aw.status = http.StatusOK
 		aw.wroteHeader = true
@@ -117,7 +127,7 @@ func (aw *accessLogWriter) Write(b []byte) (int, error) {
 }
 
 func (aw *accessLogWriter) Flush() {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.accessLogWriter.Flush")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.accessLogWriter.Flush")
 	if f, ok := aw.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}

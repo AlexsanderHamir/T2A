@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 )
 
 const (
@@ -24,13 +26,13 @@ func debugHTTPRequest(r *http.Request, op string, extra ...any) {
 	}
 	q := r.URL.RawQuery
 	if len(q) > maxHTTPLogQueryBytes {
-		q = truncateUTF8ByBytes(q, maxHTTPLogQueryBytes)
+		q = apijson.TruncateUTF8ByBytes(q, maxHTTPLogQueryBytes)
 	}
 	args := []any{
-		"cmd", httpLogCmd,
+		"cmd", calltrace.LogCmd,
 		"obs_category", "http_io",
 		"operation", op,
-		"call_path", CallPath(r.Context()),
+		"call_path", calltrace.Path(r.Context()),
 		"phase", "in",
 		"method", r.Method,
 		"path", r.URL.Path,
@@ -49,43 +51,15 @@ func debugHTTPOut(ctx context.Context, op string, httpStatus int, extra ...any) 
 		return
 	}
 	args := []any{
-		"cmd", httpLogCmd,
+		"cmd", calltrace.LogCmd,
 		"obs_category", "http_io",
 		"operation", op,
-		"call_path", CallPath(ctx),
+		"call_path", calltrace.Path(ctx),
 		"phase", "out",
 		"http_status", httpStatus,
 	}
 	args = append(args, extra...)
 	slog.Log(ctx, slog.LevelDebug, "http.io", args...)
-}
-
-func truncateUTF8ByBytes(s string, maxBytes int) string {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
-	if maxBytes <= 0 {
-		return ""
-	}
-	if len(s) <= maxBytes {
-		return s
-	}
-	const ell = "…"
-	if maxBytes <= len(ell) {
-		return ell[:maxBytes]
-	}
-	limit := maxBytes - len(ell)
-	end := 0
-	for i := 0; i < len(s); {
-		_, sz := utf8.DecodeRuneInString(s[i:])
-		if i+sz > limit {
-			break
-		}
-		i += sz
-		end = i
-	}
-	if end == 0 {
-		return ell
-	}
-	return s[:end] + ell
 }
 
 func truncateRunes(s string, maxRunes int) string {

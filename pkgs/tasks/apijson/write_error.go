@@ -44,7 +44,7 @@ func WriteJSONError(w http.ResponseWriter, r *http.Request, op string, code int,
 	}
 	payload := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
 	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
-		preview := truncateUTF8ByBytes(string(payload), maxJSONLogPreviewBytes)
+		preview := TruncateUTF8ByBytes(string(payload), maxJSONLogPreviewBytes)
 		args := []any{
 			"cmd", logctx.TraceCmd,
 			"obs_category", "http_io",

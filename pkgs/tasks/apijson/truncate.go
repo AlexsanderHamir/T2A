@@ -8,7 +8,8 @@ import (
 
 const maxJSONLogPreviewBytes = 16384
 
-func truncateUTF8ByBytes(s string, maxBytes int) string {
+// TruncateUTF8ByBytes returns s truncated to maxBytes UTF-8-safe, appending "…" when truncated.
+func TruncateUTF8ByBytes(s string, maxBytes int) string {
 	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if maxBytes <= 0 {
 		return ""

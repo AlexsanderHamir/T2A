@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"crypto/subtle"
@@ -6,23 +6,27 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
-const authorizationHeader = "Authorization"
+// AuthorizationHeader is the HTTP header name checked for bearer tokens.
+const AuthorizationHeader = "Authorization"
 
 func apiTokenConfigured() string {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.apiTokenConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.apiTokenConfigured")
 	return strings.TrimSpace(os.Getenv("T2A_API_TOKEN"))
 }
 
 // APIAuthEnabled reports whether API bearer-token auth is enabled.
 func APIAuthEnabled() bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.APIAuthEnabled")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.APIAuthEnabled")
 	return apiTokenConfigured() != ""
 }
 
 func omitAPIAuth(r *http.Request) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitAPIAuth")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.omitAPIAuth")
 	if r.Method != http.MethodGet {
 		return false
 	}
@@ -34,8 +38,9 @@ func omitAPIAuth(r *http.Request) bool {
 	}
 }
 
-func hasValidBearerToken(rawAuth, configuredToken string) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.hasValidBearerToken")
+// HasValidBearerToken reports whether rawAuth is a well-formed Bearer token matching configuredToken (constant-time compare).
+func HasValidBearerToken(rawAuth, configuredToken string) bool {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.HasValidBearerToken")
 	rawAuth = strings.TrimSpace(rawAuth)
 	if rawAuth == "" {
 		return false
@@ -62,17 +67,17 @@ func WithAPIAuth(h http.Handler) http.Handler {
 	if token == "" {
 		return h
 	}
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithAPIAuth")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithAPIAuth")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if omitAPIAuth(r) {
 			h.ServeHTTP(w, r)
 			return
 		}
-		if !hasValidBearerToken(r.Header.Get(authorizationHeader), token) {
+		if !HasValidBearerToken(r.Header.Get(AuthorizationHeader), token) {
 			slog.Log(r.Context(), slog.LevelWarn, "api auth denied",
-				"cmd", httpLogCmd, "operation", "http.api_auth",
+				"cmd", logctx.TraceCmd, "operation", "http.api_auth",
 				"method", r.Method, "path", r.URL.Path)
-			writeJSONError(w, r, "http.api_auth", http.StatusUnauthorized, "unauthorized")
+			apijson.WriteJSONError(w, r, "http.api_auth", http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		h.ServeHTTP(w, r)

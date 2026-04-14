@@ -26,10 +26,29 @@ var skipSlogRequirement = map[string]struct{}{
 	// Thin wrapper over internal/version.String (already excluded); health and JSON embed version without duplicating logs here.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tServerVersion": {},
 	// Prometheus metrics wrapper: per-chunk Write / Flush must not allocate log attrs on hot paths.
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*metricsHTTPResponseWriter.WriteHeader": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*metricsHTTPResponseWriter.Write":       {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*metricsHTTPResponseWriter.Flush":       {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*metricsHTTPResponseWriter.statusCode":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\t*metricsHTTPResponseWriter.WriteHeader": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\t*metricsHTTPResponseWriter.Write":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\t*metricsHTTPResponseWriter.Flush":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\t*metricsHTTPResponseWriter.statusCode":  {},
+	// Test/metrics accessor; RecordSSESubscriberGauge already traces.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\tSSESubscribersGauge": {},
+	// Thin re-exports to pkgs/tasks/middleware (slog lives on the real implementations).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithRecovery":                  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithHTTPMetrics":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithAccessLog":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithRateLimit":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithAPIAuth":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithRequestTimeout":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithMaxRequestBody":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tWithIdempotency":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tRateLimitPerMinuteConfigured":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tAPIAuthEnabled":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tMaxRequestBodyBytesConfigured": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tRequestTimeout":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tIdempotencyTTL":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tIdempotencyCacheLimits":        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tclearIdempotencyStateForTest":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tHasValidBearerToken":           {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

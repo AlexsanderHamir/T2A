@@ -10,8 +10,8 @@
 // Ready-task agent queue: store.SetReadyTaskNotifier (taskapi always; docs/AGENT-QUEUE.md, docs/RUNTIME-ENV.md, pkgs/agents). Queue consumers must AckAfterRecv or Receive so reconcile matches the buffer.
 // Request timeout: request_timeout.go (WithRequestTimeout; optional T2A_HTTP_REQUEST_TIMEOUT in docs/RUNTIME-ENV.md; GET /events exempt).
 // Request/response IO summaries (Debug): httplog_io.go.
-// Nested call stack for logs (call_path, helper.io): calllog.go — use withCallRoot on each handler, PushCall inside helpers.
-// JSONL order: pkgs/tasks/logctx.WrapSlogHandlerWithLogSequence (taskapi outer) + logctx.ContextWithLogSeq in access middleware → log_seq, log_seq_scope; RunObserved for explicit helper in/out pairs.
+// Nested call stack for logs (call_path, helper.io): pkgs/tasks/calltrace — use calltrace.WithRequestRoot on each handler, calltrace.Push inside helpers; calltrace.RunObserved for explicit helper in/out pairs.
+// JSONL order: pkgs/tasks/logctx.WrapSlogHandlerWithLogSequence (taskapi outer) + logctx.ContextWithLogSeq in access middleware → log_seq, log_seq_scope.
 //
 // Mutating routes should follow: decode and validate the request, call the store, map errors
 // to HTTP status, then call notifyChange after a successful write. Keep domain rules in

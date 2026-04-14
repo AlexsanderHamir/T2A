@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 )
 
 func requestTimeoutConfigured() time.Duration {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.requestTimeoutConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.requestTimeoutConfigured")
 	raw := strings.TrimSpace(os.Getenv(requestTimeoutEnv))
 	if raw == "" {
 		return defaultRequestTimeout
@@ -33,12 +35,12 @@ func requestTimeoutConfigured() time.Duration {
 // RequestTimeout returns the effective request execution timeout.
 // Default is 30s, invalid values fall back to 30s, and 0 disables.
 func RequestTimeout() time.Duration {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.RequestTimeout")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RequestTimeout")
 	return requestTimeoutConfigured()
 }
 
 func omitRequestTimeout(r *http.Request) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitRequestTimeout")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.omitRequestTimeout")
 	return r.Method == http.MethodGet && r.URL.Path == "/events"
 }
 
@@ -49,7 +51,7 @@ func WithRequestTimeout(h http.Handler) http.Handler {
 	if timeout <= 0 {
 		return h
 	}
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithRequestTimeout", "timeout_sec", int(timeout/time.Second))
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithRequestTimeout", "timeout_sec", int(timeout/time.Second))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if omitRequestTimeout(r) {
 			h.ServeHTTP(w, r)

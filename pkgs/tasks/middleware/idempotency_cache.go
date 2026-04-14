@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 type idempotencyCaptured struct {
@@ -32,7 +34,7 @@ type idempotencyCache struct {
 var idempCache = &idempotencyCache{items: make(map[string]idempotencyEntry)}
 
 func (c *idempotencyCache) get(key string) (idempotencyCaptured, bool) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.get")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyCache.get")
 	now := time.Now()
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -75,14 +77,14 @@ func (c *idempotencyCache) set(ctx context.Context, key string, cap idempotencyC
 			logCtx = context.Background()
 		}
 		slog.Log(logCtx, slog.LevelWarn, "idempotency cache evicted entries",
-			"cmd", httpLogCmd, "operation", "handler.idempotency",
+			"cmd", logctx.TraceCmd, "operation", "middleware.idempotency",
 			"evicted", evicted, "entries", len(c.items), "bytes", c.totalBytes,
 			"max_entries", maxEntries, "max_bytes", maxBytes)
 	}
 }
 
 func (c *idempotencyCache) pruneLocked(now time.Time) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.pruneLocked")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyCache.pruneLocked")
 	for k, e := range c.items {
 		if now.After(e.until) {
 			c.totalBytes -= e.size
@@ -95,7 +97,7 @@ func (c *idempotencyCache) pruneLocked(now time.Time) {
 }
 
 func (c *idempotencyCache) enforceLimitsLocked() int {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyCache.enforceLimitsLocked")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyCache.enforceLimitsLocked")
 	maxEntries, maxBytes := IdempotencyCacheLimits()
 	if maxEntries == 0 && maxBytes == 0 {
 		return 0
@@ -129,9 +131,9 @@ func (c *idempotencyCache) enforceLimitsLocked() int {
 	}
 }
 
-// clearIdempotencyStateForTest resets in-memory idempotency state (handler package tests only).
-func clearIdempotencyStateForTest() {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.clearIdempotencyStateForTest")
+// ClearIdempotencyStateForTest resets in-memory idempotency state (tests only).
+func ClearIdempotencyStateForTest() {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.ClearIdempotencyStateForTest")
 	idempCache.mu.Lock()
 	idempCache.items = make(map[string]idempotencyEntry)
 	idempCache.sets = 0

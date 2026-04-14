@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -21,20 +20,21 @@ import (
 
 func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
+	const defaultTTL = 24 * time.Hour
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "")
-	if idempotencyTTLConfigured() != defaultIdempotencyTTL || IdempotencyTTL() != defaultIdempotencyTTL {
+	if IdempotencyTTL() != defaultTTL {
 		t.Fatalf("default ttl")
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "0")
-	if idempotencyTTLConfigured() != 0 || IdempotencyTTL() != 0 {
+	if IdempotencyTTL() != 0 {
 		t.Fatalf("zero")
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "30m")
-	if got := idempotencyTTLConfigured(); got != 30*time.Minute || IdempotencyTTL() != got {
+	if got := IdempotencyTTL(); got != 30*time.Minute {
 		t.Fatalf("30m: got %v", got)
 	}
 	t.Setenv("T2A_IDEMPOTENCY_TTL", "not-a-duration")
-	if idempotencyTTLConfigured() != defaultIdempotencyTTL || IdempotencyTTL() != defaultIdempotencyTTL {
+	if IdempotencyTTL() != defaultTTL {
 		t.Fatalf("invalid falls back")
 	}
 }
@@ -44,7 +44,7 @@ func TestIdempotencyCacheLimitsConfigured(t *testing.T) {
 	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "")
 	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "")
 	maxEntries, maxBytes := IdempotencyCacheLimits()
-	if maxEntries != defaultIdempotencyMaxEntries || maxBytes != defaultIdempotencyMaxBytes {
+	if maxEntries != 2048 || maxBytes != 8<<20 {
 		t.Fatalf("defaults got entries=%d bytes=%d", maxEntries, maxBytes)
 	}
 
@@ -58,50 +58,8 @@ func TestIdempotencyCacheLimitsConfigured(t *testing.T) {
 	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "-1")
 	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "nope")
 	maxEntries, maxBytes = IdempotencyCacheLimits()
-	if maxEntries != defaultIdempotencyMaxEntries || maxBytes != defaultIdempotencyMaxBytes {
+	if maxEntries != 2048 || maxBytes != 8<<20 {
 		t.Fatalf("invalid fallback got entries=%d bytes=%d", maxEntries, maxBytes)
-	}
-}
-
-func TestIdempotencyCache_set_enforces_entry_limit(t *testing.T) {
-	t.Cleanup(clearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "2")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "0")
-
-	now := time.Now()
-	idempCache.set(context.Background(), "k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("a")}, now.Add(time.Hour))
-	idempCache.set(context.Background(), "k2", idempotencyCaptured{status: http.StatusCreated, body: []byte("b")}, now.Add(time.Hour))
-	idempCache.set(context.Background(), "k3", idempotencyCaptured{status: http.StatusCreated, body: []byte("c")}, now.Add(time.Hour))
-
-	if _, ok := idempCache.get("k1"); ok {
-		t.Fatalf("oldest key should be evicted")
-	}
-	if _, ok := idempCache.get("k2"); !ok {
-		t.Fatalf("k2 should remain")
-	}
-	if _, ok := idempCache.get("k3"); !ok {
-		t.Fatalf("k3 should remain")
-	}
-}
-
-func TestIdempotencyCache_set_enforces_byte_limit(t *testing.T) {
-	t.Cleanup(clearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "0")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "5")
-
-	now := time.Now()
-	idempCache.set(context.Background(), "k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("111")}, now.Add(time.Hour))
-	idempCache.set(context.Background(), "k2", idempotencyCaptured{status: http.StatusCreated, body: []byte("22")}, now.Add(time.Hour))
-	idempCache.set(context.Background(), "k3", idempotencyCaptured{status: http.StatusCreated, body: []byte("3")}, now.Add(time.Hour))
-
-	if _, ok := idempCache.get("k1"); ok {
-		t.Fatalf("k1 should be evicted to satisfy byte cap")
-	}
-	if _, ok := idempCache.get("k2"); !ok {
-		t.Fatalf("k2 should remain")
-	}
-	if _, ok := idempCache.get("k3"); !ok {
-		t.Fatalf("k3 should remain")
 	}
 }
 

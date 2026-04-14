@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"log/slog"
@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/time/rate"
@@ -32,12 +34,12 @@ var taskapiHTTPRateLimitedTotal = promauto.NewCounter(prometheus.CounterOpts{
 // (requests per minute). Unset uses defaultRateLimitPerMin. Invalid or negative values use the default.
 // Zero disables rate limiting (WithRateLimit becomes a no-op).
 func RateLimitPerMinuteConfigured() int {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.RateLimitPerMinuteConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RateLimitPerMinuteConfigured")
 	return parseRateLimitPerMinFromEnv()
 }
 
 func parseRateLimitPerMinFromEnv() int {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseRateLimitPerMinFromEnv")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.parseRateLimitPerMinFromEnv")
 	s := strings.TrimSpace(os.Getenv("T2A_RATE_LIMIT_PER_MIN"))
 	if s == "" {
 		return defaultRateLimitPerMin
@@ -50,7 +52,7 @@ func parseRateLimitPerMinFromEnv() int {
 }
 
 func omitRateLimit(r *http.Request) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitRateLimit")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.omitRateLimit")
 	if r.Method != http.MethodGet {
 		return false
 	}
@@ -63,7 +65,7 @@ func omitRateLimit(r *http.Request) bool {
 }
 
 func clientIPForRateLimit(r *http.Request) string {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.clientIPForRateLimit")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.clientIPForRateLimit")
 	addr := strings.TrimSpace(r.RemoteAddr)
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -84,7 +86,7 @@ type ipRateLimiter struct {
 }
 
 func newIPRateLimiter(perMin int) *ipRateLimiter {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.newIPRateLimiter")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.newIPRateLimiter")
 	return &ipRateLimiter{
 		perMin:   perMin,
 		visitors: make(map[string]*rateLimitVisitor),
@@ -92,7 +94,7 @@ func newIPRateLimiter(perMin int) *ipRateLimiter {
 }
 
 func (il *ipRateLimiter) allow(ip string) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ipRateLimiter.allow")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.ipRateLimiter.allow")
 	il.mu.Lock()
 	defer il.mu.Unlock()
 	now := time.Now()
@@ -119,7 +121,7 @@ func (il *ipRateLimiter) allow(ip string) bool {
 }
 
 func (il *ipRateLimiter) pruneLocked(now time.Time) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.ipRateLimiter.pruneLocked")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.ipRateLimiter.pruneLocked")
 	for ip, v := range il.visitors {
 		if now.Sub(v.lastSeen) > rateLimitVisitorTTL {
 			delete(il.visitors, ip)
@@ -137,7 +139,7 @@ func WithRateLimit(h http.Handler) http.Handler {
 		return h
 	}
 	il := newIPRateLimiter(perMin)
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithRateLimit", "per_ip_per_min", perMin)
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithRateLimit", "per_ip_per_min", perMin)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if omitRateLimit(r) {
 			h.ServeHTTP(w, r)
@@ -147,13 +149,13 @@ func WithRateLimit(h http.Handler) http.Handler {
 		if !il.allow(ip) {
 			taskapiHTTPRateLimitedTotal.Inc()
 			slog.Log(r.Context(), slog.LevelWarn, "rate limit exceeded",
-				"cmd", httpLogCmd,
+				"cmd", logctx.TraceCmd,
 				"operation", "http.rate_limit",
 				"client_ip", ip,
 				"method", r.Method,
 				"path", r.URL.Path,
 			)
-			setAPISecurityHeaders(w)
+			apijson.ApplySecurityHeaders(w)
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "rate limit exceeded\n", http.StatusTooManyRequests)
 			return

@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"bytes"
@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/sync/singleflight"
@@ -43,7 +45,7 @@ type idempotencyPreparedRequest struct {
 var idempSF singleflight.Group
 
 func idempotencyTTLConfigured() time.Duration {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyTTLConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyTTLConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_TTL"))
 	if s == "" {
 		return defaultIdempotencyTTL
@@ -59,7 +61,7 @@ func idempotencyTTLConfigured() time.Duration {
 }
 
 func idempotencyMaxEntriesConfigured() int {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMaxEntriesConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyMaxEntriesConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_ENTRIES"))
 	if s == "" {
 		return defaultIdempotencyMaxEntries
@@ -72,7 +74,7 @@ func idempotencyMaxEntriesConfigured() int {
 }
 
 func idempotencyMaxBytesConfigured() int {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMaxBytesConfigured")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyMaxBytesConfigured")
 	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_BYTES"))
 	if s == "" {
 		return defaultIdempotencyMaxBytes
@@ -87,19 +89,19 @@ func idempotencyMaxBytesConfigured() int {
 // IdempotencyTTL returns the effective in-process idempotency cache TTL from
 // T2A_IDEMPOTENCY_TTL (same as WithIdempotency): default 24h, 0 disables caching.
 func IdempotencyTTL() time.Duration {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.IdempotencyTTL")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.IdempotencyTTL")
 	return idempotencyTTLConfigured()
 }
 
 // IdempotencyCacheLimits returns effective in-process idempotency cache limits.
 // 0 means disabled for the respective bound.
 func IdempotencyCacheLimits() (maxEntries int, maxBytes int) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.IdempotencyCacheLimits")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.IdempotencyCacheLimits")
 	return idempotencyMaxEntriesConfigured(), idempotencyMaxBytesConfigured()
 }
 
 func idempotencyMutatingMethod(method string) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.idempotencyMutatingMethod")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyMutatingMethod")
 	switch method {
 	case http.MethodPost, http.MethodPatch, http.MethodDelete:
 		return true
@@ -109,7 +111,7 @@ func idempotencyMutatingMethod(method string) bool {
 }
 
 func shouldCacheIdempotentStatus(code int) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.shouldCacheIdempotentStatus")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.shouldCacheIdempotentStatus")
 	switch code {
 	case http.StatusOK, http.StatusCreated, http.StatusNoContent:
 		return true
@@ -119,7 +121,7 @@ func shouldCacheIdempotentStatus(code int) bool {
 }
 
 func cloneIdempotentResponseHeaders(src http.Header) http.Header {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.cloneIdempotentResponseHeaders")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.cloneIdempotentResponseHeaders")
 	dst := make(http.Header)
 	for _, k := range []string{"Content-Type", "X-Content-Type-Options"} {
 		if v := src.Get(k); v != "" {
@@ -130,7 +132,7 @@ func cloneIdempotentResponseHeaders(src http.Header) http.Header {
 }
 
 func captureIdempotentResponse(rec *httptest.ResponseRecorder) idempotencyCaptured {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.captureIdempotentResponse")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.captureIdempotentResponse")
 	status := rec.Code
 	if status == 0 {
 		status = http.StatusOK
@@ -143,8 +145,8 @@ func captureIdempotentResponse(rec *httptest.ResponseRecorder) idempotencyCaptur
 }
 
 func replayIdempotentResponse(w http.ResponseWriter, cap idempotencyCaptured) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.replayIdempotentResponse")
-	setAPISecurityHeaders(w)
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.replayIdempotentResponse")
+	apijson.ApplySecurityHeaders(w)
 	if v := cap.headers.Get("Content-Type"); v != "" {
 		w.Header().Set("Content-Type", v)
 	}
@@ -159,26 +161,26 @@ func validateIdempotencyKey(rawKey string, w http.ResponseWriter, r *http.Reques
 		return true
 	}
 	slog.Log(r.Context(), slog.LevelWarn, "idempotency key too long",
-		"cmd", httpLogCmd, "operation", "handler.idempotency",
+		"cmd", logctx.TraceCmd, "operation", "middleware.idempotency",
 		"max_len", maxIdempotencyKeyLen, "len", len(rawKey))
-	writeJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long")
+	apijson.WriteJSONError(w, r, "idempotency.key", http.StatusBadRequest, "idempotency key too long", nil)
 	return false
 }
 
 func bodyFingerprintFromRequest(r *http.Request, w http.ResponseWriter) (string, bool) {
 	if r.ContentLength < 0 {
-		writeJSONError(w, r, "idempotency.content_length", http.StatusBadRequest, "idempotency requires known content length")
+		apijson.WriteJSONError(w, r, "idempotency.content_length", http.StatusBadRequest, "idempotency requires known content length", nil)
 		return "", false
 	}
 	if r.ContentLength > maxIdempotencyBodySize {
-		writeJSONError(w, r, "idempotency.body_too_large", http.StatusRequestEntityTooLarge, "request body too large for idempotency")
+		apijson.WriteJSONError(w, r, "idempotency.body_too_large", http.StatusRequestEntityTooLarge, "request body too large for idempotency", nil)
 		return "", false
 	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelWarn, "idempotency body read failed",
-			"cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
-		writeJSONError(w, r, "idempotency.read_body", http.StatusBadRequest, "could not read request body")
+			"cmd", logctx.TraceCmd, "operation", "middleware.idempotency", "err", err)
+		apijson.WriteJSONError(w, r, "idempotency.read_body", http.StatusBadRequest, "could not read request body", nil)
 		return "", false
 	}
 	_ = r.Body.Close()
@@ -188,7 +190,7 @@ func bodyFingerprintFromRequest(r *http.Request, w http.ResponseWriter) (string,
 }
 
 func prepareIdempotencyRequest(r *http.Request, w http.ResponseWriter) (idempotencyPreparedRequest, bool) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.prepareIdempotencyRequest")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.prepareIdempotencyRequest")
 	rawKey := strings.TrimSpace(r.Header.Get(idempotencyHeader))
 	if rawKey == "" {
 		return idempotencyPreparedRequest{}, false
@@ -219,7 +221,7 @@ func prepareIdempotencyRequest(r *http.Request, w http.ResponseWriter) (idempote
 // Cache TTL comes from T2A_IDEMPOTENCY_TTL (Go duration; default 24h). Set to 0 to disable.
 // The cache is in-process only and is not shared across replicas.
 func WithIdempotency(h http.Handler) http.Handler {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithIdempotency")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithIdempotency")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ttl := idempotencyTTLConfigured()
 		if ttl <= 0 || !idempotencyMutatingMethod(r.Method) {
@@ -252,8 +254,8 @@ func WithIdempotency(h http.Handler) http.Handler {
 		})
 		if err != nil {
 			slog.Log(r.Context(), slog.LevelError, "idempotency singleflight error",
-				"cmd", httpLogCmd, "operation", "handler.idempotency", "err", err)
-			writeJSONError(w, r, "idempotency", http.StatusInternalServerError, "internal server error")
+				"cmd", logctx.TraceCmd, "operation", "middleware.idempotency", "err", err)
+			apijson.WriteJSONError(w, r, "idempotency", http.StatusInternalServerError, "internal server error", nil)
 			return
 		}
 		cap := v.(idempotencyCaptured)

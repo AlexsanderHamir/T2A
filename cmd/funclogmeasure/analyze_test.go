@@ -45,10 +45,13 @@ func TestShouldSkipSlogRequirement_handlerHotHelpers(t *testing.T) {
 	}{
 		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson", "ApplySecurityHeaders"},
 		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "ServerVersion"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.WriteHeader"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.Write"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.Flush"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "*metricsHTTPResponseWriter.statusCode"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "SSESubscribersGauge"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.WriteHeader"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.Write"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.Flush"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.statusCode"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "WithRecovery"},
+		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "HasValidBearerToken"},
 	} {
 		if !shouldSkipSlogRequirement(tt.pkg, tt.fn) {
 			t.Fatalf("expected skip %s.%s", tt.pkg, tt.fn)

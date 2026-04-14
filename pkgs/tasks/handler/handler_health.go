@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 func health(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.health")
 	const op = "health"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op)
 	writeJSON(w, r, op, http.StatusOK, map[string]string{
 		"status":  "ok",
@@ -22,9 +23,9 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthLive(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health.live")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.health.live")
 	const op = "health.live"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op)
 	writeJSON(w, r, op, http.StatusOK, map[string]string{
 		"status":  "ok",
@@ -33,9 +34,9 @@ func healthLive(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.health.ready")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.health.ready")
 	const op = "health.ready"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op)
 	ctx, cancel := context.WithTimeout(r.Context(), store.DefaultReadyTimeout)
 	defer cancel()
@@ -43,7 +44,7 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]string{}
 
 	if err := h.store.Ready(ctx); err != nil {
-		slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "database", "err", err,
+		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "database", "err", err,
 			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded),
 			"timeout_sec", int(store.DefaultReadyTimeout/time.Second))
 		checks["database"] = "fail"
@@ -58,7 +59,7 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 
 	if h.repo != nil {
 		if err := h.repo.Ready(); err != nil {
-			slog.Warn("readiness check failed", "cmd", httpLogCmd, "operation", op, "check", "workspace_repo", "err", err)
+			slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "workspace_repo", "err", err)
 			checks["workspace_repo"] = "fail"
 			writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
 				"status":  "degraded",

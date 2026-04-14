@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -44,7 +45,7 @@ const maxRepoLineQueryParamBytes = 32
 
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op, "search_q", truncateRunes(r.URL.Query().Get("q"), maxHTTPLogTitleRunes))
 	if r.Method != http.MethodGet {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
@@ -63,18 +64,18 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	paths, err := h.repo.Search(q)
 	dur := time.Since(t0)
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
+		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
 		writeJSONError(w, r, op, http.StatusInternalServerError, "search failed")
 		return
 	}
-	slog.Info("repo search completed", "cmd", httpLogCmd, "operation", op, "path_count", len(paths), "duration_ms", dur.Milliseconds(), "q_empty", strings.TrimSpace(q) == "")
+	slog.Info("repo search completed", "cmd", calltrace.LogCmd, "operation", op, "path_count", len(paths), "duration_ms", dur.Milliseconds(), "q_empty", strings.TrimSpace(q) == "")
 	writeJSON(w, r, op, http.StatusOK, repoSearchResponse{Paths: paths})
 }
 
 func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.repoValidateRange")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.repoValidateRange")
 	const op = "repo.validate_range"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	path := strings.TrimSpace(r.URL.Query().Get("path"))
 	startStr := strings.TrimSpace(r.URL.Query().Get("start"))
 	endStr := strings.TrimSpace(r.URL.Query().Get("end"))
@@ -139,7 +140,7 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.file"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	path := strings.TrimSpace(r.URL.Query().Get("path"))
 	debugHTTPRequest(r, op, "file_path", truncateRunes(path, maxHTTPLogTitleRunes))
 	if r.Method != http.MethodGet {
@@ -171,11 +172,11 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, r, op, http.StatusNotFound, "file not found")
 			return
 		}
-		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", httpLogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
+		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
 		writeJSONError(w, r, op, http.StatusInternalServerError, "read failed")
 		return
 	}
-	slog.Info("repo file preview", "cmd", httpLogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "binary", fp.Binary, "truncated", fp.Truncated, "size_bytes", fp.SizeBytes)
+	slog.Info("repo file preview", "cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "binary", fp.Binary, "truncated", fp.Truncated, "size_bytes", fp.SizeBytes)
 	resp := repoFileResponse{
 		Path:      path,
 		Content:   fp.Content,

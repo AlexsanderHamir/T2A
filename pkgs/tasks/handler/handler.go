@@ -5,12 +5,11 @@ import (
 	"net/http"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // Task routes: see README.md (handler_task_*.go). /repo: repo_handlers.go. SSE: sse.go.
-
-const httpLogCmd = "taskapi"
 
 type Handler struct {
 	store *store.Store
@@ -21,7 +20,7 @@ type Handler struct {
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
 // rep is optional: when nil, /repo routes return 503 and initial_prompt is not validated for file mentions.
 func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root) http.Handler {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.NewHandler")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.NewHandler")
 	h := &Handler{store: s, hub: hub, repo: rep}
 	m := http.NewServeMux()
 	m.Handle("GET /health", http.HandlerFunc(health))

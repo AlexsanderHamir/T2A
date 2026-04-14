@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -24,9 +25,9 @@ type checklistListResponse struct {
 }
 
 func (h *Handler) getChecklist(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.getChecklist")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.getChecklist")
 	const op = "tasks.checklist.list"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -42,9 +43,9 @@ func (h *Handler) getChecklist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.postChecklistItem")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.postChecklistItem")
 	const op = "tasks.checklist.create"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -69,9 +70,9 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchChecklistItem")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.patchChecklistItem")
 	const op = "tasks.checklist.patch"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	taskID, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -123,9 +124,9 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.deleteChecklistItem")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.deleteChecklistItem")
 	const op = "tasks.checklist.delete"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)

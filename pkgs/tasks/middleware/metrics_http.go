@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"log/slog"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -40,14 +41,19 @@ var (
 	})
 )
 
-// recordSSESubscriberGauge sets the process-wide SSE subscriber gauge (one hub per taskapi).
-func recordSSESubscriberGauge(n int) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.recordSSESubscriberGauge", "n", n)
+// RecordSSESubscriberGauge sets the process-wide SSE subscriber gauge (one hub per taskapi).
+func RecordSSESubscriberGauge(n int) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSESubscriberGauge", "n", n)
 	taskapiSSESubscribers.Set(float64(n))
 }
 
+// SSESubscribersGauge exposes the Prometheus gauge updated by RecordSSESubscriberGauge (tests, tooling).
+func SSESubscribersGauge() prometheus.Gauge {
+	return taskapiSSESubscribers
+}
+
 func omitHTTPMetrics(r *http.Request) bool {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.omitHTTPMetrics")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.omitHTTPMetrics")
 	if r.Method != http.MethodGet {
 		return false
 	}
@@ -63,7 +69,7 @@ func omitHTTPMetrics(r *http.Request) bool {
 // GET /health, /health/live, and /health/ready are skipped to keep probe traffic out of SLI series.
 // The route label is r.Pattern when set (Go 1.22+ ServeMux), else "other" to limit cardinality.
 func WithHTTPMetrics(h http.Handler) http.Handler {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.WithHTTPMetrics")
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithHTTPMetrics")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if omitHTTPMetrics(r) {
 			h.ServeHTTP(w, r)

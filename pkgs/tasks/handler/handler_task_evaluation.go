@@ -4,13 +4,14 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 func (h *Handler) evaluateDraft(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.evaluateDraft")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.evaluateDraft")
 	const op = "tasks.evaluate"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	var body taskEvaluateJSON
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "json_decode_failed", true)

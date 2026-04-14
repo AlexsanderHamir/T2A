@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 )
 
 // patchParentField decodes optional JSON parent_id: omitted (no change), null (clear), or string.
@@ -16,7 +18,7 @@ type patchParentField struct {
 }
 
 func (p *patchParentField) UnmarshalJSON(b []byte) error {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.patchParentField.UnmarshalJSON")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.patchParentField.UnmarshalJSON")
 	b = bytes.TrimSpace(b)
 	if len(b) == 0 {
 		return nil

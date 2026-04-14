@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 )
 
 func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.listTaskDrafts")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.listTaskDrafts")
 	const op = "task_drafts.list"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	limit := 50
 	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
 		if len(raw) > maxListIntQueryParamBytes {
@@ -36,9 +38,9 @@ func (h *Handler) listTaskDrafts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.saveTaskDraft")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.saveTaskDraft")
 	const op = "task_drafts.save"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	var body taskDraftSaveJSON
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		writeError(w, r, op, err, http.StatusBadRequest)
@@ -53,9 +55,9 @@ func (h *Handler) saveTaskDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.getTaskDraft")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.getTaskDraft")
 	const op = "task_drafts.get"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -70,9 +72,9 @@ func (h *Handler) getTaskDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteTaskDraft(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.deleteTaskDraft")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.deleteTaskDraft")
 	const op = "task_drafts.delete"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)

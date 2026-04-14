@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
 )
 
 // TaskChangeType names SSE payload types for task lifecycle.
@@ -32,26 +35,26 @@ type SSEHub struct {
 
 // NewSSEHub returns a hub with no subscribers. It is safe for concurrent use.
 func NewSSEHub() *SSEHub {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.NewSSEHub")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.NewSSEHub")
 	return &SSEHub{subs: make(map[chan string]struct{})}
 }
 
 // Subscribe registers a subscriber. The returned channel receives JSON lines;
 // cancel removes the subscriber and must be called when the HTTP request ends.
 func (h *SSEHub) Subscribe() (<-chan string, func()) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.SSEHub.Subscribe")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.SSEHub.Subscribe")
 	ch := make(chan string, 32)
 	h.mu.Lock()
 	h.subs[ch] = struct{}{}
 	n := len(h.subs)
 	h.mu.Unlock()
-	recordSSESubscriberGauge(n)
+	middleware.RecordSSESubscriberGauge(n)
 	return ch, func() {
 		h.mu.Lock()
 		delete(h.subs, ch)
 		n := len(h.subs)
 		h.mu.Unlock()
-		recordSSESubscriberGauge(n)
+		middleware.RecordSSESubscriberGauge(n)
 	}
 }
 
@@ -62,7 +65,7 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 	}
 	b, err := json.Marshal(ev)
 	if err != nil {
-		slog.Error("sse publish marshal failed", "cmd", httpLogCmd, "operation", "tasks.sse.publish", "err", err)
+		slog.Error("sse publish marshal failed", "cmd", calltrace.LogCmd, "operation", "tasks.sse.publish", "err", err)
 		return
 	}
 	line := string(b)
@@ -79,14 +82,14 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 		}
 	}
 	if len(out) > 0 {
-		slog.Debug("sse fanout", "cmd", httpLogCmd, "operation", "tasks.sse.publish",
+		slog.Debug("sse fanout", "cmd", calltrace.LogCmd, "operation", "tasks.sse.publish",
 			"event_type", ev.Type, "task_id", ev.ID, "subscribers", len(out))
 	}
 }
 
 func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	const op = "tasks.sse"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op, "sse_accept", "text/event-stream")
 	if h.hub == nil {
 		writeJSONError(w, r, op, http.StatusServiceUnavailable, "event stream unavailable")
@@ -94,7 +97,7 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		slog.Error("streaming unsupported", "cmd", httpLogCmd, "operation", op, "err", errors.New("response writer is not an http.Flusher"))
+		slog.Error("streaming unsupported", "cmd", calltrace.LogCmd, "operation", op, "err", errors.New("response writer is not an http.Flusher"))
 		writeJSONError(w, r, op, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
@@ -136,11 +139,11 @@ func logSSEWriteError(r *http.Request, op string, err error) {
 	if err == nil || r.Context().Err() != nil {
 		return
 	}
-	slog.Log(r.Context(), slog.LevelWarn, "sse write failed", "cmd", httpLogCmd, "operation", op, "err", err)
+	slog.Log(r.Context(), slog.LevelWarn, "sse write failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
 }
 
 func (h *Handler) notifyChange(typ TaskChangeType, id string) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.notifyChange", "change_type", typ)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.notifyChange", "change_type", typ)
 	if h.hub == nil || id == "" {
 		return
 	}

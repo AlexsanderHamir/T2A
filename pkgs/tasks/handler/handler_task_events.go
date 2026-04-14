@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -19,9 +20,9 @@ import (
 const maxTaskEventSeqParamBytes = 32
 
 func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvent")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.taskEvent")
 	const op = "tasks.event"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -48,7 +49,7 @@ func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDetailResponse {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.taskEventDetailFromDomain")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskEventDetailFromDomain")
 	data := json.RawMessage(ev.Data)
 	if len(data) == 0 {
 		data = json.RawMessage(`{}`)
@@ -70,7 +71,7 @@ func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDet
 }
 
 func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.taskEventLines")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskEventLines")
 	out := make([]taskEventLine, 0, len(evs))
 	for _, e := range evs {
 		data := json.RawMessage(e.Data)
@@ -95,9 +96,9 @@ func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
 }
 
 func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.taskEvents")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.taskEvents")
 	const op = "tasks.events"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -189,9 +190,9 @@ func (h *Handler) taskEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patchTaskEventUserResponse")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.patchTaskEventUserResponse")
 	const op = "tasks.event.user_response"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -233,13 +234,13 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 }
 
 func parseTaskEventsLimit(ctx context.Context, q url.Values) (limit int, err error) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseTaskEventsLimit")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseTaskEventsLimit")
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = PushCall(ctx, "parseTaskEventsLimit")
-	helperDebugIn(ctx, "parseTaskEventsLimit", "limit_q", q.Get("limit"), "before_seq_q", q.Get("before_seq"), "after_seq_q", q.Get("after_seq"))
-	defer func() { helperDebugOut(ctx, "parseTaskEventsLimit", "limit", limit, "err", err) }()
+	ctx = calltrace.Push(ctx, "parseTaskEventsLimit")
+	calltrace.HelperIOIn(ctx, "parseTaskEventsLimit", "limit_q", q.Get("limit"), "before_seq_q", q.Get("before_seq"), "after_seq_q", q.Get("after_seq"))
+	defer func() { calltrace.HelperIOOut(ctx, "parseTaskEventsLimit", "limit", limit, "err", err) }()
 	limit = 50
 	if v := q.Get("limit"); v != "" {
 		if len(v) > maxTaskEventSeqParamBytes {

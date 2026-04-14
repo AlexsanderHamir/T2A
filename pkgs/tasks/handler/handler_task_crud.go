@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/google/uuid"
@@ -20,9 +21,9 @@ const (
 )
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.create")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.create")
 	const op = "tasks.create"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	var body taskCreateJSON
 	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
 		debugHTTPRequest(r, op, "json_decode_failed", true)
@@ -69,9 +70,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.get")
 	const op = "tasks.get"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -87,9 +88,9 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.list")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.list")
 	const op = "tasks.list"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	limit, offset, afterID, err := parseListParams(r.Context(), r.URL.Query())
 	if err != nil {
 		debugHTTPRequest(r, op, "list_params_invalid", true)
@@ -113,9 +114,9 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.stats")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.stats")
 	const op = "tasks.stats"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op)
 	stats, err := h.store.TaskStats(r.Context())
 	if err != nil {
@@ -133,9 +134,9 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.patch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.patch")
 	const op = "tasks.patch"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -184,9 +185,9 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.Handler.delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.delete")
 	const op = "tasks.delete"
-	r = withCallRoot(r, op)
+	r = calltrace.WithRequestRoot(r, op)
 	id, err := parseTaskPathID(r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -208,14 +209,14 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {
-	slog.Debug("trace", "cmd", httpLogCmd, "operation", "handler.parseListParams")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseListParams")
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = PushCall(ctx, "parseListParams")
-	helperDebugIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"), "after_id_q", q.Get("after_id"))
+	ctx = calltrace.Push(ctx, "parseListParams")
+	calltrace.HelperIOIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"), "after_id_q", q.Get("after_id"))
 	defer func() {
-		helperDebugOut(ctx, "parseListParams", "limit", limit, "offset", offset, "after_id", afterID, "err", err)
+		calltrace.HelperIOOut(ctx, "parseListParams", "limit", limit, "offset", offset, "after_id", afterID, "err", err)
 	}()
 	limit = 50
 	offset = 0

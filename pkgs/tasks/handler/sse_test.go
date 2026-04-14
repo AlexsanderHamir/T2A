@@ -12,19 +12,21 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestSSE_subscriberGaugeTracksSubscribe(t *testing.T) {
-	base := testutil.ToFloat64(taskapiSSESubscribers)
+	g := middleware.SSESubscribersGauge()
+	base := testutil.ToFloat64(g)
 	h := NewSSEHub()
 	_, cancel := h.Subscribe()
-	if got := testutil.ToFloat64(taskapiSSESubscribers); got != base+1 {
+	if got := testutil.ToFloat64(g); got != base+1 {
 		t.Fatalf("after subscribe: got %v want %v", got, base+1)
 	}
 	cancel()
-	if got := testutil.ToFloat64(taskapiSSESubscribers); got != base {
+	if got := testutil.ToFloat64(g); got != base {
 		t.Fatalf("after cancel: got %v want %v", got, base)
 	}
 }

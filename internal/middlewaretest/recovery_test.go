@@ -1,4 +1,4 @@
-package handler
+package middlewaretest
 
 import (
 	"bytes"
@@ -8,13 +8,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
 )
 
 func TestWithRecovery_Returns500JSONOnPanic(t *testing.T) {
 	h := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("intentional test panic")
 	})
-	srv := httptest.NewServer(WithRecovery(h))
+	srv := httptest.NewServer(middleware.WithRecovery(h))
 	t.Cleanup(srv.Close)
 
 	res, err := http.Get(srv.URL)
@@ -47,7 +49,7 @@ func TestWithRecovery_logsMethodAndPathOnPanic(t *testing.T) {
 	})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/tasks/x1", nil)
-	WithRecovery(h).ServeHTTP(rec, req)
+	middleware.WithRecovery(h).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status %d", rec.Code)

@@ -16,31 +16,8 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-func TestMaxRequestBodyBytesConfigured(t *testing.T) {
-	t.Setenv(maxRequestBodyEnv, "")
-	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
-		t.Fatalf("unset want default")
-	}
-	t.Setenv(maxRequestBodyEnv, "4096")
-	if MaxRequestBodyBytesConfigured() != 4096 {
-		t.Fatalf("4096")
-	}
-	t.Setenv(maxRequestBodyEnv, "0")
-	if MaxRequestBodyBytesConfigured() != 0 {
-		t.Fatalf("zero means unlimited")
-	}
-	t.Setenv(maxRequestBodyEnv, "-3")
-	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
-		t.Fatalf("negative -> default")
-	}
-	t.Setenv(maxRequestBodyEnv, "nope")
-	if MaxRequestBodyBytesConfigured() != defaultMaxRequestBodyBytes {
-		t.Fatalf("invalid -> default")
-	}
-}
-
 func TestWithAccessLog_maxBodyOverLimit_logIncludesRequestID(t *testing.T) {
-	t.Setenv(maxRequestBodyEnv, "50")
+	t.Setenv("T2A_MAX_REQUEST_BODY_BYTES", "50")
 	var buf bytes.Buffer
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
@@ -87,7 +64,7 @@ func TestWithAccessLog_maxBodyOverLimit_logIncludesRequestID(t *testing.T) {
 }
 
 func TestHTTP_max_body_rejects_content_length_over_limit(t *testing.T) {
-	t.Setenv(maxRequestBodyEnv, "50")
+	t.Setenv("T2A_MAX_REQUEST_BODY_BYTES", "50")
 	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -120,7 +97,7 @@ func TestHTTP_max_body_rejects_content_length_over_limit(t *testing.T) {
 }
 
 func TestHTTP_max_body_allows_under_limit(t *testing.T) {
-	t.Setenv(maxRequestBodyEnv, "4096")
+	t.Setenv("T2A_MAX_REQUEST_BODY_BYTES", "4096")
 	db := tasktestdb.OpenSQLite(t)
 	srv := httptest.NewServer(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
@@ -138,7 +115,7 @@ func TestHTTP_max_body_allows_under_limit(t *testing.T) {
 }
 
 func TestHTTP_max_body_unknown_content_length_still_bounded(t *testing.T) {
-	t.Setenv(maxRequestBodyEnv, "48")
+	t.Setenv("T2A_MAX_REQUEST_BODY_BYTES", "48")
 	db := tasktestdb.OpenSQLite(t)
 	h := WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 

@@ -262,7 +262,7 @@ func TestWithAccessLog_idempotencyKeyTooLong_logIncludesRequestID(t *testing.T) 
 	db := tasktestdb.OpenSQLite(t)
 	h := WithAccessLog(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 
-	longKey := strings.Repeat("k", maxIdempotencyKeyLen+1)
+	longKey := strings.Repeat("k", 128+1)
 	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"x","priority":"medium"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", longKey)
@@ -303,7 +303,7 @@ func TestHTTP_idempotency_rejects_overlength_key(t *testing.T) {
 	srv := httptest.NewServer(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	longKey := strings.Repeat("k", maxIdempotencyKeyLen+1)
+	longKey := strings.Repeat("k", 128+1)
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(`{"title":"idem-long","priority":"medium"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -337,7 +337,7 @@ func TestHTTP_idempotency_accepts_boundary_key_length(t *testing.T) {
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	key := strings.Repeat("k", maxIdempotencyKeyLen)
+	key := strings.Repeat("k", 128)
 	body := `{"title":"idem-boundary","priority":"medium"}`
 
 	do := func() (int, string) {
@@ -405,7 +405,7 @@ func TestHTTP_idempotency_rejects_large_content_length(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"idem-large","priority":"medium"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", "idem-large-len")
-	req.ContentLength = maxIdempotencyBodySize + 1
+	req.ContentLength = (1 << 20) + 1
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 

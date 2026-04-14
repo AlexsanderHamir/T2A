@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
 )
 
 func TestAPIAuthEnabled(t *testing.T) {
@@ -25,19 +26,19 @@ func TestAPIAuthEnabled(t *testing.T) {
 }
 
 func TestHasValidBearerToken(t *testing.T) {
-	if hasValidBearerToken("", "secret") {
+	if HasValidBearerToken("", "secret") {
 		t.Fatal("empty header should fail")
 	}
-	if hasValidBearerToken("secret", "secret") {
+	if HasValidBearerToken("secret", "secret") {
 		t.Fatal("missing bearer prefix should fail")
 	}
-	if hasValidBearerToken("Bearer ", "secret") {
+	if HasValidBearerToken("Bearer ", "secret") {
 		t.Fatal("empty bearer should fail")
 	}
-	if hasValidBearerToken("Bearer nope", "secret") {
+	if HasValidBearerToken("Bearer nope", "secret") {
 		t.Fatal("wrong token should fail")
 	}
-	if !hasValidBearerToken("Bearer secret", "secret") {
+	if !HasValidBearerToken("Bearer secret", "secret") {
 		t.Fatal("valid token should pass")
 	}
 }
@@ -110,7 +111,7 @@ func TestWithAPIAuth_authorized_with_bearer_token(t *testing.T) {
 	h := WithAPIAuth(inner)
 
 	req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
-	req.Header.Set(authorizationHeader, "Bearer secret")
+	req.Header.Set(middleware.AuthorizationHeader, "Bearer secret")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
