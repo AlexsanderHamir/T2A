@@ -4,7 +4,9 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 
+/** Dev-only: production builds omit cache `console.error` noise (UI still surfaces query errors). */
 function logQueryError(scope: string, err: unknown): void {
+  if (!import.meta.env.DEV) return;
   console.error(`[${scope}]`, err);
 }
 

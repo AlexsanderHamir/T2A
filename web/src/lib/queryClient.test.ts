@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createAppQueryClient } from "./queryClient";
 
 describe("createAppQueryClient", () => {
-  it("logs query cache errors", () => {
+  it("logs query cache errors in development", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const client = createAppQueryClient();
     const err = new Error("query failed");
@@ -16,7 +16,7 @@ describe("createAppQueryClient", () => {
     spy.mockRestore();
   });
 
-  it("logs mutation cache errors", () => {
+  it("logs mutation cache errors in development", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const client = createAppQueryClient();
     const err = new Error("mutation failed");
