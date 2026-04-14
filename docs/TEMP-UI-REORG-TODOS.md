@@ -18,7 +18,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [x] Create `web/src/tasks/components/task-list/`
 - [x] Create `web/src/tasks/components/custom-select/`
 - [ ] Create `web/src/tasks/components/rich-prompt/`
-- [ ] Create `web/src/tasks/components/skeletons/`
+- [x] Create `web/src/tasks/components/skeletons/`
 - [ ] Keep one-off components in `components/` root only when truly standalone
 
 ## 2) Task Create Modal Family
@@ -73,8 +73,8 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 6) Skeletons Family
 
-- [ ] Move `taskLoadingSkeletons.tsx` into `skeletons/`
-- [ ] Move `taskLoadingSkeletonChunks.tsx`
+- [x] Move `taskLoadingSkeletons.tsx` into `skeletons/`
+- [x] Move `taskLoadingSkeletonChunks.tsx`
 - [ ] Update all imports in pages/components
 - [ ] Consider naming cleanup (`Task*Skeleton` consistency)
 
