@@ -1,10 +1,11 @@
 import { useCallback, useState, type FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
+import { FieldLabel } from "@/shared/FieldLabel";
 import type { TaskWithDepth } from "../flattenTaskTree";
 import type { PendingSubtaskDraft } from "../pendingSubtaskDraft";
 import { Modal } from "../../shared/Modal";
 import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
+import { TaskCreateModalPendingSubtasksField } from "./TaskCreateModalPendingSubtasksField";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
@@ -115,7 +116,6 @@ export function TaskCreateModal({
     dmapCommitLimit,
     dmapDomain,
   );
-  const subtasksHeadingId = "task-new-subtasks-heading";
 
   const [nestedOpen, setNestedOpen] = useState(false);
   const [nestedEditIndex, setNestedEditIndex] = useState<number | null>(null);
@@ -327,65 +327,13 @@ export function TaskCreateModal({
             ) : null}
 
             {!hasParent && !dmapMode ? (
-              <div className="task-create-subtasks">
-                <div className="task-create-subtasks-head">
-                  <div className="field-heading-with-req task-create-subtasks-heading-row">
-                    <h3
-                      className="task-create-subtasks-heading"
-                      id={subtasksHeadingId}
-                    >
-                      Subtasks
-                    </h3>
-                    <FieldRequirementBadge requirement="optional" />
-                  </div>
-                  <button
-                    type="button"
-                    className="task-detail-add-subtask-btn"
-                    disabled={disabled}
-                    aria-label="Open form to add a subtask"
-                    onClick={openNestedNew}
-                  >
-                    New subtask
-                  </button>
-                </div>
-                <p className="task-create-subtasks-hint muted">
-                  <strong>New subtask</strong> opens another form. Subtasks are
-                  created when you click <strong>Create</strong>.
-                </p>
-                {pendingSubtasks.length > 0 ? (
-                  <ul
-                    className="task-checklist-list"
-                    aria-labelledby={subtasksHeadingId}
-                  >
-                    {pendingSubtasks.map((d, index) => (
-                      <li
-                        key={`${index}-${d.title}`}
-                        className="task-checklist-row task-create-pending-subtask-row"
-                      >
-                        <span className="task-checklist-label">{d.title}</span>
-                        <div className="task-create-pending-subtask-actions">
-                          <button
-                            type="button"
-                            className="task-detail-checklist-add-btn"
-                            disabled={disabled}
-                            onClick={() => openNestedEdit(index)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="task-create-checklist-remove"
-                            disabled={disabled}
-                            onClick={() => onRemovePendingSubtask(index)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+              <TaskCreateModalPendingSubtasksField
+                pendingSubtasks={pendingSubtasks}
+                disabled={disabled}
+                onOpenNestedNew={openNestedNew}
+                onOpenNestedEdit={openNestedEdit}
+                onRemovePendingSubtask={onRemovePendingSubtask}
+              />
             ) : null}
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
