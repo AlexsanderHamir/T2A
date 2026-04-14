@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fetchWithTimeout,
+  jsonHeaders,
   maxErrorResponseBodyBytes,
   readError,
 } from "./shared";
@@ -76,6 +77,15 @@ describe("fetchWithTimeout", () => {
   });
 });
 
+describe("jsonHeaders", () => {
+  it("pins JSON request headers", () => {
+    expect(jsonHeaders).toEqual({
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    });
+  });
+});
+
 describe("readError", () => {
   it("returns trimmed error string from JSON", async () => {
     const msg = await readError(
@@ -103,6 +113,18 @@ describe("readError", () => {
   it("falls back to body text when JSON has no error or request_id", async () => {
     const msg = await readError(new Response("plain", { status: 502 }));
     expect(msg).toBe("plain");
+  });
+
+  it("falls back to trimmed body when JSON error is only whitespace", async () => {
+    const body = '{ "error": "   " }';
+    const msg = await readError(new Response(body, { status: 400 }));
+    expect(msg).toBe(body.trim());
+  });
+
+  it("ignores non-string error field and uses raw body", async () => {
+    const body = '{"error":true}';
+    const msg = await readError(new Response(body, { status: 400 }));
+    expect(msg).toBe(body);
   });
 
   it("falls back to statusText when body empty", async () => {
