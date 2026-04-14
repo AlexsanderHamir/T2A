@@ -183,6 +183,7 @@ func run() int {
 	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
 
 	api := taskapi.NewHTTPHandler(taskStore, hub, rep)
+	taskapi.RegisterDefaultPrometheusCollectors()
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
