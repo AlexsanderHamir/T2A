@@ -185,6 +185,7 @@ func run() int {
 
 	api := taskapi.NewHTTPHandler(taskStore, hub, rep)
 	taskapi.RegisterDefaultPrometheusCollectors()
+	taskapi.RegisterBuildInfoGauge()
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {

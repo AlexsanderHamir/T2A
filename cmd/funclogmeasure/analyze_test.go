@@ -28,6 +28,9 @@ func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
 	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "String") {
 		t.Fatal("expected internal/version.String to be excluded from funclogmeasure slog requirement")
 	}
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "PrometheusBuildInfoLabels") {
+		t.Fatal("expected internal/version.PrometheusBuildInfoLabels to be excluded (pure label helper)")
+	}
 	if shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "Other") {
 		t.Fatal("unexpected skip")
 	}

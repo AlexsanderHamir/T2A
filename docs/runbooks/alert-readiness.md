@@ -2,17 +2,46 @@
 
 ## Note
 
-**`taskapi` metrics** intentionally omit health paths from the HTTP latency histogram; **readiness** is usually monitored with a **synthetic probe** (Prometheus **blackbox_exporter**, Kubernetes readiness, or a load balancer health check).
+**`taskapi` HTTP metrics** intentionally **omit** health probe paths from the latency histogram and typical access-log volume ([API-HTTP.md](../API-HTTP.md)). **Readiness** is therefore usually monitored with a **synthetic probe** (Prometheus **blackbox_exporter**, Kubernetes **`readinessProbe`**, or load balancer health checks), not only from `taskapi_http_*`.
 
-## Example
+## Example alert (Prometheus)
 
-Uncomment and adapt the `TaskAPIReadinessProbeFailing` alert in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../../deploy/prometheus/t2a-taskapi-rules.yaml) once `probe_success` (or equivalent) exists.
+Uncomment and adapt **`TaskAPIReadinessProbeFailing`** in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../../deploy/prometheus/t2a-taskapi-rules.yaml) once you have a metric such as **`probe_success{job="blackbox-taskapi-ready"}`** from blackbox scraping **`GET /health/ready`**.
 
-## Check first
+## Severity and escalation
 
-1. **Response body:** `503` with `checks.database` / `workspace_repo` ([API-HTTP.md](../API-HTTP.md)).
-2. **Logs:** `operation` **`health.ready`** at **Warn** with **`deadline_exceeded`** when the DB ping times out.
+- Treat repeated **`503`** from **`/health/ready`** as **stop routing traffic** to that instance (orchestrator will do this when the probe fails).
+- **Escalate** to **database on-call** when `checks.database` fails; to **platform / config** when `workspace_repo` fails after a volume or **`REPO_ROOT`** change.
+
+## Dashboards
+
+1. **Blackbox** (when configured): `probe_success` and probe duration for the ready URL.
+2. **Correlated app metrics** during degradation: `taskapi:http:5xx_ratio5m`, `rate(taskapi_db_pool_wait_count_total[5m])`, `taskapi:http:mutating_p99_seconds`.
+3. **Build stamp** on each instance:
+
+   ```promql
+   max by (instance, version, revision) (taskapi_build_info)
+   ```
+
+## Direct checks (no Prometheus)
+
+```bash
+curl -sS -i "https://YOUR_HOST/health/ready"
+```
+
+- **`200`:** body should include `"status":"ok"` and per-check objects ([API-HTTP.md](../API-HTTP.md)).
+- **`503`:** parse **`checks.database`** and **`checks.workspace_repo`** (when present) for `fail`.
+
+## Logs (JSONL)
+
+When the **database** check fails, **`readiness check failed`** at **Warn** uses **`operation`** **`health.ready`** and may include **`timeout_sec`** and **`deadline_exceeded`** for **`context.DeadlineExceeded`** (see [OBSERVABILITY.md](../OBSERVABILITY.md)).
+
+```bash
+rg '"operation":"health.ready"' /var/log/taskapi/*.log
+```
 
 ## Mitigations
 
-- Restore Postgres connectivity; fix **`REPO_ROOT`** path if `workspace_repo` fails; scale DB if timeouts are load-related.
+- **Postgres:** restore connectivity, relieve overload, or extend timeouts only as a temporary measure while fixing root cause.
+- **`REPO_ROOT`:** ensure the configured directory exists and is mounted on the pod/host; fix volume mounts or config drift.
+- After recovery, confirm probes green for several scrape intervals before declaring the incident resolved.

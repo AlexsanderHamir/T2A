@@ -30,12 +30,13 @@ Cap on incoming body size for all routes on the API stack (including JSON bodies
 
 `GET /metrics` serves the default registry in Prometheus text format (Go client). It is **not** behind the access-log or HTTP-metrics middleware, so scrapes do not emit `http.access` lines or `taskapi_http_*` series for themselves. Responses use the same baseline hardening headers as other browser-facing routes (`handler.WrapPrometheusHandler`).
 
-At process start, **`taskapi`** also registers the standard Prometheus **Go** and **Process** collectors on that registry (`go_*` for goroutines, GC, and memory stats; `process_*` for CPU seconds, open FDs, resident memory, start time). They are the usual upstream metric names from `client_golang` (`collectors.NewGoCollector`, `collectors.NewProcessCollector`).
+At process start, **`taskapi`** registers the standard Prometheus **Go** and **Process** collectors on that registry (`go_*` for goroutines, GC, and memory stats; `process_*` for CPU seconds, open FDs, resident memory, start time; upstream names from `collectors.NewGoCollector`, `collectors.NewProcessCollector`), plus **`taskapi_build_info`** (gauge **1**, labels **`version`**, **`revision`**, **`go_version`**) so dashboards can match scrapes to **`GET /health`** JSON **`version`** and short **`vcs.revision`** (`internal/version.PrometheusBuildInfoLabels`).
 
 After a successful DB open, **`taskapi`** registers a custom collector that reads **[`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats)** on each scrape (no separate polling goroutine). Names use the `taskapi_db_pool_*` prefix:
 
 | Metric | Type | Labels | Notes |
 | ------ | ---- | ------ | ----- |
+| `taskapi_build_info` | Gauge | `version`, `revision`, `go_version` | Constant **1**; **`version`** matches health JSON; **`revision`** is short `vcs.revision` when embedded, else **`unknown`**. |
 | `taskapi_db_pool_max_open_connections` | Gauge | — | Pool cap from `SetMaxOpenConns`. |
 | `taskapi_db_pool_open_connections` | Gauge | — | Open connections (in use + idle). |
 | `taskapi_db_pool_in_use_connections` | Gauge | — | Connections currently running a query. |

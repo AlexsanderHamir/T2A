@@ -19,8 +19,9 @@ const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure
 // Keep this tiny: pure helpers on hot paths (e.g. health JSON) or inner-loop
 // predicates where Debug each call would flood logs. See docs/OBSERVABILITY.md.
 var skipSlogRequirement = map[string]struct{}{
-	"github.com/AlexsanderHamir/T2A/internal/version\tString":      {},
-	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter": {},
+	"github.com/AlexsanderHamir/T2A/internal/version\tString":                    {},
+	"github.com/AlexsanderHamir/T2A/internal/version\tPrometheusBuildInfoLabels": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter":               {},
 	// Header-only helper on every response; JSON paths log via setJSONHeaders / setAPISecurityHeaders.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tApplySecurityHeaders": {},
 	// Thin wrapper over internal/version.String (already excluded); health and JSON embed version without duplicating logs here.

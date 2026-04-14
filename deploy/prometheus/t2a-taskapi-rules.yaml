@@ -2,7 +2,8 @@
 # Apply with rule_files in prometheus.yml; tune thresholds for your traffic and SLOs.
 # Runbooks: docs/runbooks/
 #
-# Expected metric names: taskapi_http_* , taskapi_db_pool_* , taskapi_sse_subscribers
+# Expected metric names: taskapi_http_* , taskapi_db_pool_* , taskapi_sse_subscribers ,
+# taskapi_build_info{version,revision,go_version}
 # (see docs/API-HTTP.md and docs/OBSERVABILITY.md).
 
 groups:
