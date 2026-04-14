@@ -25,7 +25,7 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Area | Path | Notes |
 |------|------|--------|
 | HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `REPO_ROOT` set; `GET /health`, `/health/live`, `/health/ready`; `GET /metrics` (Prometheus). |
-| Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. |
+| Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. File map: `pkgs/tasks/store/README.md`. |
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
 | Agent hooks | `pkgs/agents/` | In-process ready-task queue always wired from `taskapi` (`store.SetReadyTaskNotifier`); defaults **256** cap and **5m** reconcile interval (env overrides); see `docs/AGENT-QUEUE.md` and `docs/RUNTIME-ENV.md`. |

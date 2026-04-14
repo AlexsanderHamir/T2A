@@ -1,6 +1,8 @@
 // Package store provides GORM-backed persistence for domain.Task and domain.TaskEvent
 // (pkgs/tasks/domain), including an append-only audit log on create and field changes.
 //
+// File layout: README.md in this directory maps concerns to store_*.go files.
+//
 // Prefer adding behavior as named use-case methods (small input structs, one transaction,
 // explicit audit events) rather than ad hoc SQL from callers. The handler should stay thin;
 // see docs/EXTENSIBILITY.md and .cursor/rules/13-tasks-stack-extensibility.mdc.

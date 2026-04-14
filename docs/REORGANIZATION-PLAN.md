@@ -156,7 +156,7 @@ pkgs/tasks/store/
 | Milestone | Deliverable | Risk |
 |-----------|-------------|------|
 | **M1** | Split `DESIGN.md` + update `docs/README.md` + `AGENTS.md` links | Low — **done** (hub `DESIGN.md` + `API-HTTP.md`, `API-SSE.md`, `RUNTIME-ENV.md`, `AGENT-QUEUE.md`, `PERSISTENCE.md`, `EXTENSIBILITY.md`; indexes and cross-links updated). |
-| **M2** | `docs/AGENT-QUEUE.md` + store `README` map | Low |
+| **M2** | `docs/AGENT-QUEUE.md` + store `README` map | Low — **done** (`docs/AGENT-QUEUE.md` from M1; `pkgs/tasks/store/README.md` concern→file map + `doc.go` pointer; `docs/PERSISTENCE.md` link). |
 | **M3** | Handler file naming / grouping + package README map (Option B) | Medium |
 | **M4** | Extract `internal/taskapi` (Option A) OR defer if M3 suffices | Medium–High |
 | **M5** | Optional `internal/taskapiconfig` for env | Low |
