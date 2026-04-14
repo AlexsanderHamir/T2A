@@ -122,11 +122,26 @@ export function TaskDetailChecklistSection({
       >
         {checklistQuery.isError ? (
           <div className="task-checklist-surface">
-            <p className="err-inline task-checklist-surface-pad" role="alert">
-              {checklistQuery.error instanceof Error
-                ? checklistQuery.error.message
-                : "Could not load checklist."}
-            </p>
+            <div className="task-checklist-surface-pad">
+              <div className="err task-checklist-fetch-err" role="alert">
+                <p>
+                  {checklistQuery.error instanceof Error
+                    ? checklistQuery.error.message
+                    : "Could not load checklist."}
+                </p>
+                <div className="task-detail-error-actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      void checklistQuery.refetch();
+                    }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ) : checklistQuery.isPending ? (
           <div className="task-checklist-surface">

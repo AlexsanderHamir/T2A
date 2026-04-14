@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -430,6 +430,52 @@ describe("TaskDetailPage", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.getByText("First")).toBeInTheDocument();
     expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("shows checklist fetch error with try again and refetches", async () => {
+    const user = userEvent.setup();
+    const task = taskDetail("cf", "Checklist fetch");
+    let checklistCalls = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === `/tasks/${task.id}`) {
+        return Response.json(task);
+      }
+      if (url === `/tasks/${task.id}/checklist`) {
+        checklistCalls += 1;
+        if (checklistCalls === 1) {
+          return new Response("server boom", { status: 500 });
+        }
+        return Response.json({ items: [] });
+      }
+      if (url.startsWith(`/tasks/${task.id}/events`)) {
+        return Response.json(emptyEventsPayload(task.id));
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderDetail(`/tasks/${task.id}`, mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^checklist fetch$/i }),
+    ).toBeInTheDocument();
+
+    const checklistSection = document.querySelector("#task-detail-checklist");
+    expect(checklistSection).not.toBeNull();
+    expect(
+      await within(checklistSection as HTMLElement).findByRole("alert"),
+    ).toBeInTheDocument();
+    await user.click(
+      within(checklistSection as HTMLElement).getByRole("button", {
+        name: /try again/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(checklistCalls).toBe(2);
+    });
+    expect(
+      await within(checklistSection as HTMLElement).findByText(/no criteria yet/i),
+    ).toBeInTheDocument();
   });
 
   it("navigates to parent task after successful delete when parent_id is set", () => {
