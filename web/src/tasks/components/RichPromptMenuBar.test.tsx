@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RichPromptMenuBar } from "./RichPromptMenuBar";
+import { RichPromptMenuBar } from "./rich-prompt/RichPromptMenuBar";
 
 describe("RichPromptMenuBar", () => {
   it("renders nothing when editor is null", () => {

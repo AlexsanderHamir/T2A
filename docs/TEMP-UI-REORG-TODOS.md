@@ -17,7 +17,7 @@ Scope: `web/src/tasks` (focus on component organization)
 - [ ] Create `web/src/tasks/components/task-create-modal/`
 - [x] Create `web/src/tasks/components/task-list/`
 - [x] Create `web/src/tasks/components/custom-select/`
-- [ ] Create `web/src/tasks/components/rich-prompt/`
+- [x] Create `web/src/tasks/components/rich-prompt/`
 - [x] Create `web/src/tasks/components/skeletons/`
 - [ ] Keep one-off components in `components/` root only when truly standalone
 
@@ -64,12 +64,12 @@ Scope: `web/src/tasks` (focus on component organization)
 
 ## 5) Rich Prompt Family
 
-- [ ] Move `RichPromptEditor.tsx` into `rich-prompt/`
-- [ ] Move `RichPromptMenuBar.tsx`
-- [ ] Move `RichPromptRepoHints.tsx`
+- [x] Move `RichPromptEditor.tsx` into `rich-prompt/`
+- [x] Move `RichPromptMenuBar.tsx`
+- [x] Move `RichPromptRepoHints.tsx`
 - [ ] Move `MentionRangePanel.tsx` (and related helpers/tests)
 - [ ] Keep extension files under `tasks/extensions/` unless explicitly re-scoped
-- [ ] Add `rich-prompt/index.ts` barrel exports if helpful
+- [x] Add `rich-prompt/index.ts` barrel exports if helpful
 
 ## 6) Skeletons Family
 
