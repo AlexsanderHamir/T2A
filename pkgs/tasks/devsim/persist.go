@@ -43,8 +43,8 @@ var EventCycle = []domain.EventType{
 	domain.EventSyncPing,
 }
 
-func samplePayload(typ domain.EventType) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.samplePayload", "type", typ)
+func samplePayloadForType(typ domain.EventType) ([]byte, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.samplePayloadForType", "type", typ)
 	if f, ok := samplePayloadByType[typ]; ok {
 		return f()
 	}
@@ -72,7 +72,7 @@ func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, op
 		return err
 	}
 	typ := nextEventTypeFromCount(n)
-	payload, err := samplePayload(typ)
+	payload, err := samplePayloadForType(typ)
 	if err != nil {
 		return err
 	}
