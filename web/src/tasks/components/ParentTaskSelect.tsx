@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { TaskWithDepth } from "../flattenTaskTree";
-import { CustomSelect, type CustomSelectOption } from "./custom-select/CustomSelect";
+import { CustomSelect, type CustomSelectOption } from "./custom-select";
 
 type Props = {
   id: string;

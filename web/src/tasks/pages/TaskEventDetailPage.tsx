@@ -7,7 +7,7 @@ import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { eventTypeLabel } from "../taskEventLabels";
 import { eventTypeNeedsUserInput } from "../taskEventNeedsUser";
 import { awaitingUserReply } from "../taskEventThread";
-import { TaskEventDetailSkeleton } from "../components/skeletons/taskSkeletons";
+import { TaskEventDetailSkeleton } from "../components/skeletons";
 import { taskQueryKeys } from "../queryKeys";
 
 export function TaskEventDetailPage() {

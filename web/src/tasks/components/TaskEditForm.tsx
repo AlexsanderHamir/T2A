@@ -3,7 +3,7 @@ import { STATUSES, type Priority, type Status, type TaskType } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../shared/Modal";
 import { PrioritySelect } from "./PrioritySelect";
-import { RichPromptEditor } from "./rich-prompt/RichPromptEditor";
+import { RichPromptEditor } from "./rich-prompt";
 import { TaskTypeSelect } from "./TaskTypeSelect";
 
 type Props = {

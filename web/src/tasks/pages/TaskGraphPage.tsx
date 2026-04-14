@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getTask } from "@/api";
 import type { Priority, Status } from "@/types";
-import { TaskGraphPageSkeleton } from "../components/skeletons/taskSkeletons";
+import { TaskGraphPageSkeleton } from "../components/skeletons";
 import { priorityPillClass, statusPillClass } from "../taskPillClasses";
 import { GRAPH_LAYOUT_PX } from "../graphLayout";
 import { taskQueryKeys } from "../queryKeys";
