@@ -115,7 +115,6 @@ export function MentionRangePanel({
     try {
       await onInsertWithRange(activeRange.startLine, activeRange.endLine);
     } catch (e: unknown) {
-      console.error("[MentionRangePanel] insert line range failed", e);
       setInsertError(
         e instanceof Error
           ? e.message

@@ -178,7 +178,6 @@ describe("MentionRangePanel", () => {
 
   it("shows an error when insert line range fails", async () => {
     const user = userEvent.setup();
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const onInsertWithRange = vi.fn().mockRejectedValue(new Error("Network down"));
 
     render(
@@ -199,6 +198,5 @@ describe("MentionRangePanel", () => {
     await user.click(screen.getByRole("button", { name: /insert line range/i }));
 
     expect(await screen.findByText("Network down")).toBeInTheDocument();
-    errorSpy.mockRestore();
   });
 });
