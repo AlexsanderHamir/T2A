@@ -9,6 +9,7 @@ import { TaskCreateModalParentField } from "./TaskCreateModalParentField";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
+import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -162,11 +163,7 @@ export function TaskCreateModal({
     [nestedEditIndex, onAddPendingSubtask, onUpdatePendingSubtask],
   );
 
-  const busyLabel = hasParent
-    ? "Creating subtask…"
-    : pendingSubtasks.length > 0
-      ? "Creating task and subtasks…"
-      : "Creating task…";
+  const busyLabel = taskCreateModalBusyLabel(hasParent, pendingSubtasks.length);
 
   return (
     <>
