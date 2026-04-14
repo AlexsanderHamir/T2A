@@ -45,7 +45,7 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 | **Line kind** | Filter JSONL in tools | `obs_category`: `http_access`, `http_io`, `helper_io`. |
 | **Access line** | One completion record per HTTP request (except `GET /health`, `/health/live`, `/health/ready`) | `operation` = `http.access`; includes `method`, `path`, `route`, `status`, `duration_ms`, `bytes_written`. |
 | **Readiness** | Tell DB probe timeouts from other failures | **`GET /health/ready`**: when the **`database`** check fails, **`readiness check failed`** at **Warn** (**`operation`** **`health.ready`**) includes **`timeout_sec`** (**`store.DefaultReadyTimeout`**, **2**) and **`deadline_exceeded`** when the error chain is **`context.DeadlineExceeded`**. See **`docs/API-HTTP.md`** (health). |
-| **Handler panic** | Rare bugs, easier triage | **`operation`** **`http.recover`** at **Error**: **`method`**, **`path`**, **`panic`**, **`stack`**; includes **`request_id`** when the request ran through access middleware. Client sees **500** JSON (**`internal server error`**). |
+| **Handler panic** | Rare bugs, easier triage | **`operation`** **`http.recover`** at **Error**: **`request_id`**, **`method`**, **`path`**, **`route`** (mux pattern when set), **`duration_ms`** (wall time until panic; there is no `http.access` line when the handler panics), **`panic`**, **`stack`**. Request id is attached in **`WithRecovery`** before inner middleware so correlation matches **`X-Request-ID`**. Client sees **500** JSON (**`internal server error`**). |
 | **SQL traces** | DB latency and shape | GORM → same `slog` sink; parameterized SQL; statements slower than **`T2A_GORM_SLOW_QUERY_MS`** (default 200ms, `0` disables) log at **Warn** with elapsed time and SQL in the `trace` group. |
 | **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_*`, `taskapi_sse_subscribers`, and **`taskapi_db_pool_*`** ([`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats) on scrape) as in [API-HTTP.md](./API-HTTP.md); plus standard **`go_*`** and **`process_*`** collectors from `taskapi` startup ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phases A2–A3). **`taskapi_http_request_duration_seconds`** uses **SLO-tuned** histogram buckets (finer below 1s; tail to 10s) — see [API-HTTP.md](./API-HTTP.md) Prometheus table and `pkgs/tasks/middleware/metrics_http.go` (`httpRequestDurationSecondsBuckets`). Health paths excluded from HTTP latency series where documented. Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Idempotency cache TTL: **`T2A_IDEMPOTENCY_TTL`**. Responses include the same baseline security headers as the API (`handler.WrapPrometheusHandler`, headers only—no per-scrape `handler.setAPISecurityHeaders` debug trace). Restrict scrapes in production. |
 | **Distributed traces** | Span graphs across services | Not in scope for single-process `taskapi` unless we adopt OpenTelemetry later. |
@@ -70,6 +70,14 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |
 
 **Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Use recording rules later if these queries are heavy ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
+
+### 5xx and `request failed` logging (roadmap A5)
+
+- **`http.access`** (`operation` **`http.access`**, non-probe routes): includes **`duration_ms`**, **`status`**, **`route`**, **`path`**, **`method`**; **`request_id`** is added by the JSON `slog` handler from context when present.
+- **`request failed`** (`writeError` / `writeStoreError`, **`logRequestFailure`**): **`operation`**, **`http_status`**, **`err`**, explicit **`request_id`** and **`route`** (for grep and Loki-style queries). **`duration_ms`** for the same request appears on the companion **`http.access`** line when the request completes without panicking.
+- **Panics** (`middleware.WithRecovery`): **`http.recover`** line includes **`request_id`**, **`route`**, **`duration_ms`** because the access middleware does not run to completion on panic.
+- **JSON encode failures** (`response encode failed` in **`handler`** / **`apijson`**): **`request_id`**, **`route`** (and **`method`**/**`path`** in **`apijson`**) where the request is available.
+- **Idempotency singleflight errors**: **`middleware.idempotency`** log includes **`request_id`**, **`method`**, **`path`**, **`route`**.
 
 ## Checklist: increasing observability
 

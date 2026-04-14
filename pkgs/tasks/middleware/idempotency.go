@@ -253,8 +253,21 @@ func WithIdempotency(h http.Handler) http.Handler {
 			return cap, nil
 		})
 		if err != nil {
+			route := ""
+			path := ""
+			if r.URL != nil {
+				path = r.URL.Path
+			}
+			if r.Pattern != "" {
+				route = r.Pattern
+			} else {
+				route = path
+			}
 			slog.Log(r.Context(), slog.LevelError, "idempotency singleflight error",
-				"cmd", logctx.TraceCmd, "operation", "middleware.idempotency", "err", err)
+				"cmd", logctx.TraceCmd, "operation", "middleware.idempotency",
+				"request_id", logctx.RequestIDFromContext(r.Context()),
+				"method", r.Method, "path", path, "route", route,
+				"err", err)
 			apijson.WriteJSONError(w, r, "idempotency", http.StatusInternalServerError, "internal server error", nil)
 			return
 		}

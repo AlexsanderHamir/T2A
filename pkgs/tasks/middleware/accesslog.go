@@ -75,6 +75,10 @@ func WithAccessLog(h http.Handler, callPath func(context.Context) string) http.H
 
 func resolveAndAttachRequestID(w http.ResponseWriter, r *http.Request) *http.Request {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.resolveAndAttachRequestID")
+	if id := logctx.RequestIDFromContext(r.Context()); id != "" {
+		w.Header().Set("X-Request-ID", id)
+		return r
+	}
 	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 	if id == "" {
 		id = uuid.NewString()

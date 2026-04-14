@@ -45,6 +45,9 @@ func TestMiddlewareStack_innerPanic_returnsJSON500(t *testing.T) {
 	if body.Error != "internal server error" {
 		t.Fatalf("error message: got %q, want %q", body.Error, "internal server error")
 	}
+	if rid := strings.TrimSpace(rec.Header().Get("X-Request-ID")); rid == "" {
+		t.Fatal("expected X-Request-ID on panic response for correlation")
+	}
 }
 
 func TestMiddlewareStack_innerOK(t *testing.T) {

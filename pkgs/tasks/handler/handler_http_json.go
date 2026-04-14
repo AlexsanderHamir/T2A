@@ -14,6 +14,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
 
 func actorFromRequest(r *http.Request) (a domain.Actor) {
@@ -101,7 +102,14 @@ func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v an
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(v); err != nil {
-		slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
+		if r != nil {
+			rid := logctx.RequestIDFromContext(r.Context())
+			route := requestRouteLabel(r)
+			slog.Log(r.Context(), slog.LevelError, "response encode failed",
+				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route, "err", err)
+		} else {
+			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
+		}
 		writeJSONError(w, r, op, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -172,7 +180,7 @@ func writeError(w http.ResponseWriter, r *http.Request, op string, err error, co
 	}
 	ctxErr := calltrace.Push(requestCtx(r), "writeError")
 	calltrace.HelperIOIn(ctxErr, "writeError", "http_op", op, "http_status", code, "err", err)
-	logRequestFailure(requestCtx(r), op, err, code)
+	logRequestFailure(r, op, err, code)
 	msg := http.StatusText(code)
 	switch code {
 	case http.StatusRequestEntityTooLarge:
@@ -228,7 +236,7 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, op string, err erro
 	calltrace.HelperIOIn(ctxErr, "writeStoreError", "http_op", op, "err", err)
 	code, msg := storeErrHTTPResponse(ctxErr, err)
 	calltrace.HelperIOOut(ctxErr, "writeStoreError", "http_status", code, "client_facing_msg", msg)
-	logRequestFailure(requestCtx(r), op, err, code)
+	logRequestFailure(r, op, err, code)
 	writeJSONError(w, r, op, code, msg)
 }
 
@@ -240,8 +248,34 @@ func requestCtx(r *http.Request) context.Context {
 	return r.Context()
 }
 
-func logRequestFailure(ctx context.Context, op string, err error, httpStatus int) {
-	attrs := []any{"cmd", calltrace.LogCmd, "operation", op, "call_path", calltrace.Path(ctx), "http_status", httpStatus, "err", err}
+func requestRouteLabel(r *http.Request) string {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.requestRouteLabel")
+	if r == nil {
+		return ""
+	}
+	if r.Pattern != "" {
+		return r.Pattern
+	}
+	if r.URL != nil {
+		return r.URL.Path
+	}
+	return ""
+}
+
+func logRequestFailure(r *http.Request, op string, err error, httpStatus int) {
+	ctx := requestCtx(r)
+	rid := ""
+	route := ""
+	if r != nil {
+		rid = logctx.RequestIDFromContext(ctx)
+		route = requestRouteLabel(r)
+	}
+	attrs := []any{
+		"cmd", calltrace.LogCmd, "operation", op,
+		"call_path", calltrace.Path(ctx),
+		"http_status", httpStatus, "err", err,
+		"request_id", rid, "route", route,
+	}
 	if httpStatus >= 500 {
 		slog.Log(ctx, slog.LevelError, "request failed", attrs...)
 		return

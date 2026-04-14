@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
 )
@@ -37,7 +38,26 @@ func WriteJSONError(w http.ResponseWriter, r *http.Request, op string, code int,
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(body); err != nil {
-		slog.Error("response encode failed", "cmd", logctx.TraceCmd, "operation", op, "err", err)
+		rid := ""
+		route := ""
+		method := ""
+		path := ""
+		if r != nil {
+			rid = logctx.RequestIDFromContext(ctx)
+			method = r.Method
+			if r.URL != nil {
+				path = r.URL.Path
+			}
+			if r.Pattern != "" {
+				route = r.Pattern
+			} else {
+				route = path
+			}
+		}
+		slog.Log(ctx, slog.LevelError, "response encode failed",
+			"cmd", logctx.TraceCmd, "operation", op,
+			"request_id", rid, "method", strings.TrimSpace(method), "path", path, "route", route,
+			"err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = io.WriteString(w, "{\"error\":\"internal server error\"}\n")
 		return
