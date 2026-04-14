@@ -12,11 +12,11 @@ import { taskCreateModalDmapReady } from "./taskCreateModalDmapReady";
 import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
 import { TaskCreateModalNestedSubtaskModal } from "./TaskCreateModalNestedSubtaskModal";
 import { useTaskCreateModalNestedDraft } from "./useTaskCreateModalNestedDraft";
+import { TaskCreateModalFooterActions } from "./TaskCreateModalFooterActions";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
 } from "./TaskCreateModalEvaluationSummary";
-import { TaskCreateModalFooterActions } from "./TaskCreateModalFooterActions";
 
 type Props = {
   pending: boolean;

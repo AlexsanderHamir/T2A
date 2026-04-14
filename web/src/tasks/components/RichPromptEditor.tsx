@@ -240,9 +240,13 @@ export function RichPromptEditor({
       ) : null}
       <RichPromptRepoHints
         showRepoMisconfigHint={showRepoMisconfigHint}
-        workspaceBroken={workspaceProbe.state === "broken"}
+        workspaceBroken={
+          workspaceProbe !== "pending" && workspaceProbe.state === "broken"
+        }
         fileSearchFailedWhileAvailable={
-          workspaceProbe.state === "available" && fileSearchUnavailable
+          workspaceProbe !== "pending" &&
+          workspaceProbe.state === "available" &&
+          fileSearchUnavailable
         }
         showRepoUnknownHint={showRepoUnknownHint}
         showFileSearchSpinner={showFileSearchSpinner}
