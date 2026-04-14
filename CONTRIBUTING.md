@@ -33,7 +33,7 @@ Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when
 
 Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
-**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`).
+**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests).
 
 **Observability:** When you change HTTP middleware, correlation, or logging shape, follow [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md). Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
 
@@ -42,7 +42,7 @@ Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 When you change REST paths, query params, response shapes, SSE payload types, or audit event types:
 
 - Update the relevant contract doc (`docs/API-HTTP.md`, `docs/API-SSE.md`, and/or `docs/RUNTIME-ENV.md`) plus `docs/DESIGN.md` when limitations or hub links change (`README.md` / `docs/WEB.md` if user-facing commands or Vite env change).
-- Reorder or add `With*` middleware for `taskapi`: edit `pkgs/tasks/handler.MiddlewareStack` (used by `internal/taskapi.NewHTTPHandler`) and extend [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) if log fields or metrics change.
+- Reorder or add `With*` middleware for `taskapi`: edit `pkgs/tasks/middleware.Stack` (used by `internal/taskapi.NewHTTPHandler` with `calltrace.Path`) and extend [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) if log fields or metrics change.
 - Update `web/src/api/parseTaskApi.ts` (and `web/src/types/` if needed) and tests.
 - Update Go handler/store tests so defaults still pass without real Postgres or network.
 

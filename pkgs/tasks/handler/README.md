@@ -2,22 +2,24 @@
 
 HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/API-HTTP.md](../../docs/API-HTTP.md), [docs/API-SSE.md](../../docs/API-SSE.md). **How to extend:** [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md).
 
-The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind the standard stack from **`handler.MiddlewareStack`**, invoked by **`internal/taskapi.NewHTTPHandler`**. Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
+The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind **`middleware.Stack(..., calltrace.Path)`** from **`internal/taskapi.NewHTTPHandler`**. Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
 
-## Middleware (`With*` — outer stack from `MiddlewareStack`)
+## Middleware (`With*` — outer stack from `middleware.Stack`)
 
-| Middleware | File | Role |
-|------------|------|------|
-| `WithRecovery` | `recovery.go` | Panic → 500 JSON. |
-| `WithHTTPMetrics` | `metrics_http.go` | Prometheus `taskapi_http_*` + in-flight gauge (health paths excluded from latency). |
-| `WithAccessLog` | `accesslog.go` | `http.access` line, `request_id`, `log_seq` scope. |
-| `WithRateLimit` | `rate_limit.go` | Per-IP token bucket (`T2A_RATE_LIMIT_PER_MIN`). |
-| `WithAPIAuth` | `api_auth.go` | Optional bearer token (`T2A_API_TOKEN`). |
-| `WithRequestTimeout` | `request_timeout.go` | Context deadline on API routes; SSE exempt. |
-| `WithMaxRequestBody` | `max_body.go` | Body size cap (`T2A_MAX_REQUEST_BODY_BYTES`). |
-| `WithIdempotency` | `idempotency.go`, `idempotency_cache.go` | `Idempotency-Key` replay cache. |
+Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import of `handler`). **`middleware_shim.go`** re-exports the same names for `cmd/taskapi` and tests that still import `handler`. **File map, `Stack` order, and env table:** [`../middleware/README.md`](../middleware/README.md).
 
-`stack.go` defines **`MiddlewareStack`**, which composes the `With*` layers in the order above.
+| Middleware | Role |
+|------------|------|
+| `WithRecovery` | Panic → 500 JSON. |
+| `WithHTTPMetrics` | Prometheus `taskapi_http_*` + in-flight gauge (health paths excluded from latency). |
+| `WithAccessLog` | `http.access` line, `request_id`, `log_seq` scope. |
+| `WithRateLimit` | Per-IP token bucket (`T2A_RATE_LIMIT_PER_MIN`). |
+| `WithAPIAuth` | Optional bearer token (`T2A_API_TOKEN`). |
+| `WithRequestTimeout` | Context deadline on API routes; SSE exempt. |
+| `WithMaxRequestBody` | Body size cap (`T2A_MAX_REQUEST_BODY_BYTES`). |
+| `WithIdempotency` | `Idempotency-Key` replay cache. |
+
+**`middleware.Stack(inner, callPath)`** in `pkgs/tasks/middleware/stack.go` composes the `With*` layers; production passes **`calltrace.Path`** so access logs include `call_path`.
 
 `GET /metrics` is registered on the **outer** mux in `cmd/taskapi` (not on the inner handler mux).
 
@@ -54,14 +56,13 @@ The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only)
 
 | File | Role |
 |------|------|
-| `calllog.go` | `withCallRoot`, `PushCall`, `call_path` for nested handler/helper traces. |
-| `observe.go` | `RunObserved` for structured helper in/out pairs. |
-| `httplog_io.go` | `http.io` / `helper.io` debug summaries. |
-| (sibling package) | **[`pkgs/tasks/logctx`](../logctx/)** — `ContextWithLogSeq`, `ContextWithRequestID`, `RequestIDFromContext`, slog wrappers (`WrapSlogHandlerWithLogSequence`, `WrapSlogHandlerWithRequestContext`). Used from `accesslog.go`, `handler_http_json.go`, and `cmd/taskapi/run.go` (no import cycle). |
-| (sibling package) | **[`pkgs/tasks/apijson`](../apijson/)** — `ApplySecurityHeaders`, `WriteJSONError` (JSON `{"error", "request_id"}` + `http.io` debug). `handler` wraps `WriteJSONError` with `CallPath`; future middleware can call `apijson` directly with `callPath` nil. |
+| (sibling package) | **[`pkgs/tasks/calltrace`](../calltrace/)** — `WithRequestRoot`, `Push`, `Path`, `RunObserved`, `HelperIOIn` / `HelperIOOut` for `call_path` and helper.io traces. File map: [`../calltrace/README.md`](../calltrace/README.md). |
+| `httplog_io.go` | `http.io` debug summaries (uses `calltrace.Path`). |
+| (sibling package) | **[`pkgs/tasks/logctx`](../logctx/)** — `ContextWithLogSeq`, `ContextWithRequestID`, `RequestIDFromContext`, slog wrappers (`WrapSlogHandlerWithLogSequence`, `WrapSlogHandlerWithRequestContext`). Used from middleware, `handler_http_json.go`, and `cmd/taskapi/run.go` (no import cycle). |
+| (sibling package) | **[`pkgs/tasks/apijson`](../apijson/)** — `ApplySecurityHeaders`, `WriteJSONError` (JSON `{"error", "request_id"}` + `http.io` debug). `handler` passes `calltrace.Path` into `WriteJSONError`; middleware receives the same `Path` function from `internal/taskapi`. |
 
 ## Tests
 
-`handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). **`stack_test.go`** asserts the production **`MiddlewareStack`** (panic → JSON 500, happy path). Integration-style tests may use `handler_http_testserver_test.go` helpers.
+`handler_http*.go`, `*_test.go` beside the feature under test (`handler_http_checklist_test.go`, `idempotency_test.go`, `sse_test.go`, etc.). **`stack_test.go`** asserts the production **`middleware.Stack(..., calltrace.Path)`** wiring (panic → JSON 500, happy path). Call-stack unit tests live in **`pkgs/tasks/calltrace`**. Integration-style tests may use `handler_http_testserver_test.go` helpers.
 
 When adding a **new** route or middleware file, extend this README in the same PR.

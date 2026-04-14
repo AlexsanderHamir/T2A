@@ -15,7 +15,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 
-**`cmd/taskapi` wiring (code, not prose contracts):** binary layout [`cmd/taskapi/README.md`](../cmd/taskapi/README.md); startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`pkgs/tasks/handler`](../pkgs/tasks/handler) (`MiddlewareStack` in `stack.go`, called from [`internal/taskapi`](../internal/taskapi) `NewHTTPHandler`); REST/SSE handlers in the same [`pkgs/tasks/handler`](../pkgs/tasks/handler) package ([`README.md`](../pkgs/tasks/handler/README.md)).
+**`cmd/taskapi` wiring (code, not prose contracts):** binary layout [`cmd/taskapi/README.md`](../cmd/taskapi/README.md); startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`pkgs/tasks/middleware`](../pkgs/tasks/middleware) (`Stack` in `stack.go`, called from [`internal/taskapi`](../internal/taskapi) `NewHTTPHandler` with `calltrace.Path`); REST/SSE handlers in [`pkgs/tasks/handler`](../pkgs/tasks/handler) ([`README.md`](../pkgs/tasks/handler/README.md)).
 
 ## Goals
 

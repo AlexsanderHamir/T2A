@@ -25,8 +25,9 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Area | Path | Notes |
 |------|------|--------|
 | HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `REPO_ROOT` set; `GET /health`, `/health/live`, `/health/ready`; `GET /metrics` (Prometheus). File map: `pkgs/tasks/handler/README.md`. |
+| Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs; used by `handler`, `middleware` (injected path), `internal/taskapi`. README: `pkgs/tasks/calltrace/README.md`. |
 | Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; imported by `handler` and `cmd/taskapi` (stdlib-only, no cycle with `handler`). |
-| JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. `handler` delegates `writeJSONError` here (passes `CallPath` for debug). |
+| JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. `handler` delegates `writeJSONError` here (passes `calltrace.Path` for debug). |
 | Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. File map: `pkgs/tasks/store/README.md`. |
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
@@ -34,7 +35,8 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | taskapi startup env | `internal/taskapiconfig/` | Listen host, log level / minimized logging, agent queue + reconcile interval, dev SSE ticker interval (see `cmd/taskapi/run.go`). |
-| taskapi HTTP stack | `pkgs/tasks/handler/stack.go` + `internal/taskapi/` | `handler.MiddlewareStack` composes `With*` layers; `internal/taskapi.NewHTTPHandler` wires store/hub/repo into `handler.NewHandler` then applies the stack (see `cmd/taskapi/run.go`). |
+| taskapi HTTP stack | `pkgs/tasks/middleware/` + `pkgs/tasks/handler/middleware_shim.go` + `internal/taskapi/` | `middleware.Stack(inner, calltrace.Path)` composes `With*` layers; `internal/taskapi.NewHTTPHandler` wires store/hub/repo into `handler.NewHandler` then applies the stack (see `cmd/taskapi/run.go`). File map + env table: `pkgs/tasks/middleware/README.md`. Handler tests and `handler.With*` shims re-export middleware for the same package. |
+| Middleware black-box tests | `internal/middlewaretest/` | Exported-API-only tests for `pkgs/tasks/middleware` (keeps the middleware package tree smaller; see `middleware/README.md` Tests). |
 | SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default store/handler/agent tests (`tasktestdb.OpenSQLite`). |
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks, burst count + SSE (`cmd/taskapi`); see `docs/API-SSE.md`. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |

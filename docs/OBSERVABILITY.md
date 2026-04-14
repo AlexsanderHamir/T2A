@@ -27,7 +27,7 @@ From production logs (and future metrics if we add them), we want to answer:
 - Functions in files with **no** successful type check for their package may be skipped (a warning is logged to stderr).
 - Helpers that **only** call non-`slog` wrappers (for example pure `writeStoreError` without a `slog` call inside **this** function) do **not** count.
 - **`cmd/funclogmeasure`** is **skipped by default**; use `-include-tool` to audit it too.
-- A **tiny allowlist** in `cmd/funclogmeasure` excludes helpers where a per-call `slog` trace would be misleading or hot-path expensive (today: `internal/version.String`; `pkgs/repo.isMentionDelimiter` inside `ParseFileMentions`; `apijson.ApplySecurityHeaders` on every response / scrape; `handler.ServerVersion` as a thin wrapper over `internal/version.String`; `handler.(*metricsHTTPResponseWriter).{WriteHeader,Write,Flush,statusCode}` on the Prometheus metrics wrapper).
+- A **tiny allowlist** in `cmd/funclogmeasure` excludes helpers where a per-call `slog` trace would be misleading or hot-path expensive (today: `internal/version.String`; `pkgs/repo.isMentionDelimiter` inside `ParseFileMentions`; `apijson.ApplySecurityHeaders` on every response / scrape; `handler.ServerVersion` as a thin wrapper over `internal/version.String`; `middleware.(*metricsHTTPResponseWriter).{WriteHeader,Write,Flush,statusCode}` on the Prometheus metrics wrapper).
 
 We do **not** treat a single percentage as a product SLO. Use the **checklists** below, **`funclogmeasure`** for the per-function log target, and **test coverage** scripts where they still help.
 
@@ -60,7 +60,7 @@ When you add or materially change behavior, use this list (copy into a PR descri
 - [ ] **Failures:** Use `writeError` / `writeStoreError` (or `slog.Log(r.Context(), …)`) so client/server errors keep correlation.
 - [ ] **SSE:** Long streams still get one access line at the end; publish path uses `slog` appropriately (see `tasks.sse.publish` at Debug when subscribers exist).
 - [ ] **Operations:** New code paths use a stable, grep-friendly `operation` string (existing pattern: `tasks.*`, `repo.*`, `http.*`).
-- [ ] **IO visibility:** At Debug, `http.io` lines record `phase` `in`/`out`, handler `operation`, `call_path`, and safe input/output summaries; helpers emit `helper.io` with `function` and the same `call_path` (see `calllog.go`, `docs/API-HTTP.md` — structured logs). Use `RunObserved` when a helper should log explicit input/output key/value pairs. New routes: `withCallRoot(r, op)` first; pass `r.Context()` into helpers that support `PushCall`—avoid secrets and unbounded payloads.
+- [ ] **IO visibility:** At Debug, `http.io` lines record `phase` `in`/`out`, handler `operation`, `call_path`, and safe input/output summaries; helpers emit `helper.io` with `function` and the same `call_path` (see `pkgs/tasks/calltrace`, `docs/API-HTTP.md` — structured logs). Use `calltrace.RunObserved` when a helper should log explicit input/output key/value pairs. New routes: `calltrace.WithRequestRoot(r, op)` first; pass `r.Context()` into helpers that support `calltrace.Push`—avoid secrets and unbounded payloads.
 
 ### Background work (`pkgs/tasks/devsim`, tickers, etc.)
 
