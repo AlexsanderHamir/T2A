@@ -1,13 +1,11 @@
 import { useState, type FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import {
-  FieldLabel,
-  FieldRequirementBadge,
-} from "@/shared/FieldLabel";
+import { FieldLabel } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskTypeSelect } from "./TaskTypeSelect";
 import { RichPromptEditor } from "./RichPromptEditor";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
+import { TaskComposeChecklistFields } from "./TaskComposeChecklistFields";
 
 export type TaskComposeFieldsProps = {
   /** Prefix for stable `id`s, e.g. `task-new` → `task-new-title`. */
@@ -142,66 +140,14 @@ export function TaskComposeFields({
       </div>
 
       {!hideChecklist ? (
-        <div className="task-create-checklist">
-          <div className="task-create-checklist-head">
-            <div className="field-heading-with-req task-create-checklist-title-row">
-              <h3
-                className="task-create-checklist-heading"
-                id={checklistHeadingId}
-              >
-                Done criteria
-              </h3>
-              <FieldRequirementBadge requirement="optional" />
-            </div>
-            <button
-              type="button"
-              className="task-detail-add-checklist-btn"
-              disabled={disabled}
-              onClick={openCriterionModal}
-            >
-              New criterion
-            </button>
-          </div>
-          <p className="task-create-checklist-hint muted">
-            All items must be satisfied before the task is done.{" "}
-            <strong>New criterion</strong> adds one; saved when you click{" "}
-            <strong>Create</strong>.
-          </p>
-          {checklistItems.length > 0 ? (
-            <div className="task-checklist-surface">
-              <ul
-                className="task-checklist-list task-checklist-list--grouped"
-                aria-labelledby={checklistHeadingId}
-              >
-                {checklistItems.map((text, index) => (
-                  <li key={`${index}-${text}`} className="task-checklist-row">
-                    <div className="task-checklist-row-main">
-                      <span className="task-checklist-text">{text}</span>
-                    </div>
-                    <div className="task-checklist-row-actions">
-                      <button
-                        type="button"
-                        className="task-detail-checklist-edit"
-                        disabled={disabled}
-                        onClick={() => openEditCriterionModal(index, text)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="task-detail-checklist-remove"
-                        disabled={disabled}
-                        onClick={() => onRemoveChecklistRow(index)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
+        <TaskComposeChecklistFields
+          checklistHeadingId={checklistHeadingId}
+          checklistItems={checklistItems}
+          disabled={disabled}
+          onOpenNewCriterion={openCriterionModal}
+          onOpenEditCriterion={openEditCriterionModal}
+          onRemoveRow={onRemoveChecklistRow}
+        />
       ) : null}
 
       {criterionModalOpen ? (
