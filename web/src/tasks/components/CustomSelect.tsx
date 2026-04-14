@@ -21,6 +21,7 @@ import {
   nextSelectable,
   prevSelectable,
 } from "./customSelectModel";
+import { CustomSelectDropdown } from "./CustomSelectDropdown";
 import { CustomSelectRowBody } from "./CustomSelectRowBody";
 
 export type { CustomSelectOption } from "./customSelectModel";
@@ -227,72 +228,24 @@ export function CustomSelect({
 
   const dropdown =
     open && pos ? (
-      <ul
+      <CustomSelectDropdown
         ref={listRef}
-        id={listboxId}
-        role="listbox"
-        tabIndex={-1}
-        aria-label={lb}
-        aria-activedescendant={
+        listboxId={listboxId}
+        listboxAriaLabel={lb}
+        value={value}
+        options={options}
+        highlight={highlight}
+        compact={compact}
+        ariaActivedescendant={
           highlightedOption ? optionId(highlightedOption.value) : undefined
         }
-        className="custom-select-dropdown"
-        style={{
-          position: "fixed",
-          top: pos.top,
-          left: pos.left,
-          width: Math.max(pos.width, compact ? 10 * 16 : 12 * 16),
-          /* Above modals — matches --z-portal-popover in app-design-tokens.css */
-          zIndex: "var(--z-portal-popover)",
-        }}
-        onKeyDown={onListKeyDown}
-        onBlur={() => setOpen(false)}
-      >
-        {options.map((o, i) =>
-          isCustomSelectHeader(o) ? (
-            <li
-              key={`header-${i}-${o.label}`}
-              role="presentation"
-              className="custom-select-option-header"
-            >
-              {o.label}
-            </li>
-          ) : (
-            <li
-              key={o.value}
-              id={optionId(o.value)}
-              role="option"
-              aria-selected={o.value === value}
-              aria-label={
-                o.rowTag ? `${o.rowTag}: ${o.label}` : undefined
-              }
-              className={
-                i === highlight
-                  ? "custom-select-option custom-select-option--highlight"
-                  : "custom-select-option"
-              }
-              style={
-                o.depth != null && o.depth > 0
-                  ? {
-                      paddingLeft: `calc(0.35rem + ${o.depth} * 0.85rem)`,
-                    }
-                  : undefined
-              }
-              onMouseEnter={() => setHighlight(i)}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pick(o.value)}
-            >
-              <CustomSelectRowBody
-                variant="option"
-                rowTag={o.rowTag}
-                label={o.label}
-                pillClass={o.pillClass}
-                depth={o.depth}
-              />
-            </li>
-          ),
-        )}
-      </ul>
+        optionId={optionId}
+        pos={pos}
+        onListKeyDown={onListKeyDown}
+        onClose={() => setOpen(false)}
+        onHighlightIndex={setHighlight}
+        onPick={pick}
+      />
     ) : null;
 
   return (
