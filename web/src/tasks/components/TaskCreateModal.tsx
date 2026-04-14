@@ -9,6 +9,7 @@ import { PrioritySelect } from "./PrioritySelect";
 import { TaskComposeFields } from "./TaskComposeFields";
 import { TaskCreateModalDraftNameField } from "./TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
+import { taskCreateModalDmapReady } from "./taskCreateModalDmapReady";
 import { TaskCreateModalInheritChecklistField } from "./TaskCreateModalInheritChecklistField";
 import { TaskCreateModalNestedSubtaskModal } from "./TaskCreateModalNestedSubtaskModal";
 import {
@@ -109,11 +110,11 @@ export function TaskCreateModal({
   const hasParent = Boolean(parentId.trim());
   const hideComposeChecklist = hasParent && checklistInherit;
   const dmapMode = taskType === "dmap";
-  const parsedCommitLimit = Number.parseInt(dmapCommitLimit, 10);
-  const dmapCommitValid =
-    Number.isInteger(parsedCommitLimit) && parsedCommitLimit > 0;
-  const dmapDomainValid = dmapDomain.trim().length > 0;
-  const dmapReady = !dmapMode || (dmapCommitValid && dmapDomainValid);
+  const dmapReady = taskCreateModalDmapReady(
+    dmapMode,
+    dmapCommitLimit,
+    dmapDomain,
+  );
   const subtasksHeadingId = "task-new-subtasks-heading";
 
   const [nestedOpen, setNestedOpen] = useState(false);
