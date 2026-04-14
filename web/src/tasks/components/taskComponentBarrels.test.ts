@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CustomSelect } from "./custom-select";
-import { RichPromptEditor } from "./rich-prompt";
-import { TaskCreateModal } from "./task-create-modal";
-import { TaskListSection } from "./task-list";
-import { TaskDetailPageSkeleton } from "./skeletons";
+import { CustomSelect, isCustomSelectHeader } from "./custom-select";
+import { MentionRangePanel, RichPromptEditor } from "./rich-prompt";
+import { taskCreateModalBusyLabel, TaskCreateModal } from "./task-create-modal";
+import { filterTasksForListView, TaskListSection } from "./task-list";
+import {
+  TaskChecklistSkeletonRows,
+  TaskDetailPageSkeleton,
+} from "./skeletons";
 
 describe("tasks component barrels", () => {
   it("re-exports primary symbols from each family index", () => {
@@ -11,6 +14,14 @@ describe("tasks component barrels", () => {
     expect(TaskCreateModal).toBeTypeOf("function");
     expect(CustomSelect).toBeTypeOf("function");
     expect(RichPromptEditor).toBeTypeOf("function");
+    expect(MentionRangePanel).toBeTypeOf("function");
     expect(TaskDetailPageSkeleton).toBeTypeOf("function");
+  });
+
+  it("re-exports non-UI helpers through the same barrels", () => {
+    expect(isCustomSelectHeader).toBeTypeOf("function");
+    expect(filterTasksForListView).toBeTypeOf("function");
+    expect(taskCreateModalBusyLabel).toBeTypeOf("function");
+    expect(TaskChecklistSkeletonRows).toBeTypeOf("function");
   });
 });
