@@ -5,7 +5,13 @@ export const maxRepoPathQueryBytes = 4096;
 export const maxRepoSearchQueryBytes = 512;
 export const maxRepoLineQueryParamBytes = 32;
 
-const searchRepoFetchTimeoutMs = 45_000;
+/**
+ * Hard ceiling on every `/repo/*` and `/health/ready` fetch in this module
+ * (probe, search, validate-range, file). Long enough to absorb a cold
+ * filesystem walk on first hit, short enough that a hung backend cannot
+ * pin a UI request forever.
+ */
+const repoFetchTimeoutMs = 45_000;
 
 function assertRepoRelPath(path: string): string {
   const t = path.trim();
@@ -35,7 +41,12 @@ function assertRepoLineQueryParam(name: string, n: number): string {
   return s;
 }
 
-function searchRepoCombinedSignal(
+/**
+ * Build an AbortSignal that fires when either the caller's signal aborts or
+ * the shared `repoFetchTimeoutMs` deadline elapses. Shared by every fetch
+ * in this module so abort/timeout semantics stay consistent across endpoints.
+ */
+function repoFetchCombinedSignal(
   user?: AbortSignal,
 ): AbortSignal | undefined {
   const AT = AbortSignal as typeof AbortSignal & {
@@ -43,7 +54,7 @@ function searchRepoCombinedSignal(
     any?: (signals: AbortSignal[]) => AbortSignal;
   };
   const timeoutSig =
-    typeof AT.timeout === "function" ? AT.timeout(searchRepoFetchTimeoutMs) : undefined;
+    typeof AT.timeout === "function" ? AT.timeout(repoFetchTimeoutMs) : undefined;
   if (!timeoutSig) {
     return user;
   }
@@ -84,7 +95,7 @@ export async function probeRepoWorkspace(
   try {
     const res = await fetch("/health/ready", {
       headers: { Accept: "application/json" },
-      signal: searchRepoCombinedSignal(options?.signal),
+      signal: repoFetchCombinedSignal(options?.signal),
     });
     let raw: unknown;
     try {
@@ -134,7 +145,7 @@ export async function searchRepoFiles(
   const params = new URLSearchParams({ q });
   const res = await fetch(`/repo/search?${params}`, {
     headers: { Accept: "application/json" },
-    signal: searchRepoCombinedSignal(options?.signal),
+    signal: repoFetchCombinedSignal(options?.signal),
   });
   if (res.status === 503) {
     return null;
@@ -175,7 +186,7 @@ export async function validateRepoRange(
   });
   const res = await fetch(`/repo/validate-range?${params}`, {
     headers: { Accept: "application/json" },
-    signal: searchRepoCombinedSignal(options?.signal),
+    signal: repoFetchCombinedSignal(options?.signal),
   });
   if (res.status === 503) {
     return null;
@@ -216,7 +227,7 @@ export async function fetchRepoFile(
   const params = new URLSearchParams({ path: p });
   const res = await fetch(`/repo/file?${params}`, {
     headers: { Accept: "application/json" },
-    signal: searchRepoCombinedSignal(options?.signal),
+    signal: repoFetchCombinedSignal(options?.signal),
   });
   if (res.status === 503) {
     return null;

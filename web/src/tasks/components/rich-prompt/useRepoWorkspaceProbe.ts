@@ -8,7 +8,7 @@ import { probeRepoWorkspace, type RepoWorkspaceProbe } from "@/api";
  * Stays "pending" until the first probe resolves, then mirrors the API result.
  * Cleanup aborts the in-flight probe so unmounting the editor (closing the
  * create modal, navigating away) cancels the network request instead of
- * relying on the 45s `searchRepoCombinedSignal` timeout fallback.
+ * relying on the 45s `repoFetchCombinedSignal` timeout fallback.
  *
  * `probeRepoWorkspace` already swallows network errors and returns
  * `{state: "unknown"}`, so the abort-on-unmount cannot surface as an
