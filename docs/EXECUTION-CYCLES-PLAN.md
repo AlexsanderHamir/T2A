@@ -311,6 +311,6 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 6 — Docs | done | `bfa91c1` |
 | 7 — Web data layer | done | `d5948d2` |
 | 8 — Web UI panel (optional) | skipped | — (deferred; mirror `task_events` already render via `TaskUpdatesTimeline`. Followup tracked in agent log queue.) |
-| 9 — Integration sweep | done | (this commit) |
+| 9 — Integration sweep | done | `b109316` |
 
 **Slice complete.** All four execution-cycles followups are tracked in `.agent/backend-improvement-agent.log` Session 13 NEXT_SESSION_QUEUE: (1) Postgres-only partial unique index for `running` cycles/phases; (2) optional `TaskCycle.EventSeq` backlink if a future read path proves expensive; (3) keyset pagination for `GET /tasks/{id}/cycles` once a UI consumer needs >1 page; (4) optional `TaskDetailExecutionSection` UI panel once a worker actually drives cycles in production. Substrate is ready for the V1 worker (see [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md)).
