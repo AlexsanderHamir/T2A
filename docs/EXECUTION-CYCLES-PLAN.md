@@ -307,7 +307,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 2 — Schema + CRUD | done | `f72ad84` |
 | 3 — Dual-write mirror | done | `bd195fa` |
 | 4 — Handler | done | `9151a58` |
-| 5 — SSE | done | _pending push_ |
+| 5 — SSE | done | `0b2be37` |
 | 6 — Docs | pending | — |
 | 7 — Web data layer | pending | — |
 | 8 — Web UI panel (optional) | pending | — |
