@@ -24,7 +24,9 @@ import {
   buildDmapPrompt,
   draftAutosaveSignature,
   normalizeDmapCommitLimit,
+  toApiTaskType,
 } from "../task-drafts";
+import { errorMessage } from "@/lib/errorMessage";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,
@@ -42,14 +44,6 @@ import { useTaskEventStream } from "./useTaskEventStream";
 const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
 const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
-
-function toApiTaskType(taskType: TaskType): TaskType {
-  return taskType === "dmap" ? "general" : taskType;
-}
-
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
 
 export function useTasksApp() {
   const queryClient = useQueryClient();

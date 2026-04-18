@@ -21,6 +21,7 @@ import {
   type TaskListResponse,
   type TaskStatsResponse,
 } from "@/types";
+import { errorMessage } from "@/lib/errorMessage";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -99,8 +100,7 @@ export function parseTaskListResponse(value: unknown): TaskListResponse {
     try {
       return parseTask(item);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`Invalid API response: tasks[${i}]: ${msg}`);
+      throw new Error(`Invalid API response: tasks[${i}]: ${errorMessage(e)}`);
     }
   });
   return {
@@ -303,8 +303,7 @@ export function parseTaskEventsResponse(value: unknown): TaskEventsResponse {
       }
       return parseTaskEventRecord(item);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`Invalid API response: events[${i}]: ${msg}`);
+      throw new Error(`Invalid API response: events[${i}]: ${errorMessage(e)}`);
     }
   });
   const approval_pending = value.approval_pending === true;
@@ -340,8 +339,7 @@ export function parseTaskEventDetail(value: unknown): TaskEventDetail {
     const ev = parseTaskEventRecord(value);
     return { task_id, ...ev };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`Invalid API response: event detail: ${msg}`);
+    throw new Error(`Invalid API response: event detail: ${errorMessage(e)}`);
   }
 }
 
@@ -406,8 +404,7 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
       try {
         return parseTaskAtDepth(item, depth + 1);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        throw new Error(`Invalid API response: children[${i}]: ${msg}`);
+        throw new Error(`Invalid API response: children[${i}]: ${errorMessage(e)}`);
       }
     });
   }
