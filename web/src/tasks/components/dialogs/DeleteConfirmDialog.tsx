@@ -28,6 +28,18 @@ export function DeleteConfirmDialog({
       labelledBy="delete-dialog-title"
       describedBy="delete-dialog-description"
       busy={deletePending}
+      // The spinner still gives in-flight feedback, but the user can
+      // step away (Escape / backdrop) without being trapped behind a
+      // slow DELETE. Safe because `useTaskDeleteFlow.deleteTask.onSuccess`
+      // is id-aware: it clears `deleteTarget` only when
+      // `prev?.id === deletedId`, and the cross-cut `onDeleted(id)`
+      // callback uses the same compare on `editing`. So a stale
+      // resolution after the user dismissed (deleteTarget = null) or
+      // queued a different deletion (deleteTarget = nextTask) cannot
+      // clobber unrelated UI state. Server-truth invalidations
+      // (`tasks/list`, `task-stats`) still fire so the deleted row
+      // disappears from the list even when the dialog is already gone.
+      dismissibleWhileBusy
     >
       <section className="panel confirm-dialog modal-sheet">
         <h2 id="delete-dialog-title">Delete task?</h2>

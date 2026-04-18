@@ -40,4 +40,39 @@ describe("DeleteConfirmDialog", () => {
     await user.keyboard("{Escape}");
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it("calls onCancel on Escape while the delete is pending (dismissibleWhileBusy)", async () => {
+    // Regression for the trap-the-user-behind-a-spinner papercut:
+    // the underlying delete flow is id-aware (useTaskDeleteFlow),
+    // so closing the dialog mid-flight is safe. The `Modal busy`
+    // overlay must NOT swallow Escape here.
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    render(
+      <DeleteConfirmDialog
+        taskTitle="X"
+        saving={false}
+        deletePending
+        onCancel={onCancel}
+        onConfirm={vi.fn()}
+      />,
+    );
+    await user.keyboard("{Escape}");
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("still renders the busy spinner overlay while pending", async () => {
+    // Visual feedback must remain even when dismiss is allowed —
+    // the user has to know the operation is still in flight.
+    render(
+      <DeleteConfirmDialog
+        taskTitle="X"
+        saving
+        deletePending
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
 });

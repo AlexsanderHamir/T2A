@@ -54,6 +54,17 @@ export function TaskEditForm({
       describedBy="edit-dialog-description"
       size="wide"
       busy={patchPending}
+      // The spinner still gives in-flight feedback, but the user can
+      // step away (Escape / backdrop) from a slow PATCH without losing
+      // context. Safe because `useTaskPatchFlow.patchTask.onSuccess`
+      // is id-aware: it fires `onPatched(patchedId)` and the parent's
+      // `setEditing(prev => prev?.id === patchedId ? null : prev)`
+      // refuses to clobber `editing` when the user has dismissed
+      // (editing = null) or moved to a different task (editing.id !==
+      // patchedId). Server-truth invalidations (`tasks/list`,
+      // `task-stats`) still fire so the new field values appear in the
+      // list even when the form is already gone.
+      dismissibleWhileBusy
     >
       <section className="panel modal-sheet modal-sheet--edit">
         <h2 id="edit-dialog-title">Edit task</h2>
