@@ -206,24 +206,24 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope (touch only `web/src/api/`, `web/src/types/`, `web/src/tasks/task-query/`, `web/src/tasks/hooks/`):**
 
-- [ ] `web/src/types/cycle.ts` — TS types for `TaskCycle`, `TaskCyclePhase`, status/phase enums.
-- [ ] Re-export from `web/src/types/index.ts` barrel (`@/types`).
-- [ ] `web/src/api/cycles.ts` — `listTaskCycles`, `getTaskCycle`, `startTaskCycle`, `terminateTaskCycle`, `startTaskCyclePhase`, `patchTaskCyclePhase` (mirror existing `tasks.ts` conventions).
-- [ ] Extend `web/src/api/parseTaskApi.ts` with shape parsers for the new types; tests in `parseTaskApi.test.ts`.
-- [ ] Re-export from `web/src/api/index.ts`.
-- [ ] `web/src/tasks/task-query/index.ts` (or `taskQueryKeys.ts`) — add `taskQueryKeys.cycles(taskId)` and `taskQueryKeys.cycle(taskId, cycleId)`.
-- [ ] `web/src/tasks/task-query/sseInvalidate.ts` — handle `task_cycle_changed` to invalidate **only** the affected task's cycle caches (not the whole task tree); test pins the granularity.
-- [ ] `web/src/tasks/hooks/useTaskCycles.ts` + colocated test using `MockEventSource` + mocked fetch (existing recipe).
+- [x] `web/src/types/cycle.ts` — TS types for `TaskCycle`, `TaskCyclePhase`, status/phase enums (plus list/detail envelopes and request bodies).
+- [x] Re-export from `web/src/types/index.ts` barrel (`@/types`); extend `TaskChangeType` with `task_cycle_changed` and `TaskChangeEvent` with optional `cycle_id`.
+- [x] `web/src/api/cycles.ts` — `listTaskCycles`, `getTaskCycle`, `startTaskCycle`, `terminateTaskCycle`, `startTaskCyclePhase`, `patchTaskCyclePhase` (mirrors `tasks.ts` conventions; reuses `assertTaskPathId` / `assertPositiveSeq`; threads `X-Actor` like the checklist routes).
+- [x] Extend `web/src/api/parseTaskApi.ts` with `parseTaskCycle`, `parseTaskCyclePhase`, `parseTaskCyclesListResponse`, `parseTaskCycleDetail`; coverage in `parseTaskApi.test.ts` (status / phase / actor / date validation, optional fields, indexed errors).
+- [x] Re-export from `web/src/api/index.ts`.
+- [x] `web/src/tasks/task-query/queryKeys.ts` — `taskQueryKeys.cycles(taskId)` and `taskQueryKeys.cycle(taskId, cycleId)` scoped under `["tasks","detail",id,"cycles",...]` so a `task_updated` invalidation still sweeps cycles, but a `task_cycle_changed` does not invalidate the broader detail tree.
+- [x] `web/src/tasks/task-query/sseInvalidate.ts` — added `parseTaskChangeFrame` returning a `task` / `cycle` discriminated union; `collectTaskIdFromSSEData` now skips cycle frames so they cannot accidentally invalidate the whole task subtree. `useTaskEventStream` accumulates two pending sets (broad task ids vs per-task cycle ids) and dedupes (cycle invalidation is suppressed when the same task already has a broad pending entry). Tests pin the granularity (`useTaskEventStream.test.tsx` asserts cycle frames invalidate only `["tasks","detail",task,"cycles"]`).
+- [x] `web/src/tasks/hooks/useTaskCycles.ts` + colocated test (`useTaskCycles` for the list, `useTaskCycle` for the detail; tests cover happy path, `limit` query forwarding, disabled state, and 404 surfacing).
 
 **Exit criteria:**
 
-- `cd web && npm test -- --run` passes.
+- `cd web && npm test -- --run` passes (435 tests).
 - `npm run lint` clean.
 - `npm run build` clean.
 
-**Commit:** `web: add task cycles API client, query keys, SSE invalidation, and useTaskCycles hook`
+**Commit:** `web: add task cycles API client, query keys, SSE invalidation, and useTaskCycles hook` — `d5948d2`
 
-**STOP — ask permission to begin Stage 8.**
+**STOP — Stage 7 done. Awaiting decision on Stage 8 (optional UI panel) vs jumping to Stage 9 (final integration sweep).**
 
 ---
 
