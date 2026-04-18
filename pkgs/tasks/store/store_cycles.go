@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -50,9 +51,12 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: task_id", domain.ErrInvalidInput)
 	}
-	meta := normalizeJSONObject(in.Meta)
+	meta, err := normalizeJSONObject(in.Meta, "meta")
+	if err != nil {
+		return nil, err
+	}
 	var created *domain.TaskCycle
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := txLoadTask(tx, taskID); err != nil {
 			return err
 		}
@@ -254,15 +258,35 @@ func nextAttemptSeqTx(tx *gorm.DB, taskID string) (int64, error) {
 	return max + 1, nil
 }
 
-// normalizeJSONObject mirrors appendEvent's nil-data handling: a nil or
-// empty payload becomes the canonical "{}" JSON object so the column's
-// NOT NULL DEFAULT '{}' invariant holds.
-func normalizeJSONObject(b []byte) []byte {
+// normalizeJSONObject is the chokepoint that enforces the documented
+// "meta_json / details_json columns are always a JSON object, defaulted to
+// {}" invariant for cycle and phase mutations (docs/EXECUTION-CYCLES.md
+// §column conventions; docs/API-HTTP.md cycle / phase routes).
+//
+// Inputs are normalized as follows:
+//   - nil / empty bytes / whitespace-only / the JSON literal "null" all
+//     collapse to the canonical zero value []byte("{}"). This matches the
+//     contract that the column never carries SQL NULL or an empty string.
+//   - A well-formed JSON object passes through unchanged.
+//   - Anything else (string, number, array, bool, malformed JSON) is
+//     rejected with domain.ErrInvalidInput wrapped with the field name so
+//     handlers can surface a 400 to the client. Silent coercion would let
+//     the column hold values that violate the documented shape and break
+//     downstream parsers (web `parseTaskApi`, response struct contract).
+func normalizeJSONObject(b []byte, field string) ([]byte, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.normalizeJSONObject")
-	if len(b) == 0 {
-		return []byte("{}")
+	trimmed := bytes.TrimSpace(b)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return []byte("{}"), nil
 	}
-	return b
+	var probe any
+	if err := json.Unmarshal(trimmed, &probe); err != nil {
+		return nil, fmt.Errorf("%w: %s must be a JSON object", domain.ErrInvalidInput, field)
+	}
+	if _, ok := probe.(map[string]any); !ok {
+		return nil, fmt.Errorf("%w: %s must be a JSON object", domain.ErrInvalidInput, field)
+	}
+	return b, nil
 }
 
 // cycleStartedPayload builds the data_json payload for the EventCycleStarted

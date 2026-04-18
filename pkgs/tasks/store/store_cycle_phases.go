@@ -143,9 +143,12 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 	if !validTerminalPhaseStatus(in.Status) {
 		return nil, fmt.Errorf("%w: status must be a terminal phase status", domain.ErrInvalidInput)
 	}
-	details := normalizeJSONObject(in.Details)
+	details, err := normalizeJSONObject(in.Details, "details")
+	if err != nil {
+		return nil, err
+	}
 	var out *domain.TaskCyclePhase
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		cycle, err := loadCycleByIDTx(tx, cycleID)
 		if err != nil {
 			return err
