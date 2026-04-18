@@ -94,18 +94,15 @@ type jsonErrorBody struct {
 // writeJSON writes v as JSON. When r is non-nil and Debug is enabled, logs response_body (truncated) and response_json_bytes.
 func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v any) {
 	setJSONHeaders(w)
-	ctx := context.Background()
-	if r != nil {
-		ctx = r.Context()
-	}
+	ctx := requestCtx(r)
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(v); err != nil {
 		if r != nil {
-			rid := logctx.RequestIDFromContext(r.Context())
+			rid := logctx.RequestIDFromContext(ctx)
 			route := requestRouteLabel(r)
-			slog.Log(r.Context(), slog.LevelError, "response encode failed",
+			slog.Log(ctx, slog.LevelError, "response encode failed",
 				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route, "err", err)
 		} else {
 			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
