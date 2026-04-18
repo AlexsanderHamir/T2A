@@ -196,7 +196,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 - `./scripts/check.ps1` with `CHECK_SKIP_WEB=1` (docs-only fast path).
 - All cross-links resolve (manual scan).
 
-**Commit:** `docs: document task execution cycles primitive and update API + design references` (SHA recorded once pushed).
+**Commit:** `docs: document task execution cycles primitive and update API + design references` (SHA `bfa91c1`).
 
 **STOP — ask permission to begin Stage 7.**
 
