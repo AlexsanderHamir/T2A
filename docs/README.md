@@ -18,6 +18,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, reconcile loop, fairness ordering. |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term phased plan for building Cursor CLI-based agent workers on top of the ready-task queue. |
+| [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | **Contract:** `task_cycles` / `task_cycle_phases` substrate, dual-write invariant to `task_events`, phase state machine, "where reads go" table, what's intentionally out. |
 | [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) | **Active working plan** for promoting the diagnose → execute → verify → persist loop into a first-class store primitive (`task_cycles`, `task_cycle_phases`) while keeping `task_events` as the audit witness. Stage-gated; commit + push between stages. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
@@ -44,6 +45,7 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |
 | `REPO_ROOT`, `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/API-HTTP.md` (Optional workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
 | Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (`T2A_USER_TASK_AGENT_*`). |
+| Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table) + `docs/EXECUTION-CYCLES-PLAN.md` (stage checklist). |
 | Agentic worker lifecycle / rollout versions | `docs/AGENTIC-LAYER-PLAN.md` + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). |
 | `web/` only (components, hooks, no API contract change) | `docs/WEB.md`; root `README` only if npm scripts or env vars for Vite change. |
 | Observability standard, measurement scripts, or `taskapi` log/checklist behavior | `docs/OBSERVABILITY.md`; touch `scripts/measure-func-slog.*` / `cmd/funclogmeasure` for the per-function `slog` audit, or `scripts/measure-observability.*` for test coverage scope. |

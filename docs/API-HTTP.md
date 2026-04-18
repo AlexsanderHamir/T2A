@@ -181,6 +181,96 @@ flowchart TD
   M -->|else| I500[500 internal server error]
 ```
 
+## Task execution cycles (`/tasks/{id}/cycles`)
+
+Cycles promote the **diagnose → execute → verify → persist** loop into a typed primitive (`task_cycles`, `task_cycle_phases`) while preserving `task_events` as the audit witness — full design in [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). Every cycle/phase mutation also fans a `task_cycle_changed` SSE event with `id` (task) and `cycle_id` (cycle) so SPA caches can invalidate just the affected cycle subtree — see [API-SSE.md](./API-SSE.md). Idempotency, rate limiting, body-cap, and `X-Actor` semantics are inherited from the rest of `taskapi` (sections above); the handler ignores any `triggered_by` field in the request body and always derives the actor from `X-Actor` (default `user`).
+
+| Capability | Method / path | Notes |
+| ---------- | ------------- | ----- |
+| Start cycle | `POST /tasks/{id}/cycles` | Body `{ "parent_cycle_id"?, "meta"? }`. `parent_cycle_id` is optional same-task lineage (`null`/omitted/missing produces a top-level cycle); a non-empty value must reference an existing cycle whose `task_id` matches `{id}` (cross-task lineage is rejected with `400 parent_cycle_id does not belong to this task`). `meta` is opaque JSON object (`{}` default). The store assigns `attempt_seq = max + 1` per task, sets `status` `running`, `triggered_by` from `X-Actor`, and inserts a mirror `cycle_started` row in `task_events` in the same SQL transaction (rolls back the cycle on mirror failure). At-most-one running cycle per task: a second `POST` while one is still `running` returns **400** `task already has a running cycle` (recovery: `Idempotency-Key` to replay the original 201, or `PATCH …/cycles/{cycleId}` to terminate the running one first). **201 Created** returns `taskCycleResponse` (see below). Publishes `task_cycle_changed` on SSE for the new cycle. |
+| List cycles | `GET /tasks/{id}/cycles` | `?limit=` (1–200, default 50; non-positive coerced to 50). Cycles ordered `attempt_seq DESC` (newest attempt first). **200** envelope `{ "task_id", "cycles": [ taskCycleResponse, ... ], "limit", "has_more" }`. `cycles` is **always a JSON array** (`[]` when none, never `null` or omitted). `has_more` is detected by fetching `limit+1` rows from the store and dropping the surplus. **Limit-only pagination today** — keyset cursor matching `/events` conventions is a tracked followup ([plan](./EXECUTION-CYCLES-PLAN.md#notes--followups)). 404 if the task does not exist. |
+| Get cycle | `GET /tasks/{id}/cycles/{cycleId}` | Returns the cycle row plus `phases[]` ordered `phase_seq ASC`. **200** envelope `{ "id", "task_id", "attempt_seq", "status", "started_at", "ended_at"?, "triggered_by", "parent_cycle_id"?, "meta", "phases": [ taskCyclePhaseResponse, ... ] }`. `phases` is always a JSON array (`[]` when none). **404** when the cycle does not exist **or** when `cycleId` belongs to a different task than `{id}` (cross-task ID smuggling is silently masked as 404 to avoid leaking cycle existence). |
+| Terminate cycle | `PATCH /tasks/{id}/cycles/{cycleId}` | Body `{ "status", "reason"? }`. `status` must be a terminal cycle status (`succeeded`, `failed`, `aborted`); `running` and unknown enums are rejected with **400** `status must be a terminal cycle status`. Rejected with **400** `cycle already terminal` if the cycle is already in a terminal status. Mirror row in `task_events` is `cycle_completed` for `succeeded` and `cycle_failed` for `failed`/`aborted` (the original status is preserved in the mirror payload's `status` field). **200** returns `taskCycleResponse`. Publishes `task_cycle_changed`. Same cross-task 404 guard as the GET above. |
+| Start phase | `POST /tasks/{id}/cycles/{cycleId}/phases` | Body `{ "phase" }`. `phase` must be one of `diagnose`, `execute`, `verify`, `persist`. Transitions follow `domain.ValidPhaseTransition` (the previous phase is the highest-`phase_seq` row already on this cycle): the first phase must be `diagnose`; from there the legal forward edges are `diagnose → execute → verify → persist`, plus the corrective edge `verify → execute` for retries. Invalid transitions are rejected with **400** `phase transition "<prev>" -> "<next>" not allowed`. The cycle must be in status `running` (terminal cycles reject phase writes with **400** `cycle is terminal`); at most one running phase per cycle. The store assigns `phase_seq = max + 1` per cycle and inserts a mirror `phase_started` row in `task_events`, then writes the assigned `task_events.seq` back into the new phase row's `event_seq` column in the same SQL transaction. **201 Created** returns `taskCyclePhaseResponse` with `event_seq` populated. Publishes `task_cycle_changed`. Same cross-task 404 guard. |
+| Complete / fail / skip phase | `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | Body `{ "status", "summary"?, "details"? }`. `status` must be a terminal phase status (`succeeded`, `failed`, `skipped`); `running` and unknown enums are rejected with **400** `status must be a terminal phase status`. `summary` is optional (omit to leave the column unchanged); `details` is opaque JSON object (defaults to `{}`). Rejected with **400** `phase already terminal` for re-termination. Mirror row in `task_events` is `phase_completed` / `phase_failed` / `phase_skipped` matching the request status; `event_seq` is overwritten on the phase row to point at the terminal mirror seq (replacing the `phase_started` pointer set at creation). **200** returns `taskCyclePhaseResponse`. Publishes `task_cycle_changed`. **Note:** completing a phase does **not** terminate the parent cycle — call `PATCH /tasks/{id}/cycles/{cycleId}` explicitly when the attempt is over. |
+
+`taskCycleResponse` shape:
+
+```json
+{
+  "id": "<cycle-uuid>",
+  "task_id": "<task-uuid>",
+  "attempt_seq": 1,
+  "status": "running",
+  "started_at": "2026-01-01T00:00:00Z",
+  "ended_at": null,
+  "triggered_by": "agent",
+  "parent_cycle_id": "<cycle-uuid>",
+  "meta": {}
+}
+```
+
+`ended_at` and `parent_cycle_id` are `omitempty`: omitted entirely on a fresh running cycle / top-level cycle. `meta` is always present (defaulted to `{}`).
+
+`taskCyclePhaseResponse` shape:
+
+```json
+{
+  "id": "<phase-uuid>",
+  "cycle_id": "<cycle-uuid>",
+  "phase": "diagnose",
+  "phase_seq": 1,
+  "status": "running",
+  "started_at": "2026-01-01T00:00:00Z",
+  "ended_at": null,
+  "summary": "short note",
+  "details": {},
+  "event_seq": 7
+}
+```
+
+`ended_at`, `summary`, and `event_seq` are `omitempty`. `details` is always present (defaulted to `{}`).
+
+### Documented `400` JSON `error` strings
+
+**`POST /tasks/{id}/cycles`** (after JSON unknown-fields decode; mapped from `domain.ErrInvalidInput` → **400** with the bare phrase):
+
+- `json: unknown field "<name>"` — body contains a key that is not on `cycleStartJSON` (`parent_cycle_id`, `meta`).
+- `request body must contain a single JSON value` — trailing data after the top-level JSON object (e.g. `{}{}`).
+- `parent_cycle_id` — `parent_cycle_id` was sent as the empty/whitespace string `""` (use `null` or omit the key for "no parent").
+- `parent_cycle_id does not belong to this task` — non-empty `parent_cycle_id` references a cycle whose `task_id` does not match `{id}`.
+- `task already has a running cycle` — concurrent attempt while a `running` cycle exists for `{id}`.
+- **404** (not 400) `not found` — `{id}` does not exist.
+
+**`GET /tasks/{id}/cycles`** (limit validation; task must exist or **404** first):
+
+- `limit must be integer 0..200` — `limit` is present but not a decimal integer in **0–200** (includes values **> 200** and non-numeric values).
+- `limit too long` — raw `limit` query value exceeds **32** bytes (abuse guard).
+
+**`PATCH /tasks/{id}/cycles/{cycleId}`** (cycle-terminate body; cross-task `cycleId` returns **404** before validation):
+
+- `json: unknown field "<name>"` — body contains a key that is not on `cycleTerminateJSON` (`status`, `reason`).
+- `status must be a terminal cycle status` — `status` is omitted, `running`, or any value other than `succeeded` / `failed` / `aborted`.
+- `cycle already terminal` — `cycleId` already has a terminal status (re-termination attempt).
+
+**`POST /tasks/{id}/cycles/{cycleId}/phases`** (phase-start body; cross-task `cycleId` returns **404** before validation):
+
+- `json: unknown field "<name>"` — body contains a key other than `phase`.
+- `phase` — `phase` is omitted or sent with a value outside `diagnose` / `execute` / `verify` / `persist` (the message is the bare field name).
+- `phase transition "<prev>" -> "<next>" not allowed` — the requested next phase violates `domain.ValidPhaseTransition` (e.g. starting on `persist`, or jumping `diagnose → verify`).
+- `cycle is terminal` — `cycleId` is in a terminal status; phase writes are read-only after terminate.
+- `cycle already has a running phase` — concurrent attempt while another phase on the same cycle is `running`.
+
+**`PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}`** (`{phaseSeq}` path segment + body):
+
+- `phase_seq must be a positive integer` — `{phaseSeq}` is empty after trim, `0`, negative, or non-numeric.
+- `phase_seq too long` — `{phaseSeq}` exceeds **32** bytes (abuse guard).
+- `json: unknown field "<name>"` — body contains a key other than `status` / `summary` / `details`.
+- `status must be a terminal phase status` — `status` is omitted, `running`, or any value other than `succeeded` / `failed` / `skipped`.
+- `phase already terminal` — `(cycleId, phaseSeq)` is already in a terminal status.
+
+**Path segment length:** the **128-byte** cap (after trim) applied to `{id}` on other task routes also covers `{cycleId}` here; overlong segments return **400** before store access. `{phaseSeq}` is capped at **32** bytes (decimal integer).
+
 Structured logs: when a request finishes, `taskapi` logs `http request complete` with `operation` `http.access`, `method`, `path`, matched `route`, `query` (raw query string, truncated), `x_actor`, `status`, `duration_ms`, and `bytes_written` (`GET /health`, `GET /health/live`, and `GET /health/ready` skip that line to avoid probe noise; they still get **`X-Request-ID`** and **`request_id` on `r.Context()`** like other routes). Every JSON line includes monotonic **`log_seq`** and **`log_seq_scope`**: **`request`** when the record used the per-request counter from access middleware, **`process`** otherwise (startup, `/health` path handling—probe requests do not attach the per-request counter, so their logs stay **`process`**-scoped, background work). Correlation lines include **`obs_category`** (`http_access`, `http_io`, `helper_io`) for filtering JSONL. At **`slog.LevelDebug`**, handlers also emit **`http.io`** lines with `phase` `in` or `out`, the same handler `operation` string as errors/access correlation, **`call_path`** (nested handler/helper chain, e.g. `tasks.create > decodeJSON > actorFromRequest`), and structured **inputs** (path ids, parsed query/limit, body field lengths and short previews for titles/prompts/text—never secrets). Nested helpers log **`helper.io`** with `phase` `helper_in` / `helper_out`, the same `call_path`, and a **`function`** field (e.g. `decodeJSON`, `writeStoreError`, `storeErrHTTPResponse`). Use **`RunObserved`** in `pkgs/tasks/handler` when a helper should log explicit input/output key/value pairs through the same `helper.io` pattern. **`phase` `out`** success responses include `response_json_bytes` and `response_body` (UTF-8–truncated JSON preview, capped ~16 KiB); `204 No Content` routes log `response_empty` instead. Handler errors use `operation` plus `http_status`; client errors (4xx) are Warn, server errors (5xx) are Error. Those lines and GORM SQL traces share `request_id` when the store used `r.Context()`. Background work (for example the optional SSE dev ticker) has no request id. Process-wide `slog` records go to the per-run JSON-lines file (not stderr, except the startup path line). GORM uses `gorm.io/gorm/logger.NewSlogLogger` with the same logger. SSE publish fanout is logged at Debug (`operation` `tasks.sse.publish`, `subscribers`, `event_type`, `task_id`) when there is at least one subscriber. Checklists, repeatable coverage measurement, and guidance on metrics/tracing: [OBSERVABILITY.md](./OBSERVABILITY.md).
 
 ## Optional workspace repo (`REPO_ROOT`)

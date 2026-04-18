@@ -73,10 +73,10 @@ type taskCyclePhaseResponse struct {
 // cycles is always a JSON array (never null). has_more is detected by
 // fetching limit+1 rows from the store; the extra row is dropped.
 type taskCyclesListResponse struct {
-	TaskID  string               `json:"task_id"`
-	Cycles  []taskCycleResponse  `json:"cycles"`
-	Limit   int                  `json:"limit"`
-	HasMore bool                 `json:"has_more"`
+	TaskID  string              `json:"task_id"`
+	Cycles  []taskCycleResponse `json:"cycles"`
+	Limit   int                 `json:"limit"`
+	HasMore bool                `json:"has_more"`
 }
 
 // taskCycleDetailResponse is the JSON envelope for GET /tasks/{id}/cycles/{cycleId}.

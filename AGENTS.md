@@ -13,6 +13,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 3 | [docs/DESIGN.md](docs/DESIGN.md) | **Hub:** architecture, limitations, links to contract docs. |
 | 4 | [docs/API-HTTP.md](docs/API-HTTP.md) | REST + `/repo`: routes, bodies, errors, metrics. |
 | 5 | [docs/API-SSE.md](docs/API-SSE.md) | `GET /events` and dev SSE env. |
+| — | [docs/EXECUTION-CYCLES.md](docs/EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write invariant, state machine, where reads go. |
 | 6 | [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md) | Env vars, startup, shutdown, timeouts. |
 | 7 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 8 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |
@@ -28,8 +29,9 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs; used by `handler`, `middleware` (injected path), `internal/taskapi`. README: `pkgs/tasks/calltrace/README.md`. |
 | Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; imported by `handler` and `cmd/taskapi` (stdlib-only, no cycle with `handler`). |
 | JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. `handler` delegates `writeJSONError` here (passes `calltrace.Path` for debug). |
-| Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. File map: `pkgs/tasks/store/README.md`. |
-| Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events. |
+| Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store maps DB errors to `domain.ErrNotFound` / `ErrInvalidInput`. Cycle/phase entrypoints live in `store_cycles.go` + `store_cycle_phases.go` and dual-write to `task_events` in the same SQL transaction (see `docs/EXECUTION-CYCLES.md`). File map: `pkgs/tasks/store/README.md`. |
+| Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events; plus `TaskCycle` / `TaskCyclePhase` and the `Phase` / `CycleStatus` / `PhaseStatus` enums + `ValidPhaseTransition` for the diagnose → execute → verify → persist substrate. |
+| Execution cycles HTTP | `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) | `POST/GET /tasks/{id}/cycles`, `GET/PATCH /tasks/{id}/cycles/{cycleId}`, `POST /tasks/{id}/cycles/{cycleId}/phases`, `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}`. Publishes `task_cycle_changed` SSE events (see `docs/API-SSE.md`); contract pinned in `docs/API-HTTP.md` and `docs/EXECUTION-CYCLES.md`. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
 | Agent hooks | `pkgs/agents/` | In-process ready-task queue always wired from `taskapi` (`store.SetReadyTaskNotifier`); defaults **256** cap and **5m** reconcile interval (env overrides); see `docs/AGENT-QUEUE.md` and `docs/RUNTIME-ENV.md`. |
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |

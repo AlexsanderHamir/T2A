@@ -179,24 +179,24 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 ---
 
-### Stage 6 — Backend docs + contract pinning
+### Stage 6 — Backend docs + contract pinning ✅
 
 **Scope (docs-only, no code changes):**
 
-- [ ] New `docs/EXECUTION-CYCLES.md` — design rationale, schema diagram, dual-write invariant, state machine diagram, "where reads go" table, concurrency rules, what's intentionally out.
-- [ ] `docs/API-HTTP.md` — add cycle routes to handler-routes table; add new 400 string subsection; cross-reference SSE trigger surface.
-- [ ] `docs/DESIGN.md` — add a "Cycles vs flat audit log" note to **Limitations** (single source of truth, dual-write rationale, no consolidation).
-- [ ] `docs/AGENT-QUEUE.md` — short note that workers will use cycles; link to plan.
-- [ ] `docs/AGENTIC-LAYER-PLAN.md` — strike-through or check the V1 line item that motivated this work; link to `EXECUTION-CYCLES.md`.
-- [ ] `AGENTS.md` repo-map — new row for `pkgs/tasks/handler/handler_cycles.go` + new domain types.
-- [ ] `docs/README.md` index — new row for `EXECUTION-CYCLES.md`.
+- [x] New `docs/EXECUTION-CYCLES.md` — design rationale, schema diagram, dual-write invariant, state machine diagram, "where reads go" table, concurrency rules, what's intentionally out.
+- [x] `docs/API-HTTP.md` — added cycle routes to handler-routes table (new "Task execution cycles (`/tasks/{id}/cycles`)" section), pinned `taskCycleResponse` / `taskCyclePhaseResponse` JSON envelopes, added the cycle-routes 400 string subsection (covers POST/GET cycles, PATCH terminate, POST phase, PATCH phase including `phase_seq` path validation), cross-referenced `task_cycle_changed` SSE.
+- [x] `docs/DESIGN.md` — added contract-doc row for `EXECUTION-CYCLES.md` and a new Limitation **15** explaining the cycles-vs-flat-audit dual-write rationale and the deliberate non-consolidation.
+- [x] `docs/AGENT-QUEUE.md` — added "Workers and execution cycles" section and cross-links to `EXECUTION-CYCLES.md` / `AGENTIC-LAYER-PLAN.md`.
+- [x] `docs/AGENTIC-LAYER-PLAN.md` — promoted the substrate note to point at `EXECUTION-CYCLES.md`, marked the substrate TODO under V1 as done, and refined the V1 scope to call the cycle routes by name.
+- [x] `AGENTS.md` repo-map — added a dedicated "Execution cycles HTTP" row for `handler_cycles.go` + `handler_cycles_json.go`; extended the Persistence and Domain rows for the new store entrypoints and types; added `EXECUTION-CYCLES.md` to the read-order table.
+- [x] `docs/README.md` index — new row for `EXECUTION-CYCLES.md` plus a "Where to put updates" entry covering the cycles substrate.
 
 **Exit criteria:**
 
 - `./scripts/check.ps1` with `CHECK_SKIP_WEB=1` (docs-only fast path).
 - All cross-links resolve (manual scan).
 
-**Commit:** `docs: document task execution cycles primitive and update API + design references`
+**Commit:** `docs: document task execution cycles primitive and update API + design references` (SHA recorded once pushed).
 
 **STOP — ask permission to begin Stage 7.**
 

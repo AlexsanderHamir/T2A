@@ -2,7 +2,7 @@
 
 Simple long-term plan to evolve from today's ready-task queue into a reliable agent worker runtime powered by Cursor CLI.
 
-**Substrate work in flight:** [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) — promoting the diagnose → execute → verify → persist loop to a first-class store primitive so V1's worker has a typed, indexed, FK-protected target to write into instead of inventing state on top of the flat `task_events` stream.
+**Substrate work:** [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) is the design + contract for the `task_cycles` / `task_cycle_phases` substrate the V1 worker writes into; [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) tracks the staged rollout of that substrate. Backend stages 1–6 are done (domain → store → dual-write → handler → SSE → docs); the web data layer (Stage 7) and UI surface (Stage 8) follow before V1 worker code lands so the worker has both a typed write target and a way for operators to see what it did.
 
 ## V0 (now) — queue foundation
 
@@ -24,13 +24,15 @@ Scope:
 - One worker loop reads queue task IDs/snapshots.
 - Worker reloads latest task from DB before doing work.
 - Worker runs Cursor CLI in headless mode (`--print --output-format json`).
+- Worker drives one execution cycle per delivered task through the substrate in [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md): `POST /tasks/{id}/cycles` → walk phases → `PATCH /tasks/{id}/cycles/{cycleId}`. The store's "at most one running cycle per task" guard becomes the worker's per-task claim.
 - Worker writes task events/status updates, then acks queue item.
 
 TODOs:
-- [ ] Define worker state machine (`queued -> running -> done|failed`).
+- [x] Provide a typed substrate for worker writes — `task_cycles` / `task_cycle_phases` are live ([`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md)).
+- [ ] Define worker state machine (`queued -> running -> done|failed`); map to `task_cycles.status` transitions rather than reinventing state.
 - [ ] Add per-run timeout and cancellation.
-- [ ] Persist raw CLI result payload (redacted) for debugging.
-- [ ] Add idempotency key per run (`task_id + attempt + prompt_hash`).
+- [ ] Persist raw CLI result payload (redacted) for debugging — store under `task_cycle_phases.details_json` until artifact volume justifies a dedicated `task_cycle_artifacts` table.
+- [ ] Add idempotency key per run (`task_id + attempt + prompt_hash`); use it on `POST /tasks/{id}/cycles` so retries collapse to one cycle row.
 
 ## V2 — reliability and safety
 

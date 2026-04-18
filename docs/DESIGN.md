@@ -13,6 +13,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | Environment variables, `dbcheck`, startup/shutdown, HTTP timeouts. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, in-memory queue, reconcile loop, fairness ordering. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
+| [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write to `task_events`, state machine, where reads go. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 
 **`cmd/taskapi` wiring (code, not prose contracts):** binary layout [`cmd/taskapi/README.md`](../cmd/taskapi/README.md); startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`pkgs/tasks/middleware`](../pkgs/tasks/middleware) (`Stack` in `stack.go`, called from [`internal/taskapi`](../internal/taskapi) `NewHTTPHandler` with `calltrace.Path`); REST/SSE handlers in [`pkgs/tasks/handler`](../pkgs/tasks/handler) ([`README.md`](../pkgs/tasks/handler/README.md)).
@@ -152,6 +153,7 @@ SSE is a hint: it does not carry full task bodies. The follow-up GET returns aut
 12. No ETag / If-Match on tasks; concurrent edits to the same row last-winner within locking rules (see [PERSISTENCE.md](./PERSISTENCE.md)).
 13. If JSON encoding of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
 14. **`Idempotency-Key`** is honored only inside a single `taskapi` process (in-memory cache + `singleflight`); multiple replicas or restarts do not share entries. Cache memory is bounded by `T2A_IDEMPOTENCY_MAX_ENTRIES` / `T2A_IDEMPOTENCY_MAX_BYTES` with oldest-entry eviction. For keyed `POST`/`PATCH`, unknown `Content-Length` is rejected with `400` and oversized bodies with `413`.
+15. **Cycles vs flat audit log:** `task_cycles` / `task_cycle_phases` are the typed source of truth for execution state ("is this task running right now?", "which phase?", "what was the last attempt's outcome?"); `task_events` stays the append-only audit witness. Every cycle/phase mutation appends a mirror row to `task_events` in the **same SQL transaction** (rolled back together on failure) — see [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). This is a deliberate dual-write, not a join: `GET /tasks/{id}/events` keeps showing a complete timeline, and the new `task_cycle_*` types are intentionally excluded from `domain.EventTypeAcceptsUserResponse` so mirror rows stay observational. The two stores are not consolidated and must not be: scanning the audit log to answer "what is true now" was the cost the cycles substrate was created to remove.
 
 ## Out of scope (today)
 
