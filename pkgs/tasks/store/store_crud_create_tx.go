@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/drafts"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
@@ -56,7 +57,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateTaskInput, by domain.A
 		}
 	}
 	if st == domain.StatusDone {
-		if err := validateCanMarkDoneTx(tx, t.ID); err != nil {
+		if err := checklist.ValidateCanMarkDoneInTx(tx, t.ID); err != nil {
 			return err
 		}
 	}

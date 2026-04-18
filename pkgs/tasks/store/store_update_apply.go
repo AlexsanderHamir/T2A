@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
@@ -118,7 +119,7 @@ func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, in
 	was := cur.ChecklistInherit
 	want := *inherit
 	if want && !was {
-		if err := deleteOwnedChecklistItemsTx(tx, taskID); err != nil {
+		if err := checklist.DeleteOwnedItemsInTx(tx, taskID); err != nil {
 			return err
 		}
 	}
@@ -183,7 +184,7 @@ func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.S
 		return nil
 	}
 	if *st == domain.StatusDone {
-		if err := validateCanMarkDoneTx(tx, taskID); err != nil {
+		if err := checklist.ValidateCanMarkDoneInTx(tx, taskID); err != nil {
 			return err
 		}
 	}

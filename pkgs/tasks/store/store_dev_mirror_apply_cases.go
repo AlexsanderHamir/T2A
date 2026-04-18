@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
@@ -19,7 +20,7 @@ func devMirrorStatusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []b
 	st := domain.Status(m["to"])
 	if kernel.ValidStatus(st) && st != t.Status {
 		if st == domain.StatusDone {
-			if err := validateCanMarkDoneTx(tx, taskID); err != nil {
+			if err := checklist.ValidateCanMarkDoneInTx(tx, taskID); err != nil {
 				return nil, err
 			}
 		}
@@ -65,7 +66,7 @@ func devMirrorPromptOrTitle(t *domain.Task, data []byte, field string) (map[stri
 
 func devMirrorTaskCompleted(tx *gorm.DB, taskID string, t *domain.Task) (map[string]any, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.devMirrorTaskCompleted")
-	if err := validateCanMarkDoneTx(tx, taskID); err != nil {
+	if err := checklist.ValidateCanMarkDoneInTx(tx, taskID); err != nil {
 		return nil, err
 	}
 	up := map[string]any{}

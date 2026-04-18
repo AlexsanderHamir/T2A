@@ -1,4 +1,4 @@
-package store
+package checklist
 
 import (
 	"context"
@@ -16,10 +16,123 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// AddChecklistItem appends a definition row; task must exist and not use checklist_inherit.
-func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+const logCmd = "taskapi"
+
+// ItemView is one definition row plus completion for a subject task.
+// Re-aliased by the store facade as store.ChecklistItemView so the
+// JSON field tags stay stable on the wire.
+type ItemView struct {
+	ID        string `json:"id"`
+	SortOrder int    `json:"sort_order"`
+	Text      string `json:"text"`
+	Done      bool   `json:"done"`
+}
+
+// DefinitionSourceTaskID returns the task id that owns checklist item
+// definitions for taskID. Walks the ParentID chain through any
+// ChecklistInherit-true ancestors. Errors:
+//   - ErrNotFound when the task or an ancestor is missing.
+//   - ErrInvalidInput when an inherit-true task has no parent, or a
+//     cycle in the parent chain is detected.
+func DefinitionSourceTaskID(ctx context.Context, db *gorm.DB, taskID string) (string, error) {
+	defer kernel.DeferLatency(kernel.OpDefinitionSourceTask)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskID")
+	return DefinitionSourceTaskIDInTx(db.WithContext(ctx), taskID)
+}
+
+// DefinitionSourceTaskIDInTx is the in-transaction variant used by
+// other internal store packages that already hold a *gorm.DB tx
+// handle.
+func DefinitionSourceTaskIDInTx(tx *gorm.DB, taskID string) (string, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskIDInTx")
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	cur := taskID
+	seen := make(map[string]bool)
+	for {
+		if seen[cur] {
+			return "", fmt.Errorf("%w: parent cycle", domain.ErrInvalidInput)
+		}
+		seen[cur] = true
+		var t domain.Task
+		if err := tx.Where("id = ?", cur).First(&t).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return "", domain.ErrNotFound
+			}
+			return "", fmt.Errorf("load task: %w", err)
+		}
+		if !t.ChecklistInherit {
+			return t.ID, nil
+		}
+		if t.ParentID == nil || *t.ParentID == "" {
+			return "", fmt.Errorf("%w: checklist_inherit requires a parent task", domain.ErrInvalidInput)
+		}
+		cur = *t.ParentID
+	}
+}
+
+// List returns definition items for taskID with done flags for that
+// same task. The taskID must exist; otherwise ErrNotFound.
+func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
+	defer kernel.DeferLatency(kernel.OpListChecklist)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.List")
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	var out []ItemView
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if _, err := kernel.LoadTask(tx, taskID); err != nil {
+			return err
+		}
+		defID, err := DefinitionSourceTaskIDInTx(tx, taskID)
+		if err != nil {
+			return err
+		}
+		items, err := itemsForDefinitionInTx(tx, defID)
+		if err != nil {
+			return err
+		}
+		if len(items) == 0 {
+			out = []ItemView{}
+			return nil
+		}
+		ids := make([]string, len(items))
+		for i := range items {
+			ids[i] = items[i].ID
+		}
+		var doneRows []domain.TaskChecklistCompletion
+		if err := tx.Where("task_id = ? AND item_id IN ?", taskID, ids).Find(&doneRows).Error; err != nil {
+			return fmt.Errorf("list checklist completions: %w", err)
+		}
+		doneSet := make(map[string]bool, len(doneRows))
+		for _, d := range doneRows {
+			doneSet[d.ItemID] = true
+		}
+		out = make([]ItemView, 0, len(items))
+		for _, it := range items {
+			out = append(out, ItemView{
+				ID:        it.ID,
+				SortOrder: it.SortOrder,
+				Text:      it.Text,
+				Done:      doneSet[it.ID],
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Add appends a definition row; the task must exist and not use
+// ChecklistInherit. Appends EventChecklistItemAdded in the same TX.
+func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -32,7 +145,7 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	var created *domain.TaskChecklistItem
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
@@ -71,10 +184,12 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 	return created, nil
 }
 
-// DeleteChecklistItem removes a definition row owned by taskID.
-func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, by domain.Actor) error {
+// Delete removes a definition row owned by taskID. Cascades to the
+// per-subject completion rows for that item. Appends
+// EventChecklistItemRemoved in the same TX.
+func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpDeleteChecklistItem)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteChecklistItem")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Delete")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -83,7 +198,7 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 	if taskID == "" || itemID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
@@ -116,11 +231,13 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 	})
 }
 
-// UpdateChecklistItemText updates the definition text for an item owned by taskID.
-// Rejected when the task uses checklist_inherit or the item is not on that task.
-func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, text string, by domain.Actor) error {
+// UpdateText updates the definition text for an item owned by taskID.
+// No-op (no event emitted) when the new text matches the existing
+// row, so idempotent UI saves do not pollute the audit log. Appends
+// EventChecklistItemUpdated in the same TX otherwise.
+func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpUpdateChecklistItemText)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemText")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.UpdateText")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -130,7 +247,7 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 	if taskID == "" || itemID == "" || text == "" {
 		return fmt.Errorf("%w: text", domain.ErrInvalidInput)
 	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
@@ -160,11 +277,14 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 	})
 }
 
-// SetChecklistItemDone sets or clears completion for subjectTaskID on an item from its definition source.
-// Only [domain.ActorAgent] may change completion; the human user records criteria (POST) but does not toggle done.
-func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
+// SetDone sets or clears completion for subjectTaskID on an item
+// resolved through DefinitionSourceTaskIDInTx. Only domain.ActorAgent
+// may change completion; the human user records criteria via Add but
+// does not toggle done. Appends EventChecklistItemToggled in the same
+// TX.
+func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, done bool, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpSetChecklistItemDone)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDone")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -176,11 +296,11 @@ func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID 
 	if subjectTaskID == "" || itemID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := kernel.LoadTask(tx, subjectTaskID); err != nil {
 			return err
 		}
-		defOwner, err := definitionSourceTaskIDTx(tx, subjectTaskID)
+		defOwner, err := DefinitionSourceTaskIDInTx(tx, subjectTaskID)
 		if err != nil {
 			return err
 		}

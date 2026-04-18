@@ -1,4 +1,4 @@
-package store
+package cycles
 
 import (
 	"context"
@@ -16,34 +16,22 @@ import (
 	"gorm.io/gorm"
 )
 
-// StartCycleInput captures everything needed to begin a new execution attempt
-// for a task. The store decides AttemptSeq; callers cannot supply it.
-type StartCycleInput struct {
-	TaskID        string
-	TriggeredBy   domain.Actor
-	ParentCycleID *string
-	// Meta is small free-form runner metadata such as
-	// {"runner":"cursor-cli","prompt_hash":"..."}. nil and empty are normalized
-	// to the zero JSON object "{}".
-	Meta []byte
-}
+const logCmd = "taskapi"
 
-// StartCycle creates a new TaskCycle row with status=running for the given
-// task. Enforces "at most one running cycle per task" via an in-TX guard
-// (portable across Postgres + SQLite); concurrent attempts surface as
-// domain.ErrInvalidInput so callers can surface a 400 to clients (a worker
-// retrying through Idempotency-Key is the supported recovery path).
+// Start creates a new TaskCycle row with status=running. Enforces "at
+// most one running cycle per task" via an in-TX guard (portable across
+// Postgres + SQLite); concurrent attempts surface as
+// domain.ErrInvalidInput. AttemptSeq is assigned by the store
+// (max(attempt_seq) + 1). ParentCycleID, when non-nil, must reference
+// a cycle row on the same task; cross-task lineage is rejected.
 //
-// AttemptSeq is assigned by the store: max(attempt_seq) over the task + 1.
-// ParentCycleID, when non-nil, must reference an existing cycle row that
-// belongs to the same task; cross-task lineage is rejected as invalid input.
-//
-// In the same SQL transaction the call appends an EventCycleStarted mirror
-// row to task_events so GET /tasks/{id}/events stays a complete witness of
-// cycle activity. If the mirror insert fails, the cycle row is rolled back.
-func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.TaskCycle, error) {
+// In the same SQL transaction the call appends an EventCycleStarted
+// mirror row to task_events so GET /tasks/{id}/events stays a complete
+// witness of cycle activity. If the mirror insert fails, the cycle row
+// is rolled back.
+func Start(ctx context.Context, db *gorm.DB, in StartCycleInput) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpStartCycle)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.StartCycle")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Start")
 	if err := kernel.ValidateActor(in.TriggeredBy); err != nil {
 		return nil, err
 	}
@@ -56,11 +44,11 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 		return nil, err
 	}
 	var created *domain.TaskCycle
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
-		if err := assertNoRunningCycleForTaskTx(tx, taskID); err != nil {
+		if err := assertNoRunningCycleForTaskInTx(tx, taskID); err != nil {
 			return err
 		}
 		if in.ParentCycleID != nil {
@@ -68,7 +56,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 			if parentID == "" {
 				return fmt.Errorf("%w: parent_cycle_id", domain.ErrInvalidInput)
 			}
-			parent, err := loadCycleByIDTx(tx, parentID)
+			parent, err := loadByIDInTx(tx, parentID)
 			if err != nil {
 				return err
 			}
@@ -77,7 +65,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 			}
 			in.ParentCycleID = &parent.ID
 		}
-		nextAttempt, err := nextAttemptSeqTx(tx, taskID)
+		nextAttempt, err := nextAttemptSeqInTx(tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -99,7 +87,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 		if err != nil {
 			return err
 		}
-		payload, err := cycleStartedPayload(row)
+		payload, err := startedPayload(row)
 		if err != nil {
 			return err
 		}
@@ -115,18 +103,19 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 	return created, nil
 }
 
-// TerminateCycle moves a running cycle into a terminal state. Rejected when
-// the cycle is already terminal, when the requested status is not terminal,
-// or when the cycle still has a running phase row.
+// Terminate moves a running cycle into a terminal state. Rejected when
+// the cycle is already terminal, when the requested status is not
+// terminal, or when the cycle still has a running phase row.
 //
-// In the same SQL transaction the call appends a mirror row to task_events:
-// EventCycleCompleted for CycleStatusSucceeded; EventCycleFailed for
-// CycleStatusFailed and CycleStatusAborted (the mirror payload's status
-// field preserves the distinction between failed and aborted). reason, if
-// non-empty, is included in the mirror payload.
-func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domain.CycleStatus, reason string, by domain.Actor) (*domain.TaskCycle, error) {
+// In the same SQL transaction the call appends a mirror row to
+// task_events: EventCycleCompleted for CycleStatusSucceeded;
+// EventCycleFailed for CycleStatusFailed and CycleStatusAborted (the
+// mirror payload's status field preserves the distinction between
+// failed and aborted). reason, if non-empty, is included in the mirror
+// payload.
+func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.CycleStatus, reason string, by domain.Actor) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpTerminateCycle)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TerminateCycle")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Terminate")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -139,15 +128,15 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 	}
 	reason = strings.TrimSpace(reason)
 	var out *domain.TaskCycle
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		cycle, err := loadCycleByIDTx(tx, cycleID)
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		cycle, err := loadByIDInTx(tx, cycleID)
 		if err != nil {
 			return err
 		}
 		if domain.TerminalCycleStatus(cycle.Status) {
 			return fmt.Errorf("%w: cycle already terminal", domain.ErrInvalidInput)
 		}
-		if err := assertNoRunningPhaseForCycleTx(tx, cycle.ID); err != nil {
+		if err := assertNoRunningPhaseForCycleInTx(tx, cycle.ID); err != nil {
 			return err
 		}
 		now := time.Now().UTC()
@@ -164,7 +153,7 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 		if err != nil {
 			return err
 		}
-		payload, err := cycleTerminatedPayload(cycle, reason)
+		payload, err := terminatedPayload(cycle, reason)
 		if err != nil {
 			return err
 		}
@@ -181,22 +170,22 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 	return out, nil
 }
 
-// GetCycle returns one cycle by id; ErrNotFound when missing.
-func (s *Store) GetCycle(ctx context.Context, cycleID string) (*domain.TaskCycle, error) {
+// Get returns one cycle by id; ErrNotFound when missing.
+func Get(ctx context.Context, db *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpGetCycle)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetCycle")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Get")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	return loadCycleByIDTx(s.db.WithContext(ctx), cycleID)
+	return loadByIDInTx(db.WithContext(ctx), cycleID)
 }
 
-// ListCyclesForTask returns cycles for a task ordered by attempt_seq DESC
+// ListForTask returns cycles for a task ordered by attempt_seq DESC
 // (newest first). limit is clamped to [1, 200]; the task must exist.
-func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int) ([]domain.TaskCycle, error) {
+func ListForTask(ctx context.Context, db *gorm.DB, taskID string, limit int) ([]domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCyclesForTask")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListForTask")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: task_id", domain.ErrInvalidInput)
@@ -208,7 +197,7 @@ func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int)
 		limit = 200
 	}
 	var out []domain.TaskCycle
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
@@ -223,10 +212,10 @@ func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int)
 	return out, nil
 }
 
-// loadCycleByIDTx fetches one cycle by id with gorm errors mapped to the
-// domain sentinels. Exported helpers and phase code share this lookup.
-func loadCycleByIDTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.loadCycleByIDTx")
+// loadByIDInTx fetches one cycle by id with gorm errors mapped to the
+// domain sentinels. Shared with the phase code via the in-TX scope.
+func loadByIDInTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.loadByIDInTx")
 	var c domain.TaskCycle
 	if err := tx.Where("id = ?", cycleID).First(&c).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -237,8 +226,8 @@ func loadCycleByIDTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
 	return &c, nil
 }
 
-func assertNoRunningCycleForTaskTx(tx *gorm.DB, taskID string) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.assertNoRunningCycleForTaskTx")
+func assertNoRunningCycleForTaskInTx(tx *gorm.DB, taskID string) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.assertNoRunningCycleForTaskInTx")
 	var n int64
 	if err := tx.Model(&domain.TaskCycle{}).Where("task_id = ? AND status = ?", taskID, domain.CycleStatusRunning).Count(&n).Error; err != nil {
 		return fmt.Errorf("running cycle lookup: %w", err)
@@ -249,8 +238,8 @@ func assertNoRunningCycleForTaskTx(tx *gorm.DB, taskID string) error {
 	return nil
 }
 
-func nextAttemptSeqTx(tx *gorm.DB, taskID string) (int64, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.nextAttemptSeqTx")
+func nextAttemptSeqInTx(tx *gorm.DB, taskID string) (int64, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.nextAttemptSeqInTx")
 	var max int64
 	if err := tx.Raw(`SELECT COALESCE(MAX(attempt_seq), 0) FROM task_cycles WHERE task_id = ?`, taskID).Scan(&max).Error; err != nil {
 		return 0, fmt.Errorf("next attempt_seq: %w", err)
@@ -258,10 +247,10 @@ func nextAttemptSeqTx(tx *gorm.DB, taskID string) (int64, error) {
 	return max + 1, nil
 }
 
-// cycleStartedPayload builds the data_json payload for the EventCycleStarted
+// startedPayload builds the data_json payload for the EventCycleStarted
 // audit mirror. Keys are stable (asserted by the dual-write invariant test).
-func cycleStartedPayload(c *domain.TaskCycle) ([]byte, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cycleStartedPayload")
+func startedPayload(c *domain.TaskCycle) ([]byte, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.startedPayload")
 	out := map[string]any{
 		"cycle_id":     c.ID,
 		"attempt_seq":  c.AttemptSeq,
@@ -277,10 +266,10 @@ func cycleStartedPayload(c *domain.TaskCycle) ([]byte, error) {
 	return b, nil
 }
 
-// cycleTerminatedPayload builds the data_json payload for the
+// terminatedPayload builds the data_json payload for the
 // EventCycleCompleted / EventCycleFailed audit mirror.
-func cycleTerminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cycleTerminatedPayload")
+func terminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.terminatedPayload")
 	out := map[string]any{
 		"cycle_id":    c.ID,
 		"attempt_seq": c.AttemptSeq,
@@ -296,11 +285,12 @@ func cycleTerminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) 
 	return b, nil
 }
 
-// mirrorEventTypeForCycleStatus picks which audit row type to write when a
-// cycle reaches the given terminal status. CycleStatusAborted folds into
-// EventCycleFailed; the payload's status field preserves the distinction.
+// mirrorEventTypeForCycleStatus picks which audit row type to write
+// when a cycle reaches the given terminal status. CycleStatusAborted
+// folds into EventCycleFailed; the payload's status field preserves
+// the distinction.
 func mirrorEventTypeForCycleStatus(s domain.CycleStatus) domain.EventType {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.mirrorEventTypeForCycleStatus")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.mirrorEventTypeForCycleStatus")
 	if s == domain.CycleStatusSucceeded {
 		return domain.EventCycleCompleted
 	}
