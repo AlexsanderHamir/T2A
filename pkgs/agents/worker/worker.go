@@ -132,9 +132,11 @@ func (w *Worker) Run(ctx context.Context) error {
 					"operation", "agent.worker.Worker.Run.shutdown", "err", err)
 				return nil
 			}
-			slog.Error("agent worker receive failed", "cmd", workerLogCmd,
-				"operation", "agent.worker.Worker.Run.receive_err", "err", err)
-			return err
+			// Bar §4: never log AND return the same error. The cmd/taskapi
+			// goroutine wrapping Run logs at Error level on non-nil return
+			// (taskapi.agent_worker.exit_err) so we propagate without
+			// double-logging here.
+			return fmt.Errorf("agent worker receive: %w", err)
 		}
 		w.processOne(ctx, task)
 	}

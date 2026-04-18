@@ -60,11 +60,13 @@ func migrateDBAndRegisterMetrics(db *gorm.DB) error {
 	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), postgres.DefaultMigrateTimeout)
 	defer migrateCancel()
 	if err := postgres.Migrate(migrateCtx, db); err != nil {
-		slog.Error("migrate failed", "cmd", cmdName, "operation", "taskapi.migrate",
-			"err", err,
-			"deadline_exceeded", errors.Is(err, context.DeadlineExceeded),
-			"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
-		return err
+		// Bar §4: never log AND return the same error. runTaskAPIService
+		// logs the wrapped error at Error level (taskapi.startup_db) so
+		// callers see the failure exactly once.
+		return fmt.Errorf("migrate (timeout %ds, deadline_exceeded=%t): %w",
+			int(postgres.DefaultMigrateTimeout/time.Second),
+			errors.Is(err, context.DeadlineExceeded),
+			err)
 	}
 	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate",
 		"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
@@ -404,18 +406,22 @@ func serveUntilShutdown(srv *http.Server, ln net.Listener) (shutdownViaSignal bo
 	return shutdownViaSignal, nil
 }
 
-func closeSQLDBOrLog(db *gorm.DB) (dbClosed bool, err error) {
+// closeSQLDBOrLog closes the GORM-owned *sql.DB pool and logs the
+// outcome. The function is the designated log site (per bar §4: never
+// log AND return the same error — pick one); callers take the returned
+// bool as the success signal and never re-log.
+func closeSQLDBOrLog(db *gorm.DB) (dbClosed bool) {
 	sqlDB, err := db.DB()
 	if err != nil {
 		slog.Error("database close skipped", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
-		return false, err
+		return false
 	}
 	if err := sqlDB.Close(); err != nil {
 		slog.Error("database close", "cmd", cmdName, "operation", "taskapi.db_close", "err", err)
-		return false, err
+		return false
 	}
 	slog.Info("database pool closed", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "db_done")
-	return true, nil
+	return true
 }
 
 func openTaskAPILogging(logDir, logLevelFlag string, disableLogging bool) (minLevel slog.Level, logFile *os.File, logPath string, minimized bool, err error) {
@@ -567,12 +573,12 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 
 	if serveErr != nil {
 		slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", serveErr)
-		_, _ = closeSQLDBOrLog(db)
+		closeSQLDBOrLog(db)
 		return 1
 	}
 
-	dbClosed, closeErr := closeSQLDBOrLog(db)
-	if closeErr != nil {
+	dbClosed := closeSQLDBOrLog(db)
+	if !dbClosed {
 		return 1
 	}
 	slog.Info("process exit", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "exit",
