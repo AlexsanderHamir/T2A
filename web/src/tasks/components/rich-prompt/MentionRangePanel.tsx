@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchRepoFile, type RepoFileResult } from "@/api/repo";
 import { errorMessage } from "@/lib/errorMessage";
 import { lineRangeFromSelection } from "@/lib/lineRangeFromSelection";
 import {
   filePreviewLanguageFromPath,
   highlightPreviewContent,
 } from "../file-preview";
+import { useMentionRangeFileLoad } from "./useMentionRangeFileLoad";
 
 export type MentionRangePanelProps = {
   id: string;
@@ -29,10 +29,8 @@ export function MentionRangePanel({
   onInsertPathOnly,
   onCancel,
 }: MentionRangePanelProps) {
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [file, setFile] = useState<RepoFileResult | null>(null);
-  const [loadRetryTick, setLoadRetryTick] = useState(0);
+  const { loading, loadError, file, retry: retryLoad } =
+    useMentionRangeFileLoad(path);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const codeContentRef = useRef<HTMLElement>(null);
   const [selStart, setSelStart] = useState(0);
@@ -40,34 +38,6 @@ export function MentionRangePanel({
   const [startLineInput, setStartLineInput] = useState("");
   const [endLineInput, setEndLineInput] = useState("");
   const [insertError, setInsertError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const ac = new AbortController();
-    setLoading(true);
-    setLoadError(null);
-    setFile(null);
-    void fetchRepoFile(path, { signal: ac.signal })
-      .then((r) => {
-        if (!active) return;
-        if (r === null) {
-          setLoadError("File preview is unavailable.");
-          return;
-        }
-        setFile(r);
-      })
-      .catch((e: unknown) => {
-        if (!active || ac.signal.aborted) return;
-        setLoadError(errorMessage(e, "Load failed"));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-      ac.abort();
-    };
-  }, [path, loadRetryTick]);
 
   const syncSelection = useCallback(() => {
     const ta = taRef.current;
@@ -182,9 +152,7 @@ export function MentionRangePanel({
             <button
               type="button"
               className="secondary"
-              onClick={() => {
-                setLoadRetryTick((t) => t + 1);
-              }}
+              onClick={retryLoad}
             >
               Try again
             </button>
