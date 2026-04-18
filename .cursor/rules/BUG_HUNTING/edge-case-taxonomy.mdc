@@ -1,0 +1,233 @@
+---
+description: >-
+  Categorized taxonomy of edge cases for the bug & edge-case hunting agent.
+  Used at PHASE 2 (DIAGNOSE) to enumerate inputs and at PHASE 3 (REPRODUCE) to
+  pick the failing case. Cross-stack: applies to Go and TS/React.
+globs:
+  - "**/*.go"
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Edge-Case Taxonomy
+
+A working enumeration of edge cases the agent should mentally walk through when targeting a function, handler, store call, hook, or component. Sections referenced from the main agent file as `§N`.
+
+> **How to use:** When the diagnose phase picks a target, walk this taxonomy top-to-bottom for that target. Stop at the first edge case that produces a failing reproducer. That is the session.
+
+---
+
+## §1 — INPUT-VALUE EDGES
+
+The classic "weird input" matrix. For any function/handler that accepts one of these types, ask: what does it do on each edge? Which are tested?
+
+### Strings
+
+- `""` (empty)
+- `" "` (whitespace only)
+- `"  leading"` / `"trailing  "` / `"  both  "`
+- Very long: 1MB single-line, 10MB multi-line
+- Unicode: `"日本語"`, emoji `"👨‍👩‍👧‍👦"` (ZWJ-grapheme), combining marks `"é"` vs `"é"` (NFC/NFD)
+- RTL: `"שלום"`, mixed-direction `"hello שלום world"`
+- Control characters: `"\0"`, `"\n"`, `"\r\n"`, `"\t"`, `"\x07"`
+- BOM: `"\uFEFFhello"`
+- Invalid UTF-8 bytes (Go: `string([]byte{0xff, 0xfe})`)
+- Strings that look like other types: `"null"`, `"undefined"`, `"true"`, `"0"`, `"NaN"`, `"-0"`, `"1e308"`
+- HTML/SQL/shell injection shapes: `"<script>"`, `"' OR 1=1 --"`, `"$(rm -rf /)"`
+- Path-traversal: `"../../etc/passwd"`, `"..\\..\\..\\windows\\system32"`
+
+### Numbers
+
+- `0`, `-0`, `1`, `-1`
+- `Number.MAX_SAFE_INTEGER` / `math.MaxInt64`, plus 1
+- `Number.MIN_SAFE_INTEGER` / `math.MinInt64`, minus 1
+- `Number.EPSILON`, very small positives, denormals
+- `Infinity`, `-Infinity`, `NaN`
+- Negative where positive expected
+- Floats where ints expected (or vice versa)
+- Currency: rounding past 2 decimals, `0.1 + 0.2`
+
+### Collections (slices, arrays, maps, lists)
+
+- `nil` (Go) / `null` / `undefined` (TS)
+- `[]` (empty)
+- `[oneItem]`
+- exactly `pageSize` items, `pageSize + 1`, `pageSize - 1`
+- duplicates: `[a, a, a]`
+- mixed types (TS: `[1, "two", null]`)
+- very large: `len == 100_000`
+- nested deeply: `[[[[[]]]]]`
+- circular references (TS, JSON.stringify)
+- map/object: missing key vs key-with-undefined vs key-with-null
+
+### Booleans / nullables
+
+- `true`, `false`
+- `null`, `undefined`, missing field
+- `0`, `""`, `[]` as falsy values when a real boolean was expected
+
+### Dates / times
+
+- `1970-01-01T00:00:00Z` (epoch)
+- `1969-12-31T23:59:59Z` (pre-epoch)
+- `2038-01-19T03:14:07Z` (32-bit overflow)
+- Leap day: `2024-02-29`
+- Leap second adjacent: `2016-12-31T23:59:60Z`
+- DST transitions: `America/New_York` 2am→3am spring, 2am→1am fall
+- UTC midnight vs local midnight
+- Far future: `9999-12-31`
+- Far past: `0001-01-01`
+- Monotonic vs wall clock (Go `time.Time` carries both — comparisons can surprise)
+- Time-zone offset of `+14:00` (Kiribati) and `-12:00` (Baker Island)
+
+### IDs / UUIDs
+
+- `""`, `"0"`, `"00000000-0000-0000-0000-000000000000"`
+- Lowercase vs uppercase UUID
+- UUID with dashes vs without
+- Database `id = 0` vs `id = -1` vs auto-increment overflow
+
+---
+
+## §2 — STATE & INVARIANT EDGES
+
+For any state-mutating code, ask: what sequences of operations produce illegal states? What does the code do then?
+
+- **Empty initial state**: first write of its kind (no prior rows; no prior subscribers)
+- **Idempotency**: same write twice in a row — does the second succeed silently? Should it?
+- **Concurrent identical writes**: two requests with the same payload arrive in flight; result of second?
+- **Partial-success writes**: multi-step write where step 2 fails — is step 1 rolled back?
+- **Transactional gaps** (repo-specific): the dual-write of `task_cycles`/`task_cycle_phases` + `task_events` is in the SAME `db.Transaction(func(tx) { ... })`? Search for any path that writes one and not the other.
+- **Status-machine bypass**: any path that sets a `status` field directly without going through a transition validator?
+- **Orphans**: deleting a parent without deleting (or reassigning) children
+- **Stale snapshot writes**: read row at T0, modify, write at T1 — was the row updated at T0.5? (Optimistic locking?)
+- **Counters / monotonic sequences**: `log_seq`, `phase_seq` — can they go backward? Restart at zero on process restart? Skip values?
+- **Cache vs source-of-truth divergence**: in-memory cache vs DB; React Query cache vs server state; SSE-pushed state vs cached query result
+- **Rebuilt-from-events vs persisted state**: if the system rebuilds state from events, does a partial replay produce the same answer as the persisted snapshot?
+
+---
+
+## §3 — CONCURRENCY & LIFECYCLE EDGES
+
+For any goroutine, hook, subscription, or timer, ask: what happens at every termination boundary? What if two of these run simultaneously?
+
+### Termination boundaries
+
+- Process shutdown mid-request (SIGTERM during request handling)
+- Context cancellation mid-write (does the partial write get committed?)
+- HTTP client disconnect mid-SSE (Go hub: does the subscriber get cleaned up?)
+- Component unmount mid-fetch (Web: does the response still call `setState` on a dead component?)
+- Tab close mid-EventSource (browser cleanup)
+- Network blip: TCP RST during partial read
+- Test process shutdown mid-goroutine (do tests deadlock or leak?)
+
+### Concurrency interleavings
+
+- Two goroutines/effects start in any order — does the result depend on order?
+- Lock acquired in inconsistent order across paths (deadlock potential)
+- Channel send to a buffered channel that's full (Go: blocks; SSE hub back-pressure pattern)
+- Channel receive from a closed channel (returns zero value — does the consumer notice?)
+- React: same component instance gets two near-simultaneous user actions (double-click submit)
+- React 18 Strict Mode double-invocation: `useEffect` runs twice — does cleanup work?
+- Rapid mount/unmount: subscription created, immediately torn down, was it registered then never unregistered?
+
+### Resource lifecycles
+
+- File opened, read, but `.Close()` only on the success path (defer missing)
+- Timer started (`time.After`, `setTimeout`) without cancellation; fires after the relevant context is gone
+- HTTP client without timeout (Go `&http.Client{}` with no Timeout field) — leaks indefinitely on slow server
+- DB connection from pool not returned (forgotten `rows.Close()`)
+- Goroutine spawned per request without bounded worker pool — unbounded fan-out under load
+
+---
+
+## §4 — FAILURE-MODE EDGES
+
+For any operation that can fail, walk through what each failure produces — visibility, state, recoverability.
+
+### Network / IO failures
+
+- Read times out half-way through the response body
+- Write succeeds at TCP level but server returns 5xx
+- DNS resolution failure
+- TLS handshake failure (expired cert, hostname mismatch)
+- Disk full mid-write
+- File locked by another process
+- Permission denied on a path the code expects to own
+
+### Parse / decode failures
+
+- JSON with extra fields (silently dropped or rejected?)
+- JSON with missing required field
+- JSON with field of wrong type (`"5"` vs `5`)
+- JSON that parses but semantic constraints fail (negative quantity)
+- Truncated body (`Content-Length` lies)
+- Wrong `Content-Type` (server returned HTML error page when JSON expected)
+
+### Logic failures
+
+- Division by zero
+- Index out of range (slice/array)
+- Nil dereference
+- Type assertion fail (Go `x.(T)` without comma-ok)
+- Map access on nil map
+- Integer overflow on arithmetic
+
+### Failure visibility audit
+
+For each of the above, ask: when this happens in production at 3am, can the operator tell from logs/metrics/UI? If no, the silent-degradation defect class is in play.
+
+### Repo-specific failure flavors
+
+- `domain.ErrNotFound` returned where `domain.ErrInvalidInput` was correct (or vice versa) — leads to wrong HTTP status
+- SSE event with malformed payload — does the web subscriber crash, ignore, or surface the error?
+- Migration partial-failure — schema half-applied, second startup re-applies idempotently?
+- `T2A_*` env var malformed (e.g. `T2A_RATE_LIMIT_PER_MIN=abc`) — fail fast on startup or fail silently at first request?
+
+---
+
+## §5 — INTEGRATION / BOUNDARY EDGES
+
+For any cross-component or cross-stack interaction, ask: do both sides agree on the wire format AND the semantics?
+
+- HTTP handler returns `null` for an absent value; web parser expects `undefined` (or omits the field). Different in TS strict mode.
+- Server emits SSE event named `task_changed`; client subscribes to `task-changed` (typo)
+- Server returns timestamps in RFC3339 with `Z`; client parses as local time
+- Server enforces a `pageSize` max of 100; client requests 1000 silently capped — pagination skips items
+- Web sends a `PATCH` body with extra fields; Go handler ignores them but should reject (or vice versa)
+- Web's `parseTaskApi` accepts a field as optional; server treats it as required when present
+- Env-var driven feature: code reads `T2A_FOO_ENABLED` but doc says `T2A_ENABLE_FOO`
+- Error JSON shapes: `{error: "msg"}` vs `{message: "msg"}` vs `{detail: "msg"}` across endpoints
+- HTTP status code mismatches: handler returns 200 with `{error: "..."}` body when 4xx was correct
+- SSE retry/last-event-id semantics: server respects `Last-Event-ID`? Client sends it on reconnect?
+
+---
+
+## §6 — REPO-SPECIFIC HOT SPOTS
+
+Based on `AGENTS.md` and `docs/` map. Re-check these on every CLEAN-STATE session before declaring clean.
+
+- `pkgs/tasks/store/store_cycle_phases.go` and `store_cycles.go` — dual-write atomicity (see `docs/EXECUTION-CYCLES.md`)
+- `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) — status code mapping, JSON shape vs `docs/API-HTTP.md`
+- `pkgs/tasks/middleware/Stack` ordering — middleware order changes have outsized blast radius
+- `pkgs/tasks/handler/` SSE hub subscriber lifecycle — leak-class hot spot
+- `pkgs/agents/` ready-task queue cap and reconcile — boundary edges (cap full, reconcile mid-flight)
+- `internal/taskapi.NewHTTPHandler` — wiring; missing layer means missing security/observability headers
+- `web/src/api/parseTaskApi` family — sole gate from `unknown` to typed; loose parsing hides P5 contract bugs
+- `web/src/tasks/task-query/sseInvalidate.ts` — SSE→React Query invalidation; wrong key invalidates nothing or invalidates everything
+- `web/src/tasks/hooks/` — every fetch hook needs abort + cleanup
+- `internal/envload/` — `.env` resolution edge cases (missing file, malformed, conflicting OS env)
+
+---
+
+## §7 — HOW TO PICK ONE TARGET PER SESSION
+
+When the diagnose phase needs to pick a single target from this taxonomy, prefer in order:
+
+1. A target that appears in the most recent `NEXT_SESSION_QUEUE` (carry-forward).
+2. A target touched in the **last 3 sessions** (recent code is more likely to have new bugs).
+3. A target from §6 (repo-specific hot spot) that hasn't been audited in the last 5 sessions.
+4. A target chosen by walking §1–§5 against a randomly-selected handler/hook from the recently-modified file list.
+
+Pick exactly one. Do not enumerate 12 candidates and write a survey. Pick, reproduce, fix.

@@ -1,0 +1,139 @@
+---
+description: >-
+  Methodology bar for the bug & edge-case hunting agent. Defines what counts as
+  a defect, what counts as actionable, the discipline for invariants, error
+  handling, and the proof standard for "the codebase is clean".
+globs:
+  - "**/*.go"
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Bug-Hunting Quality Bar
+
+This file defines the standards the hunting agent applies. Read targeted sections per `bug-edge-case-autonomous-agent.mdc` PATTERN FILE LOADING MAP. Sessions reference sections by number (`§N`).
+
+---
+
+## 1. WHAT COUNTS AS A DEFECT
+
+A **defect** is any one of the following, observed in code that is reachable in production or tests:
+
+1. **Crash class**: panic, uncaught exception, nil-pointer dereference, division-by-zero, type assertion failure, unhandled rejected promise, infinite loop, stack overflow.
+2. **Wrongness class**: function/handler/component returns or stores a value that violates a documented or implied contract (status code, JSON shape, invariant, monotonicity, idempotency, ordering).
+3. **State-corruption class**: persisted or in-memory state ends in a configuration that no valid sequence of inputs could produce — e.g. orphaned rows, mutually-inconsistent fields, a phase whose status disagrees with its parent cycle.
+4. **Leak class**: a resource (goroutine, file handle, socket, subscription, timer, EventSource, AbortController, DB connection, listener) is allocated on a code path but not released on at least one reachable termination of that path.
+5. **Race class**: data race detectable by `-race`, or a logical race observable as flaky tests, lost updates, or stale reads.
+6. **Silent-degradation class**: an error occurs and is swallowed (discarded, logged at debug-only, replaced with a default that is indistinguishable from success). The user gets a wrong answer instead of an honest failure.
+7. **Edge-case class**: a defect from §1–§6 triggered by an input that is unusual but valid (empty list, single item, max int, leap-day, BOM, RTL text, very long string, exact pagination boundary, concurrent identical request).
+
+A **non-defect** (out of scope for this agent — leave for the UI/Backend improvement agents):
+- Cosmetic UI issues (spacing, color, animation polish).
+- Performance issues that don't cross a SLO boundary or cause user-visible failure.
+- Code-style preferences (naming, formatting beyond `gofmt`/lint defaults).
+- Missing features.
+- Refactors with no behavior change and no defect.
+
+If your finding doesn't map to §1–§7 above, it's not for this agent. Do not fix it. Optionally note it in `SUSPECTED` for the user to redirect to the appropriate agent.
+
+---
+
+## 2. SEVERITY → TIER MAPPING
+
+| Defect class                  | Default tier | Notes                                                              |
+|-------------------------------|--------------|--------------------------------------------------------------------|
+| Crash on request path         | P0           | Always P0, no exceptions                                            |
+| Crash in dev-only / test-only | P0 (still)   | A panicking test masks other failures                               |
+| State corruption (persisted)  | P1           | Dual-write violations, transactional gaps, missing rollback         |
+| State corruption (in-memory)  | P1 or P2     | P2 if it requires concurrency to manifest                           |
+| Race / deadlock               | P2           | Even if currently latent                                            |
+| Goroutine / subscription leak | P2           | Lifecycle violations belong with concurrency                        |
+| Boundary input bug            | P3           | Unless it crashes (then P0) or corrupts state (then P1)             |
+| Silent error swallow          | P4           | Unless it leads to corruption (then P1)                             |
+| Contract drift (HTTP/SSE/JSON)| P5           | Unless it corrupts client state (then P1)                           |
+
+When in doubt, escalate one tier. P0 is always preferred over silently treating something serious as P3.
+
+---
+
+## 3. ACTIONABLE FINDING — DEFINITION
+
+A finding is **actionable** in this session if and only if **all four** are true:
+
+1. **Reproducible.** You can write a failing test (or a 5-line manual repro) that demonstrates the defect. If you can only "see it in the code" but can't trigger it, it is `SUSPECTED`, not actionable.
+2. **Scoped.** The fix touches a small, traceable set of files (rule of thumb: ≤ 5 files for the production change, plus the regression test). If the true fix requires a cross-cutting refactor, the **narrowest correct symptom-fix** is actionable IF it doesn't hide the root cause; otherwise log to `ROOT_CAUSE_FOLLOWUP`.
+3. **Within session budget.** You can complete PHASE 3–7 (reproduce → root-cause → fix → regression-test → verify → commit/push) in one session without leaving partially-broken state. If the fix triggers cascade failures in unrelated tests that need their own root-causing, abandon the fix and queue both items.
+4. **Doesn't violate hard rules.** A "fix" that requires deleting tests, recovering panics, or breaking contracts is not actionable — find a different angle or queue it.
+
+**SUSPECTED entries** (failing one of the above) belong in the CLEAN-STATE log audit, not in `NEXT_SESSION_QUEUE`. They are observations, not commitments.
+
+---
+
+## 4. INVARIANT INTEGRITY
+
+State invariants are properties that must hold at every observable moment. They are the bedrock of the wrongness/corruption defect classes.
+
+### Repo-specific invariants you must protect
+
+(Cross-reference `docs/EXECUTION-CYCLES.md` and `docs/DESIGN.md` before editing.)
+
+- **Cycle/phase dual-write atomicity**: a write to `task_cycles` or `task_cycle_phases` MUST occur in the same SQL transaction as the corresponding `task_events` insert. A fix that splits these is a defect, not a feature.
+- **Phase status transitions**: must pass `domain.ValidPhaseTransition`. A handler that calls a store write without first checking the transition (or relying on the store to check) is a P1 candidate.
+- **JSON contract honesty**: handler response field names and status codes match `docs/API-HTTP.md` and `docs/API-SSE.md`. Drift is a P5 defect; if the doc is wrong, fix the doc in the same session as the code.
+- **Web `parseTaskApi` chokepoint**: web treats API responses as `unknown` until parsed. A `web/src/` component reading `response.field` without going through a parser is a P5 defect (and a typing lie that hides P1 corruption).
+- **SSE event subscription symmetry**: every subscribe (Go hub-side or Web `EventSource`-side) has a matched cleanup on every termination path. Asymmetry is a P2 leak.
+- **Context propagation**: handlers and store calls on a request path use `r.Context()`, never `context.Background()`. Background-context usage outside startup/shutdown/test setup is a P2 candidate.
+
+### General invariant principles
+
+- An invariant that isn't tested isn't an invariant. When you fix an invariant violation, the regression test must assert the invariant holds, not just that the specific bug input no longer fails.
+- Prefer fixing the **enforcement point** (the chokepoint that no caller can bypass) over fixing the caller. Example: enforce the transition check inside the store, not in every handler.
+- If you discover a new invariant during a hunt, the queue entry should describe the **invariant**, not the symptom that revealed it.
+
+---
+
+## 5. ERROR-HANDLING DISCIPLINE
+
+The bar for the silent-degradation defect class.
+
+### Go
+
+- Every error from a function that can fail is either: returned (with `fmt.Errorf("context: %w", err)`); logged at the right level with structured fields; or explicitly discarded with `_ = ...` AND a comment explaining why ignoring is correct.
+- Handlers map domain errors to HTTP status using the `apijson` / handler conventions:
+  - `domain.ErrNotFound` → 404
+  - `domain.ErrInvalidInput` → 400
+  - context cancellation (`context.Canceled`) → 499 if exposed, otherwise log and return without a body
+  - everything else → 500 with `WriteJSONError` (no stack trace leak to client)
+- `defer X.Close()` is acceptable for read-only resources; for writes, capture and check the error.
+- `recover()` is acceptable only inside an explicit boundary (top-level worker, request handler middleware), and only when paired with: log of the panic value + stack, return of a clean error, and a regression test proving the panic path no longer triggers.
+
+### Web (TS/React)
+
+- Every `await` is inside `try/catch` OR returned from a function whose caller catches.
+- Every `.then` chain has a `.catch`.
+- Every fetch hook (React Query / useEffect / SWR / raw) renders an error UI on failure. Defect predicate: a fetch site that has only a loading and a success state, with no error path, is a P4 in this hunt (separate from the P2 fetch-cleanup concern).
+- `??` and `||` defaults are fine for genuinely-optional values, but when used on a fetch result, they hide the difference between "server returned nothing" and "fetch failed". Audit on a case-by-case basis.
+
+### The honesty test
+
+For any fix you ship, ask: **"If this code path executes the failure branch in production, will an operator be able to tell from logs/metrics/UI that something went wrong?"** If the answer is no, the fix is incomplete.
+
+---
+
+## 6. THE PROOF STANDARD FOR "CLEAN STATE"
+
+CLEAN STATE is a real, defensible outcome — not a fallback when the agent is tired. Defending it requires:
+
+- **All scan techniques in the priority tier file were actually run** (not skimmed). The audit log lists the commands and grep patterns executed.
+- **Verification commands pass** on a fresh run (`go vet ./...`, `go test ./... -count=1`, and at least `npm test --run` for web; full `scripts/check.*` if cross-stack work was recently merged).
+- **Last 3 sessions of `NEXT_SESSION_QUEUE` were either resolved or carried forward** — no item was silently dropped.
+- **At least one `SUSPECTED` observation OR an explicit "no anomalies observed" line per tier**. A scan that produces zero observations across all tiers is suspicious — re-check the scan techniques actually ran against the right paths.
+
+CLEAN STATE means: at this commit, in the scanned tiers, with the techniques applied, no actionable defect was visible. It does NOT mean: bug-free. It does NOT mean: stop hunting. The next session may find something, especially after new code lands.
+
+---
+
+## 7. MOTIVATION (KEEP AT THE BOTTOM, RE-READ AFTER 10 SESSIONS)
+
+The codebase you're hunting in is shared infrastructure. Every defect you ship a fix for protects the next 1000 invocations of the affected code path. Every CLEAN-STATE outcome you honestly produce builds trust that the queue is meaningful. Every dishonest "fix" (symptom patch, deleted test, swallowed panic) costs ten future sessions to undo. The bar is not "did I do something this session?" — the bar is "did I leave the codebase strictly more correct than I found it, with proof."

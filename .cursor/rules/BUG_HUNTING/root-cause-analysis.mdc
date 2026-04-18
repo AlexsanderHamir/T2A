@@ -1,0 +1,134 @@
+---
+description: >-
+  Root-cause analysis discipline for the bug & edge-case hunting agent. Loaded
+  in PHASE 4 (ROOT-CAUSE) of every fix-shipped session. Defines the difference
+  between symptom and cause, the 5-whys procedure, and the rules for when a
+  narrowed symptom-fix is acceptable.
+globs:
+  - "**/*.go"
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Root-Cause Analysis
+
+The hunting agent is allowed to ship symptom-only patches **only when** they don't hide the cause AND the larger fix is queued. This file defines the discipline.
+
+---
+
+## 1. SYMPTOM vs CAUSE
+
+A **symptom** is what the bug looks like from the outside: the failing test, the panic message, the wrong number on screen.
+
+A **cause** is the code-level decision (or absence of one) that made the symptom possible. Causes come in tiers:
+
+- **Proximate cause**: the line that triggered the symptom. ("`x.Field` was nil at line 47.")
+- **Logical cause**: the missing check or wrong assumption. ("`x` could be nil because `Lookup` returns `nil, nil` on miss, not `nil, ErrNotFound`.")
+- **Architectural cause**: the design choice that allowed the logical cause. ("`Lookup` is the only place in the package that swallows misses; every other lookup pattern returns `ErrNotFound`. The inconsistency lets every caller forget the nil check.")
+- **Process cause**: the development practice that allowed the architectural cause. ("No lint rule enforces that store methods return typed errors; reviews didn't catch it because the inconsistency is local-only.")
+
+You don't need to fix at every tier. You DO need to **identify the highest tier you're fixing at**, and queue what's left.
+
+---
+
+## 2. THE 5-WHYS, WITH GUARDRAILS
+
+Walk five "why?" questions starting from the symptom. Stop when the next "why" leaves the codebase (becomes a process question).
+
+**Example:**
+
+- **Symptom:** `PATCH /tasks/1/cycles/9999/phases/1` returns 500 instead of 404.
+- **Why?** The handler called `store.GetPhase(...)` and got a generic `*pq.Error`-like error, not `domain.ErrNotFound`.
+- **Why?** `GetPhase` does `db.First(&phase, ...)` and returns the GORM error verbatim instead of mapping `gorm.ErrRecordNotFound` → `domain.ErrNotFound`.
+- **Why?** The store wrapper for cycles maps the error correctly; the wrapper for phases was added later and skipped the mapping.
+- **Why?** No shared helper exists for "lookup or ErrNotFound"; each store method does it ad-hoc.
+- **Why?** (would leave the codebase — "code review didn't catch it" — stop here)
+
+**Causes identified:**
+- Proximate: missing mapping in `store.GetPhase`.
+- Logical: GORM error not translated at the store boundary.
+- Architectural: ad-hoc error mapping; no shared helper.
+
+**Decision:** Fix proximate + logical (5-line change in `GetPhase`). Queue architectural (introduce a `lookupOrNotFound[T]` helper across the store package — separate session, requires touching 8 methods).
+
+---
+
+## 3. RULES FOR THE NARROWED FIX
+
+A narrowed (symptom or proximate-cause) fix is acceptable IF AND ONLY IF:
+
+1. **It doesn't hide the cause.** A `recover()` around a panicking function hides the nil-deref bug. A `try/catch` that swallows an error and returns a default hides the failure. These are **forbidden** as narrowed fixes — they make future hunts harder.
+2. **It doesn't introduce new debt** that's harder to undo than the original bug. (Wrapping every call site in defensive nil checks instead of fixing the source is debt.)
+3. **The remaining work is queued** under `ROOT_CAUSE_FOLLOWUP` in the session log with a one-sentence description of the architectural fix.
+4. **The regression test asserts the correct behavior**, not just "no panic". (See `regression-test-recipes.mdc §1` — assert the 404, not just the absence of panic.)
+
+If any of (1)–(4) fails, the fix is not actionable in this session. Either widen the scope (and accept it might exceed session budget — abandon if it does) or queue the whole thing.
+
+---
+
+## 4. CAUSES YOU MUST NOT "FIX"
+
+Some causes are out-of-scope for any single hunt session:
+
+- **"Tests don't cover this area."** That's a process cause. The right response is to **add the regression test** (which you're doing anyway), not to embark on a coverage drive.
+- **"This module is poorly factored."** Refactor sessions are not for this agent. Queue a `ROOT_CAUSE_FOLLOWUP` and let the user (or a different agent) decide.
+- **"The doc was wrong."** This IS in scope IF the doc-vs-code drift caused the bug; fix the doc in the same commit. But don't go on a doc audit during a bug-hunt.
+- **"The dependency has a known bug."** Note in the log; pin or upgrade if the upgrade is local and tested; otherwise queue a `ROOT_CAUSE_FOLLOWUP` for a dependency-management session.
+
+---
+
+## 5. WHEN ROOT CAUSE IS A MISSING TEST
+
+Sometimes the chain bottoms out at: "no test would have caught this." The actionable fix is to **write the test** (which you're doing anyway as the regression test) AND, if the same gap covers a *class* of code, queue a `ROOT_CAUSE_FOLLOWUP` to harden the test surface for the class. Example:
+
+- Symptom: handler returned wrong status for one edge.
+- Root cause (missing test): no contract test pins the status-code-per-condition matrix for this handler.
+- Narrowed fix: add the regression test for this exact case.
+- Followup: queue `add contract test matrix for cycles handler covering all (input, expected status) pairs from docs/API-HTTP.md`.
+
+---
+
+## 6. WRITING THE LOG ENTRY
+
+The session log fields **Symptom**, **Root cause**, and **Fix** must be honest and distinct. Bad/good examples:
+
+**Bad** (symptom-as-cause):
+```
+Symptom: handler panicked on missing cycle
+Root cause: handler panicked on missing cycle
+Fix: added nil check
+```
+
+**Good** (causes vs symptoms separated):
+```
+Symptom: PATCH /tasks/{id}/cycles/{missing}/phases/{seq} returned HTTP 500 with a panic stack
+Root cause: store.GetPhase returned the raw GORM ErrRecordNotFound instead of mapping to domain.ErrNotFound; handler treated unknown error as 500 and the missing nil check on the returned phase pointer panicked downstream
+Fix: store.GetPhase now maps gorm.ErrRecordNotFound -> domain.ErrNotFound; handler short-circuits to 404 on ErrNotFound before dereferencing
+```
+
+The good version makes the next hunt easier: a future agent reading this entry knows that other store methods may have the same mapping gap, and the `ROOT_CAUSE_FOLLOWUP` will already say so.
+
+---
+
+## 7. CONFIDENCE STATEMENTS
+
+Your log should state confidence honestly. Three levels:
+
+- **Confirmed** — you reproduced the symptom, identified the cause, and the regression test fails before the fix and passes after. Standard outcome.
+- **Likely** — you have a plausible cause but couldn't fully reproduce; the fix addresses what you found, the regression test passes, but you suspect there may be a related path. Add a `SUSPECTED` line in addition to the queue entry.
+- **Speculative** — you don't have enough evidence. **This means it's not actionable.** Do NOT ship a "speculative fix". Log as `SUSPECTED` and either pick a different finding for the session or proceed to CLEAN-STATE EXIT.
+
+The hunting agent never speculates with code. Speculation goes in the audit log.
+
+---
+
+## 8. AFTER THE FIX
+
+When PHASE 5 is done and PHASE 6 is green, ask one final question before PHASE 7:
+
+> **"If I were to re-run this session's diagnostic scans against the post-fix code, would they find this bug again?"**
+
+If yes, your fix is incomplete or in the wrong place. Iterate.
+
+If no, you're done. Commit and push.

@@ -1,0 +1,300 @@
+---
+description: >-
+  Concrete scan recipes (commands, grep patterns, runtime probes) for the bug &
+  edge-case hunting agent. One section per priority tier. Cross-stack: Go +
+  TS/React. Sections referenced from the main agent file as §1, §3, §5.
+globs:
+  - "**/*.go"
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Bug Detection Techniques
+
+Pragmatic recipes for finding defects. The main agent file maps tiers to sections here. Run the commands, read the output, decide if there's an actionable finding. Do not skim.
+
+> **Note:** All `rg` commands assume ripgrep is on PATH (it is in this repo's dev environment). Replace with equivalent `grep -rn` only if rg is unavailable.
+
+---
+
+## §1 — CRASH CLASS (P0)
+
+Goal: surface every panic, uncaught throw, nil-deref, race that the codebase admits to.
+
+### Go scans
+
+```bash
+# 1. Run the full test suite, capture failures verbatim
+go test ./... -count=1 2>&1 | tee /tmp/bughunt-go-tests.log
+
+# 2. Run with race detector on the changed packages (read git diff first to scope)
+go test -race ./pkgs/tasks/... -count=1 2>&1 | tee /tmp/bughunt-race.log
+
+# 3. Find every explicit panic on a request path
+rg -n "\bpanic\(" pkgs/ internal/ cmd/ --type go
+
+# 4. Find silenced linter / static-analysis findings
+rg -n "//\s*nolint|//\s*lint:ignore" pkgs/ internal/ cmd/ --type go
+
+# 5. Find type assertions WITHOUT comma-ok (will panic on wrong type)
+#    Pattern: x.(T) on a line by itself or on RHS without ", ok"
+rg -n "\.\([A-Z][A-Za-z0-9_]*\)" pkgs/ internal/ cmd/ --type go | rg -v ", ok"
+
+# 6. Find unchecked map/slice indexing in hot paths
+rg -n "\[[a-zA-Z_][a-zA-Z0-9_]*\]" pkgs/tasks/handler/ --type go | rg -v "_, ok :="
+
+# 7. Vet pass
+go vet ./...
+```
+
+**What to look for:**
+- Any FAIL line in test output → P0 candidate
+- DATA RACE in race output → P0 (concurrency, but presents as crash class)
+- Panic in non-test code without an explicit boundary recovery → P0
+- Nolint without a comment explaining why → suspicious, look at the underlying issue
+
+### Web scans
+
+```bash
+# 1. Run the full Vitest suite
+cd web && npm test -- --run 2>&1 | tee /tmp/bughunt-web-tests.log
+
+# 2. Find every unguarded throw
+rg -n "throw\s+(new\s+)?Error" web/src/ --type ts --type tsx
+
+# 3. Find type-system escape hatches (these hide runtime crashes)
+rg -n "\bas\s+any\b|\bas\s+unknown\s+as\b|@ts-ignore|@ts-expect-error" web/src/
+
+# 4. Find promise chains without .catch
+rg -n "\.then\(" web/src/ --type ts --type tsx -A 1 | rg -v "\.catch\("
+
+# 5. Find async functions whose callers don't await or .catch
+#    (manual review of recent diff is more reliable than grep here)
+```
+
+**What to look for:**
+- Vitest failures → P0
+- `as any` or `@ts-ignore` without an inline justifying comment → suspicious
+- A `throw` inside a render function or a synchronous reducer → P0 (will crash React tree)
+
+---
+
+## §2 — STATE / INVARIANT (P1)
+
+Goal: find paths where state can end up wrong without anyone noticing.
+
+### Go scans
+
+```bash
+# 1. Find write methods NOT inside a transaction wrapper
+rg -n "db\.(Create|Save|Updates|Delete|Exec)" pkgs/tasks/store/ --type go -B 5 | rg -v "Transaction\("
+
+# 2. Find dual-write candidates: cycle/phase mutation that doesn't co-write task_events
+rg -ln "task_cycles|task_cycle_phases" pkgs/tasks/store/ --type go
+# For each file, manually check that mutations also touch task_events in same tx
+
+# 3. Find direct status mutations bypassing transitions
+rg -n "\.Status\s*=" pkgs/tasks/ --type go | rg -v "_test.go"
+
+# 4. Find admissions of broken invariants
+rg -n "//\s*(TODO|FIXME|XXX|HACK).*invariant|//\s*(TODO|FIXME).*race|//\s*(TODO|FIXME).*broken" pkgs/ internal/ --type go
+```
+
+### Web scans
+
+```bash
+# 1. Find optimistic updates without rollback
+rg -n "setQueryData|onMutate" web/src/ --type ts --type tsx -A 10 | rg -B 1 "onError" 
+
+# 2. Find stale-closure setState patterns
+rg -n "set[A-Z][a-zA-Z]*\(.*[+\-*/].*\)" web/src/ --type tsx
+# (true positive: setX(x + 1); should be setX(prev => prev + 1))
+
+# 3. Find mutations that don't invalidate related queries
+rg -n "useMutation" web/src/ --type tsx -A 15 | rg -B 1 "invalidateQueries|setQueryData"
+```
+
+**What to look for:**
+- Any store write outside a `db.Transaction(...)` block where multiple rows are affected
+- `task_cycles` / `task_cycle_phases` writes without a co-located `task_events` insert
+- Optimistic mutations with no `onError` rollback path
+- `setX(x + 1)` patterns instead of `setX(prev => prev + 1)`
+
+---
+
+## §3 — CONCURRENCY & LIFECYCLE (P2)
+
+### Go scans
+
+```bash
+# 1. Every goroutine — does it respect ctx.Done()?
+rg -n "go\s+func\(" pkgs/ internal/ cmd/ --type go -A 5
+
+# 2. Mutex locks — every Lock matched with deferred Unlock?
+rg -n "\.Lock\(\)" pkgs/ internal/ --type go -A 3 | rg -v "defer.*Unlock"
+
+# 3. Background context in request paths (should be r.Context())
+rg -n "context\.Background\(\)|context\.TODO\(\)" pkgs/tasks/handler/ pkgs/tasks/store/ --type go
+
+# 4. SSE hub subscribers — registration/cleanup symmetry
+#    Find where subscribers are added vs where they're removed
+rg -n "subscribe|Subscribe" pkgs/tasks/handler/ --type go -A 2
+rg -n "unsubscribe|Unsubscribe|delete\(.*subscribers" pkgs/tasks/handler/ --type go
+
+# 5. time.After in select loops (leak)
+rg -n "time\.After\(" pkgs/ internal/ cmd/ --type go -B 1 -A 3 | rg -B 2 "select"
+
+# 6. HTTP clients without timeout
+rg -n "&http\.Client\{" pkgs/ internal/ cmd/ --type go -A 5 | rg -v "Timeout:"
+
+# 7. Channel sends without context-aware select (block on full buffer)
+rg -n "<-\s*[a-zA-Z]" pkgs/tasks/handler/ --type go | rg -v "select|case"
+```
+
+### Web scans
+
+```bash
+# 1. useEffect with fetch but no AbortController
+rg -n "useEffect" web/src/ --type tsx -A 15 | rg -B 8 "fetch\(|axios\." | rg -v "AbortController|signal"
+
+# 2. EventSource without close in cleanup
+rg -n "new EventSource\(" web/src/ --type ts --type tsx -A 20 | rg -B 1 "\.close\(\)"
+
+# 3. setInterval/setTimeout without clear in cleanup
+rg -n "setInterval\(|setTimeout\(" web/src/ --type ts --type tsx -A 5 | rg -B 1 "clearInterval|clearTimeout"
+
+# 4. Effects whose cleanup depends on stale closures (manual review)
+rg -n "useEffect" web/src/ --type tsx -A 30 | rg -B 25 "return\s*\(\s*\)\s*=>"
+```
+
+**What to look for:**
+- A goroutine whose loop has `for { ... }` without `case <-ctx.Done():` → P2 leak
+- A `Lock()` without an immediate-following `defer Unlock()` → potential deadlock
+- A subscriber added with no clear matching removal path → SSE hub leak
+- `time.After` inside a `select` that loops — switch to `time.NewTimer` with `Stop`
+- React `useEffect` doing fetch with no abort signal → stale-response bug
+
+---
+
+## §4 — BOUNDARY / INPUT EDGES (P3)
+
+This tier doesn't have a generic `rg` recipe — the technique is to **pick one target** (per `edge-case-taxonomy.mdc` §7) and walk `§1 INPUT-VALUE EDGES` against it. The detection technique here is **writing failing tests**, not searching code.
+
+### Choosing a target
+
+```bash
+# Recently modified files (last 14 days), ranked by change frequency
+git log --since="14 days ago" --name-only --pretty=format: | rg -v "^$" | sort | uniq -c | sort -rn | head -20
+
+# Or files touched in the last 5 commits
+git log -5 --name-only --pretty=format: | rg -v "^$" | sort -u
+```
+
+Pick a function/handler/component from a ranked file. Then for each edge category in `edge-case-taxonomy.mdc §1`:
+1. Write a one-line failing test.
+2. Run it.
+3. If GREEN: edge already handled. Move to next category.
+4. If RED with the right symptom: this is your session.
+5. If RED with off-topic noise: fix the test setup, re-evaluate.
+
+### Go targets — useful test wrappers
+
+For handler edges: use `httptest.NewRecorder` + table-driven cases. For store edges: use `internal/tasktestdb.OpenSQLite` per `AGENTS.md`. See `regression-test-recipes.mdc §4` for skeletons.
+
+### Web targets
+
+For component edges: Vitest + Testing Library `render` + `screen.findBy*`. For hook edges: `renderHook` from `@testing-library/react`. See `regression-test-recipes.mdc §4`.
+
+---
+
+## §5 — INTEGRATION / CONTRACT DRIFT (P5)
+
+### Cross-doc checks
+
+```bash
+# 1. Every T2A_* env var in code vs every T2A_* env var in docs/RUNTIME-ENV.md
+rg -no "T2A_[A-Z_]+" pkgs/ internal/ cmd/ --type go | sort -u > /tmp/code-envs.txt
+rg -no "T2A_[A-Z_]+" docs/RUNTIME-ENV.md | sort -u > /tmp/doc-envs.txt
+diff /tmp/code-envs.txt /tmp/doc-envs.txt
+# Lines only in code → undocumented env. Lines only in docs → stale doc.
+
+# 2. Every handler route in code vs every route in docs/API-HTTP.md
+rg -no '("(GET|POST|PATCH|DELETE|PUT)\s+/[a-zA-Z0-9/{}_]+")' pkgs/tasks/handler/ --type go | sort -u
+rg -no '`(GET|POST|PATCH|DELETE|PUT)\s+/[a-zA-Z0-9/{}_]+`' docs/API-HTTP.md | sort -u
+
+# 3. SSE event names: Go emit sites vs Web subscribe sites
+rg -n 'event:\s*["`][a-z_]+["`]|EventName.*=.*"[a-z_]+"' pkgs/tasks/handler/ --type go
+rg -n 'addEventListener\(["`][a-z_]+["`]|case\s+["`][a-z_]+["`]' web/src/ --type ts --type tsx
+```
+
+### parseTaskApi audit
+
+```bash
+# 1. Find every fetch site in web/src/api/
+rg -n "fetch\(" web/src/api/ --type ts
+
+# 2. For each, confirm the response goes through parseTaskApi (or sibling)
+rg -n "parseTaskApi|parseTask\b|parseCycle" web/src/api/ --type ts
+
+# 3. Confirm web/src/ outside web/src/api/ never calls fetch directly
+rg -n "fetch\(" web/src/ --type ts --type tsx -g '!**/api/**'
+# Any hits here = P5 violation (bypasses the parser chokepoint)
+```
+
+### Status code honesty
+
+```bash
+# Find every WriteHeader / WriteJSONError call in handlers; cross-check against docs
+rg -n "WriteHeader\(http\.Status|WriteJSONError" pkgs/tasks/handler/ --type go
+```
+
+For each, manually verify: does `docs/API-HTTP.md` say this route returns this code on this condition? If not, the doc OR the code is wrong — that's the defect.
+
+### Time / timezone audit
+
+```bash
+# Server-side: time.Now() (UTC by default in Go) — usage in stored values
+rg -n "time\.Now\(\)" pkgs/tasks/store/ --type go
+
+# Web-side: Date parsing
+rg -n "new Date\(" web/src/ --type ts --type tsx
+# Suspicious: `new Date(serverString)` where serverString is RFC3339 with Z → JS treats as UTC, displays in local. Verify intent.
+```
+
+---
+
+## §6 — RUNTIME PROBES (when static scans aren't enough)
+
+Sometimes the bug only shows up at runtime. Approved probes (don't ship these — they're for the diagnose phase):
+
+### Go
+
+- Add a temporary `t.Log(...)` or `slog.Debug(...)` to verify a hypothesis. **Remove before commit.**
+- Run a single test in a tight loop: `go test -run TestX -count=100 ./pkgs/tasks/handler/` — flushes out flakiness.
+- Run with `-race` and high parallelism: `go test -race -parallel=8 ./pkgs/...`.
+- For SSE / hub bugs: write an integration test that subscribes 100 clients, disconnects them in randomized order, then checks subscriber count is zero.
+
+### Web
+
+- Use `screen.debug()` in a Vitest test temporarily to inspect DOM. Remove before commit.
+- Run a single test repeatedly: `npx vitest run --repeat=20 path/to/file.test.tsx`.
+- For React Query bugs: assert on the query cache directly via `queryClient.getQueryData(key)`.
+
+### When the bug only happens "in the app"
+
+If you can reproduce only by running the app, write a 5-line manual reproduction in the session log under `Reproducer: manual: ...`. Then do whatever it takes to lock the behavior in via an integration or unit test for the regression. The manual repro is the proof of the bug; the test is the proof it stays fixed.
+
+---
+
+## §7 — DELETION CRITERIA
+
+Knowing when a finding is **NOT** a defect saves a session:
+
+- The "weird input" produces an error response that's documented in `docs/API-HTTP.md` → not a defect, that's the contract.
+- The "missing test" covers behavior that's already covered by another test (search by symbol/import) → not a defect.
+- The "race" can only happen if a single client sends two writes faster than physically possible (microsecond-level interleaving on a single connection) → not actionable.
+- The "leak" only manifests in a process designed to terminate (CLI tool, one-shot job) → not in scope unless it's `taskapi`.
+- The "edge case" is excluded by upstream validation that you verified is reachable from every entry point → not actionable.
+
+When in doubt, write the failing test. If it passes, the case is handled. Move on.

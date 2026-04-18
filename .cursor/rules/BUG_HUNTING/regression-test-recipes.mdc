@@ -1,0 +1,372 @@
+---
+description: >-
+  Regression test templates for the bug & edge-case hunting agent. One section
+  per priority tier. Cross-stack: Go (testing + httptest + tasktestdb) and Web
+  (Vitest + Testing Library). Used at PHASE 3 (REPRODUCE) and PHASE 5 (lock-in).
+globs:
+  - "**/*_test.go"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+alwaysApply: false
+---
+
+# Regression Test Recipes
+
+A failing test written before the fix is the proof of the defect; the same test passing after the fix is the proof of the regression lock. Every fix shipped by this agent must leave behind exactly one (or a tightly-scoped few) regression tests. Sections referenced from the main agent file as `§N`.
+
+> **Naming convention:** Regression tests should be named so future contributors know they exist to prevent a specific bug. Use `TestRegression_<short_name>_does_not_<bad_thing>` (Go) or `it("does not <bad thing> when <condition>", ...)` (Vitest). Add a one-line comment with the date and a one-sentence description of the original symptom.
+
+---
+
+## §1 — CRASH-CLASS LOCK-INS (P0)
+
+### Go: panic / nil-deref regression
+
+```go
+// File next to the production code, e.g. pkgs/tasks/handler/handler_cycles_test.go
+//
+// Regression test for: PATCH /tasks/{id}/cycles/{cycleId} panicked on cycleId=0.
+// Original symptom (YYYY-MM-DD): nil cycle pointer dereferenced after lookup miss.
+func TestRegression_PatchCycle_does_not_panic_on_missing_id(t *testing.T) {
+    h, _ := newHandlerWithSQLite(t) // helper from internal/tasktestdb + handler test setup
+
+    req := httptest.NewRequest(http.MethodPatch, "/tasks/1/cycles/9999", strings.NewReader(`{}`))
+    req.Header.Set("Content-Type", "application/json")
+    rec := httptest.NewRecorder()
+
+    // Must NOT panic. Must return a clean 404.
+    require.NotPanics(t, func() { h.ServeHTTP(rec, req) })
+    require.Equal(t, http.StatusNotFound, rec.Code)
+}
+```
+
+### Go: race-class regression
+
+```go
+// Regression test for: SSE hub subscriber map mutated without lock under concurrent disconnect.
+// Original symptom: -race detected concurrent map write in subscribers.
+func TestRegression_Hub_concurrent_subscribe_unsubscribe_is_race_free(t *testing.T) {
+    hub := newHub() // production constructor
+
+    var wg sync.WaitGroup
+    for i := 0; i < 50; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            sub := hub.Subscribe()
+            time.Sleep(time.Microsecond)
+            hub.Unsubscribe(sub)
+        }()
+    }
+    wg.Wait()
+    // Must finish; -race must not fire. Run with: go test -race
+    require.Equal(t, 0, hub.SubscriberCount())
+}
+```
+
+### Web: throw-in-render regression
+
+```ts
+// File next to the component, e.g. web/src/tasks/components/TaskCard.test.tsx
+//
+// Regression for: TaskCard threw on `task.assignees === undefined` after API field rename.
+// Original symptom: white screen on /tasks list when any task lacked an assignees field.
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { TaskCard } from "./TaskCard";
+
+describe("TaskCard regression", () => {
+  it("does not throw when task.assignees is undefined", () => {
+    const task = makeTask({ assignees: undefined });
+    expect(() => render(<TaskCard task={task} />)).not.toThrow();
+    expect(screen.getByText(task.title)).toBeInTheDocument();
+  });
+});
+```
+
+---
+
+## §2 — INVARIANT LOCK-INS (P1)
+
+The test asserts the invariant directly, not just that the specific input works. Future code that violates the invariant via a different path will also fail this test.
+
+### Go: dual-write atomicity
+
+```go
+// Regression for: store.UpsertCyclePhase wrote task_cycle_phases but failed to write
+// task_events when the JSON marshal failed mid-tx, leaving an orphan phase.
+// Asserts the invariant: every phase write produces exactly one task_events row in the same tx.
+func TestInvariant_UpsertCyclePhase_dual_writes_atomically(t *testing.T) {
+    db := tasktestdb.OpenSQLite(t)
+    s := store.New(db)
+
+    phase := domain.TaskCyclePhase{ /* ... */ }
+    err := s.UpsertCyclePhase(ctx, phase)
+    require.NoError(t, err)
+
+    var phaseCount, eventCount int64
+    db.Model(&domain.TaskCyclePhase{}).Where("cycle_id = ?", phase.CycleID).Count(&phaseCount)
+    db.Model(&domain.TaskEvent{}).Where("payload LIKE ?", "%cycle_phase_changed%").Count(&eventCount)
+    require.Equal(t, phaseCount, eventCount, "every phase write must co-write a task_event in the same tx")
+
+    // Now provoke a failure mid-tx; assert NEITHER row appears.
+    badPhase := domain.TaskCyclePhase{ /* contrived to fail validation in events writer */ }
+    _ = s.UpsertCyclePhase(ctx, badPhase)
+    db.Model(&domain.TaskCyclePhase{}).Where("cycle_id = ?", badPhase.CycleID).Count(&phaseCount)
+    db.Model(&domain.TaskEvent{}).Where("payload LIKE ?", "%"+badPhase.IDForLog()+"%").Count(&eventCount)
+    require.Equal(t, int64(0), phaseCount)
+    require.Equal(t, int64(0), eventCount)
+}
+```
+
+### Web: optimistic update rollback
+
+```ts
+// Regression for: useUpdateTask did not roll back optimistic title change on server 500.
+// Asserts the invariant: query cache reflects server state after a mutation error.
+it("rolls back optimistic title update when the server returns 500", async () => {
+  server.use(
+    http.patch("/tasks/:id", () => HttpResponse.json({ error: "boom" }, { status: 500 }))
+  );
+  const { result } = renderHook(() => useUpdateTask(), { wrapper });
+  // Seed cache with a known task
+  queryClient.setQueryData(["tasks", "1"], { id: "1", title: "original" });
+
+  await act(() => result.current.mutateAsync({ id: "1", title: "changed" }));
+
+  expect(queryClient.getQueryData(["tasks", "1"])).toEqual({ id: "1", title: "original" });
+});
+```
+
+---
+
+## §3 — CONCURRENCY / LIFECYCLE LOCK-INS (P2)
+
+### Go: goroutine cleanup on context cancel
+
+```go
+// Regression for: agentReady worker leaked goroutine after caller cancelled ctx.
+func TestRegression_Worker_exits_on_context_cancel(t *testing.T) {
+    before := runtime.NumGoroutine()
+    ctx, cancel := context.WithCancel(context.Background())
+
+    w := newWorker(/* ... */)
+    go w.Run(ctx)
+
+    time.Sleep(20 * time.Millisecond) // let it start
+    cancel()
+    require.Eventually(t, func() bool {
+        return runtime.NumGoroutine() <= before+1 // +1 tolerance for test goroutine
+    }, time.Second, 10*time.Millisecond)
+}
+```
+
+### Web: useEffect aborts in-flight fetch on unmount
+
+```ts
+// Regression for: useTask hook called setState after unmount when fetch landed late.
+it("aborts the fetch when the consumer unmounts before the response", async () => {
+  let aborted = false;
+  server.use(
+    http.get("/tasks/:id", async ({ request }) => {
+      request.signal.addEventListener("abort", () => { aborted = true; });
+      await new Promise((r) => setTimeout(r, 50));
+      return HttpResponse.json({ id: "1" });
+    })
+  );
+  const { unmount } = renderHook(() => useTask("1"), { wrapper });
+  unmount();
+  await new Promise((r) => setTimeout(r, 100));
+  expect(aborted).toBe(true);
+});
+```
+
+---
+
+## §4 — BOUNDARY-EDGE LOCK-INS (P3)
+
+### Go: table-driven edge sweep
+
+```go
+// Regression for: ParsePagination accepted page=-1 and returned offset=-LIMIT.
+func TestRegression_ParsePagination_edge_inputs(t *testing.T) {
+    cases := []struct {
+        name        string
+        page, size  string
+        wantOffset  int
+        wantErr     bool
+    }{
+        {"empty defaults", "", "", 0, false},
+        {"zero page rejected", "0", "20", 0, true},
+        {"negative page rejected", "-1", "20", 0, true},
+        {"page 1", "1", "20", 0, false},
+        {"page 2", "2", "20", 20, false},
+        {"size over max clamped", "1", "10000", 0, false}, // assert clamping behavior
+        {"size = 0 rejected", "1", "0", 0, true},
+        {"max int page rejected", strconv.Itoa(math.MaxInt32), "20", 0, true},
+    }
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            offset, err := ParsePagination(tc.page, tc.size)
+            if tc.wantErr {
+                require.Error(t, err)
+                return
+            }
+            require.NoError(t, err)
+            require.Equal(t, tc.wantOffset, offset)
+        });
+    }
+}
+```
+
+### Web: parametric edge sweep
+
+```ts
+// Regression for: formatDuration(NaN) returned "NaNms" in the UI.
+import { describe, it, expect } from "vitest";
+import { formatDuration } from "./formatDuration";
+
+describe("formatDuration regression — edge inputs", () => {
+  it.each([
+    { input: 0,         expected: "0ms"  },
+    { input: -1,        expected: "0ms"  }, // clamp negative to zero
+    { input: NaN,       expected: "—"    },
+    { input: Infinity,  expected: "—"    },
+    { input: 999,       expected: "999ms" },
+    { input: 1000,      expected: "1.0s"  },
+    { input: 60_000,    expected: "1.0m"  },
+    { input: Number.MAX_SAFE_INTEGER, expected: "—" }, // unrealistic, render dash
+  ])("returns $expected for $input", ({ input, expected }) => {
+    expect(formatDuration(input)).toBe(expected);
+  });
+});
+```
+
+---
+
+## §5 — FAILURE-INJECTION LOCK-INS (P4)
+
+The test injects a failure (DB error, network error, parse error) and asserts the system degrades **honestly** — surfaces the failure, doesn't silently corrupt state.
+
+### Go: handler maps store error to correct status
+
+```go
+// Regression for: GET /tasks/{id} returned 500 when the task was actually missing,
+// because the store error wasn't mapped to domain.ErrNotFound at the boundary.
+func TestRegression_GetTask_returns_404_on_not_found(t *testing.T) {
+    h, _ := newHandlerWithSQLite(t)
+    req := httptest.NewRequest(http.MethodGet, "/tasks/does-not-exist", nil)
+    rec := httptest.NewRecorder()
+    h.ServeHTTP(rec, req)
+
+    require.Equal(t, http.StatusNotFound, rec.Code)
+    var body map[string]any
+    require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+    require.NotEmpty(t, body["error"])
+}
+```
+
+### Web: error UI on fetch failure
+
+```ts
+// Regression for: TasksPage rendered an empty list when /tasks returned 500,
+// indistinguishable from "no tasks". Now must show error UI.
+it("renders an error state when /tasks returns 500", async () => {
+  server.use(http.get("/tasks", () => HttpResponse.json({ error: "boom" }, { status: 500 })));
+  render(<TasksPage />, { wrapper });
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText(/no tasks/i)).not.toBeInTheDocument();
+});
+```
+
+---
+
+## §6 — CONTRACT-DRIFT LOCK-INS (P5)
+
+The test pins the wire format. If a future change breaks the contract, this test fires before clients break.
+
+### Go: handler response shape
+
+```go
+// Regression for: PATCH /tasks/{id}/cycles/{cycleId}/phases/{seq} renamed
+// "phaseStatus" → "status" in code without updating the doc, breaking the web client.
+// Test pins the documented shape per docs/API-HTTP.md.
+func TestContract_PatchPhase_response_shape(t *testing.T) {
+    h, _ := newHandlerWithSQLiteAndSeededCycle(t)
+    req := httptest.NewRequest(http.MethodPatch, "/tasks/1/cycles/1/phases/1",
+        strings.NewReader(`{"status":"running"}`))
+    req.Header.Set("Content-Type", "application/json")
+    rec := httptest.NewRecorder()
+    h.ServeHTTP(rec, req)
+    require.Equal(t, http.StatusOK, rec.Code)
+
+    var got map[string]any
+    require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+    // Pin the documented field names — fail loudly if anything is renamed/removed.
+    for _, field := range []string{"cycleId", "phaseSeq", "phase", "status", "startedAt"} {
+        _, ok := got[field]
+        require.True(t, ok, "response missing documented field %q", field)
+    }
+}
+```
+
+### Web: parser rejects unexpected shape
+
+```ts
+// Regression for: parseTaskApi.cycle silently coerced status="exploded" (not in enum)
+// to "unknown", masking server-side bugs.
+import { parseCycle } from "@/api/parseTaskApi";
+
+it("rejects a cycle with an out-of-enum status", () => {
+  const bad = { id: "1", status: "exploded", phases: [] };
+  expect(() => parseCycle(bad)).toThrow(/status/i);
+});
+
+it("accepts every documented status", () => {
+  for (const status of ["pending", "running", "succeeded", "failed", "cancelled"]) {
+    expect(() => parseCycle({ id: "1", status, phases: [] })).not.toThrow();
+  }
+});
+```
+
+### Cross: SSE event name pinning
+
+```go
+// Regression for: SSE event renamed in handler from "task_changed" to "taskChanged"
+// without updating the web subscriber, silently breaking real-time updates.
+func TestContract_SSE_event_names_match_documented(t *testing.T) {
+    documented := []string{"task_changed", "task_cycle_changed", "phase_changed"}
+    // Read the constants/strings the handler uses
+    emittedNames := collectEmittedEventNames(t) // helper that scans the handler package
+    for _, name := range documented {
+        require.Contains(t, emittedNames, name, "documented SSE event %q not emitted by handler", name)
+    }
+}
+```
+
+---
+
+## §7 — TEST DISCIPLINE FOR THE LOCK-IN
+
+For every regression test you commit:
+
+1. **It MUST fail before the fix and pass after.** Verify both. If you can't make it fail without the fix, it's not a regression test — it's a vanity assertion. Pick a different angle.
+2. **Name it for the bug, not the function.** `TestRegression_X_does_not_Y_when_Z` beats `TestX_extra`.
+3. **Add a one-line comment** with the date (UTC) and the one-sentence symptom. Future readers must be able to tell why this test exists.
+4. **Place it next to the production code** under test (`x_test.go` next to `x.go`; `X.test.tsx` next to `X.tsx`).
+5. **Don't refactor existing tests in the same commit.** Test refactors go in a separate session, never riding shotgun on a fix.
+6. **Don't add a regression test that requires real Postgres, real network, or a running server** unless the task explicitly needs integration tests AND you tag it appropriately per `AGENTS.md`. Default tests use `tasktestdb.OpenSQLite` and `httptest`/`MSW`.
+7. **Assert the invariant, not the symptom.** Where possible, the test should fail for a *class* of bugs, not just the one input that originally exposed it. (See §2 examples — they assert the dual-write invariant, not just the one provoking case.)
+
+---
+
+## §8 — WHEN A REGRESSION TEST IS NOT POSSIBLE
+
+Rare. Only if:
+
+- The bug requires a real external dependency that's gated and the agent cannot stand it up (e.g. real Postgres-only flake under high lock contention).
+- The bug is a process-shutdown race that requires terminating and restarting `taskapi`.
+
+In these cases, document the manual reproducer in the session log under `Reproducer: manual: ...`, and write the **closest possible** automated test that asserts the **proximate cause** (e.g. assert the lock is released on the right path, even if you can't reproduce contention). Note in the log that the regression test is "proximate cause; full reproducer is manual".
+
+This is an escape hatch. Use it sparingly. If you find yourself reaching for it twice in a row, your reproduction technique needs to improve.
