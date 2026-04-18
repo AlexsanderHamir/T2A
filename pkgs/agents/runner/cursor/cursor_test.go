@@ -16,11 +16,11 @@ import (
 // captured records every (env, stdin, dir, name, args) tuple a fake ExecFn
 // receives, so tests can assert on what the adapter actually invoked.
 type captured struct {
-	dir    string
-	env    []string
-	stdin  []byte
-	name   string
-	args   []string
+	dir   string
+	env   []string
+	stdin []byte
+	name  string
+	args  []string
 }
 
 // fakeExec returns an ExecFn that records its inputs into *captured and

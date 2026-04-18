@@ -1,30 +1,33 @@
 # `pkgs/tasks/store`
 
-GORM-backed persistence for tasks, audit events, checklists, and drafts. **Product docs:** [docs/PERSISTENCE.md](../../docs/PERSISTENCE.md), [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md). **Ready-queue hooks:** [docs/AGENT-QUEUE.md](../../docs/AGENT-QUEUE.md). API contracts: [docs/API-HTTP.md](../../docs/API-HTTP.md).
+GORM-backed persistence for tasks, audit events, checklists, drafts, draft evaluations, cycles/phases, the ready-task queue, dev-mirror, and DB health probes. **Product docs:** [docs/PERSISTENCE.md](../../docs/PERSISTENCE.md), [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md). **Ready-queue hooks:** [docs/AGENT-QUEUE.md](../../docs/AGENT-QUEUE.md). API contracts: [docs/API-HTTP.md](../../docs/API-HTTP.md).
 
 Package overview and conventions: `go doc -all .` (starts in [doc.go](./doc.go)).
 
-## Where code lives (`store_*.go`)
+## Architecture
 
-| Concern | Files | Notes |
-|--------|--------|--------|
-| **Types / wiring** | `store.go` | `Store`, `NewStore`, `CreateTaskInput`, `UpdateTaskInput`, `ParentFieldPatch`. |
-| **Ready-task notifier** | `store_ready_notify.go` | `SetReadyTaskNotifier`, `notifyReadyTask` (called after commits that surface ready work). |
-| **CRUD** | `store_crud_create.go`, `store_crud.go` | `Create`; `Get`, `Update`, `Delete`. |
-| **Lists & trees** | `store_tree.go`, `task_node.go` | Root list (offset / keyset), flat list, full task tree; `TaskNode` JSON shape. |
-| **Stats** | `store_stats.go` | Global task counters. |
-| **Draft evaluations** | `store_evaluation.go`, `store_evaluation_score.go` | `EvaluateDraftTask`, list evaluations; scoring helpers (no `Store` methods in score file). |
-| **Task drafts (saved forms)** | `store_draft.go` | Save / list / get / delete named drafts. |
-| **Health** | `store_health.go` | `Ping`, `Ready` (readiness / DB probe). |
-| **Task events — append** | `store_append_event.go` | `AppendTaskEvent` (synthetic + real audit rows). |
-| **Task events — read** | `store_task_events_query.go`, `store_task_events_page.go`, `store_get_event.go` | Full list, counts, keyset page + `ApprovalPending`, single row by `seq`. |
-| **Task events — user thread** | `store_event_user_response.go` | `AppendTaskEventResponseMessage` (thread append, locking on Postgres). |
-| **Checklist — read** | `store_checklist.go` | Definition source resolution, list items for a subject task. |
-| **Checklist — write** | `store_checklist_mutations.go`, `store_checklist_validate_tx.go` | Add / update text / set done / delete; transactional validation helpers. |
-| **Validation helpers** | `store_validate.go` | Package-private status/priority/type/actor checks used by CRUD paths. |
-| **Agent queue ordering** | `store_list_ready.go`, `store_list_ready_user.go` | `ListReadyTaskQueueCandidates` (reconcile FIFO); `ListReadyTasksUserCreated` (user-scoped list). |
-| **Devsim** | `store_dev_mirror.go`, `store_devsim_list.go` | `ApplyDevTaskRowMirror`; `ListDevsimTasks` for synthetic SSE / lifecycle helpers. |
+The public package is a **facade**: every `*Store` method in a `facade_*.go` file delegates to a per-domain package under [`internal/`](./internal). Public types (`CreateTaskInput`, `TaskNode`, `DraftTaskEvaluation`, …) are Go type aliases over the internal definitions, so external callers stay unchanged across reshuffles. Cross-domain transactions are composed by calling the exported `…InTx` helpers from sibling internal packages inside one `*gorm.DB.Transaction(...)`.
 
-Tests mirror the same names (`store_*_test.go`, `store_test.go`, `is_duplicate_task_pk_test.go`).
+Ready-task notifications (`(*Store).notifyReadyTask`) are intentionally only fired by the facade; subpackages return the updated task plus the previous status so the facade can decide whether to notify exactly once. This keeps `internal/notify` out of the per-domain dependency graphs.
 
-When adding a **new** store method, extend the table above in the same PR so the map stays truthful.
+## Where code lives
+
+| Concern | Facade file | Internal package | Notes |
+|---|---|---|---|
+| Wiring | `store.go`, `store_ready_notify.go` | `internal/notify` | `Store`, `NewStore`, `SetReadyTaskNotifier`, `notifyReadyTask`. |
+| Tasks — CRUD | `facade_tasks.go` | `internal/tasks` | `Get`, `Create`, `Update`, `Delete`. `CreateTaskInput` / `UpdateTaskInput` / `ParentFieldPatch` aliased here. |
+| Tasks — lists & trees | `facade_tree.go` | `internal/tasks` | `List` / `ListFlat`, `ListRootForest{,After}`, `GetTaskTree`. `TaskNode` and `MaxTaskTreeDepth` aliased. |
+| Stats | `facade_stats.go` | `internal/stats` | `GlobalTaskStats`. |
+| Checklist | `facade_checklist.go` | `internal/checklist` | List / add / update / delete / set-done. Exports `ValidateCanMarkDoneInTx` and `DeleteOwnedItemsInTx` for sibling subpackages. |
+| Cycles & phases | `facade_cycles.go` | `internal/cycles` | `StartCycle`, `TerminateCycle`, `GetCycle`, `ListCyclesForTask`, `StartPhase`, `CompletePhase`, `ListPhasesForCycle`. Dual-writes mirror events into `task_events`. |
+| Task events | `facade_events.go` | `internal/events` | `AppendTaskEvent`, list / count, keyset page + `ApprovalPending`, `GetTaskEvent`, `AppendTaskEventResponseMessage`, `ThreadEntriesForDisplay`. |
+| Draft evaluations | `facade_eval.go` | `internal/eval` | `EvaluateDraftTask`, `ListDraftEvaluations`. Exports `AttachDraftEvaluationsInTx` for `Create`-from-draft. |
+| Task drafts | `facade_drafts.go` | `internal/drafts` | `SaveDraft`, `ListDrafts`, `GetDraft`, `DeleteDraft`. Exports `DeleteByIDInTx` for `Create`-from-draft. |
+| Agent ready queue | `facade_ready.go` | `internal/ready` | `ListReadyTaskQueueCandidates`, `ListReadyTasksUserCreated`, `DefaultReadyTimeout`. |
+| Health | `facade_health.go` | `internal/health` | `Ping`, `Ready`. |
+| Dev simulation | `facade_devmirror.go` | `internal/devmirror` | `ApplyDevTaskRowMirror`, `ListDevsimTasks`. |
+| Shared kernel | — | `internal/kernel` | `Op*` Prometheus labels, `DeferLatency`, `AppendEvent`, `NextEventSeq`, `EventPairJSON`, `Valid*` validators, `ValidateActor`, `LoadTask`, `NormalizeJSONObject`. The only place `promauto` registers metrics. |
+
+Tests live alongside the public facade (`store_*_test.go`, `store_test.go`) and exercise the API end-to-end against the SQLite test harness. Strictly internal helpers (e.g. `isDuplicatePrimaryKey`) keep their white-box test in the corresponding `internal/<domain>/` package.
+
+When adding a **new** store method, extend the table above in the same PR and place the implementation in the matching `internal/<domain>/` package, with a thin `(*Store)` delegation in `facade_<domain>.go`.
