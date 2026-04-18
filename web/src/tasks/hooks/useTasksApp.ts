@@ -59,7 +59,23 @@ export function useTasksApp() {
   const [newDmapDomain, setNewDmapDomain] = useState("");
   const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
-  const [newDraftID, setNewDraftID] = useState("");
+  const [newDraftID, setNewDraftIDState] = useState("");
+  /**
+   * Mirror of `newDraftID` for use inside async mutation callbacks. Reading
+   * `newDraftID` directly inside `onSuccess` would capture the value at the
+   * time the mutation was created, not the value when it resolved — which is
+   * the entire bug we guard against (a stale evaluation result for draft A
+   * clobbering the form after the user has already switched to draft B).
+   *
+   * The ref is updated *synchronously* alongside the state setter (see
+   * `setNewDraftID` below) so a mutation that resolves in the same microtask
+   * cannot observe a stale ref before a `useEffect` would have caught up.
+   */
+  const newDraftIDRef = useRef("");
+  const setNewDraftID = useCallback((id: string) => {
+    newDraftIDRef.current = id;
+    setNewDraftIDState(id);
+  }, []);
   const [newDraftName, setNewDraftName] = useState("");
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
@@ -207,7 +223,7 @@ export function useTasksApp() {
       }),
     );
     setDraftAutosaveBaselineID(generatedID);
-  }, []);
+  }, [setNewDraftID]);
 
   const closeCreateModal = useCallback(() => {
     setCreateModalOpen(false);
@@ -336,7 +352,13 @@ export function useTasksApp() {
           .map((text) => ({ text })),
       });
     },
-    onSuccess: (evaluation) => {
+    onSuccess: (evaluation, variables) => {
+      // Stale-resolution guard: if the user has already switched to a
+      // different draft (or closed the modal, which generates a fresh draft
+      // id), drop this evaluation on the floor instead of pasting it onto
+      // the wrong form. Same shape as the id-aware fix in `useTaskPatchFlow`
+      // and `useTaskDeleteFlow`.
+      if (newDraftIDRef.current !== variables.id) return;
       setLatestDraftEvaluation({
         overallScore: evaluation.overall_score,
         overallSummary: evaluation.overall_summary,
