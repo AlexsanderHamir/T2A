@@ -338,4 +338,79 @@ describe("useTasksApp saveDraftMutation race", () => {
     });
     expect(mockedSaveDraft).not.toHaveBeenCalled();
   });
+
+  it("baseline tracks the snapshot that was sent, not live form state, so edits made while a save is in flight still autosave on the next dispatch", async () => {
+    // First save is held so we can edit the form mid-flight. The second
+    // save resolves immediately so we can assert it actually fired.
+    let resolveFirst: (() => void) | undefined;
+    let firstInputTitle: string | undefined;
+    let secondInputTitle: string | undefined;
+    mockedSaveDraft.mockImplementationOnce(async (input) => {
+      firstInputTitle = input.payload.title;
+      await new Promise<void>((resolve) => {
+        resolveFirst = resolve;
+      });
+      return { id: input.id!, name: input.name };
+    });
+    mockedSaveDraft.mockImplementationOnce(async (input) => {
+      secondInputTitle = input.payload.title;
+      return { id: input.id!, name: input.name };
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+
+    // First edit: kicks the autosave off with snapshot S1.
+    act(() => {
+      result.current.setNewTitle("Title v1");
+    });
+    act(() => {
+      result.current.saveDraftNow();
+    });
+    await waitFor(() => {
+      expect(result.current.draftSavePending).toBe(true);
+    });
+    expect(firstInputTitle).toBe("Title v1");
+
+    // Mid-flight: user keeps typing. Live form signature is now S2 (the
+    // "Title v2" string). With the bug, onSuccess will rebuild the
+    // baseline from live form state at resolve time -> baseline = S2.
+    // currentSig = S2 too, so the next saveDraftNow gate matches and
+    // autosave silently skips, even though the server still has v1.
+    // With the fix, onSuccess uses variables.signature = S1, so the
+    // next saveDraftNow gate sees S2 != S1 and fires.
+    act(() => {
+      result.current.setNewTitle("Title v2");
+    });
+
+    // Resolve the first save now (after the mid-flight edit landed in
+    // state). draftSavePending flips back to false.
+    await act(async () => {
+      resolveFirst?.();
+    });
+    await waitFor(() => {
+      expect(result.current.draftSavePending).toBe(false);
+    });
+
+    // The user-visible damage check: the next autosave dispatch MUST send
+    // "Title v2" to the server. Without the fix, the baseline matched the
+    // current signature and the gate inside saveDraftNow returned early,
+    // so mockedSaveDraft would not be called a second time and the v2
+    // edit would be lost on the server until the next state change.
+    act(() => {
+      result.current.saveDraftNow();
+    });
+    await waitFor(() => {
+      expect(mockedSaveDraft).toHaveBeenCalledTimes(2);
+    });
+    expect(secondInputTitle).toBe("Title v2");
+  });
 });

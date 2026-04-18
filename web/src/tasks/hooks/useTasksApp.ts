@@ -378,6 +378,15 @@ export function useTasksApp() {
   });
 
   const saveDraftMutation = useMutation({
+    /**
+     * `signature` is the autosave-baseline snapshot of the form *as sent*
+     * (computed by `currentDraftAutosaveSignature` at the time `mutate()`
+     * is called). It is NOT forwarded to the API - it is preserved in
+     * `variables` so `onSuccess` can stamp the baseline with what was
+     * actually persisted, not with whatever the form has drifted to by
+     * the time the network round-trip resolves. See onSuccess for the
+     * race this guards against.
+     */
     mutationFn: (input: {
       id: string;
       name: string;
@@ -403,8 +412,14 @@ export function useTasksApp() {
           sections: Array<{ key: string; score: number }>;
         };
       };
-    }) => apiSaveDraft(input),
-    onSuccess: async (saved) => {
+      signature: string;
+    }) =>
+      // `signature` is preserved on `variables` for `onSuccess`'s baseline
+      // stamping but is not part of the server contract; `apiSaveDraft`
+      // builds its request body from `id`/`name`/`payload` only and ignores
+      // any extra fields, so passing the wider input through is safe.
+      apiSaveDraft(input),
+    onSuccess: async (saved, variables) => {
       // Stale-resolution guard. If the user switched drafts mid-flight - via
       // `resumeDraftByID` (draft picker), `startFreshDraft`, or
       // `closeCreateModal` (which generates a brand-new draft id in
@@ -428,26 +443,15 @@ export function useTasksApp() {
       if (saved.id !== newDraftID) {
         setNewDraftID(saved.id);
       }
-      setDraftAutosaveBaseline(
-        draftAutosaveSignature({
-          id: saved.id,
-          name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
-          title: newTitle,
-          prompt: newPrompt,
-          priority: newPriority,
-          taskType: newTaskType,
-          parentId: newParentId,
-          checklistInherit: newChecklistInherit,
-          checklistItems: newChecklistItems,
-          pendingSubtasks,
-          latestEvaluation: latestDraftEvaluation,
-          dmapConfig: {
-            commitLimit: newDmapCommitLimit,
-            domain: newDmapDomain,
-            description: newDmapDescription,
-          },
-        }),
-      );
+      // Use the signature snapshot captured at `mutate()` time (the form
+      // *as sent* to the server) instead of recomputing from live form
+      // state here. Without this, edits made while the save is in flight
+      // would be folded into the baseline at resolve time, so the next
+      // `currentDraftAutosaveSignature === draftAutosaveBaseline` short-
+      // circuit would skip autosave even though the server still has the
+      // older payload - silently dropping every keystroke between mutate
+      // dispatch and resolve.
+      setDraftAutosaveBaseline(variables.signature);
       setDraftAutosaveBaselineID(saved.id);
       setLastDraftSavedAt(Date.now());
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
@@ -613,7 +617,10 @@ export function useTasksApp() {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
-    saveDraftMutation.mutate(buildDraftSaveInput());
+    saveDraftMutation.mutate({
+      ...buildDraftSaveInput(),
+      signature: currentDraftAutosaveSignature,
+    });
   }, [
     buildDraftSaveInput,
     createModalOpen,
@@ -628,8 +635,12 @@ export function useTasksApp() {
     if (!createModalOpen || !newDraftID) return;
     if (draftAutosaveBaselineID !== newDraftID) return;
     if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
+    const sigAtSchedule = currentDraftAutosaveSignature;
     autosaveTimerRef.current = setTimeout(() => {
-      saveDraftMutation.mutate(buildDraftSaveInput());
+      saveDraftMutation.mutate({
+        ...buildDraftSaveInput(),
+        signature: sigAtSchedule,
+      });
       autosaveTimerRef.current = null;
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
     return () => {
