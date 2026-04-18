@@ -2,6 +2,8 @@
 
 Simple long-term plan to evolve from today's ready-task queue into a reliable agent worker runtime powered by Cursor CLI.
 
+**Substrate work in flight:** [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) — promoting the diagnose → execute → verify → persist loop to a first-class store primitive so V1's worker has a typed, indexed, FK-protected target to write into instead of inventing state on top of the flat `task_events` stream.
+
 ## V0 (now) — queue foundation
 
 What we already have:

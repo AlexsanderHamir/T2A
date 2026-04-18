@@ -18,6 +18,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, reconcile loop, fairness ordering. |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term phased plan for building Cursor CLI-based agent workers on top of the ready-task queue. |
+| [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) | **Active working plan** for promoting the diagnose → execute → verify → persist loop into a first-class store primitive (`task_cycles`, `task_cycle_phases`) while keeping `task_events` as the audit witness. Stage-gated; commit + push between stages. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
