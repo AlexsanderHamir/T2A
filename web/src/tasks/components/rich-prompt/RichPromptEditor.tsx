@@ -7,11 +7,7 @@ import {
   RepoFileSuggestion,
   type RepoFileSuggestionOptions,
 } from "../../extensions/repoFileSuggestion";
-import {
-  probeRepoWorkspace,
-  validateRepoRange,
-  type RepoWorkspaceProbe,
-} from "../../../api";
+import { validateRepoRange } from "../../../api";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import {
   looksLikeStoredHtml,
@@ -20,6 +16,7 @@ import {
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
 import { RichPromptRepoHints } from "./RichPromptRepoHints";
+import { useRepoWorkspaceProbe } from "./useRepoWorkspaceProbe";
 import { Modal } from "@/shared/Modal";
 
 type Props = {
@@ -38,9 +35,7 @@ export function RichPromptEditor({
   disabled,
   placeholder,
 }: Props) {
-  const [workspaceProbe, setWorkspaceProbe] = useState<
-    RepoWorkspaceProbe | "pending"
-  >("pending");
+  const workspaceProbe = useRepoWorkspaceProbe();
   const [fileSearchUnavailable, setFileSearchUnavailable] = useState(false);
   const [fileSuggestBusy, setFileSuggestBusy] = useState(false);
   const [pendingInsert, setPendingInsert] = useState<{
@@ -103,17 +98,6 @@ export function RichPromptEditor({
   useEffect(() => {
     editor?.setEditable(!disabled);
   }, [editor, disabled]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setWorkspaceProbe("pending");
-    void probeRepoWorkspace().then((p) => {
-      if (!cancelled) setWorkspaceProbe(p);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!editor) return;
