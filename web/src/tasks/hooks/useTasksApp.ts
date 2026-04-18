@@ -121,6 +121,26 @@ export function useTasksApp() {
     string | null
   >(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Tracks the most recent `resumeDraftByID(id)` request so out-of-order
+   * resolutions cannot stamp the form with a stale draft.
+   *
+   * `resumeDraftByID` issues `apiGetDraft(id)` via `mutateAsync` and then
+   * unconditionally writes every form field from the resolved payload.
+   * `useMutation` allows multiple concurrent in-flight calls, so if the
+   * user clicks draft B (slow GET), then quickly clicks draft C before
+   * B resolves, both requests are in flight. Whichever lands first runs
+   * its post-await branch; if B is slower its resolution would still
+   * stamp B's fields *after* C already populated the form, silently
+   * reverting the user to the draft they just navigated away from.
+   *
+   * The ref is set *synchronously* before the await, so we can compare
+   * `requestedResumeRef.current === id` after the await to detect that
+   * a newer request has superseded this one. Same shape as
+   * `newDraftIDRef` for the create / save / evaluate races (see #20-#25
+   * in `.agent/frontend-improvement-agent.log`).
+   */
+  const requestedResumeRef = useRef<string | null>(null);
 
   const [taskListPage, setTaskListPage] = useState(0);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
@@ -183,6 +203,16 @@ export function useTasksApp() {
   }, [newChecklistInherit]);
 
   const resetNewTaskForm = useCallback(() => {
+    // Resetting the form to a fresh draft also supersedes any in-flight
+    // `resumeDraftByID` request (e.g. the user clicked draft B in the
+    // picker, then hit "Start fresh" or closed the modal before B's
+    // GET resolved). Clearing the ref here is the single
+    // upstream-of-everything clear since `resetNewTaskForm` is called
+    // from `closeCreateModal`, `startFreshDraft`, and the
+    // openCreateModal recovery branches; without it, B's late
+    // resolution would happily stamp the now-fresh form with B's
+    // payload.
+    requestedResumeRef.current = null;
     const generatedID =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -748,7 +778,22 @@ export function useTasksApp() {
   }
 
   async function resumeDraftByID(id: string) {
+    // Capture this request *synchronously* before awaiting. If a newer
+    // `resumeDraftByID(otherId)` call is issued while this one is in
+    // flight (e.g. the user clicks another draft in the picker before
+    // our GET resolves), the ref will have moved on to `otherId` by
+    // the time we land here, and we skip the form-stamp branch so the
+    // newer request's payload is the one that wins.
+    requestedResumeRef.current = id;
     const draft = await resumeDraftMutation.mutateAsync(id);
+    if (requestedResumeRef.current !== id) {
+      // A newer resume request has superseded this one. Don't touch
+      // form state, modal visibility, or the autosave baseline - those
+      // belong to whichever draft the user is now resuming. The
+      // `task-drafts` cache doesn't need invalidation here either:
+      // `apiGetDraft` is a read, not a mutation.
+      return;
+    }
     const pendingSubtasks = (draft.payload.pending_subtasks ?? []).map((st) => ({
       title: st.title,
       initial_prompt: st.initial_prompt,
