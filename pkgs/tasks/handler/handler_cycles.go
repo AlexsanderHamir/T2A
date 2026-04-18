@@ -32,6 +32,7 @@ var jsonObjectMessageEmpty = json.RawMessage(`{}`)
 // for legacy data, the response builder defensively coerces anything
 // non-object to "{}" so the client invariant always holds.
 func normalizeJSONObjectForResponse(raw []byte) json.RawMessage {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.normalizeJSONObjectForResponse")
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
 		return jsonObjectMessageEmpty
