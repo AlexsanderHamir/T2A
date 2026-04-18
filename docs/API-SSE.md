@@ -18,18 +18,26 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 {"type":"task_created|task_updated|task_deleted","id":"<task-uuid>"}
 ```
 
-| Trigger                         | `type`         |
-| ------------------------------- | -------------- |
-| Successful `POST /tasks`        | `task_created` |
-| Successful `PATCH /tasks/{id}`  | `task_updated` |
-| Successful `DELETE /tasks/{id}` | `task_deleted` |
+Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
+
+| Trigger                                                | `type`(s) emitted                                                          |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `POST /tasks`                                          | `task_created` for the new task; plus `task_updated` for `parent_id` when the task is created under a parent |
+| `PATCH /tasks/{id}`                                    | `task_updated` for the patched task                                        |
+| `DELETE /tasks/{id}`                                   | `task_deleted` for the deleted task; plus `task_updated` for the parent when the deleted task had one |
+| `POST /tasks/{id}/checklist/items`                     | `task_updated` for `{id}`                                                  |
+| `PATCH /tasks/{id}/checklist/items/{itemId}`           | `task_updated` for `{id}`                                                  |
+| `DELETE /tasks/{id}/checklist/items/{itemId}`          | `task_updated` for `{id}`                                                  |
+| `PATCH /tasks/{id}/events/{seq}` (user-response thread)| `task_updated` for `{id}`                                                  |
+
+Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) are not part of the SSE surface.
 
 ## Dev-only: SSE “cron” (`T2A_SSE_TEST=1`)
 
 For local UI work, `taskapi` can start a background ticker (no extra HTTP routes). Set `T2A_SSE_TEST=1` (never enable in production without intent). Every 3s by default (override with `T2A_SSE_TEST_INTERVAL`, or `0` to disable the ticker), the process:
 
 1. Optionally runs **lifecycle simulation** when `T2A_SSE_TEST_LIFECYCLE=1`: every `T2A_SSE_TEST_LIFECYCLE_EVERY` ticker fires (default `5`), creates a task with id prefix `t2a-devsim-` or deletes one such task (no subtasks), then publishes `task_created` or `task_deleted` on the SSE hub.
-2. Pages through `store.List` with limit 200 and increasing offset — same flat ordering as `store.ListFlat` (`id ASC` over all tasks).
+2. Pages through `store.ListFlat` with limit 200 and increasing offset (`id ASC` over all tasks).
 3. For each task row, calls `store.AppendTaskEvent` with actor `agent` up to **`T2A_SSE_TEST_EVENTS_PER_TICK`** times per tick (default `1`, max `50`) using the next `domain.EventType` in a fixed rotation that includes every `domain.EventType` once per cycle (order: `pkgs/tasks/devsim` `EventCycle`). The next type is chosen from `len(task_events) mod len(cycle)` so successive appends walk through all types. Sample JSON `data` is attached (realistic shapes for plans, artifacts, checklist rows, approvals, etc.; `from`/`to` for status, priority, prompt, and title/message events).
 4. If `T2A_SSE_TEST_SYNC_ROW=1`, after each append `store.ApplyDevTaskRowMirror` updates the task row when the synthetic event maps to fields (status, priority, title, initial prompt, terminal completed/failed). Marking **done** uses the same checklist/subtask rules as `PATCH`; mirror steps that violate those rules are skipped (debug log only).
 5. If `T2A_SSE_TEST_USER_RESPONSE=1`, after an `approval_requested` or `task_failed` append, `store.AppendTaskEventResponseMessage` adds a synthetic user thread line (same path as `PATCH /tasks/{id}/events/{seq}`).
