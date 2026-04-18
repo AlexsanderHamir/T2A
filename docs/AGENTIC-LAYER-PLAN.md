@@ -20,19 +20,9 @@ TODOs:
 
 Goal: process ready tasks end-to-end in one process reliably enough for early production.
 
-Scope:
-- One worker loop reads queue task IDs/snapshots.
-- Worker reloads latest task from DB before doing work.
-- Worker runs Cursor CLI in headless mode (`--print --output-format json`).
-- Worker drives one execution cycle per delivered task through the substrate in [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md): `POST /tasks/{id}/cycles` → walk phases → `PATCH /tasks/{id}/cycles/{cycleId}`. The store's "at most one running cycle per task" guard becomes the worker's per-task claim.
-- Worker writes task events/status updates, then acks queue item.
+Scope (one paragraph; the per-stage rollout, edge cases, and exit criteria live in [`AGENT-WORKER-PLAN.md`](./AGENT-WORKER-PLAN.md) — track V1 status there, not here):
 
-TODOs:
-- [x] Provide a typed substrate for worker writes — `task_cycles` / `task_cycle_phases` are live ([`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md)).
-- [ ] Define worker state machine (`queued -> running -> done|failed`); map to `task_cycles.status` transitions rather than reinventing state.
-- [ ] Add per-run timeout and cancellation.
-- [ ] Persist raw CLI result payload (redacted) for debugging — store under `task_cycle_phases.details_json` until artifact volume justifies a dedicated `task_cycle_artifacts` table.
-- [ ] Add idempotency key per run (`task_id + attempt + prompt_hash`); use it on `POST /tasks/{id}/cycles` so retries collapse to one cycle row.
+- One in-process worker loop consumes the existing `MemoryQueue`, reloads the task, runs Cursor CLI in headless mode (`--print --output-format json`) behind a small `runner.Runner` interface so Claude / Codex / future CLIs land as additional adapters, and writes the attempt through the [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) substrate (one `task_cycle` + one `execute` phase in V1; per-phase decomposition is V2). The store's "at most one running cycle per task" guard becomes the worker's per-task claim. A startup sweep clears orphan `running` cycles from previous processes so a hard kill cannot wedge a task.
 
 ## V2 — reliability and safety
 
