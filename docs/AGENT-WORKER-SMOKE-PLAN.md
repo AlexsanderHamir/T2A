@@ -382,7 +382,7 @@ the catch-all so individual stages stay scoped.)
 
 | Stage | State | Commit |
 |---|---|---|
-| 0 — Plan | done | _backfilled in this commit_ |
+| 0 — Plan | done | `bf3ceca` |
 | 1 — Smoke harness + fake-runner self-test | pending | — |
 | 2 — Runner-layer real-cursor smoke | pending | — |
 | 3 — Full HTTP → worker → real cursor smoke | pending | — |
