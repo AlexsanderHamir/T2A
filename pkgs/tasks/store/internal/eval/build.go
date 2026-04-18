@@ -1,21 +1,21 @@
-package store
+package eval
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math"
 	"math/rand"
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/google/uuid"
 )
 
-func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *DraftTaskEvaluation {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.buildDraftTaskEvaluationModel")
+// buildResult assembles the rubric Result from the deterministic
+// per-section scoring functions and the wall-clock-seeded suggestion
+// sampler. Pure (no I/O) so persistRow can store the byte stream and
+// return it to the caller in one step.
+func buildResult(in DraftTaskInput, rng *rand.Rand) *Result {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.eval.buildResult")
 	titleScore := scoreTitle(strings.TrimSpace(in.Title))
 	promptScore := scorePrompt(strings.TrimSpace(in.InitialPrompt))
 	priorityScore := scorePriority(in.Priority)
@@ -23,7 +23,7 @@ func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *D
 	cohesionScore := scoreCohesion(titleScore, promptScore, priorityScore, structureScore, in)
 	overall := clampScore(int(math.Round((float64(titleScore) + float64(promptScore) + float64(priorityScore) + float64(structureScore) + float64(cohesionScore)) / 5.0)))
 
-	sections := []DraftEvaluationSection{
+	sections := []Section{
 		{
 			Key:         "title",
 			Label:       "Title quality",
@@ -54,7 +54,7 @@ func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *D
 		},
 	}
 
-	return &DraftTaskEvaluation{
+	return &Result{
 		EvaluationID:        uuid.NewString(),
 		CreatedAt:           time.Now().UTC(),
 		OverallScore:        overall,
@@ -64,31 +64,4 @@ func buildDraftTaskEvaluationModel(in EvaluateDraftTaskInput, rng *rand.Rand) *D
 		CohesionSummary:     cohesionSummary(cohesionScore),
 		CohesionSuggestions: randomSuggestions(rng, cohesionSuggestionsPool(), cohesionScore),
 	}
-}
-
-func (s *Store) persistDraftEvaluationRow(ctx context.Context, in EvaluateDraftTaskInput, by domain.Actor, out *DraftTaskEvaluation) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.persistDraftEvaluationRow")
-	inputJSON, err := json.Marshal(in)
-	if err != nil {
-		return fmt.Errorf("marshal evaluation input: %w", err)
-	}
-	resultJSON, err := json.Marshal(out)
-	if err != nil {
-		return fmt.Errorf("marshal evaluation result: %w", err)
-	}
-
-	row := domain.TaskDraftEvaluation{
-		ID:         out.EvaluationID,
-		By:         by,
-		InputJSON:  inputJSON,
-		ResultJSON: resultJSON,
-		CreatedAt:  out.CreatedAt,
-	}
-	if d := strings.TrimSpace(in.DraftID); d != "" {
-		row.DraftID = &d
-	}
-	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
-		return fmt.Errorf("create draft evaluation: %w", err)
-	}
-	return nil
 }

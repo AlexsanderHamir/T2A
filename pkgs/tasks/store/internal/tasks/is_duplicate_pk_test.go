@@ -1,4 +1,4 @@
-package store
+package tasks
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestIsDuplicateTaskPrimaryKey(t *testing.T) {
+func TestIsDuplicatePrimaryKey(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
@@ -23,7 +23,7 @@ func TestIsDuplicateTaskPrimaryKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isDuplicateTaskPrimaryKey(tt.err); got != tt.want {
+			if got := isDuplicatePrimaryKey(tt.err); got != tt.want {
 				t.Fatalf("got %v want %v for %v", got, tt.want, tt.err)
 			}
 		})

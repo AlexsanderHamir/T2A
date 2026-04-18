@@ -1,4 +1,4 @@
-package store
+package tasks
 
 import (
 	"encoding/json"
@@ -12,8 +12,65 @@ import (
 	"gorm.io/gorm"
 )
 
+func wouldCreateParentCycle(tx *gorm.DB, taskID, newParent string) (bool, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.wouldCreateParentCycle")
+	cur := strings.TrimSpace(newParent)
+	seen := make(map[string]bool)
+	for cur != "" {
+		if cur == taskID {
+			return true, nil
+		}
+		if seen[cur] {
+			return true, fmt.Errorf("%w: parent cycle", domain.ErrInvalidInput)
+		}
+		seen[cur] = true
+		var t domain.Task
+		if err := tx.Where("id = ?", cur).First(&t).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, domain.ErrNotFound
+			}
+			return false, fmt.Errorf("load parent chain: %w", err)
+		}
+		if t.ParentID == nil || *t.ParentID == "" {
+			break
+		}
+		cur = *t.ParentID
+	}
+	return false, nil
+}
+
+func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInput, by domain.Actor, seq int64) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTaskPatches")
+	seqPtr := seq
+	if err := applyTitlePatch(tx, taskID, cur, in.Title, by, &seqPtr); err != nil {
+		return err
+	}
+	if err := applyInitialPromptPatch(tx, taskID, cur, in.InitialPrompt, by, &seqPtr); err != nil {
+		return err
+	}
+	if err := applyParentPatch(tx, taskID, cur, in.Parent, by, &seqPtr); err != nil {
+		return err
+	}
+	if err := applyChecklistInheritPatch(tx, taskID, cur, in.ChecklistInherit, by, &seqPtr); err != nil {
+		return err
+	}
+	if err := applyPriorityPatch(tx, taskID, cur, in.Priority, by, &seqPtr); err != nil {
+		return err
+	}
+	if err := applyTaskTypePatch(cur, in.TaskType); err != nil {
+		return err
+	}
+	if err := applyStatusPatch(tx, taskID, cur, in.Status, by, &seqPtr); err != nil {
+		return err
+	}
+	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
+		return fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
+	}
+	return nil
+}
+
 func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTitlePatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTitlePatch")
 	if title == nil {
 		return nil
 	}
@@ -37,7 +94,7 @@ func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string
 }
 
 func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, prompt *string, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyInitialPromptPatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyInitialPromptPatch")
 	if prompt == nil {
 		return nil
 	}
@@ -57,7 +114,7 @@ func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, promp
 }
 
 func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *ParentFieldPatch, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyParentPatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyParentPatch")
 	if parent == nil {
 		return nil
 	}
@@ -112,7 +169,7 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 }
 
 func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, inherit *bool, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyChecklistInheritPatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyChecklistInheritPatch")
 	if inherit == nil {
 		return nil
 	}
@@ -138,7 +195,7 @@ func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, in
 }
 
 func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain.Priority, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyPriorityPatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPriorityPatch")
 	if pr == nil {
 		return nil
 	}
@@ -161,7 +218,7 @@ func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain
 }
 
 func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyTaskTypePatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTaskTypePatch")
 	if tt == nil {
 		return nil
 	}
@@ -173,7 +230,7 @@ func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
 }
 
 func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.Status, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.applyStatusPatch")
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyStatusPatch")
 	if st == nil {
 		return nil
 	}
