@@ -55,8 +55,49 @@ const (
 	EventApprovalGranted         EventType = "approval_granted"
 	EventTaskCompleted           EventType = "task_completed"
 	EventTaskFailed              EventType = "task_failed"
+	// Execution-cycle audit mirrors. Emitted in the same SQL transaction as writes to
+	// task_cycles / task_cycle_phases so GET /tasks/{id}/events stays a complete witness
+	// of cycle activity. See docs/EXECUTION-CYCLES-PLAN.md.
+	EventCycleStarted   EventType = "cycle_started"
+	EventCycleCompleted EventType = "cycle_completed"
+	EventCycleFailed    EventType = "cycle_failed"
+	EventPhaseStarted   EventType = "phase_started"
+	EventPhaseCompleted EventType = "phase_completed"
+	EventPhaseFailed    EventType = "phase_failed"
+	EventPhaseSkipped   EventType = "phase_skipped"
 	// EventSyncPing is included in the dev ticker rotation (T2A_SSE_TEST) alongside every other EventType.
 	EventSyncPing EventType = "sync_ping"
+)
+
+// Phase is one entry in a task execution cycle. The four values match the
+// "diagnose -> execute -> verify -> persist" loop from moat.md.
+type Phase string
+
+const (
+	PhaseDiagnose Phase = "diagnose"
+	PhaseExecute  Phase = "execute"
+	PhaseVerify   Phase = "verify"
+	PhasePersist  Phase = "persist"
+)
+
+// CycleStatus is the lifecycle state of a single task_cycles row.
+type CycleStatus string
+
+const (
+	CycleStatusRunning   CycleStatus = "running"
+	CycleStatusSucceeded CycleStatus = "succeeded"
+	CycleStatusFailed    CycleStatus = "failed"
+	CycleStatusAborted   CycleStatus = "aborted"
+)
+
+// PhaseStatus is the lifecycle state of a single task_cycle_phases row.
+type PhaseStatus string
+
+const (
+	PhaseStatusRunning   PhaseStatus = "running"
+	PhaseStatusSucceeded PhaseStatus = "succeeded"
+	PhaseStatusFailed    PhaseStatus = "failed"
+	PhaseStatusSkipped   PhaseStatus = "skipped"
 )
 
 type Actor string

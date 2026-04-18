@@ -87,3 +87,62 @@ type TaskDraft struct {
 	CreatedAt   time.Time      `gorm:"not null;index"`
 	UpdatedAt   time.Time      `gorm:"not null;index"`
 }
+
+// TaskCycle is one execution attempt for a task. The (TaskID, AttemptSeq) pair
+// gives a stable monotonic ordering of attempts. A cycle's lifecycle is enforced
+// at the store boundary: at most one Running cycle per task at any time, and
+// terminal statuses (Succeeded / Failed / Aborted) are immutable. See
+// docs/EXECUTION-CYCLES-PLAN.md.
+type TaskCycle struct {
+	ID            string      `gorm:"primaryKey"`
+	TaskID        string      `gorm:"not null;index;index:task_cycles_task_id_attempt,unique,priority:1"`
+	AttemptSeq    int64       `gorm:"not null;check:chk_task_cycles_attempt_seq,attempt_seq > 0;index:task_cycles_task_id_attempt,unique,priority:2"`
+	Status        CycleStatus `gorm:"not null;index;check:chk_task_cycles_status,status IN ('running','succeeded','failed','aborted')"`
+	StartedAt     time.Time   `gorm:"not null"`
+	EndedAt       *time.Time  `gorm:""`
+	TriggeredBy   Actor       `gorm:"column:triggered_by;not null"`
+	ParentCycleID *string     `gorm:"index"`
+	// MetaJSON is small free-form runner metadata such as {"runner":"cursor-cli","prompt_hash":"..."}.
+	MetaJSON datatypes.JSON `gorm:"column:meta_json;type:jsonb;not null;default:'{}'"`
+
+	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+func (TaskCycle) TableName() string {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskCycle.TableName")
+	}
+	return "task_cycles"
+}
+
+// TaskCyclePhase is one phase entry within a cycle. A single cycle can have
+// multiple rows for the same Phase value (for example a corrective Verify after
+// a second Execute), so PhaseSeq is the monotonic entry-order identity within
+// a cycle, while Phase is the phase kind. Lifecycle invariants (one Running
+// phase per cycle, terminal status immutable, transitions validated by
+// ValidPhaseTransition) live at the store boundary.
+type TaskCyclePhase struct {
+	ID        string      `gorm:"primaryKey"`
+	CycleID   string      `gorm:"not null;index;index:task_cycle_phases_cycle_id_seq,unique,priority:1"`
+	Phase     Phase       `gorm:"column:phase;not null;check:chk_task_cycle_phases_phase,phase IN ('diagnose','execute','verify','persist')"`
+	PhaseSeq  int64       `gorm:"not null;check:chk_task_cycle_phases_phase_seq,phase_seq > 0;index:task_cycle_phases_cycle_id_seq,unique,priority:2"`
+	Status    PhaseStatus `gorm:"not null;index;check:chk_task_cycle_phases_status,status IN ('running','succeeded','failed','skipped')"`
+	StartedAt time.Time   `gorm:"not null"`
+	EndedAt   *time.Time  `gorm:""`
+	Summary   *string     `gorm:"type:text"`
+	// DetailsJSON is structured per-phase output (verify check results, persist artifact ids, etc.).
+	DetailsJSON datatypes.JSON `gorm:"column:details_json;type:jsonb;not null;default:'{}'"`
+	// EventSeq points at the task_events row that mirrors the most recent
+	// transition for this phase (set in the same SQL transaction as the mirror
+	// insert). Nullable because it is filled in by the store, not by the caller.
+	EventSeq *int64 `gorm:"column:event_seq"`
+
+	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+func (TaskCyclePhase) TableName() string {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.TaskCyclePhase.TableName")
+	}
+	return "task_cycle_phases"
+}

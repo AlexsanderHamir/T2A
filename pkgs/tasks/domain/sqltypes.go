@@ -103,3 +103,45 @@ func (a Actor) Value() (driver.Value, error) {
 	}
 	return valueStringEnum(a)
 }
+
+func (p *Phase) Scan(value any) error {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.Phase.Scan")
+	}
+	return scanStringEnum(p, value)
+}
+
+func (p Phase) Value() (driver.Value, error) {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.Phase.Value")
+	}
+	return valueStringEnum(p)
+}
+
+func (s *CycleStatus) Scan(value any) error {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.CycleStatus.Scan")
+	}
+	return scanStringEnum(s, value)
+}
+
+func (s CycleStatus) Value() (driver.Value, error) {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.CycleStatus.Value")
+	}
+	return valueStringEnum(s)
+}
+
+func (s *PhaseStatus) Scan(value any) error {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.PhaseStatus.Scan")
+	}
+	return scanStringEnum(s, value)
+}
+
+func (s PhaseStatus) Value() (driver.Value, error) {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		slog.Debug("trace", "operation", "domain.PhaseStatus.Value")
+	}
+	return valueStringEnum(s)
+}

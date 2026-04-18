@@ -51,14 +51,15 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope (touch only `pkgs/tasks/domain/`):**
 
-- [ ] Add `Phase` enum (`diagnose`, `execute`, `verify`, `persist`) in `enums.go`.
-- [ ] Add `CycleStatus` enum (`running`, `succeeded`, `failed`, `aborted`).
-- [ ] Add `PhaseStatus` enum (`running`, `succeeded`, `failed`, `skipped`).
-- [ ] Add 7 new `EventType` constants: `cycle_started`, `cycle_completed`, `cycle_failed`, `phase_started`, `phase_completed`, `phase_failed`, `phase_skipped`. (Constants only; nothing emits them yet.)
-- [ ] Add `TaskCycle` and `TaskCyclePhase` GORM model structs in `models.go`. Tags written but no `AutoMigrate` registration yet.
-- [ ] Add new file `cycle_state.go` with `func ValidPhaseTransition(prev, next Phase) bool` and a sibling `func TerminalCycleStatus(s CycleStatus) bool`.
-- [ ] Add `cycle_state_test.go` covering: valid forward transitions, valid `verify → execute` re-entry, all invalid transitions rejected, terminal-status helper truth table.
-- [ ] Update `pkgs/tasks/domain/doc.go` if needed.
+- [x] Add `Phase` enum (`diagnose`, `execute`, `verify`, `persist`) in `enums.go`.
+- [x] Add `CycleStatus` enum (`running`, `succeeded`, `failed`, `aborted`).
+- [x] Add `PhaseStatus` enum (`running`, `succeeded`, `failed`, `skipped`).
+- [x] Add 7 new `EventType` constants: `cycle_started`, `cycle_completed`, `cycle_failed`, `phase_started`, `phase_completed`, `phase_failed`, `phase_skipped`. (Constants only; nothing emits them yet.)
+- [x] Add `TaskCycle` and `TaskCyclePhase` GORM model structs in `models.go`. Tags written but no `AutoMigrate` registration yet.
+- [x] Add new file `cycle_state.go` with `func ValidPhaseTransition(prev, next Phase) bool` and `func TerminalCycleStatus(s CycleStatus) bool` / `func TerminalPhaseStatus(s PhaseStatus) bool`.
+- [x] Add `cycle_state_test.go` covering: valid forward transitions, valid `verify → execute` re-entry, all invalid transitions rejected, terminal-status helper truth tables, enum string-value drift guards, mirror events excluded from `EventTypeAcceptsUserResponse`.
+- [x] Add `Scan` / `Value` methods for the three new enums in `sqltypes.go` so GORM can persist them (Stage 2 requires this).
+- [x] Update `pkgs/tasks/domain/doc.go` to mention the new types and helpers.
 
 **Exit criteria:**
 
@@ -293,8 +294,8 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 | Stage | State | Commit |
 |---|---|---|
-| 0 — Plan | in progress | — |
-| 1 — Domain | pending | — |
+| 0 — Plan | done | `c495148` |
+| 1 — Domain | done | _pending push_ |
 | 2 — Schema + CRUD | pending | — |
 | 3 — Dual-write mirror | pending | — |
 | 4 — Handler | pending | — |
