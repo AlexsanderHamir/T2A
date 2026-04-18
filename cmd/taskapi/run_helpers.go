@@ -181,7 +181,7 @@ func (h *agentWorkerHandle) drain() {
 //
 // When the worker is disabled (default), only the queue + reconcile
 // loop start — no probe, no sweep, no Cursor binary required.
-func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) (context.CancelFunc, *agents.MemoryQueue, *agentWorkerHandle) {
+func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) (context.CancelFunc, *agents.MemoryQueue, *agentWorkerHandle, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startReadyTaskAgents")
 	qcap := taskapiconfig.UserTaskAgentQueueCap()
 	agentQueue := agents.NewMemoryQueue(qcap)
@@ -194,16 +194,27 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *hand
 	reconcileCtx, reconcileCancel := context.WithCancel(ctx)
 	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
 
-	handle := startAgentWorkerIfEnabled(ctx, taskStore, agentQueue, hub)
-	return reconcileCancel, agentQueue, handle
+	handle, err := startAgentWorkerIfEnabled(ctx, taskStore, agentQueue, hub)
+	if err != nil {
+		// Tear down the reconcile goroutine we just spawned so the
+		// caller can safely return without leaking it; bar §16
+		// forbids os.Exit outside main.go because it skips the log
+		// file flush deferred in runTaskAPIService.
+		reconcileCancel()
+		return nil, nil, nil, err
+	}
+	return reconcileCancel, agentQueue, handle, nil
 }
 
 // startAgentWorkerIfEnabled returns a populated agentWorkerHandle when
 // T2A_AGENT_WORKER_ENABLED is truthy, or a no-op handle (closed
 // waitDone, nil cancel) otherwise. Failures inside the enabled branch
-// call os.Exit(1) per the Stage 4 "fail loudly at startup" rule —
-// caller cannot recover from a missing Cursor binary.
-func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agentQueue *agents.MemoryQueue, hub *handler.SSEHub) *agentWorkerHandle {
+// (workdir missing, Cursor binary not usable) are surfaced as errors
+// per the Stage 4 "fail loudly at startup" rule — but as a returned
+// error rather than os.Exit so the caller's deferred log flush still
+// runs (bar §16: log.Fatal/os.Exit outside main.go skips deferred
+// cleanup).
+func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agentQueue *agents.MemoryQueue, hub *handler.SSEHub) (*agentWorkerHandle, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startAgentWorkerIfEnabled")
 	enabled := taskapiconfig.AgentWorkerEnabled()
 	runTimeout := taskapiconfig.AgentWorkerRunTimeout()
@@ -216,22 +227,16 @@ func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agen
 			"working_dir", workingDir)
 		closed := make(chan struct{})
 		close(closed)
-		return &agentWorkerHandle{waitDone: closed, runTimeout: runTimeout}
+		return &agentWorkerHandle{waitDone: closed, runTimeout: runTimeout}, nil
 	}
 
 	if err := assertWorkingDirExists(workingDir); err != nil {
-		slog.Error("agent worker working dir not usable, refusing to start agent worker",
-			"cmd", cmdName, "operation", "taskapi.agent_worker.workdir_err",
-			"working_dir", workingDir, "err", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("agent worker working dir %q not usable: %w", workingDir, err)
 	}
 
 	cursorVersion, err := cursor.Probe(ctx, cursorBin, cursor.DefaultProbeTimeout, nil)
 	if err != nil {
-		slog.Error("cursor binary not usable, refusing to start agent worker",
-			"cmd", cmdName, "operation", "taskapi.agent_worker.probe_err",
-			"cursor_bin", cursorBin, "err", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("cursor binary %q not usable: %w", cursorBin, err)
 	}
 
 	sweepCtx, cancelSweep := context.WithTimeout(ctx, 30*time.Second)
@@ -281,12 +286,13 @@ func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agen
 		cancelWorker: cancelWorker,
 		waitDone:     done,
 		runTimeout:   runTimeout,
-	}
+	}, nil
 }
 
 // assertWorkingDirExists is the fail-fast guard for
 // T2A_AGENT_WORKER_WORKING_DIR. Returns an error when the path is
-// missing or not a directory; the caller logs+exits.
+// missing or not a directory; the caller wraps with context and
+// returns the error up the stack.
 func assertWorkingDirExists(dir string) error {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.assertWorkingDirExists",
 		"dir", dir)
@@ -506,7 +512,10 @@ func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.Can
 		return nil, nil, err
 	}
 	logHandlerMiddlewareConfig()
-	cancel, q, aw := startReadyTaskAgents(ctx, taskStore, hub)
+	cancel, q, aw, err := startReadyTaskAgents(ctx, taskStore, hub)
+	if err != nil {
+		return nil, nil, err
+	}
 	return &taskAPIApp{taskStore: taskStore, hub: hub, rep: rep, agentQueue: q, agentWorker: aw}, cancel, nil
 }
 
@@ -559,7 +568,8 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 
 	app, stopAgents, err := buildTaskAPIApp(appCtx, db)
 	if err != nil {
-		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.repo_root", "err", err)
+		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.startup_app", "err", err)
+		closeSQLDBOrLog(db)
 		return 1
 	}
 
