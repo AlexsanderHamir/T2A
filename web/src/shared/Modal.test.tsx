@@ -7,8 +7,12 @@ import { ModalStackProvider } from "./ModalStackContext";
 
 function Harness({
   onOpenChange,
+  busy = false,
+  dismissibleWhileBusy = false,
 }: {
   onOpenChange?: (open: boolean) => void;
+  busy?: boolean;
+  dismissibleWhileBusy?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -20,6 +24,8 @@ function Harness({
         <Modal
           labelledBy="t-modal-title"
           describedBy="t-modal-desc"
+          busy={busy}
+          dismissibleWhileBusy={dismissibleWhileBusy}
           onClose={() => {
             setOpen(false);
             onOpenChange?.(false);
@@ -148,6 +154,86 @@ describe("Modal", () => {
     } finally {
       rootHost.remove();
     }
+  });
+
+  it("does not close on Escape while busy by default", async () => {
+    const user = userEvent.setup();
+    render(<Harness busy />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    await screen.findByRole("dialog");
+    await user.keyboard("{Escape}");
+    // Modal still present; the "busy locks close" historical
+    // behavior is preserved when `dismissibleWhileBusy` is unset.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("closes on Escape while busy when dismissibleWhileBusy is set", async () => {
+    const user = userEvent.setup();
+    render(<Harness busy dismissibleWhileBusy />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    await screen.findByRole("dialog");
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("closes on backdrop click while busy when dismissibleWhileBusy is set", async () => {
+    const user = userEvent.setup();
+    render(<Harness busy dismissibleWhileBusy />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    const dialog = await screen.findByRole("dialog");
+    const backdrop = dialog.parentElement?.querySelector(".modal-backdrop");
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop as Element);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("still shows the busy spinner overlay when dismissibleWhileBusy is set", async () => {
+    const user = userEvent.setup();
+    render(<Harness busy dismissibleWhileBusy />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    await screen.findByRole("dialog");
+    // Visual feedback (the spinner) must still render so the user
+    // sees the operation is in flight, even though they're free
+    // to step away.
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("dismissibleWhileBusy also works under ModalStackProvider (top-of-stack Escape gate)", async () => {
+    function StackHarness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <ModalStackProvider>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          {open ? (
+            <Modal
+              labelledBy="busy-stack-title"
+              busy
+              dismissibleWhileBusy
+              onClose={() => setOpen(false)}
+            >
+              <div>
+                <h2 id="busy-stack-title">Busy stack</h2>
+              </div>
+            </Modal>
+          ) : null}
+        </ModalStackProvider>
+      );
+    }
+
+    const user = userEvent.setup();
+    render(<StackHarness />);
+    await user.click(screen.getByRole("button", { name: /^open$/i }));
+    await screen.findByRole("heading", { name: /busy stack/i });
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
   });
 
   it("closes only the top modal on Escape when stacked under ModalStackProvider", async () => {

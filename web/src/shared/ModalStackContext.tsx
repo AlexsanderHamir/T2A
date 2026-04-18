@@ -12,6 +12,17 @@ import {
 /** Latest escape target for one open modal; read `.current` when handling Escape. */
 export type ModalEscapeRef = MutableRefObject<{
   busy: boolean;
+  /**
+   * When true, Escape (and backdrop click, handled locally on the
+   * modal itself) still close the modal even while `busy` is true.
+   * Use for long-running mutations that must not trap the user in
+   * the modal: the overlay/spinner still gives "in progress" feedback,
+   * but the user can step away while the mutation completes in the
+   * background. Caller must guarantee its `onClose` handler is safe
+   * to fire mid-flight (e.g. resets local form state but lets the
+   * mutation's settle handler land server-truth invalidations).
+   */
+  dismissibleWhileBusy: boolean;
   onClose: () => void;
 }>;
 
@@ -56,7 +67,7 @@ export function ModalStackProvider({ children }: { children: ReactNode }) {
       const stack = stackRef.current;
       if (stack.length === 0) return;
       const top = stack[stack.length - 1]!.current;
-      if (top.busy) return;
+      if (top.busy && !top.dismissibleWhileBusy) return;
       e.preventDefault();
       e.stopPropagation();
       top.onClose();

@@ -12,10 +12,21 @@ type Props = {
   describedBy?: string;
   /** Wider shell for forms with rich text (default ~narrow confirm). */
   size?: "default" | "wide";
-  /** Shows a blocking spinner overlay; backdrop and Escape are disabled. */
+  /** Shows a blocking spinner overlay; backdrop and Escape are disabled by default while busy. */
   busy?: boolean;
   /** `aria-label` on the busy spinner (screen readers). */
   busyLabel?: string;
+  /**
+   * When true, the user can still close the modal via Escape or
+   * backdrop click *even while* `busy` is true (the spinner overlay
+   * keeps showing in-flight feedback). Use for long-running
+   * background operations the user shouldn't be trapped behind
+   * (e.g. a slow create that the caller has already made safe to
+   * resolve after the modal has closed). Defaults to `false` so
+   * existing call sites keep the historical "modal locks while
+   * busy" behavior.
+   */
+  dismissibleWhileBusy?: boolean;
   /** When false, nested modals avoid fighting the parent on `document.body` scroll lock. */
   lockBodyScroll?: boolean;
   /** Higher stacking when opened above another modal. */
@@ -30,12 +41,17 @@ export function Modal({
   size = "default",
   busy = false,
   busyLabel = "Saving…",
+  dismissibleWhileBusy = false,
   lockBodyScroll = true,
   stack = "default",
 }: Props) {
   const modalStack = useModalStackOptional();
-  const escapeRef = useRef({ busy, onClose }) as ModalEscapeRef;
-  escapeRef.current = { busy, onClose };
+  const escapeRef = useRef({
+    busy,
+    dismissibleWhileBusy,
+    onClose,
+  }) as ModalEscapeRef;
+  escapeRef.current = { busy, dismissibleWhileBusy, onClose };
 
   const rootRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -107,8 +123,10 @@ export function Modal({
       return () => modalStack.unregister(escapeRef);
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || escapeRef.current.busy) return;
-      escapeRef.current.onClose();
+      if (e.key !== "Escape") return;
+      const r = escapeRef.current;
+      if (r.busy && !r.dismissibleWhileBusy) return;
+      r.onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -123,7 +141,7 @@ export function Modal({
         className="modal-backdrop"
         aria-hidden="true"
         onClick={() => {
-          if (!busy) onClose();
+          if (!busy || dismissibleWhileBusy) onClose();
         }}
       />
       <div

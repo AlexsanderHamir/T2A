@@ -138,6 +138,18 @@ export function TaskCreateModal({
         size="wide"
         busy={pending}
         busyLabel={busyLabel}
+        // While `createMutation` is pending the spinner overlay still
+        // gives in-flight feedback, but the user can step away from
+        // the modal (Escape / backdrop) without losing context. Safe
+        // because `useTasksApp.createMutation.onSuccess` gates its
+        // `closeCreateModal()` call on `newDraftIDRef.current ===
+        // variables.draft_id` and `resetNewTaskForm` clears
+        // `requestedResumeRef`, so a stale create resolution can no
+        // longer slam shut a draft the user has switched to. Server-
+        // truth invalidations (`taskQueryKeys.all`, `task-stats`,
+        // `task-drafts`) still fire so the new task appears in the
+        // list even if the modal was already closed by the user.
+        dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
           <h2 id="task-create-modal-title">
