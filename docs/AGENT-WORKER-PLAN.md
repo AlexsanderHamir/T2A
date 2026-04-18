@@ -308,7 +308,7 @@ any change to `cmd/taskapi`. Pure adapter + tests.
 
 **Scope (touch only `pkgs/agents/worker/`):**
 
-- [ ] New package `pkgs/agents/worker` with:
+- [x] New package `pkgs/agents/worker` with:
   - `worker.go` exposing `type Worker struct{ … }` and
     `NewWorker(store *store.Store, queue *agents.MemoryQueue, runner runner.Runner, opts Options) *Worker`.
   - `Worker.Run(ctx context.Context) error` — single goroutine; loops
@@ -366,7 +366,7 @@ any change to `cmd/taskapi`. Pure adapter + tests.
     SSE hub.
   - `Options`: per-run timeout (default 5m), shutdown abort timeout
     (default 5s), optional clock (for tests), optional notifier.
-- [ ] `worker_test.go` driving the worker with the fake `MemoryQueue`,
+- [x] `worker_test.go` driving the worker with the fake `MemoryQueue`,
   the SQLite test store (`internal/tasktestdb.OpenSQLite`), and the
   `runnerfake.Runner` from Stage 1. Cases:
   - **Happy path:** task → cycle row + 2 phase rows (skipped diagnose
@@ -684,7 +684,7 @@ real signal about which one bites first.
 | 0 — Plan | done | `84083f4` (initial) + this commit (substrate-drift fixes) |
 | 1 — Runner interface + fake | done | `f5c44b6` |
 | 2 — Cursor CLI adapter | done | `14f5d17` |
-| 3 — Worker loop | pending | — |
+| 3 — Worker loop | done | _(this commit)_ |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | pending | — |
 | 5 — Backend docs + contract pinning | pending | — |
 | 6 — Observability + integration sweep | pending | — |
