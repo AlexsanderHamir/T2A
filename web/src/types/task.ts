@@ -56,11 +56,19 @@ export type TaskStatsResponse = {
 export type TaskChangeType =
   | "task_created"
   | "task_updated"
-  | "task_deleted";
+  | "task_deleted"
+  | "task_cycle_changed";
 
+/**
+ * Wire shape of a single SSE frame on `GET /events`.
+ *
+ * `cycle_id` is only present on `task_cycle_changed` (omitted for the other
+ * three types so the existing wire shape stays byte-identical).
+ */
 export type TaskChangeEvent = {
   type: TaskChangeType;
   id: string;
+  cycle_id?: string;
 };
 
 export const STATUSES: Status[] = [

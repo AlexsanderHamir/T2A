@@ -1,39 +1,84 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { collectTaskIdFromSSEData, taskQueryKeys } from "../task-query";
+import { parseTaskChangeFrame, taskQueryKeys } from "../task-query";
 
 const SSE_INVALIDATE_MS = 400;
 
 /** Wait this long after an error before showing disconnected (browser may reconnect). */
 const SSE_DISCONNECT_UI_MS = 900;
 
+/**
+ * Pending invalidation slots collected between debounce ticks. `tasks` invalidates
+ * the entire `["tasks","detail",id]` subtree (covers all child queries).
+ * `cycles` invalidates only the cycle subtree for a task — task detail,
+ * checklist, events caches stay warm so cycle activity does not refetch the
+ * world.
+ */
+type PendingInvalidations = {
+  tasks: Set<string>;
+  cycles: Map<string, Set<string>>;
+};
+
+function emptyPending(): PendingInvalidations {
+  return { tasks: new Set(), cycles: new Map() };
+}
+
+function clearPending(p: PendingInvalidations): void {
+  p.tasks.clear();
+  p.cycles.clear();
+}
+
 export function useTaskEventStream(): boolean {
   const queryClient = useQueryClient();
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const disconnectUiRef = useRef<ReturnType<typeof setTimeout> | undefined>();
-  const pendingIdsRef = useRef<Set<string>>(new Set());
+  const pendingRef = useRef<PendingInvalidations>(emptyPending());
   /** Cleared on effect cleanup so queued timer callbacks cannot run after unmount. */
   const streamEffectActiveRef = useRef(false);
   const [sseLive, setSseLive] = useState(false);
 
   const flushStreamInvalidation = useCallback(() => {
-    const ids = [...pendingIdsRef.current];
-    pendingIdsRef.current.clear();
-    if (ids.length === 0) {
+    const taskIds = [...pendingRef.current.tasks];
+    const cycleEntries = [...pendingRef.current.cycles.entries()];
+    clearPending(pendingRef.current);
+    if (taskIds.length === 0 && cycleEntries.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       return;
     }
-    void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-    for (const id of ids) {
+    if (taskIds.length > 0) {
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+      for (const id of taskIds) {
+        void queryClient.invalidateQueries({
+          queryKey: taskQueryKeys.detail(id),
+        });
+      }
+    }
+    for (const [taskId] of cycleEntries) {
+      if (taskIds.includes(taskId)) {
+        // Already covered by the broad detail invalidation above.
+        continue;
+      }
       void queryClient.invalidateQueries({
-        queryKey: [...taskQueryKeys.all, "detail", id],
+        queryKey: taskQueryKeys.cycles(taskId),
       });
     }
   }, [queryClient]);
 
   const scheduleInvalidateFromStream = useCallback(
     (data: string) => {
-      collectTaskIdFromSSEData(data, pendingIdsRef.current);
+      const frame = parseTaskChangeFrame(data);
+      if (frame !== null) {
+        if (frame.kind === "task") {
+          pendingRef.current.tasks.add(frame.taskId);
+        } else {
+          let bucket = pendingRef.current.cycles.get(frame.taskId);
+          if (bucket === undefined) {
+            bucket = new Set();
+            pendingRef.current.cycles.set(frame.taskId, bucket);
+          }
+          bucket.add(frame.cycleId);
+        }
+      }
       if (sseDebounceRef.current !== undefined) {
         clearTimeout(sseDebounceRef.current);
       }
@@ -79,7 +124,7 @@ export function useTaskEventStream(): boolean {
         }
       }, SSE_DISCONNECT_UI_MS);
     };
-    const pendingIds = pendingIdsRef.current;
+    const pending = pendingRef.current;
     return () => {
       streamEffectActiveRef.current = false;
       clearDisconnectUi();
@@ -87,7 +132,7 @@ export function useTaskEventStream(): boolean {
         clearTimeout(sseDebounceRef.current);
         sseDebounceRef.current = undefined;
       }
-      pendingIds.clear();
+      clearPending(pending);
       es.close();
       setSseLive(false);
     };

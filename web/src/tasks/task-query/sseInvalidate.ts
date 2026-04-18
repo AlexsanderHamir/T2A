@@ -1,19 +1,81 @@
 /** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/API-SSE.md). */
-export function collectTaskIdFromSSEData(data: string, into: Set<string>): void {
+
+/**
+ * Discriminated union for one parsed SSE frame from `GET /events`. Returned by
+ * `parseTaskChangeFrame`; `null` is used for blank, malformed, or
+ * not-yet-known frames so the stream consumer can fall back to a broad
+ * invalidation when needed.
+ *
+ * Wire shape:
+ *   { "type": "task_created" | "task_updated" | "task_deleted",
+ *     "id": "<task uuid>" }
+ *   { "type": "task_cycle_changed",
+ *     "id": "<task uuid>", "cycle_id": "<cycle uuid>" }
+ */
+export type TaskChangeFrame =
+  | { kind: "task"; taskId: string }
+  | { kind: "cycle"; taskId: string; cycleId: string };
+
+function readStringId(o: Record<string, unknown>, key: string): string {
+  const v = o[key];
+  if (typeof v !== "string") {
+    return "";
+  }
+  return v.trim();
+}
+
+/**
+ * Parses one SSE `data:` line. Cycle frames must include both `id` (task) and
+ * `cycle_id`; task frames only need `id`. Unknown event types (including
+ * future ones) yield `null` so the caller can fall back to a broad
+ * invalidation rather than dropping the frame.
+ */
+export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
   const trimmed = data.trim();
   if (trimmed === "") {
+    return null;
+  }
+  let o: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return null;
+    }
+    o = parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const id = readStringId(o, "id");
+  if (id === "") {
+    return null;
+  }
+  if (o.type === "task_cycle_changed") {
+    const cycleId = readStringId(o, "cycle_id");
+    if (cycleId === "") {
+      return null;
+    }
+    return { kind: "cycle", taskId: id, cycleId };
+  }
+  if (
+    o.type === "task_created" ||
+    o.type === "task_updated" ||
+    o.type === "task_deleted"
+  ) {
+    return { kind: "task", taskId: id };
+  }
+  return null;
+}
+
+/**
+ * Adds the task id from one SSE `data:` payload into `into`. Cycle frames
+ * (`task_cycle_changed`) are intentionally skipped so they do not accidentally
+ * invalidate the entire task detail subtree; consumers should use
+ * `parseTaskChangeFrame` directly when they need to react to cycle changes.
+ */
+export function collectTaskIdFromSSEData(data: string, into: Set<string>): void {
+  const frame = parseTaskChangeFrame(data);
+  if (frame === null || frame.kind !== "task") {
     return;
   }
-  try {
-    const o = JSON.parse(trimmed) as { id?: unknown };
-    if (typeof o.id !== "string") {
-      return;
-    }
-    const id = o.id.trim();
-    if (id !== "") {
-      into.add(id);
-    }
-  } catch {
-    // Ignore non-JSON frames; caller may fall back to a broad invalidation.
-  }
+  into.add(frame.taskId);
 }

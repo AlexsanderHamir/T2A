@@ -25,6 +25,22 @@ describe("taskQueryKeys", () => {
     ]);
   });
 
+  it("scopes cycles list and per-cycle keys under the task detail", () => {
+    expect(taskQueryKeys.cycles("t1")).toEqual([
+      "tasks",
+      "detail",
+      "t1",
+      "cycles",
+    ]);
+    expect(taskQueryKeys.cycle("t1", "cyc-1")).toEqual([
+      "tasks",
+      "detail",
+      "t1",
+      "cycles",
+      "cyc-1",
+    ]);
+  });
+
   it("encodes events cursor variants in the key", () => {
     expect(taskQueryKeys.events("t1", { k: "head" })).toEqual([
       "tasks",

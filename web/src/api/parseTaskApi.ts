@@ -1,10 +1,20 @@
 import {
+  CYCLE_STATUSES,
+  PHASE_STATUSES,
+  PHASES,
   PRIORITIES,
   TASK_TYPES,
   STATUSES,
   TASK_EVENT_TYPES,
+  type CycleStatus,
+  type Phase,
+  type PhaseStatus,
   type Priority,
   type DraftTaskEvaluation,
+  type TaskCycle,
+  type TaskCycleDetail,
+  type TaskCyclePhase,
+  type TaskCyclesListResponse,
   type TaskDraftDetail,
   type TaskDraftSummary,
   type TaskDraftPayload,
@@ -592,4 +602,149 @@ export function parseTaskDraftDetail(value: unknown): TaskDraftDetail {
     updated_at: parseString(value.updated_at, "updated_at"),
     payload: parseDraftPayload(value.payload),
   };
+}
+
+function parseISO8601Required(v: unknown, field: string): string {
+  const s = parseString(v, field);
+  if (Number.isNaN(Date.parse(s))) {
+    throw new Error(`Invalid API response: ${field} must be a parseable date`);
+  }
+  return s;
+}
+
+function parseCycleStatus(v: unknown): CycleStatus {
+  if (typeof v !== "string" || !(CYCLE_STATUSES as readonly string[]).includes(v)) {
+    throw new Error("Invalid API response: status must be a known cycle status");
+  }
+  return v as CycleStatus;
+}
+
+function parsePhase(v: unknown): Phase {
+  if (typeof v !== "string" || !(PHASES as readonly string[]).includes(v)) {
+    throw new Error("Invalid API response: phase must be a known phase");
+  }
+  return v as Phase;
+}
+
+function parsePhaseStatus(v: unknown): PhaseStatus {
+  if (typeof v !== "string" || !(PHASE_STATUSES as readonly string[]).includes(v)) {
+    throw new Error("Invalid API response: status must be a known phase status");
+  }
+  return v as PhaseStatus;
+}
+
+function parseObjectField(v: unknown, field: string): Record<string, unknown> {
+  if (v === undefined || v === null) return {};
+  if (!isRecord(v)) {
+    throw new Error(`Invalid API response: ${field} must be an object`);
+  }
+  return v;
+}
+
+function parseOptionalParseableDate(
+  v: unknown,
+  field: string,
+): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  return parseISO8601Required(v, field);
+}
+
+function parseOptionalNonEmptyId(
+  v: unknown,
+  field: string,
+): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  return parseNonEmptyString(v, field);
+}
+
+/** Validates one cycle row from `GET /tasks/{id}/cycles[*]` (also used by detail). */
+export function parseTaskCycle(value: unknown): TaskCycle {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: cycle must be an object");
+  }
+  const out: TaskCycle = {
+    id: parseNonEmptyString(value.id, "id"),
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    attempt_seq: parseFiniteNumber(value.attempt_seq, "attempt_seq"),
+    status: parseCycleStatus(value.status),
+    started_at: parseISO8601Required(value.started_at, "started_at"),
+    triggered_by: parseActor(value.triggered_by),
+    meta: parseObjectField(value.meta, "meta"),
+  };
+  const ended = parseOptionalParseableDate(value.ended_at, "ended_at");
+  if (ended !== undefined) out.ended_at = ended;
+  const parent = parseOptionalNonEmptyId(value.parent_cycle_id, "parent_cycle_id");
+  if (parent !== undefined) out.parent_cycle_id = parent;
+  return out;
+}
+
+/** Validates one phase row inside a cycle detail or PATCH/POST phase response. */
+export function parseTaskCyclePhase(value: unknown): TaskCyclePhase {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: phase must be an object");
+  }
+  const out: TaskCyclePhase = {
+    id: parseNonEmptyString(value.id, "id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    phase: parsePhase(value.phase),
+    phase_seq: parseFiniteNumber(value.phase_seq, "phase_seq"),
+    status: parsePhaseStatus(value.status),
+    started_at: parseISO8601Required(value.started_at, "started_at"),
+    details: parseObjectField(value.details, "details"),
+  };
+  const ended = parseOptionalParseableDate(value.ended_at, "ended_at");
+  if (ended !== undefined) out.ended_at = ended;
+  if (value.summary !== undefined && value.summary !== null) {
+    out.summary = parseString(value.summary, "summary");
+  }
+  if (value.event_seq !== undefined && value.event_seq !== null) {
+    out.event_seq = parseFiniteNumber(value.event_seq, "event_seq");
+  }
+  return out;
+}
+
+/** Validates `GET /tasks/{id}/cycles` envelope. */
+export function parseTaskCyclesListResponse(
+  value: unknown,
+): TaskCyclesListResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: cycles payload must be an object");
+  }
+  const raw = value.cycles;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: cycles must be an array");
+  }
+  const cycles = raw.map((item, i) => {
+    try {
+      return parseTaskCycle(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: cycles[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  return {
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    cycles,
+    limit: parseFiniteNumber(value.limit, "limit"),
+    has_more: parseBooleanField(value.has_more, "has_more"),
+  };
+}
+
+/** Validates `GET /tasks/{id}/cycles/{cycleId}` envelope (cycle row + ordered phases). */
+export function parseTaskCycleDetail(value: unknown): TaskCycleDetail {
+  const cycle = parseTaskCycle(value);
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: cycle detail must be an object");
+  }
+  const raw = value.phases;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: phases must be an array");
+  }
+  const phases = raw.map((item, i) => {
+    try {
+      return parseTaskCyclePhase(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: phases[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  return { ...cycle, phases };
 }

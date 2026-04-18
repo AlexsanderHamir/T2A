@@ -69,6 +69,95 @@ describe("useTaskEventStream", () => {
     expect(inv).toHaveBeenCalled();
   });
 
+  it("invalidates only the cycles subtree on task_cycle_changed (no detail churn)", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+
+    const mockES = getCurrentMockES();
+    expect(mockES).not.toBeNull();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    act(() => {
+      mockES!.onmessage?.({
+        data: '{"type":"task_cycle_changed","id":"task-1","cycle_id":"cyc-1"}',
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const calls = inv.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual({
+      queryKey: ["tasks", "detail", "task-1", "cycles"],
+    });
+    for (const arg of calls) {
+      const key = (arg as { queryKey: readonly unknown[] }).queryKey;
+      expect(key).not.toEqual(["tasks", "detail", "task-1"]);
+      expect(key).not.toEqual(["tasks", "list"]);
+      expect(key).not.toEqual(["tasks"]);
+    }
+  });
+
+  it("falls back to broad invalidation when no recognised frame arrives", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    act(() => {
+      mockES!.onmessage?.({ data: "{}" });
+    });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(inv).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+  });
+
+  it("dedupes cycle invalidation when the same task already has a broad invalidation pending", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    act(() => {
+      mockES!.onmessage?.({
+        data: '{"type":"task_updated","id":"task-1"}',
+      });
+      mockES!.onmessage?.({
+        data: '{"type":"task_cycle_changed","id":"task-1","cycle_id":"cyc-1"}',
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    const calls = inv.mock.calls.map((c) => c[0]);
+    const cyclesOnlyCalls = calls.filter(
+      (c) =>
+        JSON.stringify((c as { queryKey: unknown[] }).queryKey) ===
+        JSON.stringify(["tasks", "detail", "task-1", "cycles"]),
+    );
+    expect(cyclesOnlyCalls).toHaveLength(0);
+    expect(calls).toContainEqual({
+      queryKey: ["tasks", "detail", "task-1"],
+    });
+  });
+
   it("does not invalidate queries after unmount before debounce elapses", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");

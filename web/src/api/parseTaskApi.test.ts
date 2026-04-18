@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   maxTaskParseDepth,
   parseTask,
+  parseTaskCycle,
+  parseTaskCycleDetail,
+  parseTaskCyclePhase,
+  parseTaskCyclesListResponse,
   parseTaskEventDetail,
   parseTaskEventsResponse,
   parseDraftTaskEvaluation,
@@ -454,5 +458,154 @@ describe("parseDraftTaskEvaluation", () => {
         "Ensure title, prompt, and priority describe the same outcome.",
       ],
     });
+  });
+});
+
+const validCycle = {
+  id: "cyc-1",
+  task_id: "task-1",
+  attempt_seq: 1,
+  status: "running",
+  started_at: "2026-04-18T10:00:00.000Z",
+  triggered_by: "user",
+  meta: { source: "manual" },
+};
+
+describe("parseTaskCycle", () => {
+  it("accepts a well-formed running cycle and defaults meta when missing", () => {
+    expect(parseTaskCycle(validCycle)).toEqual(validCycle);
+    const noMeta = { ...validCycle };
+    delete (noMeta as Partial<typeof validCycle>).meta;
+    expect(parseTaskCycle(noMeta)).toEqual({ ...validCycle, meta: {} });
+  });
+
+  it("includes optional ended_at and parent_cycle_id when present", () => {
+    const out = parseTaskCycle({
+      ...validCycle,
+      status: "succeeded",
+      ended_at: "2026-04-18T10:05:00.000Z",
+      parent_cycle_id: "cyc-0",
+    });
+    expect(out.ended_at).toBe("2026-04-18T10:05:00.000Z");
+    expect(out.parent_cycle_id).toBe("cyc-0");
+  });
+
+  it("rejects unknown status, bad actor, and unparseable started_at", () => {
+    expect(() => parseTaskCycle({ ...validCycle, status: "weird" })).toThrow(
+      /known cycle status/,
+    );
+    expect(() =>
+      parseTaskCycle({ ...validCycle, triggered_by: "robot" }),
+    ).toThrow(/user or agent/);
+    expect(() =>
+      parseTaskCycle({ ...validCycle, started_at: "not-a-date" }),
+    ).toThrow(/started_at/);
+  });
+});
+
+const validPhase = {
+  id: "ph-1",
+  cycle_id: "cyc-1",
+  phase: "diagnose",
+  phase_seq: 1,
+  status: "running",
+  started_at: "2026-04-18T10:00:01.000Z",
+  details: {},
+};
+
+describe("parseTaskCyclePhase", () => {
+  it("accepts a well-formed running phase and defaults details when missing", () => {
+    expect(parseTaskCyclePhase(validPhase)).toEqual(validPhase);
+    const noDetails = { ...validPhase };
+    delete (noDetails as Partial<typeof validPhase>).details;
+    expect(parseTaskCyclePhase(noDetails)).toEqual({
+      ...validPhase,
+      details: {},
+    });
+  });
+
+  it("includes optional summary, ended_at, event_seq when present", () => {
+    const out = parseTaskCyclePhase({
+      ...validPhase,
+      status: "succeeded",
+      ended_at: "2026-04-18T10:01:00.000Z",
+      summary: "diagnosed root cause",
+      event_seq: 7,
+      details: { hint: "x" },
+    });
+    expect(out.summary).toBe("diagnosed root cause");
+    expect(out.ended_at).toBe("2026-04-18T10:01:00.000Z");
+    expect(out.event_seq).toBe(7);
+    expect(out.details).toEqual({ hint: "x" });
+  });
+
+  it("rejects unknown phase or status", () => {
+    expect(() => parseTaskCyclePhase({ ...validPhase, phase: "ship" })).toThrow(
+      /known phase/,
+    );
+    expect(() => parseTaskCyclePhase({ ...validPhase, status: "weird" })).toThrow(
+      /known phase status/,
+    );
+  });
+});
+
+describe("parseTaskCyclesListResponse", () => {
+  it("parses an empty list with limit and has_more", () => {
+    expect(
+      parseTaskCyclesListResponse({
+        task_id: "task-1",
+        cycles: [],
+        limit: 50,
+        has_more: false,
+      }),
+    ).toEqual({ task_id: "task-1", cycles: [], limit: 50, has_more: false });
+  });
+
+  it("parses cycles array element-by-element with index in error", () => {
+    expect(() =>
+      parseTaskCyclesListResponse({
+        task_id: "task-1",
+        cycles: [validCycle, { ...validCycle, status: "weird" }],
+        limit: 10,
+        has_more: false,
+      }),
+    ).toThrow(/cycles\[1\]/);
+  });
+
+  it("rejects when cycles is missing or not an array", () => {
+    expect(() =>
+      parseTaskCyclesListResponse({
+        task_id: "task-1",
+        limit: 10,
+        has_more: false,
+      }),
+    ).toThrow(/cycles must be an array/);
+  });
+});
+
+describe("parseTaskCycleDetail", () => {
+  it("parses cycle + ordered phases envelope", () => {
+    const out = parseTaskCycleDetail({
+      ...validCycle,
+      phases: [
+        validPhase,
+        {
+          ...validPhase,
+          id: "ph-2",
+          phase: "execute",
+          phase_seq: 2,
+          status: "running",
+        },
+      ],
+    });
+    expect(out.id).toBe("cyc-1");
+    expect(out.phases).toHaveLength(2);
+    expect(out.phases[1].phase).toBe("execute");
+  });
+
+  it("rejects when phases is missing", () => {
+    expect(() => parseTaskCycleDetail(validCycle)).toThrow(
+      /phases must be an array/,
+    );
   });
 });

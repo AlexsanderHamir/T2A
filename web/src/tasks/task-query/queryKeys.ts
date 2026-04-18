@@ -37,4 +37,9 @@ export const taskQueryKeys = {
   },
   eventDetail: (id: string, seq: number) =>
     [...taskQueryKeys.all, "detail", id, "event", seq] as const,
+  /** Prefix for all cycle queries on a task; partial-match invalidation hits both list and per-cycle. */
+  cycles: (id: string) =>
+    [...taskQueryKeys.all, "detail", id, "cycles"] as const,
+  cycle: (id: string, cycleId: string) =>
+    [...taskQueryKeys.all, "detail", id, "cycles", cycleId] as const,
 };
