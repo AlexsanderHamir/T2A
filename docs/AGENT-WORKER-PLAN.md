@@ -685,6 +685,6 @@ real signal about which one bites first.
 | 1 — Runner interface + fake | done | `f5c44b6` |
 | 2 — Cursor CLI adapter | done | `14f5d17` |
 | 3 — Worker loop | done | `06958a2` |
-| 4 — `cmd/taskapi` wiring + config + startup sweep | done | — |
+| 4 — `cmd/taskapi` wiring + config + startup sweep | done | `b775ab5` |
 | 5 — Backend docs + contract pinning | pending | — |
 | 6 — Observability + integration sweep | pending | — |
