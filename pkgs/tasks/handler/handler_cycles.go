@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,33 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
+
+// jsonObjectMessageEmpty is the canonical "{}" RawMessage emitted by the
+// response chokepoint when a JSON-object column is missing or corrupt.
+var jsonObjectMessageEmpty = json.RawMessage(`{}`)
+
+// normalizeJSONObjectForResponse mirrors the store-side normalizeJSONObject
+// chokepoint on the response side. The store enforces the "always a JSON
+// object" invariant on writes (see pkgs/tasks/store/store_cycles.go), but
+// legacy rows from before that chokepoint — or any out-of-band write path
+// (raw SQL, migrations, future bug) — can still carry nil / empty /
+// whitespace / "null" / scalars / arrays / malformed bytes in meta_json,
+// details_json, or data_json. Per docs/API-HTTP.md these columns must
+// surface as a JSON object on every response, never as a JSON null or
+// scalar (the SPA crashes on `Object.entries(null)`). Rather than 500
+// for legacy data, the response builder defensively coerces anything
+// non-object to "{}" so the client invariant always holds.
+func normalizeJSONObjectForResponse(raw []byte) json.RawMessage {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return jsonObjectMessageEmpty
+	}
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(trimmed, &probe); err != nil {
+		return jsonObjectMessageEmpty
+	}
+	return json.RawMessage(trimmed)
+}
 
 // maxCycleListLimitParamBytes mirrors maxTaskEventSeqParamBytes — keep
 // list-paging limit query strings short.
@@ -307,13 +335,12 @@ func parseCycleListLimit(ctx context.Context, q url.Values) (int, error) {
 }
 
 // taskCycleResponseFromDomain copies a TaskCycle GORM row into the JSON
-// response shape. Meta is normalized to "{}" if the column came back empty.
+// response shape. Meta is normalized to "{}" if the column came back as
+// nil / empty / whitespace / null / a scalar / an array / malformed JSON,
+// matching the docs/API-HTTP.md "always a JSON object" invariant.
 func taskCycleResponseFromDomain(c *domain.TaskCycle) taskCycleResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskCycleResponseFromDomain")
-	meta := json.RawMessage(c.MetaJSON)
-	if len(meta) == 0 {
-		meta = json.RawMessage(`{}`)
-	}
+	meta := normalizeJSONObjectForResponse(c.MetaJSON)
 	return taskCycleResponse{
 		ID:            c.ID,
 		TaskID:        c.TaskID,
@@ -328,13 +355,11 @@ func taskCycleResponseFromDomain(c *domain.TaskCycle) taskCycleResponse {
 }
 
 // taskCyclePhaseResponseFromDomain copies a TaskCyclePhase row into the
-// JSON response shape.
+// JSON response shape. Details is normalized via the same chokepoint as
+// Meta — see taskCycleResponseFromDomain.
 func taskCyclePhaseResponseFromDomain(p *domain.TaskCyclePhase) taskCyclePhaseResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskCyclePhaseResponseFromDomain")
-	details := json.RawMessage(p.DetailsJSON)
-	if len(details) == 0 {
-		details = json.RawMessage(`{}`)
-	}
+	details := normalizeJSONObjectForResponse(p.DetailsJSON)
 	return taskCyclePhaseResponse{
 		ID:        p.ID,
 		CycleID:   p.CycleID,
@@ -353,10 +378,7 @@ func taskCyclePhaseResponseFromDomain(p *domain.TaskCyclePhase) taskCyclePhaseRe
 // envelope: cycle fields inlined plus phases in execution order.
 func taskCycleDetailFromDomain(c *domain.TaskCycle, phases []domain.TaskCyclePhase) taskCycleDetailResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskCycleDetailFromDomain")
-	meta := json.RawMessage(c.MetaJSON)
-	if len(meta) == 0 {
-		meta = json.RawMessage(`{}`)
-	}
+	meta := normalizeJSONObjectForResponse(c.MetaJSON)
 	out := taskCycleDetailResponse{
 		ID:            c.ID,
 		TaskID:        c.TaskID,

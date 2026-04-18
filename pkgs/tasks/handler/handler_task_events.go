@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -50,10 +49,7 @@ func (h *Handler) taskEvent(w http.ResponseWriter, r *http.Request) {
 
 func taskEventDetailFromDomain(ev *domain.TaskEvent, taskID string) taskEventDetailResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskEventDetailFromDomain")
-	data := json.RawMessage(ev.Data)
-	if len(data) == 0 {
-		data = json.RawMessage(`{}`)
-	}
+	data := normalizeJSONObjectForResponse(ev.Data)
 	resp := taskEventDetailResponse{
 		TaskID:         taskID,
 		Seq:            ev.Seq,
@@ -74,10 +70,7 @@ func taskEventLines(evs []domain.TaskEvent) []taskEventLine {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskEventLines")
 	out := make([]taskEventLine, 0, len(evs))
 	for _, e := range evs {
-		data := json.RawMessage(e.Data)
-		if len(data) == 0 {
-			data = json.RawMessage(`{}`)
-		}
+		data := normalizeJSONObjectForResponse(e.Data)
 		line := taskEventLine{
 			Seq:            e.Seq,
 			At:             e.At,
