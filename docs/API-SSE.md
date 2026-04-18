@@ -18,6 +18,14 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 {"type":"task_created|task_updated|task_deleted","id":"<task-uuid>"}
 ```
 
+`task_cycle_changed` payloads carry an extra `cycle_id` field so the SPA can scope its invalidation to the affected execution cycle subtree rather than the whole task:
+
+```json
+{"type":"task_cycle_changed","id":"<task-uuid>","cycle_id":"<cycle-uuid>"}
+```
+
+`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) for the underlying primitive.
+
 Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
 
 | Trigger                                                | `type`(s) emitted                                                          |
@@ -29,6 +37,10 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `PATCH /tasks/{id}/checklist/items/{itemId}`           | `task_updated` for `{id}`                                                  |
 | `DELETE /tasks/{id}/checklist/items/{itemId}`          | `task_updated` for `{id}`                                                  |
 | `PATCH /tasks/{id}/events/{seq}` (user-response thread)| `task_updated` for `{id}`                                                  |
+| `POST /tasks/{id}/cycles`                              | `task_cycle_changed` for the new cycle (`id`=task, `cycle_id`=new cycle)   |
+| `PATCH /tasks/{id}/cycles/{cycleId}`                   | `task_cycle_changed` for the terminated cycle                              |
+| `POST /tasks/{id}/cycles/{cycleId}/phases`             | `task_cycle_changed` for the cycle whose phase started                     |
+| `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | `task_cycle_changed` for the cycle whose phase transitioned                |
 
 Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) and the draft scorer (`POST /tasks/evaluate`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row.
 

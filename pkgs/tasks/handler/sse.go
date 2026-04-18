@@ -16,15 +16,22 @@ import (
 type TaskChangeType string
 
 const (
-	TaskCreated TaskChangeType = "task_created"
-	TaskUpdated TaskChangeType = "task_updated"
-	TaskDeleted TaskChangeType = "task_deleted"
+	TaskCreated      TaskChangeType = "task_created"
+	TaskUpdated      TaskChangeType = "task_updated"
+	TaskDeleted      TaskChangeType = "task_deleted"
+	TaskCycleChanged TaskChangeType = "task_cycle_changed"
 )
 
 // TaskChangeEvent is a minimal JSON line sent as one SSE "data:" frame.
+//
+// CycleID is only set for `task_cycle_changed` events so the SPA can
+// invalidate just the affected cycle subtree instead of the whole task.
+// It is omitted from the wire for every other type to keep existing
+// payloads byte-identical to the pre-Stage-5 contract.
 type TaskChangeEvent struct {
-	Type TaskChangeType `json:"type"`
-	ID   string         `json:"id"`
+	Type    TaskChangeType `json:"type"`
+	ID      string         `json:"id"`
+	CycleID string         `json:"cycle_id,omitempty"`
 }
 
 // SSEHub fans out task change notifications to all connected SSE clients.
@@ -148,4 +155,16 @@ func (h *Handler) notifyChange(typ TaskChangeType, id string) {
 		return
 	}
 	h.hub.Publish(TaskChangeEvent{Type: typ, ID: id})
+}
+
+// notifyCycleChange publishes a `task_cycle_changed` event carrying both the
+// owning task id and the affected cycle id. SPA cache invalidation hooks use
+// the cycle id to scope their refetch instead of pulling the entire task tree.
+// A blank taskID or cycleID is dropped (mirrors notifyChange's nil-hub guard).
+func (h *Handler) notifyCycleChange(taskID, cycleID string) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.notifyCycleChange", "task_id", taskID, "cycle_id", cycleID)
+	if h.hub == nil || taskID == "" || cycleID == "" {
+		return
+	}
+	h.hub.Publish(TaskChangeEvent{Type: TaskCycleChanged, ID: taskID, CycleID: cycleID})
 }

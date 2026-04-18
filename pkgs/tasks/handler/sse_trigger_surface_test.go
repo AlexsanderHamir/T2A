@@ -64,11 +64,17 @@ func drainSSE(t *testing.T, ch <-chan string, want int, timeout time.Duration) [
 	return out
 }
 
-// summarize collapses a TaskChangeEvent slice into a stable "type:id" set so
-// tests can compare published events without relying on publish order.
+// summarize collapses a TaskChangeEvent slice into a stable string set so
+// tests can compare published events without relying on publish order. The
+// format is "type:id" for task-only events and "type:id/cycle_id" for
+// task_cycle_changed events so the cycle identity is asserted explicitly.
 func summarize(events []TaskChangeEvent) []string {
 	out := make([]string, 0, len(events))
 	for _, ev := range events {
+		if ev.CycleID != "" {
+			out = append(out, fmt.Sprintf("%s:%s/%s", ev.Type, ev.ID, ev.CycleID))
+			continue
+		}
 		out = append(out, fmt.Sprintf("%s:%s", ev.Type, ev.ID))
 	}
 	sort.Strings(out)
@@ -224,10 +230,75 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		})
 	})
 
+	t.Run("POST /tasks/{id}/cycles emits task_cycle_changed", func(t *testing.T) {
+		srv, _, hub := newSSETriggerServer(t)
+		defer srv.Close()
+		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "POST /tasks/{id}/cycles", got, []string{
+			"task_cycle_changed:" + task.ID + "/" + cycleID,
+		})
+	})
+
+	t.Run("PATCH /tasks/{id}/cycles/{cycleId} emits task_cycle_changed", func(t *testing.T) {
+		srv, _, hub := newSSETriggerServer(t)
+		defer srv.Close()
+		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
+		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		mustDoJSON(t, http.MethodPatch, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID,
+			`{"status":"succeeded"}`, "agent", http.StatusOK)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "PATCH /tasks/{id}/cycles/{cycleId}", got, []string{
+			"task_cycle_changed:" + task.ID + "/" + cycleID,
+		})
+	})
+
+	t.Run("POST /tasks/{id}/cycles/{cycleId}/phases emits task_cycle_changed", func(t *testing.T) {
+		srv, _, hub := newSSETriggerServer(t)
+		defer srv.Close()
+		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
+		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		mustDoJSON(t, http.MethodPost, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID+"/phases",
+			`{"phase":"diagnose"}`, "agent", http.StatusCreated)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "POST /tasks/{id}/cycles/{cycleId}/phases", got, []string{
+			"task_cycle_changed:" + task.ID + "/" + cycleID,
+		})
+	})
+
+	t.Run("PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq} emits task_cycle_changed", func(t *testing.T) {
+		srv, _, hub := newSSETriggerServer(t)
+		defer srv.Close()
+		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
+		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
+		mustDoJSON(t, http.MethodPost, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID+"/phases",
+			`{"phase":"diagnose"}`, "agent", http.StatusCreated)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		mustDoJSON(t, http.MethodPatch, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID+"/phases/1",
+			`{"status":"succeeded"}`, "agent", http.StatusOK)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}", got, []string{
+			"task_cycle_changed:" + task.ID + "/" + cycleID,
+		})
+	})
+
 	t.Run("read-only routes do not publish", func(t *testing.T) {
 		srv, _, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
+		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
 		ch, cancel := hub.Subscribe()
 		defer cancel()
 
@@ -239,6 +310,8 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/checklist"},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/events"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles/" + cycleID},
 		}
 		for _, r := range readOnly {
 			req, err := http.NewRequest(r.method, r.url, nil)
@@ -257,6 +330,40 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			t.Fatalf("read-only routes published unexpectedly: %v", got)
 		}
 	})
+}
+
+// postCycleJSON issues POST /tasks/{taskID}/cycles with X-Actor: agent and
+// returns the assigned cycle id. Mirrors postTaskJSON for the cycles surface.
+func postCycleJSON(t *testing.T, srv *httptest.Server, taskID, body string, wantStatus int) string {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks/"+taskID+"/cycles", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Actor", "agent")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	raw, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != wantStatus {
+		t.Fatalf("POST /tasks/%s/cycles status=%d want=%d body=%s", taskID, res.StatusCode, wantStatus, raw)
+	}
+	var out struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("decode created cycle: %v body=%s", err, raw)
+	}
+	if out.ID == "" {
+		t.Fatalf("created cycle missing id: body=%s", raw)
+	}
+	return out.ID
 }
 
 func postTaskJSON(t *testing.T, srv *httptest.Server, body string, wantStatus int) domain.Task {

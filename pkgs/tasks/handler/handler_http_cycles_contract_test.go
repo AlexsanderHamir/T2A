@@ -2,11 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 )
 
 // mustStartCycle is the contract suite's POST /tasks/{id}/cycles helper. It
@@ -526,36 +524,7 @@ func TestHTTP_getTaskCycle_phase_response_shape(t *testing.T) {
 	}
 }
 
-// TestHTTP_cycle_routes_emit_no_sse — Stage 4 deliberately defers SSE
-// publishing to Stage 5. The trigger surface table for cycle/phase
-// mutations stays empty until then; this test is a guardrail so silent
-// drift in either direction is caught early.
-func TestHTTP_cycle_routes_emit_no_sse(t *testing.T) {
-	srv, _, hub := newSSETriggerServer(t)
-	defer srv.Close()
-	taskID := mustCreateTaskForCycles(t, srv.URL)
-
-	ch, cancel := hub.Subscribe()
-	defer cancel()
-
-	createReq, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks/"+taskID+"/cycles", strings.NewReader(`{}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	createReq.Header.Set("Content-Type", "application/json")
-	createReq.Header.Set("X-Actor", "agent")
-	res, err := http.DefaultClient.Do(createReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	body, _ := io.ReadAll(res.Body)
-	_ = res.Body.Close()
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("seed cycle: %d %s", res.StatusCode, body)
-	}
-
-	got := summarize(drainSSE(t, ch, 0, 200*time.Millisecond))
-	if len(got) != 0 {
-		t.Fatalf("Stage 4 must publish no SSE for cycle routes, got %v (Stage 5 will introduce task_cycle_changed)", got)
-	}
-}
+// SSE publishing for cycle and phase mutations is asserted by the
+// `task_cycle_changed` subtests in TestHTTP_SSE_triggerSurface
+// (sse_trigger_surface_test.go). The Stage 4 "must emit zero SSE" guardrail
+// was retired in Stage 5 once the trigger surface was lit up.

@@ -161,17 +161,19 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope:**
 
-- [ ] Add `task_cycle_changed` SSE event type with payload `{type: "task_cycle_changed", id: <task_id>, cycle_id: <cycle_id>}`.
-- [ ] Call `notifyChange` (or the cycle-specific equivalent) from each cycle-mutating handler write path.
-- [ ] Extend `pkgs/tasks/handler/sse_trigger_surface_test.go` with subtests covering every new mutating route → assert exact published `{type, id, cycle_id}` set.
-- [ ] Update `docs/API-SSE.md` trigger table.
+- [x] Add `task_cycle_changed` SSE event type with payload `{type: "task_cycle_changed", id: <task_id>, cycle_id: <cycle_id>}`. Implemented as a new `TaskCycleChanged` constant plus an opt-in `cycle_id` field on `TaskChangeEvent` (`omitempty` so existing payloads stay byte-identical).
+- [x] Call `notifyCycleChange(taskID, cycleID)` from each cycle-mutating handler write path (`postTaskCycle`, `patchTaskCycle`, `postTaskCyclePhase`, `patchTaskCyclePhase`).
+- [x] Extend `pkgs/tasks/handler/sse_trigger_surface_test.go` with subtests covering every new mutating route → assert exact published `{type, id, cycle_id}` set; extend the read-only routes subtest to include `GET /tasks/{id}/cycles` and `GET /tasks/{id}/cycles/{cycleId}`.
+- [x] Update `docs/API-SSE.md` trigger table and add the `task_cycle_changed` payload example.
+- [x] Retire the Stage-4 `TestHTTP_cycle_routes_emit_no_sse` guardrail (its job is now covered by the trigger-surface subtests).
 
 **Exit criteria:**
 
-- All SSE trigger surface tests pass with new subtests included.
-- `docs/API-SSE.md` and the test stay in sync (docs PR contract).
+- [x] All SSE trigger surface tests pass with new subtests included.
+- [x] `docs/API-SSE.md` and the test stay in sync (docs PR contract).
+- [x] `go vet ./...` clean, `go test ./... -count=1` green, `funclogmeasure -enforce` clean.
 
-**Commit:** `handler: publish task_cycle_changed on cycle and phase mutations`
+**Commit:** `handler: publish task_cycle_changed on cycle and phase mutations` (SHA recorded once pushed).
 
 **STOP — ask permission to begin Stage 6.**
 
@@ -305,7 +307,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 2 — Schema + CRUD | done | `f72ad84` |
 | 3 — Dual-write mirror | done | `bd195fa` |
 | 4 — Handler | done | `9151a58` |
-| 5 — SSE | pending | — |
+| 5 — SSE | done | _pending push_ |
 | 6 — Docs | pending | — |
 | 7 — Web data layer | pending | — |
 | 8 — Web UI panel (optional) | pending | — |

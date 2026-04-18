@@ -58,6 +58,7 @@ func (h *Handler) postTaskCycle(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	h.notifyCycleChange(taskID, cycle.ID)
 	writeJSON(w, r, op, http.StatusCreated, taskCycleResponseFromDomain(cycle))
 }
 
@@ -157,6 +158,7 @@ func (h *Handler) patchTaskCycle(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	h.notifyCycleChange(taskID, cycleID)
 	writeJSON(w, r, op, http.StatusOK, taskCycleResponseFromDomain(cycle))
 }
 
@@ -188,6 +190,7 @@ func (h *Handler) postTaskCyclePhase(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	h.notifyCycleChange(taskID, cycleID)
 	writeJSON(w, r, op, http.StatusCreated, taskCyclePhaseResponseFromDomain(phase))
 }
 
@@ -233,6 +236,7 @@ func (h *Handler) patchTaskCyclePhase(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	h.notifyCycleChange(taskID, cycleID)
 	writeJSON(w, r, op, http.StatusOK, taskCyclePhaseResponseFromDomain(ph))
 }
 
