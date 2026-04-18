@@ -269,7 +269,7 @@ once at the bottom under [Common verification](#common-verification).
 
 **Scope (touch only `pkgs/agents/runner/cursor/`):**
 
-- [ ] New package `pkgs/agents/runner/cursor` with:
+- [x] New package `pkgs/agents/runner/cursor` with:
   - `cursor.go` implementing the Stage-1 `Runner` interface by shelling
     out to `cursor --print --output-format json` (or the current Cursor
     headless invocation — pin in code comment).
@@ -284,10 +284,10 @@ once at the bottom under [Common verification](#common-verification).
   - JSON output parsed into `runner.Result`; non-zero exit codes mapped
     to `runner.ErrNonZeroExit` with the redacted tail of stderr in
     `Result.Details`.
-- [ ] `cursor_test.go` with a fake `execFn` covering: success path,
+- [x] `cursor_test.go` with a fake `execFn` covering: success path,
   non-zero exit, JSON parse failure, timeout, output redaction (no
   `Authorization`, no `T2A_*`, no absolute home paths in `RawOutput`).
-- [ ] Adapter is **not** wired into any binary yet.
+- [x] Adapter is **not** wired into any binary yet.
 
 **Out of scope for this stage:** any worker goroutine, any DB writes,
 any change to `cmd/taskapi`. Pure adapter + tests.
@@ -682,8 +682,8 @@ real signal about which one bites first.
 | Stage | State | Commit |
 |---|---|---|
 | 0 — Plan | done | `84083f4` (initial) + this commit (substrate-drift fixes) |
-| 1 — Runner interface + fake | pending | — |
-| 2 — Cursor CLI adapter | pending | — |
+| 1 — Runner interface + fake | done | `f5c44b6` |
+| 2 — Cursor CLI adapter | done | `43d9c25` |
 | 3 — Worker loop | pending | — |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | pending | — |
 | 5 — Backend docs + contract pinning | pending | — |
