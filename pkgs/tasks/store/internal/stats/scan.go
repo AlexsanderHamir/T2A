@@ -1,4 +1,4 @@
-package store
+package stats
 
 import (
 	"context"
@@ -6,9 +6,10 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"gorm.io/gorm"
 )
 
-type taskStatsTotalsRow struct {
+type totalsRow struct {
 	Total        int64
 	Ready        int64
 	Critical     int64
@@ -16,10 +17,10 @@ type taskStatsTotalsRow struct {
 	SubtaskTotal int64
 }
 
-func (s *Store) scanTaskStatsTotals(ctx context.Context) (taskStatsTotalsRow, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsTotals")
-	var r taskStatsTotalsRow
-	err := s.db.WithContext(ctx).Model(&domain.Task{}).
+func scanTotals(ctx context.Context, db *gorm.DB) (totalsRow, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanTotals")
+	var r totalsRow
+	err := db.WithContext(ctx).Model(&domain.Task{}).
 		Select(
 			"COUNT(*) AS total, "+
 				"SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS ready, "+
@@ -41,10 +42,10 @@ type statusCountRow struct {
 	Count  int64
 }
 
-func (s *Store) scanTaskStatsByStatus(ctx context.Context) ([]statusCountRow, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsByStatus")
+func scanByStatus(ctx context.Context, db *gorm.DB) ([]statusCountRow, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanByStatus")
 	var statusRows []statusCountRow
-	if err := s.db.WithContext(ctx).Model(&domain.Task{}).
+	if err := db.WithContext(ctx).Model(&domain.Task{}).
 		Select("status, COUNT(*) AS count").
 		Group("status").
 		Scan(&statusRows).Error; err != nil {
@@ -58,10 +59,10 @@ type priorityCountRow struct {
 	Count    int64
 }
 
-func (s *Store) scanTaskStatsByPriority(ctx context.Context) ([]priorityCountRow, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.scanTaskStatsByPriority")
+func scanByPriority(ctx context.Context, db *gorm.DB) ([]priorityCountRow, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanByPriority")
 	var priorityRows []priorityCountRow
-	if err := s.db.WithContext(ctx).Model(&domain.Task{}).
+	if err := db.WithContext(ctx).Model(&domain.Task{}).
 		Select("priority, COUNT(*) AS count").
 		Group("priority").
 		Scan(&priorityRows).Error; err != nil {

@@ -144,7 +144,7 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 	if !kernel.ValidTerminalPhaseStatus(in.Status) {
 		return nil, fmt.Errorf("%w: status must be a terminal phase status", domain.ErrInvalidInput)
 	}
-	details, err := normalizeJSONObject(in.Details, "details")
+	details, err := kernel.NormalizeJSONObject(in.Details, "details")
 	if err != nil {
 		return nil, err
 	}

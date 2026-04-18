@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/drafts"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
@@ -31,7 +32,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateTaskInput, by domain.A
 	if err := attachDraftEvaluationsTx(tx, in.DraftID, t.ID); err != nil {
 		return err
 	}
-	if err := deleteDraftByIDTx(tx, in.DraftID); err != nil {
+	if err := drafts.DeleteByIDInTx(tx, in.DraftID); err != nil {
 		return err
 	}
 	if err := kernel.AppendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
