@@ -128,29 +128,30 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope (touch only `pkgs/tasks/handler/` + `internal/taskapi/` for mux registration):**
 
-- [ ] New file `pkgs/tasks/handler/handler_cycles.go` exposing six routes:
-  - `POST /tasks/{id}/cycles` — `Idempotency-Key` honored; body `{triggered_by?, meta?, parent_cycle_id?}`.
-  - `GET  /tasks/{id}/cycles` — keyset paging matching `/events` conventions.
+- [x] New file `pkgs/tasks/handler/handler_cycles.go` exposing six routes:
+  - `POST /tasks/{id}/cycles` — `Idempotency-Key` honored via global middleware; body `{parent_cycle_id?, meta?}` (actor sourced from `X-Actor`, not the body).
+  - `GET  /tasks/{id}/cycles` — limit-based pagination with `has_more` envelope (`?limit=` 1–200, default 50). **Followup:** keyset pagination matching `/events` conventions once store gains cursor support.
   - `GET  /tasks/{id}/cycles/{cycleId}` — embedded `phases[]`.
-  - `POST /tasks/{id}/cycles/{cycleId}/phases` — body `{phase, summary?}`.
+  - `POST /tasks/{id}/cycles/{cycleId}/phases` — body `{phase}`.
   - `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` — body `{status, summary?, details?}`; state machine validates.
   - `PATCH /tasks/{id}/cycles/{cycleId}` — body `{status, reason?}`.
-- [ ] JSON DTOs colocated; reject unknown fields and trailing data (existing handler convention).
-- [ ] `X-Actor` plumbed through to store via existing `actorFromRequest` helper.
-- [ ] All abuse guards: 128-byte path segment caps, body field length caps consistent with current handler bar.
-- [ ] Mux registration in the same place as other resource families.
-- [ ] Tests:
-  - `handler_http_cycles_test.go` — happy paths for all six routes (whitebox where helpers needed).
-  - `handler_http_cycles_contract_test.go` — pin every documented 400 string, every JSON shape, response key set, content-type, status code; mirror Sessions 4–8 pattern from `.agent/backend-improvement-agent.log`.
+- [x] JSON DTOs colocated in `handler_cycles_json.go`; reject unknown fields and trailing data (existing handler convention).
+- [x] `X-Actor` plumbed through to store via existing `actorFromRequest` helper for every cycle/phase mutation.
+- [x] All abuse guards: 128-byte path segment caps for task/cycle IDs, 32-byte cap for `phaseSeq` and `limit` query, body field length caps consistent with current handler bar.
+- [x] Cross-task ID mismatch protection: `assertCycleBelongsToTask` returns 404 when the cycle exists but belongs to a different task, preventing information leakage.
+- [x] Mux registration in `handler.go` alongside other resource families.
+- [x] Tests:
+  - `handler_http_cycles_test.go` — happy paths for all six routes plus a dual-write invariant check that walks the `task_events` audit log via HTTP.
+  - `handler_http_cycles_contract_test.go` — pins every documented 400 string, every JSON shape, response key set, content-type, status code, length caps, and a Stage-5 guardrail asserting **no** SSE events are emitted yet.
 
 **Exit criteria:**
 
-- `go vet ./...` clean.
-- `go test ./... -count=1` passes.
-- `funclogmeasure -enforce` clean.
-- New routes appear in `pkgs/tasks/handler/README.md` file-map.
+- [x] `go vet ./...` clean.
+- [x] `go test ./... -count=1` passes.
+- [x] `funclogmeasure -enforce` clean (412/412 functions covered).
+- [x] New routes appear in `pkgs/tasks/handler/README.md` file-map.
 
-**Commit:** `handler: add task execution cycle and phase REST routes with contract tests`
+**Commit:** `handler: add task execution cycle and phase REST routes with contract tests` (SHA recorded once pushed).
 
 **STOP — ask permission to begin Stage 5.**
 
@@ -292,6 +293,8 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 - **(Stage 2)** Concurrency invariants ("at most one running cycle per task", "at most one running phase per cycle") are enforced today by an in-TX `SELECT ... LIMIT 1` guard in `pkgs/tasks/store/store_cycles.go` / `store_cycle_phases.go`. The portable approach was chosen because GORM `AutoMigrate` does not drive Postgres-only partial unique indexes. **Followup:** add a Postgres-only post-migration hook for `CREATE UNIQUE INDEX ... WHERE status = 'running'` once the schema lives in a real migration tool, then keep the in-TX guard for SQLite tests as a belt-and-braces backup.
 - **(Stage 3)** Only `TaskCyclePhase` carries an `event_seq` backlink to `task_events`; `TaskCycle` does not. Rationale: the cycle's `started`/`terminated` mirror rows are easily reconstructed from `(task_id, type IN ('cycle_started','cycle_completed','cycle_failed') AND data_json->>'cycle_id' = ?)`, while phases have many transitions per row and benefit from a one-shot pointer to the *most recent* mirror. **Followup:** if a future read path proves expensive without the cycle backlink, add `TaskCycle.EventSeq` in a dedicated migration; for now, the indirection is cheap.
 - **(Stage 3)** `TerminateCycle`, `StartPhase`, and `CompletePhaseInput` now require a `by domain.Actor` argument so the mirror row records who drove the transition. This is a pre-handler API change; Stage 4 will plumb `X-Actor` through to satisfy it.
+- **(Stage 4)** `GET /tasks/{id}/cycles` ships with limit-based pagination (`?limit=` + `has_more`) instead of the keyset cursor pattern used by `/events`. The store layer does not yet expose a cursor for `task_cycles`. **Followup:** add `ListCyclesForTaskAfter(taskID, afterAttemptSeq)` and switch the handler to keyset paging once a UI consumer needs it.
+- **(Stage 4)** Cycle/phase mutations do not publish SSE events yet — explicitly deferred to Stage 5 (`task_cycle_changed`). A guardrail test (`TestHTTP_cycle_routes_emit_no_sse`) pins this so an accidental Stage 5 leak fails CI.
 
 ## Status
 
@@ -301,7 +304,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 1 — Domain | done | `31c9153` |
 | 2 — Schema + CRUD | done | `f72ad84` |
 | 3 — Dual-write mirror | done | `bd195fa` |
-| 4 — Handler | pending | — |
+| 4 — Handler | done | _pending push_ |
 | 5 — SSE | pending | — |
 | 6 — Docs | pending | — |
 | 7 — Web data layer | pending | — |
