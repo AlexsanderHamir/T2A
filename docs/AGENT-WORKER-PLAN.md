@@ -683,7 +683,7 @@ real signal about which one bites first.
 |---|---|---|
 | 0 — Plan | done | `84083f4` (initial) + this commit (substrate-drift fixes) |
 | 1 — Runner interface + fake | done | `f5c44b6` |
-| 2 — Cursor CLI adapter | done | `43d9c25` |
+| 2 — Cursor CLI adapter | done | `14f5d17` |
 | 3 — Worker loop | pending | — |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | pending | — |
 | 5 — Backend docs + contract pinning | pending | — |
