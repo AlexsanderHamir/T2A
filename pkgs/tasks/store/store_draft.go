@@ -41,9 +41,11 @@ func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.Raw
 	if name == "" {
 		return nil, fmt.Errorf("%w: draft name required", domain.ErrInvalidInput)
 	}
-	if len(payload) == 0 || string(payload) == "null" {
-		payload = []byte(`{}`)
+	normalized, err := normalizeJSONObject(payload, "payload")
+	if err != nil {
+		return nil, err
 	}
+	payload = normalized
 	now := time.Now().UTC()
 	row := domain.TaskDraft{
 		ID:          id,
