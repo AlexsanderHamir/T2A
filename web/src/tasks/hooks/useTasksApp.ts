@@ -316,11 +316,27 @@ export function useTasksApp() {
       );
       return task;
     },
-    onSuccess: async () => {
+    onSuccess: async (_task, variables) => {
+      // Server-truth invalidations always fire: the new task is real
+      // regardless of which draft the user is now editing in the create
+      // modal, so list / stats / drafts caches must reflect it.
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
-      closeCreateModal();
+      // Defensive id-aware guard. Today the create modal's `Modal
+      // busy={pending}` lock blocks ESC / backdrop close while
+      // `createMutation.isPending`, so the user *cannot* switch drafts
+      // mid-create and this branch is effectively unconditional. But
+      // the moment that lock loosens (or somebody adds an out-of-modal
+      // "submit and continue editing" path), an unconditional
+      // `closeCreateModal()` here would slam shut a draft the user has
+      // since switched to. Read from `newDraftIDRef` so a resolution
+      // that lands in the same microtask as a draft switch still sees
+      // the freshest id (same shape as `evaluateDraftMutation` /
+      // `saveDraftMutation` in this file).
+      if (newDraftIDRef.current === variables.draft_id) {
+        closeCreateModal();
+      }
     },
   });
 

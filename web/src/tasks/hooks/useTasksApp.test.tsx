@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useTasksApp } from "./useTasksApp";
 import { stubEventSource } from "../../test/browserMocks";
 import type { DraftTaskEvaluation } from "@/types";
@@ -27,6 +27,7 @@ import {
   evaluateDraftTask,
   saveTaskDraft,
   getTaskDraft,
+  createTask,
 } from "../../api";
 
 const mockedListTasks = vi.mocked(listTasks);
@@ -35,6 +36,7 @@ const mockedListDrafts = vi.mocked(listTaskDrafts);
 const mockedEvaluate = vi.mocked(evaluateDraftTask);
 const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
+const mockedCreateTask = vi.mocked(createTask);
 
 function makeWrapper() {
   const queryClient = new QueryClient({
@@ -412,5 +414,160 @@ describe("useTasksApp saveDraftMutation race", () => {
       expect(mockedSaveDraft).toHaveBeenCalledTimes(2);
     });
     expect(secondInputTitle).toBe("Title v2");
+  });
+});
+
+describe("useTasksApp createMutation race", () => {
+  beforeEach(() => {
+    stubEventSource();
+    mockedListTasks.mockResolvedValue({
+      tasks: [],
+      limit: 200,
+      offset: 0,
+      has_more: false,
+    });
+    mockedGetStats.mockResolvedValue(null as unknown as never);
+    mockedListDrafts.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    mockedCreateTask.mockReset();
+    mockedGetDraft.mockReset();
+  });
+
+  it("does not closeCreateModal when a stale create resolves after the user switched drafts (defensive guard)", async () => {
+    // Hold the create mutation so we can interleave a draft switch
+    // before it resolves. Today this race is unreachable in production
+    // because `Modal busy={pending}` blocks ESC/backdrop close while
+    // the create is in flight, but the *hook itself* doesn't refuse a
+    // programmatic resume - the moment the modal lock is loosened (or
+    // an out-of-modal "submit and continue editing" path lands), the
+    // unconditional `closeCreateModal()` would slam shut a draft the
+    // user has since switched to. The guard documents and pins that
+    // contract: the modal close is gated on the just-resolved create
+    // matching the currently-active draft id.
+    let resolveCreate: (() => void) | undefined;
+    let createdDraftId: string | undefined;
+    mockedCreateTask.mockImplementationOnce(async (input) => {
+      createdDraftId = input.draft_id;
+      await new Promise<void>((r) => {
+        resolveCreate = r;
+      });
+      return {
+        id: "task-1",
+        title: input.title,
+        initial_prompt: input.initial_prompt ?? "",
+        status: "ready",
+        priority: input.priority,
+        checklist_inherit: false,
+      };
+    });
+
+    mockedGetDraft.mockResolvedValueOnce({
+      id: "draft-B-id",
+      name: "Draft B",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      payload: {
+        title: "Draft B title",
+        initial_prompt: "Draft B prompt",
+        priority: "high",
+        task_type: "general",
+        parent_id: "",
+        checklist_inherit: false,
+        checklist_items: [],
+        pending_subtasks: [],
+      },
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+    act(() => {
+      result.current.setNewTitle("Draft A");
+    });
+    act(() => {
+      result.current.setNewPriority("medium");
+    });
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: () => {},
+      } as unknown as FormEvent);
+    });
+    await waitFor(() => {
+      expect(result.current.createPending).toBe(true);
+    });
+    expect(createdDraftId).toBeDefined();
+    expect(createdDraftId).not.toBe("draft-B-id");
+
+    // Programmatically resume draft B mid-flight. Bypasses the UI lock
+    // (which is the defensive scenario this guard exists for).
+    await act(async () => {
+      await result.current.resumeDraftByID("draft-B-id");
+    });
+    expect(result.current.newTitle).toBe("Draft B title");
+    expect(result.current.createModalOpen).toBe(true);
+
+    await act(async () => {
+      resolveCreate?.();
+    });
+    await waitFor(() => {
+      expect(result.current.createPending).toBe(false);
+    });
+
+    // The modal must STILL be open showing draft B - the stale create
+    // resolution must not have closed it. Without the guard,
+    // `closeCreateModal()` runs unconditionally and the modal shuts.
+    expect(result.current.createModalOpen).toBe(true);
+    expect(result.current.newTitle).toBe("Draft B title");
+  });
+
+  it("closeCreateModal still fires on the happy path (no draft switch)", async () => {
+    mockedCreateTask.mockImplementationOnce(async (input) => ({
+      id: "task-2",
+      title: input.title,
+      initial_prompt: input.initial_prompt ?? "",
+      status: "ready",
+      priority: input.priority,
+      checklist_inherit: false,
+    }));
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+    act(() => {
+      result.current.setNewTitle("Draft A");
+    });
+    act(() => {
+      result.current.setNewPriority("medium");
+    });
+    expect(result.current.createModalOpen).toBe(true);
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: () => {},
+      } as unknown as FormEvent);
+    });
+
+    await waitFor(() => {
+      expect(result.current.createModalOpen).toBe(false);
+    });
   });
 });
