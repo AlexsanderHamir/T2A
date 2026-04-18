@@ -383,7 +383,7 @@ func serveUntilShutdown(srv *http.Server, ln net.Listener) (shutdownViaSignal bo
 
 	select {
 	case err := <-serveDone:
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return false, err
 		}
 	case s := <-sig:
@@ -399,7 +399,7 @@ func serveUntilShutdown(srv *http.Server, ln net.Listener) (shutdownViaSignal bo
 			return shutdownViaSignal, shutdownErr
 		}
 		slog.Info("http server drained", "cmd", cmdName, "operation", "taskapi.shutdown", "phase", "http_done")
-		if err := <-serveDone; err != nil && err != http.ErrServerClosed {
+		if err := <-serveDone; err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return shutdownViaSignal, err
 		}
 	}
