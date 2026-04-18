@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 )
 
 type TaskStats struct {
@@ -18,7 +19,7 @@ type TaskStats struct {
 
 // TaskStats returns global counters across all tasks.
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {
-	defer deferStoreLatency(storeOpTaskStats)()
+	defer kernel.DeferLatency(kernel.OpTaskStats)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskStats")
 	r, err := s.scanTaskStatsTotals(ctx)
 	if err != nil {

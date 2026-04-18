@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -39,7 +40,7 @@ func storeOpHistogramSampleCount(op string) (uint64, error) {
 }
 
 func TestStore_operation_duration_histogram_create_task(t *testing.T) {
-	before, err := storeOpHistogramSampleCount(storeOpCreateTask)
+	before, err := storeOpHistogramSampleCount(kernel.OpCreateTask)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func TestStore_operation_duration_histogram_create_task(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err := storeOpHistogramSampleCount(storeOpCreateTask)
+	after, err := storeOpHistogramSampleCount(kernel.OpCreateTask)
 	if err != nil {
 		t.Fatal(err)
 	}

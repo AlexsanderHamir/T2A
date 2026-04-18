@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +17,7 @@ func devMirrorStatusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []b
 	}
 	up := map[string]any{}
 	st := domain.Status(m["to"])
-	if validStatus(st) && st != t.Status {
+	if kernel.ValidStatus(st) && st != t.Status {
 		if st == domain.StatusDone {
 			if err := validateCanMarkDoneTx(tx, taskID); err != nil {
 				return nil, err
@@ -35,7 +36,7 @@ func devMirrorPriorityChanged(t *domain.Task, data []byte) (map[string]any, erro
 	}
 	up := map[string]any{}
 	pr := domain.Priority(m["to"])
-	if validPriority(pr) && pr != t.Priority {
+	if kernel.ValidPriority(pr) && pr != t.Priority {
 		up["priority"] = string(pr)
 	}
 	return up, nil

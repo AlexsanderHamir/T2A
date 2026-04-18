@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -22,11 +23,11 @@ func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string
 	if v == cur.Title {
 		return nil
 	}
-	b, err := eventPairJSON(cur.Title, v)
+	b, err := kernel.EventPairJSON(cur.Title, v)
 	if err != nil {
 		return err
 	}
-	if err := appendEvent(tx, taskID, *seq, domain.EventMessageAdded, by, b); err != nil {
+	if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventMessageAdded, by, b); err != nil {
 		return err
 	}
 	*seq++
@@ -42,11 +43,11 @@ func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, promp
 	if *prompt == cur.InitialPrompt {
 		return nil
 	}
-	b, err := eventPairJSON(cur.InitialPrompt, *prompt)
+	b, err := kernel.EventPairJSON(cur.InitialPrompt, *prompt)
 	if err != nil {
 		return err
 	}
-	if err := appendEvent(tx, taskID, *seq, domain.EventPromptAppended, by, b); err != nil {
+	if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventPromptAppended, by, b); err != nil {
 		return err
 	}
 	*seq++
@@ -100,7 +101,7 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 		if err != nil {
 			return err
 		}
-		if err := appendEvent(tx, taskID, *seq, domain.EventSubtaskAdded, by, b); err != nil {
+		if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventSubtaskAdded, by, b); err != nil {
 			return err
 		}
 		*seq++
@@ -126,7 +127,7 @@ func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, in
 		if err != nil {
 			return err
 		}
-		if err := appendEvent(tx, taskID, *seq, domain.EventChecklistInheritChanged, by, b); err != nil {
+		if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventChecklistInheritChanged, by, b); err != nil {
 			return err
 		}
 		*seq++
@@ -140,17 +141,17 @@ func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain
 	if pr == nil {
 		return nil
 	}
-	if !validPriority(*pr) {
+	if !kernel.ValidPriority(*pr) {
 		return fmt.Errorf("%w: priority", domain.ErrInvalidInput)
 	}
 	if *pr == cur.Priority {
 		return nil
 	}
-	b, err := eventPairJSON(string(cur.Priority), string(*pr))
+	b, err := kernel.EventPairJSON(string(cur.Priority), string(*pr))
 	if err != nil {
 		return err
 	}
-	if err := appendEvent(tx, taskID, *seq, domain.EventPriorityChanged, by, b); err != nil {
+	if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventPriorityChanged, by, b); err != nil {
 		return err
 	}
 	*seq++
@@ -163,7 +164,7 @@ func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
 	if tt == nil {
 		return nil
 	}
-	if !validTaskType(*tt) {
+	if !kernel.ValidTaskType(*tt) {
 		return fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
 	}
 	cur.TaskType = *tt
@@ -175,7 +176,7 @@ func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.S
 	if st == nil {
 		return nil
 	}
-	if !validStatus(*st) {
+	if !kernel.ValidStatus(*st) {
 		return fmt.Errorf("%w: status", domain.ErrInvalidInput)
 	}
 	if *st == cur.Status {
@@ -186,11 +187,11 @@ func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.S
 			return err
 		}
 	}
-	b, err := eventPairJSON(string(cur.Status), string(*st))
+	b, err := kernel.EventPairJSON(string(cur.Status), string(*st))
 	if err != nil {
 		return err
 	}
-	if err := appendEvent(tx, taskID, *seq, domain.EventStatusChanged, by, b); err != nil {
+	if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventStatusChanged, by, b); err != nil {
 		return err
 	}
 	*seq++

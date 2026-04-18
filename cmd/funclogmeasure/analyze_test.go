@@ -51,9 +51,9 @@ func TestShouldSkipSlogRequirement_repoIsMentionDelimiter(t *testing.T) {
 	}
 }
 
-func TestShouldSkipSlogRequirement_storeDeferStoreLatency(t *testing.T) {
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/tasks/store", "deferStoreLatency") {
-		t.Fatal("expected pkgs/tasks/store.deferStoreLatency skip (Prometheus hot path)")
+func TestShouldSkipSlogRequirement_storeKernelDeferLatency(t *testing.T) {
+	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel", "DeferLatency") {
+		t.Fatal("expected pkgs/tasks/store/internal/kernel.DeferLatency skip (Prometheus hot path)")
 	}
 }
 

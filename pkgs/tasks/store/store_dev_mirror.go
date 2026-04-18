@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
 // ApplyDevTaskRowMirror updates the task row to reflect a synthetic audit event without
 // appending further audit rows. For development simulation only (see pkgs/tasks/devsim).
 func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ domain.EventType, data []byte) error {
-	defer deferStoreLatency(storeOpApplyDevTaskRowMirror)()
+	defer kernel.DeferLatency(kernel.OpApplyDevTaskRowMirror)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApplyDevTaskRowMirror")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

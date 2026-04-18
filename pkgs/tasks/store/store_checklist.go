@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +22,7 @@ type ChecklistItemView struct {
 
 // DefinitionSourceTaskID returns the task id that owns checklist item definitions for id.
 func (s *Store) DefinitionSourceTaskID(ctx context.Context, taskID string) (string, error) {
-	defer deferStoreLatency(storeOpDefinitionSourceTask)()
+	defer kernel.DeferLatency(kernel.OpDefinitionSourceTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DefinitionSourceTaskID")
 	return definitionSourceTaskIDTx(s.db.WithContext(ctx), taskID)
 }
@@ -58,7 +59,7 @@ func definitionSourceTaskIDTx(tx *gorm.DB, taskID string) (string, error) {
 
 // ListChecklistForSubject returns definition items for taskID with done flags for that same task.
 func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]ChecklistItemView, error) {
-	defer deferStoreLatency(storeOpListChecklist)()
+	defer kernel.DeferLatency(kernel.OpListChecklist)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListChecklistForSubject")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
@@ -66,7 +67,7 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 	}
 	var out []ChecklistItemView
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := txLoadTask(tx, taskID); err != nil {
+		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
 		defID, err := definitionSourceTaskIDTx(tx, taskID)
@@ -110,14 +111,3 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 	return out, nil
 }
 
-func txLoadTask(tx *gorm.DB, id string) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.txLoadTask")
-	var t domain.Task
-	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domain.ErrNotFound
-		}
-		return nil, fmt.Errorf("load task: %w", err)
-	}
-	return &t, nil
-}

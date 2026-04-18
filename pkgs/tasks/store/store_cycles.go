@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -42,9 +43,9 @@ type StartCycleInput struct {
 // row to task_events so GET /tasks/{id}/events stays a complete witness of
 // cycle activity. If the mirror insert fails, the cycle row is rolled back.
 func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.TaskCycle, error) {
-	defer deferStoreLatency(storeOpStartCycle)()
+	defer kernel.DeferLatency(kernel.OpStartCycle)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.StartCycle")
-	if err := validateActor(in.TriggeredBy); err != nil {
+	if err := kernel.ValidateActor(in.TriggeredBy); err != nil {
 		return nil, err
 	}
 	taskID := strings.TrimSpace(in.TaskID)
@@ -57,7 +58,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 	}
 	var created *domain.TaskCycle
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := txLoadTask(tx, taskID); err != nil {
+		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
 		if err := assertNoRunningCycleForTaskTx(tx, taskID); err != nil {
@@ -95,7 +96,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 		if err := tx.Omit("Task").Create(row).Error; err != nil {
 			return fmt.Errorf("insert task_cycle: %w", err)
 		}
-		seq, err := nextEventSeq(tx, taskID)
+		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 		if err != nil {
 			return err
 		}
-		if err := appendEvent(tx, taskID, seq, domain.EventCycleStarted, in.TriggeredBy, payload); err != nil {
+		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventCycleStarted, in.TriggeredBy, payload); err != nil {
 			return err
 		}
 		created = row
@@ -125,16 +126,16 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 // field preserves the distinction between failed and aborted). reason, if
 // non-empty, is included in the mirror payload.
 func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domain.CycleStatus, reason string, by domain.Actor) (*domain.TaskCycle, error) {
-	defer deferStoreLatency(storeOpTerminateCycle)()
+	defer kernel.DeferLatency(kernel.OpTerminateCycle)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TerminateCycle")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	if !validTerminalCycleStatus(status) {
+	if !kernel.ValidTerminalCycleStatus(status) {
 		return nil, fmt.Errorf("%w: status must be a terminal cycle status", domain.ErrInvalidInput)
 	}
 	reason = strings.TrimSpace(reason)
@@ -160,7 +161,7 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 		}
 		cycle.Status = status
 		cycle.EndedAt = &now
-		seq, err := nextEventSeq(tx, cycle.TaskID)
+		seq, err := kernel.NextEventSeq(tx, cycle.TaskID)
 		if err != nil {
 			return err
 		}
@@ -169,7 +170,7 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 			return err
 		}
 		mirrorType := mirrorEventTypeForCycleStatus(status)
-		if err := appendEvent(tx, cycle.TaskID, seq, mirrorType, by, payload); err != nil {
+		if err := kernel.AppendEvent(tx, cycle.TaskID, seq, mirrorType, by, payload); err != nil {
 			return err
 		}
 		out = cycle
@@ -183,7 +184,7 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 
 // GetCycle returns one cycle by id; ErrNotFound when missing.
 func (s *Store) GetCycle(ctx context.Context, cycleID string) (*domain.TaskCycle, error) {
-	defer deferStoreLatency(storeOpGetCycle)()
+	defer kernel.DeferLatency(kernel.OpGetCycle)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetCycle")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -195,7 +196,7 @@ func (s *Store) GetCycle(ctx context.Context, cycleID string) (*domain.TaskCycle
 // ListCyclesForTask returns cycles for a task ordered by attempt_seq DESC
 // (newest first). limit is clamped to [1, 200]; the task must exist.
 func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int) ([]domain.TaskCycle, error) {
-	defer deferStoreLatency(storeOpListCyclesForTask)()
+	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCyclesForTask")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
@@ -209,7 +210,7 @@ func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int)
 	}
 	var out []domain.TaskCycle
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := txLoadTask(tx, taskID); err != nil {
+		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
 		if err := tx.Where("task_id = ?", taskID).Order("attempt_seq DESC").Limit(limit).Find(&out).Error; err != nil {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -31,7 +32,7 @@ type DraftDetail struct {
 }
 
 func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.RawMessage) (*DraftSummary, error) {
-	defer deferStoreLatency(storeOpSaveDraft)()
+	defer kernel.DeferLatency(kernel.OpSaveDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SaveDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -68,7 +69,7 @@ func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.Raw
 }
 
 func (s *Store) ListDrafts(ctx context.Context, limit int) ([]DraftSummary, error) {
-	defer deferStoreLatency(storeOpListDrafts)()
+	defer kernel.DeferLatency(kernel.OpListDrafts)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDrafts")
 	if limit <= 0 {
 		limit = 50
@@ -93,7 +94,7 @@ func (s *Store) ListDrafts(ctx context.Context, limit int) ([]DraftSummary, erro
 }
 
 func (s *Store) GetDraft(ctx context.Context, id string) (*DraftDetail, error) {
-	defer deferStoreLatency(storeOpGetDraft)()
+	defer kernel.DeferLatency(kernel.OpGetDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -113,7 +114,7 @@ func (s *Store) GetDraft(ctx context.Context, id string) (*DraftDetail, error) {
 }
 
 func (s *Store) DeleteDraft(ctx context.Context, id string) error {
-	defer deferStoreLatency(storeOpDeleteDraft)()
+	defer kernel.DeferLatency(kernel.OpDeleteDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteDraft")
 	id = strings.TrimSpace(id)
 	if id == "" {

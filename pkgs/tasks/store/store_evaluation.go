@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -49,16 +50,16 @@ type DraftTaskEvaluation struct {
 
 // EvaluateDraftTask scores task-creation input and persists each evaluation.
 func (s *Store) EvaluateDraftTask(ctx context.Context, in EvaluateDraftTaskInput, by domain.Actor) (*DraftTaskEvaluation, error) {
-	defer deferStoreLatency(storeOpEvaluateDraft)()
+	defer kernel.DeferLatency(kernel.OpEvaluateDraft)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.EvaluateDraftTask")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
 	tt := in.TaskType
 	if tt == "" {
 		tt = domain.TaskTypeGeneral
 	}
-	if !validTaskType(tt) {
+	if !kernel.ValidTaskType(tt) {
 		return nil, fmt.Errorf("%w: invalid task_type", domain.ErrInvalidInput)
 	}
 	in.TaskType = tt
@@ -71,7 +72,7 @@ func (s *Store) EvaluateDraftTask(ctx context.Context, in EvaluateDraftTaskInput
 }
 
 func (s *Store) ListDraftEvaluations(ctx context.Context, draftID string, limit int) ([]domain.TaskDraftEvaluation, error) {
-	defer deferStoreLatency(storeOpListDraftEvaluations)()
+	defer kernel.DeferLatency(kernel.OpListDraftEvaluations)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDraftEvaluations")
 	draftID = strings.TrimSpace(draftID)
 	if draftID == "" {

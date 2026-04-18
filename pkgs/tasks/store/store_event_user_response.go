@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -60,7 +61,7 @@ func ThreadEntriesForDisplay(ev *domain.TaskEvent) []domain.ResponseThreadEntry 
 // Event types must accept responses (see domain.EventTypeAcceptsUserResponse).
 // user_response / user_response_at are synced to the latest user message in the thread.
 func (s *Store) AppendTaskEventResponseMessage(ctx context.Context, taskID string, seq int64, text string, by domain.Actor) error {
-	defer deferStoreLatency(storeOpAppendTaskEventResponse)()
+	defer kernel.DeferLatency(kernel.OpAppendTaskEventResponse)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendTaskEventResponseMessage")
 	if by != domain.ActorUser && by != domain.ActorAgent {
 		return fmt.Errorf("%w: by must be user or agent", domain.ErrInvalidInput)

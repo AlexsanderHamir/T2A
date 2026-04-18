@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 )
 
 // ListReadyTasksUserCreated returns tasks with status ready whose first audit row is
 // task_created by user (matches the user-task agent queue policy). Results are ordered by id ascending.
 // afterID, when non-empty after trim, restricts to tasks.id > afterID for pagination.
 func (s *Store) ListReadyTasksUserCreated(ctx context.Context, limit int, afterID string) ([]domain.Task, error) {
-	defer deferStoreLatency(storeOpListReadyUserCreated)()
+	defer kernel.DeferLatency(kernel.OpListReadyUserCreated)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListReadyTasksUserCreated")
 	if limit <= 0 {
 		limit = 200

@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 )
 
 // ListDevsimTasks returns tasks whose id matches a SQL LIKE pattern (dev simulation only).
 func (s *Store) ListDevsimTasks(ctx context.Context, idLikePattern string) ([]domain.Task, error) {
-	defer deferStoreLatency(storeOpListDevsimTasks)()
+	defer kernel.DeferLatency(kernel.OpListDevsimTasks)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDevsimTasks")
 	p := strings.TrimSpace(idLikePattern)
 	if p == "" {

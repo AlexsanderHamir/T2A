@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +17,7 @@ const MaxTaskTreeDepth = 64
 
 // ListFlat returns tasks ordered by id with limit/offset over all rows (no tree).
 func (s *Store) ListFlat(ctx context.Context, limit, offset int) ([]domain.Task, error) {
-	defer deferStoreLatency(storeOpListFlat)()
+	defer kernel.DeferLatency(kernel.OpListFlat)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
 	if limit <= 0 {
 		limit = 50
@@ -48,7 +49,7 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, err
 // ListRootForest pages root tasks (parent_id IS NULL) and attaches each full descendant subtree.
 // It fetches limit+1 rows to detect hasMore. Ordering is id ASC (keyset-compatible).
 func (s *Store) ListRootForest(ctx context.Context, limit, offset int) (nodes []TaskNode, hasMore bool, err error) {
-	defer deferStoreLatency(storeOpListRootForest)()
+	defer kernel.DeferLatency(kernel.OpListRootForest)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForest")
 	if limit <= 0 {
 		limit = 50
@@ -82,7 +83,7 @@ func (s *Store) ListRootForest(ctx context.Context, limit, offset int) (nodes []
 
 // ListRootForestAfter returns root tasks with id strictly greater than afterID (same ordering and tree shape as ListRootForest).
 func (s *Store) ListRootForestAfter(ctx context.Context, limit int, afterID string) (nodes []TaskNode, hasMore bool, err error) {
-	defer deferStoreLatency(storeOpListRootForestAfter)()
+	defer kernel.DeferLatency(kernel.OpListRootForestAfter)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForestAfter")
 	afterID = strings.TrimSpace(afterID)
 	if afterID == "" {
@@ -128,7 +129,7 @@ func (s *Store) rootsToForest(ctx context.Context, roots []domain.Task) ([]TaskN
 
 // GetTaskTree returns one task and every descendant nested under it.
 func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
-	defer deferStoreLatency(storeOpGetTaskTree)()
+	defer kernel.DeferLatency(kernel.OpGetTaskTree)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskTree")
 	id = strings.TrimSpace(id)
 	if id == "" {

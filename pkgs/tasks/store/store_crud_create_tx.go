@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -33,12 +34,12 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateTaskInput, by domain.A
 	if err := deleteDraftByIDTx(tx, in.DraftID); err != nil {
 		return err
 	}
-	if err := appendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
+	if err := kernel.AppendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
 		return err
 	}
 	seq++
 	if parentID != nil {
-		pseq, err := nextEventSeq(tx, *parentID)
+		pseq, err := kernel.NextEventSeq(tx, *parentID)
 		if err != nil {
 			return err
 		}
@@ -49,7 +50,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateTaskInput, by domain.A
 		if err != nil {
 			return err
 		}
-		if err := appendEvent(tx, *parentID, pseq, domain.EventSubtaskAdded, by, pb); err != nil {
+		if err := kernel.AppendEvent(tx, *parentID, pseq, domain.EventSubtaskAdded, by, pb); err != nil {
 			return err
 		}
 	}

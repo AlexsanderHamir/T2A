@@ -8,14 +8,15 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
 // AppendTaskEvent appends one task_events row if the task exists.
 func (s *Store) AppendTaskEvent(ctx context.Context, taskID string, typ domain.EventType, by domain.Actor, data []byte) error {
-	defer deferStoreLatency(storeOpAppendTaskEvent)()
+	defer kernel.DeferLatency(kernel.OpAppendTaskEvent)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendTaskEvent")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
 	taskID = strings.TrimSpace(taskID)
@@ -30,11 +31,11 @@ func (s *Store) AppendTaskEvent(ctx context.Context, taskID string, typ domain.E
 		if n == 0 {
 			return domain.ErrNotFound
 		}
-		seq, err := nextEventSeq(tx, taskID)
+		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
-		return appendEvent(tx, taskID, seq, typ, by, data)
+		return kernel.AppendEvent(tx, taskID, seq, typ, by, data)
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {

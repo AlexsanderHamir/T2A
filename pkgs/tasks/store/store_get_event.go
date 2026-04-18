@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
 // GetTaskEvent returns one task_events row by composite key, or ErrNotFound.
 func (s *Store) GetTaskEvent(ctx context.Context, taskID string, seq int64) (*domain.TaskEvent, error) {
-	defer deferStoreLatency(storeOpGetTaskEvent)()
+	defer kernel.DeferLatency(kernel.OpGetTaskEvent)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskEvent")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

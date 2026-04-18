@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -31,7 +32,7 @@ func isDuplicateTaskPrimaryKey(err error) bool {
 }
 
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
-	defer deferStoreLatency(storeOpCreateTask)()
+	defer kernel.DeferLatency(kernel.OpCreateTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Create")
 	t, title, parentID, st, err := buildCreateTaskFromInput(in, by)
 	if err != nil {

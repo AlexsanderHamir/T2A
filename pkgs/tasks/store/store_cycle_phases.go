@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -27,16 +28,16 @@ import (
 // row to task_events and writes the assigned task_events.seq back into the
 // phase row's event_seq column so the audit pointer is one-shot.
 func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Phase, by domain.Actor) (*domain.TaskCyclePhase, error) {
-	defer deferStoreLatency(storeOpStartCyclePhase)()
+	defer kernel.DeferLatency(kernel.OpStartCyclePhase)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.StartPhase")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	if !validPhase(phase) {
+	if !kernel.ValidPhase(phase) {
 		return nil, fmt.Errorf("%w: phase", domain.ErrInvalidInput)
 	}
 	var created *domain.TaskCyclePhase
@@ -75,7 +76,7 @@ func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Pha
 		if err := tx.Omit("Cycle").Create(row).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_phase: %w", err)
 		}
-		evSeq, err := nextEventSeq(tx, cycle.TaskID)
+		evSeq, err := kernel.NextEventSeq(tx, cycle.TaskID)
 		if err != nil {
 			return err
 		}
@@ -83,7 +84,7 @@ func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Pha
 		if err != nil {
 			return err
 		}
-		if err := appendEvent(tx, cycle.TaskID, evSeq, domain.EventPhaseStarted, by, payload); err != nil {
+		if err := kernel.AppendEvent(tx, cycle.TaskID, evSeq, domain.EventPhaseStarted, by, payload); err != nil {
 			return err
 		}
 		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", row.ID).Update("event_seq", evSeq).Error; err != nil {
@@ -128,9 +129,9 @@ type CompletePhaseInput struct {
 // back into the phase row's event_seq column, replacing the EventPhaseStarted
 // pointer set at StartPhase time.
 func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*domain.TaskCyclePhase, error) {
-	defer deferStoreLatency(storeOpCompleteCyclePhase)()
+	defer kernel.DeferLatency(kernel.OpCompleteCyclePhase)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CompletePhase")
-	if err := validateActor(in.By); err != nil {
+	if err := kernel.ValidateActor(in.By); err != nil {
 		return nil, err
 	}
 	cycleID := strings.TrimSpace(in.CycleID)
@@ -140,7 +141,7 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 	if in.PhaseSeq <= 0 {
 		return nil, fmt.Errorf("%w: phase_seq", domain.ErrInvalidInput)
 	}
-	if !validTerminalPhaseStatus(in.Status) {
+	if !kernel.ValidTerminalPhaseStatus(in.Status) {
 		return nil, fmt.Errorf("%w: status must be a terminal phase status", domain.ErrInvalidInput)
 	}
 	details, err := normalizeJSONObject(in.Details, "details")
@@ -179,7 +180,7 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 			s := *in.Summary
 			ph.Summary = &s
 		}
-		evSeq, err := nextEventSeq(tx, cycle.TaskID)
+		evSeq, err := kernel.NextEventSeq(tx, cycle.TaskID)
 		if err != nil {
 			return err
 		}
@@ -188,7 +189,7 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 			return err
 		}
 		mirrorType := mirrorEventTypeForPhaseStatus(in.Status)
-		if err := appendEvent(tx, cycle.TaskID, evSeq, mirrorType, in.By, payload); err != nil {
+		if err := kernel.AppendEvent(tx, cycle.TaskID, evSeq, mirrorType, in.By, payload); err != nil {
 			return err
 		}
 		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", ph.ID).Update("event_seq", evSeq).Error; err != nil {
@@ -208,7 +209,7 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 // (phase_seq ASC). The cycle must exist; an empty result for an existing
 // cycle (no phases started yet) is not an error.
 func (s *Store) ListPhasesForCycle(ctx context.Context, cycleID string) ([]domain.TaskCyclePhase, error) {
-	defer deferStoreLatency(storeOpListCyclePhases)()
+	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListPhasesForCycle")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {

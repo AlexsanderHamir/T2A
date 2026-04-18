@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -17,9 +18,9 @@ import (
 
 // AddChecklistItem appends a definition row; task must exist and not use checklist_inherit.
 func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
-	defer deferStoreLatency(storeOpAddChecklistItem)()
+	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
 	text = strings.TrimSpace(text)
@@ -32,7 +33,7 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 	}
 	var created *domain.TaskChecklistItem
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, err := txLoadTask(tx, taskID)
+		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -53,12 +54,12 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
 		}
-		seq, err := nextEventSeq(tx, taskID)
+		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
 		b, _ := json.Marshal(map[string]string{"item_id": it.ID, "text": it.Text})
-		if err := appendEvent(tx, taskID, seq, domain.EventChecklistItemAdded, by, b); err != nil {
+		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemAdded, by, b); err != nil {
 			return err
 		}
 		created = it
@@ -72,9 +73,9 @@ func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by do
 
 // DeleteChecklistItem removes a definition row owned by taskID.
 func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, by domain.Actor) error {
-	defer deferStoreLatency(storeOpDeleteChecklistItem)()
+	defer kernel.DeferLatency(kernel.OpDeleteChecklistItem)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteChecklistItem")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
 	taskID = strings.TrimSpace(taskID)
@@ -83,7 +84,7 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, err := txLoadTask(tx, taskID)
+		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -100,12 +101,12 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 		if err := tx.Where("item_id = ?", itemID).Delete(&domain.TaskChecklistCompletion{}).Error; err != nil {
 			return fmt.Errorf("delete completions: %w", err)
 		}
-		seq, err := nextEventSeq(tx, taskID)
+		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
 		b, _ := json.Marshal(map[string]string{"item_id": itemID, "text": it.Text})
-		if err := appendEvent(tx, taskID, seq, domain.EventChecklistItemRemoved, by, b); err != nil {
+		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemRemoved, by, b); err != nil {
 			return err
 		}
 		if err := tx.Delete(&it).Error; err != nil {
@@ -118,9 +119,9 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 // UpdateChecklistItemText updates the definition text for an item owned by taskID.
 // Rejected when the task uses checklist_inherit or the item is not on that task.
 func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, text string, by domain.Actor) error {
-	defer deferStoreLatency(storeOpUpdateChecklistItemText)()
+	defer kernel.DeferLatency(kernel.OpUpdateChecklistItemText)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemText")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
 	taskID = strings.TrimSpace(taskID)
@@ -130,7 +131,7 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 		return fmt.Errorf("%w: text", domain.ErrInvalidInput)
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, err := txLoadTask(tx, taskID)
+		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -150,21 +151,21 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 		if err := tx.Model(&it).Update("text", text).Error; err != nil {
 			return fmt.Errorf("update checklist item: %w", err)
 		}
-		seq, err := nextEventSeq(tx, taskID)
+		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
 		b, _ := json.Marshal(map[string]any{"item_id": itemID, "text": text})
-		return appendEvent(tx, taskID, seq, domain.EventChecklistItemUpdated, by, b)
+		return kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemUpdated, by, b)
 	})
 }
 
 // SetChecklistItemDone sets or clears completion for subjectTaskID on an item from its definition source.
 // Only [domain.ActorAgent] may change completion; the human user records criteria (POST) but does not toggle done.
 func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
-	defer deferStoreLatency(storeOpSetChecklistItemDone)()
+	defer kernel.DeferLatency(kernel.OpSetChecklistItemDone)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
 	if by != domain.ActorAgent {
@@ -176,7 +177,7 @@ func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID 
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := txLoadTask(tx, subjectTaskID); err != nil {
+		if _, err := kernel.LoadTask(tx, subjectTaskID); err != nil {
 			return err
 		}
 		defOwner, err := definitionSourceTaskIDTx(tx, subjectTaskID)
@@ -209,12 +210,12 @@ func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID 
 				return fmt.Errorf("delete completion: %w", res.Error)
 			}
 		}
-		seq, err := nextEventSeq(tx, subjectTaskID)
+		seq, err := kernel.NextEventSeq(tx, subjectTaskID)
 		if err != nil {
 			return err
 		}
 		b, _ := json.Marshal(map[string]any{"item_id": itemID, "done": done})
-		if err := appendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
+		if err := kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
 			return err
 		}
 		return nil

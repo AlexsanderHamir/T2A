@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
-	defer deferStoreLatency(storeOpGetTask)()
+	defer kernel.DeferLatency(kernel.OpGetTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -31,9 +32,9 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 }
 
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
-	defer deferStoreLatency(storeOpUpdateTask)()
+	defer kernel.DeferLatency(kernel.OpUpdateTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
 	id = strings.TrimSpace(id)
@@ -56,7 +57,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 		}
 		origStatus = cur.Status
 
-		nextSeq, err := nextEventSeq(tx, id)
+		nextSeq, err := kernel.NextEventSeq(tx, id)
 		if err != nil {
 			return err
 		}
@@ -85,9 +86,9 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 // Delete removes a task with no children. When the task had a parent, appends
 // subtask_removed on the parent and returns that parent id (for SSE); otherwise returns "".
 func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) (string, error) {
-	defer deferStoreLatency(storeOpDeleteTask)()
+	defer kernel.DeferLatency(kernel.OpDeleteTask)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
-	if err := validateActor(by); err != nil {
+	if err := kernel.ValidateActor(by); err != nil {
 		return "", err
 	}
 	id = strings.TrimSpace(id)

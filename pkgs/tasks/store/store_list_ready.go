@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -31,7 +32,7 @@ type ReadyTaskQueueCandidate struct {
 // first (task_events seq 1), then a dialect-specific tie-breaker (SQLite: event rowid insertion order),
 // then task id. Pagination is keyset; pass the cursor from the last row of the previous page.
 func (s *Store) ListReadyTaskQueueCandidates(ctx context.Context, limit int, cursor *ReadyTaskQueueCursor) ([]ReadyTaskQueueCandidate, error) {
-	defer deferStoreLatency(storeOpListReadyQueue)()
+	defer kernel.DeferLatency(kernel.OpListReadyQueue)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListReadyTaskQueueCandidates")
 	if limit <= 0 {
 		limit = 200

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +36,7 @@ func deleteTaskInTx(tx *gorm.DB, id string, by domain.Actor) (parentToNotify str
 				return "", fmt.Errorf("parent lookup: %w", err)
 			}
 			if pn > 0 {
-				pseq, err := nextEventSeq(tx, pid)
+				pseq, err := kernel.NextEventSeq(tx, pid)
 				if err != nil {
 					return "", err
 				}
@@ -46,7 +47,7 @@ func deleteTaskInTx(tx *gorm.DB, id string, by domain.Actor) (parentToNotify str
 				if mErr != nil {
 					return "", mErr
 				}
-				if err := appendEvent(tx, pid, pseq, domain.EventSubtaskRemoved, by, b); err != nil {
+				if err := kernel.AppendEvent(tx, pid, pseq, domain.EventSubtaskRemoved, by, b); err != nil {
 					return "", err
 				}
 				parentToNotify = pid
