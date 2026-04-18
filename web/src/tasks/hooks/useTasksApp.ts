@@ -9,7 +9,6 @@ import {
   getTaskDraft as apiGetDraft,
   listTaskDrafts as apiListDrafts,
   listTasks,
-  patchTask,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
 import {
@@ -39,6 +38,7 @@ import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import { useTaskEventStream } from "./useTaskEventStream";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
+import { useTaskPatchFlow } from "./useTaskPatchFlow";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
 const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
@@ -345,28 +345,13 @@ export function useTasksApp() {
     },
   });
 
-  const patchMutation = useMutation({
-    mutationFn: (args: {
-      id: string;
-      title: string;
-      initial_prompt: string;
-      status: Status;
-      priority: Priority;
-      task_type: TaskType;
-      checklist_inherit: boolean;
-    }) =>
-      patchTask(args.id, {
-        title: args.title,
-        initial_prompt: args.initial_prompt,
-        status: args.status,
-        priority: args.priority,
-        task_type: args.task_type,
-        checklist_inherit: args.checklist_inherit,
-      }),
-    onSuccess: async () => {
-      setEditing(null);
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+  const {
+    patchTask: runPatch,
+    patchPending,
+    patchError,
+  } = useTaskPatchFlow({
+    onPatched: (patchedId) => {
+      setEditing((prev) => (prev?.id === patchedId ? null : prev));
     },
   });
 
@@ -449,7 +434,7 @@ export function useTasksApp() {
   const saving =
     createMutation.isPending ||
     evaluateDraftMutation.isPending ||
-    patchMutation.isPending ||
+    patchPending ||
     deletePending;
 
   const draftListLoading = draftsQuery.isPending;
@@ -462,7 +447,7 @@ export function useTasksApp() {
     if (createMutation.isError) return errorMessage(createMutation.error);
     if (evaluateDraftMutation.isError)
       return errorMessage(evaluateDraftMutation.error);
-    if (patchMutation.isError) return errorMessage(patchMutation.error);
+    if (patchError) return patchError;
     if (deleteError) return deleteError;
     return editTitleRequiredError;
   }, [
@@ -472,8 +457,7 @@ export function useTasksApp() {
     createMutation.error,
     evaluateDraftMutation.isError,
     evaluateDraftMutation.error,
-    patchMutation.isError,
-    patchMutation.error,
+    patchError,
     deleteError,
     editTitleRequiredError,
   ]);
@@ -819,7 +803,7 @@ export function useTasksApp() {
       return;
     }
     setEditTitleRequiredError(null);
-    patchMutation.mutate({
+    runPatch({
       id: editing.id,
       title: editTitle.trim(),
       initial_prompt: editPrompt,
@@ -832,7 +816,6 @@ export function useTasksApp() {
 
   const createPending = createMutation.isPending;
   const evaluatePending = evaluateDraftMutation.isPending;
-  const patchPending = patchMutation.isPending;
   const draftSavePending = saveDraftMutation.isPending;
 
   useEffect(() => {
