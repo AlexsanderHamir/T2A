@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,10 +23,15 @@ import (
 //     domain.ValidPhaseTransition, where the previous phase is the highest-seq
 //     phase already on this cycle (empty if none).
 //
-// Stage 3 will mirror this insert as an EventPhaseStarted row in task_events.
-func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Phase) (*domain.TaskCyclePhase, error) {
+// In the same SQL transaction the call appends an EventPhaseStarted mirror
+// row to task_events and writes the assigned task_events.seq back into the
+// phase row's event_seq column so the audit pointer is one-shot.
+func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Phase, by domain.Actor) (*domain.TaskCyclePhase, error) {
 	defer deferStoreLatency(storeOpStartCyclePhase)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.StartPhase")
+	if err := validateActor(by); err != nil {
+		return nil, err
+	}
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -69,6 +75,21 @@ func (s *Store) StartPhase(ctx context.Context, cycleID string, phase domain.Pha
 		if err := tx.Omit("Cycle").Create(row).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_phase: %w", err)
 		}
+		evSeq, err := nextEventSeq(tx, cycle.TaskID)
+		if err != nil {
+			return err
+		}
+		payload, err := phaseStartedPayload(cycle.ID, row)
+		if err != nil {
+			return err
+		}
+		if err := appendEvent(tx, cycle.TaskID, evSeq, domain.EventPhaseStarted, by, payload); err != nil {
+			return err
+		}
+		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", row.ID).Update("event_seq", evSeq).Error; err != nil {
+			return fmt.Errorf("backfill phase event_seq: %w", err)
+		}
+		row.EventSeq = &evSeq
 		created = row
 		return nil
 	})
@@ -90,6 +111,9 @@ type CompletePhaseInput struct {
 	// Details is structured per-phase output (verify checks, persist artifact
 	// ids, …). nil/empty become the zero JSON object "{}".
 	Details []byte
+	// By identifies who recorded the terminal transition; mirrored as the
+	// Actor on the audit row in task_events.
+	By domain.Actor
 }
 
 // CompletePhase moves a running phase to a terminal status. Rejected when
@@ -97,9 +121,18 @@ type CompletePhaseInput struct {
 // terminal. Does not move the parent cycle into a terminal status — that is
 // an explicit TerminateCycle call so the caller controls when an attempt is
 // declared finished.
+//
+// In the same SQL transaction the call appends an audit mirror to
+// task_events (EventPhaseCompleted / EventPhaseFailed / EventPhaseSkipped
+// depending on the terminal status) and writes the assigned task_events.seq
+// back into the phase row's event_seq column, replacing the EventPhaseStarted
+// pointer set at StartPhase time.
 func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*domain.TaskCyclePhase, error) {
 	defer deferStoreLatency(storeOpCompleteCyclePhase)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CompletePhase")
+	if err := validateActor(in.By); err != nil {
+		return nil, err
+	}
 	cycleID := strings.TrimSpace(in.CycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -113,7 +146,8 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 	details := normalizeJSONObject(in.Details)
 	var out *domain.TaskCyclePhase
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := loadCycleByIDTx(tx, cycleID); err != nil {
+		cycle, err := loadCycleByIDTx(tx, cycleID)
+		if err != nil {
 			return err
 		}
 		ph, err := loadPhaseByCycleSeqTx(tx, cycleID, in.PhaseSeq)
@@ -142,6 +176,22 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 			s := *in.Summary
 			ph.Summary = &s
 		}
+		evSeq, err := nextEventSeq(tx, cycle.TaskID)
+		if err != nil {
+			return err
+		}
+		payload, err := phaseTerminatedPayload(cycle.ID, ph)
+		if err != nil {
+			return err
+		}
+		mirrorType := mirrorEventTypeForPhaseStatus(in.Status)
+		if err := appendEvent(tx, cycle.TaskID, evSeq, mirrorType, in.By, payload); err != nil {
+			return err
+		}
+		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", ph.ID).Update("event_seq", evSeq).Error; err != nil {
+			return fmt.Errorf("backfill phase event_seq: %w", err)
+		}
+		ph.EventSeq = &evSeq
 		out = ph
 		return nil
 	})
@@ -224,4 +274,56 @@ func lastPhaseKindForCycleTx(tx *gorm.DB, cycleID string) (domain.Phase, error) 
 		return "", fmt.Errorf("last phase lookup: %w", err)
 	}
 	return p.Phase, nil
+}
+
+// phaseStartedPayload builds the data_json payload for the EventPhaseStarted
+// audit mirror.
+func phaseStartedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.phaseStartedPayload")
+	out := map[string]any{
+		"cycle_id":  cycleID,
+		"phase":     string(p.Phase),
+		"phase_seq": p.PhaseSeq,
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("marshal phase_started payload: %w", err)
+	}
+	return b, nil
+}
+
+// phaseTerminatedPayload builds the data_json payload for the
+// EventPhaseCompleted / EventPhaseFailed / EventPhaseSkipped audit mirror.
+func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.phaseTerminatedPayload")
+	out := map[string]any{
+		"cycle_id":  cycleID,
+		"phase":     string(p.Phase),
+		"phase_seq": p.PhaseSeq,
+		"status":    string(p.Status),
+	}
+	if p.Summary != nil && *p.Summary != "" {
+		out["summary"] = *p.Summary
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("marshal phase_terminated payload: %w", err)
+	}
+	return b, nil
+}
+
+// mirrorEventTypeForPhaseStatus picks which audit row type to write when a
+// phase reaches the given terminal status.
+func mirrorEventTypeForPhaseStatus(s domain.PhaseStatus) domain.EventType {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.mirrorEventTypeForPhaseStatus")
+	switch s {
+	case domain.PhaseStatusSucceeded:
+		return domain.EventPhaseCompleted
+	case domain.PhaseStatusFailed:
+		return domain.EventPhaseFailed
+	case domain.PhaseStatusSkipped:
+		return domain.EventPhaseSkipped
+	default:
+		return domain.EventPhaseFailed
+	}
 }

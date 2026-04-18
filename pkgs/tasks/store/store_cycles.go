@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -36,8 +37,9 @@ type StartCycleInput struct {
 // ParentCycleID, when non-nil, must reference an existing cycle row that
 // belongs to the same task; cross-task lineage is rejected as invalid input.
 //
-// Stage 2 only writes task_cycles; Stage 3 will append the matching
-// cycle_started mirror row to task_events in the same SQL transaction.
+// In the same SQL transaction the call appends an EventCycleStarted mirror
+// row to task_events so GET /tasks/{id}/events stays a complete witness of
+// cycle activity. If the mirror insert fails, the cycle row is rolled back.
 func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.TaskCycle, error) {
 	defer deferStoreLatency(storeOpStartCycle)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.StartCycle")
@@ -89,6 +91,17 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 		if err := tx.Omit("Task").Create(row).Error; err != nil {
 			return fmt.Errorf("insert task_cycle: %w", err)
 		}
+		seq, err := nextEventSeq(tx, taskID)
+		if err != nil {
+			return err
+		}
+		payload, err := cycleStartedPayload(row)
+		if err != nil {
+			return err
+		}
+		if err := appendEvent(tx, taskID, seq, domain.EventCycleStarted, in.TriggeredBy, payload); err != nil {
+			return err
+		}
 		created = row
 		return nil
 	})
@@ -102,12 +115,17 @@ func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.Tas
 // the cycle is already terminal, when the requested status is not terminal,
 // or when the cycle still has a running phase row.
 //
-// reason is recorded in Stage 3 as part of the cycle_failed / cycle_completed
-// mirror payload; for now it is validated and surfaced as an argument so the
-// API surface is stable across stages.
-func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domain.CycleStatus, reason string) (*domain.TaskCycle, error) {
+// In the same SQL transaction the call appends a mirror row to task_events:
+// EventCycleCompleted for CycleStatusSucceeded; EventCycleFailed for
+// CycleStatusFailed and CycleStatusAborted (the mirror payload's status
+// field preserves the distinction between failed and aborted). reason, if
+// non-empty, is included in the mirror payload.
+func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domain.CycleStatus, reason string, by domain.Actor) (*domain.TaskCycle, error) {
 	defer deferStoreLatency(storeOpTerminateCycle)()
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TerminateCycle")
+	if err := validateActor(by); err != nil {
+		return nil, err
+	}
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -115,7 +133,7 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 	if !validTerminalCycleStatus(status) {
 		return nil, fmt.Errorf("%w: status must be a terminal cycle status", domain.ErrInvalidInput)
 	}
-	_ = reason // recorded by Stage 3 mirror writer
+	reason = strings.TrimSpace(reason)
 	var out *domain.TaskCycle
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		cycle, err := loadCycleByIDTx(tx, cycleID)
@@ -138,6 +156,18 @@ func (s *Store) TerminateCycle(ctx context.Context, cycleID string, status domai
 		}
 		cycle.Status = status
 		cycle.EndedAt = &now
+		seq, err := nextEventSeq(tx, cycle.TaskID)
+		if err != nil {
+			return err
+		}
+		payload, err := cycleTerminatedPayload(cycle, reason)
+		if err != nil {
+			return err
+		}
+		mirrorType := mirrorEventTypeForCycleStatus(status)
+		if err := appendEvent(tx, cycle.TaskID, seq, mirrorType, by, payload); err != nil {
+			return err
+		}
 		out = cycle
 		return nil
 	})
@@ -226,12 +256,60 @@ func nextAttemptSeqTx(tx *gorm.DB, taskID string) (int64, error) {
 
 // normalizeJSONObject mirrors appendEvent's nil-data handling: a nil or
 // empty payload becomes the canonical "{}" JSON object so the column's
-// NOT NULL DEFAULT '{}' invariant holds even before Stage 3 wires real
-// payloads through.
+// NOT NULL DEFAULT '{}' invariant holds.
 func normalizeJSONObject(b []byte) []byte {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.normalizeJSONObject")
 	if len(b) == 0 {
 		return []byte("{}")
 	}
 	return b
+}
+
+// cycleStartedPayload builds the data_json payload for the EventCycleStarted
+// audit mirror. Keys are stable (asserted by the dual-write invariant test).
+func cycleStartedPayload(c *domain.TaskCycle) ([]byte, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cycleStartedPayload")
+	out := map[string]any{
+		"cycle_id":     c.ID,
+		"attempt_seq":  c.AttemptSeq,
+		"triggered_by": string(c.TriggeredBy),
+	}
+	if c.ParentCycleID != nil && *c.ParentCycleID != "" {
+		out["parent_cycle_id"] = *c.ParentCycleID
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("marshal cycle_started payload: %w", err)
+	}
+	return b, nil
+}
+
+// cycleTerminatedPayload builds the data_json payload for the
+// EventCycleCompleted / EventCycleFailed audit mirror.
+func cycleTerminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.cycleTerminatedPayload")
+	out := map[string]any{
+		"cycle_id":    c.ID,
+		"attempt_seq": c.AttemptSeq,
+		"status":      string(c.Status),
+	}
+	if reason != "" {
+		out["reason"] = reason
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("marshal cycle_terminated payload: %w", err)
+	}
+	return b, nil
+}
+
+// mirrorEventTypeForCycleStatus picks which audit row type to write when a
+// cycle reaches the given terminal status. CycleStatusAborted folds into
+// EventCycleFailed; the payload's status field preserves the distinction.
+func mirrorEventTypeForCycleStatus(s domain.CycleStatus) domain.EventType {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.mirrorEventTypeForCycleStatus")
+	if s == domain.CycleStatusSucceeded {
+		return domain.EventCycleCompleted
+	}
+	return domain.EventCycleFailed
 }

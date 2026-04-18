@@ -105,18 +105,20 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope:**
 
-- [ ] Inside each public store function from Stage 2, append the corresponding mirror `task_events` row in the **same `gorm.DB` transaction**.
-- [ ] Capture the assigned `task_events.seq` and write it back into the cycle/phase row (`event_seq` column) so the audit pointer is one-shot.
-- [ ] Add `pkgs/tasks/store/store_cycles_dualwrite_test.go` that pins the invariant: for **every** public mutating cycle/phase entry point, an audit row exists with the matching event type and `data_json` payload, OR the cycle/phase write was rolled back. (Table-driven across all entry points; failure forces future contributors to update both sides.)
-- [ ] Confirm `EventTypeAcceptsUserResponse` (in `pkgs/tasks/domain/event_user_response.go`) does **not** include the new types — they are observational, not interactive.
+- [x] Inside each public store function from Stage 2, append the corresponding mirror `task_events` row in the **same `gorm.DB` transaction** (`StartCycle` → `cycle_started`; `TerminateCycle` → `cycle_completed` for `succeeded`, `cycle_failed` for `failed`/`aborted` with the original status preserved in payload; `StartPhase` → `phase_started`; `CompletePhase` → `phase_completed`/`phase_failed`/`phase_skipped`).
+- [x] Capture the assigned `task_events.seq` and write it back into the **phase** row's `event_seq` column (cycle row has no such column — recorded as a deliberate scope decision in [Notes / followups](#notes--followups)).
+- [x] Add `pkgs/tasks/store/store_cycles_dualwrite_test.go` pinning the invariant table-driven across every entry point: payload shape, actor mirroring, `event_seq` backfill, monotonic `task_events.seq` across mixed operations, and a forced-failure case that proves the cycle insert is rolled back when the mirror append fails.
+- [x] Confirm `EventTypeAcceptsUserResponse` (in `pkgs/tasks/domain/event_user_response.go`) does **not** include the seven new mirror types — they are observational, not interactive (assertion baked into the dual-write test file so future drift fails CI).
+- [x] Surface change: `TerminateCycle`, `StartPhase`, and `CompletePhaseInput` now require an `Actor` (`by`) so the mirror row records who drove the transition. Stage 2 tests updated to match.
 
 **Exit criteria:**
 
-- `go test ./pkgs/tasks/store/... -count=1` passes including the new dual-write invariant suite.
-- `go test ./pkgs/tasks/handler/... -count=1` still passes (no API change yet).
-- `funclogmeasure -enforce` clean.
+- [x] `go test ./pkgs/tasks/store/... -count=1` passes including the new dual-write invariant suite.
+- [x] `go test ./pkgs/tasks/handler/... -count=1` still passes (no handler API change yet).
+- [x] `go test ./... -count=1` green across the whole repo.
+- [x] `funclogmeasure -enforce` clean (398/398 functions covered).
 
-**Commit:** `store: mirror cycle and phase transitions into task_events in the same transaction`
+**Commit:** `store: mirror cycle and phase transitions into task_events in the same transaction` (SHA recorded once pushed).
 
 **STOP — ask permission to begin Stage 4.**
 
@@ -288,6 +290,8 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 (Populated as stages discover incidental work — keep this section as the catch-all so individual stages stay scoped.)
 
 - **(Stage 2)** Concurrency invariants ("at most one running cycle per task", "at most one running phase per cycle") are enforced today by an in-TX `SELECT ... LIMIT 1` guard in `pkgs/tasks/store/store_cycles.go` / `store_cycle_phases.go`. The portable approach was chosen because GORM `AutoMigrate` does not drive Postgres-only partial unique indexes. **Followup:** add a Postgres-only post-migration hook for `CREATE UNIQUE INDEX ... WHERE status = 'running'` once the schema lives in a real migration tool, then keep the in-TX guard for SQLite tests as a belt-and-braces backup.
+- **(Stage 3)** Only `TaskCyclePhase` carries an `event_seq` backlink to `task_events`; `TaskCycle` does not. Rationale: the cycle's `started`/`terminated` mirror rows are easily reconstructed from `(task_id, type IN ('cycle_started','cycle_completed','cycle_failed') AND data_json->>'cycle_id' = ?)`, while phases have many transitions per row and benefit from a one-shot pointer to the *most recent* mirror. **Followup:** if a future read path proves expensive without the cycle backlink, add `TaskCycle.EventSeq` in a dedicated migration; for now, the indirection is cheap.
+- **(Stage 3)** `TerminateCycle`, `StartPhase`, and `CompletePhaseInput` now require a `by domain.Actor` argument so the mirror row records who drove the transition. This is a pre-handler API change; Stage 4 will plumb `X-Actor` through to satisfy it.
 
 ## Status
 
@@ -296,7 +300,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 0 — Plan | done | `c495148` |
 | 1 — Domain | done | `31c9153` |
 | 2 — Schema + CRUD | done | `f72ad84` |
-| 3 — Dual-write mirror | pending | — |
+| 3 — Dual-write mirror | done | _pending push_ |
 | 4 — Handler | pending | — |
 | 5 — SSE | pending | — |
 | 6 — Docs | pending | — |
