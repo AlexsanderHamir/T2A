@@ -79,6 +79,13 @@
   letter-spacing: -0.03em;
   color: var(--text-primary);
   line-height: 1.08;
+  min-height: 1em;
+}
+
+/** Settled-but-empty state (stats query returned null): de-emphasized dash. */
+.task-home-kpi-value--unavailable {
+  color: var(--text-tertiary);
+  font-weight: 500;
 }
 
 .task-home-kpi-meta {
@@ -1061,6 +1068,13 @@
 
 .skeleton-block--prompt {
   width: min(90%, 10rem);
+}
+
+/** Pre-stats placeholder for `.task-home-kpi-value` numerals. */
+.skeleton-block--kpi-value {
+  width: 3.25rem;
+  height: clamp(1.6rem, 2.1vw, 2rem);
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-block--btn {

@@ -907,6 +907,12 @@ export function useTasksApp() {
     error,
     sseLive,
     taskStats: taskStatsQuery.data,
+    /**
+     * True only on the first stats fetch (before any settle). Stays false
+     * during background refetch so consumers can keep showing the previous
+     * values instead of replacing them with a skeleton on every refresh.
+     */
+    taskStatsLoading: taskStatsQuery.isPending,
     draftPickerOpen,
     setDraftPickerOpen,
     taskDrafts: draftsQuery.data ?? [],

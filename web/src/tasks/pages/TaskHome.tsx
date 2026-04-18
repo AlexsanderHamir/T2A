@@ -8,6 +8,46 @@ type Props = {
   app: ReturnType<typeof useTasksApp>;
 };
 
+type KpiState =
+  | { kind: "loading" }
+  | { kind: "unavailable" }
+  | { kind: "ready"; value: number };
+
+/**
+ * KPI cards must reflect the **whole** task table, not the (paged) `tasks`
+ * array. While `taskStats` is loading we show a skeleton instead of a
+ * misleading approximation derived from the current page; if stats settled
+ * to `null` (server error) we show "—" with a "Stats unavailable" hint.
+ */
+function kpiState(
+  raw: number | undefined,
+  loading: boolean,
+  hasStats: boolean,
+): KpiState {
+  if (typeof raw === "number") return { kind: "ready", value: raw };
+  if (loading || !hasStats) return loading ? { kind: "loading" } : { kind: "unavailable" };
+  return { kind: "unavailable" };
+}
+
+function KpiValue({ state, label }: { state: KpiState; label: string }) {
+  if (state.kind === "ready") {
+    return <p className="task-home-kpi-value">{state.value}</p>;
+  }
+  if (state.kind === "loading") {
+    return (
+      <p className="task-home-kpi-value" aria-hidden="true">
+        <span className="skeleton-block skeleton-block--kpi-value" />
+        <span className="visually-hidden">Loading {label}</span>
+      </p>
+    );
+  }
+  return (
+    <p className="task-home-kpi-value task-home-kpi-value--unavailable" aria-label={`${label} unavailable`}>
+      —
+    </p>
+  );
+}
+
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
   const handleResumeDraft = (id: string) => {
@@ -15,21 +55,23 @@ export function TaskHome({ app }: Props) {
       // Error state is exposed by the hook and rendered in the modal.
     });
   };
-  const totalTasks = app.taskStats?.total ?? app.tasks.length;
-  const readyTasks =
-    app.taskStats?.by_status.ready ??
-    app.taskStats?.ready ??
-    app.tasks.filter((t) => t.status === "ready").length;
-  const criticalTasks =
-    app.taskStats?.by_priority.critical ??
-    app.taskStats?.critical ??
-    app.tasks.filter((t) => t.priority === "critical").length;
-  const parentTasks =
-    app.taskStats?.by_scope.parent ??
-    app.tasks.filter((t) => !t.parent_id).length;
-  const subtaskTasks =
-    app.taskStats?.by_scope.subtask ??
-    app.tasks.filter((t) => Boolean(t.parent_id)).length;
+  const stats = app.taskStats ?? null;
+  const statsLoading = app.taskStatsLoading;
+  const hasStats = stats !== null;
+
+  const totalState = kpiState(stats?.total, statsLoading, hasStats);
+  const readyState = kpiState(
+    stats?.by_status.ready ?? stats?.ready,
+    statsLoading,
+    hasStats,
+  );
+  const criticalState = kpiState(
+    stats?.by_priority.critical ?? stats?.critical,
+    statsLoading,
+    hasStats,
+  );
+  const parentTasks = stats?.by_scope.parent;
+  const subtaskTasks = stats?.by_scope.subtask;
 
   return (
     <>
@@ -112,22 +154,34 @@ export function TaskHome({ app }: Props) {
 
       <div className="task-detail-content--enter">
         <section className="task-home-overview" aria-label="Task overview">
-          <article className="task-home-kpi-card task-home-kpi-card--total">
+          <article
+            className="task-home-kpi-card task-home-kpi-card--total"
+            aria-busy={totalState.kind === "loading"}
+          >
             <p className="task-home-kpi-label">Total tasks</p>
-            <p className="task-home-kpi-value">{totalTasks}</p>
+            <KpiValue state={totalState} label="Total tasks" />
             <p className="task-home-kpi-meta">
-              {parentTasks} parent • {subtaskTasks} subtask
-              {subtaskTasks === 1 ? "" : "s"}
+              {hasStats && typeof parentTasks === "number" && typeof subtaskTasks === "number"
+                ? `${parentTasks} parent • ${subtaskTasks} subtask${subtaskTasks === 1 ? "" : "s"}`
+                : statsLoading
+                  ? "Loading breakdown…"
+                  : "Breakdown unavailable"}
             </p>
           </article>
-          <article className="task-home-kpi-card task-home-kpi-card--ready">
+          <article
+            className="task-home-kpi-card task-home-kpi-card--ready"
+            aria-busy={readyState.kind === "loading"}
+          >
             <p className="task-home-kpi-label">Ready tasks</p>
-            <p className="task-home-kpi-value">{readyTasks}</p>
+            <KpiValue state={readyState} label="Ready tasks" />
             <p className="task-home-kpi-meta">ready for agent pickup</p>
           </article>
-          <article className="task-home-kpi-card task-home-kpi-card--attention">
+          <article
+            className="task-home-kpi-card task-home-kpi-card--attention"
+            aria-busy={criticalState.kind === "loading"}
+          >
             <p className="task-home-kpi-label">Critical</p>
-            <p className="task-home-kpi-value">{criticalTasks}</p>
+            <KpiValue state={criticalState} label="Critical tasks" />
             <p className="task-home-kpi-meta">needs attention</p>
           </article>
         </section>
