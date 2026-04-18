@@ -44,6 +44,13 @@ const (
 	storeOpListReadyUserCreated    = "list_ready_user_created"
 	storeOpApplyDevTaskRowMirror   = "apply_dev_task_row_mirror"
 	storeOpListDevsimTasks         = "list_devsim_tasks"
+	storeOpStartCycle              = "start_cycle"
+	storeOpTerminateCycle          = "terminate_cycle"
+	storeOpGetCycle                = "get_cycle"
+	storeOpListCyclesForTask       = "list_cycles_for_task"
+	storeOpStartCyclePhase         = "start_cycle_phase"
+	storeOpCompleteCyclePhase      = "complete_cycle_phase"
+	storeOpListCyclePhases         = "list_cycle_phases"
 )
 
 // storeOpDurationBuckets favor sub-100ms resolution for SQL point reads and short tx.

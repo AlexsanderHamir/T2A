@@ -46,3 +46,23 @@ func validateActor(a domain.Actor) error {
 		return fmt.Errorf("%w: actor", domain.ErrInvalidInput)
 	}
 }
+
+func validPhase(p domain.Phase) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validPhase")
+	switch p {
+	case domain.PhaseDiagnose, domain.PhaseExecute, domain.PhaseVerify, domain.PhasePersist:
+		return true
+	default:
+		return false
+	}
+}
+
+func validTerminalCycleStatus(s domain.CycleStatus) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validTerminalCycleStatus")
+	return domain.TerminalCycleStatus(s)
+}
+
+func validTerminalPhaseStatus(s domain.PhaseStatus) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.validTerminalPhaseStatus")
+	return domain.TerminalPhaseStatus(s)
+}

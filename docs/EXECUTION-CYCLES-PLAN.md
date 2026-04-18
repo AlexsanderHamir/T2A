@@ -78,25 +78,24 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope:**
 
-- [ ] Register `domain.TaskCycle` and `domain.TaskCyclePhase` in `pkgs/tasks/postgres/postgres.go::Migrate` `AutoMigrate` call.
-- [ ] Decide partial-unique-index strategy for "one running cycle per task" + "one running phase per cycle":
-  - **Default chosen:** in-TX `SELECT ... LIMIT 1` guard inside store (portable across Postgres + SQLite); document the choice in this file's followups section.
-  - If we later want a real partial index on Postgres, add as a post-AutoMigrate raw SQL hook.
-- [ ] New file `pkgs/tasks/store/store_cycles.go` with: `StartCycle`, `TerminateCycle`, `GetCycle`, `ListCyclesForTask`.
-- [ ] New file `pkgs/tasks/store/store_cycle_phases.go` with: `StartPhase`, `CompletePhase`, `ListPhasesForCycle`.
-- [ ] Validate inputs at the store boundary (status enum, phase enum, transition validity via `domain.ValidPhaseTransition`); map invalid input to `domain.ErrInvalidInput`.
-- [ ] New file `pkgs/tasks/store/store_cycles_test.go` (table-driven) — happy path + all invariant violations.
+- [x] Register `domain.TaskCycle` and `domain.TaskCyclePhase` in `pkgs/tasks/postgres/postgres.go::Migrate` `AutoMigrate` call.
+- [x] Decide partial-unique-index strategy for "one running cycle per task" + "one running phase per cycle":
+  - **Chosen:** in-TX `SELECT ... LIMIT 1` guard inside store (portable across Postgres + SQLite). Recorded under [Notes / followups](#notes--followups) for a future Postgres-only partial-unique index migration.
+- [x] New file `pkgs/tasks/store/store_cycles.go` with: `StartCycle`, `TerminateCycle`, `GetCycle`, `ListCyclesForTask`.
+- [x] New file `pkgs/tasks/store/store_cycle_phases.go` with: `StartPhase`, `CompletePhase`, `ListPhasesForCycle`.
+- [x] Validate inputs at the store boundary (status enum, phase enum, transition validity via `domain.ValidPhaseTransition`); map invalid input to `domain.ErrInvalidInput`.
+- [x] New file `pkgs/tasks/store/store_cycles_test.go` (table-driven) — happy path + all invariant violations.
 
 **Out of scope for this stage:** `task_events` mirror writes. Pure cycle/phase state writes only — keeps the diff small and the patterns pure.
 
 **Exit criteria:**
 
-- `go test ./pkgs/tasks/store/... -count=1` passes.
-- `go test ./pkgs/tasks/postgres/... -count=1` passes (AutoMigrate still works on SQLite).
-- `internal/tasktestdb` test fixture still opens cleanly with the new tables.
-- `funclogmeasure -enforce` clean.
+- [x] `go test ./pkgs/tasks/store/... -count=1` passes.
+- [x] `go test ./pkgs/tasks/postgres/... -count=1` passes (AutoMigrate still works on SQLite).
+- [x] `internal/tasktestdb` test fixture still opens cleanly with the new tables.
+- [x] `funclogmeasure -enforce` clean (392/392 functions covered).
 
-**Commit:** `store: add task_cycles + task_cycle_phases tables and CRUD operations`
+**Commit:** `store: add task_cycles + task_cycle_phases tables and CRUD operations` (SHA recorded once pushed).
 
 **STOP — ask permission to begin Stage 3.**
 
@@ -288,7 +287,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 (Populated as stages discover incidental work — keep this section as the catch-all so individual stages stay scoped.)
 
-- _none yet_
+- **(Stage 2)** Concurrency invariants ("at most one running cycle per task", "at most one running phase per cycle") are enforced today by an in-TX `SELECT ... LIMIT 1` guard in `pkgs/tasks/store/store_cycles.go` / `store_cycle_phases.go`. The portable approach was chosen because GORM `AutoMigrate` does not drive Postgres-only partial unique indexes. **Followup:** add a Postgres-only post-migration hook for `CREATE UNIQUE INDEX ... WHERE status = 'running'` once the schema lives in a real migration tool, then keep the in-TX guard for SQLite tests as a belt-and-braces backup.
 
 ## Status
 
@@ -296,7 +295,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 |---|---|---|
 | 0 — Plan | done | `c495148` |
 | 1 — Domain | done | `31c9153` |
-| 2 — Schema + CRUD | pending | — |
+| 2 — Schema + CRUD | done | _pending push_ |
 | 3 — Dual-write mirror | pending | — |
 | 4 — Handler | pending | — |
 | 5 — SSE | pending | — |
