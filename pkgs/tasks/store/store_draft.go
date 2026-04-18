@@ -41,7 +41,7 @@ func (s *Store) SaveDraft(ctx context.Context, id, name string, payload json.Raw
 	if name == "" {
 		return nil, fmt.Errorf("%w: draft name required", domain.ErrInvalidInput)
 	}
-	if len(payload) == 0 {
+	if len(payload) == 0 || string(payload) == "null" {
 		payload = []byte(`{}`)
 	}
 	now := time.Now().UTC()
