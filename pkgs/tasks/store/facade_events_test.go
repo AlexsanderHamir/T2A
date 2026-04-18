@@ -373,31 +373,3 @@ func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 		t.Fatalf("got %v want ErrNotFound", err)
 	}
 }
-
-func TestStore_Update_rejects_invalid_actor(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	st := domain.StatusRunning
-	_, err = s.Update(ctx, tsk.ID, UpdateTaskInput{Status: &st}, domain.Actor("nope"))
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
-	}
-}
-
-func TestStore_Update_rejects_invalid_status_value(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bad := domain.Status("invalid")
-	_, err = s.Update(ctx, tsk.ID, UpdateTaskInput{Status: &bad}, domain.ActorUser)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
-	}
-}

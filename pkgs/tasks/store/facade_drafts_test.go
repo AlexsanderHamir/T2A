@@ -9,6 +9,45 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+// newDraftStoreVal is a local helper for the payload-validation tests.
+func newDraftStoreVal(t *testing.T) (*Store, context.Context) {
+	t.Helper()
+	return NewStore(tasktestdb.OpenSQLite(t)), context.Background()
+}
+
+func TestStore_DraftCRUD_roundtrip(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	saved, err := s.SaveDraft(ctx, "", "My draft", []byte(`{"title":"A"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.ID == "" {
+		t.Fatal("expected generated draft id")
+	}
+	got, err := s.GetDraft(ctx, saved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "My draft" {
+		t.Fatalf("name %q", got.Name)
+	}
+	list, err := s.ListDrafts(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != saved.ID {
+		t.Fatalf("list %#v", list)
+	}
+	if err := s.DeleteDraft(ctx, saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.GetDraft(ctx, saved.ID)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("want not found, got %v", err)
+	}
+}
+
 // TestStore_SaveDraft_payload_normalizes_null pins the documented invariant
 // for `task_drafts.payload_json` (docs/API-HTTP.md POST /task-drafts: "a
 // missing or null payload is silently coerced to {} so a follow-up GET always
@@ -111,9 +150,4 @@ func TestStore_SaveDraft_payload_repeat_normalizes_on_replace(t *testing.T) {
 	if string(got.Payload) != "{}" {
 		t.Fatalf("payload after replace = %q, want {}", string(got.Payload))
 	}
-}
-
-func newDraftStoreVal(t *testing.T) (*Store, context.Context) {
-	t.Helper()
-	return NewStore(tasktestdb.OpenSQLite(t)), context.Background()
 }
