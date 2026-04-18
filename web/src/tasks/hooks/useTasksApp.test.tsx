@@ -25,12 +25,16 @@ import {
   getTaskStats,
   listTaskDrafts,
   evaluateDraftTask,
+  saveTaskDraft,
+  getTaskDraft,
 } from "../../api";
 
 const mockedListTasks = vi.mocked(listTasks);
 const mockedGetStats = vi.mocked(getTaskStats);
 const mockedListDrafts = vi.mocked(listTaskDrafts);
 const mockedEvaluate = vi.mocked(evaluateDraftTask);
+const mockedSaveDraft = vi.mocked(saveTaskDraft);
+const mockedGetDraft = vi.mocked(getTaskDraft);
 
 function makeWrapper() {
   const queryClient = new QueryClient({
@@ -179,5 +183,159 @@ describe("useTasksApp evaluateDraftMutation race", () => {
       "applied",
     );
     expect(result.current.latestDraftEvaluation?.overallScore).toBe(9);
+  });
+});
+
+describe("useTasksApp saveDraftMutation race", () => {
+  beforeEach(() => {
+    stubEventSource();
+    mockedListTasks.mockResolvedValue({
+      tasks: [],
+      limit: 200,
+      offset: 0,
+      has_more: false,
+    });
+    mockedGetStats.mockResolvedValue(null as unknown as never);
+    mockedListDrafts.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    mockedSaveDraft.mockReset();
+    mockedGetDraft.mockReset();
+  });
+
+  it("does not stamp the autosave baseline / 'Draft saved' label onto the now-current draft when a save for a previous draft resolves late", async () => {
+    // Hold the autosave for draft A so we can switch to draft B before it
+    // resolves. Capture the id we sent so the resolution can echo it back -
+    // that's what the server does today.
+    let resolveSaveA: ((v: { id: string; name: string }) => void) | undefined;
+    let savedAId: string | undefined;
+    mockedSaveDraft.mockImplementationOnce((input) => {
+      savedAId = input.id;
+      return new Promise<{ id: string; name: string }>((resolve) => {
+        resolveSaveA = resolve;
+      });
+    });
+
+    // Draft B comes back from the picker with all the fields the resume
+    // path stamps onto state.
+    mockedGetDraft.mockResolvedValueOnce({
+      id: "draft-B-id",
+      name: "Draft B",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      payload: {
+        title: "Draft B title",
+        initial_prompt: "Draft B prompt",
+        priority: "high",
+        task_type: "general",
+        parent_id: "",
+        checklist_inherit: false,
+        checklist_items: [],
+        pending_subtasks: [],
+      },
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+    expect(result.current.createModalOpen).toBe(true);
+
+    // Touch a field so the autosave signature differs from the baseline -
+    // otherwise saveDraftNow short-circuits before calling the API.
+    act(() => {
+      result.current.setNewTitle("Draft A title");
+    });
+
+    act(() => {
+      result.current.saveDraftNow();
+    });
+    await waitFor(() => {
+      expect(result.current.draftSavePending).toBe(true);
+    });
+    expect(savedAId).toBeDefined();
+    expect(savedAId).not.toBe("draft-B-id");
+
+    // Mid-flight: user picks draft B from the picker. resumeDraftByID
+    // synchronously updates newDraftIDRef to "draft-B-id" via the
+    // setNewDraftID wrapper, then stamps the form + autosave baseline with
+    // draft B's data.
+    await act(async () => {
+      await result.current.resumeDraftByID("draft-B-id");
+    });
+    expect(result.current.newTitle).toBe("Draft B title");
+    expect(result.current.newPrompt).toBe("Draft B prompt");
+    expect(result.current.newPriority).toBe("high");
+
+    // Now resolve draft A's save. The server echoes the id we sent, so
+    // saved.id !== newDraftIDRef.current and the guard must fire.
+    await act(async () => {
+      resolveSaveA?.({ id: savedAId!, name: "Untitled draft" });
+    });
+    await waitFor(() => {
+      expect(result.current.draftSavePending).toBe(false);
+    });
+
+    // The form must STILL be showing draft B - the stale resolution must
+    // not have stomped any of the fields newDraftID / newTitle / etc.
+    expect(result.current.newTitle).toBe("Draft B title");
+    expect(result.current.newPrompt).toBe("Draft B prompt");
+    expect(result.current.newPriority).toBe("high");
+
+    // The "Draft saved" label is the user-visible proof the baseline was
+    // updated. With the bug, lastDraftSavedAt was set to Date.now() and
+    // the label flips to "Draft saved" - falsely claiming draft B was
+    // just saved when in reality the save was for draft A. With the
+    // guard, lastDraftSavedAt stays null and the label stays null.
+    expect(result.current.draftSaveLabel).toBeNull();
+  });
+
+  it("updates the autosave baseline + 'Draft saved' label on the happy path (no draft switch)", async () => {
+    let savedId: string | undefined;
+    mockedSaveDraft.mockImplementationOnce(async (input) => {
+      savedId = input.id;
+      return { id: input.id!, name: input.name };
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+    act(() => {
+      result.current.setNewTitle("Draft A title");
+    });
+
+    act(() => {
+      result.current.saveDraftNow();
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftSaveLabel).toBe("Draft saved");
+    });
+    expect(savedId).toBeDefined();
+
+    // Re-running saveDraftNow without changing anything must short-circuit
+    // (signature now matches the baseline) - proof the baseline was actually
+    // updated to the just-saved state, not skipped by the guard.
+    mockedSaveDraft.mockClear();
+    act(() => {
+      result.current.saveDraftNow();
+    });
+    expect(mockedSaveDraft).not.toHaveBeenCalled();
   });
 });

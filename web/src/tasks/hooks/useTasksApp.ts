@@ -405,6 +405,26 @@ export function useTasksApp() {
       };
     }) => apiSaveDraft(input),
     onSuccess: async (saved) => {
+      // Stale-resolution guard. If the user switched drafts mid-flight - via
+      // `resumeDraftByID` (draft picker), `startFreshDraft`, or
+      // `closeCreateModal` (which generates a brand-new draft id in
+      // `resetNewTaskForm`) - a late save for the *previous* draft must not
+      // stamp the autosave baseline (or the "Draft saved" label) onto the
+      // *current* draft. Same id-aware compare pattern as
+      // `evaluateDraftMutation`, `useTaskPatchFlow`, `useTaskDeleteFlow`.
+      //
+      // The persisted server-side draft is still a real fact, so we always
+      // invalidate the picker list. We just refuse to touch any UI form
+      // state (which is now showing a different draft).
+      //
+      // Read from `newDraftIDRef` instead of the closure-captured
+      // `newDraftID`: the ref is updated synchronously by `setNewDraftID`
+      // and `resumeDraftByID`, so it reflects the freshest id even when
+      // this `onSuccess` resolves in the same microtask as the switch.
+      if (newDraftIDRef.current !== saved.id) {
+        await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
+        return;
+      }
       if (saved.id !== newDraftID) {
         setNewDraftID(saved.id);
       }
