@@ -156,35 +156,42 @@ parentheses:
 
 **Scope:**
 
-- [ ] New package `pkgs/agents/agentsmoke` with two files:
+- [x] New package `pkgs/agents/agentsmoke` with three files:
   - `agentsmoke.go` — exports `Fixture`:
     - `NewFixture(t *testing.T) *Fixture` — creates a `t.TempDir()`,
-      computes `TargetPath` (e.g. `<tempdir>/agent-smoke-output.txt`),
+      computes `TargetPath` (`<tempdir>/agent-smoke-output.txt`),
       and pins the canonical `Prompt` and `ExpectedContents`
-      constants used by every stage.
+      ("OK\n", three bytes) used by every stage.
     - `(*Fixture).WorkingDir() string`, `(*Fixture).Prompt() string`,
       `(*Fixture).TargetPath() string`,
       `(*Fixture).ExpectedContents() string`.
     - `(*Fixture).AssertSucceeded(t *testing.T)` — reads
-      `TargetPath`, fails with a side-by-side diff if contents do not
-      match `ExpectedContents`; also asserts that no **other** file
-      was created in the tempdir (catches "Cursor wrote helpful
-      explanations everywhere").
+      `TargetPath`, fails with a side-by-side `want`/`got` diff if
+      contents do not match `ExpectedContents`; also asserts that no
+      **other** file was created anywhere inside `WorkingDir`
+      (catches "Cursor wrote helpful explanations everywhere"; walk
+      is rooted at `WorkingDir` so nested escapes also fail).
     - `(*Fixture).AssertNotMutated(t *testing.T)` — used by
-      negative tests (Stage 3 failure-path) to assert the runner did
-      not touch disk.
-  - `agentsmoke_test.go` — exercises the fixture against
-    `runnerfake.Runner` whose script writes the expected file via a
-    `WithCallback` hook (or via the harness directly so the fake
-    doesn't need filesystem access). The test must:
-    - Pass when the harness writes the expected contents.
-    - Fail (via `t.Run` + a recovered fail) when the harness writes
-      wrong contents or extra files.
-- [ ] **No real Cursor invocation in Stage 1** — the harness is
+      negative tests to assert the runner did not touch disk.
+    - Internal `verifySucceeded()`/`verifyNotMutated()` returning
+      `error` so internal tests can exercise assertion logic without
+      `t.Fatalf` plumbing.
+  - `agentsmoke_internal_test.go` — covers the assertion logic via
+    `verifySucceeded`/`verifyNotMutated`: missing target, contents
+    mismatch, trailing-junk near miss, sibling extra file, nested
+    extra file, pristine-dir happy path, non-empty-dir failure,
+    fresh-fixture invariant.
+  - `agentsmoke_test.go` — public-API + `runnerfake` integration
+    that proves the wiring shape Stages 2 and 3 will use (runner
+    receives `WorkingDir` and `Prompt` from the fixture; once the
+    workspace ends up in the expected state, `AssertSucceeded`
+    recognises it).
+- [x] **No real Cursor invocation in Stage 1** — the harness is
       the unit under test here.
-- [ ] Doc note in `pkgs/agents/agentsmoke/doc.go` describing the
-      package as "shared fixtures for Stages 2–3 of
-      `docs/AGENT-WORKER-SMOKE-PLAN.md`".
+- [x] `pkgs/agents/agentsmoke/doc.go` describes the package as
+      "shared fixtures for Stages 2 and 3 of
+      `docs/AGENT-WORKER-SMOKE-PLAN.md`" and points readers at the
+      "Why the prompt must be deterministic" section.
 
 **Exit criteria:**
 
@@ -383,7 +390,7 @@ the catch-all so individual stages stay scoped.)
 | Stage | State | Commit |
 |---|---|---|
 | 0 — Plan | done | `bf3ceca` |
-| 1 — Smoke harness + fake-runner self-test | pending | — |
+| 1 — Smoke harness + fake-runner self-test | done | _backfilled in this commit_ |
 | 2 — Runner-layer real-cursor smoke | pending | — |
 | 3 — Full HTTP → worker → real cursor smoke | pending | — |
 | 4 — Docs + runbook | pending | — |
