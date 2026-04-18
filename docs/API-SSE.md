@@ -30,7 +30,7 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `DELETE /tasks/{id}/checklist/items/{itemId}`          | `task_updated` for `{id}`                                                  |
 | `PATCH /tasks/{id}/events/{seq}` (user-response thread)| `task_updated` for `{id}`                                                  |
 
-Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) are not part of the SSE surface.
+Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) and the draft scorer (`POST /tasks/evaluate`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row.
 
 ## Dev-only: SSE “cron” (`T2A_SSE_TEST=1`)
 
