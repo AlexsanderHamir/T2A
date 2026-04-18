@@ -219,7 +219,13 @@ Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensi
 - 200 JSON: `{ "ok": true/false, "line_count"?: number, "warning"?: string }` — used to warn about invalid ranges without always returning non-200.
 - 400 if `path` is longer than 4096 bytes, or if `start` or `end` is longer than 32 bytes (abuse guard; line numbers are short decimal strings).
 
-`POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil, `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths or bad ranges fail with `domain.ErrInvalidInput` → 400 JSON error (same as other task validation errors).
+`POST /tasks` / `PATCH /tasks/{id}`: when `rep` is non-nil (i.e. **`REPO_ROOT`** is configured), `initial_prompt` is passed through `repo.ValidatePromptMentions` so unresolved paths, path-escapes, directory mentions, and out-of-range line numbers fail with `domain.ErrInvalidInput` → **400** JSON error (same shape as other task validation errors). When `rep` is nil (default in tests and any deployment without `REPO_ROOT`), the validation step is **skipped entirely** and any `@`-mention syntax in `initial_prompt` is stored verbatim with no checks. Skip paths that bypass validation even when `rep` is non-nil:
+
+- `POST /tasks` with `initial_prompt` omitted or set to the empty string `""` (no mentions to parse).
+- `PATCH /tasks/{id}` with the `initial_prompt` field omitted from the body (the `body.InitialPrompt != nil` guard short-circuits before the repo call).
+- `PATCH /tasks/{id}` with `"initial_prompt":""` (parser yields zero mentions, so validation trivially passes).
+
+Error message shape for the failing case: the JSON `error` field always **contains the offending mention** as `@<path>` (and `(<start>-<end>)` for range failures), wrapping the underlying `repo.Resolve`/`LineCount` reason. Clients should not byte-compare the full string but may rely on the `@<path>` substring to highlight the failing mention in form UI. The exact wrapping prefix (`tasks: invalid input: mention @<path>: ...`) is an implementation detail of the error chain and may double-wrap when the underlying `Resolve` error itself carries the `tasks: invalid input` prefix.
 
 ```mermaid
 sequenceDiagram
