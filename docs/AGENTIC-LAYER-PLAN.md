@@ -20,9 +20,11 @@ TODOs:
 
 Goal: process ready tasks end-to-end in one process reliably enough for early production.
 
+**Status (as of Stage 5 of [`AGENT-WORKER-PLAN.md`](./AGENT-WORKER-PLAN.md)):** the worker is wired into `cmd/taskapi` behind `T2A_AGENT_WORKER_ENABLED` (default `false`). Stages 1–4 shipped the runner abstraction (`pkgs/agents/runner`), the Cursor CLI adapter + startup probe (`pkgs/agents/runner/cursor`), the worker loop with panic/shutdown recovery (`pkgs/agents/worker`), and the orphan sweep + `cmd/taskapi` lifecycle. Stage 5 publishes the contract — see [`AGENT-WORKER.md`](./AGENT-WORKER.md). Stage 6 (metrics + log shape pinning) is the V1 exit gate; the V3 alert rules + runbooks remain a V3 deliverable.
+
 Scope (one paragraph; the per-stage rollout, edge cases, and exit criteria live in [`AGENT-WORKER-PLAN.md`](./AGENT-WORKER-PLAN.md) — track V1 status there, not here):
 
-- One in-process worker loop consumes the existing `MemoryQueue`, reloads the task, runs Cursor CLI in headless mode (`--print --output-format json`) behind a small `runner.Runner` interface so Claude / Codex / future CLIs land as additional adapters, and writes the attempt through the [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) substrate (one `task_cycle` + one `execute` phase in V1; per-phase decomposition is V2). The store's "at most one running cycle per task" guard becomes the worker's per-task claim. A startup sweep clears orphan `running` cycles from previous processes so a hard kill cannot wedge a task.
+- One in-process worker loop consumes the existing `MemoryQueue`, reloads the task, runs Cursor CLI in headless mode (`--print --output-format json`) behind a small `runner.Runner` interface so Claude / Codex / future CLIs land as additional adapters, and writes the attempt through the [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) substrate (one `task_cycle` + one `execute` phase in V1; per-phase decomposition is V2). The store's "at most one running cycle per task" guard becomes the worker's per-task claim. A startup sweep clears orphan `running` cycles from previous processes so a hard kill cannot wedge a task. Behavior, env vars, security model, and audit shape are pinned in [`AGENT-WORKER.md`](./AGENT-WORKER.md).
 
 ## V2 — reliability and safety
 

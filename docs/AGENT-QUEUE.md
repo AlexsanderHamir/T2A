@@ -10,11 +10,14 @@ A background **`agents.RunReconcileLoop`** runs **`ReconcileReadyTasksNotQueued`
 
 ## Workers and execution cycles
 
-Today's queue only delivers **ready-task snapshots**; it does not record what an in-process consumer does next. Once the V1 worker rolls out (see [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md)), each delivered task id is meant to drive one **execution cycle** through the typed `task_cycles` / `task_cycle_phases` substrate documented in [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md): the worker calls `POST /tasks/{id}/cycles` to claim an attempt, then walks `POST /tasks/{id}/cycles/{cycleId}/phases` (`diagnose → execute → verify → persist`) before terminating with `PATCH /tasks/{id}/cycles/{cycleId}`. The "at most one running cycle per task" guard in the store doubles as a per-task claim, complementing the queue's dedupe semantics. The queue itself stays unaware of cycles — it only schedules work; cycles record what the worker did with that work.
+Today's queue only delivers **ready-task snapshots**; it does not record what an in-process consumer does next. The V1 in-process worker (see [AGENT-WORKER.md](./AGENT-WORKER.md) for the contract and [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) for the staged rollout) is the first real consumer: each delivered task id drives one **execution cycle** through the typed `task_cycles` / `task_cycle_phases` substrate documented in [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). The worker writes through the store directly (not via HTTP) using `StartCycle`, then `StartPhase` / `CompletePhase` for the `diagnose → execute → verify → persist` graph (V1 records `skipped diagnose` + `execute` only), and finally `TerminateCycle`. The store's "at most one running cycle per task" guard doubles as a per-task claim, complementing the queue's dedupe semantics; `AckAfterRecv` runs only **after** terminate so a notify+reconcile race during a long attempt cannot produce a second cycle. The queue itself stays unaware of cycles — it only schedules work; cycles record what the worker did with that work. External clients still drive cycles through the REST routes documented in [API-HTTP.md](./API-HTTP.md) and [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md).
+
+The V1 worker is **opt-in** via `T2A_AGENT_WORKER_ENABLED` (default `false`); when disabled, the queue + reconcile loop run unchanged but no in-process consumer dequeues. See [AGENT-WORKER.md](./AGENT-WORKER.md) for the full env table, security model, and audit shape.
 
 ## Related
 
 - [PERSISTENCE.md](./PERSISTENCE.md) — store and audit.
 - [API-HTTP.md](./API-HTTP.md) — task REST API (status `ready`).
 - [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) — execution-cycle substrate that workers drive after dequeue.
-- [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) — Cursor CLI worker rollout.
+- [AGENT-WORKER.md](./AGENT-WORKER.md) — V1 in-process Cursor CLI consumer of this queue (lifecycle, env vars, security, audit).
+- [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) — Cursor CLI worker rollout (V0–V4).

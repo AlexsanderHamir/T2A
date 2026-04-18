@@ -14,6 +14,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 4 | [docs/API-HTTP.md](docs/API-HTTP.md) | REST + `/repo`: routes, bodies, errors, metrics. |
 | 5 | [docs/API-SSE.md](docs/API-SSE.md) | `GET /events` and dev SSE env. |
 | — | [docs/EXECUTION-CYCLES.md](docs/EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write invariant, state machine, where reads go. |
+| — | [docs/AGENT-WORKER.md](docs/AGENT-WORKER.md) | V1 in-process Cursor CLI worker contract: lifecycle, runner abstraction, env vars, security model, audit shape, orphan sweep, deferrals. Opt-in via `T2A_AGENT_WORKER_ENABLED`. |
 | 6 | [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md) | Env vars, startup, shutdown, timeouts. |
 | 7 | [docs/WEB.md](docs/WEB.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 8 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, `REPO_ROOT`). |
@@ -34,6 +35,10 @@ Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `doc
 | Execution cycles HTTP | `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) | `POST/GET /tasks/{id}/cycles`, `GET/PATCH /tasks/{id}/cycles/{cycleId}`, `POST /tasks/{id}/cycles/{cycleId}/phases`, `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}`. Publishes `task_cycle_changed` SSE events (see `docs/API-SSE.md`); contract pinned in `docs/API-HTTP.md` and `docs/EXECUTION-CYCLES.md`. |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when repo configured. |
 | Agent hooks | `pkgs/agents/` | In-process ready-task queue always wired from `taskapi` (`store.SetReadyTaskNotifier`); defaults **256** cap and **5m** reconcile interval (env overrides); see `docs/AGENT-QUEUE.md` and `docs/RUNTIME-ENV.md`. |
+| Agent runner abstraction | `pkgs/agents/runner/` | `Runner` interface + `Request` / `Result` types + typed sentinel errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`); pin point for additional CLI adapters (Claude Code, Codex). Worker uses `Runner.Name()` / `Runner.Version()` in cycle audit. Contract: `docs/AGENT-WORKER.md`. |
+| Cursor CLI runner adapter | `pkgs/agents/runner/cursor/` | V1 `runner.Runner` implementation: `cursor --print --output-format json`, env allowlist (`PATH` / `HOME` / `USERPROFILE`, `T2A_*` + `DATABASE_URL` denied), secret redaction (`Authorization`, `T2A_*=`, home-path scrub), and `Probe(cursor --version)` used at startup. Contract: `docs/AGENT-WORKER.md`. |
+| Programmable test runner | `pkgs/agents/runner/runnerfake/` | In-memory `runner.Runner` for worker + integration tests; not imported by production code. |
+| Agent worker (V1) | `pkgs/agents/worker/` | Single-goroutine consumer of `MemoryQueue` driving one cycle/task via the substrate (`StartCycle` → `StartPhase` → `CompletePhase` → `TerminateCycle`); panic + shutdown recovery on a 5s background ctx; `SweepOrphanRunningCycles` runs once at startup to clean rows left running by a previous process. Opt-in via `T2A_AGENT_WORKER_ENABLED`. Contract: `docs/AGENT-WORKER.md`. |
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |
 | taskapi startup env | `internal/taskapiconfig/` | Listen host, log level / minimized logging, agent queue + reconcile interval, dev SSE ticker interval (see `cmd/taskapi/run.go`). |

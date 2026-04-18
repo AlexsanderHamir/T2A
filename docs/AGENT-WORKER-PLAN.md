@@ -513,23 +513,23 @@ runbooks (those are Stage 6 of `AGENTIC-LAYER-PLAN.md` V3 territory).
 
 **Scope (docs-only, no code changes):**
 
-- [ ] New `docs/AGENT-WORKER.md` — lifecycle, runner abstraction, env
+- [x] New `docs/AGENT-WORKER.md` — lifecycle, runner abstraction, env
   vars, security model (env allowlist, secret redaction), how it
   composes with the queue + cycles substrate, what an operator sees in
   logs / `task_events` for one happy-path attempt, and the explicit
   V2/V3 deferrals.
-- [ ] `docs/AGENT-QUEUE.md` — short note: "consumers" is no longer
+- [x] `docs/AGENT-QUEUE.md` — short note: "consumers" is no longer
   hypothetical; link to `AGENT-WORKER.md`.
-- [ ] `docs/AGENTIC-LAYER-PLAN.md` — strike-through / check the V1 line
+- [x] `docs/AGENTIC-LAYER-PLAN.md` — strike-through / check the V1 line
   items satisfied by this slice; link to `AGENT-WORKER.md`.
-- [ ] `docs/RUNTIME-ENV.md` — add `T2A_AGENT_WORKER_*` rows to the env
+- [x] `docs/RUNTIME-ENV.md` — add `T2A_AGENT_WORKER_*` rows to the env
   table.
-- [ ] `docs/DESIGN.md` — one new row in the contract docs table
+- [x] `docs/DESIGN.md` — one new row in the contract docs table
   pointing at `AGENT-WORKER.md`; one new "Limitations" bullet noting
   the worker is in-process and does not coordinate across replicas.
-- [ ] `docs/README.md` index — new row for `AGENT-WORKER.md` and
+- [x] `docs/README.md` index — new row for `AGENT-WORKER.md` and
   `AGENT-WORKER-PLAN.md`.
-- [ ] `AGENTS.md` repo-map — new rows for `pkgs/agents/runner/`,
+- [x] `AGENTS.md` repo-map — new rows for `pkgs/agents/runner/`,
   `pkgs/agents/runner/cursor/`, `pkgs/agents/worker/`.
 
 **Exit criteria:**
@@ -686,5 +686,5 @@ real signal about which one bites first.
 | 2 — Cursor CLI adapter | done | `14f5d17` |
 | 3 — Worker loop | done | `06958a2` |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | done | `b775ab5` |
-| 5 — Backend docs + contract pinning | pending | — |
+| 5 — Backend docs + contract pinning | done | _backfilled after commit_ |
 | 6 — Observability + integration sweep | pending | — |
