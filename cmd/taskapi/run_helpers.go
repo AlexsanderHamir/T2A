@@ -18,6 +18,8 @@ import (
 	"github.com/AlexsanderHamir/T2A/internal/taskapi"
 	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
@@ -27,6 +29,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 )
+
+// shutdownGraceAfterRunTimeout is the headroom added to
+// T2A_AGENT_WORKER_RUN_TIMEOUT when waiting for Worker.Run to drain
+// during shutdown. The extra slack covers the worker's own deferred
+// best-effort writes (handleShutdownAfterRun) so they can land before
+// the reconcile ctx and DB pool close.
+const shutdownGraceAfterRunTimeout = 10 * time.Second
 
 func emitTaskAPIFileLoggingConfig(minLevel slog.Level) {
 	slog.Log(context.Background(), minLevel, "logging config",
@@ -118,7 +127,60 @@ func logHandlerMiddlewareConfig() {
 		"max_entries", idemMaxEntries, "max_bytes", idemMaxBytes)
 }
 
-func startReadyTaskAgents(ctx context.Context, taskStore *store.Store) (context.CancelFunc, *agents.MemoryQueue) {
+// agentWorkerHandle bundles the per-process state for the optional
+// agent worker. When the worker is disabled (the documented default),
+// every field except waitDone is zero/nil and waitDone is a closed
+// channel so shutdown sequencing stays uniform.
+type agentWorkerHandle struct {
+	worker       *worker.Worker
+	cancelWorker context.CancelFunc
+	waitDone     chan struct{}
+	runTimeout   time.Duration
+}
+
+// drain blocks until Worker.Run returns or the bounded shutdown
+// deadline trips. The deadline is RunTimeout plus a fixed grace so
+// the worker's own best-effort post-cancel writes
+// (handleShutdownAfterRun) can land before reconcile or the DB pool
+// close. Closes the worker context first so the runner sees a
+// cancelled ctx promptly.
+func (h *agentWorkerHandle) drain() {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerHandle.drain")
+	if h == nil || h.cancelWorker == nil {
+		return
+	}
+	h.cancelWorker()
+	deadline := h.runTimeout + shutdownGraceAfterRunTimeout
+	select {
+	case <-h.waitDone:
+		slog.Info("agent worker drained", "cmd", cmdName, "operation", "taskapi.shutdown",
+			"phase", "worker_done")
+	case <-time.After(deadline):
+		slog.Warn("agent worker drain timeout", "cmd", cmdName, "operation", "taskapi.shutdown",
+			"phase", "worker_drain_timeout", "deadline", deadline.String())
+	}
+}
+
+// startReadyTaskAgents wires the bounded ready-task queue, the
+// reconcile loop, and (when T2A_AGENT_WORKER_ENABLED is truthy) the
+// in-process Cursor CLI agent worker plus its startup orphan sweep.
+// The returned cancel func tears down the reconcile goroutine; the
+// worker handle is non-nil even when the worker is disabled so the
+// shutdown path can call drain() unconditionally.
+//
+// Wiring order when the worker is enabled:
+//  1. Probe `cursor --version` with a 5s budget; exit 1 on failure.
+//  2. Run worker.SweepOrphanRunningCycles once on the freshly opened
+//     store so any cycle/phase rows stuck in 'running' from a previous
+//     crash are closed before the new worker can race them.
+//  3. Build the Cursor adapter using the probed version string.
+//  4. Build the SSE notifier adapter that wraps hub.Publish.
+//  5. Construct + Run the Worker on a child context derived from ctx.
+//
+// When the worker is disabled (default), only the queue + reconcile
+// loop start — no probe, no sweep, no Cursor binary required.
+func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) (context.CancelFunc, *agents.MemoryQueue, *agentWorkerHandle) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startReadyTaskAgents")
 	qcap := taskapiconfig.UserTaskAgentQueueCap()
 	agentQueue := agents.NewMemoryQueue(qcap)
 	taskStore.SetReadyTaskNotifier(agentQueue)
@@ -129,7 +191,142 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store) (context.
 
 	reconcileCtx, reconcileCancel := context.WithCancel(ctx)
 	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
-	return reconcileCancel, agentQueue
+
+	handle := startAgentWorkerIfEnabled(ctx, taskStore, agentQueue, hub)
+	return reconcileCancel, agentQueue, handle
+}
+
+// startAgentWorkerIfEnabled returns a populated agentWorkerHandle when
+// T2A_AGENT_WORKER_ENABLED is truthy, or a no-op handle (closed
+// waitDone, nil cancel) otherwise. Failures inside the enabled branch
+// call os.Exit(1) per the Stage 4 "fail loudly at startup" rule —
+// caller cannot recover from a missing Cursor binary.
+func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agentQueue *agents.MemoryQueue, hub *handler.SSEHub) *agentWorkerHandle {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startAgentWorkerIfEnabled")
+	enabled := taskapiconfig.AgentWorkerEnabled()
+	runTimeout := taskapiconfig.AgentWorkerRunTimeout()
+	workingDir := taskapiconfig.AgentWorkerWorkingDir()
+	cursorBin := taskapiconfig.AgentWorkerCursorBin()
+	if !enabled {
+		slog.Info("agent worker config", "cmd", cmdName, "operation", "taskapi.agent_worker",
+			"enabled", false, "runner", "", "cursor_bin", cursorBin,
+			"cursor_version", "", "run_timeout_sec", int(runTimeout/time.Second),
+			"working_dir", workingDir)
+		closed := make(chan struct{})
+		close(closed)
+		return &agentWorkerHandle{waitDone: closed, runTimeout: runTimeout}
+	}
+
+	if err := assertWorkingDirExists(workingDir); err != nil {
+		slog.Error("agent worker working dir not usable, refusing to start agent worker",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.workdir_err",
+			"working_dir", workingDir, "err", err)
+		os.Exit(1)
+	}
+
+	cursorVersion, err := cursor.Probe(ctx, cursorBin, cursor.DefaultProbeTimeout, nil)
+	if err != nil {
+		slog.Error("cursor binary not usable, refusing to start agent worker",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.probe_err",
+			"cursor_bin", cursorBin, "err", err)
+		os.Exit(1)
+	}
+
+	sweepCtx, cancelSweep := context.WithTimeout(ctx, 30*time.Second)
+	res, sweepErr := worker.SweepOrphanRunningCycles(sweepCtx, taskStore)
+	cancelSweep()
+	if sweepErr != nil {
+		slog.Warn("agent worker startup sweep failed (continuing anyway)",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.sweep_err", "err", sweepErr)
+	} else {
+		slog.Info("agent worker startup sweep ok", "cmd", cmdName,
+			"operation", "taskapi.agent_worker.sweep_ok",
+			"cycles_aborted", res.CyclesAborted, "phases_failed", res.PhasesFailed,
+			"tasks_failed", res.TasksFailed)
+	}
+
+	adapter := cursor.New(cursor.Options{
+		BinaryPath: cursorBin,
+		Version:    cursorVersion,
+	})
+
+	notifier := newCycleChangeSSEAdapter(hub)
+	w := worker.NewWorker(taskStore, agentQueue, adapter, worker.Options{
+		RunTimeout: runTimeout,
+		WorkingDir: workingDir,
+		Notifier:   notifier,
+	})
+
+	workerCtx, cancelWorker := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := w.Run(workerCtx); err != nil {
+			slog.Error("agent worker exited with error", "cmd", cmdName,
+				"operation", "taskapi.agent_worker.exit_err", "err", err)
+		}
+	}()
+
+	slog.Info("agent worker config", "cmd", cmdName, "operation", "taskapi.agent_worker",
+		"enabled", true, "runner", adapter.Name(), "cursor_bin", cursorBin,
+		"cursor_version", cursorVersion, "run_timeout_sec", int(runTimeout/time.Second),
+		"working_dir", workingDir)
+
+	return &agentWorkerHandle{
+		worker:       w,
+		cancelWorker: cancelWorker,
+		waitDone:     done,
+		runTimeout:   runTimeout,
+	}
+}
+
+// assertWorkingDirExists is the fail-fast guard for
+// T2A_AGENT_WORKER_WORKING_DIR. Returns an error when the path is
+// missing or not a directory; the caller logs+exits.
+func assertWorkingDirExists(dir string) error {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.assertWorkingDirExists",
+		"dir", dir)
+	if dir == "" {
+		return errors.New("working directory is empty")
+	}
+	info, err := os.Stat(dir)
+	if err != nil {
+		return fmt.Errorf("stat %q: %w", dir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("path %q is not a directory", dir)
+	}
+	return nil
+}
+
+// cycleChangeSSEAdapter implements worker.CycleChangeNotifier on top
+// of the existing handler.SSEHub. The TaskCycleChanged event type and
+// the SPA cache invalidation hook were added in
+// EXECUTION-CYCLES-PLAN.md Stage 5/7; the Stage 4 worker is the first
+// server-side publisher.
+type cycleChangeSSEAdapter struct {
+	hub *handler.SSEHub
+}
+
+func newCycleChangeSSEAdapter(hub *handler.SSEHub) *cycleChangeSSEAdapter {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.newCycleChangeSSEAdapter")
+	return &cycleChangeSSEAdapter{hub: hub}
+}
+
+// PublishCycleChange satisfies worker.CycleChangeNotifier. Nil hub or
+// blank ids are no-ops so the adapter is safe to wire even before the
+// SSE listener is fully attached.
+func (a *cycleChangeSSEAdapter) PublishCycleChange(taskID, cycleID string) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.cycleChangeSSEAdapter.PublishCycleChange",
+		"task_id", taskID, "cycle_id", cycleID)
+	if a == nil || a.hub == nil || taskID == "" {
+		return
+	}
+	a.hub.Publish(handler.TaskChangeEvent{
+		Type:    handler.TaskCycleChanged,
+		ID:      taskID,
+		CycleID: cycleID,
+	})
 }
 
 func mountTaskAPIMux(ctx context.Context, api http.Handler, hub *handler.SSEHub, taskStore *store.Store, agentQueue *agents.MemoryQueue) *http.ServeMux {
@@ -285,10 +482,11 @@ func loadEnvAndOpenDatabase(envPath string) (*gorm.DB, error) {
 }
 
 type taskAPIApp struct {
-	taskStore  *store.Store
-	hub        *handler.SSEHub
-	rep        *repo.Root
-	agentQueue *agents.MemoryQueue
+	taskStore   *store.Store
+	hub         *handler.SSEHub
+	rep         *repo.Root
+	agentQueue  *agents.MemoryQueue
+	agentWorker *agentWorkerHandle
 }
 
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
@@ -300,8 +498,8 @@ func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.Can
 		return nil, nil, err
 	}
 	logHandlerMiddlewareConfig()
-	cancel, q := startReadyTaskAgents(ctx, taskStore)
-	return &taskAPIApp{taskStore: taskStore, hub: hub, rep: rep, agentQueue: q}, cancel, nil
+	cancel, q, aw := startReadyTaskAgents(ctx, taskStore, hub)
+	return &taskAPIApp{taskStore: taskStore, hub: hub, rep: rep, agentQueue: q, agentWorker: aw}, cancel, nil
 }
 
 func runTaskAPIHTTPServer(ctx context.Context, port, host string, app *taskAPIApp) (shutdownViaSignal bool, err error) {
@@ -356,11 +554,18 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.repo_root", "err", err)
 		return 1
 	}
-	defer stopAgents()
 
 	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(appCtx, port, host, app)
+	// Order: cancel worker ctx and wait for it to drain (best-effort
+	// aborted/cycle writes need a live DB pool) → cancel reconcile →
+	// close DB. Done in this strict order even on serve error so the
+	// audit trail finishes before the pool closes.
+	app.agentWorker.drain()
+	stopAgents()
+
 	if serveErr != nil {
 		slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", serveErr)
+		_, _ = closeSQLDBOrLog(db)
 		return 1
 	}
 

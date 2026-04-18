@@ -424,7 +424,7 @@ Stage 4.
 **Scope (touch `cmd/taskapi/run_helpers.go`, `internal/taskapiconfig/env.go`,
 `pkgs/agents/runner/cursor/`, and a new `pkgs/agents/worker/sweep.go`):**
 
-- [ ] Extend `internal/taskapiconfig` with:
+- [x] Extend `internal/taskapiconfig` with:
   - `EnvAgentWorkerEnabled = "T2A_AGENT_WORKER_ENABLED"` (default `false`
     — fail-safe; users opt in once they have Cursor CLI on PATH).
   - `EnvAgentWorkerCursorBin = "T2A_AGENT_WORKER_CURSOR_BIN"` (default
@@ -436,7 +436,7 @@ Stage 4.
     if directory does not exist).
   - Tests in `env_test.go` mirroring existing patterns (default,
     override, invalid → log + default).
-- [ ] **Startup sweep** (edge case #3) in `pkgs/agents/worker/sweep.go`:
+- [x] **Startup sweep** (edge case #3) in `pkgs/agents/worker/sweep.go`:
   - `func SweepOrphanRunningCycles(ctx context.Context, st *store.Store) (SweepResult, error)`
     — finds all `task_cycles` with `status='running'`, marks each
     `aborted` with reason `process_restart` (writes `cycle_failed`
@@ -452,13 +452,13 @@ Stage 4.
     back to `failed`.
   - **Runs once at startup before the worker loop begins** (in
     `cmd/taskapi/run_helpers.go`); logs `Info` with the result.
-- [ ] **Cursor binary probe** (edge case #7 in followups, addressed
+- [x] **Cursor binary probe** (edge case #7 in followups, addressed
   here cheaply): when `T2A_AGENT_WORKER_ENABLED` is truthy, run
   `cursor --version` with a 5s timeout at startup. On failure, log
   `Error("cursor binary not usable, refusing to start agent worker", …)`
   and **exit 1** — fail-fast per the engineering bar's "fail loudly at
   startup" rule. Skip the probe when the worker is disabled.
-- [ ] **SSE adapter** (edge case #6): tiny private type in
+- [x] **SSE adapter** (edge case #6): tiny private type in
   `cmd/taskapi/run_helpers.go` that implements
   `worker.CycleChangeNotifier` by calling
   `hub.Publish(handler.TaskChangeEvent{Type: handler.TaskCycleChanged, ID: taskID, CycleID: cycleID})`.
@@ -468,7 +468,7 @@ Stage 4.
   so no new SSE event type and no handler-package change are needed —
   V1 just becomes the first server-side publisher of the existing
   type.
-- [ ] `cmd/taskapi/run_helpers.go::startReadyTaskAgents` becomes
+- [x] `cmd/taskapi/run_helpers.go::startReadyTaskAgents` becomes
   `startReadyTaskAgents(...) (cancel context.CancelFunc, q *agents.MemoryQueue, w *worker.Worker)`:
   - When `T2A_AGENT_WORKER_ENABLED` is truthy:
     1. Probe Cursor binary; exit on failure.
@@ -488,10 +488,10 @@ Stage 4.
     for `Worker.Run` to return (to give the in-flight `aborted` write
     from edge case #5 a chance to land) → cancel reconcile ctx →
     proceed to existing DB close.
-- [ ] One `slog.Info("agent worker config", …)` line at startup with
+- [x] One `slog.Info("agent worker config", …)` line at startup with
   `enabled`, `runner`, `cursor_bin` (path only, never args),
   `cursor_version` (from probe), `run_timeout_sec`, `working_dir`.
-- [ ] No new HTTP routes, no new SSE event types.
+- [x] No new HTTP routes, no new SSE event types.
 
 **Out of scope for this stage:** Prometheus metrics, alert rules,
 runbooks (those are Stage 6 of `AGENTIC-LAYER-PLAN.md` V3 territory).
@@ -685,6 +685,6 @@ real signal about which one bites first.
 | 1 — Runner interface + fake | done | `f5c44b6` |
 | 2 — Cursor CLI adapter | done | `14f5d17` |
 | 3 — Worker loop | done | `06958a2` |
-| 4 — `cmd/taskapi` wiring + config + startup sweep | pending | — |
+| 4 — `cmd/taskapi` wiring + config + startup sweep | done | — |
 | 5 — Backend docs + contract pinning | pending | — |
 | 6 — Observability + integration sweep | pending | — |

@@ -66,3 +66,21 @@ func (s *Store) ListPhasesForCycle(ctx context.Context, cycleID string) ([]domai
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListPhasesForCycle")
 	return cycles.ListPhasesForCycle(ctx, s.db, cycleID)
 }
+
+// ListRunningCycles returns every cycle currently in CycleStatusRunning
+// across all tasks (no per-task filter, no limit). Used by the agent
+// worker's startup orphan sweep — the worker calls it once at boot to
+// find cycles left dangling by a previous crash. Read-only.
+func (s *Store) ListRunningCycles(ctx context.Context) ([]domain.TaskCycle, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRunningCycles")
+	return cycles.ListRunning(ctx, s.db)
+}
+
+// ListRunningCyclePhases returns every phase row currently in
+// PhaseStatusRunning across all cycles (no filter, no limit). Used by
+// the startup orphan sweep so phase rows whose parent cycle already
+// terminated are not stranded mid-state. Read-only.
+func (s *Store) ListRunningCyclePhases(ctx context.Context) ([]domain.TaskCyclePhase, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRunningCyclePhases")
+	return cycles.ListRunningPhases(ctx, s.db)
+}
