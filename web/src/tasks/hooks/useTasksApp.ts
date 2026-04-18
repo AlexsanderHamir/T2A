@@ -21,6 +21,11 @@ import {
 import { TASK_LIST_PAGE_SIZE } from "../task-paging";
 import { taskQueryKeys } from "../task-query";
 import {
+  buildDmapPrompt,
+  draftAutosaveSignature,
+  normalizeDmapCommitLimit,
+} from "../task-drafts";
+import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,
   type Priority,
@@ -38,94 +43,12 @@ const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
 const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
-function normalizeDmapCommitLimit(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
-}
-
-function buildDmapPrompt(input: {
-  commitLimit: string;
-  domain: string;
-  description: string;
-}): string {
-  const lines = [
-    "DMAP session setup",
-    "",
-    `- Commits until stoppage: ${normalizeDmapCommitLimit(input.commitLimit)}`,
-    `- Domain: ${input.domain.trim() || "unspecified"}`,
-  ];
-  if (input.description.trim()) {
-    lines.push(`- Direction: ${input.description.trim()}`);
-  }
-  return lines.join("\n");
-}
-
 function toApiTaskType(taskType: TaskType): TaskType {
   return taskType === "dmap" ? "general" : taskType;
 }
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-function normalizeDraftPromptForDirty(prompt: string): string {
-  const compact = prompt.replace(/[\s\u200B\uFEFF]/g, "").toLowerCase();
-  if (
-    compact === "" ||
-    compact === "<p></p>" ||
-    compact === "<p><br></p>" ||
-    /^<p>(<br\/?>|&nbsp;|&#160;)*<\/p>$/.test(compact)
-  ) {
-    return "";
-  }
-  return prompt;
-}
-
-function draftAutosaveSignature(input: {
-  id: string;
-  name: string;
-  title: string;
-  prompt: string;
-  priority: PriorityChoice;
-  taskType: TaskType;
-  parentId: string;
-  checklistInherit: boolean;
-  checklistItems: string[];
-  pendingSubtasks: PendingSubtaskDraft[];
-  latestEvaluation: {
-    overallScore: number;
-    overallSummary: string;
-    sections: Array<{ key: string; score: number }>;
-  } | null;
-  dmapConfig: {
-    commitLimit: string;
-    domain: string;
-    description: string;
-  };
-}): string {
-  return JSON.stringify({
-    id: input.id,
-    name: input.name,
-    payload: {
-      title: input.title,
-      initial_prompt: normalizeDraftPromptForDirty(input.prompt),
-      priority: input.priority,
-      task_type: input.taskType,
-      parent_id: input.parentId,
-      checklist_inherit: input.checklistInherit,
-      checklist_items: input.checklistItems,
-      pending_subtasks: input.pendingSubtasks.map((st) => ({
-        title: st.title,
-        initial_prompt: st.initial_prompt,
-        priority: st.priority,
-        task_type: st.task_type,
-        checklist_items: st.checklistItems,
-        checklist_inherit: st.checklist_inherit,
-      })),
-      latest_evaluation: input.latestEvaluation,
-      dmap_config: input.dmapConfig,
-    },
-  });
 }
 
 export function useTasksApp() {
