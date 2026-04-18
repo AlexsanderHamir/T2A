@@ -3,7 +3,9 @@ package devsim
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -179,6 +181,40 @@ func TestPersistAllTasks_userResponse_appendsThread(t *testing.T) {
 	if entries[len(entries)-1].By != domain.ActorUser {
 		t.Fatalf("want user message, got %+v", entries[len(entries)-1])
 	}
+}
+
+func TestRunTicker_StopsOnContextCancel(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	if _, err := st.Create(context.Background(), store.CreateTaskInput{Priority: domain.PriorityMedium, Title: "pre-cancel"}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var ticks atomic.Int64
+	publish := func(ChangeKind, string) { ticks.Add(1) }
+
+	RunTicker(ctx, st, time.Second, Options{}, publish)
+	cancel()
+
+	// After cancel, give the goroutine a generous window to observe ctx.Done()
+	// and exit instead of firing on the next tick. With ticker interval 1s,
+	// waiting > 2s is enough to detect a leak: any tick that fires after
+	// cancellation would publish at least once for the seeded task.
+	time.Sleep(2500 * time.Millisecond)
+	if got := ticks.Load(); got != 0 {
+		t.Fatalf("ticker fired %d publish(es) after ctx cancel; goroutine did not honor ctx.Done()", got)
+	}
+}
+
+func TestRunTicker_NoOpOnInvalidArgs(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	publish := func(ChangeKind, string) {}
+
+	RunTicker(context.Background(), nil, time.Second, Options{}, publish)
+	RunTicker(context.Background(), st, 500*time.Millisecond, Options{}, publish)
+	RunTicker(context.Background(), st, time.Second, Options{}, nil)
 }
 
 func TestSamplePayload_JSON(t *testing.T) {

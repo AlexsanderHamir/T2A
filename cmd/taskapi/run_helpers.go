@@ -132,14 +132,14 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store) (context.
 	return reconcileCancel, agentQueue
 }
 
-func mountTaskAPIMux(api http.Handler, hub *handler.SSEHub, taskStore *store.Store, agentQueue *agents.MemoryQueue) *http.ServeMux {
+func mountTaskAPIMux(ctx context.Context, api http.Handler, hub *handler.SSEHub, taskStore *store.Store, agentQueue *agents.MemoryQueue) *http.ServeMux {
 	taskapi.RegisterDefaultPrometheusCollectors()
 	taskapi.RegisterBuildInfoGauge()
 	taskapi.RegisterAgentQueueMetrics(agentQueue)
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", handler.WrapPrometheusHandler(promhttp.Handler()))
 	if devsim.Enabled() {
-		maybeRunSSEDevTicker(taskStore, hub)
+		maybeRunSSEDevTicker(ctx, taskStore, hub)
 	} else {
 		slog.Info("sse dev config", "cmd", cmdName, "operation", "taskapi.sse_dev", "enabled", false)
 	}
@@ -147,7 +147,7 @@ func mountTaskAPIMux(api http.Handler, hub *handler.SSEHub, taskStore *store.Sto
 	return mux
 }
 
-func maybeRunSSEDevTicker(taskStore *store.Store, hub *handler.SSEHub) {
+func maybeRunSSEDevTicker(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) {
 	d := taskapiconfig.SSETestTickerInterval()
 	if d < time.Second {
 		slog.Info("sse dev env on, ticker off", "cmd", cmdName, "operation", "taskapi.sse_dev",
@@ -156,7 +156,7 @@ func maybeRunSSEDevTicker(taskStore *store.Store, hub *handler.SSEHub) {
 	}
 	slog.Info("sse dev ticker enabled", "cmd", cmdName, "operation", "taskapi.sse_dev", "interval", d.String())
 	opts := devsim.LoadOptions()
-	devsim.RunTicker(taskStore, d, opts, func(kind devsim.ChangeKind, id string) {
+	devsim.RunTicker(ctx, taskStore, d, opts, func(kind devsim.ChangeKind, id string) {
 		var typ handler.TaskChangeType
 		switch kind {
 		case devsim.ChangeCreated:
@@ -291,7 +291,7 @@ type taskAPIApp struct {
 	agentQueue *agents.MemoryQueue
 }
 
-func buildTaskAPIApp(db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
+func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.buildTaskAPIApp")
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
@@ -300,13 +300,13 @@ func buildTaskAPIApp(db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
 		return nil, nil, err
 	}
 	logHandlerMiddlewareConfig()
-	cancel, q := startReadyTaskAgents(context.Background(), taskStore)
+	cancel, q := startReadyTaskAgents(ctx, taskStore)
 	return &taskAPIApp{taskStore: taskStore, hub: hub, rep: rep, agentQueue: q}, cancel, nil
 }
 
-func runTaskAPIHTTPServer(port, host string, app *taskAPIApp) (shutdownViaSignal bool, err error) {
+func runTaskAPIHTTPServer(ctx context.Context, port, host string, app *taskAPIApp) (shutdownViaSignal bool, err error) {
 	api := taskapi.NewHTTPHandler(app.taskStore, app.hub, app.rep)
-	mux := mountTaskAPIMux(api, app.hub, app.taskStore, app.agentQueue)
+	mux := mountTaskAPIMux(ctx, api, app.hub, app.taskStore, app.agentQueue)
 
 	listenHost := taskapiconfig.ListenHost(host)
 	ln, err := net.Listen("tcp", net.JoinHostPort(listenHost, port))
@@ -348,14 +348,17 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		return 1
 	}
 
-	app, stopAgents, err := buildTaskAPIApp(db)
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	app, stopAgents, err := buildTaskAPIApp(appCtx, db)
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.repo_root", "err", err)
 		return 1
 	}
 	defer stopAgents()
 
-	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(port, host, app)
+	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(appCtx, port, host, app)
 	if serveErr != nil {
 		slog.Error("server error", "cmd", cmdName, "operation", "taskapi.serve", "err", serveErr)
 		return 1
