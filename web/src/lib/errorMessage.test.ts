@@ -28,4 +28,20 @@ describe("errorMessage", () => {
   it("falls back to String() for non-Error objects (no '[object Object]' surprise hidden)", () => {
     expect(errorMessage({ status: 500 })).toBe("[object Object]");
   });
+
+  it("returns the kinder fallback string for non-Error inputs when provided", () => {
+    expect(errorMessage("string thrown", "Could not load updates.")).toBe(
+      "Could not load updates.",
+    );
+    expect(errorMessage(undefined, "Could not load updates.")).toBe(
+      "Could not load updates.",
+    );
+    expect(errorMessage({ status: 500 }, "Load failed")).toBe("Load failed");
+  });
+
+  it("ignores the fallback when an Error is passed (the original message wins)", () => {
+    expect(errorMessage(new Error("real cause"), "Load failed")).toBe(
+      "real cause",
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 import type { TaskChecklistResponse } from "@/types";
+import { errorMessage } from "@/lib/errorMessage";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import {
   EmptyState,
@@ -126,9 +127,10 @@ export function TaskDetailChecklistSection({
             <div className="task-checklist-surface-pad">
               <div className="err task-checklist-fetch-err" role="alert">
                 <p>
-                  {checklistQuery.error instanceof Error
-                    ? checklistQuery.error.message
-                    : "Could not load checklist."}
+                  {errorMessage(
+                    checklistQuery.error,
+                    "Could not load checklist.",
+                  )}
                 </p>
                 <div className="task-detail-error-actions">
                   <button

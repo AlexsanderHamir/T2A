@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { errorMessage } from "@/lib/errorMessage";
 import {
   SubtaskCreateModal,
   SubtaskTree,
@@ -119,11 +120,7 @@ export function TaskDetailPage({ app }: Props) {
     return (
       <section className="panel task-detail-panel task-detail-content--enter">
         <div className="err" role="alert">
-          <p>
-            {taskQuery.error instanceof Error
-              ? taskQuery.error.message
-              : "Could not load task."}
-          </p>
+          <p>{errorMessage(taskQuery.error, "Could not load task.")}</p>
           <div className="task-detail-error-actions">
             <button
               type="button"

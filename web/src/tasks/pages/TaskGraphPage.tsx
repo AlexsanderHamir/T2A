@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type UIEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getTask } from "@/api";
+import { errorMessage } from "@/lib/errorMessage";
 import type { Priority, Status } from "@/types";
 import { TaskGraphPageSkeleton } from "../components/skeletons";
 import { priorityPillClass, statusPillClass } from "../task-display";
@@ -221,10 +222,9 @@ export function TaskGraphPage() {
   }
 
   if (taskQuery.isError || !taskQuery.data) {
-    const message =
-      taskQuery.isError && taskQuery.error instanceof Error
-        ? taskQuery.error.message
-        : "Could not load task graph.";
+    const message = taskQuery.isError
+      ? errorMessage(taskQuery.error, "Could not load task graph.")
+      : "Could not load task graph.";
     return (
       <section className="panel task-graph-page task-graph-content--enter">
         <div className="err" role="alert">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRepoFile, type RepoFileResult } from "@/api/repo";
+import { errorMessage } from "@/lib/errorMessage";
 import { lineRangeFromSelection } from "@/lib/lineRangeFromSelection";
 import {
   filePreviewLanguageFromPath,
@@ -57,7 +58,7 @@ export function MentionRangePanel({
       })
       .catch((e: unknown) => {
         if (!active || ac.signal.aborted) return;
-        setLoadError(e instanceof Error ? e.message : "Load failed");
+        setLoadError(errorMessage(e, "Load failed"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -117,11 +118,7 @@ export function MentionRangePanel({
     try {
       await onInsertWithRange(activeRange.startLine, activeRange.endLine);
     } catch (e: unknown) {
-      setInsertError(
-        e instanceof Error
-          ? e.message
-          : "Insert failed. Please try again.",
-      );
+      setInsertError(errorMessage(e, "Insert failed. Please try again."));
     }
   }, [activeRange, onInsertWithRange]);
 

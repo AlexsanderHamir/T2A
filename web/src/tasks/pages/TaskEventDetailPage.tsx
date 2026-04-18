@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { getTaskEvent, patchTaskEventUserResponse } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import { errorMessage } from "@/lib/errorMessage";
 import {
   awaitingUserReply,
   eventTypeLabel,
@@ -85,11 +86,7 @@ export function TaskEventDetailPage() {
     return (
       <section className="panel task-detail-panel task-detail-content--enter">
         <div className="err" role="alert">
-          <p>
-            {q.error instanceof Error
-              ? q.error.message
-              : "Could not load event."}
-          </p>
+          <p>{errorMessage(q.error, "Could not load event.")}</p>
           <div className="task-detail-error-actions">
             <button
               type="button"
@@ -191,9 +188,7 @@ export function TaskEventDetailPage() {
           {saveMutation.isError ? (
             <div className="err" role="alert">
               <p>
-                {saveMutation.error instanceof Error
-                  ? saveMutation.error.message
-                  : "Could not send message."}
+                {errorMessage(saveMutation.error, "Could not send message.")}
               </p>
             </div>
           ) : null}

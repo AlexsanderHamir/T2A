@@ -1,4 +1,5 @@
 import type { TaskEvent } from "@/types";
+import { errorMessage } from "@/lib/errorMessage";
 import {
   EmptyState,
   EmptyStateTimelineGlyph,
@@ -38,9 +39,7 @@ export function TaskUpdatesTimeline({
         <TaskTimelineSkeleton />
       ) : isError ? (
         <div className="err" role="alert">
-          <p>
-            {error instanceof Error ? error.message : "Could not load updates."}
-          </p>
+          <p>{errorMessage(error, "Could not load updates.")}</p>
           {onRetry ? (
             <div className="task-detail-error-actions">
               <button type="button" className="secondary" onClick={onRetry}>
