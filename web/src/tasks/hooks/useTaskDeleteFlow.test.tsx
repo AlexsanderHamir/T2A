@@ -176,4 +176,51 @@ describe("useTaskDeleteFlow", () => {
     expect(result.current.deleteVariables).toEqual({ id: "root" });
     expect(result.current.deleteVariables).not.toHaveProperty("parent_id");
   });
+
+  it("does not clobber a freshly-opened confirm dialog when a previous delete settles", async () => {
+    // Hold A's delete open until we manually resolve, simulating a slow API.
+    let resolveA: (() => void) | undefined;
+    mockedDelete.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveA = resolve;
+        }) as unknown as ReturnType<typeof deleteTask>,
+    );
+
+    const { Wrapper } = makeWrapper();
+    const onDeleted = vi.fn();
+    const { result } = renderHook(() => useTaskDeleteFlow({ onDeleted }), {
+      wrapper: Wrapper,
+    });
+
+    act(() => {
+      result.current.requestDelete({ id: "A", title: "A" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(true);
+    });
+
+    // Mid-flight: user opens the confirm dialog for a *different* row.
+    act(() => {
+      result.current.requestDelete({ id: "B", title: "B" });
+    });
+    expect(result.current.deleteTarget).toEqual({ id: "B", title: "B" });
+
+    // Now A finishes successfully.
+    act(() => {
+      resolveA?.();
+    });
+
+    await waitFor(() => {
+      expect(onDeleted).toHaveBeenCalledWith("A");
+    });
+
+    // B's confirm dialog must still be up — A's resolution must not silently
+    // dismiss the unrelated second target.
+    expect(result.current.deleteTarget).toEqual({ id: "B", title: "B" });
+  });
 });

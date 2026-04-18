@@ -49,6 +49,11 @@ export type UseTaskDeleteFlowResult = {
  *
  * Query invalidation is handled here because the list + stats refresh is
  * intrinsic to "a delete succeeded".
+ *
+ * The internal `deleteTarget` clear on success is id-aware (mirrors the
+ * `useTaskPatchFlow` race fix): if a delete settles *after* the user has
+ * already opened the confirm dialog for a *different* row, we leave that
+ * second confirm dialog up instead of silently dismissing it.
  */
 export function useTaskDeleteFlow(opts: {
   onDeleted?: (id: string) => void;
@@ -61,7 +66,7 @@ export function useTaskDeleteFlow(opts: {
     mutationFn: (input: DeleteVariables) => deleteTask(input.id),
     onSuccess: async (_, variables) => {
       const deletedId = variables.id;
-      setDeleteTarget(null);
+      setDeleteTarget((prev) => (prev?.id === deletedId ? null : prev));
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.listRoot(),
       });
