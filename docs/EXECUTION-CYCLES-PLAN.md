@@ -295,7 +295,7 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 |---|---|---|
 | 0 — Plan | done | `c495148` |
 | 1 — Domain | done | `31c9153` |
-| 2 — Schema + CRUD | done | _pending push_ |
+| 2 — Schema + CRUD | done | `f72ad84` |
 | 3 — Dual-write mirror | pending | — |
 | 4 — Handler | pending | — |
 | 5 — SSE | pending | — |
