@@ -695,4 +695,4 @@ production long enough to surface which one bites first.
 | 3 — Worker loop | done | `06958a2` |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | done | `b775ab5` |
 | 5 — Backend docs + contract pinning | done | `3da7334` |
-| 6 — Observability + integration sweep | done | _backfilled below_ |
+| 6 — Observability + integration sweep | done | `9a9e42e` |
