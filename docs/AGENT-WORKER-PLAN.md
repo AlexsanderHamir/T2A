@@ -82,8 +82,12 @@ worker ─► AgentRunner interface
 ```
 
 - `AgentRunner` is a **narrow** interface (`Run(ctx, Request) (Result, error)`,
-  `Name() string`) per the engineering bar's "accept interfaces, return
-  concrete types" rule.
+  `Name() string`, `Version() string`) per the engineering bar's
+  "accept interfaces, return concrete types" rule. `Version()` is the
+  runner-reported identity string the worker writes into
+  `task_cycles.MetaJSON.runner_version` for every attempt (see Stage 3
+  step 3); for Cursor that's the `cursor --version` string captured
+  at Stage 4's startup probe and cached on the adapter.
 - The `task_cycles.MetaJSON` column already exists; the worker writes
   `{"runner":"cursor-cli","runner_version":"…","prompt_hash":"…"}` into it
   on every cycle so the audit trail is honest about who ran each attempt.
@@ -99,15 +103,23 @@ one would make V1 ship broken or silently degrade in production. Each is
 implemented in the stage noted in parentheses; the design rationale lives
 inline so we do not re-litigate later.
 
-1. **One phase per cycle in V1, not four.** Cursor CLI is a single
-   headless invocation; there is no honest way to slice it into the four
-   `moat.md` phases without inventing four prompts we have not designed
-   yet. V1 records exactly **one** phase per cycle (`execute`). The
+1. **Two phase rows per cycle, only one of substance.** Cursor CLI is
+   a single headless invocation; there is no honest way to slice it
+   into the four `moat.md` phases without inventing four prompts we
+   have not designed yet. The substrate's `domain.ValidPhaseTransition`
+   (see [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md), state machine
+   section) requires the **first phase on a cycle to be `diagnose`** —
+   `StartPhase(execute)` on a fresh cycle is rejected with
+   `phase transition "" -> "execute" not allowed`. V1 therefore writes
+   two rows: a `diagnose` row immediately closed with `status="skipped"`
+   and `summary="single-phase V1; diagnose deferred"` (mirrored as
+   `phase_skipped` in `task_events` so the audit trail is honest), then
+   an `execute` row that wraps the actual Cursor invocation. The
    `diagnose → execute → verify → persist` decomposition is how the
-   substrate is **shaped**; it is not how the V1 worker uses it. Per-phase
-   decomposition is deferred to V2 once we either (a) wrap Cursor with
-   distinct shell pre/post steps or (b) add a runner whose CLI exposes
-   per-phase calls. (Stage 3.)
+   substrate is **shaped**; it is not how the V1 worker uses it. Real
+   per-phase decomposition is deferred to V2 once we either (a) wrap
+   Cursor with distinct shell pre/post steps or (b) add a runner whose
+   CLI exposes per-phase calls. (Stage 3.)
 2. **Worker transitions task status.** Without this, the reconcile loop
    re-enqueues the same `ready` task on every 5m tick forever. Worker
    flips `ready → running` at `StartCycle` and `running → done | failed`
@@ -136,12 +148,20 @@ inline so we do not re-litigate later.
 6. **UI stays alive during worker runs.** Cycle/phase writes happen at
    the store layer; SSE `notifyChange` lives in the handler layer. Worker
    takes an **optional** `CycleChangeNotifier` interface (defined in
-   `pkgs/agents/worker`) and `cmd/taskapi` wires `SSEHub` into it via a
-   tiny adapter that publishes a `TaskUpdated` event for the affected
-   task id after each cycle/phase write. **No new SSE event type is
-   added** — the dedicated `task_cycle_changed` event remains in
-   Stage 5 of `EXECUTION-CYCLES-PLAN.md`; V1 reuses the existing channel
-   so the UI invalidates the task and refetches. (Stages 3 + 4.)
+   `pkgs/agents/worker`) with signature
+   `PublishCycleChange(taskID, cycleID string)`, and `cmd/taskapi`
+   wires `SSEHub` into it via a tiny adapter that publishes a
+   **`task_cycle_changed`** frame (`{type, id=task, cycle_id=cycle}`)
+   after each cycle/phase write. The `task_cycle_changed` event type
+   shipped in Stage 5 of `EXECUTION-CYCLES-PLAN.md` (commit `0b2be37`)
+   and the SPA already routes those frames to the dedicated cycles
+   cache slot (`["tasks","detail",id,"cycles"]`) via
+   `parseTaskChangeFrame` / `useTaskEventStream` (Stage 7,
+   commit `d5948d2`), so checklist / events / detail caches stay warm
+   on open task pages and only the cycles list / cycle detail
+   refetches. The V1 worker becomes the first server-side publisher of
+   the existing event type — no new SSE event type, no
+   handler-package change. (Stages 3 + 4.)
 
 The edge cases below are flagged but **not** addressed in V1; they live
 in `### Notes / followups` so they cannot get lost: working-directory
@@ -160,8 +180,11 @@ each ready task it receives, it:
 2. Transitions the task `ready → running` and calls
    `(*store.Store).StartCycle(...)` with `runner` metadata in `MetaJSON`
    (`{"runner": "cursor-cli", "runner_version": "...", "prompt_hash": "..."}`).
-3. **Single `execute` phase**: `StartPhase(execute)` → `runner.Run(...)`
-   → `CompletePhase(succeeded | failed)` with the result in `details`.
+3. **Two phase rows** (edge case #1): a no-op `diagnose` row
+   immediately closed with `status="skipped"` to satisfy the
+   substrate's "first phase must be `diagnose`" rule, then the real
+   `execute` row — `StartPhase(execute)` → `runner.Run(...)` →
+   `CompletePhase(succeeded | failed)` with the result in `details`.
 4. Calls `TerminateCycle(...)` with `succeeded` or `failed`, and
    transitions the task to `done` or `failed` accordingly.
 5. Calls `(*MemoryQueue).AckAfterRecv(taskID)` — **after** step 4, never
@@ -183,8 +206,21 @@ once at the bottom under [Common verification](#common-verification).
 ### Stage 0 — Plan landed (this doc)
 
 - [x] `docs/AGENT-WORKER-PLAN.md` written.
-- [ ] Linked from `docs/AGENTIC-LAYER-PLAN.md` (V1 section) and `docs/README.md`.
-- [ ] Commit + push.
+- [x] Linked from `docs/AGENTIC-LAYER-PLAN.md` (V1 section, line 23)
+  and `docs/README.md` (index row + cross-reference table).
+- [x] Drift fixes folded in before Stage 1 begins, against the
+  substrate as it actually shipped (Stages 1–9 of
+  `EXECUTION-CYCLES-PLAN.md`): edge case #1 acknowledges the
+  "first phase must be `diagnose`" rule and writes a skipped diagnose
+  row before execute; edge case #6 + Stage 4 SSE adapter publish the
+  `task_cycle_changed` event type that shipped in Stage 5
+  (commit `0b2be37`) so the SPA's granular cycles-cache invalidation
+  (Stage 7, commit `d5948d2`) lights up immediately; deferred-list
+  bullets refreshed to reflect that the cycle REST routes (`9151a58`)
+  and `task_cycle_changed` SSE event have already shipped; runner
+  interface signature gains `Version() string` so Stage 3's
+  `MetaJSON.runner_version` write line up with Stage 1's interface.
+- [x] Commit + push.
 
 **Commit:** `docs: add agent worker (V1) implementation plan`
 
@@ -197,7 +233,9 @@ once at the bottom under [Common verification](#common-verification).
 **Scope (touch only `pkgs/agents/runner/`):**
 
 - [ ] New package `pkgs/agents/runner` with:
-  - `runner.go` defining `Runner` interface, `Request`, `Result`, and
+  - `runner.go` defining `Runner` interface
+    (`Run(ctx context.Context, req Request) (Result, error)`,
+    `Name() string`, `Version() string`), `Request`, `Result`, and
     typed errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`).
   - `Request` carries: `TaskID`, `AttemptSeq`, `Phase` (one of the four
     `domain.Phase` values), `Prompt`, `WorkingDir`, `Timeout`, `Env`
@@ -288,10 +326,22 @@ any change to `cmd/taskapi`. Pure adapter + tests.
     3. `StartCycle` with `MetaJSON = {"runner": runner.Name(),
        "runner_version": runner.Version(),
        "prompt_hash": sha256(task.InitialPrompt)}`.
-    4. **Single phase** (edge case #1): `StartPhase(ctx, cycle.ID,
-       PhaseExecute, ActorAgent)` → `runner.Run(...)` → `CompletePhase`
-       with status `succeeded` for `nil` error, `failed` for
-       `runner.ErrNonZeroExit` / `ErrInvalidOutput` / `ErrTimeout`.
+    4. **Two phase rows, one of substance** (edge case #1): the
+       substrate's `ValidPhaseTransition` requires the first phase on
+       a cycle to be `diagnose`, so V1 writes a no-op `diagnose` row
+       first to satisfy the state machine, then the real `execute`
+       row. Concretely:
+       - `StartPhase(ctx, cycle.ID, PhaseDiagnose, ActorAgent)` →
+         immediately `CompletePhase(... PhaseStatusSkipped, summary="single-phase V1; diagnose deferred", details=nil)`
+         (mirrors as `phase_skipped` in `task_events`).
+       - `StartPhase(ctx, cycle.ID, PhaseExecute, ActorAgent)` →
+         `runner.Run(...)` → `CompletePhase` with status `succeeded`
+         for `nil` error, `failed` for `runner.ErrNonZeroExit` /
+         `ErrInvalidOutput` / `ErrTimeout` (mirrors as
+         `phase_completed` / `phase_failed`).
+       The diagnose row's `event_seq` will point at its own
+       `phase_skipped` mirror; the execute row's `event_seq` will
+       point at its terminal mirror per the dual-write contract.
     5. `TerminateCycle(ctx, cycle.ID, succeeded|failed, reason, ActorAgent)`.
     6. Transition task `running → done` (succeeded) or `running → failed`
        (failed) so the reconcile loop does not re-enqueue (edge case #2).
@@ -319,9 +369,11 @@ any change to `cmd/taskapi`. Pure adapter + tests.
 - [ ] `worker_test.go` driving the worker with the fake `MemoryQueue`,
   the SQLite test store (`internal/tasktestdb.OpenSQLite`), and the
   `runnerfake.Runner` from Stage 1. Cases:
-  - **Happy path:** task → cycle row + 1 phase row + 3 mirror events
-    (`cycle_started`, `phase_started`+`phase_completed`,
-    `cycle_completed`) appear in store; task ends in `done`.
+  - **Happy path:** task → cycle row + 2 phase rows (skipped diagnose
+    + succeeded execute) + 6 mirror events (`cycle_started`,
+    `phase_started`+`phase_skipped` for diagnose,
+    `phase_started`+`phase_completed` for execute, `cycle_completed`)
+    appear in store; task ends in `done`.
   - **Runner failure:** runner returns `ErrNonZeroExit` → cycle row
     `failed`, phase row `failed`, `cycle_failed` mirror event present,
     task ends in `failed`, queue is acked.
@@ -342,8 +394,11 @@ any change to `cmd/taskapi`. Pure adapter + tests.
     yields `ErrInvalidInput` ("running cycle exists"), worker logs and
     acks without crashing.
   - **Notifier publishes once per write** (edge case #6): fake notifier
-    records calls; happy path produces exactly N publishes (one per
-    cycle/phase mutation), nil notifier is a no-op.
+    records calls; happy path produces exactly **6** publishes (one
+    per cycle/phase mutation: `StartCycle`, diagnose `StartPhase`,
+    diagnose `CompletePhase(skipped)`, execute `StartPhase`, execute
+    `CompletePhase`, `TerminateCycle`), each carrying the cycle id;
+    nil notifier is a no-op.
   - Race detector: `go test -race ./pkgs/agents/worker/...`.
 
 **Out of scope for this stage:** retries, multiple workers, runner
@@ -406,8 +461,13 @@ Stage 4.
 - [ ] **SSE adapter** (edge case #6): tiny private type in
   `cmd/taskapi/run_helpers.go` that implements
   `worker.CycleChangeNotifier` by calling
-  `hub.Publish(handler.TaskChangeEvent{Type: handler.TaskUpdated, ID: taskID})`.
-  No new SSE event type, no handler-package change.
+  `hub.Publish(handler.TaskChangeEvent{Type: handler.TaskCycleChanged, ID: taskID, CycleID: cycleID})`.
+  The `TaskCycleChanged` event type already exists (Stage 5 of
+  `EXECUTION-CYCLES-PLAN.md`, commit `0b2be37`) and the SPA already
+  routes it to a dedicated cache slot (Stage 7, commit `d5948d2`),
+  so no new SSE event type and no handler-package change are needed —
+  V1 just becomes the first server-side publisher of the existing
+  type.
 - [ ] `cmd/taskapi/run_helpers.go::startReadyTaskAgents` becomes
   `startReadyTaskAgents(...) (cancel context.CancelFunc, q *agents.MemoryQueue, w *worker.Worker)`:
   - When `T2A_AGENT_WORKER_ENABLED` is truthy:
@@ -549,16 +609,23 @@ runbooks (those are Stage 6 of `AGENTIC-LAYER-PLAN.md` V3 territory).
   `AGENTIC-LAYER-PLAN.md`; Stage 6 only adds the counters / histograms
   the alerts will eventually consume.
 - **Dead-letter handling** — V4.
-- **Cycle REST routes (`POST /tasks/{id}/cycles`, etc.)** — Stages 4–5
-  of `EXECUTION-CYCLES-PLAN.md`; only build when an external client
-  (UI or another worker) needs them. The V1 worker writes through the
-  store directly.
-- **`task_cycle_changed` SSE event** — Stage 5 of
-  `EXECUTION-CYCLES-PLAN.md`; only when the UI panel needs live
-  invalidation. Existing `task_events` mirror rows already render via
-  the audit timeline.
+- **Cycle REST routes (`POST /tasks/{id}/cycles`, etc.)** — already
+  **shipped** in Stage 4 of `EXECUTION-CYCLES-PLAN.md`
+  (commit `9151a58`), but the V1 worker still writes through the
+  store directly to avoid an extra HTTP hop and double SSE fan-out
+  inside the same process. External clients (UI, another worker)
+  use the REST routes; the in-process V1 worker uses the store.
+- **`task_cycle_changed` SSE event** — already **shipped** in Stage 5
+  of `EXECUTION-CYCLES-PLAN.md` (commit `0b2be37`). The V1 worker
+  becomes the first server-side publisher via the
+  `CycleChangeNotifier` adapter wired in Stage 4 of this plan
+  (edge case #6 + Stage 4 SSE adapter section). The SPA already
+  invalidates the cycles cache slot granularly on receipt
+  (Stage 7 of `EXECUTION-CYCLES-PLAN.md`, commit `d5948d2`).
 - **Web UI execution panel** — Stage 8 of `EXECUTION-CYCLES-PLAN.md`,
-  already gated as optional there.
+  intentionally skipped during the substrate slice (mirror
+  `task_events` already render via `TaskUpdatesTimeline`); promote
+  once V1 worker activity in production demonstrates a need.
 - **Cursor CLI security guardrails beyond env allowlist + redaction**
   — V2 of `AGENTIC-LAYER-PLAN.md`.
 - **Splitting the worker into its own binary (`cmd/taskagent`)** — only
@@ -614,7 +681,7 @@ real signal about which one bites first.
 
 | Stage | State | Commit |
 |---|---|---|
-| 0 — Plan | pending | — |
+| 0 — Plan | done | `84083f4` (initial) + this commit (substrate-drift fixes) |
 | 1 — Runner interface + fake | pending | — |
 | 2 — Cursor CLI adapter | pending | — |
 | 3 — Worker loop | pending | — |
