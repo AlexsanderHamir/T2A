@@ -251,10 +251,12 @@ func startAgentWorkerIfEnabled(ctx context.Context, taskStore *store.Store, agen
 	})
 
 	notifier := newCycleChangeSSEAdapter(hub)
+	metrics := taskapi.RegisterAgentWorkerMetrics()
 	w := worker.NewWorker(taskStore, agentQueue, adapter, worker.Options{
 		RunTimeout: runTimeout,
 		WorkingDir: workingDir,
 		Notifier:   notifier,
+		Metrics:    metrics,
 	})
 
 	workerCtx, cancelWorker := context.WithCancel(ctx)

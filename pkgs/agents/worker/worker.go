@@ -71,6 +71,11 @@ type Options struct {
 	// each successful StartCycle / StartPhase / CompletePhase /
 	// TerminateCycle. Nil disables fan-out (used in unit tests).
 	Notifier CycleChangeNotifier
+	// Metrics, when non-nil, receives one RecordRun call after every
+	// TerminateCycle write (happy path, panic, shutdown abort, and
+	// best-effort intermediate failures). Nil disables observation
+	// (used in unit tests). cmd/taskapi wires a Prometheus adapter.
+	Metrics RunMetrics
 	// Clock, when non-nil, replaces time.Now().UTC() for duration
 	// logging. Tests can stub a deterministic clock here.
 	Clock func() time.Time
@@ -143,6 +148,10 @@ type processState struct {
 	cycleStarted    bool
 	runningPhase    domain.Phase
 	runningPhaseSeq int64
+	// startedAt is captured at processOne entry so every TerminateCycle
+	// path (happy / panic / shutdown / best-effort) observes the same
+	// wall-clock duration into the metrics histogram.
+	startedAt time.Time
 }
 
 // processOne runs the worker's full per-task lifecycle. The function is
@@ -153,7 +162,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.processOne",
 		"task_id", task.ID)
 	startedAt := w.options.Clock()
-	state := processState{}
+	state := processState{startedAt: startedAt}
 
 	// Defer order is LIFO: ack runs LAST so the queue-pending guard
 	// holds for the entire processOne body, including the deferred
@@ -396,7 +405,9 @@ func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, 
 }
 
 // terminateCycle closes the cycle row and clears state so the recovery
-// path is a no-op for already-terminal cycles.
+// path is a no-op for already-terminal cycles. Records one metrics
+// observation on success so cmd/taskapi's Prometheus counter +
+// histogram see the happy-path attempt outcome.
 func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID string, status domain.CycleStatus, reason string) bool {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.terminateCycle",
 		"cycle_id", state.cycleID, "status", string(status), "reason", reason)
@@ -416,6 +427,7 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	}
 	state.cycleStarted = false
 	w.publish(taskID, state.cycleID)
+	w.recordRun(string(status), w.runner.Name(), state.startedAt)
 	return true
 }
 
@@ -465,6 +477,7 @@ func (w *Worker) handleShutdownAfterRun(state *processState, taskID string) {
 				"cycle_id", state.cycleID, "err", err)
 		} else {
 			w.publish(taskID, state.cycleID)
+			w.recordRun(string(domain.CycleStatusAborted), w.runner.Name(), state.startedAt)
 		}
 		state.cycleStarted = false
 	}
@@ -519,6 +532,7 @@ func (w *Worker) recoverFromPanic(state *processState, task domain.Task) {
 				"cycle_id", state.cycleID, "err", err)
 		} else {
 			w.publish(task.ID, state.cycleID)
+			w.recordRun(string(domain.CycleStatusFailed), w.runner.Name(), state.startedAt)
 		}
 		state.cycleStarted = false
 	}
@@ -587,6 +601,7 @@ func (w *Worker) bestEffortTerminate(ctx context.Context, state *processState, t
 			}
 		} else {
 			w.publish(taskID, state.cycleID)
+			w.recordRun(string(status), w.runner.Name(), state.startedAt)
 		}
 		state.cycleStarted = false
 	}

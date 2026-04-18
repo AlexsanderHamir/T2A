@@ -547,17 +547,17 @@ runbooks (those are Stage 6 of `AGENTIC-LAYER-PLAN.md` V3 territory).
 
 **Scope:**
 
-- [ ] Add a single Prometheus counter
+- [x] Add a single Prometheus counter
   `t2a_agent_runs_total{runner,terminal_status}` registered through
   `internal/taskapi` next to `RegisterAgentQueueMetrics`. Increment in
   `worker.processOne` after `TerminateCycle`. Cardinality is bounded
   (one runner today, four terminal statuses).
-- [ ] Add a histogram `t2a_agent_run_duration_seconds{runner}` with
+- [x] Add a histogram `t2a_agent_run_duration_seconds{runner}` with
   the existing histogram bucket convention used in `pkgs/tasks/store/store_metrics.go`.
-- [ ] Update `deploy/prometheus/t2a-taskapi-rules.yaml` only if the
+- [x] Update `deploy/prometheus/t2a-taskapi-rules.yaml` only if the
   user explicitly wants alerts; otherwise note in Stage 6 commit body
   that alerts are deferred to V3 of `AGENTIC-LAYER-PLAN.md`.
-- [ ] One new end-to-end test under `pkgs/tasks/agentreconcile` (or a
+- [x] One new end-to-end test under `pkgs/tasks/agentreconcile` (or a
   sibling `pkgs/agents/agentworker_e2e_test.go`) that:
   - starts a real SQLite store + queue + reconcile + worker (fake
     runner),
@@ -565,8 +565,8 @@ runbooks (those are Stage 6 of `AGENTIC-LAYER-PLAN.md` V3 territory).
   - waits for the cycle to terminate,
   - asserts the full sequence of `task_events` rows and the queue's
     pending-set state at the end.
-- [ ] Re-read `docs/AGENT-WORKER.md` for drift introduced by Stages 4–5.
-- [ ] Append a final "V1 worker shipped" note in
+- [x] Re-read `docs/AGENT-WORKER.md` for drift introduced by Stages 4–5.
+- [x] Append a final "V1 worker shipped" note in
   `### Notes / followups` below.
 
 **Exit criteria:**
@@ -677,6 +677,14 @@ real signal about which one bites first.
   this is 4 series; with five runners it grows to 20. Still bounded,
   but worth re-checking in V2.
 
+**V1 worker shipped.** All six stages closed; see the status table
+below for commits. The contract lives in `docs/AGENT-WORKER.md`. The
+in-process Cursor CLI worker is opt-in via `T2A_AGENT_WORKER_ENABLED`
+and observed through `t2a_agent_runs_total` + `t2a_agent_run_duration_seconds`
+plus the existing `taskapi_agent_queue_*` gauges. Promote the deferred
+items above into individual follow-up plans only after V1 has run in
+production long enough to surface which one bites first.
+
 ## Status
 
 | Stage | State | Commit |
@@ -687,4 +695,4 @@ real signal about which one bites first.
 | 3 — Worker loop | done | `06958a2` |
 | 4 — `cmd/taskapi` wiring + config + startup sweep | done | `b775ab5` |
 | 5 — Backend docs + contract pinning | done | `3da7334` |
-| 6 — Observability + integration sweep | pending | — |
+| 6 — Observability + integration sweep | done | _backfilled below_ |

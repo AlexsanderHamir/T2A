@@ -326,6 +326,32 @@ What an operator sees in logs and in `task_events` for one happy-path attempt of
 
 A failed attempt swaps `phase_completed` → `phase_failed`, `cycle_completed` → `cycle_failed` (with `reason` payload), and `status_changed (running → failed)`. A panic adds `reason="panic"`. A shutdown adds `reason="shutdown"` and the cycle ends in `aborted` instead of `failed`.
 
+## Metrics
+
+The worker exposes two Prometheus series, registered by `taskapi.RegisterAgentWorkerMetrics()` in `internal/taskapi/agent_worker_metrics.go` and observed through the `worker.RunMetrics` interface so the worker package itself does not depend on Prometheus:
+
+| Series | Type | Labels | Source |
+|--------|------|--------|--------|
+| `t2a_agent_runs_total` | counter | `runner`, `terminal_status` | Incremented exactly once per `TerminateCycle` write (happy path, panic, shutdown abort, best-effort intermediate failure). |
+| `t2a_agent_run_duration_seconds` | histogram | `runner` | Observes `now - state.startedAt` at the same call site, with buckets tuned for the V1 run-timeout range (`0.5s … 30m`). |
+
+Cardinality is bounded by construction: `runner` comes from `runner.Runner.Name()` (today: `cursor-cli`, `fake` in tests), and `terminal_status` is one of the three terminal `domain.CycleStatus` values (`succeeded`, `failed`, `aborted`). New runners add adapter implementations, not freeform labels.
+
+The seam itself is `worker.RunMetrics`:
+
+```go
+// pkgs/agents/worker/metrics.go
+type RunMetrics interface {
+    RecordRun(runner string, terminalStatus string, duration time.Duration)
+}
+```
+
+`Worker.Options{Metrics: ...}` is the wiring point. Tests pass `nil` (no observation), production wires `taskapi.RegisterAgentWorkerMetrics()` which registers on the default Prometheus registry exactly once and returns the adapter. Implementations MUST NOT block: the worker invokes `RecordRun` synchronously after each `TerminateCycle` write, so a slow sink would back-pressure the run loop.
+
+The companion queue gauges (`taskapi_agent_queue_depth`, `taskapi_agent_queue_capacity`) ship in `internal/taskapi/agent_queue_metrics.go` and are independent of the worker — they remain useful even when the worker is disabled, since reconcile is still doing the dequeue work for external clients.
+
+Alert rules and runbooks for these series are deliberately deferred to V3 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md); V1 ships the raw observability surface so operators can build alerts on real production traffic rather than guessed thresholds.
+
 ## What's deliberately out of scope (V1)
 
 These are tracked in [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) "What's deliberately deferred" and the followups section so they cannot get lost:
@@ -335,7 +361,7 @@ These are tracked in [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) "What's deli
 - Retry/backoff and failure taxonomy.
 - Multi-replica claim/lease and dead-letter handling.
 - Per-cycle workspace isolation (git worktrees etc).
-- Prometheus metrics + alert rules + runbooks (Stage 6 of `AGENT-WORKER-PLAN.md` adds the counters; alerts and runbooks remain V3 of `AGENTIC-LAYER-PLAN.md`).
+- Prometheus alert rules + runbooks (Stage 6 ships the raw counter + histogram; alerts and runbooks remain V3 of `AGENTIC-LAYER-PLAN.md`).
 - A standalone `cmd/taskagent` binary — only worth doing once the worker needs to scale independently of `taskapi`.
 
 ## Related
