@@ -74,8 +74,8 @@ export function TaskDetailPage({ app }: Props) {
   useTaskDetailDeleteNavigate(
     taskId,
     navigate,
-    app.deleteMutation.isSuccess,
-    app.deleteMutation.variables,
+    app.deleteSuccess,
+    app.deleteVariables,
   );
 
   const taskQuery = useQuery({

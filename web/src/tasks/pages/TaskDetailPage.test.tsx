@@ -22,7 +22,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 function mockApp(): ReturnType<typeof useTasksApp> {
   return {
-    deleteMutation: { isSuccess: false, variables: undefined },
+    deleteSuccess: false,
+    deleteVariables: undefined,
     openEdit: vi.fn(),
     requestDelete: vi.fn(),
     saving: false,
@@ -34,10 +35,8 @@ function appWithDeleteSuccess(
 ): ReturnType<typeof useTasksApp> {
   return {
     ...mockApp(),
-    deleteMutation: {
-      isSuccess: true,
-      variables,
-    },
+    deleteSuccess: true,
+    deleteVariables: variables,
   } as unknown as ReturnType<typeof useTasksApp>;
 }
 

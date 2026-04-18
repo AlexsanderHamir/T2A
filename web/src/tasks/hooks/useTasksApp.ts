@@ -5,7 +5,6 @@ import {
   createTask as apiCreate,
   getTaskStats,
   deleteTaskDraft as apiDeleteDraft,
-  deleteTask as apiDelete,
   evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
   listTaskDrafts as apiListDrafts,
@@ -39,6 +38,7 @@ import {
 import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import { useTaskEventStream } from "./useTaskEventStream";
+import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
 const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
@@ -85,12 +85,20 @@ export function useTasksApp() {
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
 
-  /** In-app delete confirmation (avoids `window.confirm`, which breaks input focus in some browsers). */
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    title: string;
-    parent_id?: string;
-  } | null>(null);
+  const {
+    deleteTarget,
+    requestDelete,
+    cancelDelete,
+    confirmDelete,
+    deletePending,
+    deleteError,
+    deleteSuccess,
+    deleteVariables,
+  } = useTaskDeleteFlow({
+    onDeleted: (deletedId) => {
+      setEditing((prev) => (prev?.id === deletedId ? null : prev));
+    },
+  });
 
   /** Client-side validation (shown after server errors when applicable). */
   const [editTitleRequiredError, setEditTitleRequiredError] = useState<
@@ -362,18 +370,6 @@ export function useTasksApp() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (input: { id: string; parent_id?: string }) =>
-      apiDelete(input.id),
-    onSuccess: async (_, variables) => {
-      const deletedId = variables.id;
-      setDeleteTarget(null);
-      setEditing((prev) => (prev?.id === deletedId ? null : prev));
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
-    },
-  });
-
   const saveDraftMutation = useMutation({
     mutationFn: (input: {
       id: string;
@@ -454,7 +450,7 @@ export function useTasksApp() {
     createMutation.isPending ||
     evaluateDraftMutation.isPending ||
     patchMutation.isPending ||
-    deleteMutation.isPending;
+    deletePending;
 
   const draftListLoading = draftsQuery.isPending;
   const draftListError = draftsQuery.isError
@@ -467,7 +463,7 @@ export function useTasksApp() {
     if (evaluateDraftMutation.isError)
       return errorMessage(evaluateDraftMutation.error);
     if (patchMutation.isError) return errorMessage(patchMutation.error);
-    if (deleteMutation.isError) return errorMessage(deleteMutation.error);
+    if (deleteError) return deleteError;
     return editTitleRequiredError;
   }, [
     tasksQuery.isError,
@@ -478,8 +474,7 @@ export function useTasksApp() {
     evaluateDraftMutation.error,
     patchMutation.isError,
     patchMutation.error,
-    deleteMutation.isError,
-    deleteMutation.error,
+    deleteError,
     editTitleRequiredError,
   ]);
 
@@ -835,33 +830,9 @@ export function useTasksApp() {
     });
   }
 
-  const requestDelete = useCallback((t: Task) => {
-    const pid = t.parent_id?.trim();
-    setDeleteTarget({
-      id: t.id,
-      title: t.title,
-      ...(pid ? { parent_id: pid } : {}),
-    });
-  }, []);
-
-  const cancelDelete = useCallback(() => {
-    setDeleteTarget(null);
-  }, []);
-
-  function confirmDelete() {
-    if (!deleteTarget) return;
-    deleteMutation.mutate({
-      id: deleteTarget.id,
-      ...(deleteTarget.parent_id
-        ? { parent_id: deleteTarget.parent_id }
-        : {}),
-    });
-  }
-
   const createPending = createMutation.isPending;
   const evaluatePending = evaluateDraftMutation.isPending;
   const patchPending = patchMutation.isPending;
-  const deletePending = deleteMutation.isPending;
   const draftSavePending = saveDraftMutation.isPending;
 
   useEffect(() => {
@@ -903,7 +874,8 @@ export function useTasksApp() {
     evaluatePending,
     patchPending,
     deletePending,
-    deleteMutation,
+    deleteSuccess,
+    deleteVariables,
     error,
     sseLive,
     taskStats: taskStatsQuery.data,
