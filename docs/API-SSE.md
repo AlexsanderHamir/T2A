@@ -24,7 +24,7 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 {"type":"task_cycle_changed","id":"<task-uuid>","cycle_id":"<cycle-uuid>"}
 ```
 
-`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) for the underlying primitive.
+`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive (and [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) for the staged rollout).
 
 Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
 
@@ -67,7 +67,13 @@ For local UI work, `taskapi` can start a background ticker (no extra HTTP routes
 
 There are no extra dev-only HTTP paths; only normal REST + `GET /events` apply.
 
-Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative. The SPA debounces bursts, then invalidates cached **list** queries and only **detail** subtrees for task ids present on the `data` lines (falling back to invalidating all task queries if no id could be parsed), so open pages for unrelated tasks are not refetched on every event.
+Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative. The SPA debounces bursts, then routes each frame to the narrowest cache slot that can hold the change:
+
+- `task_created` / `task_updated` / `task_deleted` invalidate the cached **list** queries plus the affected **detail** subtree (`["tasks","detail",id,…]`).
+- `task_cycle_changed` invalidates **only** the cycles slot (`["tasks","detail",id,"cycles"]`), so open task pages keep their checklist, events, and detail caches warm — only the cycle list / cycle detail refetches. When the same task already has a broad detail invalidation pending in the same debounce window, the cycle slot is suppressed (it would be redundant).
+- A frame with no recognisable `id` falls back to invalidating all task queries so nothing goes stale.
+
+This is implemented in `web/src/tasks/task-query/sseInvalidate.ts` (`parseTaskChangeFrame`) and `web/src/tasks/hooks/useTaskEventStream.ts`, with granularity pinned by tests.
 
 ## Related
 

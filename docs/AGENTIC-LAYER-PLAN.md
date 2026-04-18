@@ -2,7 +2,7 @@
 
 Simple long-term plan to evolve from today's ready-task queue into a reliable agent worker runtime powered by Cursor CLI.
 
-**Substrate work:** [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) is the design + contract for the `task_cycles` / `task_cycle_phases` substrate the V1 worker writes into; [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) tracks the staged rollout of that substrate. Backend stages 1–6 are done (domain → store → dual-write → handler → SSE → docs); the web data layer (Stage 7) and UI surface (Stage 8) follow before V1 worker code lands so the worker has both a typed write target and a way for operators to see what it did.
+**Substrate work:** [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) is the design + contract for the `task_cycles` / `task_cycle_phases` substrate the V1 worker writes into; [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) tracks the staged rollout. **The substrate slice is complete** (stages 1–9): domain types, schema + CRUD, dual-write mirror into `task_events`, six new HTTP routes, `task_cycle_changed` SSE, contract docs, web data layer with granular cycle-cache invalidation, and a final integration sweep. The optional UI panel (stage 8) was deliberately deferred — mirror `task_events` already render via `TaskUpdatesTimeline`, so cycle activity is visible without a dedicated panel; promote it when a worker actually drives cycles in production. The worker can now land against a stable typed write target, and any UI a user needs to monitor it is one cached query away (`useTaskCycles` / `useTaskCycle`).
 
 ## V0 (now) — queue foundation
 

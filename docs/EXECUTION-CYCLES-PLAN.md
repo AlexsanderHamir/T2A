@@ -255,15 +255,15 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 
 **Scope:**
 
-- [ ] Full `./scripts/check.ps1` (no skip flags).
-- [ ] `funclogmeasure -enforce` across the whole repo.
-- [ ] Re-read `docs/EXECUTION-CYCLES.md`, `docs/API-HTTP.md`, `docs/API-SSE.md` for drift introduced by later stages.
-- [ ] Append a final session row to `.agent/backend-improvement-agent.log` summarising the slice and tagging followups in `### Notes / followups` below.
+- [x] Full `./scripts/check.ps1` (no skip flags) — gofmt clean, `go vet` clean, all Go tests pass, web 70 files / 435 tests pass, eslint clean, vite build clean.
+- [x] `funclogmeasure -enforce` across the whole repo — 145 files / 413 funcs / **100.0% slog coverage**.
+- [x] Re-read `docs/EXECUTION-CYCLES.md`, `docs/API-HTTP.md`, `docs/API-SSE.md` for drift introduced by later stages. Two items found in `API-SSE.md` (Stage 7 drift): the "underlying primitive" cross-reference pointed at the plan instead of the contract doc, and the SPA-invalidation paragraph at the bottom predated the granular `task_cycle_changed` cycle path. Both fixed in this commit.
+- [x] Appended Session 13 to `.agent/backend-improvement-agent.log` summarising the whole slice (Stages 0–9, all commit SHAs, verification numbers) and added the four execution-cycles followups (partial unique index, `TaskCycle.EventSeq`, keyset cursor for `/cycles`, optional UI panel) plus carried-forward queue items.
 
 **Exit criteria:**
 
-- All checks green.
-- This file updated: every checkbox checked, followups extracted, plan archived (or marked complete in `docs/AGENTIC-LAYER-PLAN.md`).
+- [x] All checks green (full `./scripts/check.ps1` end-to-end, no skip flags).
+- [x] This file updated: every checkbox checked, followups extracted to the agent log queue, slice marked complete in `docs/AGENTIC-LAYER-PLAN.md` (substrate stages 1–9 done; V1 worker remains its own slice).
 
 **Commit:** `chore: finalize execution cycles slice (full check pass + docs sweep)`
 
@@ -308,7 +308,9 @@ Each stage's "Exit criteria" is the gate. Verification commands are listed once 
 | 3 — Dual-write mirror | done | `bd195fa` |
 | 4 — Handler | done | `9151a58` |
 | 5 — SSE | done | `0b2be37` |
-| 6 — Docs | pending | — |
-| 7 — Web data layer | pending | — |
-| 8 — Web UI panel (optional) | pending | — |
-| 9 — Integration sweep | pending | — |
+| 6 — Docs | done | `bfa91c1` |
+| 7 — Web data layer | done | `d5948d2` |
+| 8 — Web UI panel (optional) | skipped | — (deferred; mirror `task_events` already render via `TaskUpdatesTimeline`. Followup tracked in agent log queue.) |
+| 9 — Integration sweep | done | (this commit) |
+
+**Slice complete.** All four execution-cycles followups are tracked in `.agent/backend-improvement-agent.log` Session 13 NEXT_SESSION_QUEUE: (1) Postgres-only partial unique index for `running` cycles/phases; (2) optional `TaskCycle.EventSeq` backlink if a future read path proves expensive; (3) keyset pagination for `GET /tasks/{id}/cycles` once a UI consumer needs >1 page; (4) optional `TaskDetailExecutionSection` UI panel once a worker actually drives cycles in production. Substrate is ready for the V1 worker (see [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md)).
