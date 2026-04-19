@@ -42,12 +42,34 @@
 // # Environment policy
 //
 // The child process inherits NOTHING from the parent process by default.
-// The adapter passes through only:
+// The adapter passes through only the curated default-passthrough list
+// declared as defaultPassthroughEnvKeys in cursor.go, plus any keys the
+// caller adds via Options.ExtraAllowedEnvKeys or runner.Request.Env.
+// The default list covers:
 //
-//   - PATH (so the binary can find tools)
-//   - HOME (Unix), USERPROFILE (Windows)
-//   - Anything explicitly placed in runner.Request.Env by the caller
-//   - Anything explicitly placed in Options.ExtraAllowedEnvKeys
+//   - Universal: PATH, HOME, USERPROFILE
+//   - Windows process model and command interpreter: SYSTEMDRIVE,
+//     SYSTEMROOT, WINDIR, COMSPEC, PATHEXT
+//   - Windows known folders: LOCALAPPDATA, APPDATA, PROGRAMDATA,
+//     ALLUSERSPROFILE, PUBLIC, TEMP, TMP
+//   - Windows program / DLL lookup: PROGRAMFILES, PROGRAMFILES(X86),
+//     PROGRAMW6432, COMMONPROGRAMFILES, COMMONPROGRAMFILES(X86)
+//   - Windows identity: USERNAME, USERDOMAIN, COMPUTERNAME, LOGONSERVER,
+//     SESSIONNAME
+//   - Architecture / CPU: OS, PROCESSOR_ARCHITECTURE,
+//     PROCESSOR_IDENTIFIER, PROCESSOR_LEVEL, PROCESSOR_REVISION,
+//     NUMBER_OF_PROCESSORS
+//
+// The Windows system vars are not optional. Components in the
+// cursor-agent process tree (Software Licensing Service, ETW, .NET CLR,
+// Defender hooks, the C runtime) call ExpandEnvironmentStrings on
+// hardcoded paths like "%SystemDrive%\\ProgramData\\..." against the
+// child env block; if those tokens fail to expand, Windows treats them
+// as literals and CreateFile resolves them as relative paths under the
+// child's cwd — which is the configured RepoRoot. Without the wider
+// passthrough every real run silently writes a literal "%SystemDrive%"
+// directory tree into the operator's worktree (2026-04-19 incident).
+// None of the listed keys are credential-bearing.
 //
 // The adapter ALWAYS strips entries whose key is "DATABASE_URL" or whose
 // key has a "T2A_" prefix, even when the caller asked for them. Store

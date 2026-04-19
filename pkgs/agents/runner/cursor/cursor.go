@@ -343,17 +343,99 @@ var envDeniedKeys = map[string]struct{}{
 	"DATABASE_URL": {},
 }
 
+// defaultPassthroughEnvKeys is the curated list of parent-process env
+// vars the cursor adapter forwards to every spawned cursor-agent child
+// by default. Grouped by purpose:
+//
+//   - Universal: PATH, HOME, USERPROFILE (binary lookup + user home on
+//     both Unix and Windows).
+//   - Windows process model and command interpreter: SYSTEMDRIVE,
+//     SYSTEMROOT, WINDIR, COMSPEC, PATHEXT.
+//   - Windows known folders that ExpandEnvironmentStrings and
+//     SHGetKnownFolderPath rely on: LOCALAPPDATA, APPDATA, PROGRAMDATA,
+//     ALLUSERSPROFILE, PUBLIC, TEMP, TMP.
+//   - Windows program / DLL lookup: PROGRAMFILES, PROGRAMFILES(X86),
+//     PROGRAMW6432, COMMONPROGRAMFILES, COMMONPROGRAMFILES(X86).
+//   - Windows identity (used by Win32 APIs that resolve principals or
+//     compute per-user paths from scratch): USERNAME, USERDOMAIN,
+//     COMPUTERNAME, LOGONSERVER, SESSIONNAME.
+//   - Architecture / CPU info (build tools and runtime probes): OS,
+//     PROCESSOR_ARCHITECTURE, PROCESSOR_IDENTIFIER, PROCESSOR_LEVEL,
+//     PROCESSOR_REVISION, NUMBER_OF_PROCESSORS.
+//
+// Why the Windows system vars are mandatory and not optional: when
+// SYSTEMDRIVE was missing from the child env block on Windows,
+// components in the cursor-agent process tree (Software Licensing
+// Service caches, ETW, .NET CLR config loaders, Defender hooks)
+// called ExpandEnvironmentStrings on hardcoded paths like
+// "%SystemDrive%\\ProgramData\\Microsoft\\Windows\\Caches\\..." against
+// the empty env, got the literal "%SystemDrive%\\..." string back, and
+// CreateFile resolved it as a relative path under the child's cwd —
+// which is AppSettings.RepoRoot. The result was a literal
+// "%SystemDrive%\\ProgramData\\Microsoft\\Windows\\Caches" directory
+// silently appearing in the operator's worktree (2026-04-19 incident;
+// reproduced on every real agent run until this list was widened). The
+// fix is to treat Windows system env vars as role-equivalent to PATH
+// on Unix and forward them by default; none are credential-bearing,
+// and the deny-list (DATABASE_URL, T2A_*) keeps secrets out regardless.
+//
+// The list is OS-agnostic on purpose: lookups go through os.Getenv,
+// which returns "" for any key the parent process does not have set,
+// and missing keys are silently dropped from the child env slice. So
+// shipping the full Windows list on a Linux runner has zero effect
+// (those keys do not exist in the parent env), and shipping the full
+// Unix list on Windows is harmless (HOME on Windows is usually unset;
+// USERPROFILE is what carries the user-home value).
+//
+// Windows env semantics are case-insensitive; we use SCREAMING_SNAKE
+// uniformly because Go-side it is the conventional spelling and
+// Windows resolves it identically to the canonical mixed-case form
+// (e.g. SYSTEMDRIVE matches the SystemDrive that appears in
+// os.Environ()).
+var defaultPassthroughEnvKeys = []string{
+	"PATH",
+	"HOME",
+	"USERPROFILE",
+	"SYSTEMDRIVE",
+	"SYSTEMROOT",
+	"WINDIR",
+	"COMSPEC",
+	"PATHEXT",
+	"LOCALAPPDATA",
+	"APPDATA",
+	"PROGRAMDATA",
+	"ALLUSERSPROFILE",
+	"PUBLIC",
+	"TEMP",
+	"TMP",
+	"PROGRAMFILES",
+	"PROGRAMFILES(X86)",
+	"PROGRAMW6432",
+	"COMMONPROGRAMFILES",
+	"COMMONPROGRAMFILES(X86)",
+	"USERNAME",
+	"USERDOMAIN",
+	"COMPUTERNAME",
+	"LOGONSERVER",
+	"SESSIONNAME",
+	"OS",
+	"PROCESSOR_ARCHITECTURE",
+	"PROCESSOR_IDENTIFIER",
+	"PROCESSOR_LEVEL",
+	"PROCESSOR_REVISION",
+	"NUMBER_OF_PROCESSORS",
+}
+
 // buildEnv assembles the env slice in os/exec format ("KEY=VALUE"). The
-// passthrough set is {PATH, HOME, USERPROFILE} ∪ extraKeys ∪ keys(reqEnv),
+// passthrough set is defaultPassthroughEnvKeys ∪ extraKeys ∪ keys(reqEnv),
 // minus the deny-list. Later sources override earlier ones; reqEnv wins
 // over parent env so callers can shadow PATH if they need to.
 func buildEnv(reqEnv map[string]string, extraKeys []string) []string {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.buildEnv",
 		"req_env_count", len(reqEnv), "extra_keys", len(extraKeys))
-	allowed := map[string]struct{}{
-		"PATH":        {},
-		"HOME":        {},
-		"USERPROFILE": {},
+	allowed := make(map[string]struct{}, len(defaultPassthroughEnvKeys)+len(extraKeys))
+	for _, k := range defaultPassthroughEnvKeys {
+		allowed[k] = struct{}{}
 	}
 	for _, k := range extraKeys {
 		if k == "" || isDeniedEnvKey(k) {
