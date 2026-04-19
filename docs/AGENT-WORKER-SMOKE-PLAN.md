@@ -439,6 +439,6 @@ parentheses:
 |---|---|---|
 | 0 — Plan | done | `bf3ceca` |
 | 1 — Smoke harness + fake-runner self-test | done | `9647bbb` |
-| 2 — Runner-layer real-cursor smoke | done | _backfilled in this commit_ |
+| 2 — Runner-layer real-cursor smoke | done | `2288d22` |
 | 3 — Full HTTP → worker → real cursor smoke | pending | — |
 | 4 — Docs + runbook | pending | — |
