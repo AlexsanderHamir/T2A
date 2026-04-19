@@ -130,6 +130,7 @@ export function parseTaskListResponse(value: unknown): TaskListResponse {
   };
 }
 
+/** Validates GET /tasks/stats JSON. */
 export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: task stats payload must be an object");
@@ -585,6 +586,7 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
   };
 }
 
+/** Validates GET /task-drafts list JSON (`drafts` array). */
 export function parseTaskDraftSummaryList(value: unknown): TaskDraftSummary[] {
   if (!isRecord(value)) throw new Error("Invalid API response: draft list must be object");
   const raw = value.drafts;
@@ -602,6 +604,7 @@ export function parseTaskDraftSummaryList(value: unknown): TaskDraftSummary[] {
   });
 }
 
+/** Validates GET /task-drafts/{id} JSON. */
 export function parseTaskDraftDetail(value: unknown): TaskDraftDetail {
   if (!isRecord(value)) throw new Error("Invalid API response: draft detail must be object");
   return {

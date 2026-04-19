@@ -120,6 +120,7 @@ Results from applying §7 to a narrow slice of the tree (not a full-repo audit):
 | **Raw SQL (`store/`)** | Production `Raw` uses are `COALESCE(MAX(...),0)` next-key allocation in `kernel.NextEventSeq`, `cycles.nextAttemptSeqInTx`, `cycles.nextPhaseSeqInTx`. `NextEventSeq` already documents concurrency and why `MAX(seq)` runs under a task row lock; the cycle helpers are unexported `MAX+1` patterns next to clear function names — no extra SQL comment added. |
 | **Hooks** | `useEffect` sites under `web/src/tasks/hooks/` use normal dependency arrays; no `eslint-disable` for exhaustive-deps in the tree. |
 | **CSS** | No new magic-number sweep in this pass; treat opportunistically when touching styles. |
+| **API boundary (`parseTaskApi`)** | Spot-checked exported `parse*` functions: added JSDoc for `parseTaskStatsResponse`, `parseTaskDraftSummaryList`, and `parseTaskDraftDetail` (wire route contract; throws on invalid JSON per §4.2). |
 
 ---
 
