@@ -46,6 +46,9 @@ func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 	if got.MaxRunDurationSeconds != want.MaxRunDurationSeconds {
 		t.Errorf("MaxRunDurationSeconds = %d, want %d", got.MaxRunDurationSeconds, want.MaxRunDurationSeconds)
 	}
+	if got.AgentPickupDelaySeconds != want.AgentPickupDelaySeconds {
+		t.Errorf("AgentPickupDelaySeconds = %d, want %d", got.AgentPickupDelaySeconds, want.AgentPickupDelaySeconds)
+	}
 	if got.UpdatedAt.IsZero() {
 		t.Error("UpdatedAt should be set after seed")
 	}
@@ -168,6 +171,18 @@ func TestStore_UpdateSettings_trimsAndClamps(t *testing.T) {
 	t.Run("rejects_negative_max_duration", func(t *testing.T) {
 		s, ctx := newSettingsStore(t)
 		_, err := s.UpdateSettings(ctx, SettingsPatch{MaxRunDurationSeconds: ptrInt(-1)})
+		if !errors.Is(err, domain.ErrInvalidInput) {
+			t.Fatalf("err = %v, want ErrInvalidInput", err)
+		}
+	})
+
+	t.Run("rejects_invalid_agent_pickup_delay", func(t *testing.T) {
+		s, ctx := newSettingsStore(t)
+		_, err := s.UpdateSettings(ctx, SettingsPatch{AgentPickupDelaySeconds: ptrInt(-1)})
+		if !errors.Is(err, domain.ErrInvalidInput) {
+			t.Fatalf("err = %v, want ErrInvalidInput", err)
+		}
+		_, err = s.UpdateSettings(ctx, SettingsPatch{AgentPickupDelaySeconds: ptrInt(604801)})
 		if !errors.Is(err, domain.ErrInvalidInput) {
 			t.Fatalf("err = %v, want ErrInvalidInput", err)
 		}

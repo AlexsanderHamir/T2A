@@ -1,6 +1,10 @@
 package tasks
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import (
+	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+)
 
 // CreateInput is the task creation payload. Re-aliased by the public
 // store facade as store.CreateTaskInput so handler code stays
@@ -17,6 +21,9 @@ type CreateInput struct {
 	ChecklistInherit bool
 	Runner           string
 	CursorModel      string
+	// PickupNotBefore is optional; when set, the agent queue excludes this task
+	// until the instant has passed (UTC).
+	PickupNotBefore *time.Time
 }
 
 // ParentFieldPatch updates parent_id when non-nil. Clear true means

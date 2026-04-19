@@ -23,13 +23,14 @@ import (
 // ago" without a parser; nil-safe because the row always exists once
 // GET seeds defaults on first boot.
 type settingsResponse struct {
-	WorkerEnabled         bool   `json:"worker_enabled"`
-	Runner                string `json:"runner"`
-	RepoRoot              string `json:"repo_root"`
-	CursorBin             string `json:"cursor_bin"`
-	CursorModel           string `json:"cursor_model"`
-	MaxRunDurationSeconds int    `json:"max_run_duration_seconds"`
-	UpdatedAt             string `json:"updated_at,omitempty"`
+	WorkerEnabled           bool   `json:"worker_enabled"`
+	Runner                  string `json:"runner"`
+	RepoRoot                string `json:"repo_root"`
+	CursorBin               string `json:"cursor_bin"`
+	CursorModel             string `json:"cursor_model"`
+	MaxRunDurationSeconds   int    `json:"max_run_duration_seconds"`
+	AgentPickupDelaySeconds int    `json:"agent_pickup_delay_seconds"`
+	UpdatedAt               string `json:"updated_at,omitempty"`
 }
 
 // settingsPatchBody is the JSON body accepted by PATCH /settings.
@@ -39,12 +40,13 @@ type settingsResponse struct {
 // store.SettingsPatch one-for-one so the handler can map fields
 // directly without any field-by-field adapter logic.
 type settingsPatchBody struct {
-	WorkerEnabled         *bool   `json:"worker_enabled,omitempty"`
-	Runner                *string `json:"runner,omitempty"`
-	RepoRoot              *string `json:"repo_root,omitempty"`
-	CursorBin             *string `json:"cursor_bin,omitempty"`
-	CursorModel           *string `json:"cursor_model,omitempty"`
-	MaxRunDurationSeconds *int    `json:"max_run_duration_seconds,omitempty"`
+	WorkerEnabled           *bool   `json:"worker_enabled,omitempty"`
+	Runner                  *string `json:"runner,omitempty"`
+	RepoRoot                *string `json:"repo_root,omitempty"`
+	CursorBin               *string `json:"cursor_bin,omitempty"`
+	CursorModel             *string `json:"cursor_model,omitempty"`
+	MaxRunDurationSeconds   *int    `json:"max_run_duration_seconds,omitempty"`
+	AgentPickupDelaySeconds *int    `json:"agent_pickup_delay_seconds,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -132,12 +134,13 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	patch := store.SettingsPatch{
-		WorkerEnabled:         body.WorkerEnabled,
-		Runner:                body.Runner,
-		RepoRoot:              body.RepoRoot,
-		CursorBin:             body.CursorBin,
-		CursorModel:           body.CursorModel,
-		MaxRunDurationSeconds: body.MaxRunDurationSeconds,
+		WorkerEnabled:           body.WorkerEnabled,
+		Runner:                  body.Runner,
+		RepoRoot:                body.RepoRoot,
+		CursorBin:               body.CursorBin,
+		CursorModel:             body.CursorModel,
+		MaxRunDurationSeconds:   body.MaxRunDurationSeconds,
+		AgentPickupDelaySeconds: body.AgentPickupDelaySeconds,
 	}
 	if patch.IsEmpty() {
 		writeJSONError(w, r, op, http.StatusBadRequest, "patch body must include at least one field")
@@ -297,12 +300,13 @@ func (h *Handler) cancelCurrentRun(w http.ResponseWriter, r *http.Request) {
 func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsResponseFrom")
 	resp := settingsResponse{
-		WorkerEnabled:         cfg.WorkerEnabled,
-		Runner:                cfg.Runner,
-		RepoRoot:              cfg.RepoRoot,
-		CursorBin:             cfg.CursorBin,
-		CursorModel:           cfg.CursorModel,
-		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
+		WorkerEnabled:           cfg.WorkerEnabled,
+		Runner:                  cfg.Runner,
+		RepoRoot:                cfg.RepoRoot,
+		CursorBin:               cfg.CursorBin,
+		CursorModel:             cfg.CursorModel,
+		MaxRunDurationSeconds:   cfg.MaxRunDurationSeconds,
+		AgentPickupDelaySeconds: cfg.AgentPickupDelaySeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

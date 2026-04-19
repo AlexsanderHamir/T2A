@@ -21,12 +21,13 @@ const logCmd = "taskapi"
 // (e.g. *int = 0 means MaxRunDurationSeconds explicitly set to 0 == "no
 // limit"; nil means "leave unchanged").
 type Patch struct {
-	WorkerEnabled         *bool
-	Runner                *string
-	RepoRoot              *string
-	CursorBin             *string
-	CursorModel           *string
-	MaxRunDurationSeconds *int
+	WorkerEnabled           *bool
+	Runner                  *string
+	RepoRoot                *string
+	CursorBin               *string
+	CursorModel             *string
+	MaxRunDurationSeconds   *int
+	AgentPickupDelaySeconds *int
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -40,7 +41,8 @@ func (p Patch) IsEmpty() bool {
 		p.RepoRoot == nil &&
 		p.CursorBin == nil &&
 		p.CursorModel == nil &&
-		p.MaxRunDurationSeconds == nil
+		p.MaxRunDurationSeconds == nil &&
+		p.AgentPickupDelaySeconds == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -144,6 +146,12 @@ func validatePatch(patch Patch) error {
 	if patch.MaxRunDurationSeconds != nil && *patch.MaxRunDurationSeconds < 0 {
 		return fmt.Errorf("%w: max_run_duration_seconds must be >= 0", domain.ErrInvalidInput)
 	}
+	if patch.AgentPickupDelaySeconds != nil {
+		v := *patch.AgentPickupDelaySeconds
+		if v < 0 || v > 604800 {
+			return fmt.Errorf("%w: agent_pickup_delay_seconds must be between 0 and 604800", domain.ErrInvalidInput)
+		}
+	}
 	if patch.CursorModel != nil && len(strings.TrimSpace(*patch.CursorModel)) > 256 {
 		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
 	}
@@ -169,5 +177,8 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.MaxRunDurationSeconds != nil {
 		row.MaxRunDurationSeconds = *patch.MaxRunDurationSeconds
+	}
+	if patch.AgentPickupDelaySeconds != nil {
+		row.AgentPickupDelaySeconds = *patch.AgentPickupDelaySeconds
 	}
 }

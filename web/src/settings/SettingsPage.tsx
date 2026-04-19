@@ -16,6 +16,7 @@ type FormState = {
   cursorBin: string;
   cursorModel: string;
   maxRunDurationSeconds: string;
+  agentPickupDelaySeconds: string;
 };
 
 function toFormState(s: AppSettings): FormState {
@@ -26,6 +27,7 @@ function toFormState(s: AppSettings): FormState {
     cursorBin: s.cursor_bin,
     cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
+    agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
   };
 }
 
@@ -49,6 +51,16 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   const parsedMax = Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10);
   if (Number.isFinite(parsedMax) && parsedMax !== initial.max_run_duration_seconds) {
     out.max_run_duration_seconds = parsedMax;
+  }
+  const parsedPickup = Number.parseInt(
+    form.agentPickupDelaySeconds.trim() || "0",
+    10,
+  );
+  if (
+    Number.isFinite(parsedPickup) &&
+    parsedPickup !== initial.agent_pickup_delay_seconds
+  ) {
+    out.agent_pickup_delay_seconds = parsedPickup;
   }
   return out;
 }
@@ -127,6 +139,14 @@ export function SettingsPage() {
 
   const maxParsed = form ? Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10) : 0;
   const maxInvalid = form ? !Number.isFinite(maxParsed) || maxParsed < 0 : false;
+  const pickupParsed = form
+    ? Number.parseInt(form.agentPickupDelaySeconds.trim() || "0", 10)
+    : 0;
+  const pickupInvalid = form
+    ? !Number.isFinite(pickupParsed) ||
+      pickupParsed < 0 ||
+      pickupParsed > 604800
+    : false;
 
   function handleField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((cur) => (cur === null ? cur : { ...cur, [key]: value }));
@@ -140,7 +160,7 @@ export function SettingsPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!settings || !form || maxInvalid) return;
+    if (!settings || !form || maxInvalid || pickupInvalid) return;
     const body = diffPatch(settings, form);
     if (Object.keys(body).length === 0) return;
     // Snapshot the form *as submitted* so we can detect post-submit
@@ -186,6 +206,11 @@ export function SettingsPage() {
         }
         if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
           merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
+        }
+        if (cur.agentPickupDelaySeconds === formAtSubmit.agentPickupDelaySeconds) {
+          merged.agentPickupDelaySeconds = String(
+            next.agent_pickup_delay_seconds,
+          );
         }
         return merged;
       });
@@ -312,6 +337,33 @@ export function SettingsPage() {
               )}
             </select>
           </label>
+
+          <label className="settings-field">
+            <span className="settings-field-label">
+              Agent pickup delay (seconds)
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={604800}
+              step={1}
+              value={form.agentPickupDelaySeconds}
+              onChange={(e) =>
+                handleField("agentPickupDelaySeconds", e.target.value)
+              }
+              aria-invalid={pickupInvalid}
+            />
+          </label>
+          <p className="settings-field-help">
+            After you create a ready task, wait this many seconds before the
+            worker may start it — avoids the agent grabbing the task while
+            the create UI is still finishing. <code>0</code> = no delay.
+          </p>
+          {pickupInvalid ? (
+            <p role="alert" className="settings-field-error">
+              Must be between 0 and 604800 (7 days).
+            </p>
+          ) : null}
         </fieldset>
 
         <fieldset className="settings-fieldset">
@@ -449,7 +501,7 @@ export function SettingsPage() {
         <div className="settings-actions">
           <button
             type="submit"
-            disabled={!isDirty || patch.isPending || maxInvalid}
+            disabled={!isDirty || patch.isPending || maxInvalid || pickupInvalid}
           >
             {patch.isPending ? "Saving…" : "Save changes"}
           </button>

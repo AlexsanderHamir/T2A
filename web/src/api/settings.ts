@@ -15,6 +15,11 @@ export type AppSettings = {
   /** Empty string = Cursor default model (`cursor-agent` omits `--model`). */
   cursor_model: string;
   max_run_duration_seconds: number;
+  /**
+   * Seconds to wait after a new ready task is created before the worker may
+   * dequeue it. 0 = pick up immediately.
+   */
+  agent_pickup_delay_seconds: number;
   updated_at?: string;
 };
 
@@ -31,6 +36,7 @@ export type AppSettingsPatch = Partial<{
   cursor_bin: string;
   cursor_model: string;
   max_run_duration_seconds: number;
+  agent_pickup_delay_seconds: number;
 }>;
 
 export type ProbeCursorResult = {
@@ -72,13 +78,15 @@ function assertSettings(raw: unknown): AppSettings {
   const cursorBin = o.cursor_bin;
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
+  const pickupDelay = o.agent_pickup_delay_seconds;
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
     typeof cursorBin !== "string" ||
     typeof cursorModel !== "string" ||
-    typeof maxDur !== "number"
+    typeof maxDur !== "number" ||
+    typeof pickupDelay !== "number"
   ) {
     throw new Error("unexpected settings response shape");
   }
@@ -89,6 +97,7 @@ function assertSettings(raw: unknown): AppSettings {
     cursor_bin: cursorBin,
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
+    agent_pickup_delay_seconds: pickupDelay,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

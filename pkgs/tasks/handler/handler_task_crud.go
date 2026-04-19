@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -58,6 +59,17 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	var pickupNotBefore *time.Time
+	if settings.AgentPickupDelaySeconds > 0 {
+		st := body.Status
+		if st == "" {
+			st = domain.StatusReady
+		}
+		if st == domain.StatusReady {
+			t := time.Now().UTC().Add(time.Duration(settings.AgentPickupDelaySeconds) * time.Second)
+			pickupNotBefore = &t
+		}
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:               body.ID,
 		DraftID:          body.DraftID,
@@ -70,6 +82,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		ChecklistInherit: inherit,
 		Runner:           runner,
 		CursorModel:      cursorModel,
+		PickupNotBefore:  pickupNotBefore,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)

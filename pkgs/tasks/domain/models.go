@@ -22,6 +22,9 @@ type Task struct {
 	// CursorModel is forwarded to cursor-agent as --model when non-empty;
 	// empty means omit the flag for this task (same semantics as app settings).
 	CursorModel string `json:"cursor_model" gorm:"not null;default:''"`
+	// PickupNotBefore defers agent dequeue until this instant (UTC). NULL means
+	// eligible as soon as status is ready (legacy rows and zero-delay creates).
+	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
 }
 
 // TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.

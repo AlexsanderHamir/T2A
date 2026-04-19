@@ -218,6 +218,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		ChecklistInherit: in.ChecklistInherit,
 		Runner:           runner,
 		CursorModel:      in.CursorModel,
+		PickupNotBefore:  in.PickupNotBefore,
 	}
 	return t, title, parentID, st, nil
 }

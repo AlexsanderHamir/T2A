@@ -28,15 +28,19 @@ import (
 //     the flag so Cursor picks its default model for the account.
 //   - MaxRunDurationSeconds: per-run wall-clock cap in seconds. 0 means
 //     "no limit" — the worker does not wrap runner.Run with a timeout.
+//   - AgentPickupDelaySeconds: when > 0, new ready tasks get pickup_not_before =
+//     created_at + this many seconds so the agent does not dequeue them
+//     immediately (smoother UX right after create). 0 disables the delay.
 type AppSettings struct {
-	ID                    uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled         bool      `gorm:"not null;default:true"`
-	Runner                string    `gorm:"not null;default:'cursor'"`
-	RepoRoot              string    `gorm:"not null;default:''"`
-	CursorBin             string    `gorm:"not null;default:''"`
-	CursorModel           string    `gorm:"not null;default:''"`
-	MaxRunDurationSeconds int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	UpdatedAt             time.Time `gorm:"not null"`
+	ID                      uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
+	WorkerEnabled           bool      `gorm:"not null;default:true"`
+	Runner                  string    `gorm:"not null;default:'cursor'"`
+	RepoRoot                string    `gorm:"not null;default:''"`
+	CursorBin               string    `gorm:"not null;default:''"`
+	CursorModel             string    `gorm:"not null;default:''"`
+	MaxRunDurationSeconds   int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	AgentPickupDelaySeconds int       `gorm:"not null;default:0;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	UpdatedAt               time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -55,12 +59,13 @@ const DefaultRunner = "cursor"
 // store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		ID:                    AppSettingsRowID,
-		WorkerEnabled:         true,
-		Runner:                DefaultRunner,
-		RepoRoot:              "",
-		CursorBin:             "",
-		MaxRunDurationSeconds: 0,
+		ID:                      AppSettingsRowID,
+		WorkerEnabled:           true,
+		Runner:                  DefaultRunner,
+		RepoRoot:                "",
+		CursorBin:               "",
+		MaxRunDurationSeconds:   0,
+		AgentPickupDelaySeconds: 0,
 	}
 }
 

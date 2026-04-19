@@ -15,6 +15,7 @@ const testAppSettings: AppSettings = {
   cursor_bin: "",
   cursor_model: "",
   max_run_duration_seconds: 0,
+  agent_pickup_delay_seconds: 0,
 };
 
 const testCursorModelsEmpty: ListCursorModelsResult = {

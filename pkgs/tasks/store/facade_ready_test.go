@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -40,6 +41,42 @@ func TestListReadyTaskQueueCandidates_ordersOldestCreatedFirst(t *testing.T) {
 	}
 	if len(page2) != 1 || page2[0].Task.ID != idNewer {
 		t.Fatalf("second page got %+v want id %q", page2, idNewer)
+	}
+}
+
+func TestListReadyTaskQueueCandidates_excludesFuturePickupNotBefore(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	future := time.Now().UTC().Add(1 * time.Hour)
+	if _, err := s.Create(ctx, CreateTaskInput{
+		Title:           "deferred pickup",
+		Priority:        domain.PriorityMedium,
+		PickupNotBefore: &future,
+	}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.ListReadyTaskQueueCandidates(ctx, 10, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("expected no eligible candidates before pickup time, got %d", len(got))
+	}
+	past := time.Now().UTC().Add(-1 * time.Minute)
+	if _, err := s.Create(ctx, CreateTaskInput{
+		ID:              "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+		Title:           "eligible",
+		Priority:        domain.PriorityMedium,
+		PickupNotBefore: &past,
+	}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	got2, err := s.ListReadyTaskQueueCandidates(ctx, 10, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got2) != 1 || got2[0].Task.ID != "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" {
+		t.Fatalf("got %+v want one task aaaaaaaa-...", got2)
 	}
 }
 

@@ -69,11 +69,13 @@ func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *Qu
 		order = "te.at ASC, te.rowid ASC, tasks.id ASC"
 	}
 
+	now := time.Now().UTC()
 	q := db.WithContext(ctx).Model(&domain.Task{}).
 		Select(sel).
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ?`,
 			int64(1), domain.EventTaskCreated).
 		Where("tasks.status = ?", domain.StatusReady).
+		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now).
 		Order(order).
 		Limit(limit)
 
@@ -117,10 +119,12 @@ func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string
 		limit = 500
 	}
 	afterID = strings.TrimSpace(afterID)
+	now := time.Now().UTC()
 	q := db.WithContext(ctx).Model(&domain.Task{}).
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ? AND te.by = ?`,
 			int64(1), domain.EventTaskCreated, domain.ActorUser).
 		Where("tasks.status = ?", domain.StatusReady).
+		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now).
 		Order("tasks.id ASC").
 		Limit(limit)
 	if afterID != "" {

@@ -32,6 +32,11 @@ export type Task = {
    * the flag (Cursor default for the account).
    */
   cursor_model: string;
+  /**
+   * When set (RFC3339), the agent worker will not dequeue this ready task
+   * until this instant. Omitted when eligible immediately.
+   */
+  pickup_not_before?: string;
   /** Present when this task is nested under another (GET /tasks tree). */
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */

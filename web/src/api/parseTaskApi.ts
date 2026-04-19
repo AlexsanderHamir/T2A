@@ -414,6 +414,15 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
         ? parseString(value.cursor_model, "cursor_model")
         : "",
   };
+  if (
+    value.pickup_not_before !== undefined &&
+    value.pickup_not_before !== null
+  ) {
+    base.pickup_not_before = parseString(
+      value.pickup_not_before,
+      "pickup_not_before",
+    );
+  }
   if ("task_type" in value && value.task_type !== undefined) {
     base.task_type = parseTaskType(value.task_type);
   } else {
