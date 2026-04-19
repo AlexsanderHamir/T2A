@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
 import { useAppSettings } from "./useAppSettings";
 import "./settings.css";
@@ -45,12 +46,29 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   return out;
 }
 
+/**
+ * Tagged feedback the page surfaces after a mutation settles. Split into
+ * `success` vs `error` so each kind can render through the right ARIA
+ * live-region (`role="status"` polite for success; `role="alert"`
+ * assertive for errors). Previously a single `statusMsg: string` was
+ * routed through `role="status"` for *both* kinds, which meant
+ * screen-reader users with assistive tech configured for
+ * polite-only announcements could miss failures, AND the visual
+ * treatment didn't distinguish the two (a successful save and a
+ * probe-failed-with-error rendered with the same neutral styling).
+ *
+ * `null` is the steady idle state; setting `status` always replaces
+ * the previous one (no stacking — each mutation supersedes the prior
+ * feedback).
+ */
+type Status = { kind: "success"; message: string } | { kind: "error"; message: string } | null;
+
 export function SettingsPage() {
   useDocumentTitle("Settings");
   const { settings, isLoading, error, patch, probe, cancelRun, refetch } =
     useAppSettings();
   const [form, setForm] = useState<FormState | null>(null);
-  const [statusMsg, setStatusMsg] = useState<string>("");
+  const [status, setStatus] = useState<Status>(null);
 
   useEffect(() => {
     if (settings && form === null) {
@@ -75,54 +93,76 @@ export function SettingsPage() {
     if (!settings || !form || maxInvalid) return;
     const body = diffPatch(settings, form);
     if (Object.keys(body).length === 0) return;
-    setStatusMsg("");
+    setStatus(null);
     try {
       const next = await patch.mutateAsync(body);
       setForm(toFormState(next));
-      setStatusMsg("Settings saved.");
+      setStatus({ kind: "success", message: "Settings saved." });
     } catch (err) {
-      setStatusMsg(err instanceof Error ? err.message : String(err));
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   async function handleProbe() {
     if (!form) return;
-    setStatusMsg("");
+    setStatus(null);
     try {
       const result = await probe.mutateAsync({
         runner: form.runner.trim() || undefined,
         binary_path: form.cursorBin.trim() || undefined,
       });
       if (result.ok) {
-        setStatusMsg(
-          result.version
+        setStatus({
+          kind: "success",
+          message: result.version
             ? `Cursor binary OK (version ${result.version}).`
             : "Cursor binary OK.",
-        );
+        });
       } else {
-        setStatusMsg(`Cursor binary check failed: ${result.error ?? "unknown error"}`);
+        // Probe returned `{ ok: false, error }` — semantically a
+        // failure even though the HTTP request succeeded. Route through
+        // the error channel so screen readers hear the assertive
+        // announcement and the user sees the danger styling instead of
+        // the previous "neutral status" treatment that made a probe
+        // failure look like a successful informational message.
+        setStatus({
+          kind: "error",
+          message: `Cursor binary check failed: ${result.error ?? "unknown error"}`,
+        });
       }
     } catch (err) {
-      setStatusMsg(err instanceof Error ? err.message : String(err));
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   async function handleCancelRun() {
-    setStatusMsg("");
+    setStatus(null);
     try {
       const result = await cancelRun.mutateAsync();
-      setStatusMsg(
-        result.cancelled ? "In-flight agent run cancelled." : "No agent run in flight.",
-      );
+      setStatus({
+        kind: "success",
+        message: result.cancelled
+          ? "In-flight agent run cancelled."
+          : "No agent run in flight.",
+      });
     } catch (err) {
-      setStatusMsg(err instanceof Error ? err.message : String(err));
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   function handleReset() {
     if (settings) {
       setForm(toFormState(settings));
-      setStatusMsg("");
+      setStatus(null);
     }
   }
 
@@ -289,14 +329,34 @@ export function SettingsPage() {
           </button>
         </div>
 
-        {statusMsg ? (
+        {status?.kind === "success" ? (
           <p
             role="status"
             data-testid="settings-status"
             className="settings-status"
           >
-            {statusMsg}
+            {status.message}
           </p>
+        ) : null}
+        {status?.kind === "error" ? (
+          // Errors deliberately render through `MutationErrorBanner`
+          // (role="alert", aria-live="assertive" implicitly) so
+          // screen-readers announce them immediately, and so the
+          // visual treatment (`.err` danger background) makes the
+          // failure unmistakable. The prior single-channel
+          // `role="status"` rendering was an a11y regression for
+          // anyone with assistive tech configured for polite-only
+          // announcements (a missed save / probe failure / cancel
+          // failure could go entirely unnoticed). The
+          // `data-testid="settings-status-error"` selector lets the
+          // existing test plumbing assert against this region
+          // explicitly without depending on the message phrase.
+          <div data-testid="settings-status-error">
+            <MutationErrorBanner
+              error={status.message}
+              className="settings-status-err"
+            />
+          </div>
         ) : null}
       </form>
     </section>

@@ -138,7 +138,11 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("surfaces probe failures without throwing", async () => {
+  it("surfaces probe failures via the error channel (role='alert', not role='status')", async () => {
+    // Session #36 — probe `{ ok: false, error }` is semantically a
+    // failure and must announce assertively to screen-readers, AND
+    // must NOT appear in the success-styled `settings-status`
+    // region (which is now reserved for actual successes).
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings/probe-cursor")) {
@@ -154,8 +158,52 @@ describe("SettingsPage", () => {
     const probeBtn = await screen.findByRole("button", { name: /Test cursor binary/ });
     await userEvent.click(probeBtn);
     await waitFor(() =>
-      expect(screen.getByTestId("settings-status")).toHaveTextContent(/spawn ENOENT/),
+      expect(screen.getByTestId("settings-status-error")).toHaveTextContent(
+        /spawn ENOENT/,
+      ),
     );
+    expect(screen.queryByTestId("settings-status")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/spawn ENOENT/);
+  });
+
+  it("surfaces patch errors via the error channel and does not show the success status", async () => {
+    // Session #36 regression for the failed-PATCH case: previously
+    // a 500 from PATCH /settings rendered through the same
+    // `role="status"` channel as a successful save, which was a
+    // direct a11y regression (assertive failure announced as polite).
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
+      const url = requestUrl(input);
+      if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+        return jsonResponse(defaultSettings());
+      }
+      if (url.endsWith("/settings") && init?.method === "PATCH") {
+        return new Response(
+          JSON.stringify({ error: "internal: disk full" }),
+          {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPage();
+    const repoInput = await screen.findByLabelText(/Repository root/);
+    await userEvent.clear(repoInput);
+    await userEvent.type(repoInput, "/var/repos/new");
+
+    const saveBtn = screen.getByRole("button", { name: /Save changes/ });
+    await userEvent.click(saveBtn);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-status-error")).toBeInTheDocument(),
+    );
+    // The error message text varies by API client error shape, but
+    // the assertive alert region must always render so screen
+    // readers announce the failure.
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-status")).not.toBeInTheDocument();
   });
 
   it("calls /settings/cancel-current-run and reports whether a run was cancelled", async () => {
