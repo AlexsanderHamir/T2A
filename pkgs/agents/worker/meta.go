@@ -51,11 +51,13 @@ func sha256Hex(s string) string {
 // JSON object the store expects. The store's kernel.NormalizeJSONObject
 // chokepoint requires details_json to be a JSON object on every write
 // (sessions 1+2 of .agent/bug-hunting-agent.log) — non-object payloads
-// surface as domain.ErrInvalidInput, which would orphan the running
-// cycle/phase/task because completeExecutePhase clears state.cycleStarted
-// on any CompletePhase error. runner.Result.Details is typed
+// surface as domain.ErrInvalidInput. runner.Result.Details is typed
 // json.RawMessage and adapters like cursor forward whatever the CLI
-// emitted, so the worker is the chokepoint that has to coerce.
+// emitted, so the worker is the chokepoint that has to coerce. (When
+// CompletePhase fails for any other reason, processOne now falls
+// through to bestEffortTerminate so the cycle row never lingers in
+// `running`; the orphan-sweep at startup is the last-resort safety
+// net.)
 //
 // Rules (matching the store-side normalize:
 //

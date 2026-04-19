@@ -683,3 +683,108 @@ func (f *funcRunner) Version() string { return f.version }
 func (f *funcRunner) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
 	return f.run(ctx, req)
 }
+
+// TestWorker_CompletePhaseFailure_terminatesCycleAndFailsTask pins the
+// fix for the orphaned-cycle bug documented in worker.completeExecutePhase:
+// when CompletePhase(execute) fails for any reason other than process
+// shutdown or panic, the worker must still terminate the cycle and walk
+// the task to `failed` so the next dequeue does not re-enter the loop
+// and so the operator does not have to wait for the startup orphan
+// sweep to clean up.
+//
+// The reproducer preempts the execute-phase row from inside the runner:
+// before the runner returns its successful Result, it directly calls
+// store.CompletePhase to mark the same phase row terminal. The worker's
+// happy-path CompletePhase call then surfaces "phase already terminal"
+// (domain.ErrInvalidInput). Without the fix this strands the cycle in
+// `running` and the task in `running` until the next process restart;
+// with the fix the cycle is `failed` with the dedicated reason and the
+// task is walked to `failed` synchronously.
+func TestWorker_CompletePhaseFailure_terminatesCycleAndFailsTask(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "complete-phase-failure")
+
+	bg := context.Background()
+	preemptOnce := sync.Once{}
+	var preempted atomic.Bool
+	r := runnerfake.New()
+	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "all green",
+		json.RawMessage(`{"ok":true}`), ""))
+
+	wrapped := &funcRunner{
+		name:    "preempt",
+		version: "v0",
+		run: func(rctx context.Context, req runner.Request) (runner.Result, error) {
+			preemptOnce.Do(func() {
+				cycles, err := h.store.ListCyclesForTask(bg, req.TaskID, 5)
+				if err != nil || len(cycles) == 0 {
+					t.Errorf("preempt: list cycles: err=%v len=%d", err, len(cycles))
+					return
+				}
+				phases, err := h.store.ListPhasesForCycle(bg, cycles[0].ID)
+				if err != nil {
+					t.Errorf("preempt: list phases: %v", err)
+					return
+				}
+				for _, ph := range phases {
+					if ph.Phase != domain.PhaseExecute {
+						continue
+					}
+					if domain.TerminalPhaseStatus(ph.Status) {
+						continue
+					}
+					summary := "preempted by test"
+					if _, err := h.store.CompletePhase(bg, store.CompletePhaseInput{
+						CycleID:  cycles[0].ID,
+						PhaseSeq: ph.PhaseSeq,
+						Status:   domain.PhaseStatusFailed,
+						Summary:  &summary,
+						By:       domain.ActorAgent,
+					}); err != nil {
+						t.Errorf("preempt: CompletePhase: %v", err)
+						return
+					}
+					preempted.Store(true)
+					return
+				}
+				t.Errorf("preempt: no running execute phase to preempt")
+			})
+			return r.Run(rctx, req)
+		},
+	}
+
+	_, done := h.startWorker(ctx, wrapped, worker.Options{})
+	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	if !preempted.Load() {
+		t.Fatal("test setup did not preempt the execute phase; reproducer is a no-op")
+	}
+
+	if final.Status != domain.StatusFailed {
+		t.Fatalf("task final status = %q, want %q", final.Status, domain.StatusFailed)
+	}
+
+	cycles, err := h.store.ListCyclesForTask(bg, tsk.ID, 5)
+	if err != nil {
+		t.Fatalf("list cycles: %v", err)
+	}
+	if len(cycles) != 1 {
+		t.Fatalf("cycle count = %d, want 1", len(cycles))
+	}
+	c := cycles[0]
+	if c.Status == domain.CycleStatusRunning || c.Status == "" {
+		t.Fatalf("cycle status after CompletePhase failure = %q, want a terminal status (cycle was orphaned)", c.Status)
+	}
+	if c.Status != domain.CycleStatusFailed {
+		t.Fatalf("cycle status = %q, want %q (CompletePhase write failures must mark the cycle failed)", c.Status, domain.CycleStatusFailed)
+	}
+}

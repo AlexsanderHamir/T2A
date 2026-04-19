@@ -100,6 +100,15 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		}
 	}
 	if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
+		// CompletePhase failed (phase row indeterminate). The cycle
+		// row is still ours to close — without this terminate the
+		// cycle/task rows are orphaned in `running` until the next
+		// process restart triggers SweepOrphanRunningCycles. We force
+		// the cycle to `failed` regardless of the runner's outcome:
+		// even a successful run is a write failure from the audit
+		// trail's perspective if we could not persist the phase
+		// terminal status.
+		w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
 		return
 	}
 	if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
@@ -299,12 +308,19 @@ func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, 
 		slog.Log(ctx, level, "agent worker CompletePhase(execute) failed",
 			"cmd", workerLogCmd, "operation", "agent.worker.Worker.completeExecutePhase.err",
 			"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "err", err)
-		// Whatever happened, the phase is no longer ours to close on
-		// the happy path. Clear state so the panic-recovery branch
-		// does not double-write.
+		// The phase row is in an indeterminate state (either still
+		// running, already terminal, or vanished). Clear the phase
+		// pointer so bestEffortTerminate's CompletePhase retry is
+		// skipped — but leave cycleStarted=true so the cycle row
+		// itself still gets terminated, otherwise the cycle row is
+		// orphaned in `running` and the task row is orphaned in
+		// `running`, requiring the startup orphan sweep to clean up
+		// (see meta.go::detailsBytes for the historical context). The
+		// deferred recoverFromPanic only acts on actual panics, so
+		// leaving cycleStarted=true here cannot cause a double
+		// TerminateCycle on the happy-error path.
 		state.runningPhase = ""
 		state.runningPhaseSeq = 0
-		state.cycleStarted = false
 		return false
 	}
 	state.runningPhase = ""

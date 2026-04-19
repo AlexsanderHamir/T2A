@@ -51,6 +51,15 @@ const PanicReason = "panic"
 // context cancels mid-run.
 const ShutdownReason = "shutdown"
 
+// completePhaseFailedReason is the cycle termination reason written when
+// the worker successfully ran the runner but failed to persist the
+// terminal status onto the execute phase row (CompletePhase returned an
+// error). The cycle row is forced to `failed` so the task does not stay
+// pinned in `running` waiting for the next-restart orphan sweep, and
+// the reason is distinct from "shutdown"/"panic"/"runner_*" so the
+// audit trail makes the rare write-failure mode greppable.
+const completePhaseFailedReason = "complete_phase_failed"
+
 // CycleChangeNotifier is the optional SSE seam. cmd/taskapi wires an
 // adapter that calls hub.Publish(handler.TaskCycleChanged{...}); tests
 // pass nil and every PublishCycleChange call becomes a no-op.
