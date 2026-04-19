@@ -156,13 +156,32 @@ func clipRawOutput(s string) (string, bool) {
 }
 
 // clipDetails returns a JSON-safe Details payload that fits inside
-// MaxResultDetailsBytes. When the input is over budget it is replaced with
-// a sentinel object so consumers never have to handle malformed JSON.
+// MaxResultDetailsBytes AND is well-formed JSON. When the input is
+// over budget OR contains invalid JSON it is replaced with a sentinel
+// object so consumers (worker dual-write into TaskCyclePhase.MetaJSON,
+// SPA, log shipper) never have to handle malformed JSON. nil and the
+// empty slice are passed through unchanged so "no details" stays
+// distinguishable from "had details but they were lost".
 func clipDetails(d json.RawMessage) (json.RawMessage, bool) {
 	slog.Debug("trace", "cmd", runnerLogCmd, "operation", "runner.clipDetails", "bytes", len(d))
-	if len(d) <= MaxResultDetailsBytes {
+	if len(d) == 0 {
 		return d, false
 	}
-	sentinel := fmt.Sprintf(`{"truncated":true,"original_bytes":%d}`, len(d))
-	return json.RawMessage(sentinel), true
+	if len(d) > MaxResultDetailsBytes {
+		sentinel := fmt.Sprintf(`{"truncated":true,"original_bytes":%d}`, len(d))
+		return json.RawMessage(sentinel), true
+	}
+	if !json.Valid(d) {
+		// Invalid-but-under-cap: still emit the sentinel so the
+		// "well-formed JSON" contract on Result.Details holds. We
+		// reuse the same shape as the size-overflow sentinel — the
+		// truncated flag carries the "details were lost" signal,
+		// and original_bytes preserves the size for forensic
+		// analysis. Distinguishing invalid-vs-oversize is not
+		// worth a wire-format change today; downstream consumers
+		// only need to know "we didn't get usable details".
+		sentinel := fmt.Sprintf(`{"truncated":true,"original_bytes":%d}`, len(d))
+		return json.RawMessage(sentinel), true
+	}
+	return d, false
 }
