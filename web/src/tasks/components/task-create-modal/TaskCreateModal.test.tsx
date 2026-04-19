@@ -36,8 +36,6 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onRemovePendingSubtask: vi.fn(),
     evaluatePending: false,
     evaluation: null,
-    draftName: "Untitled draft",
-    onDraftNameChange: vi.fn(),
     dmapCommitLimit: "5",
     dmapDomain: "",
     dmapDescription: "",
@@ -156,6 +154,18 @@ describe("TaskCreateModal", () => {
     });
     expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /^create$/i })).not.toBeDisabled();
+  });
+
+  it("does not render a separate draft name field (title doubles as the draft name)", () => {
+    renderModal({ draftSaveLabel: "Draft saved" });
+    expect(
+      screen.queryByLabelText(/^draft name$/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("surfaces the draft save status near the modal heading", () => {
+    renderModal({ draftSaveLabel: "Saving draft…" });
+    expect(screen.getByText(/saving draft/i)).toBeInTheDocument();
   });
 
   it("shows DMAP-specific fields when task type is DMAP", () => {

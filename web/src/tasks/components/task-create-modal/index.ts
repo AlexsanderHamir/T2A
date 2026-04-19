@@ -5,7 +5,6 @@ export * from "./fields/TaskCreateModalPrimaryFields";
 export * from "./dmap/TaskCreateModalDmapTitleRow";
 export * from "./dmap/TaskCreateModalDmapSection";
 export * from "./fields/TaskCreateModalParentField";
-export * from "./fields/TaskCreateModalDraftNameField";
 export * from "./fields/TaskCreateModalInheritChecklistField";
 export * from "./fields/TaskCreateModalPendingSubtasksField";
 export * from "./fields/TaskCreateModalEvaluationSummary";

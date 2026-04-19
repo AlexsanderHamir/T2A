@@ -6,7 +6,6 @@ import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";
 import { TaskCreateModalPendingSubtasksField } from "./fields/TaskCreateModalPendingSubtasksField";
-import { TaskCreateModalDraftNameField } from "./fields/TaskCreateModalDraftNameField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
 import { TaskCreateModalInheritChecklistField } from "./fields/TaskCreateModalInheritChecklistField";
@@ -49,8 +48,6 @@ type Props = {
   onRemovePendingSubtask: (index: number) => void;
   evaluatePending: boolean;
   evaluation: TaskCreateModalEvaluation | null;
-  draftName: string;
-  onDraftNameChange: (name: string) => void;
   dmapCommitLimit: string;
   dmapDomain: string;
   dmapDescription: string;
@@ -111,8 +108,6 @@ export function TaskCreateModal({
   onRemovePendingSubtask,
   evaluatePending,
   evaluation,
-  draftName,
-  onDraftNameChange,
   dmapCommitLimit,
   dmapDomain,
   dmapDescription,
@@ -176,17 +171,23 @@ export function TaskCreateModal({
           <h2 id="task-create-modal-title">
             {hasParent ? "New subtask" : "New task"}
           </h2>
+          {draftSaveLabel ? (
+            <p
+              className={[
+                "task-create-draft-status",
+                draftSaveError ? "task-create-draft-status--error" : "muted",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-live={draftSaveError ? "assertive" : "polite"}
+            >
+              {draftSaveLabel}
+            </p>
+          ) : null}
           <form
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <TaskCreateModalDraftNameField
-              draftName={draftName}
-              onDraftNameChange={onDraftNameChange}
-              disabled={disabled}
-              draftSaveLabel={draftSaveLabel}
-              draftSaveError={draftSaveError}
-            />
             <TaskCreateModalParentField
               parentOptionsLoading={parentOptionsLoading}
               parentId={parentId}

@@ -123,8 +123,6 @@ export function TaskHome({ app }: Props) {
           onRemovePendingSubtask={app.removePendingSubtask}
           evaluatePending={app.evaluatePending}
           evaluation={app.latestDraftEvaluation}
-          draftName={app.newDraftName}
-          onDraftNameChange={app.setNewDraftName}
           dmapCommitLimit={app.newDmapCommitLimit}
           dmapDomain={app.newDmapDomain}
           dmapDescription={app.newDmapDescription}

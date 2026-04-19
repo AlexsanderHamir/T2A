@@ -76,7 +76,6 @@ export function useTasksApp() {
     newDraftIDRef.current = id;
     setNewDraftIDState(id);
   }, []);
-  const [newDraftName, setNewDraftName] = useState("");
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
   const [latestDraftEvaluation, setLatestDraftEvaluation] = useState<{
@@ -231,7 +230,6 @@ export function useTasksApp() {
     setNewChecklistInherit(false);
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
-    setNewDraftName(TASK_DRAFTS.untitledDraftName);
     setLastDraftSavedAt(null);
     setDraftAutosaveBaseline(
       draftAutosaveSignature({
@@ -593,7 +591,7 @@ export function useTasksApp() {
     () =>
       draftAutosaveSignature({
         id: newDraftID,
-        name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
+        name: newTitle.trim() || TASK_DRAFTS.untitledDraftName,
         title: newTitle,
         prompt: newPrompt,
         priority: newPriority,
@@ -617,7 +615,6 @@ export function useTasksApp() {
       newChecklistInherit,
       newChecklistItems,
       newDraftID,
-      newDraftName,
       newParentId,
       newPriority,
       newPrompt,
@@ -630,7 +627,7 @@ export function useTasksApp() {
   const buildDraftSaveInput = useCallback(() => {
     return {
       id: newDraftID,
-      name: newDraftName.trim() || TASK_DRAFTS.untitledDraftName,
+      name: newTitle.trim() || TASK_DRAFTS.untitledDraftName,
       payload: {
         title: newTitle,
         initial_prompt: newPrompt,
@@ -675,7 +672,6 @@ export function useTasksApp() {
     newChecklistInherit,
     newChecklistItems,
     newDraftID,
-    newDraftName,
     newParentId,
     newPriority,
     newPrompt,
@@ -839,7 +835,6 @@ export function useTasksApp() {
         }
       : null;
     setNewDraftID(draft.id);
-    setNewDraftName(draft.name);
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
@@ -857,11 +852,20 @@ export function useTasksApp() {
     setNewChecklistItems(draft.payload.checklist_items ?? []);
     setPendingSubtasks(pendingSubtasks);
     setLatestDraftEvaluation(latestEvaluation);
+    const resumedTitle = draft.payload.title ?? "";
     setDraftAutosaveBaseline(
       draftAutosaveSignature({
         id: draft.id,
-        name: draft.name,
-        title: draft.payload.title ?? "",
+        // Draft name is derived from the title (with "Untitled draft"
+        // fallback) at save time, so the baseline must use the same
+        // derivation against the resumed title — not the persisted
+        // `draft.name` from the server, which may have been authored
+        // under the old standalone-name field. Without this, a draft
+        // whose stored name does not equal `title || "Untitled draft"`
+        // would immediately appear "dirty" on resume and fire an
+        // autosave that only updates the name.
+        name: resumedTitle.trim() || TASK_DRAFTS.untitledDraftName,
+        title: resumedTitle,
         prompt: draft.payload.initial_prompt ?? "",
         priority: draft.payload.priority ?? "",
         taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
@@ -1070,8 +1074,6 @@ export function useTasksApp() {
       ? errorMessage(resumeDraftMutation.error)
       : null,
     clearResumeDraftError: resumeDraftMutation.reset,
-    newDraftName,
-    setNewDraftName,
     newTitle,
     setNewTitle,
     newPrompt,

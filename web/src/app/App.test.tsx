@@ -572,9 +572,10 @@ describe("App", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: /^new task$/i });
-    expect(within(dialog).getByLabelText(/^draft name$/i)).toHaveValue(
-      "Draft from list",
-    );
+    // The standalone draft-name field was removed: the task title now
+    // doubles as the draft name. Confirm there's no draft-name input
+    // and the title field reflects the resumed payload.
+    expect(within(dialog).queryByLabelText(/^draft name$/i)).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText(/^title$/i)).toHaveValue("Prefilled title");
     expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
     expect(within(dialog).getByText("Child A")).toBeInTheDocument();
