@@ -223,9 +223,9 @@ func assertWorkingDirExists(dir string) error {
 
 // cycleChangeSSEAdapter implements worker.CycleChangeNotifier on top
 // of the existing handler.SSEHub. The TaskCycleChanged event type and
-// the SPA cache invalidation hook were added in
-// EXECUTION-CYCLES-PLAN.md Stage 5/7; the Stage 4 worker is the first
-// server-side publisher.
+// the SPA cache invalidation hook are pinned by docs/API-SSE.md and
+// docs/EXECUTION-CYCLES.md; the V1 worker is the first server-side
+// publisher.
 type cycleChangeSSEAdapter struct {
 	hub *handler.SSEHub
 }

@@ -1,6 +1,6 @@
 # Agent worker (V1)
 
-Authoritative behavior for the **single in-process Cursor CLI worker** that consumes the ready-task queue and drives one execution cycle per task. This is the contract doc; the staged rollout breakdown lives in [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md). Versioned roadmap: [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md). Substrate the worker writes through: [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). Queue it consumes: [AGENT-QUEUE.md](./AGENT-QUEUE.md). Architecture hub: [DESIGN.md](./DESIGN.md).
+Authoritative behavior for the **single in-process Cursor CLI worker** that consumes the ready-task queue and drives one execution cycle per task. Versioned roadmap: [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md). Substrate the worker writes through: [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). Queue it consumes: [AGENT-QUEUE.md](./AGENT-QUEUE.md). Architecture hub: [DESIGN.md](./DESIGN.md). Forward-looking design proposals: [`proposals/`](./proposals/).
 
 ## Why this exists
 
@@ -209,7 +209,7 @@ For one successful task the worker produces:
 
 Plus the regular `status_changed` events that `(*store.Store).Update` writes when the task transitions `ready → running` and then `running → done`, exactly as for any other actor that flips a task through the REST API.
 
-The worker also publishes one `task_cycle_changed` SSE event per cycle/phase mutation (six per happy-path attempt) via the `CycleChangeNotifier` adapter wired in `cmd/taskapi/run_helpers.go`. The SPA already routes that event to its dedicated cycles cache slot (Stage 7 of `EXECUTION-CYCLES-PLAN.md`), so cycle activity appears in any open browser without a page refresh and without the SPA refetching the entire task tree.
+The worker also publishes one `task_cycle_changed` SSE event per cycle/phase mutation (six per happy-path attempt) via the `CycleChangeNotifier` adapter wired in `cmd/taskapi/run_helpers.go`. The SPA routes that event to its dedicated cycles cache slot (see [API-SSE.md](./API-SSE.md)), so cycle activity appears in any open browser without a page refresh and without the SPA refetching the entire task tree.
 
 Failure mirrors are symmetrical: a failed runner produces `phase_failed` (instead of `phase_completed`) and `cycle_failed` (instead of `cycle_completed`), with the `reason` field in the `cycle_failed` payload set to one of the strings in the [Runner abstraction table](#runner-abstraction). A panic produces the same shape with `reason="panic"`. Shutdown produces `cycle_failed` with `status=aborted` and `reason="shutdown"`.
 
@@ -265,7 +265,7 @@ The worker runs Cursor CLI as a child process inside the same user account as `t
 - **Secret redaction in `RawOutput`:** the redactor (`cursor.Redact`) is applied before the combined stdout + stderr is written to `task_cycle_phases.details_json`. It blanks `Authorization: …` headers, `T2A_…=value` assignments, and rewrites absolute home paths to `~`.
 - **Prompt hashing in audit:** `task_cycles.meta_json.prompt_hash` records `sha256(initial_prompt)`, never the prompt body. The body lives only on `tasks.initial_prompt` (where it was already authored) and is forwarded to the child on stdin; it never enters the audit log or worker `slog` lines.
 - **Per-run wall-clock cap:** every `runner.Run` is wrapped in `context.WithTimeout(parentCtx, T2A_AGENT_WORKER_RUN_TIMEOUT)` (default 5m). Cursor's child process is killed when the ctx fires.
-- **Working-dir hygiene is the operator's job (V1).** V1 has one worker, one working directory, sequential tasks. Cursor's whole job is to modify files; task A leaves edits, task B sees them. V2 will need per-cycle workspace isolation (git worktrees, ephemeral clones, branch-per-cycle); see [Notes / followups](./AGENT-WORKER-PLAN.md#notes--followups).
+- **Working-dir hygiene is the operator's job (V1).** V1 has one worker, one working directory, sequential tasks. Cursor's whole job is to modify files; task A leaves edits, task B sees them. V2 will need per-cycle workspace isolation (git worktrees, ephemeral clones, branch-per-cycle) — see V2 in [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md).
 - **No outbound network policy enforcement.** V1 trusts that Cursor CLI honors its own configured network behavior. V2 may add a network namespace / proxy-only policy for the child process.
 
 ## Composing with the queue and the cycles substrate
@@ -274,8 +274,8 @@ The worker is a **consumer**, not a co-author of the surrounding contracts:
 
 - **Queue (`pkgs/agents` / [AGENT-QUEUE.md](./AGENT-QUEUE.md)):** the worker calls `(*MemoryQueue).Receive` and `AckAfterRecv` and never touches the pending set otherwise. Reconcile keeps backfilling ready tasks even while the worker is running, so a startup dropped notify cannot leak.
 - **Cycles substrate (`pkgs/tasks/store` / [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md)):** the worker writes through the same `StartCycle` / `StartPhase` / `CompletePhase` / `TerminateCycle` facade methods that external clients use through the REST routes. The dual-write invariant (every cycle/phase mutation appends a `task_events` mirror in the same SQL transaction) is enforced by the store, not the worker — the worker just calls the facade and lets the substrate do its work.
-- **REST routes vs. in-process write:** `POST /tasks/{id}/cycles` (and friends) shipped in Stage 4 of `EXECUTION-CYCLES-PLAN.md` and remain the contract for **external** clients. The V1 worker bypasses HTTP and writes directly through the store to avoid an extra HTTP hop and double SSE fan-out inside the same process; this is documented out-of-scope for the REST routes.
-- **SSE (`task_cycle_changed`):** already shipped in Stage 5 of `EXECUTION-CYCLES-PLAN.md`. The V1 worker becomes the first server-side publisher via the `cycleChangeSSEAdapter` in `cmd/taskapi/run_helpers.go`. The SPA already invalidates the cycles cache slot granularly on receipt (Stage 7).
+- **REST routes vs. in-process write:** `POST /tasks/{id}/cycles` (and friends — see [API-HTTP.md](./API-HTTP.md)) remain the contract for **external** clients. The V1 worker bypasses HTTP and writes directly through the store to avoid an extra HTTP hop and double SSE fan-out inside the same process; this is documented out-of-scope for the REST routes.
+- **SSE (`task_cycle_changed`):** the contract lives in [API-SSE.md](./API-SSE.md). The V1 worker is the first server-side publisher via the `cycleChangeSSEAdapter` in `cmd/taskapi/run_helpers.go`. The SPA invalidates the cycles cache slot granularly on receipt.
 
 What the worker does **not** know about:
 
@@ -328,7 +328,7 @@ A failed attempt swaps `phase_completed` → `phase_failed`, `cycle_completed` �
 
 ### Smoke run (operator-only, real cursor-agent)
 
-The fake-runner test suite covers every wiring decision in V1, but it cannot prove the wired-up system actually drives a real Cursor CLI invocation to completion. That gap is closed by the **real-cursor smoke test** specified in [AGENT-WORKER-SMOKE-PLAN.md](./AGENT-WORKER-SMOKE-PLAN.md) and shipped in two layers:
+The fake-runner test suite covers every wiring decision in V1, but it cannot prove the wired-up system actually drives a real Cursor CLI invocation to completion. That gap is closed by the **real-cursor smoke test**, shipped in two layers:
 
 | Layer | What it proves | File |
 |-------|----------------|------|
@@ -375,7 +375,7 @@ Both tests are **double-gated**: they no-op without the `cursor_real` build tag 
 - `unexpected extra files` warnings (informational only) → on Windows, OS-level cache files (`cversions.2.db`, `*.ver*`) sometimes drop into the test's temp working directory. The harness logs these and continues; the only authoritative assertion is the target file's contents.
 - Test wall-clock above 90 s → Cursor cold-cache or a network blip. Re-run; if persistent, raise it locally first before opening an issue.
 
-The plan document ([AGENT-WORKER-SMOKE-PLAN.md](./AGENT-WORKER-SMOKE-PLAN.md)) records the full reasoning behind the deterministic prompt shape, the gating strategy, and the adapter bugs the smoke surfaced during its own rollout.
+The deterministic prompt shape, gating strategy, and the adapter bugs surfaced during the smoke's rollout are captured in the test files themselves and in `pkgs/agents/agentsmoke/doc.go`.
 
 ## Metrics
 
@@ -405,19 +405,18 @@ Alert rules and runbooks for these series are deliberately deferred to V3 of [AG
 
 ## What's deliberately out of scope (V1)
 
-These are tracked in [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) "What's deliberately deferred" and the followups section so they cannot get lost:
+Tracked under V2/V3/V4 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md); fresh design work for any of the items below should land as a proposal in [`proposals/`](./proposals/) before implementation begins.
 
 - Per-phase decomposition (`diagnose / verify / persist` substance).
 - Multi-runner selection at runtime.
 - Retry/backoff and failure taxonomy.
 - Multi-replica claim/lease and dead-letter handling.
 - Per-cycle workspace isolation (git worktrees etc).
-- Prometheus alert rules + runbooks (Stage 6 ships the raw counter + histogram; alerts and runbooks remain V3 of `AGENTIC-LAYER-PLAN.md`).
+- Prometheus alert rules + runbooks (V1 ships the raw counter + histogram; alerts and runbooks remain V3 of `AGENTIC-LAYER-PLAN.md`).
 - A standalone `cmd/taskagent` binary — only worth doing once the worker needs to scale independently of `taskapi`.
 
 ## Related
 
-- [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) — staged rollout, exit criteria, edge cases, status table.
 - [AGENT-QUEUE.md](./AGENT-QUEUE.md) — the `MemoryQueue` + reconcile loop the worker consumes from.
 - [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) — `task_cycles` / `task_cycle_phases` substrate the worker writes through, dual-write invariant.
 - [RUNTIME-ENV.md](./RUNTIME-ENV.md) — full env table including the V1 worker variables.

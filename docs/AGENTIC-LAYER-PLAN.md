@@ -1,30 +1,8 @@
 # Agentic layer plan (Cursor CLI)
 
-Simple long-term plan to evolve from today's ready-task queue into a reliable agent worker runtime powered by Cursor CLI.
+Long-term plan for evolving the in-process Cursor CLI agent worker into a reliable, multi-runner, multi-replica execution runtime.
 
-**Substrate work:** [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) is the design + contract for the `task_cycles` / `task_cycle_phases` substrate the V1 worker writes into; [`EXECUTION-CYCLES-PLAN.md`](./EXECUTION-CYCLES-PLAN.md) tracks the staged rollout. **The substrate slice is complete** (stages 1–9): domain types, schema + CRUD, dual-write mirror into `task_events`, six new HTTP routes, `task_cycle_changed` SSE, contract docs, web data layer with granular cycle-cache invalidation, and a final integration sweep. The optional UI panel (stage 8) was deliberately deferred — mirror `task_events` already render via `TaskUpdatesTimeline`, so cycle activity is visible without a dedicated panel; promote it when a worker actually drives cycles in production. The worker can now land against a stable typed write target, and any UI a user needs to monitor it is one cached query away (`useTaskCycles` / `useTaskCycle`).
-
-## V0 (now) — queue foundation
-
-What we already have:
-- Ready-task notifier from store commits.
-- Bounded in-memory `MemoryQueue` with dedupe (`ErrAlreadyQueued`) and backpressure (`ErrQueueFull`).
-- Startup + periodic reconcile (`ReconcileReadyTasksNotQueued`).
-- Basic queue metrics and logs.
-
-TODOs:
-- [ ] Keep `docs/AGENT-QUEUE.md` and `docs/RUNTIME-ENV.md` aligned when queue behavior changes.
-- [ ] Add dashboard panels for queue fill ratio, reconcile enqueue counts, and queue-full events.
-
-## V1 — single worker with Cursor CLI
-
-Goal: process ready tasks end-to-end in one process reliably enough for early production.
-
-**Status (as of Stage 5 of [`AGENT-WORKER-PLAN.md`](./AGENT-WORKER-PLAN.md)):** the worker is wired into `cmd/taskapi` behind `T2A_AGENT_WORKER_ENABLED` (default `false`). Stages 1–4 shipped the runner abstraction (`pkgs/agents/runner`), the Cursor CLI adapter + startup probe (`pkgs/agents/runner/cursor`), the worker loop with panic/shutdown recovery (`pkgs/agents/worker`), and the orphan sweep + `cmd/taskapi` lifecycle. Stage 5 publishes the contract — see [`AGENT-WORKER.md`](./AGENT-WORKER.md). Stage 6 (metrics + log shape pinning) is the V1 exit gate; the V3 alert rules + runbooks remain a V3 deliverable.
-
-Scope (one paragraph; the per-stage rollout, edge cases, and exit criteria live in [`AGENT-WORKER-PLAN.md`](./AGENT-WORKER-PLAN.md) — track V1 status there, not here):
-
-- One in-process worker loop consumes the existing `MemoryQueue`, reloads the task, runs Cursor CLI in headless mode (`--print --output-format json`) behind a small `runner.Runner` interface so Claude / Codex / future CLIs land as additional adapters, and writes the attempt through the [`EXECUTION-CYCLES.md`](./EXECUTION-CYCLES.md) substrate (one `task_cycle` + one `execute` phase in V1; per-phase decomposition is V2). The store's "at most one running cycle per task" guard becomes the worker's per-task claim. A startup sweep clears orphan `running` cycles from previous processes so a hard kill cannot wedge a task. Behavior, env vars, security model, and audit shape are pinned in [`AGENT-WORKER.md`](./AGENT-WORKER.md).
+V0 (the ready-task queue + reconcile loop) and V1 (the in-process Cursor CLI worker that drives one execution cycle per task through the typed `task_cycles` / `task_cycle_phases` substrate) have shipped. Their contracts live in [AGENT-QUEUE.md](./AGENT-QUEUE.md), [AGENT-WORKER.md](./AGENT-WORKER.md), and [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). Forward design work for new capabilities goes under [`proposals/`](./proposals/); this doc only tracks the open versions below.
 
 ## V2 — reliability and safety
 
@@ -39,18 +17,18 @@ TODOs:
 - [ ] Add retry policy and terminal-failure rule.
 - [ ] Add task-level lock/claim to prevent concurrent processing of same task.
 - [ ] Add prompt/version tracking for reproducibility.
-- [ ] Add security guardrails (env allowlist, cwd policy, secret redaction).
+- [ ] Add deeper security guardrails (cwd policy beyond V1's `T2A_AGENT_WORKER_WORKING_DIR`, additional secret-redaction rules as new runners land).
 
 ## V3 — operator-grade observability
 
 Goal: make agent behavior easy to monitor and debug.
 
 Scope:
-- Metrics for run duration, success/failure, retries, and task age.
+- Metrics for run duration, success/failure, retries, and task age (V1 ships `t2a_agent_runs_total` + `t2a_agent_run_duration_seconds`; retries / task-age remain).
 - Runbook coverage for queue stalls and repeated failures.
 
 TODOs:
-- [ ] Add metrics: `agent_runs_total`, `agent_run_duration_seconds`, retry/failure counters.
+- [ ] Add retry/failure counters once V2 retries land.
 - [ ] Add alert rules for sustained queue-full and high terminal-failure rate.
 - [ ] Add correlation IDs across queue event -> worker run -> task_events writes.
 - [ ] Add runbooks for "stuck queue" and "high retry burn."
@@ -71,7 +49,6 @@ TODOs:
 
 ## Exit criteria by version
 
-- V1: tasks can be processed end-to-end with bounded timeout and durable result writes.
 - V2: retries are controlled; duplicate/concurrent execution is prevented.
 - V3: operators can detect and triage issues from dashboards + alerts + runbooks.
 - V4: system tolerates restarts/replica scaling without losing or starving work.

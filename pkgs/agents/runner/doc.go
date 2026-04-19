@@ -2,18 +2,19 @@
 //
 // One Runner.Run call corresponds to exactly one execution-cycle phase
 // (diagnose / execute / verify / persist as defined in moat.md and
-// docs/EXECUTION-CYCLES.md). The worker in pkgs/agents/worker (Stage 3 of
-// docs/AGENT-WORKER-PLAN.md) drives the lifecycle (start cycle, start phase,
+// docs/EXECUTION-CYCLES.md). The worker in pkgs/agents/worker (contract:
+// docs/AGENT-WORKER.md) drives the lifecycle (start cycle, start phase,
 // patch phase) and asks a Runner to actually do the per-phase work.
 //
 // # Multi-runner roadmap
 //
-// V1 ships a single concrete adapter for Cursor's CLI (Stage 2 of
-// docs/AGENT-WORKER-PLAN.md). Additional runners (Codex CLI, Claude Code CLI,
-// in-process tool callers, etc.) land as new packages under pkgs/agents/runner/
-// without touching the worker. The Runner interface is therefore deliberately
-// minimal: anything that can be expressed as "given a Request, eventually
-// return a Result or a typed error" can be a Runner.
+// V1 ships a single concrete adapter for Cursor's CLI (see
+// pkgs/agents/runner/cursor). Additional runners (Codex CLI, Claude
+// Code CLI, in-process tool callers, etc.) land as new packages under
+// pkgs/agents/runner/ without touching the worker. The Runner
+// interface is therefore deliberately minimal: anything that can be
+// expressed as "given a Request, eventually return a Result or a
+// typed error" can be a Runner.
 //
 // # Wire format
 //

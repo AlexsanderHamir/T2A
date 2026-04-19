@@ -17,12 +17,10 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [API-SSE.md](./API-SSE.md) | **Contract:** `GET /events`, SSE wire format, dev-only `T2A_SSE_TEST` vars. |
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, reconcile loop, fairness ordering. |
-| [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | **Long-term roadmap** (V0–V4) for evolving the queue into a multi-runner agent runtime. Per-version goals + scope only; per-stage execution lives in the version-scoped `*-PLAN.md` companions. |
+| [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | **Long-term roadmap** (V2–V4) for evolving the in-process Cursor CLI worker into a reliable, multi-runner, multi-replica execution runtime. V0/V1 have shipped — see contract docs below. |
 | [AGENT-WORKER.md](./AGENT-WORKER.md) | **Contract:** V1 in-process Cursor CLI worker — lifecycle, runner abstraction, env vars (`T2A_AGENT_WORKER_*`), security model (env allowlist, secret redaction, prompt hashing), audit shape, orphan sweep, and explicit V2/V3/V4 deferrals. Opt-in via `T2A_AGENT_WORKER_ENABLED`. |
-| [AGENT-WORKER-PLAN.md](./AGENT-WORKER-PLAN.md) | **Active working plan** for V1 of `AGENTIC-LAYER-PLAN.md` — single in-process worker that consumes the ready-task queue, drives one execution cycle per task via Cursor CLI, and writes through the `EXECUTION-CYCLES.md` substrate. Stage-gated; commit + push between stages. Archived once V1 ships. |
-| [AGENT-WORKER-SMOKE-PLAN.md](./AGENT-WORKER-SMOKE-PLAN.md) | **Active working plan** for the operator-run real-`cursor-agent` smoke test that proves the V1 worker can drive a real Cursor CLI invocation to a real, verifiable filesystem mutation end-to-end (default-skipped in CI, gated by `T2A_TEST_REAL_CURSOR=1` + `cursor_real` build tag). Stage-gated; commit + push between stages. |
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | **Contract:** `task_cycles` / `task_cycle_phases` substrate, dual-write invariant to `task_events`, phase state machine, "where reads go" table, what's intentionally out. |
-| [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) | **Active working plan** for promoting the diagnose → execute → verify → persist loop into a first-class store primitive (`task_cycles`, `task_cycle_phases`) while keeping `task_events` as the audit witness. Stage-gated; commit + push between stages. |
+| [proposals/](./proposals/) | **Forward-looking design docs** for features that have not yet shipped. Read `proposals/README.md` for what goes here. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
@@ -31,7 +29,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | **Todos:** Prometheus/runtime/DB pool metrics, SLOs, alerts, OTel — execution order and principles. |
 | [runbooks/](./runbooks/) | **Operator:** short notes for Prometheus alerts (`TaskAPIHighHTTP5xxRate`, latency, in-flight, DB pool, readiness); expand in roadmap B3. |
 | [../deploy/prometheus/README.md](../deploy/prometheus/README.md) | **Prometheus:** `rule_files` for `t2a-taskapi-rules.yaml` (recording + alerting rules for `taskapi` metrics). |
-| [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | **Planned** codebase and docs reorg (phased); execute before large new surfaces (e.g. Cursor CLI). |
+| [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | **Principles** for keeping the codebase + docs layout consistent (dependency rules, non-goals, "what not to do"). The original phased reorg has shipped. |
 | [HANDLER-SCALE.md](./HANDLER-SCALE.md) | **Maintainability:** why `handler` is large, what already moved out (`middleware`, `calltrace`, `middlewaretest`, `handlertest`, `httpsecurityexpect`), conventions for new tests, ordered next extractions. |
 
 Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkgs/repo`, `internal/envload`, `cmd/taskapi`, `cmd/dbcheck`.
@@ -48,10 +46,11 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |
 | `REPO_ROOT`, `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/API-HTTP.md` (Optional workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
 | Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (`T2A_USER_TASK_AGENT_*`). |
-| Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/AGENT-WORKER-PLAN.md` (active stages) + `docs/RUNTIME-ENV.md` (`T2A_AGENT_WORKER_*`) + `docs/AGENTIC-LAYER-PLAN.md` (V0–V4 roadmap). |
-| Operator-run real-cursor smoke test for the V1 worker | `docs/AGENT-WORKER.md` "Smoke run" (operator runbook) + `docs/AGENT-WORKER-SMOKE-PLAN.md` (rollout history + rationale). |
-| Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table) + `docs/EXECUTION-CYCLES-PLAN.md` (stage checklist). |
-| Agentic worker lifecycle / rollout versions | `docs/AGENTIC-LAYER-PLAN.md` (versioned roadmap V0–V4) + the version's active `*-PLAN.md` companion (e.g. `docs/AGENT-WORKER-PLAN.md` for V1) + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). |
+| Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/RUNTIME-ENV.md` (`T2A_AGENT_WORKER_*`) + `docs/AGENTIC-LAYER-PLAN.md` (V2–V4 roadmap). |
+| Operator-run real-cursor smoke test for the V1 worker | `docs/AGENT-WORKER.md` "Smoke run" (operator runbook). |
+| Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table). |
+| Agentic worker lifecycle / future versions | `docs/AGENTIC-LAYER-PLAN.md` (versioned roadmap V2–V4) + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). New version-scoped execution playbooks land as `docs/<FEATURE>-PLAN.md` next to their contract doc once a `proposals/` design is accepted; delete the playbook after the version ships. |
+| New feature proposals (designs not yet shipped) | `docs/proposals/<FEATURE>.md`. Once accepted and execution starts, promote the contract to `docs/<FEATURE>.md` and (optionally) add `docs/<FEATURE>-PLAN.md` for the per-stage execution. |
 | `web/` only (components, hooks, no API contract change) | `docs/WEB.md`; root `README` only if npm scripts or env vars for Vite change. |
 | Observability standard, measurement scripts, or `taskapi` log/checklist behavior | `docs/OBSERVABILITY.md`; touch `scripts/measure-func-slog.*` / `cmd/funclogmeasure` for the per-function `slog` audit, or `scripts/measure-observability.*` for test coverage scope. |
 | New Prometheus recording/alert rules or runbook links for `taskapi` | `deploy/prometheus/t2a-taskapi-rules.yaml` + `deploy/prometheus/README.md`; alert text in `docs/runbooks/`; cross-link from `docs/OBSERVABILITY.md`. |

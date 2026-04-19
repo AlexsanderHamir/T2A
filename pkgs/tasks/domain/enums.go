@@ -57,7 +57,7 @@ const (
 	EventTaskFailed              EventType = "task_failed"
 	// Execution-cycle audit mirrors. Emitted in the same SQL transaction as writes to
 	// task_cycles / task_cycle_phases so GET /tasks/{id}/events stays a complete witness
-	// of cycle activity. See docs/EXECUTION-CYCLES-PLAN.md.
+	// of cycle activity. See docs/EXECUTION-CYCLES.md.
 	EventCycleStarted   EventType = "cycle_started"
 	EventCycleCompleted EventType = "cycle_completed"
 	EventCycleFailed    EventType = "cycle_failed"

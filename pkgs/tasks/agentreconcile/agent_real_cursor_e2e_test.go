@@ -5,8 +5,8 @@
 // excluded from default builds by the cursor_real build tag and
 // additionally gated by T2A_TEST_REAL_CURSOR=1 so even with the tag
 // set the test no-ops unless the operator opted in. See
-// docs/AGENT-WORKER-SMOKE-PLAN.md "Stage 3" for the runbook and the
-// rationale behind the prompt + assertion shape.
+// docs/AGENT-WORKER.md "Smoke run" for the operator runbook and
+// pkgs/agents/agentsmoke/doc.go for the prompt + assertion rationale.
 //
 // Run it locally as:
 //
@@ -112,12 +112,12 @@ func (n *hubCycleNotifier) PublishCycleChange(taskID, cycleID string) {
 }
 
 // TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten is
-// the Stage 3 smoke called for in docs/AGENT-WORKER-SMOKE-PLAN.md: a
-// real Cursor binary, driven through the same wiring cmd/taskapi
-// builds (handler + SSE hub + notifier + reconcile + worker + cursor
-// adapter + Prometheus adapter), turns a single POST /tasks into a
-// real file on disk and a fully-audited cycle. Default-skip in CI;
-// opt-in via T2A_TEST_REAL_CURSOR=1.
+// the full-stack real-cursor smoke (see docs/AGENT-WORKER.md "Smoke
+// run"): a real Cursor binary, driven through the same wiring
+// cmd/taskapi builds (handler + SSE hub + notifier + reconcile +
+// worker + cursor adapter + Prometheus adapter), turns a single
+// POST /tasks into a real file on disk and a fully-audited cycle.
+// Default-skip in CI; opt-in via T2A_TEST_REAL_CURSOR=1.
 func TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten(t *testing.T) {
 	if os.Getenv(realCursorRunGateEnv) != "1" {
 		t.Skipf("skipping: %s != 1; this test invokes a paid Cursor run", realCursorRunGateEnv)

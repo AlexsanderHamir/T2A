@@ -1,7 +1,7 @@
 // Package runnerfake provides a deterministic in-memory implementation of
-// runner.Runner used by every later test in the V1 worker plan
-// (docs/AGENT-WORKER-PLAN.md). The fake is keyed on (TaskID, Phase) so
-// tests can script the outcome of each phase without depending on a real
+// runner.Runner used by every V1 worker test (contract:
+// docs/AGENT-WORKER.md). The fake is keyed on (TaskID, Phase) so tests
+// can script the outcome of each phase without depending on a real
 // CLI.
 //
 // The fake is exported (capital R Runner) so test files in other packages

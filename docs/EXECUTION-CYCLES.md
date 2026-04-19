@@ -1,6 +1,6 @@
 # Execution cycles
 
-Authoritative design for the **diagnose → execute → verify → persist** loop as a first-class store primitive (`task_cycles`, `task_cycle_phases`) and how it stays consistent with the flat `task_events` audit log. This is the contract doc; the staged implementation breakdown lives next door in [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md). Architecture hub: [DESIGN.md](./DESIGN.md). REST surface: [API-HTTP.md](./API-HTTP.md). SSE: [API-SSE.md](./API-SSE.md).
+Authoritative design for the **diagnose → execute → verify → persist** loop as a first-class store primitive (`task_cycles`, `task_cycle_phases`) and how it stays consistent with the flat `task_events` audit log. Architecture hub: [DESIGN.md](./DESIGN.md). REST surface: [API-HTTP.md](./API-HTTP.md). SSE: [API-SSE.md](./API-SSE.md). Forward-looking design proposals (e.g. promoting `verify` to a substantive phase): [`proposals/`](./proposals/).
 
 ## Why this primitive exists
 
@@ -69,7 +69,7 @@ erDiagram
 - `meta_json` and `details_json` are stored as Postgres `jsonb` (`text` on SQLite) and default to `{}`; the store normalizes nil/empty input to that canonical zero value so the column never carries SQL `NULL` or an empty string.
 - `task_cycle_phases.event_seq` is a soft pointer to the **most recent** mirror row in `task_events` for that phase. It is filled by the store, not by the caller. See **Dual-write invariant**.
 
-`task_cycles` does **not** carry an `event_seq` backlink. Cycle audit rows are easily reconstructed from `(task_id, type IN ('cycle_started', 'cycle_completed', 'cycle_failed') AND data_json->>'cycle_id' = ?)`. Phases benefit more from a one-shot pointer because they have multiple transitions per row. Recorded under [Notes / followups](./EXECUTION-CYCLES-PLAN.md#notes--followups) so a future read path can promote it without digging.
+`task_cycles` does **not** carry an `event_seq` backlink. Cycle audit rows are easily reconstructed from `(task_id, type IN ('cycle_started', 'cycle_completed', 'cycle_failed') AND data_json->>'cycle_id' = ?)`. Phases benefit more from a one-shot pointer because they have multiple transitions per row. A future read path can promote it without digging.
 
 ## State machine
 
@@ -135,27 +135,27 @@ The store enforces the following invariants inside the same transaction as the r
 - **Phase transitions follow `ValidPhaseTransition`.** Invalid transitions surface as `ErrInvalidInput: phase transition "<prev>" -> "<next>" not allowed`.
 - **Cross-task lineage is rejected.** Both `StartCycle` (`parent_cycle_id`) and the handler's `assertCycleBelongsToTask` preflight return `ErrInvalidInput` / `404` when a cycle id from one task is referenced under another task. The store does not let a `parent_cycle_id` straddle tasks; the handler defends `cycleId` URL segments belonging to a different `taskId` because `task_cycles.id` is unique on its own.
 
-The "at most one running" guards are implemented as in-TX `SELECT ... LIMIT 1` checks rather than partial unique indexes because GORM `AutoMigrate` does not drive Postgres-only `CREATE UNIQUE INDEX ... WHERE status = 'running'` migrations. A future Postgres-only post-migration hook can add the partial unique index as a belt-and-braces backup; the in-TX guard stays for SQLite test parity. Recorded as a followup in the [plan doc](./EXECUTION-CYCLES-PLAN.md#notes--followups).
+The "at most one running" guards are implemented as in-TX `SELECT ... LIMIT 1` checks rather than partial unique indexes because GORM `AutoMigrate` does not drive Postgres-only `CREATE UNIQUE INDEX ... WHERE status = 'running'` migrations. A future Postgres-only post-migration hook can add the partial unique index as a belt-and-braces backup; the in-TX guard stays for SQLite test parity.
 
 ## HTTP and SSE surface
 
 REST routes, request/response shapes, idempotency, and `400` strings are pinned in [API-HTTP.md](./API-HTTP.md) under **Task execution cycles (`/tasks/{id}/cycles`)**. SSE notifications (`task_cycle_changed`) are pinned in [API-SSE.md](./API-SSE.md). Two cross-cutting points worth restating here:
 
 - The handler ignores any `triggered_by` field in the request body and always derives the actor from `X-Actor` (default `user`), matching the rest of `taskapi`. The `triggered_by` column on `task_cycles` is set by the store from that header, not by the body, so request shape and stored state cannot drift.
-- `GET /tasks/{id}/cycles` ships with limit-based pagination (`?limit=` + `has_more` envelope). The `/events` keyset cursor pattern is a deliberate followup; the store does not yet expose a cursor for `task_cycles`. Tracked in the [plan doc](./EXECUTION-CYCLES-PLAN.md#notes--followups).
+- `GET /tasks/{id}/cycles` ships with limit-based pagination (`?limit=` + `has_more` envelope). The `/events` keyset cursor pattern is a deliberate followup; the store does not yet expose a cursor for `task_cycles`.
 
 ## What's intentionally out (today)
 
 - **`task_cycle_artifacts` table.** Artifacts (test logs, diff bundles, screenshots) live in `task_cycle_phases.details_json` until a UI demands a browser. Promoting them to a typed table is a future slice once worker output volume justifies it.
 - **Cross-cycle dependencies.** No "cycle B depends on cycle A" graph; this matters once multiple workers cooperate on the same task. The current `parent_cycle_id` covers same-task lineage (e.g. a corrective sub-attempt) and nothing else.
 - **Retry / backoff policy.** A worker-side concern, not a data-model concern. The substrate only records what happened; deciding whether to start another `StartCycle` is the worker's job.
-- **Visual cycle Gantt / dependency graph.** The web UI panel (planned in `EXECUTION-CYCLES-PLAN.md` Stage 8) is a list with phase rollups, not a chart.
+- **Visual cycle Gantt / dependency graph.** The current UI surfaces cycle activity through `TaskUpdatesTimeline` (mirror events) plus `useTaskCycles` / `useTaskCycle` data hooks; a dedicated cycles panel is a list with phase rollups, not a chart, and remains an open design opportunity for [`proposals/`](./proposals/).
 - **Versioned migrations for the new tables.** They are picked up by the same `AutoMigrate` call as the rest of the schema; a global migration overhaul (Goose, Atlas, …) is a separate `docs/PERSISTENCE.md` decision.
 
 ## Related
 
 - [moat.md](../moat.md) — the prose origin of the diagnose → execute → verify → persist loop.
-- [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) — staged implementation breakdown and followups.
+- [`proposals/`](./proposals/) — forward-looking design work for the cycles surface (e.g. substantive `verify` / `persist` phases, cycles UI panel).
 - [API-HTTP.md](./API-HTTP.md) — REST contract for `/tasks/{id}/cycles…`.
 - [API-SSE.md](./API-SSE.md) — `task_cycle_changed` payload and trigger surface.
 - [PERSISTENCE.md](./PERSISTENCE.md) — store, `task_events`, AutoMigrate scope.

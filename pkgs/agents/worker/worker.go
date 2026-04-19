@@ -28,8 +28,8 @@ const DefaultRunTimeout = 5 * time.Minute
 
 // DefaultShutdownAbortTimeout bounds the post-cancel best-effort writes
 // (CompletePhase + TerminateCycle + Update task) that run on a
-// non-cancelled background context after the parent ctx fires. Matches
-// the Stage 3 design in docs/AGENT-WORKER-PLAN.md edge case #5.
+// non-cancelled background context after the parent ctx fires. See
+// docs/AGENT-WORKER.md "Lifecycle of one task" for the shutdown path.
 const DefaultShutdownAbortTimeout = 5 * time.Second
 
 // SkippedDiagnoseSummary is the canonical summary written on the no-op
@@ -84,10 +84,11 @@ type Options struct {
 	Clock func() time.Time
 }
 
-// Worker is the single-goroutine in-process consumer wired in
-// docs/AGENT-WORKER-PLAN.md Stage 3. Construct it with NewWorker and
-// drive it with Run; both methods are safe to call from one goroutine
-// only (V1 explicitly does not run multiple workers in parallel).
+// Worker is the single-goroutine in-process consumer of the
+// MemoryQueue (contract: docs/AGENT-WORKER.md). Construct it with
+// NewWorker and drive it with Run; both methods are safe to call from
+// one goroutine only (V1 explicitly does not run multiple workers in
+// parallel).
 type Worker struct {
 	store   *store.Store
 	queue   *agents.MemoryQueue

@@ -46,9 +46,9 @@ type Runner interface {
 // pinned by runner_test.go; see package doc for the wire-format contract.
 //
 // Env should contain ONLY entries the adapter is willing to forward to the
-// underlying tool. Cursor adapter convention (Stage 2 of
-// docs/AGENT-WORKER-PLAN.md) is to pass through PATH and HOME and nothing
-// else by default; everything else must be explicitly allowlisted by the
+// underlying tool. Cursor adapter convention (see docs/AGENT-WORKER.md
+// "Security model") is to pass through PATH and HOME and nothing else
+// by default; everything else must be explicitly allowlisted by the
 // caller.
 type Request struct {
 	TaskID     string            `json:"task_id"`

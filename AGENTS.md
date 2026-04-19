@@ -9,7 +9,8 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 1 | [README.md](README.md) | Install, run `taskapi` / `dbcheck`, `web/` npm commands, dev scripts. |
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
 | — | [docs/PRODUCT.md](docs/PRODUCT.md) | Control-plane positioning and what T2A provides before large bets; horizons, scope rules. |
-| — | [docs/REORGANIZATION-PLAN.md](docs/REORGANIZATION-PLAN.md) | **Planned** docs + backend layout (phased milestones); read before large structural work. |
+| — | [docs/REORGANIZATION-PLAN.md](docs/REORGANIZATION-PLAN.md) | **Principles** for the docs + backend layout (dependency rules, non-goals, what-not-to-do); read before large structural work. |
+| — | [docs/proposals/](docs/proposals/) | **Forward-looking** design docs for features that have not yet shipped (one file per proposal). |
 | 3 | [docs/DESIGN.md](docs/DESIGN.md) | **Hub:** architecture, limitations, links to contract docs. |
 | 4 | [docs/API-HTTP.md](docs/API-HTTP.md) | REST + `/repo`: routes, bodies, errors, metrics. |
 | 5 | [docs/API-SSE.md](docs/API-SSE.md) | `GET /events` and dev SSE env. |

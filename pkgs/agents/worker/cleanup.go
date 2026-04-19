@@ -131,7 +131,7 @@ func (w *Worker) recoverFromPanic(state *processState, task domain.Task) {
 // bestEffortFailTask is the cleanup path used when StartCycle itself
 // failed (so there is no cycle row to terminate but the task is now
 // `running` and would otherwise be re-enqueued forever by the
-// reconcile loop — edge case #2 in docs/AGENT-WORKER-PLAN.md).
+// reconcile loop). See docs/AGENT-WORKER.md "Lifecycle of one task".
 func (w *Worker) bestEffortFailTask(ctx context.Context, taskID string) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.bestEffortFailTask",
 		"task_id", taskID)

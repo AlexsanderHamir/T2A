@@ -24,7 +24,7 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 {"type":"task_cycle_changed","id":"<task-uuid>","cycle_id":"<cycle-uuid>"}
 ```
 
-`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive (and [EXECUTION-CYCLES-PLAN.md](./EXECUTION-CYCLES-PLAN.md) for the staged rollout).
+`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive.
 
 Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
 

@@ -15,8 +15,8 @@ const agentsmokeLogCmd = "taskapi"
 
 // targetFilename is the canonical filename Cursor must create inside
 // Fixture.WorkingDir. Pinned so the prompt and the assertion logic
-// stay in lockstep across every stage of
-// docs/AGENT-WORKER-SMOKE-PLAN.md.
+// stay in lockstep across every layer of the real-cursor smoke (see
+// docs/AGENT-WORKER.md "Smoke run").
 const targetFilename = "agent-smoke-output.txt"
 
 // expectedContents is the exact byte sequence Cursor must write into
@@ -59,9 +59,9 @@ func NewFixture(t *testing.T) *Fixture {
 
 // buildPrompt returns the canonical prompt body. It is deliberately
 // explicit about the absolute path and forbids tangential work so the
-// post-condition assertion can be tight. See
-// docs/AGENT-WORKER-SMOKE-PLAN.md "Why the prompt must be
-// deterministic".
+// post-condition assertion can be tight: a real Cursor invocation is
+// non-deterministic by construction, so the smoke asserts on the
+// outcome (the bytes on disk) rather than on Cursor's process.
 func buildPrompt(target string) string {
 	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.buildPrompt", "target", target)
 	return fmt.Sprintf(`Create a single file at exactly the absolute path:
