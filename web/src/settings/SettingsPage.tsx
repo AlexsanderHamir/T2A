@@ -84,6 +84,18 @@ export function SettingsPage() {
   const knownNoRunTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
+  /**
+   * The PATH-resolved cursor binary the server reports from the most
+   * recent successful probe, kept around so the help text can show the
+   * concrete default ("auto-detected at /usr/local/bin/cursor-agent")
+   * after the operator clicks Test with the field blank. Cleared on
+   * any field edit because a fresh edit may invalidate the previously
+   * resolved path (e.g. they're typing a custom path that hasn't been
+   * probed yet).
+   */
+  const [resolvedDefaultBin, setResolvedDefaultBin] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (settings && form === null) {
@@ -122,6 +134,12 @@ export function SettingsPage() {
     // they may have just dispatched a task in another tab. Re-arm the
     // Cancel button so the next probe is allowed.
     if (knownNoRun) clearKnownNoRun();
+    // The cursor-bin field's resolved default is only meaningful while
+    // the field stays blank; once the operator starts typing, the
+    // previous resolution describes a path they're no longer using.
+    if (key === "cursorBin" && resolvedDefaultBin !== null) {
+      setResolvedDefaultBin(null);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -190,12 +208,19 @@ export function SettingsPage() {
         binary_path: form.cursorBin.trim() || undefined,
       });
       if (result.ok) {
-        setStatus({
-          kind: "success",
-          message: result.version
-            ? `Cursor binary OK (version ${result.version}).`
-            : "Cursor binary OK.",
-        });
+        // Compose the message from whichever fields the server populated.
+        // The resolved binary path is the most user-actionable bit when
+        // the operator left the field blank — without it they have no
+        // idea what "auto-detect on PATH" actually picked.
+        const bits: string[] = ["Cursor binary OK"];
+        if (result.binary_path) bits.push(`at ${result.binary_path}`);
+        if (result.version) bits.push(`(version ${result.version})`);
+        setStatus({ kind: "success", message: `${bits.join(" ")}.` });
+        if (result.binary_path && form.cursorBin.trim() === "") {
+          setResolvedDefaultBin(result.binary_path);
+        } else {
+          setResolvedDefaultBin(null);
+        }
       } else {
         // Probe returned `{ ok: false, error }` — semantically a
         // failure even though the HTTP request succeeded. Route through
@@ -365,6 +390,16 @@ export function SettingsPage() {
           <p className="settings-field-help">
             Leave empty to auto-detect on PATH. Use the test button to verify
             before saving.
+            {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
+              <>
+                {" "}
+                Currently resolves to{" "}
+                <code data-testid="settings-resolved-cursor-bin">
+                  {resolvedDefaultBin}
+                </code>
+                .
+              </>
+            ) : null}
           </p>
           <button
             type="button"

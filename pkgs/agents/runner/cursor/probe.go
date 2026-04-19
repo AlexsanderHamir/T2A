@@ -98,6 +98,31 @@ func DefaultProbeFn(ctx context.Context, name string, args ...string) ([]byte, [
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), exitCode, err
 }
 
+// ResolveBinaryPath returns the absolute path that exec.Command would use
+// for binaryPath (via PATH lookup), or the trimmed input when LookPath
+// fails. Designed so callers can show the operator the concrete path that
+// got executed — particularly when the input is a bare command name like
+// "cursor-agent" and the actual binary lives somewhere on PATH that the
+// operator never typed. Returns "" for empty/whitespace input so callers
+// can distinguish "nothing configured" from "PATH lookup miss".
+//
+// Best-effort: a LookPath failure is not propagated because the caller
+// (e.g. registry.Probe) still wants to attempt the probe with the bare
+// name and surface the real exec error rather than a preflight LookPath
+// error that would be redundant.
+func ResolveBinaryPath(binaryPath string) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.ResolveBinaryPath",
+		"binary", binaryPath)
+	p := strings.TrimSpace(binaryPath)
+	if p == "" {
+		return ""
+	}
+	if abs, err := exec.LookPath(p); err == nil {
+		return abs
+	}
+	return p
+}
+
 // firstNonEmptyLine returns the first non-empty trimmed line of b, or
 // "" when b is empty / whitespace-only.
 func firstNonEmptyLine(b []byte) string {

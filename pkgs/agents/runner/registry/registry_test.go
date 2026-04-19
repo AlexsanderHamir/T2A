@@ -91,7 +91,7 @@ func TestBuild_unknownReturnsErrUnknownRunner(t *testing.T) {
 func TestProbe_unknownRunnerSurfacesErrUnknownRunner(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	_, err := registry.Probe(ctx, "zzz", "", 50*time.Millisecond)
+	_, _, err := registry.Probe(ctx, "zzz", "", 50*time.Millisecond)
 	if !errors.Is(err, registry.ErrUnknownRunner) {
 		t.Fatalf("err = %v, want ErrUnknownRunner", err)
 	}
@@ -103,7 +103,7 @@ func TestProbe_unknownRunnerSurfacesErrUnknownRunner(t *testing.T) {
 func TestProbe_missingBinarySurfacesError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := registry.Probe(ctx, registry.CursorRunnerID, "/nonexistent/path/cursor-agent-xyz-9999", 200*time.Millisecond)
+	_, _, err := registry.Probe(ctx, registry.CursorRunnerID, "/nonexistent/path/cursor-agent-xyz-9999", 200*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected error probing nonexistent binary")
 	}

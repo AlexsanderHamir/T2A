@@ -80,7 +80,7 @@ type agentWorkerSupervisor struct {
 	queue      *agents.MemoryQueue
 	hub        *handler.SSEHub
 	metrics    worker.RunMetrics
-	probe      func(ctx context.Context, id, binaryPath string, timeout time.Duration) (string, error)
+	probe      func(ctx context.Context, id, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error)
 	probeBudge time.Duration
 
 	// applyMu serializes Start / Reload end-to-end so the read-prev,
@@ -141,7 +141,7 @@ type effectiveSettingsLog struct {
 type AgentWorkerSupervisor interface {
 	CancelCurrentRun() bool
 	Reload(ctx context.Context) error
-	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (string, error)
+	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error)
 }
 
 // newAgentWorkerSupervisor wires the supervisor with its dependencies.
@@ -185,7 +185,7 @@ func (s *agentWorkerSupervisor) Reload(ctx context.Context) error {
 // Save. Reuses the same registry.Probe the supervisor uses on boot so
 // the probe result the operator sees is identical to what would be
 // observed at the next reload.
-func (s *agentWorkerSupervisor) ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (string, error) {
+func (s *agentWorkerSupervisor) ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.ProbeRunner",
 		"runner", runnerID, "binary", binaryPath)
 	if timeout <= 0 {
@@ -280,7 +280,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	}
 
 	probeCtx, cancel := context.WithTimeout(ctx, s.probeBudge)
-	version, probeErr := s.probe(probeCtx, cfg.Runner, cfg.CursorBin, s.probeBudge)
+	version, _, probeErr := s.probe(probeCtx, cfg.Runner, cfg.CursorBin, s.probeBudge)
 	cancel()
 	if probeErr != nil {
 		stopWorkerInstance(prev, "probe_failed")

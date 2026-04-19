@@ -53,10 +53,18 @@ type probeRequest struct {
 }
 
 type probeResponse struct {
-	OK      bool   `json:"ok"`
-	Runner  string `json:"runner"`
-	Version string `json:"version,omitempty"`
-	Error   string `json:"error,omitempty"`
+	OK     bool   `json:"ok"`
+	Runner string `json:"runner"`
+	// BinaryPath is the absolute path that was actually executed (e.g.
+	// /usr/local/bin/cursor-agent). Populated whether the probe
+	// succeeded or failed so the SPA can show the operator the
+	// concrete path that was tried — particularly important when the
+	// operator left the field blank and the registry resolved to a
+	// PATH-discovered default. Empty when resolution returned nothing
+	// useful (e.g. unknown runner).
+	BinaryPath string `json:"binary_path,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 type cancelRunResponse struct {
@@ -171,8 +179,8 @@ func (h *Handler) probeCursor(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	version, err := h.agent.ProbeRunner(r.Context(), body.Runner, body.BinaryPath, settingsProbeTimeout)
-	resp := probeResponse{Runner: body.Runner}
+	version, resolvedBin, err := h.agent.ProbeRunner(r.Context(), body.Runner, body.BinaryPath, settingsProbeTimeout)
+	resp := probeResponse{Runner: body.Runner, BinaryPath: resolvedBin}
 	if err != nil {
 		resp.OK = false
 		resp.Error = err.Error()

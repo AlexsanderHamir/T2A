@@ -30,7 +30,7 @@ import (
 type AgentWorkerControl interface {
 	CancelCurrentRun() bool
 	Reload(ctx context.Context) error
-	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (string, error)
+	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error)
 }
 
 type Handler struct {

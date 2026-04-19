@@ -33,6 +33,14 @@ export type AppSettingsPatch = Partial<{
 export type ProbeCursorResult = {
   ok: boolean;
   runner: string;
+  /**
+   * Absolute binary path that the server actually executed. Populated
+   * regardless of ok, so the SPA can show "auto-detected at
+   * /usr/local/bin/cursor-agent" on success or "tried /usr/local/bin/cursor
+   * — exec failed" on failure. Empty when the server could not resolve
+   * the runner at all (e.g. unknown runner id).
+   */
+  binary_path?: string;
   version?: string;
   error?: string;
 };
@@ -127,6 +135,7 @@ export async function probeCursor(
     throw new Error("unexpected probe-cursor response shape");
   }
   const out: ProbeCursorResult = { ok: o.ok, runner: o.runner };
+  if (typeof o.binary_path === "string") out.binary_path = o.binary_path;
   if (typeof o.version === "string") out.version = o.version;
   if (typeof o.error === "string") out.error = o.error;
   return out;

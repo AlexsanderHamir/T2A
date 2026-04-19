@@ -22,15 +22,16 @@ import (
 // CancelCurrentRun, and POST /settings/probe-cursor wires the binary
 // path through to ProbeRunner.
 type fakeAgentControl struct {
-	cancelResult atomic.Bool
-	cancelCalls  atomic.Int32
-	reloadCalls  atomic.Int32
-	reloadErr    atomic.Pointer[error]
-	probeCalls   atomic.Int32
-	probeVersion atomic.Pointer[string]
-	probeErr     atomic.Pointer[error]
-	lastRunner   atomic.Pointer[string]
-	lastBinary   atomic.Pointer[string]
+	cancelResult  atomic.Bool
+	cancelCalls   atomic.Int32
+	reloadCalls   atomic.Int32
+	reloadErr     atomic.Pointer[error]
+	probeCalls    atomic.Int32
+	probeVersion  atomic.Pointer[string]
+	probeResolved atomic.Pointer[string]
+	probeErr      atomic.Pointer[error]
+	lastRunner    atomic.Pointer[string]
+	lastBinary    atomic.Pointer[string]
 }
 
 func (f *fakeAgentControl) CancelCurrentRun() bool {
@@ -46,19 +47,23 @@ func (f *fakeAgentControl) Reload(_ context.Context) error {
 	return nil
 }
 
-func (f *fakeAgentControl) ProbeRunner(_ context.Context, runnerID, binaryPath string, _ time.Duration) (string, error) {
+func (f *fakeAgentControl) ProbeRunner(_ context.Context, runnerID, binaryPath string, _ time.Duration) (string, string, error) {
 	f.probeCalls.Add(1)
 	r := runnerID
 	b := binaryPath
 	f.lastRunner.Store(&r)
 	f.lastBinary.Store(&b)
+	resolved := ""
+	if rp := f.probeResolved.Load(); rp != nil {
+		resolved = *rp
+	}
 	if e := f.probeErr.Load(); e != nil {
-		return "", *e
+		return "", resolved, *e
 	}
 	if v := f.probeVersion.Load(); v != nil {
-		return *v, nil
+		return *v, resolved, nil
 	}
-	return "", nil
+	return "", resolved, nil
 }
 
 // settingsTestServer wires the same handler the production binary
@@ -221,6 +226,34 @@ func TestHTTP_ProbeCursor_returnsVersionFromControl(t *testing.T) {
 	}
 	if got := ctrl.lastBinary.Load(); got == nil || *got != "/usr/local/bin/cursor" {
 		t.Errorf("binary path not forwarded: %v", got)
+	}
+}
+
+// TestHTTP_ProbeCursor_returnsResolvedBinaryPath pins the contract
+// surfaced by the SPA: the probe response carries the absolute path
+// that was actually executed (PATH-resolved when the operator left
+// the field blank), so the "Test cursor binary" success message can
+// say "auto-detected at /usr/local/bin/cursor-agent" instead of just
+// "OK". Without this field the operator has no way to tell what
+// "auto-detect on PATH" actually resolved to.
+func TestHTTP_ProbeCursor_returnsResolvedBinaryPath(t *testing.T) {
+	srv, _, _, ctrl := settingsTestServer(t)
+	v := "cursor 1.0"
+	resolved := "/opt/local/bin/cursor-agent"
+	ctrl.probeVersion.Store(&v)
+	ctrl.probeResolved.Store(&resolved)
+
+	body := mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/probe-cursor",
+		`{"runner":"cursor","binary_path":""}`, http.StatusOK)
+	var resp probeResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, body)
+	}
+	if !resp.OK {
+		t.Fatalf("resp = %+v, want OK=true", resp)
+	}
+	if resp.BinaryPath != resolved {
+		t.Errorf("BinaryPath = %q, want %q", resp.BinaryPath, resolved)
 	}
 }
 

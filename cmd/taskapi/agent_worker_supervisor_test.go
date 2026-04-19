@@ -24,7 +24,7 @@ type supervisorTestRig struct {
 	sup   *agentWorkerSupervisor
 }
 
-func newSupervisorTestRig(t *testing.T, ctx context.Context, probeFn func(ctx context.Context, id, bin string, timeout time.Duration) (string, error)) *supervisorTestRig {
+func newSupervisorTestRig(t *testing.T, ctx context.Context, probeFn func(ctx context.Context, id, bin string, timeout time.Duration) (string, string, error)) *supervisorTestRig {
 	t.Helper()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
@@ -50,9 +50,9 @@ func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 	defer cancel()
 
 	probeCalled := false
-	probe := func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
+	probe := func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		probeCalled = true
-		return "should-not-call", nil
+		return "should-not-call", "", nil
 	}
 	rig := newSupervisorTestRig(t, ctx, probe)
 
@@ -86,9 +86,9 @@ func TestSupervisor_StaysIdleWhenWorkerDisabled(t *testing.T) {
 		t.Fatalf("seed settings: %v", err)
 	}
 	probeCalled := false
-	rig.sup.probe = func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
+	rig.sup.probe = func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		probeCalled = true
-		return "x", nil
+		return "x", "", nil
 	}
 
 	if err := rig.sup.Start(ctx); err != nil {
@@ -114,8 +114,8 @@ func TestSupervisor_ProbeFailureKeepsIdle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
-		return "", errors.New("cursor not installed")
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		return "", "", errors.New("cursor not installed")
 	})
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
 		RepoRoot: ptrString(t.TempDir()),
@@ -143,8 +143,8 @@ func TestSupervisor_StartsWorkerWhenConfigured(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
-		return "test-version-1.2.3", nil
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		return "test-version-1.2.3", "", nil
 	})
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
 		RepoRoot: ptrString(t.TempDir()),
@@ -176,8 +176,8 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
-		return "v1", nil
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		return "v1", "", nil
 	})
 	dirA := t.TempDir()
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
@@ -228,8 +228,8 @@ func TestSupervisor_ReloadSkipsRespawnOnNoMaterialChange(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
-		return "v1", nil
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		return "v1", "", nil
 	})
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
 		RepoRoot: ptrString(t.TempDir()),
@@ -322,7 +322,7 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 		return blockProbe
 	}
 
-	probe := func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
+	probe := func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		n := atomic.AddInt32(&concurrentNow, 1)
 		defer atomic.AddInt32(&concurrentNow, -1)
 		for {
@@ -332,7 +332,7 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 			}
 		}
 		<-getGate()
-		return "v1", nil
+		return "v1", "", nil
 	}
 
 	rig := newSupervisorTestRig(t, ctx, probe)

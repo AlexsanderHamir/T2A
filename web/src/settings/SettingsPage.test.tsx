@@ -138,6 +138,44 @@ describe("SettingsPage", () => {
     );
   });
 
+  it("surfaces the PATH-resolved binary path when the field is blank, in both the status and the help text", async () => {
+    // Without this, an operator who leaves the cursor-bin field blank
+    // and clicks Test sees only "Cursor binary OK" and has no idea
+    // which binary on PATH was actually exec'd. The /settings/probe-cursor
+    // response now carries `binary_path`; the SPA must surface it.
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input: FetchInput, init?: RequestInit) => {
+        const url = requestUrl(input);
+        if (url.endsWith("/settings/probe-cursor")) {
+          return jsonResponse({
+            ok: true,
+            runner: "cursor",
+            binary_path: "/opt/local/bin/cursor-agent",
+            version: "2026.05",
+          });
+        }
+        if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+          return jsonResponse(defaultSettings({ cursor_bin: "" }));
+        }
+        return new Response("not found", { status: 404 });
+      },
+    );
+
+    renderPage();
+    const probeBtn = await screen.findByRole("button", {
+      name: /Test cursor binary/,
+    });
+    await userEvent.click(probeBtn);
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-status")).toHaveTextContent(
+        /at \/opt\/local\/bin\/cursor-agent.*2026\.05/,
+      ),
+    );
+    expect(
+      screen.getByTestId("settings-resolved-cursor-bin"),
+    ).toHaveTextContent("/opt/local/bin/cursor-agent");
+  });
+
   it("surfaces probe failures via the error channel (role='alert', not role='status')", async () => {
     // Session #36 — probe `{ ok: false, error }` is semantically a
     // failure and must announce assertively to screen-readers, AND

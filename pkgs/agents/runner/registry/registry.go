@@ -109,18 +109,25 @@ func Build(id string, opts BuildOptions) (runner.Runner, error) {
 }
 
 // Probe runs the runner's --version probe with a bounded deadline and
-// returns the trimmed version string. Used by the supervisor at boot
-// (to populate runner.Version()) and by POST /settings/probe-cursor
-// (to validate a cursor binary path before saving).
+// returns the trimmed version string plus the absolute binary path that
+// was actually executed (PATH-resolved when the operator left the field
+// blank, so the SPA "Test cursor binary" success message can show
+// "auto-detected on PATH at /usr/local/bin/cursor-agent" instead of
+// just "OK"). Used by the supervisor at boot (to populate
+// runner.Version()) and by POST /settings/probe-cursor (to validate a
+// cursor binary path before saving).
 //
 // Empty binaryPath uses the descriptor's DefaultBinaryHint. timeout
-// <= 0 falls back to the runner's documented default.
-func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (string, error) {
+// <= 0 falls back to the runner's documented default. The resolved
+// path is best-effort: when LookPath fails the original input is
+// returned so the caller still has something to display alongside the
+// probe error.
+func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
 	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Probe",
 		"id", id, "binary", binaryPath, "timeout_ns", int64(timeout))
 	desc, err := Lookup(id)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	bin := strings.TrimSpace(binaryPath)
 	if bin == "" {
@@ -128,8 +135,10 @@ func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (s
 	}
 	switch desc.ID {
 	case CursorRunnerID:
-		return cursor.Probe(ctx, bin, timeout, nil)
+		resolved := cursor.ResolveBinaryPath(bin)
+		v, probeErr := cursor.Probe(ctx, resolved, timeout, nil)
+		return v, resolved, probeErr
 	default:
-		return "", fmt.Errorf("%w: %q (no Probe branch)", ErrUnknownRunner, desc.ID)
+		return "", "", fmt.Errorf("%w: %q (no Probe branch)", ErrUnknownRunner, desc.ID)
 	}
 }
