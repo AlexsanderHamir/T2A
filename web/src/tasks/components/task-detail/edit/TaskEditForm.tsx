@@ -82,7 +82,9 @@ export function TaskEditForm({
       dismissibleWhileBusy
     >
       <section className="panel modal-sheet modal-sheet--edit">
-        <h2 id="edit-dialog-title">Edit task</h2>
+        <h2 id="edit-dialog-title" className="term-arrow">
+          <span>Edit task</span>
+        </h2>
         <form onSubmit={(e) => void onSubmit(e)}>
           <p className="muted stack-tight-zero" id="edit-dialog-description">
             <code>{taskId}</code>

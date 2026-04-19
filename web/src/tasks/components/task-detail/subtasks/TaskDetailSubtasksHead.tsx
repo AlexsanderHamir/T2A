@@ -15,8 +15,11 @@ export function TaskDetailSubtasksHead({
   return (
     <div className="task-detail-subtasks-head">
       <div className="field-heading-with-req task-detail-subtasks-title-row">
-        <h3 className="task-detail-section-heading" id="task-subtasks-heading">
-          Subtasks
+        <h3
+          className="task-detail-section-heading term-prompt"
+          id="task-subtasks-heading"
+        >
+          <span>Subtasks</span>
         </h3>
         <FieldRequirementBadge requirement="optional" />
       </div>

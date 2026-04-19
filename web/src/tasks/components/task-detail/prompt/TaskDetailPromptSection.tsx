@@ -11,8 +11,11 @@ export function TaskDetailPromptSection({
 }: TaskDetailPromptSectionProps) {
   return (
     <div className="task-detail-section task-detail-prompt">
-      <h3 className="task-detail-section-heading" id="task-detail-prompt-heading">
-        Initial prompt
+      <h3
+        className="task-detail-section-heading term-prompt"
+        id="task-detail-prompt-heading"
+      >
+        <span>Initial prompt</span>
       </h3>
       {!promptHasVisibleContent(initialPrompt) ? (
         <p

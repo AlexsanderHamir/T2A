@@ -42,7 +42,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                   Drafts
                 </Link>
               </nav>
-              <p className="app-tagline">Capture work. Ship with clarity.</p>
+              <p className="app-tagline term-prompt">
+                <span>capture --work --ship-with-clarity</span>
+              </p>
             </div>
             <div className="app-header-actions">
               <StreamStatusHint

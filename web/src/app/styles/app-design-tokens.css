@@ -1,9 +1,21 @@
 /* Design tokens — aligned with .cursor/rules/16-ui-ux-iteration.mdc */
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  /*
+   * Terminal aesthetic (2026-04 redesign): monospace everywhere. The
+   * historical sans stack now points at the same mono cascade so every
+   * existing component immediately picks up the new look without
+   * touching consumer CSS. The `--font-prose` token is kept as an
+   * escape hatch for any future reading surface that explicitly opts
+   * out (long-form prose, marketing pages); none of the SPA pages use
+   * it today.
+   */
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "Cascadia Code",
+    "SF Mono", SFMono-Regular, "Roboto Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --font-sans: var(--font-mono);
+  --font-prose: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* Spacing — 4px base grid; use for layout rhythm (not one-off rem values) */
   --space-0: 0;
@@ -130,12 +142,19 @@
   /* On brand / saturated fills — avoids pure #fff while keeping contrast (DS §3) */
   --text-on-brand: #fafafa;
 
-  --bg-page: #f6f8fa;
-  --bg-elevated: #fafafa;
-  --bg-subtle: #f0f2f5;
-  /* Body mesh / idle chrome (DS §3 / §9) */
-  --bg-linear-wash-start: #eef1f4;
-  --bg-linear-wash-end: #fafbfc;
+  /*
+   * Terminal aesthetic: cleaner near-white page so monospace text
+   * reads as console output on paper. The previous mesh + tinted wash
+   * (purple / green radial spots) competed visually with the new
+   * uniform mono typography; we tone them way down via the
+   * --surface-glass-spot / --brand-mesh tokens without removing the
+   * gradient layers entirely.
+   */
+  --bg-page: #fbfbf9;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f4f4f1;
+  --bg-linear-wash-start: #f7f7f4;
+  --bg-linear-wash-end: #fbfbf9;
   --bg-mesh-dark-brand-glow: rgb(30 27 75 / 25%);
   --bg-mesh-dark-success-glow: rgb(20 83 45 / 12%);
   --stream-dot-idle: rgb(60 60 67 / 25%);
@@ -146,7 +165,10 @@
   --brand-deep: #4338cc;
   --brand-rgb: 99 91 255;
   --brand-muted: rgb(var(--brand-rgb) / 12%);
-  --brand-mesh: rgb(var(--brand-rgb) / 6%);
+  /* Terminal redesign: dial the brand radial spot in the body
+     gradient way down so the page reads as a clean console
+     surface instead of a tinted purple mesh. */
+  --brand-mesh: rgb(var(--brand-rgb) / 1.5%);
   --brand-focus: rgb(var(--brand-rgb) / 32%);
   --link: #5046e5;
   --link-hover: #4338cc;
@@ -245,8 +267,11 @@
   --border-chrome-spinner: rgb(var(--slate-shadow) / 10%);
   --chrome-fill-wash: rgb(var(--slate-shadow) / 5%);
   --chrome-fill-muted: rgb(var(--slate-shadow) / 4%);
-  /* White glass / frost on light UI (pills, panels, table hovers — DS §3 / §9) */
-  --surface-glass-spot: rgb(255 255 255 / 88%);
+  /* White glass / frost on light UI (pills, panels, table hovers — DS §3 / §9).
+     Terminal redesign: opacity dropped from 88% so the body radial
+     spot at the top of the page becomes a near-imperceptible warm
+     wash rather than a bright halo behind monospace text. */
+  --surface-glass-spot: rgb(255 255 255 / 32%);
   --surface-glass-pill: linear-gradient(180deg, rgb(255 255 255 / 98%) 0%, rgb(250 250 252 / 100%) 100%);
   --surface-glass-pill-sync: linear-gradient(180deg, rgb(252 252 253) 0%, rgb(246 246 248) 100%);
   --chrome-glass-lip-inset: 0 1px 0 rgb(255 255 255 / 80%) inset;
@@ -274,7 +299,9 @@
   --success-bright: #00b87a;
   --success-soft: rgb(0 169 110 / 12%);
   --success-border: rgb(0 169 110 / 22%);
-  --success-mesh: rgb(0 169 110 / 5%);
+  /* Terminal redesign: same rationale as --brand-mesh — keep the
+     body wash near-white instead of a green tint. */
+  --success-mesh: rgb(0 169 110 / 1%);
   --success-thread-surface: rgb(16 185 129 / 10%);
   --success-thread-surface-soft: rgb(16 185 129 / 9%);
   --success-rich-focus-border: rgb(5 150 105 / 35%);
@@ -350,12 +377,21 @@
   --mention-syntax-number: #1e6fd6;
   --mention-syntax-function: #b35000;
 
-  font-family: var(--font-sans);
-  line-height: 1.5;
-  font-size: var(--text-md);
+  font-family: var(--font-mono);
+  line-height: 1.55;
+  /*
+   * Monospace renders ~10% wider than the previous SF Pro stack, so
+   * we drop the body size half a tick to keep line lengths close to
+   * the documented 60–75ch target without rewriting every layout.
+   * `font-feature-settings` enables ligature-aware mono fonts
+   * (JetBrains, Cascadia) without forcing them on stacks that lack
+   * them.
+   */
+  font-size: var(--text-sm);
   color: var(--text-primary);
   background: var(--bg-page);
   color-scheme: light;
+  font-feature-settings: "kern" 1, "calt" 1, "ss01" 1, "cv11" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

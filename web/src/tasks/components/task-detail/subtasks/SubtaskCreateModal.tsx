@@ -86,7 +86,9 @@ export function SubtaskCreateModal({
       dismissibleWhileBusy
     >
       <section className="panel modal-sheet modal-sheet--edit task-subtask-modal-sheet">
-        <h2 id="subtask-create-title">New subtask</h2>
+        <h2 id="subtask-create-title" className="term-arrow">
+          <span>New subtask</span>
+        </h2>
         <form
           className="task-subtask-modal-form task-create-form"
           onSubmit={onSubmit}

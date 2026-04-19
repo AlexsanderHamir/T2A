@@ -22,8 +22,11 @@ export function TaskCreateModalPendingSubtasksField({
     <div className="task-create-subtasks">
       <div className="task-create-subtasks-head">
         <div className="field-heading-with-req task-create-subtasks-heading-row">
-          <h3 className="task-create-subtasks-heading" id={SUBTASKS_HEADING_ID}>
-            Subtasks
+          <h3
+            className="task-create-subtasks-heading term-prompt"
+            id={SUBTASKS_HEADING_ID}
+          >
+            <span>Subtasks</span>
           </h3>
           <FieldRequirementBadge requirement="optional" />
         </div>

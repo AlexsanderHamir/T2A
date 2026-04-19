@@ -125,7 +125,9 @@ export function TaskEventDetailPage() {
       </nav>
 
       <header className="task-event-detail-header">
-        <h2 className="task-detail-title">Event #{ev.seq}</h2>
+        <h2 className="task-detail-title term-arrow">
+          <span>Event #{ev.seq}</span>
+        </h2>
         <p
           className="task-event-detail-stance"
           role="status"
@@ -219,7 +221,9 @@ export function TaskEventDetailPage() {
       ) : null}
 
       <div className="task-event-detail-data-block">
-        <h3 className="task-detail-subheading">Data (JSON)</h3>
+        <h3 className="task-detail-subheading term-prompt">
+          <span>Data (JSON)</span>
+        </h3>
         <pre className="task-timeline-data task-event-detail-data-pre">
           {dataJson}
         </pre>
@@ -231,8 +235,11 @@ export function TaskEventDetailPage() {
           role="log"
           aria-label="Conversation on this event"
         >
-          <h3 className="task-detail-subheading" id="task-event-thread-heading">
-            Conversation
+          <h3
+            className="task-detail-subheading term-prompt"
+            id="task-event-thread-heading"
+          >
+            <span>Conversation</span>
           </h3>
           <ul
             className="task-event-detail-thread-list"

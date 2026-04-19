@@ -152,7 +152,9 @@ export function TaskCreateModal({
         dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
-          <h2 id="task-create-modal-title">New task</h2>
+          <h2 id="task-create-modal-title" className="term-arrow">
+            <span>New task</span>
+          </h2>
           {draftSaveLabel ? (
             <p
               className={[

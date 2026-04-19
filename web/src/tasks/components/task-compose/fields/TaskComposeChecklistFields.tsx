@@ -22,10 +22,10 @@ export function TaskComposeChecklistFields({
       <div className="task-create-checklist-head">
         <div className="field-heading-with-req task-create-checklist-title-row">
           <h3
-            className="task-create-checklist-heading"
+            className="task-create-checklist-heading term-prompt"
             id={checklistHeadingId}
           >
-            Done criteria
+            <span>Done criteria</span>
           </h3>
           <FieldRequirementBadge requirement="optional" />
         </div>

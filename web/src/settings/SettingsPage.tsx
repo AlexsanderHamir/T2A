@@ -208,7 +208,9 @@ export function SettingsPage() {
   if (isLoading || !form || !settings) {
     return (
       <section className="settings-page" aria-busy="true">
-        <h2 className="settings-page-title">Settings</h2>
+        <h2 className="settings-page-title term-arrow">
+          <span>Settings</span>
+        </h2>
         <p>{error ? `Error: ${error.message}` : "Loading settings…"}</p>
         {error ? (
           <button type="button" onClick={() => void refetch()}>
@@ -225,7 +227,9 @@ export function SettingsPage() {
   return (
     <section className="settings-page">
       <header className="settings-page-header">
-        <h2 className="settings-page-title">Settings</h2>
+        <h2 className="settings-page-title term-arrow">
+          <span>Settings</span>
+        </h2>
         {lastUpdated ? (
           <p className="settings-page-subtitle" data-testid="settings-last-updated">
             Last updated: <time dateTime={lastUpdated}>{lastUpdated}</time>

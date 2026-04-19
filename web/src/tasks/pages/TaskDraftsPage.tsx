@@ -72,8 +72,12 @@ export function TaskDraftsPage({ app }: Props) {
 
   return (
     <section className="panel task-detail-content--enter">
-      <h2>Task drafts</h2>
-      <p className="muted">Continue previous drafts or remove ones you no longer need.</p>
+      <h2 className="term-arrow">
+        <span>Task drafts</span>
+      </h2>
+      <p className="muted term-prompt">
+        <span>resume --or-remove</span>
+      </p>
       {resumeError ? (
         <div className="err" role="alert">
           <p>{resumeError}</p>

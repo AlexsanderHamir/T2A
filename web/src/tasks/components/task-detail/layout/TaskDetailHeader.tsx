@@ -23,7 +23,9 @@ export function TaskDetailHeader({ task }: Props) {
       </nav>
 
       <header className="task-detail-header">
-        <h2 className="task-detail-title">{task.title}</h2>
+        <h2 className="task-detail-title term-arrow">
+          <span>{task.title}</span>
+        </h2>
         <p
           className="task-event-detail-stance"
           role="status"
