@@ -244,28 +244,6 @@ describe("SettingsPage", () => {
     expect(screen.queryByTestId("settings-status")).not.toBeInTheDocument();
   });
 
-  it("calls /settings/cancel-current-run and reports whether a run was cancelled", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
-      const url = requestUrl(input);
-      if (url.endsWith("/settings/cancel-current-run")) {
-        return jsonResponse({ cancelled: true });
-      }
-      if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
-        return jsonResponse(defaultSettings());
-      }
-      return new Response("not found", { status: 404 });
-    });
-
-    renderPage();
-    const cancelBtn = await screen.findByRole("button", { name: /Cancel current run/ });
-    await userEvent.click(cancelBtn);
-    await waitFor(() =>
-      expect(screen.getByTestId("settings-status")).toHaveTextContent(
-        /cancelled/i,
-      ),
-    );
-  });
-
   it("preserves in-flight typing on other fields when a PATCH resolves", async () => {
     // Session #37 regression: if the user edits field A, hits Save,
     // and then keeps typing in field B while the PATCH is still in
@@ -381,50 +359,6 @@ describe("SettingsPage", () => {
       expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
     );
     expect(repoInput).toHaveValue("/var/repos/B");
-  });
-
-  it("disables Cancel current run after a probe finds no run in flight, and re-enables it on form edit", async () => {
-    // The backend has no proactive "is a run in flight" signal (no
-    // /settings/run-status endpoint, no agent_run_started SSE event),
-    // so the Cancel button doubles as a probe. Once a click proves
-    // nothing's running, leaving the button live just invites the
-    // operator to keep poking a no-op. Regression: it must
-    // sticky-disable until the operator does something that
-    // plausibly changes the in-flight state (a form edit re-arms it
-    // because the about-to-be-saved config might enable the worker
-    // or they may have started a run elsewhere).
-    let cancelCalls = 0;
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      async (input: FetchInput, init?: RequestInit) => {
-        const url = requestUrl(input);
-        if (url.endsWith("/settings/cancel-current-run")) {
-          cancelCalls += 1;
-          return jsonResponse({ cancelled: false });
-        }
-        if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
-          return jsonResponse(defaultSettings());
-        }
-        return new Response("not found", { status: 404 });
-      },
-    );
-
-    renderPage();
-    const cancelBtn = await screen.findByRole("button", {
-      name: /Cancel current run/,
-    });
-    expect(cancelBtn).not.toBeDisabled();
-    await userEvent.click(cancelBtn);
-    await waitFor(() =>
-      expect(screen.getByTestId("settings-status")).toHaveTextContent(
-        /No agent run in flight/i,
-      ),
-    );
-    expect(cancelBtn).toBeDisabled();
-    expect(cancelCalls).toBe(1);
-
-    const repoInput = screen.getByLabelText(/Repository root/);
-    await userEvent.type(repoInput, "/added");
-    expect(cancelBtn).not.toBeDisabled();
   });
 
   it("rejects negative max_run_duration_seconds", async () => {

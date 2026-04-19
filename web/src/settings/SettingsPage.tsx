@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
@@ -65,25 +65,10 @@ type Status = { kind: "success"; message: string } | { kind: "error"; message: s
 
 export function SettingsPage() {
   useDocumentTitle("Settings");
-  const { settings, isLoading, error, patch, probe, cancelRun, refetch } =
+  const { settings, isLoading, error, patch, probe, refetch } =
     useAppSettings();
   const [form, setForm] = useState<FormState | null>(null);
   const [status, setStatus] = useState<Status>(null);
-  /**
-   * Sticky knowledge from the most recent `cancelCurrentRun` call. The
-   * backend has no "is a run currently in flight" probe and emits no
-   * `agent_run_started` SSE event, so we cannot proactively know whether
-   * the Cancel button has anything to do. Instead the button doubles as
-   * a probe: once a click proves there's no in-flight run, we mark this
-   * `true` and disable the button until either (a) the operator edits a
-   * form field (treated as activity that might have triggered a fresh
-   * run elsewhere) or (b) an auto-clear timeout elapses so they can
-   * re-probe without a page refresh.
-   */
-  const [knownNoRun, setKnownNoRun] = useState(false);
-  const knownNoRunTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
   /**
    * The PATH-resolved cursor binary the server reports from the most
    * recent successful probe, kept around so the help text can show the
@@ -103,22 +88,6 @@ export function SettingsPage() {
     }
   }, [settings, form]);
 
-  useEffect(() => {
-    return () => {
-      if (knownNoRunTimerRef.current !== undefined) {
-        clearTimeout(knownNoRunTimerRef.current);
-      }
-    };
-  }, []);
-
-  function clearKnownNoRun() {
-    if (knownNoRunTimerRef.current !== undefined) {
-      clearTimeout(knownNoRunTimerRef.current);
-      knownNoRunTimerRef.current = undefined;
-    }
-    setKnownNoRun(false);
-  }
-
   const isDirty = useMemo(() => {
     if (!settings || !form) return false;
     return Object.keys(diffPatch(settings, form)).length > 0;
@@ -129,11 +98,6 @@ export function SettingsPage() {
 
   function handleField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((cur) => (cur === null ? cur : { ...cur, [key]: value }));
-    // Operator activity invalidates our last-known "no run in flight"
-    // knowledge: a save they're about to make could enable the worker, or
-    // they may have just dispatched a task in another tab. Re-arm the
-    // Cancel button so the next probe is allowed.
-    if (knownNoRun) clearKnownNoRun();
     // The cursor-bin field's resolved default is only meaningful while
     // the field stays blank; once the operator starts typing, the
     // previous resolution describes a path they're no longer using.
@@ -238,48 +202,6 @@ export function SettingsPage() {
         kind: "error",
         message: err instanceof Error ? err.message : String(err),
       });
-    }
-  }
-
-  async function handleCancelRun() {
-    setStatus(null);
-    try {
-      const result = await cancelRun.mutateAsync();
-      setStatus({
-        kind: "success",
-        message: result.cancelled
-          ? "In-flight agent run cancelled."
-          : "No agent run in flight.",
-      });
-      if (result.cancelled) {
-        clearKnownNoRun();
-      } else {
-        // Sticky-disable the button so the operator does not keep
-        // poking a no-op. Re-arm after a window so they can re-probe
-        // without reloading the page; the server's cancel endpoint is
-        // cheap but each click without intervening activity is wasted
-        // motion and clutters the status region.
-        setKnownNoRun(true);
-        if (knownNoRunTimerRef.current !== undefined) {
-          clearTimeout(knownNoRunTimerRef.current);
-        }
-        knownNoRunTimerRef.current = setTimeout(() => {
-          knownNoRunTimerRef.current = undefined;
-          setKnownNoRun(false);
-        }, 30_000);
-      }
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  function handleReset() {
-    if (settings) {
-      setForm(toFormState(settings));
-      setStatus(null);
     }
   }
 
@@ -445,28 +367,6 @@ export function SettingsPage() {
           >
             {patch.isPending ? "Saving…" : "Save changes"}
           </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={handleReset}
-            disabled={!isDirty || patch.isPending}
-            title="Revert any unsaved edits back to the last saved values."
-          >
-            Discard changes
-          </button>
-          <button
-            type="button"
-            className="danger"
-            onClick={() => void handleCancelRun()}
-            disabled={cancelRun.isPending || knownNoRun}
-            title={
-              knownNoRun
-                ? "No agent run was in flight on the last check. Edit a field or wait a moment to re-enable."
-                : undefined
-            }
-          >
-            {cancelRun.isPending ? "Cancelling…" : "Cancel current run"}
-          </button>
         </div>
 
         {status?.kind === "success" ? (
@@ -486,8 +386,8 @@ export function SettingsPage() {
           // failure unmistakable. The prior single-channel
           // `role="status"` rendering was an a11y regression for
           // anyone with assistive tech configured for polite-only
-          // announcements (a missed save / probe failure / cancel
-          // failure could go entirely unnoticed). The
+          // announcements (a missed save / probe failure could go
+          // entirely unnoticed). The
           // `data-testid="settings-status-error"` selector lets the
           // existing test plumbing assert against this region
           // explicitly without depending on the message phrase.
