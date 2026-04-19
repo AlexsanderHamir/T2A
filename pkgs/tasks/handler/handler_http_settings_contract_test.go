@@ -270,6 +270,52 @@ func TestHTTP_ProbeCursor_emptyBodyFallsBackToStoredValues(t *testing.T) {
 	}
 }
 
+// TestHTTP_ProbeCursor_chunkedBodyRespectsExplicitOverride pins the
+// transport-encoding-agnostic decoding contract for
+// POST /settings/probe-cursor: a JSON body delivered via HTTP/1.1
+// chunked transfer-encoding (Transfer-Encoding: chunked, no
+// Content-Length header — server-side r.ContentLength == -1) must be
+// decoded just like a Content-Length-terminated body. Before the fix
+// the handler gated its decode on `r.ContentLength > 0`, so a chunked
+// POST silently dropped the body, fell through to the
+// fall-back-to-stored-values branch, and probed whatever was sitting
+// in app_settings instead of the explicit binary the caller asked for.
+// Wrapping a strings.Reader in struct{ io.Reader }{...} hides the
+// length-aware concrete type from net/http, which forces the client to
+// emit chunked encoding (this is the documented contract on
+// http.NewRequest).
+func TestHTTP_ProbeCursor_chunkedBodyRespectsExplicitOverride(t *testing.T) {
+	srv, _, _, ctrl := settingsTestServer(t)
+	v := "cursor 9.9.9"
+	ctrl.probeVersion.Store(&v)
+
+	body := `{"runner":"cursor","binary_path":"/explicit/from/chunked"}`
+	rdr := struct{ io.Reader }{strings.NewReader(body)}
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/settings/probe-cursor", rdr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if req.ContentLength != 0 {
+		t.Fatalf("test setup: expected ContentLength==0 (chunked) on outgoing request, got %d", req.ContentLength)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	respBytes, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d body=%s", res.StatusCode, respBytes)
+	}
+	if got := ctrl.lastBinary.Load(); got == nil || *got != "/explicit/from/chunked" {
+		t.Errorf("chunked body ignored: lastBinary=%v want=%q", got, "/explicit/from/chunked")
+	}
+	if got := ctrl.lastRunner.Load(); got == nil || *got != "cursor" {
+		t.Errorf("chunked runner ignored: lastRunner=%v want=%q", got, "cursor")
+	}
+}
+
 // TestHTTP_CancelCurrentRun_publishesSSEWhenCancelled covers the
 // documented "fan out so the SPA can flip the button" contract:
 // returns the worker's cancel result and only publishes the SSE

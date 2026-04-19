@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -136,10 +138,20 @@ func (h *Handler) probeCursor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body probeRequest
-	if r.ContentLength > 0 {
+	// ContentLength == 0 ⇒ definitely no body (e.g. SPA "Test" with no
+	// form input, falls back to stored values). ContentLength > 0 ⇒
+	// length-prefixed body. ContentLength == -1 ⇒ length unknown
+	// (HTTP/1.1 chunked transfer-encoding); we still need to attempt
+	// the decode so explicit `runner` / `binary_path` overrides in
+	// chunked POSTs are honored. Only an io.EOF (truly empty body
+	// despite the unknown-length hint) is treated as "no body" and
+	// falls through to the stored-values branch.
+	if r.ContentLength != 0 {
 		if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
-			writeError(w, r, op, err, http.StatusBadRequest)
-			return
+			if !errors.Is(err, io.EOF) {
+				writeError(w, r, op, err, http.StatusBadRequest)
+				return
+			}
 		}
 	}
 	body.Runner = strings.TrimSpace(body.Runner)
