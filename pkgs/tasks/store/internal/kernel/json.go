@@ -18,6 +18,23 @@ import (
 // JSON object; a string / number / array / bool / malformed input
 // returns domain.ErrInvalidInput so handlers surface a 400.
 //
+// The returned bytes are always whitespace-trimmed at the document
+// boundaries: the empty/null branch returns the canonical "{}", and
+// the validated-object branch returns the trimmed slice rather than
+// the caller's original bytes. Without this, valid-object inputs
+// padded with leading or trailing whitespace (e.g. "  {\"a\":1}\n")
+// were persisted with the surrounding whitespace intact, while the
+// empty branch always emitted exactly "{}" — leaving the on-disk
+// shape inconsistent (two callers writing the same logical payload
+// could end up with byte-different rows depending on which branch
+// fired) and inflating column size with no semantic value. Trimming
+// at the boundary keeps the dual-write audit mirror, the response
+// chokepoint (handler.normalizeJSONObjectForResponse), and any
+// future byte-equality assertion in sync. Interior whitespace inside
+// the JSON document is preserved by encoding/json's tokenizer so
+// pretty-printed payloads still round-trip with their formatting
+// intact.
+//
 // field is the human-readable name of the offending column; it is
 // only used to format the wrapped error.
 func NormalizeJSONObject(b []byte, field string) ([]byte, error) {
@@ -33,5 +50,5 @@ func NormalizeJSONObject(b []byte, field string) ([]byte, error) {
 	if _, ok := probe.(map[string]any); !ok {
 		return nil, fmt.Errorf("%w: %s must be a JSON object", domain.ErrInvalidInput, field)
 	}
-	return b, nil
+	return trimmed, nil
 }
