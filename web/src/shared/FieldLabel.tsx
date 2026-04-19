@@ -36,18 +36,16 @@ type BadgeProps = {
   requirement: FieldRequirement;
 };
 
-/** Badge only (for headings, checkbox rows, or custom layouts). */
+/**
+ * Render a discreet required marker (`*`). Optional fields render nothing —
+ * the convention is "marked = required, unmarked = optional", which keeps the
+ * form quiet (DS §7) instead of stamping every label with a pill.
+ */
 export function FieldRequirementBadge({ requirement }: BadgeProps) {
-  if (requirement === "none") return null;
+  if (requirement !== "required") return null;
   return (
-    <span
-      className={
-        requirement === "required"
-          ? "field-req field-req--required"
-          : "field-req field-req--optional"
-      }
-    >
-      {requirement === "required" ? "Required" : "Optional"}
+    <span className="field-req field-req--required" aria-hidden="true">
+      *
     </span>
   );
 }

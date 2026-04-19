@@ -44,28 +44,37 @@ export class AppErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const message = this.props.fallbackMessage ?? DEFAULT_FALLBACK_MESSAGE;
       return (
-        <div className="err error-banner" role="alert" aria-live="assertive">
-          <span className="error-banner__text">
-            {this.props.fallbackMessage ?? DEFAULT_FALLBACK_MESSAGE}
-          </span>
-          <div className="task-detail-error-actions">
-            <button
-              type="button"
-              className="secondary"
-              onClick={this.handleSoftReset}
-            >
-              Try again
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                window.location.reload();
-              }}
-            >
-              Reload page
-            </button>
+        <div
+          className="app-error-fallback"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="app-error-fallback__card">
+            <div className="app-error-fallback__icon-wrap" aria-hidden="true">
+              <AppErrorBoundaryGlyph />
+            </div>
+            <h1 className="app-error-fallback__title">Something went wrong</h1>
+            <p className="app-error-fallback__description">{message}</p>
+            <div className="app-error-fallback__actions">
+              <button
+                type="button"
+                className="app-error-fallback__cta"
+                onClick={this.handleSoftReset}
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                className="app-error-fallback__secondary"
+                onClick={() => {
+                  window.location.reload();
+                }}
+              >
+                Reload page
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -73,4 +82,34 @@ export class AppErrorBoundary extends React.Component<
 
     return this.props.children;
   }
+}
+
+function AppErrorBoundaryGlyph() {
+  return (
+    <svg
+      className="app-error-fallback__glyph"
+      width={44}
+      height={44}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <circle
+        cx={24}
+        cy={24}
+        r={18}
+        stroke="currentColor"
+        strokeWidth={1.75}
+        opacity={0.55}
+      />
+      <path
+        d="M24 16v9"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <circle cx={24} cy={31} r={1.4} fill="currentColor" />
+    </svg>
+  );
 }

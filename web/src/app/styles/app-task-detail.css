@@ -405,7 +405,10 @@ button.task-home-new-task-btn:disabled {
 
 .task-subtask-modal-sheet h2,
 .task-create-modal-sheet h2 {
-  margin-bottom: 0.85rem;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  margin-bottom: 0.4rem;
 }
 
 .task-subtask-modal-form.task-create-form,
