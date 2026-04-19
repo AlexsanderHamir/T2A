@@ -385,6 +385,13 @@ var (
 	// (which may include dots, slashes, +, =, spaces in scheme variants)
 	// is replaced — never just the first word.
 	authHeaderRe = regexp.MustCompile(`(?i)(authorization:[ \t]*)([^\r\n]+)`)
+	// cookieHeaderRe matches "Cookie:" and "Set-Cookie:" headers
+	// case-insensitively and consumes the rest of the line. Session
+	// cookies and Set-Cookie tokens are credential-bearing and must
+	// be treated symmetrically with Authorization. The leading word
+	// boundary `\b` keeps us from accidentally matching arbitrary
+	// "...cookie:..." substrings inside JSON or paths.
+	cookieHeaderRe = regexp.MustCompile(`(?i)\b((?:set-)?cookie:[ \t]*)([^\r\n]+)`)
 	// t2aEnvRe matches "T2A_FOO=value" assignments. The value half is
 	// taken as a single shell token (\S+), which is the conventional
 	// shape T2A_* env vars take in logs. If a T2A value contains spaces
@@ -408,6 +415,7 @@ func redact(s string, homePaths []string) string {
 		return s
 	}
 	out := authHeaderRe.ReplaceAllString(s, "${1}[REDACTED]")
+	out = cookieHeaderRe.ReplaceAllString(out, "${1}[REDACTED]")
 	out = t2aEnvRe.ReplaceAllString(out, "$1=[REDACTED]")
 	for _, hp := range homePaths {
 		if hp == "" {

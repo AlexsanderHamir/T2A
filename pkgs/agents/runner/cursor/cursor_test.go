@@ -301,6 +301,43 @@ func TestRun_redactionAuthorizationHeader(t *testing.T) {
 	}
 }
 
+// TestRun_redactionCookieHeader proves Cookie and Set-Cookie header
+// values are scrubbed from RawOutput. The Authorization header is
+// already redacted (TestRun_redactionAuthorizationHeader), but Cookie
+// and Set-Cookie headers are equally credential-bearing — a session
+// cookie is functionally equivalent to a bearer token. Cursor's CLI
+// can emit HTTP-style traces in verbose / error paths (or any embedded
+// HTTP client logging) where these headers leak verbatim. Treating
+// only Authorization as secret-shaped while leaving Cookie /
+// Set-Cookie in the clear is a defense-in-depth gap. The fix matches
+// both `Cookie:` and `Set-Cookie:` case-insensitively (the latter
+// covers the response-side header variant) and consumes the rest of
+// the line, mirroring the Authorization redaction shape exactly.
+func TestRun_redactionCookieHeader(t *testing.T) {
+	t.Parallel()
+
+	stderr := []byte("Cookie: session=abc.def.ghi; csrf=xyz123\n" +
+		"Set-Cookie: auth=tok-1234567890; Path=/; HttpOnly\n")
+	a := newAdapter(fakeExec(&captured{}, []byte(""), stderr, 1, nil, false))
+
+	res, _ := a.Run(context.Background(), defaultRequest())
+	if strings.Contains(res.RawOutput, "session=abc.def.ghi") {
+		t.Errorf("RawOutput leaks Cookie value: %q", res.RawOutput)
+	}
+	if strings.Contains(res.RawOutput, "csrf=xyz123") {
+		t.Errorf("RawOutput leaks Cookie attribute: %q", res.RawOutput)
+	}
+	if strings.Contains(res.RawOutput, "auth=tok-1234567890") {
+		t.Errorf("RawOutput leaks Set-Cookie value: %q", res.RawOutput)
+	}
+	if !strings.Contains(res.RawOutput, "Cookie: [REDACTED]") {
+		t.Errorf("missing Cookie redaction marker: %q", res.RawOutput)
+	}
+	if !strings.Contains(res.RawOutput, "Set-Cookie: [REDACTED]") {
+		t.Errorf("missing Set-Cookie redaction marker: %q", res.RawOutput)
+	}
+}
+
 // TestRun_redactionT2AEnv proves T2A_* env values are scrubbed from
 // RawOutput. Exact mechanism: stderr accidentally echoing an env line
 // like "T2A_DATABASE_URL=postgres://...".
@@ -344,10 +381,16 @@ func TestRun_redactionHomePath(t *testing.T) {
 func TestRedact_publicHelper(t *testing.T) {
 	t.Parallel()
 
-	in := "Authorization: Bearer abc.def.ghi\nT2A_FOO=secretvalue\n"
+	in := "Authorization: Bearer abc.def.ghi\nT2A_FOO=secretvalue\nCookie: sid=cookie-secret-12345\nSet-Cookie: x=y; HttpOnly\n"
 	got := cursor.Redact(in)
 	if strings.Contains(got, "abc.def.ghi") || strings.Contains(got, "secretvalue") {
 		t.Errorf("Redact leaked secret: %q", got)
+	}
+	if strings.Contains(got, "cookie-secret-12345") {
+		t.Errorf("Redact leaked Cookie value: %q", got)
+	}
+	if strings.Contains(got, "x=y") {
+		t.Errorf("Redact leaked Set-Cookie value: %q", got)
 	}
 }
 
