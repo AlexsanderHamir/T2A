@@ -3,18 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import {
   addChecklistItem,
   createTask as apiCreate,
-  getTaskStats,
   deleteTaskDraft as apiDeleteDraft,
   evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
   listTaskDrafts as apiListDrafts,
-  listTasks,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
-import {
-  flattenTaskTreeRoots,
-  type PendingSubtaskDraft,
-} from "../task-tree";
+import { type PendingSubtaskDraft } from "../task-tree";
 import { TASK_LIST_PAGE_SIZE } from "../task-paging";
 import { taskQueryKeys } from "../task-query";
 import {
@@ -30,23 +25,56 @@ import {
   type Priority,
   type PriorityChoice,
   type Status,
-  type Task,
   type TaskType,
 } from "@/types";
-import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import { useTaskEventStream } from "./useTaskEventStream";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
-import { useTaskPatchFlow } from "./useTaskPatchFlow";
+import { useTasksAppEditSheet } from "./useTasksAppEditSheet";
+import { useTasksAppListQuery } from "./useTasksAppListQuery";
 
-/** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
-const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
-const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
 export function useTasksApp() {
   const queryClient = useQueryClient();
   const sseLive = useTaskEventStream();
+
+  const {
+    tasksQuery,
+    taskStatsQuery,
+    taskListPage,
+    setTaskListPage,
+    resetTaskListPage,
+    tasks,
+    rootTaskTrees,
+    loading,
+    listRefreshing,
+    hasNextTaskPage,
+    hasPrevTaskPage,
+  } = useTasksAppListQuery();
+
+  const {
+    editing,
+    editTitle,
+    setEditTitle,
+    editPrompt,
+    setEditPrompt,
+    editPriority,
+    editTaskType,
+    setEditPriority,
+    setEditTaskType,
+    editStatus,
+    setEditStatus,
+    editChecklistInherit,
+    setEditChecklistInherit,
+    editTitleRequiredError,
+    openEdit,
+    closeEdit,
+    submitEdit,
+    patchPending,
+    patchError,
+    clearEditingIfTask,
+  } = useTasksAppEditSheet();
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
@@ -88,14 +116,6 @@ export function useTasksApp() {
   );
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const [editing, setEditing] = useState<Task | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editPrompt, setEditPrompt] = useState("");
-  const [editPriority, setEditPriority] = useState<Priority>("medium");
-  const [editTaskType, setEditTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
-  const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
-  const [editChecklistInherit, setEditChecklistInherit] = useState(false);
-
   const {
     deleteTarget,
     requestDelete,
@@ -108,14 +128,9 @@ export function useTasksApp() {
     resetError: resetDeleteError,
   } = useTaskDeleteFlow({
     onDeleted: (deletedId) => {
-      setEditing((prev) => (prev?.id === deletedId ? null : prev));
+      clearEditingIfTask(deletedId);
     },
   });
-
-  /** Client-side validation (shown after server errors when applicable). */
-  const [editTitleRequiredError, setEditTitleRequiredError] = useState<
-    string | null
-  >(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
    * Tracks the most recent `resumeDraftByID(id)` request so out-of-order
@@ -138,50 +153,17 @@ export function useTasksApp() {
    */
   const requestedResumeRef = useRef<string | null>(null);
 
-  const [taskListPage, setTaskListPage] = useState(0);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
   const [draftAutosaveBaselineID, setDraftAutosaveBaselineID] = useState("");
   const [createEntryDraftErrorHint, setCreateEntryDraftErrorHint] = useState<
     string | null
   >(null);
 
-  const tasksQuery = useQuery({
-    queryKey: taskQueryKeys.list(taskListPage),
-    queryFn: ({ signal }) =>
-      listTasks(
-        TASK_LIST_PAGE_SIZE,
-        taskListPage * TASK_LIST_PAGE_SIZE,
-        { signal },
-      ),
-  });
   const draftsQuery = useQuery({
     queryKey: ["task-drafts"],
     queryFn: ({ signal }) =>
       apiListDrafts(TASK_DRAFTS.createModalDraftListLimit, { signal }),
   });
-  const taskStatsQuery = useQuery({
-    queryKey: ["task-stats"],
-    queryFn: async ({ signal }) => {
-      try {
-        return await getTaskStats({ signal });
-      } catch {
-        return null;
-      }
-    },
-  });
-
-  const resetTaskListPage = useCallback(() => {
-    setTaskListPage(0);
-  }, []);
-
-  const rootTaskTrees = useMemo(
-    () => tasksQuery.data?.tasks ?? [],
-    [tasksQuery.data?.tasks],
-  );
-  const tasks = useMemo(
-    () => flattenTaskTreeRoots(rootTaskTrees),
-    [rootTaskTrees],
-  );
 
   const resetNewTaskForm = useCallback(() => {
     // Resetting the form to a fresh draft also supersedes any in-flight
@@ -260,15 +242,6 @@ export function useTasksApp() {
     resetNewTaskForm();
     setCreateModalOpen(true);
   }, [draftsQuery.data, draftsQuery.error, draftsQuery.isError, draftsQuery.isPending, resetNewTaskForm]);
-
-  const loading = tasksQuery.isPending;
-  const rawListRefreshing =
-    tasksQuery.isFetching && !tasksQuery.isPending;
-  const listRefreshing = useHysteresisBoolean(
-    rawListRefreshing,
-    LIST_REFRESH_SHOW_MS,
-    LIST_REFRESH_HIDE_MS,
-  );
 
   const createMutation = useMutation({
     mutationFn: async (input: {
@@ -376,25 +349,6 @@ export function useTasksApp() {
       });
     },
   });
-
-  const {
-    patchTask: runPatch,
-    patchPending,
-    patchError,
-    resetError: resetPatchError,
-  } = useTaskPatchFlow({
-    onPatched: (patchedId) => {
-      setEditing((prev) => (prev?.id === patchedId ? null : prev));
-    },
-  });
-
-  // Wipe stale errors when their hosting modals close so the next open
-  // doesn't render an old `.err role="alert"` callout before the user has
-  // interacted. Mirrors the `createMutation.reset()` / `evaluateDraftMutation.reset()`
-  // lifecycle wired in session #33; pinned by the per-component error tests.
-  useEffect(() => {
-    if (!editing) resetPatchError();
-  }, [editing, resetPatchError]);
 
   useEffect(() => {
     if (!deleteTarget) resetDeleteError();
@@ -545,12 +499,6 @@ export function useTasksApp() {
     deleteError,
     editTitleRequiredError,
   ]);
-
-  useEffect(() => {
-    if (editTitleRequiredError && editTitle.trim()) {
-      setEditTitleRequiredError(null);
-    }
-  }, [editTitle, editTitleRequiredError]);
 
   const currentDraftAutosaveSignature = useMemo(
     () =>
@@ -891,53 +839,10 @@ export function useTasksApp() {
     setPendingSubtasks((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  function openEdit(t: Task) {
-    setEditing(t);
-    setEditTitle(t.title);
-    setEditPrompt(t.initial_prompt);
-    setEditPriority(t.priority);
-    setEditTaskType(t.task_type ?? DEFAULT_NEW_TASK_TYPE);
-    setEditStatus(t.status);
-    setEditChecklistInherit(t.checklist_inherit === true);
-    setEditTitleRequiredError(null);
-  }
-
-  function closeEdit() {
-    setEditing(null);
-    setEditTitleRequiredError(null);
-  }
-
-  function submitEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editing) return;
-    if (!editTitle.trim()) {
-      setEditTitleRequiredError("Title is required.");
-      return;
-    }
-    setEditTitleRequiredError(null);
-    runPatch({
-      id: editing.id,
-      title: editTitle.trim(),
-      initial_prompt: editPrompt,
-      status: editStatus,
-      priority: editPriority,
-      task_type: editTaskType,
-      checklist_inherit: editChecklistInherit,
-    });
-  }
-
   const createPending = createMutation.isPending;
   const evaluatePending = evaluateDraftMutation.isPending;
   const draftSavePending = saveDraftMutation.isPending;
 
-  useEffect(() => {
-    if (!tasksQuery.isPending && rootTaskTrees.length === 0 && taskListPage > 0) {
-      setTaskListPage(0);
-    }
-  }, [tasksQuery.isPending, rootTaskTrees.length, taskListPage]);
-
-  const hasNextTaskPage = rootTaskTrees.length === TASK_LIST_PAGE_SIZE;
-  const hasPrevTaskPage = taskListPage > 0;
   const retryDraftList = useCallback(async () => {
     await draftsQuery.refetch();
   }, [draftsQuery]);
