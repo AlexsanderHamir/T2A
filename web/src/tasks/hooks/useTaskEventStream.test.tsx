@@ -63,13 +63,27 @@ describe("useTaskEventStream", () => {
     });
     expect(inv).not.toHaveBeenCalled();
 
+    // Halfway through the coalesce window: still nothing, the agent
+    // worker emits frames ~1s apart so the trailing debounce must
+    // outlast a single inter-frame gap to actually batch them.
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(450);
+    });
+    expect(inv).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(500);
     });
     expect(inv).toHaveBeenCalled();
   });
 
-  it("invalidates only the cycles subtree on task_cycle_changed (no detail churn)", () => {
+  it("invalidates the task detail subtree on task_cycle_changed so worker-driven activity is live on the open task page", () => {
+    // Prior behaviour kept the detail subtree warm on cycle frames as
+    // an optimisation. Because the agent worker only emits cycle frames
+    // (never task_updated), that left the open task detail page silently
+    // stale: status flips (running → done), new audit events, and
+    // checklist toggles all needed a manual refresh. We now treat cycle
+    // frames as broad task invalidations; this test pins that contract.
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");
 
@@ -88,18 +102,19 @@ describe("useTaskEventStream", () => {
       });
     });
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(950);
     });
 
     const calls = inv.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual({ queryKey: ["tasks", "list"] });
     expect(calls).toContainEqual({
-      queryKey: ["tasks", "detail", "task-1", "cycles"],
+      queryKey: ["tasks", "detail", "task-1"],
     });
+    // Standalone "cycles only" invalidation must not also fire — it
+    // would be redundant work and would defeat the dedup logic.
     for (const arg of calls) {
       const key = (arg as { queryKey: readonly unknown[] }).queryKey;
-      expect(key).not.toEqual(["tasks", "detail", "task-1"]);
-      expect(key).not.toEqual(["tasks", "list"]);
-      expect(key).not.toEqual(["tasks"]);
+      expect(key).not.toEqual(["tasks", "detail", "task-1", "cycles"]);
     }
   });
 
@@ -119,7 +134,7 @@ describe("useTaskEventStream", () => {
       mockES!.onmessage?.({ data: "{}" });
     });
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(950);
     });
     expect(inv).toHaveBeenCalledWith({ queryKey: ["tasks"] });
   });
@@ -144,7 +159,7 @@ describe("useTaskEventStream", () => {
       });
     });
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(950);
     });
     const calls = inv.mock.calls.map((c) => c[0]);
     const cyclesOnlyCalls = calls.filter(
@@ -156,6 +171,83 @@ describe("useTaskEventStream", () => {
     expect(calls).toContainEqual({
       queryKey: ["tasks", "detail", "task-1"],
     });
+  });
+
+  it("coalesces a burst of agent worker cycle frames into a single flush", () => {
+    // Regression: in production the agent worker emits ~6 task_cycle_changed
+    // frames per task run, ~1s apart. A short trailing debounce never
+    // batched them and each frame fired its own refetch storm. With the
+    // new ~900ms window plus maxWait, frames arriving every ~700ms should
+    // collapse into ONE flush (one detail invalidation per task) instead
+    // of six. We assert that the per-task detail key is invalidated at
+    // most once across the whole burst.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+
+    // Emit 4 cycle frames 700ms apart — each one resets the debounce so
+    // nothing flushes mid-burst.
+    for (let i = 0; i < 4; i++) {
+      act(() => {
+        mockES!.onmessage?.({
+          data: '{"type":"task_cycle_changed","id":"task-burst","cycle_id":"cyc-1"}',
+        });
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+      });
+    }
+    // Drain the trailing debounce.
+    act(() => {
+      vi.advanceTimersByTime(950);
+    });
+
+    const detailCalls = inv.mock.calls
+      .map((c) => (c[0] as { queryKey: readonly unknown[] }).queryKey)
+      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail", "task-burst"]));
+    expect(detailCalls).toHaveLength(1);
+  });
+
+  it("forces a flush at maxWait so a continuous SSE stream cannot starve the UI", () => {
+    // The trailing debounce alone could be reset forever by frames
+    // arriving inside the coalesce window (e.g. multiple concurrent
+    // tasks). The maxWait safety valve must force a flush so the open
+    // task page still receives status updates under sustained load.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+
+    // 12 frames every 300ms = 3.6s of continuous activity, all *inside*
+    // the 900ms coalesce window — a naive debounce would never flush.
+    for (let i = 0; i < 12; i++) {
+      act(() => {
+        mockES!.onmessage?.({
+          data: '{"type":"task_cycle_changed","id":"task-stream","cycle_id":"cyc-1"}',
+        });
+      });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+    }
+
+    const detailCalls = inv.mock.calls
+      .map((c) => (c[0] as { queryKey: readonly unknown[] }).queryKey)
+      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail", "task-stream"]));
+    expect(detailCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not invalidate queries after unmount before debounce elapses", () => {
