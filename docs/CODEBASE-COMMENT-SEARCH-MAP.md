@@ -116,6 +116,7 @@ Results from applying §7 to a narrow slice of the tree (not a full-repo audit):
 | Focus | Finding |
 |-------|---------|
 | **Domain exports** | `pkgs/tasks/domain/errors.go` sentinel vars lacked godoc; added contract + HTTP mapping (see §3.2). `doc.go` index updated to link `[ErrConflict]`. |
+| **Handler exports** | `Handler` struct had no godoc while `NewHandler` and options were documented; added a short construction contract (§3.2). |
 | **Raw SQL (`store/`)** | Production `Raw` uses are `COALESCE(MAX(...),0)` next-key allocation in `kernel.NextEventSeq`, `cycles.nextAttemptSeqInTx`, `cycles.nextPhaseSeqInTx`. `NextEventSeq` already documents concurrency and why `MAX(seq)` runs under a task row lock; the cycle helpers are unexported `MAX+1` patterns next to clear function names — no extra SQL comment added. |
 | **Hooks** | `useEffect` sites under `web/src/tasks/hooks/` use normal dependency arrays; no `eslint-disable` for exhaustive-deps in the tree. |
 | **CSS** | No new magic-number sweep in this pass; treat opportunistically when touching styles. |

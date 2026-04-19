@@ -33,6 +33,9 @@ type AgentWorkerControl interface {
 	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error)
 }
 
+// Handler carries dependencies for the mounted REST routes, SSE stream, repo
+// helpers, and optional agent worker control. Use NewHandler; the zero value
+// is not usable.
 type Handler struct {
 	store    *store.Store
 	hub      *SSEHub
