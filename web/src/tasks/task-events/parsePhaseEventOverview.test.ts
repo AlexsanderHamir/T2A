@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { parsePhaseEventOverview } from "./parsePhaseEventOverview";
+import {
+  normalizePhaseSummaryMarkdown,
+  parsePhaseEventOverview,
+} from "./parsePhaseEventOverview";
+
+describe("normalizePhaseSummaryMarkdown", () => {
+  it("turns literal \\n sequences into newlines for markdown parsers", () => {
+    const raw = "| A | B |\\n| --- | --- |\\n| 1 | 2 |";
+    expect(normalizePhaseSummaryMarkdown(raw)).toBe(
+      "| A | B |\n| --- | --- |\n| 1 | 2 |",
+    );
+  });
+
+  it("leaves real newlines unchanged", () => {
+    const raw = "a\nb";
+    expect(normalizePhaseSummaryMarkdown(raw)).toBe("a\nb");
+  });
+});
 
 describe("parsePhaseEventOverview", () => {
   it("returns null for unrelated event types", () => {

@@ -83,6 +83,17 @@ const PHASE_OVERVIEW_TYPES = new Set<TaskEventType>([
 ]);
 
 /**
+ * Phase summaries are often markdown. Some payloads store newlines as the two
+ * characters `\` + `n` instead of real line breaks; normalize so GFM tables
+ * and lists parse correctly in the UI.
+ */
+export function normalizePhaseSummaryMarkdown(raw: string): string {
+  let s = raw.replace(/^\n+/, "").trimEnd();
+  s = s.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\n");
+  return s;
+}
+
+/**
  * When non-null, the event detail page can show an Overview tab with metrics
  * and a rendered summary before the raw JSON.
  */

@@ -1,8 +1,10 @@
 import { useId, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { CopyableId } from "@/shared/CopyableId";
 import type { TaskEventType } from "@/types/task";
 import {
+  normalizePhaseSummaryMarkdown,
   parsePhaseEventOverview,
   type PhaseEventOverviewModel,
 } from "../../task-events/parsePhaseEventOverview";
@@ -33,7 +35,9 @@ function statusTone(
 }
 
 function PhaseEventOverviewBody({ model }: { model: PhaseEventOverviewModel }) {
-  const summaryText = model.summary?.replace(/^\n+/, "").trimEnd();
+  const summaryText = model.summary
+    ? normalizePhaseSummaryMarkdown(model.summary)
+    : "";
   const tone = statusTone(model.status);
   const hasUsage =
     model.usage &&
@@ -169,7 +173,18 @@ function PhaseEventOverviewBody({ model }: { model: PhaseEventOverviewModel }) {
         <div className="task-event-summary-block">
           <h4 className="task-event-summary-heading">Summary</h4>
           <div className="task-event-markdown">
-            <ReactMarkdown>{summaryText}</ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                table: (props) => (
+                  <div className="task-event-markdown-table-scroll">
+                    <table {...props} />
+                  </div>
+                ),
+              }}
+            >
+              {summaryText}
+            </ReactMarkdown>
           </div>
         </div>
       ) : null}
