@@ -9,7 +9,13 @@ describe("TaskDetailHeader", () => {
     render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskDetailHeader
-          task={{ title: "My task", status: "ready", priority: "high" }}
+          task={{
+            title: "My task",
+            status: "ready",
+            priority: "high",
+            runner: "cursor",
+            cursor_model: "",
+          }}
         />
       </MemoryRouter>,
     );
@@ -31,7 +37,13 @@ describe("TaskDetailHeader", () => {
     render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskDetailHeader
-          task={{ title: "Blocked", status: "blocked", priority: "medium" }}
+          task={{
+            title: "Blocked",
+            status: "blocked",
+            priority: "medium",
+            runner: "cursor",
+            cursor_model: "opus",
+          }}
         />
       </MemoryRouter>,
     );

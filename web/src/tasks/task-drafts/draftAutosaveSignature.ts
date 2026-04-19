@@ -28,6 +28,8 @@ export type DraftAutosaveSignatureInput = {
   prompt: string;
   priority: PriorityChoice;
   taskType: TaskType;
+  runner: string;
+  cursorModel: string;
   parentId: string;
   checklistInherit: boolean;
   checklistItems: string[];
@@ -64,6 +66,8 @@ export function draftAutosaveSignature(
       initial_prompt: normalizeDraftPromptForDirty(input.prompt),
       priority: input.priority,
       task_type: input.taskType,
+      runner: input.runner,
+      cursor_model: input.cursorModel,
       parent_id: input.parentId,
       checklist_inherit: input.checklistInherit,
       checklist_items: input.checklistItems,

@@ -58,6 +58,10 @@ type Request struct {
 	WorkingDir string            `json:"working_dir"`
 	Timeout    time.Duration     `json:"timeout_ns"`
 	Env        map[string]string `json:"env,omitempty"`
+	// CursorModel is optional per-run model selection for the Cursor CLI
+	// adapter. Empty means use the adapter default (from app settings at
+	// worker construction).
+	CursorModel string `json:"cursor_model,omitempty"`
 }
 
 // Result is what Runner.Run returns. On wrapped error returns

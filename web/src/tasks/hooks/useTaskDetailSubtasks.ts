@@ -5,6 +5,7 @@ import {
   DEFAULT_NEW_TASK_TYPE,
   type Priority,
   type PriorityChoice,
+  type Task,
   type TaskType,
 } from "@/types";
 import { taskQueryKeys } from "../task-query";
@@ -104,6 +105,9 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
        */
       submissionToken: number;
     }) => {
+      const parent = queryClient.getQueryData<Task>(
+        taskQueryKeys.detail(taskId),
+      );
       const child = await createTask({
         title: input.title,
         initial_prompt: input.initial_prompt,
@@ -111,6 +115,12 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
         task_type: input.task_type,
         parent_id: taskId,
         checklist_inherit: input.checklist_inherit,
+        ...(parent
+          ? {
+              runner: parent.runner,
+              cursor_model: parent.cursor_model,
+            }
+          : {}),
       });
       if (!input.checklist_inherit) {
         for (const raw of input.checklistItems) {

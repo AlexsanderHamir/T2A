@@ -50,14 +50,14 @@ type Options struct {
 	// BinaryPath is the cursor-agent executable. Defaults to "cursor-agent"
 	// (resolved against PATH).
 	BinaryPath string
-	// Args is the fixed argv tail appended after BinaryPath. Defaults to
-	// []string{"--print", "--output-format", "json", "--force"}. The
-	// "--force" flag instructs cursor-agent to auto-approve filesystem
-	// and shell tool calls instead of blocking on an interactive prompt
-	// the worker has no way to answer; without it the child would
-	// reliably wedge until Request.Timeout. Override only if a runner
-	// variant should not auto-approve (e.g. a future "plan-only" mode).
+	// Args is an optional fixed argv tail (tests). When nil, argv is built
+	// per Run from DefaultCursorModel and runner.Request.CursorModel.
+	// When non-nil, Args is passed verbatim and DefaultCursorModel /
+	// Request.CursorModel are ignored.
 	Args []string
+	// DefaultCursorModel is used when Request.CursorModel is empty (typical
+	// app-settings default at worker construction).
+	DefaultCursorModel string
 	// Name is the runner.Name() value (recorded in TaskCyclePhase MetaJSON
 	// by the worker). Defaults to "cursor-cli".
 	Name string
@@ -78,13 +78,14 @@ type Options struct {
 
 // Adapter is the cursor.Runner implementation. Construct via New.
 type Adapter struct {
-	binaryPath string
-	args       []string
-	name       string
-	version    string
-	exec       ExecFn
-	extraKeys  []string
-	homePaths  []string
+	binaryPath         string
+	args               []string
+	defaultCursorModel string
+	name               string
+	version            string
+	exec               ExecFn
+	extraKeys          []string
+	homePaths          []string
 }
 
 // New returns a configured Adapter. Zero-value Options yields the V1
@@ -92,19 +93,19 @@ type Adapter struct {
 func New(opts Options) *Adapter {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.New")
 	a := &Adapter{
-		binaryPath: opts.BinaryPath,
-		args:       opts.Args,
-		name:       opts.Name,
-		version:    opts.Version,
-		exec:       opts.ExecFn,
-		extraKeys:  append([]string(nil), opts.ExtraAllowedEnvKeys...),
-		homePaths:  append([]string(nil), opts.HomePathReplacements...),
+		binaryPath:         opts.BinaryPath,
+		defaultCursorModel: strings.TrimSpace(opts.DefaultCursorModel),
+		name:               opts.Name,
+		version:            opts.Version,
+		exec:               opts.ExecFn,
+		extraKeys:          append([]string(nil), opts.ExtraAllowedEnvKeys...),
+		homePaths:          append([]string(nil), opts.HomePathReplacements...),
+	}
+	if len(opts.Args) > 0 {
+		a.args = append([]string(nil), opts.Args...)
 	}
 	if a.binaryPath == "" {
 		a.binaryPath = defaultBinaryPath
-	}
-	if a.args == nil {
-		a.args = []string{"--print", "--output-format", "json", "--force"}
 	}
 	if a.name == "" {
 		a.name = defaultName
@@ -119,6 +120,22 @@ func New(opts Options) *Adapter {
 		a.homePaths = liveHomePaths()
 	}
 	return a
+}
+
+func (a *Adapter) argvFor(req runner.Request) []string {
+	if len(a.args) > 0 {
+		return a.args
+	}
+	m := strings.TrimSpace(req.CursorModel)
+	if m == "" {
+		m = a.defaultCursorModel
+	}
+	out := []string{"--print", "--output-format", "json"}
+	if m != "" {
+		out = append(out, "--model", m)
+	}
+	out = append(out, "--force")
+	return out
 }
 
 // Name implements runner.Runner.
@@ -150,13 +167,14 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 	defer cancel()
 
 	env := buildEnv(req.Env, a.extraKeys)
+	argv := a.argvFor(req)
 	stdout, stderr, exitCode, execErr := a.exec(
 		runCtx,
 		req.WorkingDir,
 		env,
 		[]byte(req.Prompt),
 		a.binaryPath,
-		a.args...,
+		argv...,
 	)
 
 	rawOutput := redact(combineStreams(stdout, stderr), a.homePaths)

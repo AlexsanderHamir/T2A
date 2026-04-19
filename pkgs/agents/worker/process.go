@@ -301,12 +301,13 @@ func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycl
 	w.setCurrentRunCancel(cancel)
 	defer w.setCurrentRunCancel(nil)
 	return w.runner.Run(runCtx, runner.Request{
-		TaskID:     task.ID,
-		AttemptSeq: cycle.AttemptSeq,
-		Phase:      domain.PhaseExecute,
-		Prompt:     task.InitialPrompt,
-		WorkingDir: w.options.WorkingDir,
-		Timeout:    w.options.RunTimeout,
+		TaskID:      task.ID,
+		AttemptSeq:  cycle.AttemptSeq,
+		Phase:       domain.PhaseExecute,
+		Prompt:      task.InitialPrompt,
+		WorkingDir:  w.options.WorkingDir,
+		Timeout:     w.options.RunTimeout,
+		CursorModel: task.CursorModel,
 	})
 }
 

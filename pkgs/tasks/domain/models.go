@@ -15,6 +15,13 @@ type Task struct {
 	TaskType         TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ParentID         *string  `json:"parent_id,omitempty" gorm:"index"`
 	ChecklistInherit bool     `json:"checklist_inherit" gorm:"not null;default:false"`
+	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
+	// create time from the request or app defaults; must match the worker's
+	// configured runner when the task runs.
+	Runner string `json:"runner" gorm:"not null;default:'cursor'"`
+	// CursorModel is forwarded to cursor-agent as --model when non-empty;
+	// empty means omit the flag for this task (same semantics as app settings).
+	CursorModel string `json:"cursor_model" gorm:"not null;default:''"`
 }
 
 // TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.

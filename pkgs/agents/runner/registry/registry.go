@@ -99,15 +99,10 @@ func Build(id string, opts BuildOptions) (runner.Runner, error) {
 	}
 	switch desc.ID {
 	case CursorRunnerID:
-		args := []string{"--print", "--output-format", "json"}
-		if m := strings.TrimSpace(opts.CursorModel); m != "" {
-			args = append(args, "--model", m)
-		}
-		args = append(args, "--force")
 		return cursor.New(cursor.Options{
-			BinaryPath: bin,
-			Version:    opts.Version,
-			Args:       args,
+			BinaryPath:         bin,
+			Version:            opts.Version,
+			DefaultCursorModel: strings.TrimSpace(opts.CursorModel),
 		}), nil
 	default:
 		// Defensive: List + Lookup should make this unreachable, but

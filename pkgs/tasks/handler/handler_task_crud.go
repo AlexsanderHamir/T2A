@@ -48,6 +48,16 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if body.ChecklistInherit != nil {
 		inherit = *body.ChecklistInherit
 	}
+	settings, err := h.store.GetSettings(r.Context())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	runner, cursorModel, err := resolveTaskRunnerModel(&body, settings)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:               body.ID,
 		DraftID:          body.DraftID,
@@ -58,6 +68,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		TaskType:         body.TaskType,
 		ParentID:         body.ParentID,
 		ChecklistInherit: inherit,
+		Runner:           runner,
+		CursorModel:      cursorModel,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)

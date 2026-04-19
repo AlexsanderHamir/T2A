@@ -15,6 +15,8 @@ type CreateInput struct {
 	TaskType         domain.TaskType
 	ParentID         *string
 	ChecklistInherit bool
+	Runner           string
+	CursorModel      string
 }
 
 // ParentFieldPatch updates parent_id when non-nil. Clear true means

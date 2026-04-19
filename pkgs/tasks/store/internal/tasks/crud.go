@@ -203,6 +203,10 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 	if in.ChecklistInherit && (parentID == nil || *parentID == "") {
 		return nil, "", nil, "", fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
+	runner := strings.TrimSpace(in.Runner)
+	if runner == "" {
+		runner = domain.DefaultRunner
+	}
 	t = &domain.Task{
 		ID:               id,
 		Title:            title,
@@ -212,6 +216,8 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		TaskType:         tt,
 		ParentID:         parentID,
 		ChecklistInherit: in.ChecklistInherit,
+		Runner:           runner,
+		CursorModel:      in.CursorModel,
 	}
 	return t, title, parentID, st, nil
 }

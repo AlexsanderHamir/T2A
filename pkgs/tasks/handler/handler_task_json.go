@@ -18,6 +18,8 @@ type taskCreateJSON struct {
 	TaskType         domain.TaskType `json:"task_type"`
 	ParentID         *string         `json:"parent_id"`
 	ChecklistInherit *bool           `json:"checklist_inherit"`
+	Runner           *string         `json:"runner"`
+	CursorModel      *string         `json:"cursor_model"`
 }
 
 type taskEvaluateJSON struct {

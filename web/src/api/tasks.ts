@@ -180,6 +180,8 @@ export async function createTask(input: {
   draft_id?: string;
   parent_id?: string;
   checklist_inherit?: boolean;
+  runner?: string;
+  cursor_model?: string;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -188,6 +190,12 @@ export async function createTask(input: {
     priority: input.priority,
     task_type: input.task_type ?? DEFAULT_NEW_TASK_TYPE,
   };
+  if (input.runner !== undefined) {
+    body.runner = input.runner;
+  }
+  if (input.cursor_model !== undefined) {
+    body.cursor_model = input.cursor_model;
+  }
   const cid = assertOptionalTaskPathId(input.id, "id");
   if (cid !== undefined) {
     body.id = cid;

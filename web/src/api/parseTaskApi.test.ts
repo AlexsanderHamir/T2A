@@ -23,6 +23,8 @@ const validTask = {
   priority: "medium",
   task_type: "general",
   checklist_inherit: false,
+  runner: "cursor",
+  cursor_model: "",
 };
 
 describe("parseTask", () => {
@@ -61,6 +63,8 @@ describe("parseTask", () => {
         priority: "medium",
         task_type: "general",
         checklist_inherit: false,
+        runner: "cursor",
+        cursor_model: "",
       };
       if (n <= 0) {
         return base;
@@ -91,6 +95,8 @@ describe("parseTask", () => {
             task_type: "bug_fix",
             checklist_inherit: true,
             parent_id: "root",
+            runner: "cursor",
+            cursor_model: "",
           },
         ],
       }),
@@ -102,6 +108,8 @@ describe("parseTask", () => {
       priority: "medium",
       task_type: "general",
       checklist_inherit: false,
+      runner: "cursor",
+      cursor_model: "",
       children: [
         {
           id: "c1",
@@ -112,6 +120,8 @@ describe("parseTask", () => {
           task_type: "bug_fix",
           checklist_inherit: true,
           parent_id: "root",
+          runner: "cursor",
+          cursor_model: "",
         },
       ],
     });

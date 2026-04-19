@@ -10,6 +10,7 @@ import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
 import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNestedSubtaskModal";
 import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
+import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -46,6 +47,10 @@ type Props = {
   onDmapCommitLimitChange: (value: string) => void;
   onDmapDomainChange: (value: string) => void;
   onDmapDescriptionChange: (value: string) => void;
+  taskRunner: string;
+  taskCursorModel: string;
+  onTaskRunnerChange: (runner: string) => void;
+  onTaskCursorModelChange: (v: string) => void;
   onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
@@ -100,6 +105,10 @@ export function TaskCreateModal({
   onDmapCommitLimitChange,
   onDmapDomainChange,
   onDmapDescriptionChange,
+  taskRunner,
+  taskCursorModel,
+  onTaskRunnerChange,
+  onTaskCursorModelChange,
   onSaveDraft,
   onEvaluate,
   onSubmit,
@@ -194,6 +203,14 @@ export function TaskCreateModal({
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
               onRemoveChecklistRow={onRemoveChecklistRow}
+            />
+
+            <TaskCreateModalAgentSection
+              disabled={disabled}
+              runner={taskRunner}
+              cursorModel={taskCursorModel}
+              onRunnerChange={onTaskRunnerChange}
+              onCursorModelChange={onTaskCursorModelChange}
             />
 
             {!dmapMode ? (

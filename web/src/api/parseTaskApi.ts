@@ -405,6 +405,14 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
     status: parseStatus(value.status),
     priority: parsePriority(value.priority),
     checklist_inherit: parseChecklistInherit(value.checklist_inherit),
+    runner:
+      value.runner !== undefined && value.runner !== null
+        ? parseString(value.runner, "runner")
+        : "cursor",
+    cursor_model:
+      value.cursor_model !== undefined && value.cursor_model !== null
+        ? parseString(value.cursor_model, "cursor_model")
+        : "",
   };
   if ("task_type" in value && value.task_type !== undefined) {
     base.task_type = parseTaskType(value.task_type);
@@ -581,6 +589,17 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
               "payload.dmap_config.description",
             ),
           },
+        }
+      : {}),
+    ...(typeof value.runner === "string"
+      ? { runner: parseString(value.runner, "payload.runner") }
+      : {}),
+    ...(typeof value.cursor_model === "string"
+      ? {
+          cursor_model: parseString(
+            value.cursor_model,
+            "payload.cursor_model",
+          ),
         }
       : {}),
   };

@@ -123,6 +123,10 @@ export function TaskHome({ app }: Props) {
           onDmapCommitLimitChange={app.setNewDmapCommitLimit}
           onDmapDomainChange={app.setNewDmapDomain}
           onDmapDescriptionChange={app.setNewDmapDescription}
+          taskRunner={app.newTaskRunner}
+          taskCursorModel={app.newTaskCursorModel}
+          onTaskRunnerChange={app.setNewTaskRunner}
+          onTaskCursorModelChange={app.setNewTaskCursorModel}
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}

@@ -25,6 +25,13 @@ export type Task = {
   status: Status;
   priority: Priority;
   task_type?: TaskType;
+  /** Agent runner id for this task (e.g. `cursor`); chosen at create time. */
+  runner: string;
+  /**
+   * Optional `cursor-agent --model` value for this task. Empty means omit
+   * the flag (Cursor default for the account).
+   */
+  cursor_model: string;
   /** Present when this task is nested under another (GET /tasks tree). */
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
@@ -237,6 +244,9 @@ export type TaskDraftPayload = {
   initial_prompt: string;
   priority: PriorityChoice;
   task_type: TaskType;
+  /** Omitted in older drafts; defaults from app settings when missing. */
+  runner?: string;
+  cursor_model?: string;
   parent_id: string;
   checklist_inherit: boolean;
   checklist_items: string[];

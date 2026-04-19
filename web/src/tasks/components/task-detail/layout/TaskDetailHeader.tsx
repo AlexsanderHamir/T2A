@@ -6,7 +6,14 @@ import {
   statusPillClass,
 } from "../../../task-display";
 
-type TaskDetailHeaderTask = Pick<Task, "title" | "status" | "priority">;
+const RUNNER_LABELS: Record<string, string> = {
+  cursor: "Cursor CLI",
+};
+
+type TaskDetailHeaderTask = Pick<
+  Task,
+  "title" | "status" | "priority" | "runner" | "cursor_model"
+>;
 
 type Props = {
   task: TaskDetailHeaderTask;
@@ -44,6 +51,12 @@ export function TaskDetailHeader({ task }: Props) {
             {task.priority}
           </span>
         </div>
+        <p className="muted task-detail-agent-meta" aria-label="Agent for this task">
+          {RUNNER_LABELS[task.runner] ?? task.runner}
+          {(task.cursor_model ?? "").trim()
+            ? ` · model ${task.cursor_model}`
+            : " · default model"}
+        </p>
       </header>
     </>
   );

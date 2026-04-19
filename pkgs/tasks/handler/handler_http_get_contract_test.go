@@ -50,7 +50,7 @@ func TestHTTP_getTask_leafRootEnvelope(t *testing.T) {
 		t.Fatalf("decode envelope: %v body=%s", err, raw)
 	}
 
-	wantKeys := []string{"id", "title", "initial_prompt", "status", "priority", "task_type", "checklist_inherit"}
+	wantKeys := []string{"checklist_inherit", "cursor_model", "id", "initial_prompt", "priority", "runner", "status", "task_type", "title"}
 	gotKeys := make([]string, 0, len(top))
 	for k := range top {
 		gotKeys = append(gotKeys, k)

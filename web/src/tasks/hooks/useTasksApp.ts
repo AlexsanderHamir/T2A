@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AppSettings } from "@/api/settings";
+import { fetchAppSettings } from "@/api/settings";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addChecklistItem,
@@ -16,7 +18,7 @@ import {
   type PendingSubtaskDraft,
 } from "../task-tree";
 import { TASK_LIST_PAGE_SIZE } from "../task-paging";
-import { taskQueryKeys } from "../task-query";
+import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import {
   buildDmapPrompt,
   draftAutosaveSignature,
@@ -57,6 +59,8 @@ export function useTasksApp() {
   );
   const [newDmapDomain, setNewDmapDomain] = useState("");
   const [newDmapDescription, setNewDmapDescription] = useState("");
+  const [newTaskRunner, setNewTaskRunner] = useState("cursor");
+  const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   const [newDraftID, setNewDraftIDState] = useState("");
   /**
@@ -145,6 +149,11 @@ export function useTasksApp() {
     string | null
   >(null);
 
+  useQuery({
+    queryKey: settingsQueryKeys.app(),
+    queryFn: ({ signal }) => fetchAppSettings({ signal }),
+  });
+
   const tasksQuery = useQuery({
     queryKey: taskQueryKeys.list(taskListPage),
     queryFn: ({ signal }) =>
@@ -205,6 +214,9 @@ export function useTasksApp() {
     setNewDmapCommitLimit(TASK_DRAFTS.initialDmapCommitLimit);
     setNewDmapDomain("");
     setNewDmapDescription("");
+    const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
+    setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
+    setNewTaskCursorModel(s?.cursor_model ?? "");
     setNewChecklistItems([]);
     setPendingSubtasks([]);
     setLatestDraftEvaluation(null);
@@ -218,6 +230,8 @@ export function useTasksApp() {
         prompt: "",
         priority: "",
         taskType: DEFAULT_NEW_TASK_TYPE,
+        runner: (s?.runner ?? "cursor").trim() || "cursor",
+        cursorModel: s?.cursor_model ?? "",
         parentId: "",
         checklistInherit: false,
         checklistItems: [],
@@ -231,7 +245,7 @@ export function useTasksApp() {
       }),
     );
     setDraftAutosaveBaselineID(generatedID);
-  }, [setNewDraftID]);
+  }, [queryClient, setNewDraftID]);
 
   const closeCreateModal = useCallback(() => {
     setCreateModalOpen(false);
@@ -280,6 +294,8 @@ export function useTasksApp() {
       checklistItems: string[];
       pendingSubtasks: PendingSubtaskDraft[];
       draft_id: string;
+      runner: string;
+      cursor_model: string;
     }) => {
       const addChecklistItems = async (taskId: string, items: string[]) => {
         const rows = items.map((raw) => raw.trim()).filter(Boolean);
@@ -292,6 +308,8 @@ export function useTasksApp() {
         priority: input.priority,
         task_type: input.task_type,
         draft_id: input.draft_id,
+        runner: input.runner,
+        cursor_model: input.cursor_model,
       });
       await addChecklistItems(task.id, input.checklistItems);
       await Promise.all(
@@ -306,6 +324,8 @@ export function useTasksApp() {
               priority: st.priority,
               task_type: st.task_type,
               parent_id: task.id,
+              runner: input.runner,
+              cursor_model: input.cursor_model,
               ...(childInherit ? { checklist_inherit: true } : {}),
             });
             if (!childInherit) {
@@ -418,6 +438,8 @@ export function useTasksApp() {
         initial_prompt: string;
         priority: PriorityChoice;
         task_type: TaskType;
+        runner: string;
+        cursor_model: string;
         parent_id: string;
         checklist_inherit: boolean;
         checklist_items: string[];
@@ -569,6 +591,8 @@ export function useTasksApp() {
         checklistItems: newChecklistItems,
         pendingSubtasks,
         latestEvaluation: latestDraftEvaluation,
+        runner: newTaskRunner,
+        cursorModel: newTaskCursorModel,
         dmapConfig: {
           commitLimit: newDmapCommitLimit,
           domain: newDmapDomain,
@@ -586,6 +610,8 @@ export function useTasksApp() {
       newPrompt,
       newTaskType,
       newTitle,
+      newTaskRunner,
+      newTaskCursorModel,
       pendingSubtasks,
     ],
   );
@@ -599,6 +625,8 @@ export function useTasksApp() {
         initial_prompt: newPrompt,
         priority: newPriority,
         task_type: newTaskType,
+        runner: newTaskRunner,
+        cursor_model: newTaskCursorModel,
         parent_id: "",
         checklist_inherit: false,
         checklist_items: newChecklistItems,
@@ -641,6 +669,8 @@ export function useTasksApp() {
     newPrompt,
     newTaskType,
     newTitle,
+    newTaskRunner,
+    newTaskCursorModel,
     pendingSubtasks,
   ]);
 
@@ -751,6 +781,8 @@ export function useTasksApp() {
       draft_id: newDraftID,
       checklistItems: newChecklistItems,
       pendingSubtasks,
+      runner: newTaskRunner.trim() || "cursor",
+      cursor_model: newTaskCursorModel.trim(),
     });
   }
 
@@ -792,6 +824,19 @@ export function useTasksApp() {
           sections: draft.payload.latest_evaluation.sections,
         }
       : null;
+    const settingsSnap = queryClient.getQueryData<AppSettings>(
+      settingsQueryKeys.app(),
+    );
+    const resumedRunner =
+      typeof draft.payload.runner === "string" && draft.payload.runner.trim()
+        ? draft.payload.runner.trim()
+        : (settingsSnap?.runner ?? "cursor").trim() || "cursor";
+    const resumedModel =
+      typeof draft.payload.cursor_model === "string"
+        ? draft.payload.cursor_model
+        : (settingsSnap?.cursor_model ?? "");
+    setNewTaskRunner(resumedRunner);
+    setNewTaskCursorModel(resumedModel);
     setNewDraftID(draft.id);
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
@@ -831,6 +876,8 @@ export function useTasksApp() {
         prompt: draft.payload.initial_prompt ?? "",
         priority: draft.payload.priority ?? "",
         taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
+        runner: resumedRunner,
+        cursorModel: resumedModel,
         // Match the always-empty baseline from `currentDraftAutosaveSignature`:
         // resuming a legacy draft with `parent_id` set must not flip the
         // dirty bit (the next autosave intentionally clears those fields).
@@ -1052,6 +1099,10 @@ export function useTasksApp() {
     setNewDmapDescription,
     setNewPriority,
     setNewTaskType,
+    newTaskRunner,
+    setNewTaskRunner,
+    newTaskCursorModel,
+    setNewTaskCursorModel,
     newChecklistItems,
     latestDraftEvaluation,
     pendingSubtasks,

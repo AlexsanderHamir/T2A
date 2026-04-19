@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,11 +38,22 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onDmapCommitLimitChange: vi.fn(),
     onDmapDomainChange: vi.fn(),
     onDmapDescriptionChange: vi.fn(),
+    taskRunner: "cursor",
+    taskCursorModel: "",
+    onTaskRunnerChange: vi.fn(),
+    onTaskCursorModelChange: vi.fn(),
     onSaveDraft: vi.fn(),
     onEvaluate: vi.fn(),
     onSubmit: vi.fn(),
   };
-  return render(<TaskCreateModal {...base} {...props} />);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <TaskCreateModal {...base} {...props} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("TaskCreateModal", () => {

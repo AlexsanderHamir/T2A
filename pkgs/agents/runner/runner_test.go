@@ -46,7 +46,7 @@ func TestRequest_jsonShape(t *testing.T) {
 		}
 	}
 	for k := range generic {
-		if !contains(wantKeys, k) {
+		if !contains(wantKeys, k) && k != "cursor_model" {
 			t.Errorf("unexpected JSON key %q (full payload: %s)", k, raw)
 		}
 	}
@@ -65,13 +65,14 @@ func TestRequest_jsonRoundtrip(t *testing.T) {
 	t.Parallel()
 
 	want := runner.Request{
-		TaskID:     "22222222-2222-4222-8222-222222222222",
-		AttemptSeq: 7,
-		Phase:      domain.PhaseDiagnose,
-		Prompt:     "diagnose the failure",
-		WorkingDir: "/work",
-		Timeout:    250 * time.Millisecond,
-		Env:        map[string]string{"PATH": "/bin", "HOME": "/home/runner"},
+		TaskID:      "22222222-2222-4222-8222-222222222222",
+		AttemptSeq:  7,
+		Phase:       domain.PhaseDiagnose,
+		Prompt:      "diagnose the failure",
+		WorkingDir:  "/work",
+		Timeout:     250 * time.Millisecond,
+		Env:         map[string]string{"PATH": "/bin", "HOME": "/home/runner"},
+		CursorModel: "opus-4.1",
 	}
 
 	raw, err := json.Marshal(want)
@@ -84,7 +85,8 @@ func TestRequest_jsonRoundtrip(t *testing.T) {
 	}
 	if got.TaskID != want.TaskID || got.AttemptSeq != want.AttemptSeq ||
 		got.Phase != want.Phase || got.Prompt != want.Prompt ||
-		got.WorkingDir != want.WorkingDir || got.Timeout != want.Timeout {
+		got.WorkingDir != want.WorkingDir || got.Timeout != want.Timeout ||
+		got.CursorModel != want.CursorModel {
 		t.Errorf("scalar mismatch: got %+v want %+v", got, want)
 	}
 	if len(got.Env) != len(want.Env) {
