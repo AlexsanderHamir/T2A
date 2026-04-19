@@ -4,7 +4,24 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
+import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import { TaskCreateModal } from "./TaskCreateModal";
+
+const testAppSettings: AppSettings = {
+  worker_enabled: false,
+  runner: "cursor",
+  repo_root: "",
+  cursor_bin: "",
+  cursor_model: "",
+  max_run_duration_seconds: 0,
+};
+
+const testCursorModelsEmpty: ListCursorModelsResult = {
+  ok: true,
+  runner: "cursor",
+  models: [],
+};
 
 function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
   const base: ComponentProps<typeof TaskCreateModal> = {
@@ -47,8 +64,15 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onSubmit: vi.fn(),
   };
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+    },
   });
+  client.setQueryData(settingsQueryKeys.app(), testAppSettings);
+  client.setQueryData(
+    [...settingsQueryKeys.all, "create-modal-cursor-models", "cursor", ""],
+    testCursorModelsEmpty,
+  );
   return render(
     <QueryClientProvider client={client}>
       <TaskCreateModal {...base} {...props} />
@@ -193,6 +217,15 @@ describe("TaskCreateModal", () => {
   it("surfaces the draft save status near the modal heading", () => {
     renderModal({ draftSaveLabel: "Saving draft…" });
     expect(screen.getByText(/saving draft/i)).toBeInTheDocument();
+  });
+
+  it("shows Cursor model as a select with a Default option", () => {
+    renderModal();
+    const model = screen.getByTestId("task-create-cursor-model-select");
+    expect(model.tagName).toBe("SELECT");
+    expect(
+      screen.getByRole("option", { name: /^default$/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows DMAP-specific fields when task type is DMAP", () => {

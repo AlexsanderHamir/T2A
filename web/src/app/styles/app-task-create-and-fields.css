@@ -440,6 +440,28 @@
   box-shadow: var(--shadow-focus-danger);
 }
 
+.task-create-agent {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: none;
+  position: relative;
+}
+
+.task-create-agent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-hairline);
+  opacity: 0.7;
+}
+
+.task-create-agent .task-create-subtasks-heading {
+  margin-bottom: 0.5rem;
+}
+
 .task-create-subtasks {
   margin-top: 0.5rem;
   padding-top: 1.25rem;

@@ -67,34 +67,18 @@
   max-width: 40rem;
 }
 
-.task-create-agent-fieldset {
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
-.task-create-agent-legend {
-  float: left;
-  width: 100%;
-  margin: 0 0 0.35rem;
-  padding: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.task-create-agent-hint {
-  margin: 0 0 0.65rem;
-  font-size: var(--text-xs);
-  clear: both;
-}
-
 .task-create-agent-grid {
   display: grid;
   grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
   gap: 0.75rem 1rem;
-  align-items: end;
+  align-items: start;
   clear: both;
+}
+
+.task-create-agent-model-err {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-xs);
+  color: #d32f2f;
 }
 
 @media (max-width: 520px) {

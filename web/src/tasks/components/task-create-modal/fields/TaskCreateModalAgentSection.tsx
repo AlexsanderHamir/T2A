@@ -1,9 +1,17 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listCursorModels } from "@/api/settings";
+import type { AppSettings } from "@/api/settings";
+import { fetchAppSettings, listCursorModels } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 
 const RUNNERS = [{ id: "cursor", label: "Cursor CLI" }] as const;
+
+const AGENT_HEADING_ID = "task-create-agent-heading";
+
+function runnerDisplayLabel(runnerId: string): string {
+  const row = RUNNERS.find((r) => r.id === runnerId);
+  return row?.label ?? runnerId;
+}
 
 type Props = {
   disabled: boolean;
@@ -13,10 +21,7 @@ type Props = {
   onCursorModelChange: (v: string) => void;
 };
 
-/**
- * Runner and model for the new task. Defaults come from app settings; changes
- * apply only to this task (POST body), not global defaults.
- */
+/** Runner and model for the new task (POST body; does not change Settings). */
 export function TaskCreateModalAgentSection({
   disabled,
   runner,
@@ -27,31 +32,52 @@ export function TaskCreateModalAgentSection({
   const baseId = useId();
   const runnerId = `${baseId}-runner`;
   const modelId = `${baseId}-model`;
-  const listId = `${baseId}-model-list`;
+
+  const settingsQuery = useQuery<AppSettings>({
+    queryKey: settingsQueryKeys.app(),
+    queryFn: ({ signal }) => fetchAppSettings({ signal }),
+  });
+
+  const cursorBinKey = (settingsQuery.data?.cursor_bin ?? "").trim();
 
   const modelsQuery = useQuery({
     queryKey: [
       ...settingsQueryKeys.all,
       "create-modal-cursor-models",
       runner,
+      cursorBinKey,
     ],
     queryFn: ({ signal }) =>
-      listCursorModels({ runner }, { signal }),
+      listCursorModels(
+        {
+          runner,
+          binary_path: cursorBinKey || undefined,
+        },
+        { signal },
+      ),
     enabled: runner === "cursor",
   });
 
-  const modelOptions =
-    modelsQuery.data?.ok && modelsQuery.data.models
-      ? modelsQuery.data.models
-      : [];
+  const modelIdsFromList = useMemo(() => {
+    const m = modelsQuery.data;
+    if (!m?.ok || !m.models) return new Set<string>();
+    return new Set(m.models.map((x) => x.id));
+  }, [modelsQuery.data]);
+
+  const modelSelectBusy = modelsQuery.isFetching;
+  const modelSelectDisabled = disabled || modelSelectBusy;
 
   return (
-    <fieldset className="task-create-agent-fieldset">
-      <legend className="task-create-agent-legend">Agent</legend>
-      <p className="muted task-create-agent-hint">
-        Defaults match your settings. You can override for this task only — saving
-        here does not change global defaults.
-      </p>
+    <section
+      className="task-create-agent"
+      aria-labelledby={AGENT_HEADING_ID}
+    >
+      <h3
+        id={AGENT_HEADING_ID}
+        className="task-create-subtasks-heading term-prompt"
+      >
+        <span>Agent</span>
+      </h3>
       <div className="task-create-agent-grid">
         <div className="field">
           <label htmlFor={runnerId}>Runner</label>
@@ -70,25 +96,58 @@ export function TaskCreateModalAgentSection({
         </div>
         <div className="field">
           <label htmlFor={modelId}>Model</label>
-          <input
-            id={modelId}
-            type="text"
-            value={cursorModel}
-            disabled={disabled}
-            onChange={(e) => onCursorModelChange(e.target.value)}
-            placeholder="Leave empty for Cursor default"
-            list={runner === "cursor" ? listId : undefined}
-            autoComplete="off"
-          />
           {runner === "cursor" ? (
-            <datalist id={listId}>
-              {modelOptions.map((m) => (
-                <option key={m.id} value={m.id} />
-              ))}
-            </datalist>
-          ) : null}
+            <>
+              <select
+                id={modelId}
+                data-testid="task-create-cursor-model-select"
+                value={cursorModel}
+                disabled={modelSelectDisabled}
+                aria-busy={modelSelectBusy}
+                onChange={(e) => onCursorModelChange(e.target.value)}
+              >
+                <option value="">Default</option>
+                {modelsQuery.data?.ok && modelsQuery.data.models
+                  ? modelsQuery.data.models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))
+                  : null}
+                {cursorModel.trim() !== "" &&
+                !modelIdsFromList.has(cursorModel.trim()) ? (
+                  <option value={cursorModel.trim()}>
+                    {cursorModel.trim()} (saved — not in current list)
+                  </option>
+                ) : null}
+              </select>
+              {modelsQuery.isError ? (
+                <p role="alert" className="task-create-agent-model-err">
+                  Could not load models for {runnerDisplayLabel(runner)}:{" "}
+                  {modelsQuery.error instanceof Error
+                    ? modelsQuery.error.message
+                    : String(modelsQuery.error)}
+                </p>
+              ) : null}
+              {modelsQuery.data && !modelsQuery.data.ok ? (
+                <p role="alert" className="task-create-agent-model-err">
+                  {modelsQuery.data.error ?? "Model list failed."}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <input
+              id={modelId}
+              type="text"
+              value={cursorModel}
+              disabled={disabled}
+              onChange={(e) => onCursorModelChange(e.target.value)}
+              placeholder="Model id (optional)"
+              autoComplete="off"
+            />
+          )}
         </div>
       </div>
-    </fieldset>
+    </section>
   );
 }
