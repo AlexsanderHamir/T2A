@@ -189,6 +189,7 @@ export function TaskDetailPage({ app }: Props) {
             onRemoveChecklistRow={removeSubtaskChecklistRow}
             onChecklistInheritChange={setSubtaskInherit}
             onSubmit={submitNewSubtask}
+            error={createSubtaskMutation.error}
           />
         ) : null}
       </div>

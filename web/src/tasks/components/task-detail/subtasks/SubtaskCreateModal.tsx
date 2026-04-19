@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../../shared/Modal";
 import { TaskComposeFields } from "../../task-compose";
 
@@ -24,6 +25,17 @@ type Props = {
   onRemoveChecklistRow: (index: number) => void;
   onChecklistInheritChange: (v: boolean) => void;
   onSubmit: (e: FormEvent) => void;
+  /**
+   * Surfaces the underlying `createSubtaskMutation.error` inside the
+   * modal as a `.err role="alert"` callout above the action buttons.
+   * Same pattern as `ChecklistCriterionModal` (#31): without this, a
+   * failed create silently re-enables the submit button and the user
+   * has no idea anything went wrong. Pass `mutation.error` directly
+   * (typed as `Error | null` by react-query v5). `null` / undefined
+   * renders no callout, preserving the historical no-feedback
+   * behaviour for callers that haven't opted in yet.
+   */
+  error?: Error | null;
 };
 
 export function SubtaskCreateModal({
@@ -46,6 +58,7 @@ export function SubtaskCreateModal({
   onRemoveChecklistRow,
   onChecklistInheritChange,
   onSubmit,
+  error = null,
 }: Props) {
   const disabled = pending || saving;
 
@@ -108,6 +121,11 @@ export function SubtaskCreateModal({
               <FieldRequirementBadge requirement="optional" />
             </span>
           </label>
+          {error ? (
+            <div className="err task-subtask-modal-err" role="alert">
+              {errorMessage(error, "Could not create subtask.")}
+            </div>
+          ) : null}
           <div className="row stack-row-actions task-subtask-modal-actions">
             <button
               type="button"
