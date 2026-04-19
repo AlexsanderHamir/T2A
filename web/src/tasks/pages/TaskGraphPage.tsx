@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type UIEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { getTask } from "@/api";
+import { fetchTaskGraphMockJson, getTask } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { Priority, Status } from "@/types";
@@ -108,14 +108,7 @@ async function getGraphTask(
   if (!mockUrl) {
     return getTask(taskId, options) as unknown as GraphTaskNode;
   }
-  const res = await fetch(mockUrl, {
-    headers: { Accept: "application/json" },
-    signal: options?.signal,
-  });
-  if (!res.ok) {
-    throw new Error(`Could not load graph mock from ${mockUrl}`);
-  }
-  const raw: unknown = await res.json();
+  const raw: unknown = await fetchTaskGraphMockJson(mockUrl, options);
   if (!isGraphTaskNode(raw)) {
     throw new Error("Invalid graph mock payload");
   }

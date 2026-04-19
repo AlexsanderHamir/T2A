@@ -1018,7 +1018,7 @@ export function useTasksApp() {
     sseLive,
     taskStats: taskStatsQuery.data,
     /**
-     * True only on the first stats fetch (before any settle). Stays false
+     * True only on the first stats query resolution (before any settle). Stays false
      * during background refetch so consumers can keep showing the previous
      * values instead of replacing them with a skeleton on every refresh.
      */

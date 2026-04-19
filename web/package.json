@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "check:standards": "pwsh -NoProfile -File ../scripts/check-code-standards.ps1",
     "mock:graph:generate": "node ./scripts/generate-graph-mock.mjs",
     "mock:graph:100k": "node ./scripts/generate-graph-mock.mjs --node-count=100000 --output=public/mock-data/graphs/task-graph-100k.json",
     "mock:graph:200k": "node ./scripts/generate-graph-mock.mjs --node-count=200000 --output=public/mock-data/graphs/task-graph-200k.json",
