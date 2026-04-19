@@ -39,6 +39,16 @@ func omitAPIAuth(r *http.Request) bool {
 }
 
 // HasValidBearerToken reports whether rawAuth is a well-formed Bearer token matching configuredToken (constant-time compare).
+//
+// The auth-scheme name is matched case-insensitively per RFC 7235 § 2.1
+// ("the case-insensitive token defined as the auth-scheme name") /
+// RFC 6750 § 2.1 — curl, Postman, several reverse proxies, and a number
+// of HTTP client libraries normalize the scheme to lowercase
+// ("bearer ...") and the historical strings.HasPrefix(rawAuth,
+// "Bearer ") check rejected every non-titlecase variant as 401 even
+// when the credential matched (see
+// TestHasValidBearerToken_caseInsensitiveScheme). The credential
+// portion is still constant-time-compared for length and content.
 func HasValidBearerToken(rawAuth, configuredToken string) bool {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.HasValidBearerToken")
 	rawAuth = strings.TrimSpace(rawAuth)
@@ -46,10 +56,10 @@ func HasValidBearerToken(rawAuth, configuredToken string) bool {
 		return false
 	}
 	const prefix = "Bearer "
-	if !strings.HasPrefix(rawAuth, prefix) {
+	if len(rawAuth) < len(prefix) || !strings.EqualFold(rawAuth[:len(prefix)], prefix) {
 		return false
 	}
-	presented := strings.TrimSpace(strings.TrimPrefix(rawAuth, prefix))
+	presented := strings.TrimSpace(rawAuth[len(prefix):])
 	if presented == "" || configuredToken == "" {
 		return false
 	}

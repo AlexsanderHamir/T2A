@@ -119,6 +119,40 @@ func TestWithAPIAuth_authorized_with_bearer_token(t *testing.T) {
 	}
 }
 
+// TestHasValidBearerToken_caseInsensitiveScheme pins RFC 7235 § 2.1:
+// the auth-scheme name is case-insensitive. curl, Postman, and several
+// proxies normalize the scheme to lowercase ("bearer ..."), and other
+// stacks emit ALL-CAPS. The historical strings.HasPrefix(rawAuth,
+// "Bearer ") check rejected every non-titlecase variant as 401 even
+// though the credential matched, breaking integrations that lowercased
+// the scheme name.
+func TestHasValidBearerToken_caseInsensitiveScheme(t *testing.T) {
+	for _, scheme := range []string{"bearer", "BEARER", "Bearer", "BeArEr"} {
+		if !HasValidBearerToken(scheme+" secret", "secret") {
+			t.Errorf("scheme %q should be accepted (RFC 7235 §2.1: scheme names are case-insensitive); got reject", scheme)
+		}
+	}
+	if HasValidBearerToken("Basic secret", "secret") {
+		t.Error("Basic scheme must still be rejected even when the credential matches; got accept")
+	}
+}
+
+func TestWithAPIAuth_authorized_with_lowercase_bearer_scheme(t *testing.T) {
+	t.Setenv("T2A_API_TOKEN", "secret")
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := WithAPIAuth(inner)
+
+	req := httptest.NewRequest(http.MethodPost, "/tasks", nil)
+	req.Header.Set(middleware.AuthorizationHeader, "bearer secret")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("lowercase bearer scheme: status %d body %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestWithAPIAuth_exempts_health_and_metrics(t *testing.T) {
 	t.Setenv("T2A_API_TOKEN", "secret")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
