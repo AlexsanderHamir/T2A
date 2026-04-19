@@ -92,15 +92,24 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 		out = append(out, ch)
 	}
 	h.mu.RUnlock()
+	dropped := 0
 	for _, ch := range out {
 		select {
 		case ch <- line:
 		default:
+			dropped++
 		}
+	}
+	if dropped > 0 {
+		middleware.RecordSSEDroppedFrames(dropped)
+		slog.Warn("sse fanout dropped frames",
+			"cmd", calltrace.LogCmd, "operation", "tasks.sse.publish",
+			"event_type", ev.Type, "task_id", ev.ID,
+			"subscribers", len(out), "dropped", dropped)
 	}
 	if len(out) > 0 {
 		slog.Debug("sse fanout", "cmd", calltrace.LogCmd, "operation", "tasks.sse.publish",
-			"event_type", ev.Type, "task_id", ev.ID, "subscribers", len(out))
+			"event_type", ev.Type, "task_id", ev.ID, "subscribers", len(out), "dropped", dropped)
 	}
 }
 

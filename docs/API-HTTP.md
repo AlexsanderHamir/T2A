@@ -67,6 +67,7 @@ HTTP traffic that **does** pass through the API stack records:
 | `taskapi_agent_queue_depth` | Gauge | — | Ready-task snapshots buffered in the in-process agent queue. |
 | `taskapi_agent_queue_capacity` | Gauge | — | Max buffer size from **`T2A_USER_TASK_AGENT_QUEUE_CAP`** (see [RUNTIME-ENV.md](./RUNTIME-ENV.md)). |
 | `taskapi_sse_subscribers` | Gauge | — | Connected **`GET /events`** clients for this process (in-memory hub; not shared across replicas). |
+| `taskapi_sse_dropped_frames_total` | Counter | — | Total SSE fanout frames dropped because a subscriber's bounded channel was full at publish time (slow-consumer indicator). The hub drops silently rather than blocking the publisher; correlate with `taskapi_sse_subscribers` to spot per-fanout drop rates. A non-zero rate means a client is stuck reading the stream and is missing UI updates — investigate proxy/keepalive timeouts and SPA tab focus first. |
 
 There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.
 

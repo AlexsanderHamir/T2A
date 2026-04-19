@@ -48,6 +48,20 @@ var (
 		Name:      "sse_subscribers",
 		Help:      "Number of connected GET /events SSE clients in this process.",
 	})
+	// taskapiSSEDroppedFramesTotal counts how many fanout-frame writes the
+	// SSE hub had to drop because a subscriber's bounded channel was full
+	// at the time of Publish (slow consumer / blocked HTTP write). This is
+	// the canonical observable for fanout pressure under load — the hub
+	// drops silently rather than blocking the publisher, so without this
+	// counter a stuck client would only surface as missing UI updates with
+	// no metric trail. Counter is process-wide (no subscriber label) to
+	// keep cardinality bounded; correlate with taskapi_sse_subscribers
+	// gauge to spot per-fanout drop rates.
+	taskapiSSEDroppedFramesTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "sse_dropped_frames_total",
+		Help:      "Total SSE fanout frames dropped because a subscriber channel was full (slow consumer indicator).",
+	})
 )
 
 // RecordSSESubscriberGauge sets the process-wide SSE subscriber gauge (one hub per taskapi).
@@ -58,7 +72,28 @@ func RecordSSESubscriberGauge(n int) {
 
 // SSESubscribersGauge exposes the Prometheus gauge updated by RecordSSESubscriberGauge (tests, tooling).
 func SSESubscribersGauge() prometheus.Gauge {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSESubscribersGauge")
 	return taskapiSSESubscribers
+}
+
+// RecordSSEDroppedFrames bumps the dropped-frames counter by n. Called by the
+// SSE hub Publish path each time a subscriber's bounded channel was full at
+// fanout time. Pass the count for the entire fanout (not per-subscriber) so
+// the helper stays cheap on the hot path.
+func RecordSSEDroppedFrames(n int) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSEDroppedFrames", "n", n)
+	if n <= 0 {
+		return
+	}
+	taskapiSSEDroppedFramesTotal.Add(float64(n))
+}
+
+// SSEDroppedFramesCounter exposes the Prometheus counter updated by
+// RecordSSEDroppedFrames. Tests use it to assert hub fanout-pressure behavior
+// without hitting the /metrics endpoint.
+func SSEDroppedFramesCounter() prometheus.Counter {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSEDroppedFramesCounter")
+	return taskapiSSEDroppedFramesTotal
 }
 
 func omitHTTPMetrics(r *http.Request) bool {
