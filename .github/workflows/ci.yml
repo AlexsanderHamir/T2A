@@ -60,6 +60,11 @@ jobs:
         run: npm run lint
         working-directory: web
 
+      # Lightweight guardrails from .cursor/rules/CODE_STANDARDS.mdc (fetch in api/, etc.)
+      - name: CODE_STANDARDS guardrails
+        run: npm run check:standards
+        working-directory: web
+
       - name: Build web app
         run: npm run build
         working-directory: web
