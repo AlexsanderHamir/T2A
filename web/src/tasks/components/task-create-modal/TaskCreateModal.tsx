@@ -1,14 +1,12 @@
 import type { FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import type { PendingSubtaskDraft, TaskWithDepth } from "../../task-tree";
+import type { PendingSubtaskDraft } from "../../task-tree";
 import { Modal } from "../../../shared/Modal";
 import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
-import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";
 import { TaskCreateModalPendingSubtasksField } from "./fields/TaskCreateModalPendingSubtasksField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
-import { TaskCreateModalInheritChecklistField } from "./fields/TaskCreateModalInheritChecklistField";
 import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNestedSubtaskModal";
 import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
@@ -20,7 +18,6 @@ import {
 type Props = {
   pending: boolean;
   saving: boolean;
-  parentOptionsLoading?: boolean;
   draftSaving: boolean;
   draftSaveLabel: string | null;
   draftSaveError: boolean;
@@ -30,15 +27,10 @@ type Props = {
   priority: PriorityChoice;
   taskType: TaskType;
   checklistItems: string[];
-  parentOptions: TaskWithDepth[];
-  parentId: string;
-  checklistInherit: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
   onTaskTypeChange: (t: TaskType) => void;
-  onParentIdChange: (id: string) => void;
-  onChecklistInheritChange: (v: boolean) => void;
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
@@ -80,7 +72,6 @@ type Props = {
 export function TaskCreateModal({
   pending,
   saving,
-  parentOptionsLoading = false,
   draftSaving,
   draftSaveLabel,
   draftSaveError,
@@ -90,15 +81,10 @@ export function TaskCreateModal({
   priority,
   taskType,
   checklistItems,
-  parentOptions,
-  parentId,
-  checklistInherit,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
   onTaskTypeChange,
-  onParentIdChange,
-  onChecklistInheritChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
@@ -121,8 +107,6 @@ export function TaskCreateModal({
   evaluateError = null,
 }: Props) {
   const disabled = pending || saving;
-  const hasParent = Boolean(parentId.trim());
-  const hideComposeChecklist = hasParent && checklistInherit;
   const dmapMode = taskType === "dmap";
   const dmapReady = taskCreateModalDmapReady(
     dmapMode,
@@ -144,7 +128,7 @@ export function TaskCreateModal({
     onUpdatePendingSubtask,
   });
 
-  const busyLabel = taskCreateModalBusyLabel(hasParent, pendingSubtasks.length);
+  const busyLabel = taskCreateModalBusyLabel(pendingSubtasks.length);
 
   return (
     <>
@@ -168,9 +152,7 @@ export function TaskCreateModal({
         dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
-          <h2 id="task-create-modal-title">
-            {hasParent ? "New subtask" : "New task"}
-          </h2>
+          <h2 id="task-create-modal-title">New task</h2>
           {draftSaveLabel ? (
             <p
               className={[
@@ -188,15 +170,6 @@ export function TaskCreateModal({
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <TaskCreateModalParentField
-              parentOptionsLoading={parentOptionsLoading}
-              parentId={parentId}
-              parentOptions={parentOptions}
-              onParentIdChange={onParentIdChange}
-              disabled={disabled}
-              hasParent={hasParent}
-            />
-
             <TaskCreateModalPrimaryFields
               dmapMode={dmapMode}
               disabled={disabled}
@@ -214,22 +187,14 @@ export function TaskCreateModal({
               onDmapDescriptionChange={onDmapDescriptionChange}
               prompt={prompt}
               checklistItems={checklistItems}
-              hideComposeChecklist={hideComposeChecklist}
+              hideComposeChecklist={false}
               onPromptChange={onPromptChange}
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
               onRemoveChecklistRow={onRemoveChecklistRow}
             />
 
-            {hasParent && !dmapMode ? (
-              <TaskCreateModalInheritChecklistField
-                checklistInherit={checklistInherit}
-                disabled={disabled}
-                onChecklistInheritChange={onChecklistInheritChange}
-              />
-            ) : null}
-
-            {!hasParent && !dmapMode ? (
+            {!dmapMode ? (
               <TaskCreateModalPendingSubtasksField
                 pendingSubtasks={pendingSubtasks}
                 disabled={disabled}
@@ -260,7 +225,6 @@ export function TaskCreateModal({
               priority={priority}
               dmapReady={dmapReady}
               evaluatePending={evaluatePending}
-              hasParent={hasParent}
               onClose={onClose}
               onSaveDraft={onSaveDraft}
               onEvaluate={onEvaluate}

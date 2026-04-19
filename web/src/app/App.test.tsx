@@ -28,19 +28,6 @@ async function choosePriorityInDialog(
   );
 }
 
-async function chooseParentTaskInDialog(
-  user: ReturnType<typeof userEvent.setup>,
-  dialog: HTMLElement,
-  optionLabel: string,
-) {
-  await user.click(
-    within(dialog).getByRole("combobox", { name: /^parent task$/i }),
-  );
-  await user.click(
-    screen.getByRole("option", { name: new RegExp(optionLabel, "i") }),
-  );
-}
-
 function renderApp() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -1249,30 +1236,14 @@ describe("App", () => {
     expect(checklistPosts[0]).toContain("Updated wording");
   });
 
-  it("creates a subtask from home with checklist criteria added after create", async () => {
+  it("does not expose a parent picker on the home create-task modal", async () => {
+    // Subtasks are now created from inside the parent task page
+    // (`SubtaskCreateModal`), not from the home modal. The home
+    // modal is exclusively for top-level tasks.
     const user = userEvent.setup();
-    let created = false;
-    const checklistPosts: string[] = [];
-
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url.startsWith("/tasks?")) {
-        if (!created) {
-          return Response.json({
-            tasks: [
-              {
-                id: "p1",
-                title: "Check parent",
-                initial_prompt: "",
-                status: "ready",
-                priority: "medium",
-                checklist_inherit: false,
-              },
-            ],
-            limit: 200,
-            offset: 0,
-          });
-        }
         return Response.json({
           tasks: [
             {
@@ -1282,16 +1253,6 @@ describe("App", () => {
               status: "ready",
               priority: "medium",
               checklist_inherit: false,
-              children: [
-                {
-                  id: "t1",
-                  title: "With criteria",
-                  initial_prompt: "",
-                  status: "ready",
-                  priority: "medium",
-                  checklist_inherit: false,
-                },
-              ],
             },
           ],
           limit: 200,
@@ -1304,26 +1265,6 @@ describe("App", () => {
           { status: 503 },
         );
       }
-      if (url === "/tasks" && init?.method === "POST") {
-        created = true;
-        return new Response(
-          JSON.stringify({
-            id: "t1",
-            title: "With criteria",
-            initial_prompt: "",
-            status: "ready",
-            priority: "medium",
-            checklist_inherit: false,
-            parent_id: "p1",
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
-        const body = init?.body != null ? String(init.body) : "";
-        checklistPosts.push(body);
-        return new Response(null, { status: 204 });
-      }
       return new Response("not found", { status: 404 });
     });
 
@@ -1331,42 +1272,21 @@ describe("App", () => {
     expect(await screen.findByText("Check parent")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);
-    await waitFor(() => {
-      expect(
-        within(dialog).getByRole("combobox", { name: /^parent task$/i }),
-      ).toBeInTheDocument();
-    });
-    await chooseParentTaskInDialog(user, dialog, "Check parent");
     expect(
-      await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
+      within(dialog).getByRole("heading", { name: /^new task$/i }),
     ).toBeInTheDocument();
-
-    await user.type(within(dialog).getByLabelText(/^title$/i), "With criteria");
-    await choosePriorityInDialog(user, dialog);
-    await user.click(
-      within(dialog).getByRole("button", { name: /new criterion/i }),
-    );
-    const criterionDialog = await screen.findByRole("dialog", {
-      name: /new criterion/i,
-    });
-    await user.type(
-      within(criterionDialog).getByLabelText(/^criterion$/i),
-      "Tests pass",
-    );
-    await user.click(
-      within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
-    );
-
-    await user.click(
-      within(dialog).getByRole("button", { name: /^add subtask$/i }),
-    );
-
     expect(
-      await screen.findByRole("link", { name: /check parent/i }),
+      within(dialog).queryByRole("combobox", { name: /^parent task$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/inherit parent's checklist criteria/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: /^create$/i }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /with criteria/i })).toBeNull();
-    expect(checklistPosts).toHaveLength(1);
-    expect(checklistPosts[0]).toContain("Tests pass");
+    expect(
+      within(dialog).queryByRole("button", { name: /^add subtask$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("creates a task with subtasks after the parent task", async () => {
@@ -1517,30 +1437,15 @@ describe("App", () => {
     ]);
   });
 
-  it("creates a subtask from home when parent task is selected", async () => {
+  it("posts a top-level task with no parent_id from the home create modal", async () => {
+    // The home modal is now top-level-only; verifies no parent_id
+    // is ever attached even when parent tasks exist in the list.
     const user = userEvent.setup();
-    let created = false;
     let postBody: Record<string, unknown> | null = null;
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
       if (url.startsWith("/tasks?")) {
-        if (!created) {
-          return Response.json({
-            tasks: [
-              {
-                id: "parent",
-                title: "Parent task",
-                initial_prompt: "",
-                status: "ready",
-                priority: "medium",
-                checklist_inherit: false,
-              },
-            ],
-            limit: 200,
-            offset: 0,
-          });
-        }
         return Response.json({
           tasks: [
             {
@@ -1550,16 +1455,6 @@ describe("App", () => {
               status: "ready",
               priority: "medium",
               checklist_inherit: false,
-              children: [
-                {
-                  id: "child",
-                  title: "Child sub",
-                  initial_prompt: "",
-                  status: "ready",
-                  priority: "medium",
-                  checklist_inherit: false,
-                },
-              ],
             },
           ],
           limit: 200,
@@ -1573,20 +1468,18 @@ describe("App", () => {
         );
       }
       if (url === "/tasks" && init?.method === "POST") {
-        created = true;
         postBody =
           init?.body != null && typeof init.body === "string"
             ? JSON.parse(init.body)
             : {};
         return new Response(
           JSON.stringify({
-            id: "child",
-            title: "Child sub",
+            id: "new",
+            title: "Standalone task",
             initial_prompt: "",
             status: "ready",
             priority: "medium",
             checklist_inherit: false,
-            parent_id: "parent",
           }),
           { status: 201, headers: { "Content-Type": "application/json" } },
         );
@@ -1598,31 +1491,25 @@ describe("App", () => {
     expect(await screen.findByText("Parent task")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);
-    await waitFor(() => {
-      expect(
-        within(dialog).getByRole("combobox", { name: /^parent task$/i }),
-      ).toBeInTheDocument();
-    });
-    await chooseParentTaskInDialog(user, dialog, "Parent task");
-    expect(
-      await within(dialog).findByRole("heading", { name: /^new subtask$/i }),
-    ).toBeInTheDocument();
-    await user.type(within(dialog).getByLabelText(/^title$/i), "Child sub");
+    await user.type(
+      within(dialog).getByLabelText(/^title$/i),
+      "Standalone task",
+    );
     await choosePriorityInDialog(user, dialog);
     await user.click(
-      within(dialog).getByRole("button", { name: /^add subtask$/i }),
+      within(dialog).getByRole("button", { name: /^create$/i }),
     );
 
-    expect(
-      await screen.findByRole("link", { name: /parent task/i }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /child sub/i })).toBeNull();
-    expect(postBody).not.toBeNull();
+    await waitFor(() => {
+      expect(postBody).not.toBeNull();
+    });
     const posted = postBody as unknown as {
       parent_id?: unknown;
+      checklist_inherit?: unknown;
       title?: unknown;
     };
-    expect(posted.parent_id).toBe("parent");
-    expect(posted.title).toBe("Child sub");
+    expect(posted.title).toBe("Standalone task");
+    expect(posted.parent_id).toBeUndefined();
+    expect(posted.checklist_inherit).toBeUndefined();
   });
 });

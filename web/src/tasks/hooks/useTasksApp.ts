@@ -12,7 +12,6 @@ import {
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
 import {
-  flattenTaskTree,
   flattenTaskTreeRoots,
   type PendingSubtaskDraft,
 } from "../task-tree";
@@ -87,9 +86,6 @@ export function useTasksApp() {
   const [pendingSubtasks, setPendingSubtasks] = useState<PendingSubtaskDraft[]>(
     [],
   );
-  /** When set, POST /tasks includes `parent_id` (subtask on the home page). */
-  const [newParentId, setNewParentId] = useState("");
-  const [newChecklistInherit, setNewChecklistInherit] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const [editing, setEditing] = useState<Task | null>(null);
@@ -186,21 +182,6 @@ export function useTasksApp() {
     () => flattenTaskTreeRoots(rootTaskTrees),
     [rootTaskTrees],
   );
-  const parentPickerTasks = useMemo(
-    () => flattenTaskTree(rootTaskTrees),
-    [rootTaskTrees],
-  );
-
-  useEffect(() => {
-    if (!newParentId) {
-      setNewChecklistInherit(false);
-    }
-  }, [newParentId]);
-
-  useEffect(() => {
-    if (!newChecklistInherit) return;
-    setNewChecklistItems([]);
-  }, [newChecklistInherit]);
 
   const resetNewTaskForm = useCallback(() => {
     // Resetting the form to a fresh draft also supersedes any in-flight
@@ -226,8 +207,6 @@ export function useTasksApp() {
     setNewDmapDescription("");
     setNewChecklistItems([]);
     setPendingSubtasks([]);
-    setNewParentId("");
-    setNewChecklistInherit(false);
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
     setLastDraftSavedAt(null);
@@ -298,8 +277,6 @@ export function useTasksApp() {
       status: Status;
       priority: Priority;
       task_type: TaskType;
-      parent_id?: string;
-      checklist_inherit: boolean;
       checklistItems: string[];
       pendingSubtasks: PendingSubtaskDraft[];
       draft_id: string;
@@ -308,9 +285,6 @@ export function useTasksApp() {
         const rows = items.map((raw) => raw.trim()).filter(Boolean);
         await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
       };
-      const parentId = input.parent_id?.trim();
-      const inherit =
-        Boolean(parentId) && input.checklist_inherit === true;
       const task = await apiCreate({
         title: input.title,
         initial_prompt: input.initial_prompt,
@@ -318,12 +292,8 @@ export function useTasksApp() {
         priority: input.priority,
         task_type: input.task_type,
         draft_id: input.draft_id,
-        ...(parentId ? { parent_id: parentId } : {}),
-        ...(inherit ? { checklist_inherit: true } : {}),
       });
-      if (!inherit) {
-        await addChecklistItems(task.id, input.checklistItems);
-      }
+      await addChecklistItems(task.id, input.checklistItems);
       await Promise.all(
         input.pendingSubtasks
           .filter((st) => Boolean(st.title.trim()))
@@ -377,11 +347,8 @@ export function useTasksApp() {
       status: Status;
       priority: Priority;
       task_type: TaskType;
-      parent_id?: string;
-      checklist_inherit: boolean;
       checklistItems: string[];
     }) => {
-      const parentId = input.parent_id?.trim();
       return apiEvaluateDraft({
         id: input.id,
         title: input.title,
@@ -389,8 +356,6 @@ export function useTasksApp() {
         status: input.status,
         priority: input.priority,
         task_type: input.task_type,
-        ...(parentId ? { parent_id: parentId } : {}),
-        ...(parentId ? { checklist_inherit: input.checklist_inherit } : {}),
         checklist_items: input.checklistItems
           .map((text) => text.trim())
           .filter(Boolean)
@@ -596,8 +561,11 @@ export function useTasksApp() {
         prompt: newPrompt,
         priority: newPriority,
         taskType: newTaskType,
-        parentId: newParentId,
-        checklistInherit: newChecklistInherit,
+        // The create modal can no longer parent or inherit-from a parent,
+        // but the wire format still has these fields so the autosave
+        // signature mirrors what the server persists.
+        parentId: "",
+        checklistInherit: false,
         checklistItems: newChecklistItems,
         pendingSubtasks,
         latestEvaluation: latestDraftEvaluation,
@@ -612,10 +580,8 @@ export function useTasksApp() {
       newDmapCommitLimit,
       newDmapDescription,
       newDmapDomain,
-      newChecklistInherit,
       newChecklistItems,
       newDraftID,
-      newParentId,
       newPriority,
       newPrompt,
       newTaskType,
@@ -633,8 +599,8 @@ export function useTasksApp() {
         initial_prompt: newPrompt,
         priority: newPriority,
         task_type: newTaskType,
-        parent_id: newParentId,
-        checklist_inherit: newChecklistInherit,
+        parent_id: "",
+        checklist_inherit: false,
         checklist_items: newChecklistItems,
         pending_subtasks: pendingSubtasks.map((st) => ({
           title: st.title,
@@ -669,10 +635,8 @@ export function useTasksApp() {
     newDmapCommitLimit,
     newDmapDescription,
     newDmapDomain,
-    newChecklistInherit,
     newChecklistItems,
     newDraftID,
-    newParentId,
     newPriority,
     newPrompt,
     newTaskType,
@@ -745,7 +709,6 @@ export function useTasksApp() {
   const draftSaveError = createModalOpen && saveDraftMutation.isError;
 
   function evaluateDraftBeforeCreate() {
-    const parentId = newParentId.trim();
     if (!newTitle.trim() || !newPriority) return;
     const dmapDomain = newDmapDomain.trim();
     if (newTaskType === "dmap" && !dmapDomain) return;
@@ -763,8 +726,6 @@ export function useTasksApp() {
       status: DEFAULT_NEW_TASK_STATUS,
       priority: newPriority,
       task_type: toApiTaskType(newTaskType),
-      ...(parentId ? { parent_id: parentId } : {}),
-      checklist_inherit: Boolean(parentId) && newChecklistInherit,
       checklistItems: newChecklistItems,
     });
   }
@@ -772,7 +733,6 @@ export function useTasksApp() {
   async function submitCreate(e: FormEvent) {
     e.preventDefault();
     if (!newTitle.trim() || !newPriority) return;
-    const parentId = newParentId.trim();
     const dmapDomain = newDmapDomain.trim();
     if (newTaskType === "dmap" && !dmapDomain) return;
     createMutation.mutate({
@@ -789,8 +749,6 @@ export function useTasksApp() {
       priority: newPriority,
       task_type: toApiTaskType(newTaskType),
       draft_id: newDraftID,
-      ...(parentId ? { parent_id: parentId } : {}),
-      checklist_inherit: Boolean(parentId) && newChecklistInherit,
       checklistItems: newChecklistItems,
       pendingSubtasks,
     });
@@ -847,8 +805,12 @@ export function useTasksApp() {
     );
     setNewDmapDomain(draft.payload.dmap_config?.domain ?? "");
     setNewDmapDescription(draft.payload.dmap_config?.description ?? "");
-    setNewParentId(draft.payload.parent_id ?? "");
-    setNewChecklistInherit(draft.payload.checklist_inherit === true);
+    // The create modal no longer hosts a parent picker or the
+    // inherit-from-parent toggle (subtasks are created from inside
+    // the parent task's own page now). Drop those fields silently
+    // when resuming a legacy draft so the form represents what the
+    // user can actually edit; the next autosave will persist them
+    // as empty/false.
     setNewChecklistItems(draft.payload.checklist_items ?? []);
     setPendingSubtasks(pendingSubtasks);
     setLatestDraftEvaluation(latestEvaluation);
@@ -869,8 +831,11 @@ export function useTasksApp() {
         prompt: draft.payload.initial_prompt ?? "",
         priority: draft.payload.priority ?? "",
         taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
-        parentId: draft.payload.parent_id ?? "",
-        checklistInherit: draft.payload.checklist_inherit === true,
+        // Match the always-empty baseline from `currentDraftAutosaveSignature`:
+        // resuming a legacy draft with `parent_id` set must not flip the
+        // dirty bit (the next autosave intentionally clears those fields).
+        parentId: "",
+        checklistInherit: false,
         checklistItems: draft.payload.checklist_items ?? [],
         pendingSubtasks,
         latestEvaluation,
@@ -992,7 +957,6 @@ export function useTasksApp() {
 
   return {
     tasks,
-    parentPickerTasks,
     rootTasksOnPage: rootTaskTrees.length,
     loading,
     listRefreshing,
@@ -1094,10 +1058,6 @@ export function useTasksApp() {
     addPendingSubtask,
     updatePendingSubtask,
     removePendingSubtask,
-    newParentId,
-    setNewParentId,
-    newChecklistInherit,
-    setNewChecklistInherit,
     appendNewChecklistCriterion,
     updateNewChecklistRow,
     removeNewChecklistRow,

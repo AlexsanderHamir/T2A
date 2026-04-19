@@ -18,15 +18,10 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     priority: "medium",
     taskType: "general",
     checklistItems: [],
-    parentOptions: [],
-    parentId: "",
-    checklistInherit: false,
     onTitleChange: vi.fn(),
     onPromptChange: vi.fn(),
     onPriorityChange: vi.fn(),
     onTaskTypeChange: vi.fn(),
-    onParentIdChange: vi.fn(),
-    onChecklistInheritChange: vi.fn(),
     onAppendChecklistCriterion: vi.fn(),
     onUpdateChecklistRow: vi.fn(),
     onRemoveChecklistRow: vi.fn(),
@@ -103,14 +98,30 @@ describe("TaskCreateModal", () => {
     ).toBeDisabled();
   });
 
-  it("renders parent options loading skeleton while parent options are pending", () => {
-    renderModal({ parentOptionsLoading: true });
+  it("does not render a parent task picker (subtasks are created from the parent task page)", () => {
+    renderModal();
+    expect(
+      screen.queryByRole("combobox", { name: /parent task/i }),
+    ).not.toBeInTheDocument();
     expect(
       document.querySelector(".task-create-parent-loading"),
-    ).not.toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      /loading parent task options/i,
-    );
+    ).toBeNull();
+    expect(
+      screen.queryByText(/inherit parent's checklist criteria/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("always titles the modal 'New task' (the modal no longer creates subtasks)", () => {
+    renderModal();
+    expect(
+      screen.getByRole("heading", { name: /^new task$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /^new subtask$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^create$/i }),
+    ).toBeInTheDocument();
   });
 
   it("does not render mutation error callouts on the happy path", () => {

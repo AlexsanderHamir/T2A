@@ -95,7 +95,6 @@ export function TaskHome({ app }: Props) {
         <TaskCreateModal
           pending={app.createPending}
           saving={app.saving}
-          parentOptionsLoading={app.loading}
           draftSaving={app.draftSavePending}
           draftSaveLabel={app.draftSaveLabel}
           draftSaveError={app.draftSaveError}
@@ -105,15 +104,10 @@ export function TaskHome({ app }: Props) {
           priority={app.newPriority}
           taskType={app.newTaskType}
           checklistItems={app.newChecklistItems}
-          parentOptions={app.parentPickerTasks}
-          parentId={app.newParentId}
-          checklistInherit={app.newChecklistInherit}
           onTitleChange={app.setNewTitle}
           onPromptChange={app.setNewPrompt}
           onPriorityChange={app.setNewPriority}
           onTaskTypeChange={app.setNewTaskType}
-          onParentIdChange={app.setNewParentId}
-          onChecklistInheritChange={app.setNewChecklistInherit}
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
           onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}

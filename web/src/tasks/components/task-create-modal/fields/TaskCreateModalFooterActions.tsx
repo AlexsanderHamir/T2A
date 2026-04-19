@@ -7,7 +7,6 @@ type Props = {
   priority: PriorityChoice;
   dmapReady: boolean;
   evaluatePending: boolean;
-  hasParent: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
   onEvaluate: () => void;
@@ -20,7 +19,6 @@ export function TaskCreateModalFooterActions({
   priority,
   dmapReady,
   evaluatePending,
-  hasParent,
   onClose,
   onSaveDraft,
   onEvaluate,
@@ -58,7 +56,7 @@ export function TaskCreateModalFooterActions({
         className="task-create-submit"
         disabled={evalAndSubmitDisabled}
       >
-        {hasParent ? "Add subtask" : "Create"}
+        Create
       </button>
     </div>
   );
