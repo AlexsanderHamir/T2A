@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -380,6 +381,180 @@ func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 	}
 	if len(pEv) != 2 || pEv[0].Type != domain.EventTaskCreated || pEv[1].Type != domain.EventSubtaskAdded {
 		t.Fatalf("parent events: %+v", pEv)
+	}
+}
+
+// findEventsByType filters a task event slice down to a single EventType. Used
+// by the parent-reparent regression suite below to make audit assertions
+// tolerant of unrelated events that may appear on the same task.
+func findEventsByType(evs []domain.TaskEvent, want domain.EventType) []domain.TaskEvent {
+	out := []domain.TaskEvent{}
+	for _, e := range evs {
+		if e.Type == want {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_payload
+// pins the audit contract documented in docs/API-HTTP.md (line 205): the
+// `subtask_added` event is emitted on the **parent** task with payload
+// `{child_task_id, title}` whenever a child becomes its subtask. The Create
+// flow already follows this contract (see
+// TestStore_Create_child_appends_subtask_event_on_parent above); the PATCH
+// /tasks/{id} reparent flow used to instead emit a single `subtask_added` on
+// the **child** with payload `{parent_id, previous_parent_id}`, which broke
+// any consumer that subscribes to the parent's events to track its children
+// (notably the SSE invalidation in the SPA).
+func TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_payload(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: parent.ID}}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	pEv, err := s.ListTaskEvents(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	added := findEventsByType(pEv, domain.EventSubtaskAdded)
+	if len(added) != 1 {
+		t.Fatalf("parent subtask_added events: got %d want 1; full=%+v", len(added), pEv)
+	}
+	var payload struct {
+		ChildTaskID string `json:"child_task_id"`
+		Title       string `json:"title"`
+	}
+	if err := json.Unmarshal(added[0].Data, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v raw=%s", err, string(added[0].Data))
+	}
+	if payload.ChildTaskID != child.ID {
+		t.Fatalf("child_task_id=%q want %q", payload.ChildTaskID, child.ID)
+	}
+	if payload.Title != "kid" {
+		t.Fatalf("title=%q want %q", payload.Title, "kid")
+	}
+	chEv, err := s.ListTaskEvents(ctx, child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := findEventsByType(chEv, domain.EventSubtaskAdded); len(got) != 0 {
+		t.Fatalf("child must not receive subtask_added on reparent: %+v", got)
+	}
+}
+
+// TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent pins the
+// other half of the reparent audit contract: clearing parent_id (PATCH
+// `parent_id:null`) must emit `subtask_removed` on the **old parent**, not
+// `subtask_added` on the child. This is the symmetric companion to
+// docs/API-HTTP.md line 205 ("`subtask_removed` on the parent when that child
+// is deleted") — orphaning via PATCH is logically equivalent to removing the
+// child from the parent's subtree.
+func TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := parent.ID
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{Clear: true}}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	pEv, err := s.ListTaskEvents(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	removed := findEventsByType(pEv, domain.EventSubtaskRemoved)
+	if len(removed) != 1 {
+		t.Fatalf("parent subtask_removed events: got %d want 1; full=%+v", len(removed), pEv)
+	}
+	var payload struct {
+		ChildTaskID string `json:"child_task_id"`
+		Title       string `json:"title"`
+	}
+	if err := json.Unmarshal(removed[0].Data, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v raw=%s", err, string(removed[0].Data))
+	}
+	if payload.ChildTaskID != child.ID {
+		t.Fatalf("child_task_id=%q want %q", payload.ChildTaskID, child.ID)
+	}
+	if payload.Title != "kid" {
+		t.Fatalf("title=%q want %q", payload.Title, "kid")
+	}
+	chEv, err := s.ListTaskEvents(ctx, child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := findEventsByType(chEv, domain.EventSubtaskAdded); len(got) != 0 {
+		t.Fatalf("child must not receive subtask_added on clear-parent: %+v", got)
+	}
+	if got := findEventsByType(chEv, domain.EventSubtaskRemoved); len(got) != 0 {
+		t.Fatalf("child must not receive subtask_removed on clear-parent: %+v", got)
+	}
+}
+
+// TestStore_Update_changeParent_emits_remove_on_old_and_add_on_new pins the
+// reparent-across-parents audit contract: PATCHing `parent_id` from one
+// non-empty value to another non-empty value must emit `subtask_removed` on
+// the OLD parent and `subtask_added` on the NEW parent (in the same tx). This
+// keeps the "events on parent track its children list" invariant consistent
+// with the Create / Delete flows.
+func TestStore_Update_changeParent_emits_remove_on_old_and_add_on_new(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	oldParent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "old"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newParent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "new"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opid := oldParent.ID
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &opid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: newParent.ID}}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	oldEv, err := s.ListTaskEvents(ctx, oldParent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := findEventsByType(oldEv, domain.EventSubtaskRemoved); len(got) != 1 {
+		t.Fatalf("old parent subtask_removed: got %d want 1; full=%+v", len(got), oldEv)
+	}
+	newEv, err := s.ListTaskEvents(ctx, newParent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addedNew := findEventsByType(newEv, domain.EventSubtaskAdded)
+	if len(addedNew) != 1 {
+		t.Fatalf("new parent subtask_added: got %d want 1; full=%+v", len(addedNew), newEv)
+	}
+	var payload struct {
+		ChildTaskID string `json:"child_task_id"`
+		Title       string `json:"title"`
+	}
+	if err := json.Unmarshal(addedNew[0].Data, &payload); err != nil {
+		t.Fatalf("unmarshal: %v raw=%s", err, string(addedNew[0].Data))
+	}
+	if payload.ChildTaskID != child.ID || payload.Title != "kid" {
+		t.Fatalf("payload=%+v want child_task_id=%q title=%q", payload, child.ID, "kid")
 	}
 }
 

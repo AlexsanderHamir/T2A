@@ -152,20 +152,49 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 		nextStr = pid
 	}
 	if prevStr != nextStr {
-		b, err := json.Marshal(map[string]string{
-			"parent_id":          nextStr,
-			"previous_parent_id": prevStr,
-		})
-		if err != nil {
-			return err
+		// Audit invariant (docs/API-HTTP.md line 205): subtask_added /
+		// subtask_removed are emitted on the **parent** task, with payload
+		// `{child_task_id, title}` — mirroring the Create / Delete flows in
+		// crud.go so consumers that subscribe to a parent's events to track
+		// its children list see PATCH-reparents the same way they see new
+		// subtasks and cascaded deletes. We deliberately do NOT append a
+		// parent-related event to the child's own audit log: that would
+		// diverge from Create (no parent-event on the new child) and Delete
+		// (the gone task has no audit at all).
+		title := strings.TrimSpace(cur.Title)
+		if prevStr != "" {
+			if err := appendParentChildEvent(tx, prevStr, taskID, title, domain.EventSubtaskRemoved, by); err != nil {
+				return err
+			}
 		}
-		if err := kernel.AppendEvent(tx, taskID, *seq, domain.EventSubtaskAdded, by, b); err != nil {
-			return err
+		if nextStr != "" {
+			if err := appendParentChildEvent(tx, nextStr, taskID, title, domain.EventSubtaskAdded, by); err != nil {
+				return err
+			}
 		}
-		*seq++
 	}
 	cur.ParentID = nextPtr
 	return nil
+}
+
+// appendParentChildEvent writes a single subtask_added / subtask_removed audit
+// row on `parentID` with the documented `{child_task_id, title}` payload. It
+// allocates its own per-parent event seq via kernel.NextEventSeq because the
+// caller's `seq` cursor belongs to the **child** task being patched, not to
+// the parent receiving the audit row.
+func appendParentChildEvent(tx *gorm.DB, parentID, childID, childTitle string, t domain.EventType, by domain.Actor) error {
+	pseq, err := kernel.NextEventSeq(tx, parentID)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(map[string]string{
+		"child_task_id": childID,
+		"title":         childTitle,
+	})
+	if err != nil {
+		return err
+	}
+	return kernel.AppendEvent(tx, parentID, pseq, t, by, b)
 }
 
 func applyChecklistInheritPatch(tx *gorm.DB, taskID string, cur *domain.Task, inherit *bool, by domain.Actor, seq *int64) error {
