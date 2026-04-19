@@ -42,6 +42,16 @@ export class AppErrorBoundary extends React.Component<
     this.setState({ hasError: false });
   };
 
+  private handleGoHome = (): void => {
+    // Hard navigation rather than react-router `navigate("/")`:
+    // AppErrorBoundary is a class component (no hooks) and the
+    // failed subtree may have left non-error state in a wedged
+    // condition. A full document load to "/" guarantees a clean
+    // mount with no leaked closures, mirroring the safety contract
+    // of the Reload-page button below.
+    window.location.assign("/");
+  };
+
   render() {
     if (this.state.hasError) {
       const message = this.props.fallbackMessage ?? DEFAULT_FALLBACK_MESSAGE;
@@ -64,6 +74,13 @@ export class AppErrorBoundary extends React.Component<
                 onClick={this.handleSoftReset}
               >
                 Try again
+              </button>
+              <button
+                type="button"
+                className="app-error-fallback__secondary"
+                onClick={this.handleGoHome}
+              >
+                Go back
               </button>
               <button
                 type="button"

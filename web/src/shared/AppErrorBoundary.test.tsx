@@ -86,8 +86,42 @@ describe("AppErrorBoundary", () => {
       within(alert).getByRole("button", { name: /^try again$/i }),
     ).toBeInTheDocument();
     expect(
+      within(alert).getByRole("button", { name: /^go back$/i }),
+    ).toBeInTheDocument();
+    expect(
       within(alert).getByRole("button", { name: /^reload page$/i }),
     ).toBeInTheDocument();
+    errorSpy.mockRestore();
+  });
+
+  it("Go back navigates to the home route via a hard load", async () => {
+    const user = userEvent.setup();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // window.location.assign in jsdom is non-configurable, so swap
+    // the whole `location` for a stub that exposes a spy. This
+    // mirrors how the real boundary kicks a fresh document load
+    // ("/" + clean state) without depending on react-router.
+    const assignSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, assign: assignSpy },
+    });
+
+    render(
+      <AppErrorBoundary>
+        <CrashOnRender />
+      </AppErrorBoundary>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^go back$/i }));
+    expect(assignSpy).toHaveBeenCalledTimes(1);
+    expect(assignSpy).toHaveBeenCalledWith("/");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: originalLocation,
+    });
     errorSpy.mockRestore();
   });
 
