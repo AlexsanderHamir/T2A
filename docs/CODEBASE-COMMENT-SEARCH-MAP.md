@@ -143,3 +143,4 @@ Results from applying §7 to a narrow slice of the tree (not a full-repo audit):
 | **CSS** | No new magic-number sweep in this pass; treat opportunistically when touching styles. |
 | **API boundary (`parseTaskApi`)** | All exported `parse*` functions now have one-line JSDoc (route + contract); throws on invalid JSON per §4.2. |
 | **Docs index** | Linked from `docs/README.md` (“What to read” + “Where to put updates”) so comment-audit passes are discoverable next to contract docs. |
+| **AGENTS.md** | Optional read-order row points here for agents doing comment/godoc/JSDoc passes alongside contract docs. |
