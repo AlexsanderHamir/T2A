@@ -97,7 +97,7 @@ type taskAPIApp struct {
 	hub         *handler.SSEHub
 	rep         *repo.Root
 	agentQueue  *agents.MemoryQueue
-	agentWorker *agentWorkerHandle
+	agentWorker *agentWorkerSupervisor
 }
 
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
@@ -154,7 +154,7 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 	// aborted/cycle writes need a live DB pool) → cancel reconcile →
 	// close DB. Done in this strict order even on serve error so the
 	// audit trail finishes before the pool closes.
-	app.agentWorker.drain()
+	app.agentWorker.Drain()
 	stopAgents()
 
 	if serveErr != nil {

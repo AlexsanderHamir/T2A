@@ -20,6 +20,16 @@ const (
 	TaskUpdated      TaskChangeType = "task_updated"
 	TaskDeleted      TaskChangeType = "task_deleted"
 	TaskCycleChanged TaskChangeType = "task_cycle_changed"
+	// SettingsChanged fires after PATCH /settings persists or the
+	// agent worker supervisor restarts as a result of a settings change.
+	// The event has no ID/CycleID; consumers refetch GET /settings to
+	// pick up the new values. Documented in docs/API-SSE.md.
+	SettingsChanged TaskChangeType = "settings_changed"
+	// AgentRunCancelled fires after POST /settings/cancel-current-run
+	// successfully cancels an in-flight runner.Run. Listeners use it
+	// to flip the SPA "Cancel current run" button back to its idle
+	// state without polling.
+	AgentRunCancelled TaskChangeType = "agent_run_cancelled"
 )
 
 // TaskChangeEvent is a minimal JSON line sent as one SSE "data:" frame.

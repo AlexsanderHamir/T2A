@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
@@ -22,9 +24,13 @@ import (
 
 const workerLogCmd = "taskapi"
 
-// DefaultRunTimeout caps a single runner.Run invocation. Mirrored by
-// T2A_AGENT_WORKER_RUN_TIMEOUT in Stage 4 wiring.
-const DefaultRunTimeout = 5 * time.Minute
+// CancelledByOperatorReason is the cycle/phase termination reason
+// recorded when an operator hits "Cancel current run" from the
+// settings page (POST /settings/cancel-current-run). Distinct from
+// ShutdownReason (parent ctx cancelled by process shutdown) and
+// "runner_timeout" (RunTimeout fired) so the audit trail can
+// distinguish all three causes of a cancelled context.
+const CancelledByOperatorReason = "cancelled_by_operator"
 
 // DefaultShutdownAbortTimeout bounds the post-cancel best-effort writes
 // (CompletePhase + TerminateCycle + Update task) that run on a
@@ -59,8 +65,13 @@ type CycleChangeNotifier interface {
 // defaults so cmd/taskapi can construct a Worker without filling in
 // every field.
 type Options struct {
-	// RunTimeout caps one runner.Run invocation. Defaults to
-	// DefaultRunTimeout.
+	// RunTimeout caps one runner.Run invocation. <=0 means "no
+	// timeout" — the worker does not wrap runner.Run with a deadline
+	// and the only way to interrupt a run is via the parent ctx
+	// (process shutdown) or CancelCurrentRun (operator-initiated).
+	// Replaces the prior 5-minute default; the supervisor now sources
+	// this from AppSettings.MaxRunDurationSeconds (default 0 = "No
+	// limit").
 	RunTimeout time.Duration
 	// ShutdownAbortTimeout bounds the best-effort cycle/phase/task
 	// writes performed on a background context after the parent ctx is
@@ -86,24 +97,40 @@ type Options struct {
 
 // Worker is the single-goroutine in-process consumer of the
 // MemoryQueue (contract: docs/AGENT-WORKER.md). Construct it with
-// NewWorker and drive it with Run; both methods are safe to call from
-// one goroutine only (V1 explicitly does not run multiple workers in
-// parallel).
+// NewWorker and drive it with Run; the Run loop is single-goroutine.
+//
+// CancelCurrentRun is safe to call from any goroutine (typically the
+// HTTP handler for POST /settings/cancel-current-run): it grabs the
+// per-run cancel func under a mutex and invokes it. The Run loop
+// observes the cancellation via the cancelled context the runner
+// passed; classifyOperatorCancel then maps the resulting error to
+// CancelledByOperatorReason instead of "runner_timeout" or
+// "shutdown".
 type Worker struct {
 	store   *store.Store
 	queue   *agents.MemoryQueue
 	runner  runner.Runner
 	options Options
+
+	mu               sync.Mutex
+	currentRunCancel context.CancelFunc
+	// cancelByOperator is set by CancelCurrentRun before the cancel
+	// func is invoked so the Run loop can distinguish operator cancels
+	// from RunTimeout fires (both surface as a cancelled ctx). Atomic
+	// so the Run loop can read without taking the mutex; the Run loop
+	// resets it back to false after consuming.
+	cancelByOperator atomic.Bool
 }
 
 // NewWorker constructs a Worker with sensible defaults applied to opts.
 // st, q, and r MUST be non-nil; callers that want a no-op runner pass
 // runnerfake.New().
+//
+// Note: opts.RunTimeout is NOT defaulted. <=0 means "no per-run cap"
+// (the supervisor's documented default). Callers that need a hard cap
+// pass an explicit positive duration.
 func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Options) *Worker {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.NewWorker")
-	if opts.RunTimeout <= 0 {
-		opts.RunTimeout = DefaultRunTimeout
-	}
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout
 	}
@@ -113,6 +140,53 @@ func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Opt
 		}
 	}
 	return &Worker{store: st, queue: q, runner: r, options: opts}
+}
+
+// CancelCurrentRun cancels the in-flight runner.Run, if any. Returns
+// true when there was an in-flight run to cancel. Safe to call from
+// any goroutine; idempotent (a no-op when nothing is running).
+//
+// The cancellation is observed by the Run loop, which records the
+// cycle as failed with reason CancelledByOperatorReason (distinct
+// from RunTimeout's "runner_timeout" and shutdown's "shutdown") so
+// the audit trail captures who killed the run.
+func (w *Worker) CancelCurrentRun() bool {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.CancelCurrentRun")
+	if w == nil {
+		return false
+	}
+	w.mu.Lock()
+	cancel := w.currentRunCancel
+	w.mu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	w.cancelByOperator.Store(true)
+	cancel()
+	slog.Info("agent worker run cancelled by operator", "cmd", workerLogCmd,
+		"operation", "agent.worker.Worker.CancelCurrentRun.fired")
+	return true
+}
+
+// setCurrentRunCancel installs the cancel func for the in-flight run.
+// Called by invokeRunner (process.go) before runner.Run; cleared on
+// return. Both calls happen on the Run loop goroutine, so the mutex
+// only serializes against external CancelCurrentRun callers.
+func (w *Worker) setCurrentRunCancel(cancel context.CancelFunc) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.setCurrentRunCancel",
+		"installed", cancel != nil)
+	w.mu.Lock()
+	w.currentRunCancel = cancel
+	w.mu.Unlock()
+}
+
+// consumeOperatorCancel reports whether the most recent run was
+// cancelled by an operator and clears the flag. Run loop calls this
+// after invokeRunner returns to decide whether to override the
+// classifier's "runner_timeout" mapping with CancelledByOperatorReason.
+func (w *Worker) consumeOperatorCancel() bool {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.consumeOperatorCancel")
+	return w.cancelByOperator.Swap(false)
 }
 
 // Run blocks on the queue and processes one task at a time until ctx

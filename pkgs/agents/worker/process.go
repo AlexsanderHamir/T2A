@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
@@ -79,6 +80,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	}
 
 	result, runErr := w.invokeRunner(parentCtx, fresh, cycle, execPhase)
+	operatorCancelled := w.consumeOperatorCancel()
 
 	if parentCtx.Err() != nil {
 		w.handleShutdownAfterRun(&state, task.ID)
@@ -86,6 +88,17 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	}
 
 	phaseStatus, cycleStatus, taskStatus, reason := classifyRunOutcome(runErr)
+	if operatorCancelled {
+		// The runner observed a cancelled ctx and surfaced an
+		// ErrTimeout-shaped error. Override the classifier so the
+		// audit trail records why the cycle ended (the operator hit
+		// "Cancel current run") rather than implying a per-run
+		// timeout fired or the runner produced bad output.
+		reason = CancelledByOperatorReason
+		if result.Summary == "" || strings.HasPrefix(result.Summary, "cursor: timeout") {
+			result.Summary = "cancelled by operator"
+		}
+	}
 	if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
 		return
 	}
@@ -221,15 +234,21 @@ func (w *Worker) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle,
 	return exec, true
 }
 
-// invokeRunner builds the Request, applies the per-run timeout, and
-// returns whatever the runner produced. The returned error is the raw
-// adapter error (typed via runner.Err* sentinels); classification is
-// done by the caller so the shutdown branch can short-circuit it.
+// invokeRunner builds the Request, applies the per-run timeout (if any),
+// publishes the cancel func so an operator can interrupt the run, and
+// returns whatever the runner produced. <=0 RunTimeout means "no cap":
+// the run can only be interrupted by the parent ctx (process shutdown)
+// or CancelCurrentRun (operator-initiated). The returned error is the
+// raw adapter error (typed via runner.Err* sentinels); classification
+// is done by the caller so the shutdown branch can short-circuit it.
 func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.invokeRunner",
-		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq)
-	runCtx, cancel := context.WithTimeout(parentCtx, w.options.RunTimeout)
+		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq,
+		"run_timeout_ns", int64(w.options.RunTimeout))
+	runCtx, cancel := withOptionalRunTimeout(parentCtx, w.options.RunTimeout)
 	defer cancel()
+	w.setCurrentRunCancel(cancel)
+	defer w.setCurrentRunCancel(nil)
 	return w.runner.Run(runCtx, runner.Request{
 		TaskID:     task.ID,
 		AttemptSeq: cycle.AttemptSeq,
@@ -238,6 +257,20 @@ func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycl
 		WorkingDir: w.options.WorkingDir,
 		Timeout:    w.options.RunTimeout,
 	})
+}
+
+// withOptionalRunTimeout returns a derived context that either inherits
+// only the parent (no cap) or carries an additional WithTimeout. Pulled
+// out so the no-cap path is a single function call rather than a branch
+// inside invokeRunner. The returned cancel func MUST be called either
+// directly (defer) or via CancelCurrentRun.
+func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Context, context.CancelFunc) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.withOptionalRunTimeout",
+		"timeout_ns", int64(d))
+	if d <= 0 {
+		return context.WithCancel(parent)
+	}
+	return context.WithTimeout(parent, d)
 }
 
 // completeExecutePhase persists the runner's outcome on the execute
