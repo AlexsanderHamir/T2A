@@ -228,6 +228,123 @@ describe("SettingsPage", () => {
     );
   });
 
+  it("preserves in-flight typing on other fields when a PATCH resolves", async () => {
+    // Session #37 regression: if the user edits field A, hits Save,
+    // and then keeps typing in field B while the PATCH is still in
+    // flight, the post-resolution `setForm(toFormState(next))` used
+    // to clobber field B back to its server value (silently losing
+    // the user's typing). The fix snapshots `formAtSubmit` and only
+    // applies server truth per-field where the form hasn't been
+    // re-edited since submit.
+    let releasePatch: ((value: Response) => void) | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input: FetchInput, init?: RequestInit) => {
+        const url = requestUrl(input);
+        if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+          return jsonResponse(defaultSettings());
+        }
+        if (url.endsWith("/settings") && init?.method === "PATCH") {
+          // Hold the PATCH response until the test releases it, so
+          // we have a deterministic in-flight window for typing
+          // into the second field.
+          return new Promise<Response>((resolve) => {
+            releasePatch = resolve;
+          });
+        }
+        return new Response("not found", { status: 404 });
+      },
+    );
+
+    renderPage();
+    const repoInput = await screen.findByLabelText(/Repository root/);
+    await userEvent.clear(repoInput);
+    await userEvent.type(repoInput, "/var/repos/new");
+
+    const saveBtn = screen.getByRole("button", { name: /Save changes/ });
+    await userEvent.click(saveBtn);
+
+    // PATCH is in flight; the user keeps typing in the cursor-bin
+    // field (a field NOT in the submitted patch body).
+    const cursorInput = screen.getByLabelText(/Cursor CLI path/);
+    await userEvent.clear(cursorInput);
+    await userEvent.type(cursorInput, "/opt/local/bin/cursor-agent");
+
+    // Now release the PATCH. The response carries the server's
+    // pre-edit cursor_bin (because the user's in-flight typing was
+    // never sent). Without the race-hardening, the form would now
+    // overwrite the cursor field back to the server value.
+    if (!releasePatch) throw new Error("PATCH was not in flight");
+    (releasePatch as (value: Response) => void)(
+      jsonResponse(
+        defaultSettings({
+          repo_root: "/var/repos/new",
+          updated_at: "2026-04-19T12:30:00Z",
+        }),
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
+    );
+    // The user's in-flight typing in cursor_bin must survive.
+    expect(cursorInput).toHaveValue("/opt/local/bin/cursor-agent");
+    // The patched field (repo_root) is whatever the user submitted
+    // (no further edits), so the server value applies cleanly.
+    expect(repoInput).toHaveValue("/var/repos/new");
+    // Form is now dirty against the new server baseline (user has
+    // unsaved cursor_bin changes), so Save re-enables for the next
+    // round.
+    expect(screen.getByRole("button", { name: /Save changes/ })).not.toBeDisabled();
+  });
+
+  it("preserves user re-edits to the same field while a PATCH is in flight", async () => {
+    // Session #37 regression: the user types /A, hits Save, then
+    // changes their mind to /B while the PATCH (carrying /A) is
+    // still in flight. The PATCH resolves with /A. The user's
+    // current intent is /B; clobbering back to /A would be silent
+    // data loss + violate the user's mental model.
+    let releasePatch: ((value: Response) => void) | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input: FetchInput, init?: RequestInit) => {
+        const url = requestUrl(input);
+        if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+          return jsonResponse(defaultSettings());
+        }
+        if (url.endsWith("/settings") && init?.method === "PATCH") {
+          return new Promise<Response>((resolve) => {
+            releasePatch = resolve;
+          });
+        }
+        return new Response("not found", { status: 404 });
+      },
+    );
+
+    renderPage();
+    const repoInput = await screen.findByLabelText(/Repository root/);
+    await userEvent.clear(repoInput);
+    await userEvent.type(repoInput, "/var/repos/A");
+
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
+
+    await userEvent.clear(repoInput);
+    await userEvent.type(repoInput, "/var/repos/B");
+
+    if (!releasePatch) throw new Error("PATCH was not in flight");
+    (releasePatch as (value: Response) => void)(
+      jsonResponse(
+        defaultSettings({
+          repo_root: "/var/repos/A",
+          updated_at: "2026-04-19T12:30:00Z",
+        }),
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
+    );
+    expect(repoInput).toHaveValue("/var/repos/B");
+  });
+
   it("rejects negative max_run_duration_seconds", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       jsonResponse(defaultSettings()),

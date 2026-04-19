@@ -93,10 +93,49 @@ export function SettingsPage() {
     if (!settings || !form || maxInvalid) return;
     const body = diffPatch(settings, form);
     if (Object.keys(body).length === 0) return;
+    // Snapshot the form *as submitted* so we can detect post-submit
+    // typing on any field when the PATCH eventually resolves. The
+    // race we're closing here: the user clicks Save with one field
+    // edited (e.g. `repo_root`), then while the PATCH is in flight
+    // they keep typing in *other* fields (e.g. `cursor_bin`).
+    // Without this snapshot the post-resolution
+    // `setForm(toFormState(next))` would clobber the in-flight
+    // typing back to whatever the server returned (which for the
+    // un-submitted fields is the *prior* server value, not the
+    // user's typing) — silent data loss with no feedback.
+    //
+    // Same race-hardening shape used by `useTaskPatchFlow` /
+    // `useTaskDeleteFlow` / `evaluateDraftMutation` — capture the
+    // freshest known good snapshot at call time, then per-field
+    // compare at resolve time and only apply server truth for
+    // fields the user hasn't subsequently edited. Fields the user
+    // re-edited keep the user's typing; `isDirty` will recompute
+    // against the new server-known baseline so the Save button
+    // re-enables for the new edits.
+    const formAtSubmit = form;
     setStatus(null);
     try {
       const next = await patch.mutateAsync(body);
-      setForm(toFormState(next));
+      setForm((cur) => {
+        if (cur === null) return toFormState(next);
+        const merged: FormState = { ...cur };
+        if (cur.workerEnabled === formAtSubmit.workerEnabled) {
+          merged.workerEnabled = next.worker_enabled;
+        }
+        if (cur.runner === formAtSubmit.runner) {
+          merged.runner = next.runner;
+        }
+        if (cur.repoRoot === formAtSubmit.repoRoot) {
+          merged.repoRoot = next.repo_root;
+        }
+        if (cur.cursorBin === formAtSubmit.cursorBin) {
+          merged.cursorBin = next.cursor_bin;
+        }
+        if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
+          merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
+        }
+        return merged;
+      });
       setStatus({ kind: "success", message: "Settings saved." });
     } catch (err) {
       setStatus({
