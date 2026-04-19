@@ -9,6 +9,7 @@ import {
   parseTaskEventDetail,
   parseTaskEventsResponse,
   parseDraftTaskEvaluation,
+  parseTaskDraftDetail,
   parseTaskListResponse,
   parseTaskStatsResponse,
 } from "./parseTaskApi";
@@ -607,5 +608,67 @@ describe("parseTaskCycleDetail", () => {
     expect(() => parseTaskCycleDetail(validCycle)).toThrow(
       /phases must be an array/,
     );
+  });
+});
+
+describe("parseTaskDraftDetail (payload.priority validation)", () => {
+  // Regression: parseDraftPayload used to do
+  //   priority: (value.priority as TaskDraftPayload["priority"]) ?? "",
+  // which let arbitrary server values through unvalidated, even though
+  // sibling pending_subtasks priorities are properly validated by
+  // parsePriority(). The downstream UI (PrioritySelect) silently drops
+  // invalid values; the parser is the chokepoint that should reject them.
+  const baseDraft = {
+    id: "d1",
+    name: "draft",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    payload: {
+      title: "t",
+      initial_prompt: "p",
+      priority: "medium",
+      task_type: "general",
+      parent_id: "",
+      checklist_inherit: false,
+      checklist_items: [],
+      pending_subtasks: [],
+    },
+  };
+
+  it("accepts a valid PriorityChoice value on the parent draft", () => {
+    const out = parseTaskDraftDetail(baseDraft);
+    expect(out.payload.priority).toBe("medium");
+  });
+
+  it("accepts an empty-string priority (user has not selected one yet)", () => {
+    const out = parseTaskDraftDetail({
+      ...baseDraft,
+      payload: { ...baseDraft.payload, priority: "" },
+    });
+    expect(out.payload.priority).toBe("");
+  });
+
+  it("defaults a missing priority to empty string", () => {
+    const { priority: _omit, ...rest } = baseDraft.payload;
+    const out = parseTaskDraftDetail({ ...baseDraft, payload: rest });
+    expect(out.payload.priority).toBe("");
+  });
+
+  it("rejects an unknown priority string on the parent draft", () => {
+    expect(() =>
+      parseTaskDraftDetail({
+        ...baseDraft,
+        payload: { ...baseDraft.payload, priority: "Critical" },
+      }),
+    ).toThrow(/known task priority/);
+  });
+
+  it("rejects a non-string priority on the parent draft", () => {
+    expect(() =>
+      parseTaskDraftDetail({
+        ...baseDraft,
+        payload: { ...baseDraft.payload, priority: 42 },
+      }),
+    ).toThrow(/known task priority/);
   });
 });

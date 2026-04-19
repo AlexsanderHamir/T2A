@@ -65,6 +65,15 @@ function parsePriority(v: unknown): Priority {
   return v as Priority;
 }
 
+// Drafts allow an "unset" priority while the user is still composing
+// (PriorityChoice = Priority | ""). Treat null/undefined as "" too, so
+// we accept the same lenient input shape the legacy `?? ""` cast did,
+// without skipping validation when a non-string / unknown value arrives.
+function parsePriorityChoice(v: unknown): Priority | "" {
+  if (v === undefined || v === null || v === "") return "";
+  return parsePriority(v);
+}
+
 function parseTaskType(v: unknown): TaskType {
   if (typeof v !== "string" || !(TASK_TYPES as readonly string[]).includes(v)) {
     throw new Error("Invalid API response: task_type must be a known task type");
@@ -510,7 +519,7 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
   return {
     title: parseString(value.title, "payload.title"),
     initial_prompt: parseString(value.initial_prompt, "payload.initial_prompt"),
-    priority: (value.priority as TaskDraftPayload["priority"]) ?? "",
+    priority: parsePriorityChoice(value.priority),
     task_type: parseTaskType(value.task_type ?? "general"),
     parent_id: parseString(value.parent_id ?? "", "payload.parent_id"),
     checklist_inherit: value.checklist_inherit === true,
