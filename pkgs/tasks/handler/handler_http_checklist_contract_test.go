@@ -407,6 +407,118 @@ func TestHTTP_postChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	}
 }
 
+// TestHTTP_patchChecklistItem_textBranch400Strings pins the bare wire
+// phrases for every PATCH text-update branch validation 400 documented in
+// docs/API-HTTP.md. The done-branch wire phrases (`only the agent may mark
+// checklist items done or undone`, `done` value typing) are pinned by the
+// existing happy-path file (handler_http_checklist_test.go); this test
+// closes the analogous gap for the text branch (`text required`,
+// `cannot update inherited checklist definitions from this task`) and the
+// shared one-of-choice phrase (`send exactly one of text or done`) so the
+// bare phrases live next to the per-route SSE pins added in Session 19.
+// Without it a future copy-edit in handler_checklist.go (handler-generated
+// "text required" + "send exactly one of text or done") or
+// pkgs/tasks/store/internal/checklist/checklist.go (store-generated
+// "cannot update inherited checklist definitions from this task") would
+// silently drift the wire phrase clients rely on for error UI without
+// breaking any contract test. Mirrors the bare-phrase tables in
+// handler_http_events_patch_contract_test.go (Session 17) and the POST
+// `text required` table above (Session 4).
+func TestHTTP_patchChecklistItem_textBranch400Strings(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	parentID := mustCreateChecklistTask(t, srv, "chk-text-400-parent")
+	defRes, err := http.Post(srv.URL+"/tasks/"+parentID+"/checklist/items",
+		"application/json", strings.NewReader(`{"text":"owned"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defBody, _ := io.ReadAll(defRes.Body)
+	_ = defRes.Body.Close()
+	if defRes.StatusCode != http.StatusCreated {
+		t.Fatalf("seed item status %d body=%s", defRes.StatusCode, defBody)
+	}
+	var def domain.TaskChecklistItem
+	if err := json.Unmarshal(defBody, &def); err != nil {
+		t.Fatal(err)
+	}
+	childID := mustCreateChildInheriting(t, srv, parentID, "chk-text-400-child")
+
+	patch := func(taskID, itemID, body string) (int, string) {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodPatch,
+			srv.URL+"/tasks/"+taskID+"/checklist/items/"+itemID,
+			strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, _ := io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		return res.StatusCode, string(raw)
+	}
+
+	cases := []struct {
+		name             string
+		taskID, itemID   string
+		body             string
+		want             string
+		commentaryReason string
+	}{
+		{
+			name: "emptyText", taskID: parentID, itemID: def.ID,
+			body:             `{"text":""}`,
+			want:             "text required",
+			commentaryReason: "handler-generated phrase before the store call (handler_checklist.go:103); empty/whitespace-only text is rejected here so the store never sees it",
+		},
+		{
+			name: "whitespaceText", taskID: parentID, itemID: def.ID,
+			body:             `{"text":"   \t  "}`,
+			want:             "text required",
+			commentaryReason: "same handler branch as emptyText; trim happens before the empty check so all-whitespace produces the same wire phrase rather than being silently dropped to a store-side error",
+		},
+		{
+			name: "noFields", taskID: parentID, itemID: def.ID,
+			body:             `{}`,
+			want:             "send exactly one of text or done",
+			commentaryReason: "shared one-of-choice phrase that gates BOTH text and done branches (handler_checklist.go:95); the existing errorPathsNeverPublish test only checks status code, so the bare phrase needs its own pin",
+		},
+		{
+			name: "bothFields", taskID: parentID, itemID: def.ID,
+			body:             `{"text":"x","done":true}`,
+			want:             "send exactly one of text or done",
+			commentaryReason: "same one-of phrase from the opposite direction (sending both fields); proves the textSet == doneSet branch covers the symmetric case the doc bullet `or neither field was provided for the one-of choice` only covers the empty side of",
+		},
+		{
+			name: "inheritingChild", taskID: childID, itemID: def.ID,
+			body:             `{"text":"updated"}`,
+			want:             "cannot update inherited checklist definitions from this task",
+			commentaryReason: "store-generated phrase from pkgs/tasks/store/internal/checklist/checklist.go:256; the child task inherits via checklist_inherit=true so the definition lives on parent and cannot be edited through the child handle",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, raw := patch(tc.taskID, tc.itemID, tc.body)
+			if code != http.StatusBadRequest {
+				t.Fatalf("status %d (want 400) body=%s — case rationale: %s", code, raw, tc.commentaryReason)
+			}
+			var errBody jsonErrorBody
+			if err := json.Unmarshal([]byte(raw), &errBody); err != nil {
+				t.Fatalf("decode: %v body=%s", err, raw)
+			}
+			if errBody.Error != tc.want {
+				t.Fatalf("error=%q want %q (docs/API-HTTP.md PATCH /tasks/{id}/checklist/items/{itemId} 400 strings) — case rationale: %s", errBody.Error, tc.want, tc.commentaryReason)
+			}
+		})
+	}
+}
+
 // TestHTTP_patchChecklistItem_publishesTaskUpdated colocates the per-route SSE
 // positive invariant for PATCH: a successful done-toggle publishes exactly
 // `task_updated:{id}`.
