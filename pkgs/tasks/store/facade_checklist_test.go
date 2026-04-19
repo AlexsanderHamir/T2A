@@ -182,6 +182,54 @@ func TestStore_UpdateChecklistItemText_updates_row(t *testing.T) {
 	}
 }
 
+// TestStore_UpdateChecklistItemText_rejects_done_item pins the rule
+// that a checklist criterion can no longer be edited once the agent
+// has marked it done. Without this guard a stale UI (or any other
+// client) could rewrite the definition text after the fact, silently
+// changing the meaning of the already-persisted
+// EventChecklistItemToggled (done=true) row in the audit timeline.
+// The SPA also disables its Edit button for done rows, but the
+// authoritative rule lives here.
+func TestStore_UpdateChecklistItemText_rejects_done_item(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetChecklistItemDone(ctx, tsk.ID, it.ID, true, domain.ActorAgent); err != nil {
+		t.Fatalf("mark done: %v", err)
+	}
+	err = s.UpdateChecklistItemText(ctx, tsk.ID, it.ID, "after", domain.ActorAgent)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+	// The persisted row must still hold the original definition text:
+	// rejection has to be a no-op, not a partial write.
+	items, err := s.ListChecklistForSubject(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Text != "before" {
+		t.Fatalf("text changed despite rejection: %+v", items)
+	}
+	// And no spurious EventChecklistItemUpdated should have leaked
+	// into the audit log — only the original add + the toggle.
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range evs {
+		if e.Type == domain.EventChecklistItemUpdated {
+			t.Fatalf("unexpected checklist_item_updated event after rejected edit: %+v", e)
+		}
+	}
+}
+
 func TestStore_UpdateChecklistItemText_rejects_checklist_inherit(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()

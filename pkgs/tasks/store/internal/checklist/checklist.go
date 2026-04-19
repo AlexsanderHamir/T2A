@@ -262,6 +262,33 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
+		// A done criterion records what was actually accepted as
+		// satisfied. Letting the text be retroactively rewritten
+		// would silently change the meaning of the already-emitted
+		// EventChecklistItemToggled (done=true) audit row — anyone
+		// replaying the timeline would see "done" against definition
+		// text that never existed at completion time. Reject the
+		// edit at the source of truth so any client (UI, CLI, etc.)
+		// gets the same answer; the SPA also disables its Edit
+		// button for done items, but that's defence-in-depth.
+		//
+		// `Done` lives on the per-subject TaskChecklistCompletion
+		// row, not on the item itself (this is what lets inheriting
+		// child tasks track completion independently while sharing
+		// one definition). We reject if *any* subject has marked
+		// the criterion done — even the inherit case where the
+		// definition is owned here but the completion lives on a
+		// child — because the audit-rewriting concern is symmetric
+		// across every subject that already accepted the text.
+		var doneCount int64
+		if err := tx.Model(&domain.TaskChecklistCompletion{}).
+			Where("item_id = ?", itemID).
+			Count(&doneCount).Error; err != nil {
+			return fmt.Errorf("count completions: %w", err)
+		}
+		if doneCount > 0 {
+			return fmt.Errorf("%w: cannot edit a criterion that has already been marked done", domain.ErrInvalidInput)
+		}
 		if it.Text == text {
 			return nil
 		}

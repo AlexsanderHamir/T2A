@@ -43,10 +43,28 @@ export function TaskDetailChecklistItemList({
                 <button
                   type="button"
                   className="task-detail-checklist-edit"
+                  // Done criteria are locked: editing the text after the
+                  // agent has accepted the criterion as satisfied would
+                  // silently rewrite history (the
+                  // checklist_item_toggled audit row would now point at
+                  // text that didn't exist at completion time). The
+                  // backend rejects this with ErrInvalidInput as well —
+                  // disabling here just keeps the affordance honest.
                   disabled={
+                    item.done ||
                     editCriterionPending ||
                     removeItemPending ||
                     addCriterionPending
+                  }
+                  title={
+                    item.done
+                      ? "Already marked done — cannot edit. Remove it if it was wrong."
+                      : undefined
+                  }
+                  aria-label={
+                    item.done
+                      ? `Edit criterion (locked: already marked done): ${item.text}`
+                      : undefined
                   }
                   onClick={() => onOpenEditCriterionModal(item.id, item.text)}
                 >
