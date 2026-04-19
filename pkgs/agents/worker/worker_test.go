@@ -296,8 +296,13 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 	}
 
 	calls := h.notifier.snapshot()
-	if len(calls) != 6 {
-		t.Fatalf("notifier publish count = %d, want 6 (calls=%+v)", len(calls), calls)
+	// 6 publishes from cycle/phase row writes + 1 trailing publish
+	// after the final transitionTask succeeds (see process.go: that
+	// trailing publish is the cure for the "task stuck in running on
+	// the open detail page until refresh" race; the SPA's debounced
+	// invalidation needs it to refetch *after* the status row flips).
+	if len(calls) != 7 {
+		t.Fatalf("notifier publish count = %d, want 7 (calls=%+v)", len(calls), calls)
 	}
 	for i, c := range calls {
 		if c.TaskID != tsk.ID || c.CycleID != cycle.ID {

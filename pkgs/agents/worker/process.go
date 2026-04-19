@@ -140,6 +140,25 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	if !w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
 		return
 	}
+	// Re-publish the cycle frame *after* the final task status row has
+	// been written. terminateCycle (above) already emitted one publish,
+	// but the order is: cycle row writes -> SSE publish -> task row
+	// status transitions. The SPA's invalidation handler refetches the
+	// task on the publish, races the in-flight transitionTask, and
+	// usually wins — leaving the open task page stuck on `running` even
+	// though the work is done. There are no further SSE frames after
+	// the transition (transitionTask doesn't publish, and the worker
+	// goes idle), so the stale row sticks until the user refreshes.
+	//
+	// One extra publish here is the cheap fix: the frontend coalesces
+	// both publishes into a single flush (SSE_INVALIDATE_WINDOW_MS in
+	// useTaskEventStream is 900ms; the gap between terminateCycle and
+	// transitionTask is well under that), so the user sees one
+	// invalidation that fetches the post-transition row. The cycle ID
+	// is reused intentionally — the frame is identifying *which* task
+	// changed, not the cycle's own state, and the SPA only cares about
+	// the task scope for invalidation.
+	w.publish(task.ID, cycle.ID)
 
 	slog.Info("agent worker run complete", "cmd", workerLogCmd,
 		"operation", "agent.worker.Worker.processOne.summary",
