@@ -289,9 +289,10 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            The agent worker, <code>/repo/*</code> endpoints, and{" "}
-            <code>@file</code> mentions all read this path. Leave empty to
-            disable repo features until you pick a workspace.
+            The project the agent will execute tasks on. The agent worker,{" "}
+            <code>/repo/*</code> endpoints, and <code>@file</code> mentions
+            all read this path. Leave empty to disable repo features until
+            you pick a workspace.
           </p>
         </fieldset>
 
