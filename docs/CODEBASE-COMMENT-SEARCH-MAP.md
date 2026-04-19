@@ -4,6 +4,10 @@ This document breaks the repository into **search blocks** aligned with [`.curso
 
 Canonical repo orientation remains [AGENTS.md](../AGENTS.md) and [docs/DESIGN.md](./DESIGN.md).
 
+### Agent commit scope
+
+Automated or agent-assisted commits should include **only** files that belong to the task at hand (files the agent created or intentionally edited for that task). Before committing, run `git status` and `git diff --staged`; avoid `git add -A` when the working tree contains unrelated local changes. Unrelated refactors belong in a separate commit by the author who owns that work.
+
 ---
 
 ## 1. Top-level layout (where to point search)
@@ -111,3 +115,14 @@ Re-run these commands before a comment-focused PR or when updating `.cursor/rule
 - [`docs/WEB.md`](./WEB.md) — `web/src` module map
 - [`pkgs/tasks/handler/README.md`](../pkgs/tasks/handler/README.md) — handler file map
 - [`pkgs/tasks/store/README.md`](../pkgs/tasks/store/README.md) — store facade map
+
+---
+
+## 7. Stage 2 — deeper pass (after baseline ripgrep)
+
+Use this when moving from mechanical searches (§4–5) to judgment-heavy review:
+
+1. **Exports:** Spot-check `godoc` on exported symbols in one package you touched (e.g. `pkgs/tasks/handler/` or `pkgs/tasks/domain/`): comments should state contract and non-obvious behavior, not restate the name (MDC §3.2).
+2. **Raw SQL / complex queries:** For any `Raw`, multi-line `const q`, or planner-sensitive query in `pkgs/tasks/store/`, confirm there is intent where the SQL shape is non-obvious (MDC §5.2).
+3. **React hooks:** For new or changed `useEffect` / `useLayoutEffect`, confirm dependency arrays are correct; if a dependency is intentionally omitted, the MDC requires an inline reason (and typically an eslint directive with that reason).
+4. **CSS:** Flag new magic numbers in `web/src/app/styles/` for a short “why” comment (MDC §4.4).
