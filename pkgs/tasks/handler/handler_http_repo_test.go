@@ -57,6 +57,18 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 		b, _ := io.ReadAll(res2.Body)
 		t.Fatalf("create status %d body %s", res2.StatusCode, b)
 	}
+	// The validatePromptMentionsIfRepo path returns errors wrapped with
+	// domain.ErrInvalidInput (via repo.wrapMention). Without prefix-aware
+	// error rendering the wire body echoed the internal "tasks: invalid
+	// input: " marker into the SPA banner. Pin the clean phrasing here so
+	// we cannot regress to the raw wrap on POST /tasks.
+	createBody, _ := io.ReadAll(res2.Body)
+	if strings.Contains(string(createBody), "tasks: invalid input") {
+		t.Errorf("POST /tasks bad-mention body must not leak ErrInvalidInput prefix; got %s", createBody)
+	}
+	if !strings.Contains(string(createBody), "mention") || !strings.Contains(string(createBody), "nope.txt") {
+		t.Errorf("POST /tasks bad-mention body must still surface the underlying mention reason; got %s", createBody)
+	}
 
 	res3, err := http.Post(srv.URL+"/tasks", "application/json",
 		strings.NewReader(`{"title":"t2","initial_prompt":"@note.txt(1-2)","priority":"medium"}`))

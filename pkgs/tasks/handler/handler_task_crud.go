@@ -33,7 +33,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	by := actorFromRequest(r)
 	debugHTTPRequest(r, op, taskCreateInputFields(&body, string(by))...)
 	if err := h.validatePromptMentionsIfRepo(r, body.InitialPrompt); err != nil {
-		writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
+		// repo.ValidatePromptMentions wraps every reject with
+		// domain.ErrInvalidInput (via repo.wrapMention / wrapMentionMsg),
+		// so route through writeStoreError to launder the
+		// "tasks: invalid input: " prefix the same way every other
+		// store-side error path does. Going through writeJSONError
+		// with err.Error() leaked that internal prefix into the SPA
+		// "fix the mention" banner — see
+		// TestHTTP_repo_search_and_create_rejects_bad_file_mention.
+		writeStoreError(w, r, op, err)
 		return
 	}
 	inherit := false
@@ -165,7 +173,12 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.InitialPrompt != nil {
 		if err := h.validatePromptMentionsIfRepo(r, *body.InitialPrompt); err != nil {
-			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
+			// Same prefix-leak symmetry as POST /tasks above:
+			// validatePromptMentionsIfRepo's wrap targets
+			// domain.ErrInvalidInput, so writeStoreError gives the
+			// same clean "mention @path: file does not exist" wire
+			// shape clients already see for the create flow.
+			writeStoreError(w, r, op, err)
 			return
 		}
 	}
