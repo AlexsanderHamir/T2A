@@ -58,7 +58,7 @@ export function TaskDetailChecklistItemList({
                   }
                   title={
                     item.done
-                      ? "Already marked done — cannot edit. Remove it if it was wrong."
+                      ? "Already marked done — cannot edit a satisfied criterion."
                       : undefined
                   }
                   aria-label={
@@ -73,7 +73,25 @@ export function TaskDetailChecklistItemList({
                 <button
                   type="button"
                   className="task-detail-checklist-remove"
-                  disabled={removeItemPending}
+                  // Symmetric with the Edit lock above: removing a done
+                  // criterion would orphan the persisted
+                  // checklist_item_toggled (done=true) audit row and
+                  // erase the historical fact that the task ever
+                  // satisfied this requirement. The backend rejects
+                  // this with ErrInvalidInput; disabling here keeps the
+                  // affordance honest so users don't trigger a bogus
+                  // 400 round-trip.
+                  disabled={item.done || removeItemPending}
+                  title={
+                    item.done
+                      ? "Already marked done — cannot remove a satisfied criterion."
+                      : undefined
+                  }
+                  aria-label={
+                    item.done
+                      ? `Remove criterion (locked: already marked done): ${item.text}`
+                      : undefined
+                  }
                   onClick={() => onRemoveChecklistItem(item.id)}
                 >
                   Remove

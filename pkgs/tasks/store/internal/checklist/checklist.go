@@ -213,8 +213,33 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
-		if err := tx.Where("item_id = ?", itemID).Delete(&domain.TaskChecklistCompletion{}).Error; err != nil {
-			return fmt.Errorf("delete completions: %w", err)
+		// Symmetric with UpdateText above: a done criterion records
+		// what was actually accepted as satisfied, and the
+		// EventChecklistItemToggled (done=true) audit row already
+		// references this item id. Removing the definition would
+		// orphan that toggle event — anyone replaying the timeline
+		// would see "checklist item X marked done" with no record of
+		// what X was, and the per-subject completion row would have
+		// to be silently cascaded away, erasing the historical fact
+		// that the subject task ever satisfied this requirement.
+		// Reject at the source of truth so every client (UI, CLI,
+		// future API consumers) gets the same answer; the SPA also
+		// disables its Remove button for done items, but that's
+		// defence-in-depth.
+		//
+		// As with UpdateText, completion lives on
+		// TaskChecklistCompletion (per-subject), not on the item
+		// itself, so we count across *all* subjects: if any
+		// subject — including an inheriting child — has marked the
+		// criterion done, the audit-orphaning concern applies.
+		var doneCount int64
+		if err := tx.Model(&domain.TaskChecklistCompletion{}).
+			Where("item_id = ?", itemID).
+			Count(&doneCount).Error; err != nil {
+			return fmt.Errorf("count completions: %w", err)
+		}
+		if doneCount > 0 {
+			return fmt.Errorf("%w: cannot remove a criterion that has already been marked done", domain.ErrInvalidInput)
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {

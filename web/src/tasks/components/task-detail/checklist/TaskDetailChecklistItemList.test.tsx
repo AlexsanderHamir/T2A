@@ -81,13 +81,45 @@ describe("TaskDetailChecklistItemList", () => {
     expect(onOpenEditCriterionModal).not.toHaveBeenCalled();
   });
 
-  it("keeps Remove enabled on done criteria so users can clean up wrong acceptances", () => {
-    renderList([DONE]);
+  it("locks the Remove button on done criteria and explains why", () => {
+    // Mirrors the Edit lock: removing a done criterion would orphan
+    // the persisted checklist_item_toggled (done=true) audit row and
+    // silently cascade away the per-subject completion row, erasing
+    // the historical fact that the task ever satisfied this
+    // requirement. The backend rejects this with ErrInvalidInput;
+    // this test pins the UI half so users can't even attempt the
+    // bogus write. (Earlier behaviour kept Remove enabled as an
+    // "escape hatch" for wrong auto-completes — that was rejected as
+    // an audit-trail violation; the agent's acceptance is the
+    // source of truth.)
+    renderList([PENDING, DONE]);
 
-    // Remove must remain available even when Edit is locked: a done
-    // row that was wrongly auto-completed still needs an escape
-    // hatch, otherwise the criterion is permanent dead weight.
-    const removeBtn = screen.getByRole("button", { name: /^remove$/i });
-    expect(removeBtn).toBeEnabled();
+    const removeButtons = screen.getAllByRole("button", { name: /^remove/i });
+    expect(removeButtons).toHaveLength(2);
+
+    const removePending = removeButtons.find(
+      (b) => !b.getAttribute("aria-label")?.includes("locked"),
+    );
+    expect(removePending).toBeDefined();
+    expect(removePending).toBeEnabled();
+
+    const removeDone = removeButtons.find((b) =>
+      b.getAttribute("aria-label")?.includes("locked"),
+    );
+    expect(removeDone).toBeDefined();
+    expect(removeDone).toBeDisabled();
+    expect(removeDone).toHaveAttribute(
+      "title",
+      expect.stringMatching(/already marked done/i),
+    );
+  });
+
+  it("does not call onRemoveChecklistItem when the locked Remove button is clicked", async () => {
+    const user = userEvent.setup();
+    const { onRemoveChecklistItem } = renderList([DONE]);
+
+    const removeDone = screen.getByRole("button", { name: /remove.*locked/i });
+    await user.click(removeDone);
+    expect(onRemoveChecklistItem).not.toHaveBeenCalled();
   });
 });

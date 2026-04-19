@@ -251,6 +251,57 @@ func TestStore_UpdateChecklistItemText_rejects_checklist_inherit(t *testing.T) {
 	}
 }
 
+// TestStore_DeleteChecklistItem_rejects_done_item pins the rule that
+// a checklist criterion can no longer be removed once the agent has
+// marked it done, mirroring the equivalent guard on UpdateText.
+// Removing a done definition would orphan the persisted
+// EventChecklistItemToggled (done=true) audit row — replaying the
+// timeline would show "item X marked done" with no record of what X
+// was — and silently cascade away the per-subject completion row,
+// erasing the historical fact that the subject task ever satisfied
+// the requirement. The SPA also disables its Remove button for done
+// rows; the authoritative rule lives here.
+func TestStore_DeleteChecklistItem_rejects_done_item(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "keep", domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetChecklistItemDone(ctx, tsk.ID, it.ID, true, domain.ActorAgent); err != nil {
+		t.Fatalf("mark done: %v", err)
+	}
+	err = s.DeleteChecklistItem(ctx, tsk.ID, it.ID, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+	// The persisted row must still exist: rejection has to be a
+	// no-op, not a partial write that leaves orphan completions
+	// behind.
+	items, err := s.ListChecklistForSubject(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != it.ID || !items[0].Done {
+		t.Fatalf("checklist item must remain intact and done after rejection: %+v", items)
+	}
+	// And no spurious EventChecklistItemRemoved should have leaked
+	// into the audit log — only the original add + the toggle.
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range evs {
+		if e.Type == domain.EventChecklistItemRemoved {
+			t.Fatalf("unexpected checklist_item_removed event after rejected delete: %+v", e)
+		}
+	}
+}
+
 func TestStore_DeleteChecklistItem_appends_removed_event(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
