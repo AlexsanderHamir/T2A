@@ -147,7 +147,7 @@ export async function searchRepoFiles(
     headers: { Accept: "application/json" },
     signal: repoFetchCombinedSignal(options?.signal),
   });
-  if (res.status === 503) {
+  if (res.status === 503 || res.status === 409) {
     return null;
   }
   if (!res.ok) throw new Error(await readError(res));
@@ -188,7 +188,7 @@ export async function validateRepoRange(
     headers: { Accept: "application/json" },
     signal: repoFetchCombinedSignal(options?.signal),
   });
-  if (res.status === 503) {
+  if (res.status === 503 || res.status === 409) {
     return null;
   }
   if (!res.ok) throw new Error(await readError(res));
@@ -229,7 +229,7 @@ export async function fetchRepoFile(
     headers: { Accept: "application/json" },
     signal: repoFetchCombinedSignal(options?.signal),
   });
-  if (res.status === 503) {
+  if (res.status === 503 || res.status === 409) {
     return null;
   }
   if (!res.ok) throw new Error(await readError(res));

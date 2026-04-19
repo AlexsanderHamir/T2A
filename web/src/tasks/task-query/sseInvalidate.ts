@@ -14,7 +14,9 @@
  */
 export type TaskChangeFrame =
   | { kind: "task"; taskId: string }
-  | { kind: "cycle"; taskId: string; cycleId: string };
+  | { kind: "cycle"; taskId: string; cycleId: string }
+  | { kind: "settings" }
+  | { kind: "agent_run_cancelled" };
 
 function readStringId(o: Record<string, unknown>, key: string): string {
   const v = o[key];
@@ -44,6 +46,12 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
     o = parsed as Record<string, unknown>;
   } catch {
     return null;
+  }
+  if (o.type === "settings_changed") {
+    return { kind: "settings" };
+  }
+  if (o.type === "agent_run_cancelled") {
+    return { kind: "agent_run_cancelled" };
   }
   const id = readStringId(o, "id");
   if (id === "") {

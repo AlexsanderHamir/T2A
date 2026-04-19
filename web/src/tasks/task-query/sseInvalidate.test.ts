@@ -89,4 +89,13 @@ describe("parseTaskChangeFrame", () => {
     expect(parseTaskChangeFrame('{"type":"task_updated"}')).toBeNull();
     expect(parseTaskChangeFrame('{"type":"sync_ping","id":"x"}')).toBeNull();
   });
+
+  it("returns settings/agent_run_cancelled frames without an id", () => {
+    expect(parseTaskChangeFrame('{"type":"settings_changed"}')).toEqual({
+      kind: "settings",
+    });
+    expect(parseTaskChangeFrame('{"type":"agent_run_cancelled"}')).toEqual({
+      kind: "agent_run_cancelled",
+    });
+  });
 });

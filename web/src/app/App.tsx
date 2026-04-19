@@ -9,6 +9,7 @@ import { TaskDraftsPage } from "../tasks/pages/TaskDraftsPage";
 import { TaskHome } from "../tasks/pages/TaskHome";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
+import { SettingsPage } from "../settings";
 import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import { RoutedMainOutlet } from "./RoutedMainOutlet";
@@ -43,10 +44,21 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               </nav>
               <p className="app-tagline">Capture work. Ship with clarity.</p>
             </div>
-            <StreamStatusHint
-              connected={app.sseLive}
-              listSyncing={app.sseLive ? false : app.listRefreshing}
-            />
+            <div className="app-header-actions">
+              <StreamStatusHint
+                connected={app.sseLive}
+                listSyncing={app.sseLive ? false : app.listRefreshing}
+              />
+              <Link
+                to="/settings"
+                className="app-header-settings-link"
+                aria-label="Open settings"
+                title="Settings"
+              >
+                <span aria-hidden="true">⚙</span>
+                <span className="visually-hidden">Settings</span>
+              </Link>
+            </div>
           </div>
         </header>
         {app.error ? <ErrorBanner message={app.error} /> : null}
@@ -102,6 +114,7 @@ export default function App() {
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"
           element={<TaskEventDetailPage />}

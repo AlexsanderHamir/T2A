@@ -43,3 +43,8 @@ export const taskQueryKeys = {
   cycle: (id: string, cycleId: string) =>
     [...taskQueryKeys.all, "detail", id, "cycles", cycleId] as const,
 };
+
+export const settingsQueryKeys = {
+  all: ["settings"] as const,
+  app: () => [...settingsQueryKeys.all, "app"] as const,
+};

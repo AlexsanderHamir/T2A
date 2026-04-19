@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseTaskChangeFrame, taskQueryKeys } from "../task-query";
+import { parseTaskChangeFrame, settingsQueryKeys, taskQueryKeys } from "../task-query";
 
 const SSE_INVALIDATE_MS = 400;
 
@@ -70,13 +70,21 @@ export function useTaskEventStream(): boolean {
       if (frame !== null) {
         if (frame.kind === "task") {
           pendingRef.current.tasks.add(frame.taskId);
-        } else {
+        } else if (frame.kind === "cycle") {
           let bucket = pendingRef.current.cycles.get(frame.taskId);
           if (bucket === undefined) {
             bucket = new Set();
             pendingRef.current.cycles.set(frame.taskId, bucket);
           }
           bucket.add(frame.cycleId);
+        } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {
+          // Settings updates and operator-initiated cancels are rare
+          // and don't touch task data; refetch the settings cache
+          // directly without joining the debounce batch (the SPA
+          // Settings page should reflect the change instantly).
+          void queryClient.invalidateQueries({
+            queryKey: settingsQueryKeys.app(),
+          });
         }
       }
       if (sseDebounceRef.current !== undefined) {
@@ -90,7 +98,7 @@ export function useTaskEventStream(): boolean {
         flushStreamInvalidation();
       }, SSE_INVALIDATE_MS);
     },
-    [flushStreamInvalidation],
+    [flushStreamInvalidation, queryClient],
   );
 
   useEffect(() => {
