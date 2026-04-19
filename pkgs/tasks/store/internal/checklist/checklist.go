@@ -311,6 +311,33 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
+		// Idempotency guard — mirror the convention established by every
+		// other patch path (UpdateText above, applyTitlePatch,
+		// applyInitialPromptPatch, applyChecklistInheritPatch,
+		// applyPriorityPatch, applyStatusPatch): if the requested state
+		// already matches the persisted state, treat the call as a no-op.
+		// Skipping the write and the event keeps the audit log free of
+		// noise on agent retries (a single agent run can re-assert the
+		// same checklist completion many times), prevents the completion
+		// `at` timestamp from being silently re-stamped on no-op
+		// done=true calls, and avoids broadcasting `task_updated` SSE
+		// fanouts for changes that didn't happen.
+		var existing domain.TaskChecklistCompletion
+		err = tx.Where("task_id = ? AND item_id = ?", subjectTaskID, itemID).First(&existing).Error
+		switch {
+		case err == nil:
+			if done {
+				// Already done — no-op.
+				return nil
+			}
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			if !done {
+				// Already not-done — no-op.
+				return nil
+			}
+		default:
+			return fmt.Errorf("load completion: %w", err)
+		}
 		if done {
 			row := domain.TaskChecklistCompletion{
 				TaskID: subjectTaskID,
