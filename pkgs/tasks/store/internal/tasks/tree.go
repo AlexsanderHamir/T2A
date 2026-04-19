@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -121,7 +122,12 @@ func GetTree(ctx context.Context, db *gorm.DB, id string) (Node, error) {
 	var root domain.Task
 	err := db.WithContext(ctx).Where("id = ?", id).First(&root).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		// errors.Is (not ==) so that any future wrapper around the
+		// gorm sentinel — e.g. a query hook that returns
+		// fmt.Errorf("get task %s: %w", id, gorm.ErrRecordNotFound)
+		// — still maps to domain.ErrNotFound instead of falling
+		// through to the generic 500 path.
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return Node{}, domain.ErrNotFound
 		}
 		return Node{}, fmt.Errorf("get task: %w", err)

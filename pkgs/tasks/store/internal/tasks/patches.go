@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -26,7 +27,13 @@ func wouldCreateParentCycle(tx *gorm.DB, taskID, newParent string) (bool, error)
 		seen[cur] = true
 		var t domain.Task
 		if err := tx.Where("id = ?", cur).First(&t).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
+			// errors.Is (not ==) so a wrapped sentinel still
+			// becomes domain.ErrNotFound. The rest of the package
+			// (crud.go, cycles.go, drafts.go, etc.) already uses
+			// errors.Is — keeping these two old `==` checks meant
+			// patches.go was a single spot where an upstream
+			// wrapper would silently turn 404 into 500.
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return false, domain.ErrNotFound
 			}
 			return false, fmt.Errorf("load parent chain: %w", err)

@@ -726,6 +726,101 @@ func TestStore_ListRootForest_hasMore_and_keyset(t *testing.T) {
 	}
 }
 
+// TestStore_GetTaskTree_wrappedRecordNotFoundStillMapsToErrNotFound pins
+// the contract that GetTree's sentinel check uses errors.Is and not the
+// fragile `err == gorm.ErrRecordNotFound`. We register a Query "after"
+// callback that wraps any tasks-row miss with `fmt.Errorf("wrapped: %w",
+// tx.Error)`; with the historical `==` check the GetTaskTree call
+// produced a generic "get task: wrapped: ..." 500 instead of the
+// documented domain.ErrNotFound that the HTTP handler maps to 404.
+func TestStore_GetTaskTree_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) {
+	t.Parallel()
+	db := tasktestdb.OpenSQLite(t)
+	const cb = "test_wrap_tasks_record_not_found"
+	if err := db.Callback().Query().After("gorm:query").Register(cb, func(tx *gorm.DB) {
+		if tx.Statement != nil && tx.Statement.Table == "tasks" && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			tx.Error = fmt.Errorf("wrapped: %w", tx.Error)
+		}
+	}); err != nil {
+		t.Fatalf("register callback: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := db.Callback().Query().Remove(cb); err != nil {
+			t.Logf("remove callback: %v", err)
+		}
+	})
+
+	s := NewStore(db)
+	_, err := s.GetTaskTree(context.Background(), "00000000-0000-0000-0000-deadbeefdead")
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("GetTaskTree on wrapped ErrRecordNotFound: got err=%v, want errors.Is(domain.ErrNotFound) — fragile `==` check would surface the wrap as a generic 500 instead of the documented 404", err)
+	}
+}
+
+// TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound mirrors
+// the GetTaskTree sentinel-wrapping test above for the parent-cycle
+// guard in applyParentPatch / wouldCreateParentCycle. Same root cause:
+// the historical `err == gorm.ErrRecordNotFound` check broke as soon as
+// any upstream layer wrapped the sentinel via %w; switching to
+// errors.Is keeps the documented 404 wire shape intact.
+func TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) {
+	t.Parallel()
+	db := tasktestdb.OpenSQLite(t)
+	s := NewStore(db)
+	ctx := context.Background()
+
+	parent, err := s.Create(ctx, CreateTaskInput{Title: "p", Priority: domain.PriorityMedium}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := s.Create(ctx, CreateTaskInput{Title: "c", Priority: domain.PriorityMedium, ParentID: &parent.ID}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Manually corrupt the parent chain by deleting the parent row out
+	// from under the child *without* clearing the child's parent_id.
+	// The next PATCH that triggers wouldCreateParentCycle will load
+	// the dangling parent_id and hit the gorm.ErrRecordNotFound branch
+	// we are exercising here.
+	if err := db.Exec("DELETE FROM tasks WHERE id = ?", parent.ID).Error; err != nil {
+		t.Fatalf("seed: delete parent row: %v", err)
+	}
+
+	const cb = "test_wrap_tasks_record_not_found_update"
+	if err := db.Callback().Query().After("gorm:query").Register(cb, func(tx *gorm.DB) {
+		if tx.Statement != nil && tx.Statement.Table == "tasks" && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			tx.Error = fmt.Errorf("wrapped: %w", tx.Error)
+		}
+	}); err != nil {
+		t.Fatalf("register callback: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := db.Callback().Query().Remove(cb); err != nil {
+			t.Logf("remove callback: %v", err)
+		}
+	})
+
+	// Re-parent the orphaned child to itself's grandchild stand-in to
+	// trigger wouldCreateParentCycle, which walks up the (now
+	// corrupted) chain and hits the wrapped sentinel.
+	newParent, err := s.Create(ctx, CreateTaskInput{Title: "np", Priority: domain.PriorityMedium}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Make the new parent point to the deleted (dangling) id so the
+	// chain walk traverses through the wrapped not-found.
+	if err := db.Exec("UPDATE tasks SET parent_id = ? WHERE id = ?", parent.ID, newParent.ID).Error; err != nil {
+		t.Fatalf("seed: dangle new parent: %v", err)
+	}
+	_, err = s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: newParent.ID}}, domain.ActorUser)
+	if err == nil {
+		t.Fatal("Update on dangling parent chain: want error, got nil")
+	}
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("Update on wrapped ErrRecordNotFound in parent chain: got err=%v, want errors.Is(domain.ErrNotFound)", err)
+	}
+}
+
 func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
