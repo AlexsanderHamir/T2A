@@ -84,8 +84,8 @@ the only state that matters is the file on disk.`, target)
 }
 
 // WorkingDir is the per-test tempdir. Pass it as
-// runner.Request.WorkingDir (Stage 2) or via
-// T2A_AGENT_WORKER_WORKING_DIR on the worker process (Stage 3).
+// runner.Request.WorkingDir (Stage 2) or via app_settings.repo_root
+// on the worker process (Stage 3 — see docs/SETTINGS.md).
 func (f *Fixture) WorkingDir() string {
 	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.WorkingDir")
 	return f.workingDir

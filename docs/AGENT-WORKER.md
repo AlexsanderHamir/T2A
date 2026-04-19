@@ -13,7 +13,7 @@ V1 is deliberately small:
 - **One attempt per task.** No retry/backoff; failure is terminal. V2 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) owns the retry policy.
 - **One execute phase per cycle.** The `diagnose → execute → verify → persist` decomposition lives in the substrate's state machine but the worker only writes a `skipped` `diagnose` (to satisfy `domain.ValidPhaseTransition`) and a real `execute` phase. Per-phase decomposition is V2.
 
-When `T2A_AGENT_WORKER_ENABLED` is unset (the default), `taskapi` behaves exactly as it did before V1: the queue + reconcile loop run, but no worker dequeues, no cursor binary is required, no startup probe runs, no orphan sweep runs.
+The worker is **enabled by default** as soon as a workspace repo is configured. Operators control everything from the SPA Settings page (gear icon → `/settings`), persisted in the singleton `app_settings` row — see [SETTINGS.md](./SETTINGS.md). When the page disables the worker (or the workspace repo is unset / the runner probe fails), `taskapi` behaves as it did before V1: the queue + reconcile loop run, but no worker dequeues and no cursor binary is required.
 
 ## Architecture
 
@@ -169,8 +169,8 @@ V1 ships exactly one adapter; V2 multi-runner selection is intentionally deferre
 
 - `cursor --print --output-format json` (overridable via `cursor.Options.Args`).
 - The task's `initial_prompt` is fed on stdin.
-- Working directory is `runner.Request.WorkingDir`, which the worker fills from `T2A_AGENT_WORKER_WORKING_DIR` (see [Environment variables](#environment-variables)).
-- Timeout is `runner.Request.Timeout`, which the worker fills from `T2A_AGENT_WORKER_RUN_TIMEOUT` (default 5m). The adapter applies `context.WithTimeout` on top of the worker's already-bounded ctx; either firing maps to `runner.ErrTimeout`.
+- Working directory is `runner.Request.WorkingDir`, which the worker fills from `app_settings.repo_root` (see [Configuration](#configuration) and [SETTINGS.md](./SETTINGS.md)).
+- Timeout is `runner.Request.Timeout`, which the worker fills from `app_settings.max_run_duration_seconds` (default `0` = no limit). When non-zero, the adapter applies `context.WithTimeout` on top of the worker's ctx; either firing maps to `runner.ErrTimeout`.
 
 **Env allowlist (defense in depth):**
 
@@ -184,7 +184,7 @@ V1 ships exactly one adapter; V2 multi-runner selection is intentionally deferre
 
 **Startup probe:**
 
-- When `T2A_AGENT_WORKER_ENABLED` is truthy, `cmd/taskapi` calls `cursor.Probe(ctx, cursorBin, 5s, nil)` once before the worker loop starts. The probe shells out `<cursorBin> --version` and uses the trimmed first non-empty line of stdout (or stderr) as the `Runner.Version()` value.
+- Whenever `app_settings.worker_enabled` is true and the supervisor decides it can start the worker, it calls `cursor.Probe(ctx, cursorBin, 5s, nil)` before the worker loop spins up. The probe shells out `<cursorBin> --version` and uses the trimmed first non-empty line of stdout (or stderr) as the `Runner.Version()` value. The same probe runs on every `POST /settings/probe-cursor` so the SPA "Test cursor binary" button uses identical logic — see [SETTINGS.md](./SETTINGS.md).
 - Probe failure (binary missing on `PATH`, non-zero exit, exec error, timeout, empty output) logs `Error("cursor binary not usable, refusing to start agent worker", …)` and **exits 1** per the engineering bar's "fail loudly at startup" rule. Operators see the failure in the same boot log they would already be reading; the alternative — failing per-task hours later — is harder to triage.
 - The probe is **not** run when the worker is disabled, so operators without Cursor CLI on `PATH` are unaffected by the V1 wiring.
 
@@ -217,7 +217,7 @@ Failure mirrors are symmetrical: a failed runner produces `phase_failed` (instea
 
 If `taskapi` is killed mid-cycle (OS kill, deadline trip on the 5s shutdown budget, power loss), the `task_cycles.status='running'` and `task_cycle_phases.status='running'` rows from the in-flight attempt are stuck — they cannot resolve themselves and the store's "at most one running cycle per task" guard would block any new attempt forever.
 
-`worker.SweepOrphanRunningCycles(ctx, st)` is the safety net. It runs **once at startup**, **before** `Worker.Run` begins, and only when `T2A_AGENT_WORKER_ENABLED` is truthy:
+`worker.SweepOrphanRunningCycles(ctx, st)` is the safety net. It runs **once at startup**, **before** `Worker.Run` begins, and only when the supervisor decides the worker can run (see [SETTINGS.md](./SETTINGS.md) — `worker_enabled=true`, `repo_root` set, runner probe ok):
 
 1. List every `task_cycle_phases` row with `status='running'`. For each: `CompletePhase(failed, "process_restart")`. Phase-first order avoids the "cycle has running phase" guard inside `TerminateCycle`.
 2. List every `task_cycles` row with `status='running'`. For each: `TerminateCycle(aborted, "process_restart")` (writes a `cycle_failed` mirror with `status: aborted` and `reason: process_restart`).
@@ -227,35 +227,36 @@ The sweep is idempotent: re-running on a clean DB is a no-op and reports `{cycle
 
 When the worker is disabled, the sweep is **not** run — leaving any running rows alone is intentional, since they may have been written by a worker enabled in a previous boot or by an external client that owns its own lifecycle.
 
-## Environment variables
+## Configuration
 
-All V1 worker env vars live under the `T2A_AGENT_WORKER_*` prefix and are read once at startup in `internal/taskapiconfig`. The full env table for `taskapi` is in [RUNTIME-ENV.md](./RUNTIME-ENV.md); this section documents the worker-specific knobs in detail.
+All V1 worker knobs live in the singleton `app_settings` DB row and are surfaced on the SPA Settings page (`/settings`). Authoritative reference: [SETTINGS.md](./SETTINGS.md). The supervisor reloads them in-process whenever `PATCH /settings` succeeds, so changes never require a restart.
 
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `T2A_AGENT_WORKER_ENABLED` | `false` (worker off) | Truthy values (`1`, `true`, `yes`, `on`, case-insensitive) opt the worker in. Default-off so operators without Cursor CLI on `PATH` see no behavior change. |
-| `T2A_AGENT_WORKER_CURSOR_BIN` | `cursor` (resolved against `PATH`) | Path to the Cursor CLI binary used by both the startup probe and the runner. Set to an absolute path to pin a specific build; relative names go through `PATH` lookup. |
-| `T2A_AGENT_WORKER_RUN_TIMEOUT` | `5m` | Per-run wall-clock cap forwarded to `runner.Request.Timeout`. Invalid Go-duration strings, zero, or negative values fall back to the default with a `Warn` log. |
-| `T2A_AGENT_WORKER_WORKING_DIR` | `REPO_ROOT` if set, else process cwd | Working directory passed to `runner.Request.WorkingDir`. Validated at startup: non-existent paths exit 1 with `agent worker working dir not usable, refusing to start agent worker`. |
+| Field | Default | Effect |
+|-------|---------|--------|
+| `worker_enabled` | `true` | Turn the in-process worker off without restarting `taskapi`. |
+| `runner` | `cursor` | Runner identifier from the `pkgs/agents/runner/registry`. Currently only `cursor` ships. |
+| `repo_root` | empty | Absolute path to the workspace the worker (and `/repo/*`) operates against. While empty the supervisor stays idle. |
+| `cursor_bin` | `cursor` (resolved against `PATH`) | Cursor CLI binary used by both the startup probe and the runner. Absolute path pins a build; relative names go through `PATH`. |
+| `max_run_duration_seconds` | `0` (no limit) | Per-run wall-clock cap forwarded to `runner.Request.Timeout`. `0` means "no limit"; positive values are honoured exactly. |
 
-Related queue/reconcile vars (always read, even when the worker is disabled):
+Related queue/reconcile env vars (always read, even when the worker is idle):
 
 - `T2A_USER_TASK_AGENT_QUEUE_CAP` — buffer depth of the `MemoryQueue` the worker dequeues from. See [AGENT-QUEUE.md](./AGENT-QUEUE.md).
 - `T2A_USER_TASK_AGENT_RECONCILE_INTERVAL` — periodic reconcile tick that backfills ready tasks the notifier dropped.
 
-The startup log emits exactly one structured line summarizing the worker config:
+The supervisor emits one structured line on every (re)load summarizing the live config:
 
 ```
-slog.Info("agent worker config", "cmd"="taskapi", "operation"="taskapi.agent_worker",
+slog.Info("agent worker supervisor reload", "cmd"="taskapi", "operation"="taskapi.agent_worker_supervisor",
   "enabled"=true,
-  "runner"="cursor-cli",
+  "runner"="cursor",
   "cursor_bin"="cursor",
   "cursor_version"="cursor 1.2.3",
-  "run_timeout_sec"=300,
-  "working_dir"="/home/op/code/myrepo")
+  "run_timeout_sec"=0,
+  "repo_root"="/home/op/code/myrepo")
 ```
 
-When disabled the same line is emitted with `enabled=false` and blank `runner` / `cursor_version` so log scrapers can detect "the operator deliberately ran without the worker" vs. "the worker was supposed to run but failed to probe."
+When the supervisor stays idle the same line is emitted with `enabled=false` (or a non-empty `reason` such as `repo_root_not_configured` / `probe_failed`) so log scrapers can tell "operator disabled it" apart from "supervisor refused to start it."
 
 ## Security model
 
@@ -264,7 +265,7 @@ The worker runs Cursor CLI as a child process inside the same user account as `t
 - **Env allowlist:** the child sees only `PATH`, `HOME`, `USERPROFILE`, plus keys explicitly allowed via `cursor.Options.ExtraAllowedEnvKeys`. `DATABASE_URL` and any `T2A_*` key are scrubbed unconditionally — Cursor cannot read the store credentials or the worker's own configuration even if a future code path tries to forward them.
 - **Secret redaction in `RawOutput`:** the redactor (`cursor.Redact`) is applied before the combined stdout + stderr is written to `task_cycle_phases.details_json`. It blanks `Authorization: …` headers, `T2A_…=value` assignments, and rewrites absolute home paths to `~`.
 - **Prompt hashing in audit:** `task_cycles.meta_json.prompt_hash` records `sha256(initial_prompt)`, never the prompt body. The body lives only on `tasks.initial_prompt` (where it was already authored) and is forwarded to the child on stdin; it never enters the audit log or worker `slog` lines.
-- **Per-run wall-clock cap:** every `runner.Run` is wrapped in `context.WithTimeout(parentCtx, T2A_AGENT_WORKER_RUN_TIMEOUT)` (default 5m). Cursor's child process is killed when the ctx fires.
+- **Per-run wall-clock cap:** when `app_settings.max_run_duration_seconds > 0`, every `runner.Run` is wrapped in `context.WithTimeout(parentCtx, max_run_duration)`. The default (`0`) is "no limit" — runs only end on completion, operator cancel, or process shutdown. Operators raise/lower the cap from the SPA Settings page; see [SETTINGS.md](./SETTINGS.md).
 - **Working-dir hygiene is the operator's job (V1).** V1 has one worker, one working directory, sequential tasks. Cursor's whole job is to modify files; task A leaves edits, task B sees them. V2 will need per-cycle workspace isolation (git worktrees, ephemeral clones, branch-per-cycle) — see V2 in [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md).
 - **No outbound network policy enforcement.** V1 trusts that Cursor CLI honors its own configured network behavior. V2 may add a network namespace / proxy-only policy for the child process.
 
@@ -339,7 +340,7 @@ The fake-runner test suite covers every wiring decision in V1, but it cannot pro
 
 **Prerequisites.**
 
-- `cursor-agent` installed and on `PATH` (or override via `T2A_AGENT_WORKER_CURSOR_BIN`; the Windows shim is `cursor-agent.cmd`).
+- `cursor-agent` installed and on `PATH` (or set the absolute path on the SPA Settings page → "Cursor binary"; the Windows shim is `cursor-agent.cmd`).
 - Cursor logged in for the local user account that runs the test.
 - Both stages take ~12–14 s wall-clock against a warm Cursor session; budget 60 s on a cold cache.
 
@@ -370,7 +371,7 @@ Both tests are **double-gated**: they no-op without the `cursor_real` build tag 
 
 **When the smoke fails.** The tests print operator-readable failure context before exiting:
 
-- `cursor probe failed` → `cursor-agent` is missing or not executable. Install it or set `T2A_AGENT_WORKER_CURSOR_BIN` to the absolute path of the binary (Windows: typically `C:\Users\<you>\AppData\Local\cursor-agent\cursor-agent.cmd`).
+- `cursor probe failed` → `cursor-agent` is missing or not executable. Install it or open the SPA Settings page (gear icon → "Cursor binary") and set the absolute path of the binary, then click "Test cursor binary" (Windows: typically `C:\Users\<you>\AppData\Local\cursor-agent\cursor-agent.cmd`).
 - `task ... final status = "failed"` → the test dumps the cycle's `MetaJSON` and per-phase `Summary` + `DetailsJSON` tail. Check Cursor login (`cursor-agent --version` should succeed without a login prompt) and inspect the `details_tail` for the redacted CLI output.
 - `unexpected extra files` warnings (informational only) → on Windows, OS-level cache files (`cversions.2.db`, `*.ver*`) sometimes drop into the test's temp working directory. The harness logs these and continues; the only authoritative assertion is the target file's contents.
 - Test wall-clock above 90 s → Cursor cold-cache or a network blip. Re-run; if persistent, raise it locally first before opening an issue.

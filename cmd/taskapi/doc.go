@@ -7,7 +7,7 @@
 //
 // It loads environment with envload.Load (repo-root .env or -env path), opens the database with
 // pkgs/tasks/postgres.Open, runs postgres.Migrate on every startup, constructs handler.NewSSEHub for
-// task change notifications, optionally opens pkgs/repo from REPO_ROOT for GET /repo/* and prompt
+// task change notifications, optionally opens pkgs/repo from app_settings.repo_root for GET /repo/* and prompt
 // validation, then mounts handler.NewHandler (REST + GET /events SSE + optional /repo) on / with
 // WithRecovery, WithHTTPMetrics, WithAccessLog, WithRateLimit, WithAPIAuth, WithRequestTimeout, WithMaxRequestBody, and WithIdempotency; GET /metrics (Prometheus text) is registered separately on the mux behind handler.WrapPrometheusHandler (baseline security headers).
 //

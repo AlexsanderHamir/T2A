@@ -24,7 +24,7 @@ alwaysApply: false
 - Use **`net/http/httptest`** — see **`pkgs/tasks/handler/handler_http_test.go`** for patterns:
   - **`newTaskTestServer(t)`** — SQLite + store + handler + SSE hub
   - **`newTaskTestServerWithStore`** when tests need direct store access
-  - **`newTaskTestServerWithRepo`** when `REPO_ROOT`-style behavior is under test
+  - **`newTaskTestServerWithRepo`** when workspace-repo (`app_settings.repo_root`) behavior is under test
 - Always **`t.Helper()`** in constructors that set up DB or server.
 - Assert **status code**, then decode JSON into **small structs** or **`domain` types** as appropriate.
 - For error bodies, assert **stable `error` field** or documented shape — avoid brittle full-string equality on driver text.

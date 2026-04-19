@@ -13,7 +13,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-// patchRepoTestSetup wires a REPO_ROOT-aware test server, a single seed file
+// patchRepoTestSetup wires a workspace-repo-aware test server, a single seed file
 // for valid mentions, and one created task whose id can be patched in subtests.
 // Centralized here so each subtest below is just one PATCH + one assertion.
 func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string) {
@@ -46,7 +46,7 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string)
 }
 
 // TestHTTP_patchTask_repoMentionValidation pins the documented behavior of
-// PATCH /tasks/{id} `initial_prompt` validation when REPO_ROOT is configured
+// PATCH /tasks/{id} `initial_prompt` validation when the workspace repo is configured
 // (handler.Handler.patch -> h.repo.ValidatePromptMentions). Session 9 covered
 // the non-repo path of PATCH; this is the missing repo-side coverage from the
 // queue. Pins six subcases that together describe the full validation
@@ -132,16 +132,17 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 }
 
 // TestHTTP_patchTask_noRepoMentionValidationWhenUnconfigured pins that PATCH
-// silently accepts a malformed @mention when REPO_ROOT is *not* configured
-// (h.repo == nil). This is the dual of the REPO_ROOT-set path above and
-// guards the existing newTaskTestServer wiring (no repo -> no validation).
+// silently accepts a malformed @mention when the workspace repo is *not*
+// configured (h.repoProv reports no root, e.g. app_settings.repo_root empty).
+// This is the dual of the configured-repo path above and guards the existing
+// newTaskTestServer wiring (no repo -> no validation).
 func TestHTTP_patchTask_noRepoMentionValidationWhenUnconfigured(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 	id := mustCreateTask(t, srv.URL, `{"title":"x","priority":"medium"}`)
 	res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @nope.txt"}`)
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status %d body=%s (no REPO_ROOT -> no mention validation)", res.StatusCode, raw)
+		t.Fatalf("status %d body=%s (no workspace repo -> no mention validation)", res.StatusCode, raw)
 	}
 }
 

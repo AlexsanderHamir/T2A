@@ -9,7 +9,7 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 ## Before you start
 
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
-2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL` (and optionally `REPO_ROOT`). Never commit `.env`.
+2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL`. The workspace repo path, agent worker switches, cursor binary, and per-run timeout now live in the SPA Settings page (gear icon in the header → `/settings`); see [docs/SETTINGS.md](docs/SETTINGS.md). Never commit `.env`.
 3. Authoritative HTTP/SSE/JSON behavior: [docs/API-HTTP.md](docs/API-HTTP.md), [docs/API-SSE.md](docs/API-SSE.md), [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md); architecture and limitations: [docs/DESIGN.md](docs/DESIGN.md) · optional UI client: [docs/WEB.md](docs/WEB.md).
 4. For who T2A is for and how we choose scope (large features or roadmap debates), see [docs/PRODUCT.md](docs/PRODUCT.md).
 

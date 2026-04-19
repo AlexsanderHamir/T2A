@@ -25,7 +25,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | [`pkgs/tasks/handler`](../../pkgs/tasks/handler) | REST + SSE inner mux; see [`handler/README.md`](../../pkgs/tasks/handler/README.md). |
 | [`pkgs/tasks/logctx`](../../pkgs/tasks/logctx) | Request id + `log_seq` context and `slog` handler wrappers for JSONL correlation (used in `run.go` and handler). |
 | [`pkgs/agents`](../../pkgs/agents) | `MemoryQueue` + reconcile loop. |
-| [`pkgs/repo`](../../pkgs/repo) | Optional workspace when `REPO_ROOT` is set. |
+| [`pkgs/repo`](../../pkgs/repo) | Optional workspace when `app_settings.repo_root` is set (SPA Settings page; see `docs/SETTINGS.md`). |
 | [`pkgs/tasks/devsim`](../../pkgs/tasks/devsim) | Synthetic SSE / audit ticker when `T2A_SSE_TEST=1`. |
 
 Keep **business rules** out of this directory—only startup, wiring, and process lifecycle.

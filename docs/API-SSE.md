@@ -26,6 +26,15 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 
 `cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive.
 
+`settings_changed` and `agent_run_cancelled` are id-less notifications fired by the [App settings](./API-HTTP.md#app-settings) routes — there is no `id` (or `cycle_id`) field, only `type`:
+
+```json
+{"type":"settings_changed"}
+{"type":"agent_run_cancelled"}
+```
+
+Consumers refetch `GET /settings` (and clear any "cancelling…" UI state for `agent_run_cancelled`) on receipt; both are documented in [SETTINGS.md](./SETTINGS.md).
+
 Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
 
 | Trigger                                                | `type`(s) emitted                                                          |
@@ -41,6 +50,8 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `PATCH /tasks/{id}/cycles/{cycleId}`                   | `task_cycle_changed` for the terminated cycle                              |
 | `POST /tasks/{id}/cycles/{cycleId}/phases`             | `task_cycle_changed` for the cycle whose phase started                     |
 | `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | `task_cycle_changed` for the cycle whose phase transitioned                |
+| `PATCH /settings`                                      | `settings_changed` (no id) after the supervisor finishes its in-process reload |
+| `POST /settings/cancel-current-run`                    | `agent_run_cancelled` (no id) when a run was actually cancelled (`{"cancelled": true}`); no event when nothing was running |
 
 Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) and the draft scorer (`POST /tasks/evaluate`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row.
 
@@ -71,7 +82,8 @@ Clients typically use `EventSource` in the browser (or any SSE-capable client), 
 
 - `task_created` / `task_updated` / `task_deleted` invalidate the cached **list** queries plus the affected **detail** subtree (`["tasks","detail",id,…]`).
 - `task_cycle_changed` invalidates **only** the cycles slot (`["tasks","detail",id,"cycles"]`), so open task pages keep their checklist, events, and detail caches warm — only the cycle list / cycle detail refetches. When the same task already has a broad detail invalidation pending in the same debounce window, the cycle slot is suppressed (it would be redundant).
-- A frame with no recognisable `id` falls back to invalidating all task queries so nothing goes stale.
+- `settings_changed` and `agent_run_cancelled` invalidate **only** the settings cache slot (`["settings","app"]`) so the SPA Settings page reflects new values instantly without disturbing task caches; they bypass the debounce batch.
+- A frame with no recognisable `id` (and no recognised id-less type above) falls back to invalidating all task queries so nothing goes stale.
 
 This is implemented in `web/src/tasks/task-query/sseInvalidate.ts` (`parseTaskChangeFrame`) and `web/src/tasks/hooks/useTaskEventStream.ts`, with granularity pinned by tests.
 

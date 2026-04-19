@@ -27,7 +27,7 @@ type Props = {
   placeholder?: string;
 };
 
-/** Rich initial prompt (TipTap) with @ file suggestions when REPO_ROOT is set. */
+/** Rich initial prompt (TipTap) with @ file suggestions when the workspace repo (app_settings.repo_root) is set. */
 export function RichPromptEditor({
   id,
   value,

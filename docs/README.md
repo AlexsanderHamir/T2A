@@ -18,13 +18,14 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, reconcile loop, fairness ordering. |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | **Long-term roadmap** (V2–V4) for evolving the in-process Cursor CLI worker into a reliable, multi-runner, multi-replica execution runtime. V0/V1 have shipped — see contract docs below. |
-| [AGENT-WORKER.md](./AGENT-WORKER.md) | **Contract:** V1 in-process Cursor CLI worker — lifecycle, runner abstraction, env vars (`T2A_AGENT_WORKER_*`), security model (env allowlist, secret redaction, prompt hashing), audit shape, orphan sweep, and explicit V2/V3/V4 deferrals. Opt-in via `T2A_AGENT_WORKER_ENABLED`. |
+| [AGENT-WORKER.md](./AGENT-WORKER.md) | **Contract:** V1 in-process Cursor CLI worker — lifecycle, runner abstraction, security model (env allowlist, secret redaction, prompt hashing), audit shape, orphan sweep, and explicit V2/V3/V4 deferrals. Configured live via the SPA Settings page; see [SETTINGS.md](./SETTINGS.md). |
+| [SETTINGS.md](./SETTINGS.md) | **Contract:** singleton `app_settings` row, SPA Settings page wiring, `GET/PATCH /settings` + `/settings/probe-cursor` + `/settings/cancel-current-run`, env-var migration table. |
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | **Contract:** `task_cycles` / `task_cycle_phases` substrate, dual-write invariant to `task_events`, phase state machine, "where reads go" table, what's intentionally out. |
 | [proposals/](./proposals/) | **Forward-looking design docs** for features that have not yet shipped. Read `proposals/README.md` for what goes here. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, `REPO_ROOT`, CI/local check failures. |
+| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, missing workspace repo, CI/local check failures. |
 | [OBSERVABILITY.md](./OBSERVABILITY.md) | How we standardize, measure, and extend logging and correlation for `taskapi` (checklists, coverage script, **Grafana / PromQL**, **SLIs / SLOs** starter table for `taskapi`). |
 | [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | **Todos:** Prometheus/runtime/DB pool metrics, SLOs, alerts, OTel — execution order and principles. |
 | [runbooks/](./runbooks/) | **Operator:** short notes for Prometheus alerts (`TaskAPIHighHTTP5xxRate`, latency, in-flight, DB pool, readiness); expand in roadmap B3. |
@@ -44,9 +45,9 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 | SSE (`GET /events`), synthetic dev SSE | `docs/API-SSE.md`. |
 | New tasks API behavior (domain / store / handler / web) | `docs/EXTENSIBILITY.md` + `.cursor/rules/13-tasks-stack-extensibility.mdc`; HTTP/SSE contract files above; client sync per CONTRIBUTING. |
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |
-| `REPO_ROOT`, `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/API-HTTP.md` (Optional workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
+| Workspace repo (`app_settings.repo_root`), `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/SETTINGS.md` + `docs/API-HTTP.md` (Workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
 | Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (`T2A_USER_TASK_AGENT_*`). |
-| Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/RUNTIME-ENV.md` (`T2A_AGENT_WORKER_*`) + `docs/AGENTIC-LAYER-PLAN.md` (V2–V4 roadmap). |
+| Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/SETTINGS.md` (UI/HTTP knobs) + `docs/AGENTIC-LAYER-PLAN.md` (V2–V4 roadmap). |
 | Operator-run real-cursor smoke test for the V1 worker | `docs/AGENT-WORKER.md` "Smoke run" (operator runbook). |
 | Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table). |
 | Agentic worker lifecycle / future versions | `docs/AGENTIC-LAYER-PLAN.md` (versioned roadmap V2–V4) + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). New version-scoped execution playbooks land as `docs/<FEATURE>-PLAN.md` next to their contract doc once a `proposals/` design is accepted; delete the playbook after the version ships. |

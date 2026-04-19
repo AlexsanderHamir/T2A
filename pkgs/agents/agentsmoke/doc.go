@@ -9,7 +9,7 @@
 // (pkgs/agents/runner/cursor/cursor_real_smoke_test.go) hands a
 // Fixture to the real cursor.Adapter directly, and the full-stack
 // smoke (pkgs/tasks/agentreconcile/agent_real_cursor_e2e_test.go)
-// hands the same Fixture (transitively, via T2A_AGENT_WORKER_WORKING_DIR)
+// hands the same Fixture (transitively, via app_settings.repo_root)
 // to the full HTTP -> worker -> cursor stack. The harness ships with
 // a fake-runner self-test that proves the assertion logic recognises
 // both the happy path and the common failure modes (missing target,

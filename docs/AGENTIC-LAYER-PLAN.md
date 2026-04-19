@@ -17,7 +17,7 @@ TODOs:
 - [ ] Add retry policy and terminal-failure rule.
 - [ ] Add task-level lock/claim to prevent concurrent processing of same task.
 - [ ] Add prompt/version tracking for reproducibility.
-- [ ] Add deeper security guardrails (cwd policy beyond V1's `T2A_AGENT_WORKER_WORKING_DIR`, additional secret-redaction rules as new runners land).
+- [ ] Add deeper security guardrails (cwd policy beyond V1's `app_settings.repo_root`, additional secret-redaction rules as new runners land).
 
 ## V3 — operator-grade observability
 

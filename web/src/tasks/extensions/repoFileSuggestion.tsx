@@ -20,7 +20,7 @@ export type { RepoSuggestionItem } from "./repoFileSuggestionList";
 export const repoFileSuggestionPluginKey = new PluginKey("repoFileSuggestion");
 
 export type RepoFilePickedPayload = {
-  /** Path relative to REPO_ROOT (forward slashes). */
+  /** Path relative to the configured workspace repo (forward slashes). */
   path: string;
   /** Document position where the mention should be inserted (`@` was removed). */
   insertAt: number;

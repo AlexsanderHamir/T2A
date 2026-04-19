@@ -16,9 +16,9 @@ Fix: For synthetic activity in dev, set `T2A_SSE_TEST=1` in `.env` and restart `
 
 ## `No repository is configured for file search` in the rich prompt
 
-Cause: `REPO_ROOT` is unset or empty on `taskapi`.
+Cause: `app_settings.repo_root` is empty (the workspace repo has not been configured on the SPA Settings page).
 
-Fix: Set `REPO_ROOT` to an absolute path to the workspace you want `@` mentions to search, in `.env`, and restart `taskapi`.
+Fix: Open the SPA, click the gear icon in the header, and set the **Workspace repository** to an absolute path to the workspace you want `@` mentions to search. The supervisor reloads in-process; no `taskapi` restart is needed. See [SETTINGS.md](./SETTINGS.md).
 
 ## Web cannot reach the API (errors on fetch / EventSource)
 

@@ -11,7 +11,7 @@
 // Run it locally as:
 //
 //	$env:T2A_TEST_REAL_CURSOR='1'
-//	$env:T2A_AGENT_WORKER_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
+//	$env:T2A_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
 //	go test -tags=cursor_real -run TestAgentE2E_RealCursor -race ./pkgs/tasks/agentreconcile/... -count=1
 //
 // Prerequisites: cursor-agent on PATH (or the env override) and
@@ -56,7 +56,7 @@ const realCursorRunGateEnv = "T2A_TEST_REAL_CURSOR"
 // cursor-agent binary (for example the .cmd shim on Windows). When
 // unset the adapter's default ("cursor-agent" resolved against PATH)
 // is used.
-const realCursorBinaryEnv = "T2A_AGENT_WORKER_CURSOR_BIN"
+const realCursorBinaryEnv = "T2A_TEST_CURSOR_BIN"
 
 // e2eRealCursorPollTimeout bounds the wait for task.status == done.
 // Generous because Cursor cold caches + first-tool-call latency can
@@ -264,6 +264,252 @@ func TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten(t *testing.T
 	}
 	reconcileCancel()
 	<-reconcileDone
+}
+
+// e2eRealCursorCancelStartTimeout bounds how long the cancel-mid-run
+// test waits for the worker to actually start the execute phase before
+// firing CancelCurrentRun. Mirrors the order of magnitude of
+// e2eRealCursorPollTimeout but tighter — if cursor-agent has not even
+// reached the runner.Run call by then, the operator-cancel scenario
+// has nothing to cancel and the test fails loudly with the dump
+// instead of pretending success.
+const e2eRealCursorCancelStartTimeout = 60 * time.Second
+
+// e2eRealCursorCancelStartPollInterval is the spacing between phase
+// reads while the cancel test waits for the execute phase to appear.
+// Short enough to fire CancelCurrentRun quickly after the runner
+// actually launches, so we cancel mid-run and not after the binary
+// has already finished the first tool call.
+const e2eRealCursorCancelStartPollInterval = 100 * time.Millisecond
+
+// e2eRealCursorCancelTerminalTimeout bounds how long the test waits
+// for the worker to reach a terminal task state after CancelCurrentRun
+// fires. Must be larger than the cursor-agent shutdown grace window
+// (the adapter SIGINTs the child and waits a few seconds for a clean
+// exit before SIGKILL-ing) but small enough that a hung worker shows
+// up as a test failure rather than a 5 minute CI hang.
+const e2eRealCursorCancelTerminalTimeout = 60 * time.Second
+
+// TestAgentE2E_RealCursor_cancelMidRunMarksCycleCancelledByOperator
+// is the operator-cancel companion to the happy-path real-cursor
+// smoke. It exercises the full path the SPA "Cancel current run"
+// button takes through the V1 worker, end to end against a real
+// cursor-agent process: create a ready task, wait for the worker to
+// actually launch cursor (execute phase started), call
+// Worker.CancelCurrentRun (mirrors POST /settings/cancel-current-run),
+// then assert the task lands in failed and the cycle's terminal
+// reason is "cancelled_by_operator" — not "runner_timeout" (the per-
+// run cap did not fire) and not "shutdown" (the worker context is
+// alive). Default-skip in CI; opt-in via T2A_TEST_REAL_CURSOR=1.
+//
+// The test deliberately uses a long-form prompt and a no-cap
+// RunTimeout so the cancel path is the only thing that can finish the
+// run. Without that we would race the runner's natural completion and
+// occasionally observe a succeeded cycle.
+func TestAgentE2E_RealCursor_cancelMidRunMarksCycleCancelledByOperator(t *testing.T) {
+	if os.Getenv(realCursorRunGateEnv) != "1" {
+		t.Skipf("skipping: %s != 1; this test invokes a paid Cursor run", realCursorRunGateEnv)
+	}
+
+	binaryPath := os.Getenv(realCursorBinaryEnv)
+	if binaryPath == "" {
+		binaryPath = "cursor-agent"
+	}
+
+	probeCtx, probeCancel := context.WithTimeout(context.Background(), cursor.DefaultProbeTimeout)
+	defer probeCancel()
+	cursorVersion, probeErr := cursor.Probe(probeCtx, binaryPath, cursor.DefaultProbeTimeout, nil)
+	if probeErr != nil {
+		t.Fatalf("cursor probe %q failed: %v\nHint: install cursor-agent and set %s to its path",
+			binaryPath, probeErr, realCursorBinaryEnv)
+	}
+	t.Logf("cursor-agent version: %s (binary=%s)", cursorVersion, binaryPath)
+
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	hub := handler.NewSSEHub()
+	q := agents.NewMemoryQueue(4)
+	st.SetReadyTaskNotifier(q)
+
+	srv := httptest.NewServer(handler.NewHandler(st, hub, nil))
+	defer srv.Close()
+
+	fixture := agentsmoke.NewFixture(t)
+
+	adapter := cursor.New(cursor.Options{
+		BinaryPath: binaryPath,
+		Version:    cursorVersion,
+	})
+
+	reg := prometheus.NewPedanticRegistry()
+	metrics, err := taskapi.RegisterAgentWorkerMetricsOn(reg)
+	if err != nil {
+		t.Fatalf("RegisterAgentWorkerMetricsOn: %v", err)
+	}
+
+	w := worker.NewWorker(st, q, adapter, worker.Options{
+		// RunTimeout 0 means "no cap" — only the operator cancel can
+		// finish this run. Pins the SettingsPage default of "no
+		// limit" so a regression that reintroduces the old 5-minute
+		// fallback would surface here as a runner_timeout reason.
+		RunTimeout: 0,
+		WorkingDir: fixture.WorkingDir(),
+		Notifier:   &hubCycleNotifier{hub: hub},
+		Metrics:    metrics,
+	})
+
+	reconcileCtx, reconcileCancel := context.WithCancel(rootCtx)
+	defer reconcileCancel()
+	reconcileDone := make(chan struct{})
+	go func() {
+		defer close(reconcileDone)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eRealCursorReconcileTick)
+	}()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	defer workerCancel()
+	workerDone := make(chan error, 1)
+	go func() {
+		workerDone <- w.Run(workerCtx)
+	}()
+
+	// Long-form prompt deliberately picks a task cursor will actually
+	// spend wall-clock on (not just an instant write) so the cancel
+	// fires while runner.Run is genuinely mid-execution. The
+	// fixture's working dir is empty, so cursor has to enumerate it
+	// before doing anything.
+	cancelPrompt := "Carefully audit every file in this workspace for security issues, " +
+		"then write a detailed multi-section report to AUDIT.md. Take your time and be thorough; " +
+		"explore the directory structure and explain each finding."
+	createBody, err := json.Marshal(map[string]any{
+		"title":          "real cursor cancel-mid-run",
+		"initial_prompt": cancelPrompt,
+		"status":         "ready",
+		"priority":       "medium",
+	})
+	if err != nil {
+		t.Fatalf("marshal create body: %v", err)
+	}
+
+	taskID := postTaskAndReturnID(t, srv.URL, string(createBody))
+	t.Logf("created task %s; waiting up to %s for worker to start the execute phase",
+		taskID, e2eRealCursorCancelStartTimeout)
+
+	cycleID := waitExecutePhaseRunning(t, rootCtx, st, taskID,
+		e2eRealCursorCancelStartTimeout, e2eRealCursorCancelStartPollInterval)
+	if cycleID == "" {
+		dumpFailedTaskContext(t, rootCtx, st, taskID)
+		t.Fatalf("execute phase never reached running for task %s within %s",
+			taskID, e2eRealCursorCancelStartTimeout)
+	}
+	t.Logf("execute phase running on cycle %s; firing CancelCurrentRun", cycleID)
+
+	if !w.CancelCurrentRun() {
+		dumpFailedTaskContext(t, rootCtx, st, taskID)
+		t.Fatalf("CancelCurrentRun() = false, want true (a run should be in flight)")
+	}
+
+	finalStatus := waitTaskTerminalE2E(t, rootCtx, st, taskID,
+		e2eRealCursorCancelTerminalTimeout, e2eRealCursorPollInterval)
+	if finalStatus != domain.StatusFailed {
+		dumpFailedTaskContext(t, rootCtx, st, taskID)
+		t.Fatalf("task %s final status = %q, want %q after cancel",
+			taskID, finalStatus, domain.StatusFailed)
+	}
+
+	time.Sleep(e2eRealCursorPostDoneSettle)
+
+	cycles, err := st.ListCyclesForTask(rootCtx, taskID, 10)
+	if err != nil {
+		t.Fatalf("list cycles for %s: %v", taskID, err)
+	}
+	if len(cycles) != 1 {
+		t.Fatalf("cycle count = %d, want 1 (cycles=%+v)", len(cycles), cycles)
+	}
+	cyc := cycles[0]
+	if cyc.Status != domain.CycleStatusFailed {
+		t.Fatalf("cycle status = %q, want %q (meta=%s)",
+			cyc.Status, domain.CycleStatusFailed, cyc.MetaJSON)
+	}
+
+	// The worker stamps the terminal reason on cycle_failed events
+	// (and mirrors it onto the cycle row); audit-trail invariant is
+	// that the operator-cancel branch in classifyRunOutcome wins
+	// over both runner_timeout (no per-run cap fired here) and
+	// runner_error (the runner returned ErrTimeout because the ctx
+	// was cancelled, not because of an internal failure).
+	events, err := st.ListTaskEvents(rootCtx, taskID)
+	if err != nil {
+		t.Fatalf("list events for %s: %v", taskID, err)
+	}
+	var sawOperatorReason, sawTimeoutReason bool
+	for _, e := range events {
+		if e.Type != domain.EventCycleFailed {
+			continue
+		}
+		body := string(e.Data)
+		if strings.Contains(body, worker.CancelledByOperatorReason) {
+			sawOperatorReason = true
+		}
+		if strings.Contains(body, "runner_timeout") {
+			sawTimeoutReason = true
+		}
+	}
+	if !sawOperatorReason {
+		t.Fatalf("no cycle_failed event carried %q reason; events=%+v cycle=%s",
+			worker.CancelledByOperatorReason, events, cyc.ID)
+	}
+	if sawTimeoutReason {
+		t.Errorf("cycle_failed carried runner_timeout reason; the no-cap RunTimeout should never fire (events=%+v)",
+			events)
+	}
+
+	// CancelCurrentRun is documented as one-shot: the second call
+	// should report idle (false) because the worker already consumed
+	// the operator-cancel flag and finished the cycle. Mirrors the
+	// 200 {"cancelled":false} response the SPA sees on a redundant
+	// click.
+	if w.CancelCurrentRun() {
+		t.Errorf("second CancelCurrentRun() = true, want false (idle after first cancel completed)")
+	}
+
+	workerCancel()
+	if err := <-workerDone; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+	reconcileCancel()
+	<-reconcileDone
+}
+
+// waitExecutePhaseRunning polls the cycle list for taskID until it
+// observes a cycle whose execute phase row exists and is in
+// PhaseStatusRunning, then returns the cycle ID. Returns "" on
+// timeout. Used by the cancel-mid-run e2e to ensure CancelCurrentRun
+// fires only after runner.Run is genuinely in flight (otherwise the
+// worker has nothing to cancel and the test would race the queue).
+func waitExecutePhaseRunning(t *testing.T, ctx context.Context, st *store.Store, taskID string, timeout, interval time.Duration) string {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		cycles, err := st.ListCyclesForTask(ctx, taskID, 5)
+		if err == nil && len(cycles) > 0 {
+			for _, c := range cycles {
+				phases, perr := st.ListPhasesForCycle(ctx, c.ID)
+				if perr != nil {
+					continue
+				}
+				for _, p := range phases {
+					if p.Phase == domain.PhaseExecute && p.Status == domain.PhaseStatusRunning {
+						return c.ID
+					}
+				}
+			}
+		}
+		time.Sleep(interval)
+	}
+	return ""
 }
 
 // postTaskAndReturnID issues POST /tasks against baseURL and returns

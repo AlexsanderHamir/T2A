@@ -36,7 +36,7 @@
 //   - GET    /tasks/{id}      — 200 + task tree (nested children[])
 //   - PATCH  /tasks/{id}      — partial update; 200 + task tree
 //   - DELETE /tasks/{id}      — 204, no body; 400 if the task still has subtasks
-//   - GET    /repo/search     — optional; JSON paths (q=); 503 if REPO_ROOT unset
+//   - GET    /repo/search     — optional; JSON paths (q=); 409 repo_root_not_configured if app_settings.repo_root unset
 //   - GET    /repo/file       — optional; JSON file preview for path= (UTF-8 text or binary); 503 if unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //

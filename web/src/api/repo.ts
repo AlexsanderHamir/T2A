@@ -86,7 +86,7 @@ export type RepoWorkspaceProbe =
   | { state: "unknown" };
 
 /**
- * Lightweight check: does the running taskapi have REPO_ROOT configured and on disk?
+ * Lightweight check: does the running taskapi have a workspace repo configured (via Settings) and on disk?
  * Prefer this over GET /repo/search?q= on mount (avoids walking the tree).
  */
 export async function probeRepoWorkspace(
@@ -136,7 +136,7 @@ export async function probeRepoWorkspace(
   }
 }
 
-/** File paths under REPO_ROOT matching q, or null if repo is not configured (503). */
+/** File paths under the configured workspace repo matching q, or null if repo is not configured (409/503). */
 export async function searchRepoFiles(
   q: string,
   options?: { signal?: AbortSignal },

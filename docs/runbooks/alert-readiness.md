@@ -11,7 +11,7 @@ Uncomment and adapt **`TaskAPIReadinessProbeFailing`** in [`deploy/prometheus/t2
 ## Severity and escalation
 
 - Treat repeated **`503`** from **`/health/ready`** as **stop routing traffic** to that instance (orchestrator will do this when the probe fails).
-- **Escalate** to **database on-call** when `checks.database` fails; to **platform / config** when `workspace_repo` fails after a volume or **`REPO_ROOT`** change.
+- **Escalate** to **database on-call** when `checks.database` fails; to **platform / config** when `workspace_repo` fails after a volume or **`app_settings.repo_root`** change (managed from the SPA Settings page; see [SETTINGS.md](../SETTINGS.md)).
 
 ## Dashboards
 
@@ -43,5 +43,5 @@ rg '"operation":"health.ready"' /var/log/taskapi/*.log
 ## Mitigations
 
 - **Postgres:** restore connectivity, relieve overload, or extend timeouts only as a temporary measure while fixing root cause.
-- **`REPO_ROOT`:** ensure the configured directory exists and is mounted on the pod/host; fix volume mounts or config drift.
+- **Workspace repo:** ensure `app_settings.repo_root` (set from the SPA Settings page → gear icon) points at a directory that exists and is mounted on the pod/host; fix volume mounts or update the path from the UI / `PATCH /settings`. See [SETTINGS.md](../SETTINGS.md).
 - After recovery, confirm probes green for several scrape intervals before declaring the incident resolved.

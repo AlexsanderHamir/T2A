@@ -77,7 +77,7 @@ Production: build static assets; serve `dist` same-origin as the API or behind a
 - [AGENTS.md](AGENTS.md) — repo map, checks, pitfalls  
 - [CONTRIBUTING.md](CONTRIBUTING.md) — PRs, API / `parseTaskApi` sync  
 - Extend the tasks stack: [docs/EXTENSIBILITY.md](docs/EXTENSIBILITY.md) and `.cursor/rules/13-tasks-stack-extensibility.mdc`  
-- Workspace repo (`REPO_ROOT`, `/repo`): [docs/API-HTTP.md](docs/API-HTTP.md#optional-workspace-repo-repo_root), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
+- Workspace repo (`app_settings.repo_root`, `/repo`): [docs/SETTINGS.md](docs/SETTINGS.md), [docs/API-HTTP.md](docs/API-HTTP.md#workspace-repo), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
 - Large Cursor-assisted edits: `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING)
 
 ```bash

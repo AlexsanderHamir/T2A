@@ -100,7 +100,7 @@ func serveUntilShutdown(srv *http.Server, ln net.Listener) (shutdownViaSignal bo
 }
 
 func runTaskAPIHTTPServer(ctx context.Context, port, host string, app *taskAPIApp) (shutdownViaSignal bool, err error) {
-	api := taskapi.NewHTTPHandler(app.taskStore, app.hub, app.rep, app.agentWorker)
+	api := taskapi.NewHTTPHandler(app.taskStore, app.hub, nil, app.agentWorker)
 	mux := mountTaskAPIMux(ctx, api, app.hub, app.taskStore, app.agentQueue)
 
 	listenHost := taskapiconfig.ListenHost(host)

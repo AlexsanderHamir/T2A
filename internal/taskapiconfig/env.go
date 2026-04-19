@@ -23,27 +23,10 @@ const (
 	// EnvListenHost is T2A_LISTEN_HOST (HTTP bind address).
 	EnvListenHost = "T2A_LISTEN_HOST"
 	// EnvLogLevel is T2A_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
-	EnvLogLevel = "T2A_LOG_LEVEL"
-	// EnvAgentWorkerEnabled is T2A_AGENT_WORKER_ENABLED (truthy to opt
-	// the in-process Cursor CLI worker in; default off so operators
-	// without the binary on PATH are unaffected).
-	EnvAgentWorkerEnabled = "T2A_AGENT_WORKER_ENABLED"
-	// EnvAgentWorkerCursorBin is T2A_AGENT_WORKER_CURSOR_BIN (cursor
-	// binary path; relative names are resolved against $PATH).
-	EnvAgentWorkerCursorBin = "T2A_AGENT_WORKER_CURSOR_BIN"
-	// EnvAgentWorkerRunTimeout is T2A_AGENT_WORKER_RUN_TIMEOUT (per-run
-	// wall-clock cap; defaults to 5m).
-	EnvAgentWorkerRunTimeout = "T2A_AGENT_WORKER_RUN_TIMEOUT"
-	// EnvAgentWorkerWorkingDir is T2A_AGENT_WORKER_WORKING_DIR (working
-	// directory passed to runner.Request; defaults to REPO_ROOT when
-	// set, else the process cwd).
-	EnvAgentWorkerWorkingDir = "T2A_AGENT_WORKER_WORKING_DIR"
-
+	EnvLogLevel                           = "T2A_LOG_LEVEL"
 	defaultUserTaskAgentQueueCap          = 256
 	defaultUserTaskAgentReconcileInterval = 5 * time.Minute
 	defaultSSETestInterval                = 3 * time.Second
-	defaultAgentWorkerCursorBin           = "cursor"
-	defaultAgentWorkerRunTimeout          = 5 * time.Minute
 )
 
 // DefaultUserTaskAgentQueueCap is used when T2A_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
@@ -54,15 +37,6 @@ const DefaultUserTaskAgentReconcileInterval = defaultUserTaskAgentReconcileInter
 
 // DefaultSSETestTickerInterval is used when T2A_SSE_TEST_INTERVAL is unset or below 1s (dev only).
 const DefaultSSETestTickerInterval = defaultSSETestInterval
-
-// DefaultAgentWorkerCursorBin is used when T2A_AGENT_WORKER_CURSOR_BIN
-// is unset / blank. "cursor" relies on PATH resolution; ops can set an
-// absolute path to pin a specific build.
-const DefaultAgentWorkerCursorBin = defaultAgentWorkerCursorBin
-
-// DefaultAgentWorkerRunTimeout is used when T2A_AGENT_WORKER_RUN_TIMEOUT
-// is unset, invalid, or non-positive.
-const DefaultAgentWorkerRunTimeout = defaultAgentWorkerRunTimeout
 
 // EnvTruthy reports whether key is set to a common “true” value (1, true, yes, on; case-insensitive).
 func EnvTruthy(key string) bool {
@@ -165,81 +139,6 @@ func UserTaskAgentQueueCap() int {
 		return defaultUserTaskAgentQueueCap
 	}
 	return n
-}
-
-// AgentWorkerEnabled reports whether the in-process Cursor CLI agent
-// worker should be started. Returns false (the documented fail-safe
-// default) when T2A_AGENT_WORKER_ENABLED is unset.
-func AgentWorkerEnabled() bool {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.AgentWorkerEnabled")
-	return EnvTruthy(EnvAgentWorkerEnabled)
-}
-
-// AgentWorkerCursorBin returns the cursor binary path. When the env
-// var is unset or blank, defaults to DefaultAgentWorkerCursorBin
-// ("cursor", resolved against $PATH).
-func AgentWorkerCursorBin() string {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.AgentWorkerCursorBin")
-	v := strings.TrimSpace(os.Getenv(EnvAgentWorkerCursorBin))
-	if v == "" {
-		return defaultAgentWorkerCursorBin
-	}
-	return v
-}
-
-// AgentWorkerRunTimeout returns the per-run wall-clock cap. Defaults
-// to 5m when the env var is unset, unparseable, zero, or negative —
-// the worker treats <=0 as "use my default" so this guard keeps the
-// audit trail predictable.
-func AgentWorkerRunTimeout() time.Duration {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.AgentWorkerRunTimeout")
-	raw := strings.TrimSpace(os.Getenv(EnvAgentWorkerRunTimeout))
-	if raw == "" {
-		return defaultAgentWorkerRunTimeout
-	}
-	d, err := time.ParseDuration(raw)
-	if err != nil {
-		slog.Warn("invalid env, using default agent worker run timeout", "cmd", cmdLog,
-			"operation", "taskapiconfig.agent_worker_run_timeout",
-			"var", EnvAgentWorkerRunTimeout, "value", raw, "err", err,
-			"default", defaultAgentWorkerRunTimeout.String())
-		return defaultAgentWorkerRunTimeout
-	}
-	if d <= 0 {
-		slog.Warn("invalid env, using default agent worker run timeout", "cmd", cmdLog,
-			"operation", "taskapiconfig.agent_worker_run_timeout",
-			"var", EnvAgentWorkerRunTimeout, "value", raw,
-			"default", defaultAgentWorkerRunTimeout.String())
-		return defaultAgentWorkerRunTimeout
-	}
-	return d
-}
-
-// AgentWorkerWorkingDir returns the working directory the worker
-// passes to runner.Request.WorkingDir. Resolution order:
-//  1. T2A_AGENT_WORKER_WORKING_DIR (trimmed) when non-empty.
-//  2. REPO_ROOT (trimmed) when non-empty — keeps the worker aligned
-//     with the optional repo root the rest of taskapi already honours.
-//  3. The process cwd as reported by os.Getwd; on Getwd failure
-//     returns "" and lets the runner adapter / caller decide.
-//
-// The caller is responsible for fail-fast verification that the
-// returned path exists; this function is config-only.
-func AgentWorkerWorkingDir() string {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.AgentWorkerWorkingDir")
-	if v := strings.TrimSpace(os.Getenv(EnvAgentWorkerWorkingDir)); v != "" {
-		return v
-	}
-	if v := strings.TrimSpace(os.Getenv("REPO_ROOT")); v != "" {
-		return v
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		slog.Warn("agent worker working dir Getwd failed", "cmd", cmdLog,
-			"operation", "taskapiconfig.agent_worker_working_dir", "err", err)
-		return ""
-	}
-	return cwd
 }
 
 // UserTaskAgentReconcileInterval returns the background reconcile tick interval.

@@ -30,7 +30,7 @@ func OpenRoot(dir string) (*Root, error) {
 	slog.Debug("trace", "operation", "repo.OpenRoot")
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
-		return nil, fmt.Errorf("%w: REPO_ROOT is empty", domain.ErrInvalidInput)
+		return nil, fmt.Errorf("%w: repo root is empty", domain.ErrInvalidInput)
 	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *Root) Abs() string {
 	return r.abs
 }
 
-// Ready verifies the root directory still exists and is a directory (for HTTP readiness when REPO_ROOT is configured).
+// Ready verifies the root directory still exists and is a directory (for HTTP readiness when a repo root is configured via Settings).
 func (r *Root) Ready() error {
 	slog.Debug("trace", "operation", "repo.Root.Ready")
 	if r == nil {

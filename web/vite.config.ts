@@ -51,7 +51,7 @@ export default defineConfig({
       "/task-drafts": { target: api, changeOrigin: true },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
-      // So the SPA can probe taskapi readiness (REPO_ROOT) without a full /repo/search walk.
+      // So the SPA can probe taskapi readiness (workspace repo from app_settings.repo_root) without a full /repo/search walk.
       "/health": { target: api, changeOrigin: true },
     },
   },

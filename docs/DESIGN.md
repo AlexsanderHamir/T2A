@@ -12,7 +12,8 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [API-SSE.md](./API-SSE.md) | `GET /events`, wire format, dev-only synthetic SSE env vars. |
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | Environment variables, `dbcheck`, startup/shutdown, HTTP timeouts. |
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, in-memory queue, reconcile loop, fairness ordering. |
-| [AGENT-WORKER.md](./AGENT-WORKER.md) | V1 in-process Cursor CLI worker: lifecycle, runner abstraction, env vars, security model, audit trail, orphan sweep, deferrals. Opt-in via `T2A_AGENT_WORKER_ENABLED`. |
+| [AGENT-WORKER.md](./AGENT-WORKER.md) | V1 in-process Cursor CLI worker: lifecycle, runner abstraction, security model, audit trail, orphan sweep, deferrals. Configured live from the SPA Settings page (see [SETTINGS.md](./SETTINGS.md)). |
+| [SETTINGS.md](./SETTINGS.md) | Singleton `app_settings` row, SPA Settings page wiring, `GET/PATCH /settings` + `/settings/probe-cursor` + `/settings/cancel-current-run` contracts, env-var migration table. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write to `task_events`, state machine, where reads go. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
@@ -46,7 +47,7 @@ flowchart LR
     PG[(PostgreSQL)]
   end
 
-  subgraph optional["Optional REPO_ROOT"]
+  subgraph optional["Workspace repo (app_settings.repo_root)"]
     FS[(Checkout on disk)]
   end
 
@@ -65,7 +66,7 @@ The SSE hub is in-memory only: it is not durable and not shared across OS proces
 
 Ready-task delivery to in-process consumers (bounded queue + reconcile) is documented in **[AGENT-QUEUE.md](./AGENT-QUEUE.md)**.
 
-When `REPO_ROOT` is set, `taskapi` also opens `pkgs/repo` for read-only workspace search and line-range checks used by the UI; see [API-HTTP.md](./API-HTTP.md#optional-workspace-repo-repo_root).
+When `app_settings.repo_root` is set (via the SPA Settings page or `PATCH /settings`; see [SETTINGS.md](./SETTINGS.md)), `taskapi` also opens `pkgs/repo` for read-only workspace search and line-range checks used by the UI; see [API-HTTP.md](./API-HTTP.md#workspace-repo).
 
 ### Go package dependencies (high level)
 
@@ -144,9 +145,9 @@ SSE is a hint: it does not carry full task bodies. The follow-up GET returns aut
 2. SSE delivery is best-effort: each subscriber has a bounded buffer (32); slow clients may drop events. For guaranteed history, use the database and `task_events`.
 3. No authentication or authorization in this module; `X-Actor` is labeling, not identity proof.
 4. Per-IP HTTP rate limiting is in-memory per process (`T2A_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`). Request bodies are capped to **1 MiB** by default (`T2A_MAX_REQUEST_BODY_BYTES`), can be tuned higher, or disabled with `0`; headers are also capped via `MaxHeaderBytes`, and read timeouts bound how long the server waits for the request (including body).
-5. Task CRUD error bodies are JSON `{"error":"<message>"}` for handler-mapped failures (404 / 400 / 409 / 500); `/repo/*` uses the same JSON error shape (see [API-HTTP.md](./API-HTTP.md#optional-workspace-repo-repo_root)).
+5. Task CRUD error bodies are JSON `{"error":"<message>"}` for handler-mapped failures (404 / 400 / 409 / 500); `/repo/*` uses the same JSON error shape (see [API-HTTP.md](./API-HTTP.md#workspace-repo)).
 6. `dbcheck` does not serve HTTP; it only checks DB (and optionally migrates).
-7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (DB ping + trivial SQL, optional workspace directory stat when `REPO_ROOT` is set); `dbcheck` remains useful for CLI and migrations.
+7. `GET /health` and `GET /health/live` are liveness-only (no database probe). Use `GET /health/ready` for in-process readiness (DB ping + trivial SQL, plus workspace directory stat when `app_settings.repo_root` is set); `dbcheck` remains useful for CLI and migrations.
 8. `taskapi` serves plain HTTP — TLS is expected at a reverse proxy or load balancer, not inside this binary.
 9. Schema evolution is `AutoMigrate` only — no versioned migration files, rollback story, or drift detection beyond what GORM provides.
 10. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.
@@ -155,7 +156,7 @@ SSE is a hint: it does not carry full task bodies. The follow-up GET returns aut
 13. If JSON encoding of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
 14. **`Idempotency-Key`** is honored only inside a single `taskapi` process (in-memory cache + `singleflight`); multiple replicas or restarts do not share entries. Cache memory is bounded by `T2A_IDEMPOTENCY_MAX_ENTRIES` / `T2A_IDEMPOTENCY_MAX_BYTES` with oldest-entry eviction. For keyed `POST`/`PATCH`, unknown `Content-Length` is rejected with `400` and oversized bodies with `413`.
 15. **Cycles vs flat audit log:** `task_cycles` / `task_cycle_phases` are the typed source of truth for execution state ("is this task running right now?", "which phase?", "what was the last attempt's outcome?"); `task_events` stays the append-only audit witness. Every cycle/phase mutation appends a mirror row to `task_events` in the **same SQL transaction** (rolled back together on failure) — see [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). This is a deliberate dual-write, not a join: `GET /tasks/{id}/events` keeps showing a complete timeline, and the new `task_cycle_*` types are intentionally excluded from `domain.EventTypeAcceptsUserResponse` so mirror rows stay observational. The two stores are not consolidated and must not be: scanning the audit log to answer "what is true now" was the cost the cycles substrate was created to remove.
-16. **Agent worker is in-process and single-instance.** When `T2A_AGENT_WORKER_ENABLED` is truthy, one goroutine inside `taskapi` consumes the ready-task queue and drives execution cycles via the Cursor CLI runner. There is no cross-replica coordination: running two `taskapi` instances with the worker enabled is **not supported** because each replica's startup orphan sweep would race the other's in-flight cycles, and the per-task claim is enforced by the store's "at most one running cycle per task" guard rather than a database lease. Operator-grade durability + multi-replica claiming is V4 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md); the V1 contract and security model are pinned in [AGENT-WORKER.md](./AGENT-WORKER.md).
+16. **Agent worker is in-process and single-instance.** When `app_settings.worker_enabled` is true and `app_settings.repo_root` is set (see [SETTINGS.md](./SETTINGS.md)), one goroutine inside `taskapi` consumes the ready-task queue and drives execution cycles via the configured runner. There is no cross-replica coordination: running two `taskapi` instances with the worker enabled is **not supported** because each replica's startup orphan sweep would race the other's in-flight cycles, and the per-task claim is enforced by the store's "at most one running cycle per task" guard rather than a database lease. Operator-grade durability + multi-replica claiming is V4 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md); the V1 contract and security model are pinned in [AGENT-WORKER.md](./AGENT-WORKER.md).
 
 ## Out of scope (today)
 
@@ -179,5 +180,5 @@ Optional Vite + React app under `web/` uses `/tasks`, `/events`, and `/repo` as 
 | [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | Phased layout cleanup roadmap. |
 | `pkgs/tasks/handler/doc.go`      | Routes next to code.                            |
 | `pkgs/tasks/store/doc.go`        | Store behavior and extensibility notes.           |
-| `pkgs/repo`                      | `REPO_ROOT`, `go doc`.                      |
+| `pkgs/repo`                      | Workspace repo (`app_settings.repo_root`), `go doc`. |
 | `cmd/taskapi/doc.go`             | Flags and wiring.                               |

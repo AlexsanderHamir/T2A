@@ -27,4 +27,4 @@ sequenceDiagram
   H-->>C: 200 JSON task
 ```
 
-Changing JSON shapes, routes, or SSE payload types requires updating **[API-HTTP.md](./API-HTTP.md)** and **[API-SSE.md](./API-SSE.md)** (and the [DESIGN.md](./DESIGN.md) hub if limitations or strategy change) and the client parsers in lockstep. Rule pointers: `.cursor/rules/13-tasks-stack-extensibility.mdc` (tasks stack); workspace repo (`REPO_ROOT`, `/repo/*`, `pkgs/repo`) — `.cursor/rules/14-repo-workspace-extensibility.mdc`; GORM models / AutoMigrate / SQLite test schema — `.cursor/rules/15-database-schema.mdc`.
+Changing JSON shapes, routes, or SSE payload types requires updating **[API-HTTP.md](./API-HTTP.md)** and **[API-SSE.md](./API-SSE.md)** (and the [DESIGN.md](./DESIGN.md) hub if limitations or strategy change) and the client parsers in lockstep. Rule pointers: `.cursor/rules/13-tasks-stack-extensibility.mdc` (tasks stack); workspace repo (`app_settings.repo_root`, `/repo/*`, `pkgs/repo`) — `.cursor/rules/14-repo-workspace-extensibility.mdc`; GORM models / AutoMigrate / SQLite test schema — `.cursor/rules/15-database-schema.mdc`.

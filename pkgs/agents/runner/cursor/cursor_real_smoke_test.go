@@ -11,7 +11,7 @@
 // Run it locally as:
 //
 //	$env:T2A_TEST_REAL_CURSOR='1'
-//	$env:T2A_AGENT_WORKER_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
+//	$env:T2A_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
 //	go test -tags=cursor_real -run TestCursorAdapter_RealBinary -race ./pkgs/agents/runner/cursor/... -count=1
 //
 // Prerequisites: cursor-agent on PATH (or the env override) and
@@ -44,7 +44,7 @@ const realCursorRunGateEnv = "T2A_TEST_REAL_CURSOR"
 // cursor-agent binary (for example the .cmd shim on Windows). When
 // unset the adapter's default ("cursor-agent" resolved against PATH)
 // is used.
-const realCursorBinaryEnv = "T2A_AGENT_WORKER_CURSOR_BIN"
+const realCursorBinaryEnv = "T2A_TEST_CURSOR_BIN"
 
 // realCursorRunBudget is the per-call wall-clock cap. Generous
 // because cold caches + first-tool-call latency can take well over a
