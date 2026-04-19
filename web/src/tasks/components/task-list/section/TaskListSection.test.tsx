@@ -134,7 +134,10 @@ describe("TaskListSection", () => {
     await user.click(
       screen.getByRole("button", { name: /^delete task "alpha"$/i }),
     );
-    expect(onRequestDelete).toHaveBeenCalledWith(task);
+    expect(onRequestDelete).toHaveBeenCalledWith({
+      ...task,
+      subtaskCount: 0,
+    });
   });
 
   it("filters rows by status and priority", async () => {

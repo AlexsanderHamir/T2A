@@ -14,7 +14,7 @@ import {
   TaskDetailUpdatesSection,
 } from "../components/task-detail";
 import { sanitizePromptHtml } from "../task-prompt";
-import { userAttention } from "../task-display";
+import { taskDescendantCount, userAttention } from "../task-display";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
@@ -153,7 +153,12 @@ export function TaskDetailPage({ app }: Props) {
         attention={attention}
         saving={app.saving}
         onEdit={() => app.openEdit(task)}
-        onDelete={() => app.requestDelete(task)}
+        onDelete={() =>
+          app.requestDelete({
+            ...task,
+            subtaskCount: taskDescendantCount(task),
+          })
+        }
       />
 
       <div className="task-detail-section" id="task-detail-subtasks">

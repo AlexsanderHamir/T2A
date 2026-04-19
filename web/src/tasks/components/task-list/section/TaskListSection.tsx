@@ -6,6 +6,7 @@ import { TaskListSectionHeading } from "./TaskListSectionHeading";
 import { TaskPager } from "../pager/TaskPager";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
+import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
 import type { EmptyStateAction } from "@/shared/EmptyState";
 import {
   filterTasksForListView,
@@ -43,8 +44,13 @@ type Props = {
    */
   smoothTransitions?: boolean;
   onEdit: (t: Task) => void;
-  /** Opens in-app delete confirmation (do not call `window.confirm` from the table). */
-  onRequestDelete: (t: Task) => void;
+  /**
+   * Opens in-app delete confirmation (do not call `window.confirm` from the
+   * table). The table forwards the row's pre-computed `descendantCount` via
+   * `subtaskCount` so the confirm dialog can warn about the cascade — see
+   * docs/API-HTTP.md "DELETE /tasks/{id}".
+   */
+  onRequestDelete: (t: DeleteTargetInput) => void;
   /** Primary action when the server returned no tasks (e.g. open create modal). */
   emptyListAction?: EmptyStateAction;
   /** Optional toolbar on the title row (e.g. home “New task”). */

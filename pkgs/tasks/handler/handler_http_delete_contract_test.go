@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -137,43 +138,41 @@ func TestHTTP_deleteTask_unknownIDIs404(t *testing.T) {
 	}
 }
 
-// TestHTTP_deleteTask_subtaskRejection pins the documented 400 wire phrase
-// `delete subtasks first` produced by deleteTaskInTx when a child task still
-// references this id via parent_id. Also asserts that the parent row is still
-// present after the rejection (the rejected delete must not partially mutate
-// state) by issuing a successful follow-up DELETE on the child and then on
-// the parent.
-func TestHTTP_deleteTask_subtaskRejection(t *testing.T) {
+// TestHTTP_deleteTask_cascadesToSubtasks pins the documented cascade
+// contract: a single DELETE /tasks/{id} on a task with descendants
+// removes the entire subtree (root + every child + every grandchild)
+// in one call, returning 204. After the call every id in the subtree
+// must respond 404 to a follow-up GET.
+//
+// This replaces the prior `delete subtasks first` 400 rejection: the
+// store-side guard was removed in favour of a recursive cascade so
+// users no longer have to descend the tree by hand from the SPA. See
+// docs/API-HTTP.md "DELETE /tasks/{id}" for the wire-level note.
+func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
 	child := mustCreateTask(t, srv.URL,
 		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	grandchild := mustCreateTask(t, srv.URL,
+		`{"title":"gc","priority":"medium","parent_id":"`+child+`"}`)
 
 	res, raw := deleteTask(t, srv.URL, parent)
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("status %d (want 204 — cascade) body=%s", res.StatusCode, raw)
 	}
-	var errBody jsonErrorBody
-	if err := json.Unmarshal(raw, &errBody); err != nil {
-		t.Fatalf("decode: %v body=%s", err, raw)
-	}
-	if errBody.Error != "delete subtasks first" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md DELETE /tasks/{id} 400 strings)", errBody.Error, "delete subtasks first")
+	if len(raw) != 0 {
+		t.Fatalf("body=%q want empty (DELETE cascade still returns 204 + empty body)", raw)
 	}
 
-	resGet, _ := http.Get(srv.URL + "/tasks/" + parent)
-	_ = resGet.Body.Close()
-	if resGet.StatusCode != http.StatusOK {
-		t.Fatalf("parent GET after rejected delete status %d (want 200 — rejection must not mutate)", resGet.StatusCode)
-	}
-
-	if res, raw := deleteTask(t, srv.URL, child); res.StatusCode != http.StatusNoContent {
-		t.Fatalf("delete child status %d (want 204) body=%s", res.StatusCode, raw)
-	}
-	if res, raw := deleteTask(t, srv.URL, parent); res.StatusCode != http.StatusNoContent {
-		t.Fatalf("delete parent (after child gone) status %d (want 204) body=%s", res.StatusCode, raw)
+	for _, id := range []string{parent, child, grandchild} {
+		resGet, _ := http.Get(srv.URL + "/tasks/" + id)
+		_ = resGet.Body.Close()
+		if resGet.StatusCode != http.StatusNotFound {
+			t.Fatalf("GET %s after cascade status %d (want 404 — every descendant must be gone)",
+				id, resGet.StatusCode)
+		}
 	}
 }
 
@@ -216,5 +215,35 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 			string(TaskDeleted) + ":" + child,
 			string(TaskUpdated) + ":" + parent,
 		})
+	})
+
+	// Cascade pin: deleting a parent that has its own descendants must
+	// emit one task_deleted per removed row (root first, then BFS
+	// children) plus exactly one task_updated for the surviving
+	// grandparent. Mirrors the row-level metric contract: counter
+	// increments by N, not by 1.
+	t.Run("cascade_emitsOneTaskDeletedPerRowPlusGrandparentUpdated", func(t *testing.T) {
+		grandparent := mustCreateTask(t, srv.URL, `{"title":"gp","priority":"medium"}`)
+		parent := mustCreateTask(t, srv.URL,
+			`{"title":"p","priority":"medium","parent_id":"`+grandparent+`"}`)
+		child := mustCreateTask(t, srv.URL,
+			`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+		ch, unsub := hub.Subscribe()
+		defer unsub()
+
+		if res, raw := deleteTask(t, srv.URL, parent); res.StatusCode != http.StatusNoContent {
+			t.Fatalf("delete parent (cascade) status %d body=%s", res.StatusCode, raw)
+		}
+		// 2 task_deleted (parent + child) and 1 task_updated (grandparent).
+		// summarize() sorts alphabetically; UUIDs are random, so we sort
+		// `want` the same way instead of betting on UUID-collation luck.
+		got := summarize(drainSSE(t, ch, 3, 2*time.Second))
+		want := []string{
+			string(TaskDeleted) + ":" + child,
+			string(TaskDeleted) + ":" + parent,
+			string(TaskUpdated) + ":" + grandparent,
+		}
+		sort.Strings(want)
+		mustEqualEvents(t, "DELETE /tasks/{id} (cascade)", got, want)
 	})
 }

@@ -427,7 +427,7 @@ func TestStore_TaskDelete_cascades_to_cycles_and_phases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatalf("delete task: %v", err)
 	}
 

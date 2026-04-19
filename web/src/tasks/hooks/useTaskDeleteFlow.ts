@@ -9,12 +9,22 @@ export type DeleteTargetInput = {
   id: string;
   title: string;
   parent_id?: string | null;
+  /**
+   * Optional total descendant count (children + grandchildren …) so the
+   * confirm dialog can warn the user that DELETE cascades. Server-side
+   * `DELETE /tasks/{id}` always cascades regardless of this hint
+   * (docs/API-HTTP.md "DELETE /tasks/{id}"); the field is presentation-only
+   * and defaults to 0 when omitted (callers without a tree in hand stay
+   * source-compatible, the dialog simply omits the cascade warning line).
+   */
+  subtaskCount?: number;
 };
 
 export type DeleteTarget = {
   id: string;
   title: string;
   parent_id?: string;
+  subtaskCount: number;
 };
 
 export type DeleteVariables = { id: string; parent_id?: string };
@@ -77,9 +87,11 @@ export function useTaskDeleteFlow(opts: {
 
   const requestDelete = useCallback((t: DeleteTargetInput) => {
     const pid = t.parent_id?.trim();
+    const count = Math.max(0, Math.trunc(t.subtaskCount ?? 0));
     setDeleteTarget({
       id: t.id,
       title: t.title,
+      subtaskCount: count,
       ...(pid ? { parent_id: pid } : {}),
     });
   }, []);

@@ -57,6 +57,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
           {app.deleteTarget ? (
             <DeleteConfirmDialog
               taskTitle={app.deleteTarget.title}
+              subtaskCount={app.deleteTarget.subtaskCount}
               saving={app.saving}
               deletePending={app.deletePending}
               onCancel={app.cancelDelete}

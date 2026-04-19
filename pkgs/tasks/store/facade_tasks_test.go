@@ -234,7 +234,7 @@ func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
 
 func TestStore_Delete_not_found(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
-	_, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
+	_, _, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("got %v want ErrNotFound", err)
 	}
@@ -242,13 +242,18 @@ func TestStore_Delete_not_found(t *testing.T) {
 
 func TestStore_Delete_rejects_empty_id(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
-	_, err := s.Delete(context.Background(), "", domain.ActorUser)
+	_, _, err := s.Delete(context.Background(), "", domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
 }
 
-func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
+// TestStore_Delete_cascadesSubtree pins the documented contract that
+// a single Delete on a parent removes the parent and every descendant
+// in BFS order. Replaces the prior `delete subtasks first` rejection
+// (see docs/API-HTTP.md DELETE /tasks/{id}) so users no longer have
+// to descend the tree manually from the SPA.
+func TestStore_Delete_cascadesSubtree(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
@@ -257,13 +262,39 @@ func TestStore_Delete_blockedWhenChildrenExist(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
-	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
+	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Delete(ctx, parent.ID, domain.ActorUser)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
+	cid := child.ID
+	grand, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "gc", ParentID: &cid}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletedIDs, parentNotify, err := s.Delete(ctx, parent.ID, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("cascade delete: %v", err)
+	}
+	if parentNotify != "" {
+		t.Fatalf("parentNotify=%q want empty (root has no parent)", parentNotify)
+	}
+	if len(deletedIDs) != 3 {
+		t.Fatalf("deletedIDs=%v want 3 ids (parent+child+grandchild)", deletedIDs)
+	}
+	want := map[string]bool{parent.ID: true, child.ID: true, grand.ID: true}
+	for _, id := range deletedIDs {
+		if !want[id] {
+			t.Fatalf("unexpected id %q in deletedIDs=%v", id, deletedIDs)
+		}
+		delete(want, id)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing ids from cascade: %v (got %v)", want, deletedIDs)
+	}
+	for _, id := range []string{parent.ID, child.ID, grand.ID} {
+		if _, err := s.Get(ctx, id); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("Get(%s) after cascade err=%v want ErrNotFound", id, err)
+		}
 	}
 }
 
@@ -275,7 +306,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	err = db.Where("task_id = ?", tsk.ID).First(&domain.TaskEvent{}).Error
@@ -296,12 +327,15 @@ func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parentNotify, err := s.Delete(ctx, child.ID, domain.ActorUser)
+	deletedIDs, parentNotify, err := s.Delete(ctx, child.ID, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if parentNotify != parent.ID {
 		t.Fatalf("notify parent %q want %q", parentNotify, parent.ID)
+	}
+	if len(deletedIDs) != 1 || deletedIDs[0] != child.ID {
+		t.Fatalf("deletedIDs=%v want [%s]", deletedIDs, child.ID)
 	}
 	pEv, err := s.ListTaskEvents(ctx, parent.ID)
 	if err != nil {

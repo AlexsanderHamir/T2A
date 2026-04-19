@@ -61,6 +61,57 @@ describe("DeleteConfirmDialog", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it("does not render the cascade warning when subtaskCount is 0/omitted", () => {
+    render(
+      <DeleteConfirmDialog
+        taskTitle="leaf"
+        saving={false}
+        deletePending={false}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByText(/will also be permanently deleted/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("warns about the cascade when subtaskCount > 0 (singular phrasing)", () => {
+    render(
+      <DeleteConfirmDialog
+        taskTitle="parent"
+        subtaskCount={1}
+        saving={false}
+        deletePending={false}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /its 1 subtask will also be permanently deleted/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("warns about the cascade when subtaskCount > 1 (plural phrasing)", () => {
+    render(
+      <DeleteConfirmDialog
+        taskTitle="parent"
+        subtaskCount={4}
+        saving={false}
+        deletePending={false}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /its 4 subtasks will also be permanently deleted/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("still renders the busy spinner overlay while pending", async () => {
     // Visual feedback must remain even when dismiss is allowed —
     // the user has to know the operation is still in flight.

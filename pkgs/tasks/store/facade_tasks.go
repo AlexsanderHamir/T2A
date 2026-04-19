@@ -66,10 +66,13 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	return updated, nil
 }
 
-// Delete removes a leaf task and returns the parent id (or "" for
-// roots) so the caller can fan out an SSE poke. See tasks.Delete for
-// the full contract.
-func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) (string, error) {
+// Delete removes the task at id and every descendant in one
+// transaction. Returns the full set of removed task ids (root first,
+// then BFS descendants) and the surviving grandparent id (or "" when
+// the requested root had no parent) so the caller can fan out one
+// task_deleted SSE event per id and one task_updated event for the
+// surviving parent. See tasks.Delete for the full contract.
+func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]string, string, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
 	return tasks.Delete(ctx, s.db, id, by)
 }

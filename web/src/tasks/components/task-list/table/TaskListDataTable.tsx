@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { CSSProperties } from "react";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
+import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
 import {
   priorityPillClass,
   statusNeedsUserInput,
@@ -23,7 +24,13 @@ type Props = {
   saving: boolean;
   emptyListAction?: EmptyStateAction;
   onEdit: (t: Task) => void;
-  onRequestDelete: (t: Task) => void;
+  /**
+   * Receives the table row plus the pre-computed `subtaskCount` carried by
+   * `TaskWithDepth.descendantCount`. Forwarded to `useTaskDeleteFlow` so the
+   * confirm dialog can warn the user about the cascade documented in
+   * docs/API-HTTP.md "DELETE /tasks/{id}".
+   */
+  onRequestDelete: (t: DeleteTargetInput) => void;
 };
 
 export function TaskListDataTable({
@@ -148,7 +155,12 @@ export function TaskListDataTable({
                         type="button"
                         className="danger btn-table"
                         aria-label={`Delete task "${t.title}"`}
-                        onClick={() => onRequestDelete(t)}
+                        onClick={() =>
+                          onRequestDelete({
+                            ...t,
+                            subtaskCount: t.descendantCount ?? 0,
+                          })
+                        }
                         disabled={saving}
                       >
                         Delete

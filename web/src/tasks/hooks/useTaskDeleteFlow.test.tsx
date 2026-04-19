@@ -58,7 +58,11 @@ describe("useTaskDeleteFlow", () => {
     act(() => {
       result.current.requestDelete({ id: "t1", title: "Hello", parent_id: "  " });
     });
-    expect(result.current.deleteTarget).toEqual({ id: "t1", title: "Hello" });
+    expect(result.current.deleteTarget).toEqual({
+      id: "t1",
+      title: "Hello",
+      subtaskCount: 0,
+    });
   });
 
   it("requestDelete preserves a non-empty trimmed parent_id", () => {
@@ -73,7 +77,39 @@ describe("useTaskDeleteFlow", () => {
       id: "c1",
       title: "Child",
       parent_id: "p1",
+      subtaskCount: 0,
     });
+  });
+
+  it("requestDelete carries a positive subtaskCount through to deleteTarget", () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "p1", title: "Parent", subtaskCount: 3 });
+    });
+    expect(result.current.deleteTarget).toEqual({
+      id: "p1",
+      title: "Parent",
+      subtaskCount: 3,
+    });
+  });
+
+  it("requestDelete clamps a negative or fractional subtaskCount to a non-negative integer", () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "x", title: "X", subtaskCount: -2 });
+    });
+    expect(result.current.deleteTarget?.subtaskCount).toBe(0);
+
+    act(() => {
+      result.current.requestDelete({ id: "x", title: "X", subtaskCount: 2.7 });
+    });
+    expect(result.current.deleteTarget?.subtaskCount).toBe(2);
   });
 
   it("cancelDelete clears the target without calling the API", () => {
@@ -152,7 +188,11 @@ describe("useTaskDeleteFlow", () => {
       expect(result.current.deleteError).toBe("nope");
     });
     expect(result.current.deleteSuccess).toBe(false);
-    expect(result.current.deleteTarget).toEqual({ id: "t1", title: "X" });
+    expect(result.current.deleteTarget).toEqual({
+      id: "t1",
+      title: "X",
+      subtaskCount: 0,
+    });
     expect(onDeleted).not.toHaveBeenCalled();
   });
 
@@ -208,7 +248,11 @@ describe("useTaskDeleteFlow", () => {
     act(() => {
       result.current.requestDelete({ id: "B", title: "B" });
     });
-    expect(result.current.deleteTarget).toEqual({ id: "B", title: "B" });
+    expect(result.current.deleteTarget).toEqual({
+      id: "B",
+      title: "B",
+      subtaskCount: 0,
+    });
 
     // Now A finishes successfully.
     act(() => {
@@ -221,6 +265,10 @@ describe("useTaskDeleteFlow", () => {
 
     // B's confirm dialog must still be up — A's resolution must not silently
     // dismiss the unrelated second target.
-    expect(result.current.deleteTarget).toEqual({ id: "B", title: "B" });
+    expect(result.current.deleteTarget).toEqual({
+      id: "B",
+      title: "B",
+      subtaskCount: 0,
+    });
   });
 });

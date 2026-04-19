@@ -197,17 +197,22 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 	debugHTTPRequest(r, op, "task_id", id)
 	by := actorFromRequest(r)
-	parentNotify, err := h.store.Delete(r.Context(), id, by)
+	deletedIDs, parentNotify, err := h.store.Delete(r.Context(), id, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyChange(TaskDeleted, id)
+	for _, deletedID := range deletedIDs {
+		h.notifyChange(TaskDeleted, deletedID)
+		taskapiDomainTasksDeletedTotal.Inc()
+	}
 	if parentNotify != "" {
 		h.notifyChange(TaskUpdated, parentNotify)
 	}
-	taskapiDomainTasksDeletedTotal.Inc()
-	debugHTTPOut(r.Context(), op, http.StatusNoContent, "task_id", id, "response_empty", true)
+	debugHTTPOut(r.Context(), op, http.StatusNoContent,
+		"task_id", id,
+		"deleted_count", len(deletedIDs),
+		"response_empty", true)
 	w.WriteHeader(http.StatusNoContent)
 }
 

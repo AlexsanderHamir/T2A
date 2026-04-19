@@ -111,33 +111,50 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	return updated, origStatus, nil
 }
 
-// Delete removes a leaf task (children block deletion) and, when the
-// task had a parent, appends a subtask_removed audit event on the
-// parent and returns that parent id (so the facade can fan out an
-// SSE poke). When the task was a root, the returned parent id is "".
-func Delete(ctx context.Context, db *gorm.DB, id string, by domain.Actor) (string, error) {
+// Delete removes the task at id and every descendant in one
+// transaction. The cascade is BFS from the requested root, so a single
+// HTTP DELETE always takes the entire subtree with it; this matches
+// the documented contract in docs/API-HTTP.md ("DELETE cascades to all
+// descendants").
+//
+// Returns:
+//   - deletedIDs: every task id removed by this call, in BFS order
+//     (root first, leaves last). The handler fans out one
+//     `task_deleted` SSE event per id and bumps the deletion counter
+//     by len(deletedIDs).
+//   - parentToNotify: the id of the surviving grandparent (the parent
+//     of the requested root) when present, so the handler can fire a
+//     single `task_updated` SSE event so any open parent view
+//     re-renders without its now-gone subtask. Empty when the root had
+//     no parent.
+//
+// A `subtask_removed` audit row is appended on the surviving parent
+// only — intermediate parents in the cascade are themselves about to
+// be deleted, so their audit rows would be cascade-purged immediately
+// and have no consumer.
+func Delete(ctx context.Context, db *gorm.DB, id string, by domain.Actor) (deletedIDs []string, parentToNotify string, err error) {
 	defer kernel.DeferLatency(kernel.OpDeleteTask)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.Delete")
 	if err := kernel.ValidateActor(by); err != nil {
-		return "", err
+		return nil, "", err
 	}
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
+		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	var parentToNotify string
-	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		pid, txErr := deleteTaskInTx(tx, id, by)
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		ids, pid, txErr := deleteTaskSubtreeInTx(tx, id, by)
 		if txErr != nil {
 			return txErr
 		}
+		deletedIDs = ids
 		parentToNotify = pid
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return parentToNotify, nil
+	return deletedIDs, parentToNotify, nil
 }
 
 func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, title string, parentID *string, st domain.Status, err error) {
@@ -251,56 +268,78 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 	return nil
 }
 
-func deleteTaskInTx(tx *gorm.DB, id string, by domain.Actor) (parentToNotify string, err error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.deleteTaskInTx")
-	var t domain.Task
-	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
+// deleteTaskSubtreeInTx is the in-transaction worker for Delete. It
+// walks the parent_id graph BFS-style starting at root, collects
+// every descendant id, appends one subtask_removed audit row on the
+// surviving grandparent (only when present), and then bulk-deletes
+// the entire id set in a single statement. Per-task children
+// (cycles/phases/checklist/events) are removed by FK CASCADE on each
+// task row going away — see domain/models.go for the constraint
+// definitions.
+//
+// Order: deletedIDs is BFS from root (root first, then its children,
+// then grandchildren, …). The handler treats the slice as opaque; the
+// only ordering consumer is observability (logs / SSE tail).
+func deleteTaskSubtreeInTx(tx *gorm.DB, root string, by domain.Actor) (deletedIDs []string, parentToNotify string, err error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.deleteTaskSubtreeInTx")
+	var rootRow domain.Task
+	if err := tx.Where("id = ?", root).First(&rootRow).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", domain.ErrNotFound
+			return nil, "", domain.ErrNotFound
 		}
-		return "", fmt.Errorf("load task: %w", err)
+		return nil, "", fmt.Errorf("load task: %w", err)
 	}
-	var childCount int64
-	if err := tx.Model(&domain.Task{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
-		return "", fmt.Errorf("delete task: %w", err)
+	deletedIDs = []string{root}
+	queue := []string{root}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		var childIDs []string
+		if err := tx.Model(&domain.Task{}).
+			Where("parent_id = ?", cur).
+			Pluck("id", &childIDs).Error; err != nil {
+			return nil, "", fmt.Errorf("collect descendants: %w", err)
+		}
+		if len(childIDs) == 0 {
+			continue
+		}
+		deletedIDs = append(deletedIDs, childIDs...)
+		queue = append(queue, childIDs...)
 	}
-	if childCount > 0 {
-		return "", fmt.Errorf("%w: delete subtasks first", domain.ErrInvalidInput)
-	}
-	if t.ParentID != nil {
-		pid := strings.TrimSpace(*t.ParentID)
+	if rootRow.ParentID != nil {
+		pid := strings.TrimSpace(*rootRow.ParentID)
 		if pid != "" {
 			var pn int64
 			if err := tx.Model(&domain.Task{}).Where("id = ?", pid).Count(&pn).Error; err != nil {
-				return "", fmt.Errorf("parent lookup: %w", err)
+				return nil, "", fmt.Errorf("parent lookup: %w", err)
 			}
 			if pn > 0 {
 				pseq, err := kernel.NextEventSeq(tx, pid)
 				if err != nil {
-					return "", err
+					return nil, "", err
 				}
 				b, mErr := json.Marshal(map[string]string{
-					"child_task_id": id,
-					"title":         strings.TrimSpace(t.Title),
+					"child_task_id": root,
+					"title":         strings.TrimSpace(rootRow.Title),
 				})
 				if mErr != nil {
-					return "", mErr
+					return nil, "", mErr
 				}
 				if err := kernel.AppendEvent(tx, pid, pseq, domain.EventSubtaskRemoved, by, b); err != nil {
-					return "", err
+					return nil, "", err
 				}
 				parentToNotify = pid
 			}
 		}
 	}
-	res := tx.Where("id = ?", id).Delete(&domain.Task{})
+	res := tx.Where("id IN ?", deletedIDs).Delete(&domain.Task{})
 	if res.Error != nil {
-		return "", fmt.Errorf("delete task: %w", res.Error)
+		return nil, "", fmt.Errorf("delete task subtree: %w", res.Error)
 	}
 	if res.RowsAffected == 0 {
-		return "", domain.ErrNotFound
+		return nil, "", domain.ErrNotFound
 	}
-	return parentToNotify, nil
+	return deletedIDs, parentToNotify, nil
 }
 
 // isDuplicatePrimaryKey detects unique/PK violations on task insert

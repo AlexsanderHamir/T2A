@@ -5,6 +5,15 @@ type Props = {
   taskTitle: string;
   saving: boolean;
   deletePending: boolean;
+  /**
+   * Total descendant count for the task being confirmed (children +
+   * grandchildren …). When > 0 the dialog appends a cascade warning line so
+   * the user knows the server-side `DELETE /tasks/{id}` will remove every
+   * descendant in one transaction (docs/API-HTTP.md "DELETE /tasks/{id}").
+   * Defaults to 0 when omitted so call-sites without a tree stay
+   * source-compatible (no warning line rendered).
+   */
+  subtaskCount?: number;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -13,6 +22,7 @@ export function DeleteConfirmDialog({
   taskTitle,
   saving,
   deletePending,
+  subtaskCount = 0,
   onCancel,
   onConfirm,
 }: Props) {
@@ -45,6 +55,17 @@ export function DeleteConfirmDialog({
         <h2 id="delete-dialog-title">Delete task?</h2>
         <p className="muted" id="delete-dialog-description">
           This cannot be undone. Task: <strong>{taskTitle}</strong>
+          {subtaskCount > 0 ? (
+            <>
+              {" "}
+              <br />
+              <strong>
+                {subtaskCount === 1
+                  ? "Its 1 subtask will also be permanently deleted."
+                  : `Its ${subtaskCount} subtasks will also be permanently deleted.`}
+              </strong>
+            </>
+          ) : null}
         </p>
         <div className="row stack-row-actions">
           <button
