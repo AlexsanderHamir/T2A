@@ -75,6 +75,29 @@ func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdap
 	return &workerMetricsAdapter{runs: runs, duration: duration}, nil
 }
 
+// RegisterAgentWorkerMetricsOn is the test-friendly variant of
+// RegisterAgentWorkerMetrics: it registers the worker counter +
+// histogram on reg (typically a prometheus.NewPedanticRegistry built
+// per-test) and returns the adapter as worker.RunMetrics so callers
+// can plug it into worker.Options.Metrics without going through the
+// global default registry. The returned adapter shares its full shape
+// (metric names, labels, buckets) with the production wiring so an
+// e2e test cannot drift from prod by silently using a different
+// counter name.
+//
+// Errors propagate verbatim — duplicate registration on the same reg
+// surfaces as a prometheus.AlreadyRegisteredError that the test can
+// inspect; production callers go through RegisterAgentWorkerMetrics
+// which absorbs that case via sync.Once.
+func RegisterAgentWorkerMetricsOn(reg prometheus.Registerer) (worker.RunMetrics, error) {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterAgentWorkerMetricsOn")
+	a, err := registerAgentWorkerMetricsOn(reg)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
 // RegisterAgentWorkerMetrics registers the worker counter + histogram
 // on the default Prometheus registry exactly once and returns an
 // adapter that satisfies worker.RunMetrics. Safe to call when the

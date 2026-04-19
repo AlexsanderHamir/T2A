@@ -283,47 +283,62 @@ parentheses:
 
 **Scope:**
 
-- [ ] New file
+- [x] New file
       `pkgs/tasks/agentreconcile/agent_real_cursor_e2e_test.go` with
       `//go:build cursor_real` at the top. Sibling to the existing
       Stage 6 fake-runner e2e to keep all "real flow" tests in one
       directory.
-- [ ] Single test
+- [x] Single test
       `TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten`:
   - `t.Skip` unless `T2A_TEST_REAL_CURSOR=1`.
-  - `cursor.Probe` first; skip with a clear message if the binary is
-    missing or unusable.
+  - `cursor.Probe` first; fail with an operator-friendly message if
+    the binary is missing or unusable (skip would mask a real
+    misconfig once the operator opted in via the env gate).
   - Build the **same** stack `cmd/taskapi/run_helpers.go` builds:
     real SQLite store, real `MemoryQueue`, `RunReconcileLoop`, real
-    `cursor.Adapter`, real `cycleChangeSSEAdapter` over an
-    `httptest.Server`-mounted handler, real worker, real Prometheus
-    adapter on a `prometheus.NewPedanticRegistry`. The wiring lives
-    in a helper added to the test file (or, if Stage A of the
-    broader e2e plan has shipped, reuses that harness).
-  - Open an SSE subscription to `GET /events` against the test
-    server.
+    `cursor.Adapter`, a tiny `hubCycleNotifier` mirroring
+    `cycleChangeSSEAdapter` over an `httptest.Server`-mounted
+    handler, real worker, real Prometheus adapter on a
+    `prometheus.NewPedanticRegistry` via the new
+    `taskapi.RegisterAgentWorkerMetricsOn` test seam.
+  - Subscribe directly to `*handler.SSEHub` (Subscribe/cancel pair)
+    instead of opening a real `GET /events` stream — same channel
+    underneath, no goroutine + reader bookkeeping in the test.
   - `POST /tasks` with `status=ready, initial_prompt=fixture.Prompt(),
-    title="real cursor smoke"`. The request's working directory is
-    set via `T2A_AGENT_WORKER_WORKING_DIR=fixture.WorkingDir()` on
-    the test harness (the worker forwards it to the runner per
-    `AGENT-WORKER.md` "Environment variables").
+    title="real cursor smoke"`. The working directory is configured
+    via `worker.Options.WorkingDir = fixture.WorkingDir()` directly
+    rather than the env-loader (`taskapiconfig.AgentWorkerWorkingDir`),
+    because the test bypasses `cmd/taskapi`'s startup loader; the
+    field semantics are identical.
   - Poll the store with `pollTimeout=120s` (Cursor is slower than
-    the fake) until `task.status == done`. Fail loudly on
-    `task.status == failed` with the cycle's reason and the
-    truncated, **redacted** `RawOutput` from the execute phase.
-  - Assertions:
+    the fake) until `task.status` reaches a terminal value. Fail
+    loudly on `task.status == failed` and dump the cycle status,
+    meta, and per-phase `Summary` + `DetailsJSON` tail so the
+    operator does not have to crack open SQLite.
+  - Assertions, in order:
     1. Final task `status == done`.
     2. Exactly one cycle, `status = succeeded`, `meta_json.runner ==
        "cursor-cli"`, non-empty `meta_json.runner_version`.
     3. Exactly two phases: `diagnose=skipped`, `execute=succeeded`.
-    4. `fixture.AssertSucceeded(t)` — the file is on disk.
+    4. `fixture.AssertSucceeded(t)` — the file is on disk with the
+       expected bytes.
     5. SSE stream observed at least one `task_cycle_changed` for the
-       new task (sanity check; Stage 6 e2e covers exact counts with
-       the fake).
+       new task and cycle (sanity check; Stage 6 fake-runner e2e
+       still pins exact event counts).
     6. Pedantic registry shows
        `t2a_agent_runs_total{runner="cursor-cli",terminal_status="succeeded"} == 1`
-       and one histogram observation.
-- [ ] Same opt-in runbook hint in the test file's package doc.
+       and exactly one histogram observation in
+       `t2a_agent_run_duration_seconds{runner="cursor-cli"}`.
+- [x] Same opt-in runbook hint in the test file's package doc.
+- [x] **Stage 3 surfaced one minor wiring need — closed in same
+      commit**: `internal/taskapi.RegisterAgentWorkerMetricsOn(reg)`
+      is now public so the e2e (and any future external test) can
+      register the production counter + histogram on a
+      `prometheus.NewPedanticRegistry` without going through the
+      `sync.Once`-guarded default-registry path. The lowercase
+      `registerAgentWorkerMetricsOn` stays as the implementation; the
+      new public wrapper is a one-liner so production wiring keeps
+      its single source of truth.
 
 **Exit criteria:**
 
@@ -432,6 +447,17 @@ parentheses:
   files" hard-fail to "log extras as informational warning"; strict
   mode is still available via `(*Fixture).ExtraFiles()` for callers
   that want it.
+- **Stage 3 finding — local notifier adapter.** The production SSE
+  notifier (`cycleChangeSSEAdapter` in `cmd/taskapi`) lives in package
+  main and cannot be imported by tests. The Stage 3 e2e re-implements
+  the same five-line adapter (`hubCycleNotifier`) in the test file.
+  The contract is small enough that a parallel implementation is
+  cheaper than promoting the adapter to a public package; if a third
+  caller ever appears, promote it to `pkgs/tasks/handler` next to
+  `SSEHub` rather than keeping two copies in lockstep. Same logic
+  applies to the metrics adapter: the test reuses the production
+  shape via the new `RegisterAgentWorkerMetricsOn` seam, so there is
+  exactly one source of truth for metric names + labels + buckets.
 
 ## Status
 
@@ -440,5 +466,5 @@ parentheses:
 | 0 — Plan | done | `bf3ceca` |
 | 1 — Smoke harness + fake-runner self-test | done | `9647bbb` |
 | 2 — Runner-layer real-cursor smoke | done | `2288d22` |
-| 3 — Full HTTP → worker → real cursor smoke | pending | — |
+| 3 — Full HTTP → worker → real cursor smoke | done | `pending-backfill` |
 | 4 — Docs + runbook | pending | — |
