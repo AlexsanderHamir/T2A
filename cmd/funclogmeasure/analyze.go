@@ -138,6 +138,29 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":   {},
+
+	// pkgs/tasks/calltrace: thin orchestration / pure-context helpers that
+	// either delegate to helperDebugIn/helperDebugOut (which DO log) or
+	// only mutate / read context. RunObserved emits the helper.io trace
+	// pair through its delegates so a per-function log here would
+	// triple-count every observed helper invocation; HelperIOIn /
+	// HelperIOOut are one-line public wrappers over the same delegates;
+	// Push / Path / WithRequestRoot are pure context-stack manipulation
+	// embedded into other trace lines (call_path field on every
+	// http.access / http.io / helper.io frame).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tRunObserved":     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tHelperIOIn":      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tHelperIOOut":     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tPush":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tPath":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace\tWithRequestRoot": {},
+	// pkgs/tasks/logctx: pure context-read helper for the request id;
+	// embedded by the access-log middleware into the http.access trace.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tRequestIDFromContext": {},
+	// pkgs/tasks/store/internal/settings: pure five-pointer-nil predicate
+	// for the no-op short-circuit on PATCH /settings; the surrounding
+	// handler emits the trace line with the decision context.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/settings\tPatch.IsEmpty": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

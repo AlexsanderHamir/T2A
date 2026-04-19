@@ -2,20 +2,21 @@ package calltrace
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"strings"
 )
 
 type stackKey struct{}
 
-// Push returns ctx with name appended to the call stack used for call_path / helper.io logs.
-// Use at handler entry (operation string) and at the start of nested helpers.
+// Push returns ctx with name appended to the call stack used for call_path /
+// helper.io logs. Use at handler entry (operation string) and at the start
+// of nested helpers. Skip-listed in cmd/funclogmeasure/analyze.go: pure
+// context-mutation helper called once per handler/helper entry, where the
+// caller is already responsible for emitting the surrounding trace line.
 func Push(ctx context.Context, name string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_ = slog.Default().Enabled(ctx, slog.LevelDebug)
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return ctx
@@ -30,12 +31,13 @@ func Push(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, stackKey{}, next)
 }
 
-// Path returns "parent > child > ..." for the current ctx, or empty when unset.
+// Path returns "parent > child > ..." for the current ctx, or empty when
+// unset. Skip-listed: pure context-read helper consumed by callers that
+// embed the result into their own trace line.
 func Path(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
-	_ = slog.Default().Enabled(ctx, slog.LevelDebug)
 	s, _ := ctx.Value(stackKey{}).([]string)
 	if len(s) == 0 {
 		return ""
@@ -43,11 +45,13 @@ func Path(ctx context.Context) string {
 	return strings.Join(s, " > ")
 }
 
-// WithRequestRoot attaches the HTTP handler operation as the first stack frame (after middleware context).
+// WithRequestRoot attaches the HTTP handler operation as the first stack
+// frame (after middleware context). Skip-listed: thin one-line wrapper
+// over Push; the per-request access log emitted by the access middleware
+// already names the operation.
 func WithRequestRoot(r *http.Request, op string) *http.Request {
 	if r == nil {
 		return nil
 	}
-	_ = slog.Default().Enabled(r.Context(), slog.LevelDebug)
 	return r.WithContext(Push(r.Context(), op))
 }

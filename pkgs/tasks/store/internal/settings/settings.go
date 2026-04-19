@@ -30,10 +30,10 @@ type Patch struct {
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
 // HTTP handler to short-circuit no-op PATCH calls without a DB write.
+// Skip-listed in cmd/funclogmeasure/analyze.go: pure five-pointer-nil
+// predicate called once per PATCH /settings request, where the surrounding
+// handler already logs the no-op short-circuit decision.
 func (p Patch) IsEmpty() bool {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.Patch.IsEmpty")
-	}
 	return p.WorkerEnabled == nil &&
 		p.Runner == nil &&
 		p.RepoRoot == nil &&

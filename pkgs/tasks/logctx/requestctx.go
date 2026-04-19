@@ -22,11 +22,13 @@ func ContextWithRequestID(ctx context.Context, id string) context.Context {
 }
 
 // RequestIDFromContext returns the request id from ctx, or empty when unset.
+// Skip-listed in cmd/funclogmeasure/analyze.go: pure context-read helper
+// embedded into other trace lines (the access-log middleware reads it
+// once per request and emits the http.access trace with it).
 func RequestIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
-	_ = slog.Default().Enabled(ctx, slog.LevelDebug)
 	s, _ := ctx.Value(ctxKeyRequestID).(string)
 	return s
 }
