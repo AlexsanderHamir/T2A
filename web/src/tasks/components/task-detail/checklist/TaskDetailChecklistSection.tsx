@@ -34,6 +34,15 @@ export type TaskDetailChecklistSectionProps = {
   editCriterionPending: boolean;
   onRemoveChecklistItem: (itemId: string) => void;
   removeItemPending: boolean;
+  /**
+   * Most recent error from the underlying mutations. Surfaced inline
+   * so users get visible feedback when a write fails (the modals stay
+   * open & the buttons re-enable, but without this the user has no
+   * idea anything went wrong). `null` for happy path / idle / pending.
+   */
+  addCriterionError?: Error | null;
+  editCriterionError?: Error | null;
+  removeItemError?: Error | null;
 };
 
 export function TaskDetailChecklistSection({
@@ -59,6 +68,9 @@ export function TaskDetailChecklistSection({
   editCriterionPending,
   onRemoveChecklistItem,
   removeItemPending,
+  addCriterionError = null,
+  editCriterionError = null,
+  removeItemError = null,
 }: TaskDetailChecklistSectionProps) {
   return (
     <div className="task-detail-section" id="task-detail-checklist">
@@ -194,6 +206,8 @@ export function TaskDetailChecklistSection({
           // already gone. See `.agent/frontend-improvement-agent.log`
           // Session 30.
           dismissibleWhileBusy
+          error={addCriterionError}
+          errorFallback="Could not add criterion."
         />
       ) : null}
       {editModalOpen && !checklistInherit && editingItemId ? (
@@ -214,7 +228,17 @@ export function TaskDetailChecklistSection({
           // gone. See `.agent/frontend-improvement-agent.log`
           // Session 30.
           dismissibleWhileBusy
+          error={editCriterionError}
+          errorFallback="Could not save changes."
         />
+      ) : null}
+      {removeItemError ? (
+        <div
+          className="err task-checklist-remove-err"
+          role="alert"
+        >
+          {errorMessage(removeItemError, "Could not remove criterion.")}
+        </div>
       ) : null}
     </div>
   );

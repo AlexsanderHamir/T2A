@@ -216,6 +216,9 @@ export function TaskDetailPage({ app }: Props) {
         editCriterionPending={updateChecklistTextMutation.isPending}
         onRemoveChecklistItem={(id) => deleteChecklistMutation.mutate(id)}
         removeItemPending={deleteChecklistMutation.isPending}
+        addCriterionError={addChecklistMutation.error}
+        editCriterionError={updateChecklistTextMutation.error}
+        removeItemError={deleteChecklistMutation.error}
       />
 
       <TaskDetailPromptSection

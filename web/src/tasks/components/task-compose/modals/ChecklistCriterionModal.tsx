@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { FieldLabel } from "@/shared/FieldLabel";
+import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../../shared/Modal";
 
 type Props = {
@@ -25,6 +26,19 @@ type Props = {
    * only and `pending` is permanently false anyway.
    */
   dismissibleWhileBusy?: boolean;
+  /**
+   * Surfaces the underlying mutation's error inside the modal as a
+   * `.err role="alert"` callout above the action buttons. Pass
+   * `mutation.error` directly (typed as `Error | null` by react-query
+   * v5). When `null` (the happy / idle / pending path), no callout is
+   * rendered. The callout uses `errorMessage(error, fallback)` so the
+   * caller controls the fallback phrase per mode (e.g. "Could not add
+   * criterion." vs "Could not save changes."). Defaults to no
+   * callout for the `TaskComposeFields` caller, where the local-state
+   * editor has no async error path to surface.
+   */
+  error?: Error | null;
+  errorFallback?: string;
 };
 
 export function ChecklistCriterionModal({
@@ -38,6 +52,8 @@ export function ChecklistCriterionModal({
   modalStack = "default",
   lockBodyScroll = true,
   dismissibleWhileBusy = false,
+  error = null,
+  errorFallback,
 }: Props) {
   const disabled = pending || saving;
   const titleId =
@@ -97,6 +113,20 @@ export function ChecklistCriterionModal({
               aria-required="true"
             />
           </div>
+          {error ? (
+            <div
+              className="err task-checklist-criterion-modal-err"
+              role="alert"
+            >
+              {errorMessage(
+                error,
+                errorFallback ??
+                  (mode === "add"
+                    ? "Could not add criterion."
+                    : "Could not save changes."),
+              )}
+            </div>
+          ) : null}
           <div className="row stack-row-actions task-checklist-criterion-modal-actions">
             <button
               type="button"
