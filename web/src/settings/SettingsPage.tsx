@@ -390,17 +390,20 @@ export function SettingsPage() {
           <p className="settings-field-help">
             Leave empty to auto-detect on PATH. Use the test button to verify
             before saving.
-            {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
-              <>
-                {" "}
-                Currently resolves to{" "}
-                <code data-testid="settings-resolved-cursor-bin">
-                  {resolvedDefaultBin}
-                </code>
-                .
-              </>
-            ) : null}
           </p>
+          {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
+            <div className="settings-resolved-bin">
+              <span className="settings-resolved-bin-label">
+                Currently resolves to
+              </span>
+              <code
+                className="settings-resolved-bin-path"
+                data-testid="settings-resolved-cursor-bin"
+              >
+                {resolvedDefaultBin}
+              </code>
+            </div>
+          ) : null}
           <button
             type="button"
             className="secondary"

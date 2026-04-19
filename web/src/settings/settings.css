@@ -124,6 +124,41 @@
   color: #d32f2f;
 }
 
+/*
+ * Resolved-default callout for the Cursor binary field. Shown only
+ * when the input is blank AND the most recent probe surfaced a
+ * concrete path. Lifted out of the field-help paragraph because
+ * cramming "instructional copy" + "live status" into the same
+ * sentence made both unreadable: the operator's eye couldn't tell
+ * where the rules ended and the resolved fact began. Now the help
+ * text is a plain instruction, and this block is a label/value pair
+ * that visually separates "what gets used right now" from "how the
+ * field works".
+ */
+.settings-resolved-bin {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 4px;
+  background: var(--color-bg-subtle, #f7f7fa);
+}
+
+.settings-resolved-bin-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #555);
+}
+
+.settings-resolved-bin-path {
+  font-size: 13px;
+  color: var(--color-text, #1a1a1a);
+  word-break: break-all;
+}
+
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
