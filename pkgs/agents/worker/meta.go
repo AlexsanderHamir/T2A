@@ -1,0 +1,95 @@
+package worker
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"log/slog"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+)
+
+// meta.go owns the payload helpers that produce JSON bytes for the
+// store: cycle MetaJSON (buildCycleMeta + sha256Hex) and phase
+// details_json (detailsBytes). These are pure functions of their
+// inputs; no Worker receiver, no store calls, easy to unit-test in
+// isolation.
+
+// buildCycleMeta produces the JSON body written to TaskCycle.MetaJSON.
+// The Stage-3 audit contract pins these three keys; adding more later
+// is allowed but renames require a coordinated migration of the
+// substrate's mirror payloads.
+func buildCycleMeta(r runner.Runner, prompt string) []byte {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.buildCycleMeta",
+		"runner", r.Name())
+	out := map[string]string{
+		"runner":         r.Name(),
+		"runner_version": r.Version(),
+		"prompt_hash":    sha256Hex(prompt),
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		slog.Warn("agent worker meta marshal failed", "cmd", workerLogCmd,
+			"operation", "agent.worker.buildCycleMeta.err", "err", err)
+		return []byte("{}")
+	}
+	return b
+}
+
+// sha256Hex returns the lowercase hex SHA-256 of s. The worker writes
+// this into MetaJSON.prompt_hash so the audit trail can correlate runs
+// of the same prompt across replays without storing the prompt itself.
+func sha256Hex(s string) string {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.sha256Hex",
+		"len", len(s))
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
+}
+
+// detailsBytes converts a runner.Result's free-form Details into the
+// JSON object the store expects. The store's kernel.NormalizeJSONObject
+// chokepoint requires details_json to be a JSON object on every write
+// (sessions 1+2 of .agent/bug-hunting-agent.log) — non-object payloads
+// surface as domain.ErrInvalidInput, which would orphan the running
+// cycle/phase/task because completeExecutePhase clears state.cycleStarted
+// on any CompletePhase error. runner.Result.Details is typed
+// json.RawMessage and adapters like cursor forward whatever the CLI
+// emitted, so the worker is the chokepoint that has to coerce.
+//
+// Rules (matching the store-side normalize:
+//
+//   - nil / empty / whitespace / "null" -> "{}"
+//   - valid JSON object -> pass through verbatim
+//   - valid JSON non-object (string, number, array, bool) -> wrapped
+//     as {"value": <raw>} so the original parsed value survives in the
+//     audit trail
+//   - malformed JSON -> wrapped as {"raw": "<original-bytes-as-string>"}
+//     so the diagnostic bytes are preserved (still parseable JSON)
+func detailsBytes(r runner.Result) []byte {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.detailsBytes",
+		"len", len(r.Details))
+	trimmed := bytes.TrimSpace(r.Details)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return []byte("{}")
+	}
+	if trimmed[0] == '{' && json.Valid(trimmed) {
+		return r.Details
+	}
+	if json.Valid(trimmed) {
+		out := make([]byte, 0, len(trimmed)+12)
+		out = append(out, []byte(`{"value":`)...)
+		out = append(out, trimmed...)
+		out = append(out, '}')
+		return out
+	}
+	encoded, err := json.Marshal(string(r.Details))
+	if err != nil {
+		return []byte("{}")
+	}
+	out := make([]byte, 0, len(encoded)+10)
+	out = append(out, []byte(`{"raw":`)...)
+	out = append(out, encoded...)
+	out = append(out, '}')
+	return out
+}
