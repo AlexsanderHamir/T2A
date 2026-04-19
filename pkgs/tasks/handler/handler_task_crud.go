@@ -216,9 +216,6 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 
 func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseListParams")
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx = calltrace.Push(ctx, "parseListParams")
 	calltrace.HelperIOIn(ctx, "parseListParams", "limit_q", q.Get("limit"), "offset_q", q.Get("offset"), "after_id_q", q.Get("after_id"))
 	defer func() {

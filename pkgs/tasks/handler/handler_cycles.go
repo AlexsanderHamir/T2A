@@ -305,9 +305,6 @@ func assertCycleBelongsToTask(ctx context.Context, s *store.Store, taskID, cycle
 // parseTaskEventsLimit. Same 0..200 cap and 32-byte abuse guard.
 func parseCycleListLimit(ctx context.Context, q url.Values) (int, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseCycleListLimit")
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx = calltrace.Push(ctx, "parseCycleListLimit")
 	calltrace.HelperIOIn(ctx, "parseCycleListLimit", "limit_q", q.Get("limit"))
 	var (

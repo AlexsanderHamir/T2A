@@ -38,9 +38,6 @@ func actorFromRequest(r *http.Request) (a domain.Actor) {
 
 func decodeJSON(ctx context.Context, r io.Reader, dst any) (err error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.decodeJSON")
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx = calltrace.Push(ctx, "decodeJSON")
 	calltrace.HelperIOIn(ctx, "decodeJSON", "dst_type", fmt.Sprintf("%T", dst))
 	defer func() { calltrace.HelperIOOut(ctx, "decodeJSON", "err", err) }()
@@ -195,9 +192,6 @@ func writeError(w http.ResponseWriter, r *http.Request, op string, err error, co
 // storeErrHTTPResponse maps store/domain errors to an HTTP status and JSON error body message.
 func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.storeErrHTTPResponse")
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx = calltrace.Push(ctx, "storeErrHTTPResponse")
 	calltrace.HelperIOIn(ctx, "storeErrHTTPResponse", "err", err)
 	defer func() {

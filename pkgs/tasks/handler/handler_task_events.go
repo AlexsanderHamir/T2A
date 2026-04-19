@@ -238,9 +238,6 @@ func (h *Handler) patchTaskEventUserResponse(w http.ResponseWriter, r *http.Requ
 
 func parseTaskEventsLimit(ctx context.Context, q url.Values) (limit int, err error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseTaskEventsLimit")
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx = calltrace.Push(ctx, "parseTaskEventsLimit")
 	calltrace.HelperIOIn(ctx, "parseTaskEventsLimit", "limit_q", q.Get("limit"), "before_seq_q", q.Get("before_seq"), "after_seq_q", q.Get("after_seq"))
 	defer func() { calltrace.HelperIOOut(ctx, "parseTaskEventsLimit", "limit", limit, "err", err) }()

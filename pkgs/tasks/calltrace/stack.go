@@ -10,9 +10,19 @@ type stackKey struct{}
 
 // Push returns ctx with name appended to the call stack used for call_path /
 // helper.io logs. Use at handler entry (operation string) and at the start
-// of nested helpers. Skip-listed in cmd/funclogmeasure/analyze.go: pure
-// context-mutation helper called once per handler/helper entry, where the
-// caller is already responsible for emitting the surrounding trace line.
+// of nested helpers.
+//
+// Nil-ctx contract: callers MUST NOT pre-guard `if ctx == nil { ctx =
+// context.Background() }` before calling Push. Push handles nil internally
+// (line 17 below) and the result is always a non-nil context that is safe
+// to pass to HelperIOIn / HelperIOOut (which also nil-guard internally via
+// helperDebugIn / helperDebugOut). Several handler-side parsers used to
+// carry a redundant pre-guard before Session 28 — that pattern is now
+// obsolete and should not be re-introduced.
+//
+// Skip-listed in cmd/funclogmeasure/analyze.go: pure context-mutation
+// helper called once per handler/helper entry, where the caller is already
+// responsible for emitting the surrounding trace line.
 func Push(ctx context.Context, name string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
