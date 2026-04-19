@@ -45,6 +45,20 @@ func (s *Store) ListCyclesForTask(ctx context.Context, taskID string, limit int)
 	return cycles.ListForTask(ctx, s.db, taskID, limit)
 }
 
+// ListCyclesForTaskBefore is the keyset-paginated form of
+// ListCyclesForTask. When beforeAttemptSeq > 0 the page is restricted to
+// cycles whose attempt_seq is strictly less than beforeAttemptSeq (next
+// page of older cycles past a cursor the caller already saw); a
+// non-positive value behaves identically to ListCyclesForTask. Ordering
+// (attempt_seq DESC, newest first), limit clamping ([1, 200]), and the
+// not-found mapping match ListCyclesForTask exactly so the two callers
+// share the same kernel.OpListCyclesForTask Prometheus label and the
+// same error envelope on the wire.
+func (s *Store) ListCyclesForTaskBefore(ctx context.Context, taskID string, beforeAttemptSeq int64, limit int) ([]domain.TaskCycle, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCyclesForTaskBefore")
+	return cycles.ListForTaskBefore(ctx, s.db, taskID, beforeAttemptSeq, limit)
+}
+
 // StartPhase appends a new phase row to a running cycle. See
 // cycles.StartPhase for the full state-machine and dual-write
 // contract.

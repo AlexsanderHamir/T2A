@@ -72,11 +72,20 @@ type taskCyclePhaseResponse struct {
 // taskCyclesListResponse is the JSON envelope for GET /tasks/{id}/cycles.
 // cycles is always a JSON array (never null). has_more is detected by
 // fetching limit+1 rows from the store; the extra row is dropped.
+//
+// next_before_attempt_seq is the cursor for the next (older) page when
+// has_more is true. It carries the attempt_seq of the last (lowest) row
+// in this response, suitable for the caller to pass back as
+// ?before_attempt_seq= on the next GET. Omitted via omitempty when no
+// next page exists so clients can use absence as the end-of-stream
+// signal (matches the /events `next_after_seq` / `next_before_seq`
+// convention).
 type taskCyclesListResponse struct {
-	TaskID  string              `json:"task_id"`
-	Cycles  []taskCycleResponse `json:"cycles"`
-	Limit   int                 `json:"limit"`
-	HasMore bool                `json:"has_more"`
+	TaskID               string              `json:"task_id"`
+	Cycles               []taskCycleResponse `json:"cycles"`
+	Limit                int                 `json:"limit"`
+	HasMore              bool                `json:"has_more"`
+	NextBeforeAttemptSeq *int64              `json:"next_before_attempt_seq,omitempty"`
 }
 
 // taskCycleDetailResponse is the JSON envelope for GET /tasks/{id}/cycles/{cycleId}.

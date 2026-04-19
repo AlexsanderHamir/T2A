@@ -212,6 +212,89 @@ func TestStore_GetCycle_and_ListCyclesForTask(t *testing.T) {
 	}
 }
 
+// TestStore_ListCyclesForTaskBefore_keysetCursor pins the cursor
+// semantics added alongside GET /tasks/{id}/cycles?before_attempt_seq=
+// in Session 30. Three cycles seeded with attempt_seq 1/2/3 (the store
+// assigns max+1 in order); the keyset call MUST return strictly older
+// cycles than the cursor (i.e. attempt_seq < cursor) and never the
+// cursor row itself, otherwise paginating clients would see duplicates
+// across pages. The non-positive-cursor branch MUST behave identically
+// to ListCyclesForTask so the new method can serve both first-page and
+// next-page requests through a single store entrypoint.
+func TestStore_ListCyclesForTaskBefore_keysetCursor(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+
+	for i := 0; i < 3; i++ {
+		c, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+		if err != nil {
+			t.Fatalf("start cycle #%d: %v", i+1, err)
+		}
+		if _, err := s.TerminateCycle(ctx, c.ID, domain.CycleStatusSucceeded, "", domain.ActorAgent); err != nil {
+			t.Fatalf("terminate cycle #%d: %v", i+1, err)
+		}
+	}
+
+	t.Run("zeroBeforeBehavesLikeListForTask", func(t *testing.T) {
+		got, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, 0, 0)
+		if err != nil {
+			t.Fatalf("zero-before err = %v", err)
+		}
+		if len(got) != 3 {
+			t.Fatalf("zero-before len = %d, want 3 (matches ListCyclesForTask)", len(got))
+		}
+		if got[0].AttemptSeq != 3 || got[2].AttemptSeq != 1 {
+			t.Fatalf("zero-before order = [%d ... %d], want [3 ... 1]", got[0].AttemptSeq, got[2].AttemptSeq)
+		}
+	})
+
+	t.Run("strictlyLessThanCursor", func(t *testing.T) {
+		got, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, 3, 50)
+		if err != nil {
+			t.Fatalf("before=3 err = %v", err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("before=3 len = %d, want 2 (cycles 2 and 1)", len(got))
+		}
+		if got[0].AttemptSeq != 2 || got[1].AttemptSeq != 1 {
+			t.Fatalf("before=3 order = [%d, %d], want [2, 1]", got[0].AttemptSeq, got[1].AttemptSeq)
+		}
+		for _, c := range got {
+			if c.AttemptSeq >= 3 {
+				t.Fatalf("cursor row leaked: attempt_seq=%d should be < 3 (strict)", c.AttemptSeq)
+			}
+		}
+	})
+
+	t.Run("limitOneEnablesPaging", func(t *testing.T) {
+		first, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, 0, 1)
+		if err != nil || len(first) != 1 || first[0].AttemptSeq != 3 {
+			t.Fatalf("first page = %+v err=%v, want [{3}]", first, err)
+		}
+		second, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, first[0].AttemptSeq, 1)
+		if err != nil || len(second) != 1 || second[0].AttemptSeq != 2 {
+			t.Fatalf("second page = %+v err=%v, want [{2}]", second, err)
+		}
+		third, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, second[0].AttemptSeq, 1)
+		if err != nil || len(third) != 1 || third[0].AttemptSeq != 1 {
+			t.Fatalf("third page = %+v err=%v, want [{1}]", third, err)
+		}
+		end, err := s.ListCyclesForTaskBefore(ctx, tsk.ID, third[0].AttemptSeq, 1)
+		if err != nil {
+			t.Fatalf("end-of-stream err = %v", err)
+		}
+		if len(end) != 0 {
+			t.Fatalf("end-of-stream len = %d, want 0", len(end))
+		}
+	})
+
+	t.Run("missingTaskMapsToNotFound", func(t *testing.T) {
+		if _, err := s.ListCyclesForTaskBefore(ctx, "missing", 1, 1); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("err = %v, want ErrNotFound", err)
+		}
+	})
+}
+
 // --- StartPhase / CompletePhase / ListPhasesForCycle ---------------------
 
 func TestStore_StartPhase_enforces_state_machine(t *testing.T) {

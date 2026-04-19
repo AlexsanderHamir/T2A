@@ -106,8 +106,13 @@ func (h *Handler) getTaskCycles(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	debugHTTPRequest(r, op, "task_id", taskID, "limit", limit)
-	rows, err := h.store.ListCyclesForTask(r.Context(), taskID, limit+1)
+	beforeAttemptSeq, err := parseCycleListBeforeAttemptSeq(r.Context(), r.URL.Query())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	debugHTTPRequest(r, op, "task_id", taskID, "limit", limit, "before_attempt_seq", beforeAttemptSeq)
+	rows, err := h.store.ListCyclesForTaskBefore(r.Context(), taskID, beforeAttemptSeq, limit+1)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -121,12 +126,22 @@ func (h *Handler) getTaskCycles(w http.ResponseWriter, r *http.Request) {
 	for i := range rows {
 		out = append(out, taskCycleResponseFromDomain(&rows[i]))
 	}
-	writeJSON(w, r, op, http.StatusOK, taskCyclesListResponse{
+	resp := taskCyclesListResponse{
 		TaskID:  taskID,
 		Cycles:  out,
 		Limit:   limit,
 		HasMore: hasMore,
-	})
+	}
+	if hasMore && len(out) > 0 {
+		// Cursor for the next (older) page is the last (lowest attempt_seq)
+		// row this response carries. Strict < in the store keeps the cursor
+		// row from being repeated across pages, matching the /events
+		// `before_seq` convention. Only emitted when a next page actually
+		// exists so clients can use omitempty as the end-of-stream signal.
+		next := out[len(out)-1].AttemptSeq
+		resp.NextBeforeAttemptSeq = &next
+	}
+	writeJSON(w, r, op, http.StatusOK, resp)
 }
 
 // getTaskCycle handles GET /tasks/{id}/cycles/{cycleId}.
@@ -299,6 +314,32 @@ func assertCycleBelongsToTask(ctx context.Context, s *store.Store, taskID, cycle
 		return domain.ErrNotFound
 	}
 	return nil
+}
+
+// parseCycleListBeforeAttemptSeq parses the optional ?before_attempt_seq=
+// keyset cursor for GET /tasks/{id}/cycles. Mirrors the validation used
+// by ?before_seq= on /tasks/{id}/events: 32-byte abuse guard, must be a
+// strictly positive int64. Returns 0 (no cursor / first page) when the
+// param is absent or empty after trim.
+func parseCycleListBeforeAttemptSeq(ctx context.Context, q url.Values) (before int64, err error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseCycleListBeforeAttemptSeq")
+	ctx = calltrace.Push(ctx, "parseCycleListBeforeAttemptSeq")
+	calltrace.HelperIOIn(ctx, "parseCycleListBeforeAttemptSeq", "before_q", q.Get("before_attempt_seq"))
+	defer func() {
+		calltrace.HelperIOOut(ctx, "parseCycleListBeforeAttemptSeq", "before_attempt_seq", before, "err", err)
+	}()
+	v := strings.TrimSpace(q.Get("before_attempt_seq"))
+	if v == "" {
+		return 0, nil
+	}
+	if len(v) > maxCycleListLimitParamBytes {
+		return 0, fmt.Errorf("%w: before_attempt_seq too long", domain.ErrInvalidInput)
+	}
+	n, e := strconv.ParseInt(v, 10, 64)
+	if e != nil || n < 1 {
+		return 0, fmt.Errorf("%w: before_attempt_seq must be a positive integer", domain.ErrInvalidInput)
+	}
+	return n, nil
 }
 
 // parseCycleListLimit is the GET /tasks/{id}/cycles equivalent of

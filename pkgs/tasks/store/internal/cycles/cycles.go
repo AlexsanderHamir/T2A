@@ -184,8 +184,27 @@ func Get(ctx context.Context, db *gorm.DB, cycleID string) (*domain.TaskCycle, e
 // ListForTask returns cycles for a task ordered by attempt_seq DESC
 // (newest first). limit is clamped to [1, 200]; the task must exist.
 func ListForTask(ctx context.Context, db *gorm.DB, taskID string, limit int) ([]domain.TaskCycle, error) {
-	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListForTask")
+	return ListForTaskBefore(ctx, db, taskID, 0, limit)
+}
+
+// ListForTaskBefore is the keyset-paginated form of ListForTask. When
+// beforeAttemptSeq > 0 the result is restricted to cycles whose
+// attempt_seq is strictly less than beforeAttemptSeq (i.e. the next page
+// of older cycles past a cursor the caller already saw). beforeAttemptSeq
+// <= 0 is equivalent to ListForTask (no cursor / first page). Ordering
+// and limit clamping match ListForTask exactly so the two callers share
+// the same kernel.OpListCyclesForTask Prometheus label and the same
+// envelope shape on the wire.
+//
+// Cursor semantics: the page is always sorted attempt_seq DESC (newest
+// first) so handlers paginate by handing the *last* (oldest) row's
+// attempt_seq back as the next beforeAttemptSeq. Strict < (rather than
+// <=) keeps the cursor row from being repeated across pages and matches
+// the existing /events `before_seq` convention.
+func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAttemptSeq int64, limit int) ([]domain.TaskCycle, error) {
+	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListForTaskBefore")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: task_id", domain.ErrInvalidInput)
@@ -201,7 +220,11 @@ func ListForTask(ctx context.Context, db *gorm.DB, taskID string, limit int) ([]
 		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
 		}
-		if err := tx.Where("task_id = ?", taskID).Order("attempt_seq DESC").Limit(limit).Find(&out).Error; err != nil {
+		q := tx.Where("task_id = ?", taskID)
+		if beforeAttemptSeq > 0 {
+			q = q.Where("attempt_seq < ?", beforeAttemptSeq)
+		}
+		if err := q.Order("attempt_seq DESC").Limit(limit).Find(&out).Error; err != nil {
 			return fmt.Errorf("list task_cycles: %w", err)
 		}
 		return nil
