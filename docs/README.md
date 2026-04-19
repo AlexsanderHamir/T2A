@@ -25,6 +25,7 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 | [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
+| [CODEBASE-COMMENT-SEARCH-MAP.md](./CODEBASE-COMMENT-SEARCH-MAP.md) | Repo blocks and `rg` recipes for auditing comments against `.cursor/rules/codebase_comments.mdc` (not HTTP/API contract). |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, missing workspace repo, CI/local check failures. |
 | [OBSERVABILITY.md](./OBSERVABILITY.md) | How we standardize, measure, and extend logging and correlation for `taskapi` (checklists, coverage script, **Grafana / PromQL**, **SLIs / SLOs** starter table for `taskapi`). |
 | [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | **Todos:** Prometheus/runtime/DB pool metrics, SLOs, alerts, OTel — execution order and principles. |
@@ -53,6 +54,7 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 | Agentic worker lifecycle / future versions | `docs/AGENTIC-LAYER-PLAN.md` (versioned roadmap V2–V4) + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). New version-scoped execution playbooks land as `docs/<FEATURE>-PLAN.md` next to their contract doc once a `proposals/` design is accepted; delete the playbook after the version ships. |
 | New feature proposals (designs not yet shipped) | `docs/proposals/<FEATURE>.md`. Once accepted and execution starts, promote the contract to `docs/<FEATURE>.md` and (optionally) add `docs/<FEATURE>-PLAN.md` for the per-stage execution. |
 | `web/` only (components, hooks, no API contract change) | `docs/WEB.md`; root `README` only if npm scripts or env vars for Vite change. |
+| Comment style / godoc / JSDoc audits (not API shape changes) | `.cursor/rules/codebase_comments.mdc`; optional `docs/CODEBASE-COMMENT-SEARCH-MAP.md` for search blocks and baseline `rg` recipes. |
 | Observability standard, measurement scripts, or `taskapi` log/checklist behavior | `docs/OBSERVABILITY.md`; touch `scripts/measure-func-slog.*` / `cmd/funclogmeasure` for the per-function `slog` audit, or `scripts/measure-observability.*` for test coverage scope. |
 | New Prometheus recording/alert rules or runbook links for `taskapi` | `deploy/prometheus/t2a-taskapi-rules.yaml` + `deploy/prometheus/README.md`; alert text in `docs/runbooks/`; cross-link from `docs/OBSERVABILITY.md`. |
 | `dbcheck` | Root `README` + `cmd/dbcheck` doc if flags change. |
