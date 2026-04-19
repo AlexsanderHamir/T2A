@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -71,6 +73,26 @@ type probeResponse struct {
 
 type cancelRunResponse struct {
 	Cancelled bool `json:"cancelled"`
+}
+
+// listCursorModelsRequest mirrors probeRequest: optional runner and binary_path
+// (empty fields fall back to GET /settings values).
+type listCursorModelsRequest struct {
+	Runner     string `json:"runner,omitempty"`
+	BinaryPath string `json:"binary_path,omitempty"`
+}
+
+type cursorModelWire struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type listCursorModelsResponse struct {
+	OK         bool              `json:"ok"`
+	Runner     string            `json:"runner"`
+	BinaryPath string            `json:"binary_path,omitempty"`
+	Models     []cursorModelWire `json:"models,omitempty"`
+	Error      string            `json:"error,omitempty"`
 }
 
 // settingsProbeTimeout caps how long POST /settings/probe-cursor will
@@ -193,6 +215,63 @@ func (h *Handler) probeCursor(w http.ResponseWriter, r *http.Request) {
 	resp.OK = true
 	resp.Version = version
 	writeJSON(w, r, op, http.StatusOK, resp)
+}
+
+func (h *Handler) listCursorModels(w http.ResponseWriter, r *http.Request) {
+	const op = "settings.list_cursor_models"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.listCursorModels")
+	r = calltrace.WithRequestRoot(r, op)
+	debugHTTPRequest(r, op)
+
+	var body listCursorModelsRequest
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
+			if !errors.Is(err, io.EOF) {
+				writeError(w, r, op, err, http.StatusBadRequest)
+				return
+			}
+		}
+	}
+	body.Runner = strings.TrimSpace(body.Runner)
+	body.BinaryPath = strings.TrimSpace(body.BinaryPath)
+
+	if body.Runner == "" || body.BinaryPath == "" {
+		cfg, err := h.store.GetSettings(r.Context())
+		if err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+		if body.Runner == "" {
+			body.Runner = cfg.Runner
+		}
+		if body.BinaryPath == "" {
+			body.BinaryPath = cfg.CursorBin
+		}
+	}
+
+	if _, err := registry.Lookup(body.Runner); err != nil {
+		writeError(w, r, op, err, http.StatusBadRequest)
+		return
+	}
+	if body.Runner != registry.CursorRunnerID {
+		writeJSONError(w, r, op, http.StatusBadRequest, "only the cursor runner supports model listing")
+		return
+	}
+
+	models, resolved, err := cursor.ListModels(r.Context(), body.BinaryPath, cursor.ListModelsTimeout, nil)
+	out := listCursorModelsResponse{Runner: body.Runner, BinaryPath: resolved}
+	if err != nil {
+		out.OK = false
+		out.Error = err.Error()
+		writeJSON(w, r, op, http.StatusOK, out)
+		return
+	}
+	out.OK = true
+	out.Models = make([]cursorModelWire, 0, len(models))
+	for _, m := range models {
+		out.Models = append(out.Models, cursorModelWire{ID: m.ID, Label: m.Label})
+	}
+	writeJSON(w, r, op, http.StatusOK, out)
 }
 
 func (h *Handler) cancelCurrentRun(w http.ResponseWriter, r *http.Request) {

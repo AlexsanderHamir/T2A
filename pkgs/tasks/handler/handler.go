@@ -13,7 +13,7 @@ import (
 
 // Task routes: see README.md (handler_task_*.go). /repo: repo_handlers.go. SSE: sse.go.
 // Settings routes: handler_settings.go (GET/PATCH /settings, POST /settings/probe-cursor,
-// POST /settings/cancel-current-run).
+// POST /settings/list-cursor-models, POST /settings/cancel-current-run).
 
 // AgentWorkerControl is the narrow surface the /settings handlers use
 // to drive the in-process agent worker. The cmd/taskapi supervisor
@@ -95,6 +95,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /settings", http.HandlerFunc(h.getSettings))
 	m.Handle("PATCH /settings", http.HandlerFunc(h.patchSettings))
 	m.Handle("POST /settings/probe-cursor", http.HandlerFunc(h.probeCursor))
+	m.Handle("POST /settings/list-cursor-models", http.HandlerFunc(h.listCursorModels))
 	m.Handle("POST /settings/cancel-current-run", http.HandlerFunc(h.cancelCurrentRun))
 	return m
 }

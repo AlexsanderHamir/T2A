@@ -1,7 +1,9 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
+import { listCursorModels } from "@/api/settings";
 import { useAppSettings } from "./useAppSettings";
 import "./settings.css";
 
@@ -97,6 +99,31 @@ export function SettingsPage() {
     if (!settings || !form) return false;
     return Object.keys(diffPatch(settings, form)).length > 0;
   }, [settings, form]);
+
+  const cursorModelsQuery = useQuery({
+    queryKey: [
+      "settings",
+      "cursor-models",
+      settings?.cursor_bin,
+      form?.cursorBin,
+      form?.runner,
+    ],
+    queryFn: ({ signal }) =>
+      listCursorModels(
+        {
+          runner: form?.runner ?? settings?.runner ?? "cursor",
+          binary_path: (form?.cursorBin ?? "").trim() || undefined,
+        },
+        { signal },
+      ),
+    enabled: Boolean(settings && form),
+  });
+
+  const modelIdsFromList = useMemo(() => {
+    const m = cursorModelsQuery.data;
+    if (!m?.ok || !m.models) return new Set<string>();
+    return new Set(m.models.map((x) => x.id));
+  }, [cursorModelsQuery.data]);
 
   const maxParsed = form ? Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10) : 0;
   const maxInvalid = form ? !Number.isFinite(maxParsed) || maxParsed < 0 : false;
@@ -312,20 +339,49 @@ export function SettingsPage() {
           <legend>Cursor agent (CLI)</legend>
           <label className="settings-field">
             <span className="settings-field-label">Model override</span>
-            <input
-              type="text"
+            <select
+              data-testid="settings-cursor-model-select"
               value={form.cursorModel}
               onChange={(e) => handleField("cursorModel", e.target.value)}
-              placeholder="(default — omit --model)"
-              spellCheck={false}
-              autoComplete="off"
-            />
+              disabled={cursorModelsQuery.isFetching}
+              aria-busy={cursorModelsQuery.isFetching}
+            >
+              <option value="">
+                Default (omit --model; Cursor chooses for your account)
+              </option>
+              {cursorModelsQuery.data?.ok && cursorModelsQuery.data.models
+                ? cursorModelsQuery.data.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))
+                : null}
+              {form.cursorModel.trim() !== "" &&
+              !modelIdsFromList.has(form.cursorModel.trim()) ? (
+                <option value={form.cursorModel.trim()}>
+                  {form.cursorModel.trim()} (saved — not in current list)
+                </option>
+              ) : null}
+            </select>
           </label>
+          {cursorModelsQuery.isError ? (
+            <p role="alert" className="settings-field-error">
+              Could not load models from the Cursor CLI:{" "}
+              {cursorModelsQuery.error instanceof Error
+                ? cursorModelsQuery.error.message
+                : String(cursorModelsQuery.error)}
+            </p>
+          ) : null}
+          {cursorModelsQuery.data && !cursorModelsQuery.data.ok ? (
+            <p role="alert" className="settings-field-error">
+              {cursorModelsQuery.data.error ?? "Model list failed."}
+            </p>
+          ) : null}
           <p className="settings-field-help">
-            Optional <code>cursor-agent --model</code> value. Leave empty to use
-            Cursor&apos;s default model for your account (recommended when you
-            want automatic routing). Set this after a usage-limit failure to
-            switch models without opening the Cursor app.
+            List comes from <code>cursor-agent --list-models</code> using the
+            binary path above. Pick a model here or leave &quot;Default&quot; to
+            omit <code>--model</code>. After a usage-limit error, choose another
+            model and save.
           </p>
 
           <label className="settings-field">

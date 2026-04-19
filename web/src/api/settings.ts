@@ -52,6 +52,15 @@ export type CancelCurrentRunResult = {
   cancelled: boolean;
 };
 
+/** Response from POST /settings/list-cursor-models. */
+export type ListCursorModelsResult = {
+  ok: boolean;
+  runner: string;
+  binary_path?: string;
+  models?: Array<{ id: string; label: string }>;
+  error?: string;
+};
+
 function assertSettings(raw: unknown): AppSettings {
   if (raw === null || typeof raw !== "object") {
     throw new Error("unexpected settings response shape");
@@ -83,6 +92,43 @@ function assertSettings(raw: unknown): AppSettings {
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;
+  }
+  return out;
+}
+
+export async function listCursorModels(
+  body: { runner?: string; binary_path?: string },
+  options?: { signal?: AbortSignal },
+): Promise<ListCursorModelsResult> {
+  const res = await fetchWithTimeout("/settings/list-cursor-models", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+    signal: options?.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("unexpected list-cursor-models response");
+  }
+  const o = raw as Record<string, unknown>;
+  if (typeof o.ok !== "boolean" || typeof o.runner !== "string") {
+    throw new Error("unexpected list-cursor-models response shape");
+  }
+  const out: ListCursorModelsResult = { ok: o.ok, runner: o.runner };
+  if (typeof o.binary_path === "string") out.binary_path = o.binary_path;
+  if (typeof o.error === "string") out.error = o.error;
+  if (Array.isArray(o.models)) {
+    out.models = o.models.map((m) => {
+      if (m === null || typeof m !== "object") {
+        throw new Error("unexpected model entry");
+      }
+      const e = m as Record<string, unknown>;
+      if (typeof e.id !== "string" || typeof e.label !== "string") {
+        throw new Error("unexpected model entry shape");
+      }
+      return { id: e.id, label: e.label };
+    });
   }
   return out;
 }

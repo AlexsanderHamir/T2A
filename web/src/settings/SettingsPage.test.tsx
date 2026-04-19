@@ -14,6 +14,24 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
+/** POST /settings/list-cursor-models is requested when Settings mounts; stub it for tests. */
+function stubListCursorModelsFetch(
+  inner: (input: FetchInput, init?: RequestInit) => Promise<Response>,
+) {
+  return async (input: FetchInput, init?: RequestInit) => {
+    const u = requestUrl(input);
+    if (u.endsWith("/settings/list-cursor-models")) {
+      return jsonResponse({
+        ok: true,
+        runner: "cursor",
+        binary_path: "/usr/local/bin/cursor-agent",
+        models: [{ id: "auto", label: "Auto" }],
+      });
+    }
+    return inner(input, init);
+  };
+}
+
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     worker_enabled: true,
@@ -48,12 +66,12 @@ describe("SettingsPage", () => {
   });
 
   it("loads the settings row and pre-populates the form", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput) => {
       if (requestUrl(input).endsWith("/settings")) {
         return jsonResponse(defaultSettings());
       }
       return new Response("not found", { status: 404 });
-    });
+    }));
 
     renderPage();
     const repoInput = await screen.findByLabelText(/Repository root/);
@@ -66,9 +84,9 @@ describe("SettingsPage", () => {
   });
 
   it("shows the workspace warning banner when repo root is empty", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings({ repo_root: "" })),
-    );
+    ));
 
     renderPage();
     expect(
@@ -79,7 +97,7 @@ describe("SettingsPage", () => {
   it("PATCHes only the changed fields and updates form state on success", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockImplementation(async (input: FetchInput, init?: RequestInit) => {
+      .mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
         const url = requestUrl(input);
         if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
           return jsonResponse(defaultSettings());
@@ -93,7 +111,7 @@ describe("SettingsPage", () => {
           );
         }
         return new Response("not found", { status: 404 });
-      });
+      }));
 
     renderPage();
     const repoInput = await screen.findByLabelText(/Repository root/);
@@ -111,16 +129,16 @@ describe("SettingsPage", () => {
   });
 
   it("disables Save when no fields have changed", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings()),
-    );
+    ));
     renderPage();
     const saveBtn = await screen.findByRole("button", { name: /Save changes/ });
     expect(saveBtn).toBeDisabled();
   });
 
   it("calls /settings/probe-cursor and shows the version on success", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings/probe-cursor")) {
         return jsonResponse({ ok: true, runner: "cursor", version: "2026.04" });
@@ -129,7 +147,7 @@ describe("SettingsPage", () => {
         return jsonResponse(defaultSettings());
       }
       return new Response("not found", { status: 404 });
-    });
+    }));
 
     renderPage();
     const probeBtn = await screen.findByRole("button", { name: /Test cursor binary/ });
@@ -145,7 +163,7 @@ describe("SettingsPage", () => {
     // which binary on PATH was actually exec'd. The /settings/probe-cursor
     // response now carries `binary_path`; the SPA must surface it.
     vi.spyOn(globalThis, "fetch").mockImplementation(
-      async (input: FetchInput, init?: RequestInit) => {
+      stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
         const url = requestUrl(input);
         if (url.endsWith("/settings/probe-cursor")) {
           return jsonResponse({
@@ -159,7 +177,7 @@ describe("SettingsPage", () => {
           return jsonResponse(defaultSettings({ cursor_bin: "" }));
         }
         return new Response("not found", { status: 404 });
-      },
+      }),
     );
 
     renderPage();
@@ -182,7 +200,7 @@ describe("SettingsPage", () => {
     // failure and must announce assertively to screen-readers, AND
     // must NOT appear in the success-styled `settings-status`
     // region (which is now reserved for actual successes).
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings/probe-cursor")) {
         return jsonResponse({ ok: false, runner: "cursor", error: "spawn ENOENT" });
@@ -191,7 +209,7 @@ describe("SettingsPage", () => {
         return jsonResponse(defaultSettings());
       }
       return new Response("not found", { status: 404 });
-    });
+    }));
 
     renderPage();
     const probeBtn = await screen.findByRole("button", { name: /Test cursor binary/ });
@@ -210,7 +228,7 @@ describe("SettingsPage", () => {
     // a 500 from PATCH /settings rendered through the same
     // `role="status"` channel as a successful save, which was a
     // direct a11y regression (assertive failure announced as polite).
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput, init?: RequestInit) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
         return jsonResponse(defaultSettings());
@@ -225,7 +243,7 @@ describe("SettingsPage", () => {
         );
       }
       return new Response("not found", { status: 404 });
-    });
+    }));
 
     renderPage();
     const repoInput = await screen.findByLabelText(/Repository root/);
@@ -255,7 +273,7 @@ describe("SettingsPage", () => {
     // re-edited since submit.
     let releasePatch: ((value: Response) => void) | null = null;
     vi.spyOn(globalThis, "fetch").mockImplementation(
-      async (input: FetchInput, init?: RequestInit) => {
+      stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
         const url = requestUrl(input);
         if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
           return jsonResponse(defaultSettings());
@@ -269,7 +287,7 @@ describe("SettingsPage", () => {
           });
         }
         return new Response("not found", { status: 404 });
-      },
+      }),
     );
 
     renderPage();
@@ -322,7 +340,7 @@ describe("SettingsPage", () => {
     // data loss + violate the user's mental model.
     let releasePatch: ((value: Response) => void) | null = null;
     vi.spyOn(globalThis, "fetch").mockImplementation(
-      async (input: FetchInput, init?: RequestInit) => {
+      stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
         const url = requestUrl(input);
         if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
           return jsonResponse(defaultSettings());
@@ -333,7 +351,7 @@ describe("SettingsPage", () => {
           });
         }
         return new Response("not found", { status: 404 });
-      },
+      }),
     );
 
     renderPage();
@@ -363,9 +381,9 @@ describe("SettingsPage", () => {
   });
 
   it("rejects negative max_run_duration_seconds", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings()),
-    );
+    ));
     renderPage();
     const maxInput = await screen.findByLabelText(/Max run duration/);
     await userEvent.clear(maxInput);
