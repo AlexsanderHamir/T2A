@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -23,6 +24,15 @@ import (
 // backend-engineering-bar.mdc §2 / §16 the lifecycle subsystems
 // (logging, db, agent worker, http) live in sibling run_*.go files.
 
+// errRepoRootDisabled is the documented sentinel that
+// openOptionalRepoRoot returns when REPO_ROOT is unset. The bar §4
+// rule "never return nil, nil where the caller cannot distinguish
+// success from no-op" applies to (*T, error) functions like this one:
+// without a sentinel the call site has no way to tell "intentionally
+// disabled" apart from "succeeded but somehow returned a nil pointer".
+// Callers use errors.Is and treat it as a non-fatal "no repo wiring".
+var errRepoRootDisabled = errors.New("repo root disabled (REPO_ROOT unset)")
+
 func logHTTPTimeoutsAndShutdown() {
 	slog.Info("http server limits", "cmd", cmdName, "operation", "taskapi.http_limits",
 		"read_header_timeout_sec", int(readHeaderTimeout.Seconds()),
@@ -34,15 +44,20 @@ func logHTTPTimeoutsAndShutdown() {
 	)
 }
 
+// openOptionalRepoRoot opens the repo wiring pinned by REPO_ROOT.
+// Returns errRepoRootDisabled (a sentinel; check with errors.Is) when
+// the env var is unset — the documented "no repo configured" path.
+// Any other error means REPO_ROOT was set but OpenRoot rejected it
+// and startup should fail.
 func openOptionalRepoRoot() (*repo.Root, error) {
 	root := strings.TrimSpace(os.Getenv("REPO_ROOT"))
 	if root == "" {
 		slog.Info("repo root config", "cmd", cmdName, "operation", "taskapi.repo_root", "enabled", false)
-		return nil, nil
+		return nil, errRepoRootDisabled
 	}
 	r, err := repo.OpenRoot(root)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open repo root %q: %w", root, err)
 	}
 	slog.Info("repo root config", "cmd", cmdName, "operation", "taskapi.repo_root",
 		"enabled", true, "path", r.Abs())
@@ -90,7 +105,13 @@ func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.Can
 	taskStore := store.NewStore(db)
 	hub := handler.NewSSEHub()
 	rep, err := openOptionalRepoRoot()
-	if err != nil {
+	switch {
+	case errors.Is(err, errRepoRootDisabled):
+		// Documented disabled path: keep rep nil and continue. Logged
+		// at INFO inside openOptionalRepoRoot already so no second
+		// emission here (bar §4: pick one log site).
+		rep = nil
+	case err != nil:
 		return nil, nil, err
 	}
 	logHandlerMiddlewareConfig()
