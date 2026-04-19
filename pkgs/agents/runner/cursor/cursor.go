@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -301,6 +302,13 @@ func stderrTailDetails(stderr []byte, homePaths []string) json.RawMessage {
 	tail := stderr
 	if len(tail) > stderrTailBytes {
 		tail = tail[len(tail)-stderrTailBytes:]
+		// The byte-cap cut may land in the middle of a multibyte UTF-8
+		// rune. Drop any leading continuation bytes so the subsequent
+		// string conversion (and downstream json.Marshal) does not
+		// rewrite the dangling bytes to U+FFFD and leak a corrupted
+		// diagnostic into Result.Details.stderr_tail. Mirrors the
+		// pkgs/repo/read_preview_io.go::trimTrailingPartialRune fix.
+		tail = trimLeadingPartialRune(tail)
 	}
 	redacted := redact(string(tail), homePaths)
 	payload, err := json.Marshal(struct {
@@ -312,6 +320,19 @@ func stderrTailDetails(stderr []byte, homePaths []string) json.RawMessage {
 		return json.RawMessage(`{"stderr_tail":"[redaction failure]"}`)
 	}
 	return payload
+}
+
+// trimLeadingPartialRune drops up to 3 leading UTF-8 continuation bytes
+// (10xxxxxx) so a buffer cut that landed mid-rune does not surface as
+// U+FFFD after string conversion. The longest valid UTF-8 sequence is
+// 4 bytes, so at most 3 continuation bytes can precede the next valid
+// rune-start, which bounds the loop. Returns the input unchanged when
+// the first byte is already a rune-start (the common case).
+func trimLeadingPartialRune(b []byte) []byte {
+	for len(b) > 0 && !utf8.RuneStart(b[0]) {
+		b = b[1:]
+	}
+	return b
 }
 
 // envDeniedKeys lists keys that must NEVER reach the child process, even
