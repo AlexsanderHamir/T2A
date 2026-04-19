@@ -312,6 +312,17 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/events"},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles"},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles/" + cycleID},
+			// Session 30 keyset pagination variants on GET /tasks/{id}/cycles —
+			// pin the cursor branch follows the same read-only contract as
+			// the un-cursored branch on both happy (?before_attempt_seq=2)
+			// and 400-validation paths (?before_attempt_seq=0, =abc, =-1).
+			// A future refactor that wired any side effect into the cursor
+			// branch (eg. recording the cursor for replay) would silently
+			// publish without breaking any other test before this row.
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=2"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=0"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=abc"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=-1"},
 		}
 		for _, r := range readOnly {
 			req, err := http.NewRequest(r.method, r.url, nil)
