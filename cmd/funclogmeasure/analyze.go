@@ -62,6 +62,43 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/taskapi\t*sqlDBStatsCollector.Collect":  {},
 	// Store Prometheus latency helper; per-call slog would flood and duplicate SQL traces.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel\tDeferLatency": {},
+
+	// funclogmeasure: stub exemptions for pure helpers that have no observable
+	// behavior worth logging. Each was previously gated only by the no-op
+	// `_ = slog.Default().Enabled(context.Background(), ...)` line, which
+	// satisfied the analyzer at the cost of one extra function-table read
+	// per call and a misleading "this function logs" claim. Skip-listing
+	// here is the documented escape hatch the rule reserves for trivial
+	// pure helpers; the calling functions still log so a request trace is
+	// never lost. See Session 24 of .agent/backend-improvement-agent.log
+	// for the audit trail and rationale.
+	//
+	// cmd/taskapi/main.go: main() is already a thin wrapper around run();
+	// run() is the slog setup point, so logging in main() before the JSON
+	// sink is configured would emit on stderr before the file exists
+	// (see the in-file comment).
+	"github.com/AlexsanderHamir/T2A/cmd/taskapi\tmain": {},
+	// pkgs/tasks/handler/httplog_io.go: pure attribute-builder helpers
+	// for the http.io trace line. The actual slog.Log call lives on the
+	// calling function (logHTTPRequest / logHTTPResponse); these helpers
+	// only flatten request/response state into []any so the per-call cost
+	// is one slice append per field, not one slog formatter pass.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\ttruncateRunes":         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\ttaskCreateInputFields": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\ttaskPatchInputFields":  {},
+	// pkgs/tasks/apijson/truncate.go: UTF-8-safe truncation used by the
+	// http.io trace line preview fields above; same rationale as the
+	// helpers in handler/httplog_io.go (pure transformation, no I/O).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tTruncateUTF8ByBytes": {},
+	// pkgs/tasks/logctx/log_seq.go: ContextWithLogSeq attaches a counter
+	// pointer to the request context; logSeqFromContext reads it back.
+	// Both are called once per request from middleware that already logs
+	// the http.access line. WrapSlogHandlerWithLogSequence is a one-shot
+	// wiring helper called at startup from cmd/taskapi/run.go (which
+	// logs the wiring step itself).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tContextWithLogSeq":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tlogSeqFromContext":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tWrapSlogHandlerWithLogSequence": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

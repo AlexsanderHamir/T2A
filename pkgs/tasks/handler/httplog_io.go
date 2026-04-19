@@ -62,8 +62,11 @@ func debugHTTPOut(ctx context.Context, op string, httpStatus int, extra ...any) 
 	slog.Log(ctx, slog.LevelDebug, "http.io", args...)
 }
 
+// truncateRunes is a pure helper called only from taskCreateInputFields /
+// taskPatchInputFields, which themselves only run inside the
+// debugHTTPRequest gate. Skip-listed in cmd/funclogmeasure/analyze.go
+// rather than logging per-call (would emit per-trace-line per truncation).
 func truncateRunes(s string, maxRunes int) string {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if maxRunes <= 0 {
 		return ""
 	}
@@ -80,8 +83,11 @@ func truncateRunes(s string, maxRunes int) string {
 	return b.String()
 }
 
+// taskCreateInputFields builds the body_* slog attribute slice for the
+// debugHTTPRequest http.io trace. Pure transformation; the trace itself
+// logs and is gated by Enabled() upstream so this helper never runs when
+// debug is off. Skip-listed in cmd/funclogmeasure/analyze.go.
 func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if body == nil {
 		return nil
 	}
@@ -109,8 +115,10 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	return out
 }
 
+// taskPatchInputFields is the PATCH /tasks/{id} mirror of
+// taskCreateInputFields above; same pure-helper rationale and skip-list
+// entry.
 func taskPatchInputFields(body *taskPatchJSON) []any {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if body == nil {
 		return nil
 	}

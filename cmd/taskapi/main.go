@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"log/slog"
 	"os"
 	"time"
 )
@@ -19,9 +17,10 @@ const (
 	maxRequestHeaders = 1 << 20
 )
 
+// main is intentionally a thin wrapper around run(). The slog JSON sink is
+// installed inside run() after the log file is opened, so logging here would
+// emit to stderr before the file exists. Skip-listed in
+// cmd/funclogmeasure/analyze.go for the same reason.
 func main() {
-	// Real JSON sink is installed in run() after the log file is opened; this satisfies the
-	// per-function slog audit without emitting to stderr before the file exists.
-	_ = slog.Default().Enabled(context.Background(), slog.LevelInfo)
 	os.Exit(run())
 }

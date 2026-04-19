@@ -1,16 +1,17 @@
 package apijson
 
 import (
-	"context"
-	"log/slog"
 	"unicode/utf8"
 )
 
 const maxJSONLogPreviewBytes = 16384
 
-// TruncateUTF8ByBytes returns s truncated to maxBytes UTF-8-safe, appending "…" when truncated.
+// TruncateUTF8ByBytes returns s truncated to maxBytes UTF-8-safe, appending
+// "…" when truncated. Pure helper: callers (debugHTTPRequest /
+// debugHTTPResponse) already gate on slog.Default().Enabled, so per-call
+// logging here would just duplicate the surrounding trace line.
+// Skip-listed in cmd/funclogmeasure/analyze.go.
 func TruncateUTF8ByBytes(s string, maxBytes int) string {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if maxBytes <= 0 {
 		return ""
 	}

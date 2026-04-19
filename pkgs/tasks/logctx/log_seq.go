@@ -11,20 +11,21 @@ type logSeqKey struct{}
 // ContextWithLogSeq attaches a per-request monotonic counter. Every slog record emitted with this
 // context gets a rising log_seq (via WrapSlogHandlerWithLogSequence), so JSON lines for one
 // request can be sorted by log_seq to recover call order.
+//
+// Pure context helper called once per request from middleware that already
+// emits the http.access trace; logging here would double-count requests.
+// Skip-listed in cmd/funclogmeasure/analyze.go.
 func ContextWithLogSeq(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_ = slog.Default().Enabled(ctx, slog.LevelDebug)
 	return context.WithValue(ctx, logSeqKey{}, new(atomic.Uint64))
 }
 
+// logSeqFromContext is a pure value-extraction helper used by Handle below;
+// see ContextWithLogSeq for the skip-list rationale. Funclogmeasure
+// skip-list entry mirrors the same pkg path.
 func logSeqFromContext(ctx context.Context) *atomic.Uint64 {
-	c := ctx
-	if c == nil {
-		c = context.Background()
-	}
-	_ = slog.Default().Enabled(c, slog.LevelDebug)
 	if ctx == nil {
 		return nil
 	}
@@ -35,8 +36,10 @@ func logSeqFromContext(ctx context.Context) *atomic.Uint64 {
 // WrapSlogHandlerWithLogSequence adds log_seq (and log_seq_scope) to each record. When ctx carries
 // a counter from ContextWithLogSeq, scope is "request". Otherwise processFallback is incremented
 // and scope is "process" (startup / health / background) so non-request lines still have order.
+//
+// One-shot wiring helper called from cmd/taskapi/run.go at boot, which
+// already logs the wiring step. Skip-listed in cmd/funclogmeasure/analyze.go.
 func WrapSlogHandlerWithLogSequence(h slog.Handler, processFallback *atomic.Uint64) slog.Handler {
-	_ = slog.Default().Enabled(context.Background(), slog.LevelDebug)
 	if h == nil {
 		return nil
 	}
