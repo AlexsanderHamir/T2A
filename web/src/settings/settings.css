@@ -11,16 +11,26 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  font-size: 18px;
   text-decoration: none;
-  color: inherit;
+  color: var(--text-secondary, inherit);
   border: 1px solid transparent;
+  transition:
+    background-color var(--duration-short, 150ms) ease,
+    border-color var(--duration-short, 150ms) ease,
+    color var(--duration-short, 150ms) ease;
+}
+
+.app-header-settings-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
 .app-header-settings-link:hover,
 .app-header-settings-link:focus-visible {
   background: rgba(0, 0, 0, 0.05);
   border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary, inherit);
 }
 
 .settings-page {

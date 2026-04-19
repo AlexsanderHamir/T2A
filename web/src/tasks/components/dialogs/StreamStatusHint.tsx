@@ -31,19 +31,6 @@ export function StreamStatusHint({ connected, listSyncing }: Props) {
           </span>
         )}
       </div>
-      <details className="stream-status-dev">
-        <summary>Local development</summary>
-        <p>
-          Start <code>taskapi</code> on port <strong>8080</strong>, then{" "}
-          <code>npm run dev</code> in <code>web/</code>. Events stream at{" "}
-          <code>/events</code>. While connected, the header stays on{" "}
-          <strong>Connected</strong> even if the list refetches in the background
-          after each event. With <code>T2A_SSE_TEST=1</code> on the server,
-          synthetic events fire about every <strong>3s</strong> by default (
-          <code>T2A_SSE_TEST_INTERVAL</code>)—that refetch traffic is normal in
-          dev; turn the test off or slow the interval if you do not need it.
-        </p>
-      </details>
     </div>
   );
 }
