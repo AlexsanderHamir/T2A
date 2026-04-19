@@ -6,6 +6,7 @@ import {
   parsePhaseEventOverview,
   type PhaseEventOverviewModel,
 } from "../../task-events/parsePhaseEventOverview";
+import { GenericEventDataOverview } from "./GenericEventDataOverview";
 
 function formatDurationMs(ms: number | undefined): string | undefined {
   if (ms === undefined) return undefined;
@@ -193,14 +194,18 @@ export function TaskEventDataPanel({
   const panelOverviewId = `${baseId}-panel-overview`;
   const panelJsonId = `${baseId}-panel-json`;
 
-  const [tab, setTab] = useState<TabId>(() =>
-    overview ? "overview" : "json",
-  );
+  const [tab, setTab] = useState<TabId>("overview");
 
   const jsonPre = (
     <pre className="task-timeline-data task-event-detail-data-pre">
       {dataJson}
     </pre>
+  );
+
+  const overviewBody = overview ? (
+    <PhaseEventOverviewBody model={overview} />
+  ) : (
+    <GenericEventDataOverview data={data} />
   );
 
   return (
@@ -209,62 +214,56 @@ export function TaskEventDataPanel({
         <span>Event data</span>
       </h3>
 
-      {overview ? (
-        <>
-          <div
-            className="task-event-data-tabs"
-            role="tablist"
-            aria-label="Event payload view"
-          >
-            <button
-              type="button"
-              id={tabOverviewId}
-              role="tab"
-              aria-selected={tab === "overview"}
-              aria-controls={panelOverviewId}
-              tabIndex={tab === "overview" ? 0 : -1}
-              className="task-event-data-tab"
-              data-active={tab === "overview" ? "true" : undefined}
-              onClick={() => setTab("overview")}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              id={tabJsonId}
-              role="tab"
-              aria-selected={tab === "json"}
-              aria-controls={panelJsonId}
-              tabIndex={tab === "json" ? 0 : -1}
-              className="task-event-data-tab"
-              data-active={tab === "json" ? "true" : undefined}
-              onClick={() => setTab("json")}
-            >
-              Raw JSON
-            </button>
-          </div>
-          <div
-            id={panelOverviewId}
-            role="tabpanel"
-            aria-labelledby={tabOverviewId}
-            hidden={tab !== "overview"}
-            className="task-event-data-panel"
-          >
-            <PhaseEventOverviewBody model={overview} />
-          </div>
-          <div
-            id={panelJsonId}
-            role="tabpanel"
-            aria-labelledby={tabJsonId}
-            hidden={tab !== "json"}
-            className="task-event-data-panel"
-          >
-            {jsonPre}
-          </div>
-        </>
-      ) : (
-        jsonPre
-      )}
+      <div
+        className="task-event-data-tabs"
+        role="tablist"
+        aria-label="Event payload view"
+      >
+        <button
+          type="button"
+          id={tabOverviewId}
+          role="tab"
+          aria-selected={tab === "overview"}
+          aria-controls={panelOverviewId}
+          tabIndex={tab === "overview" ? 0 : -1}
+          className="task-event-data-tab"
+          data-active={tab === "overview" ? "true" : undefined}
+          onClick={() => setTab("overview")}
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          id={tabJsonId}
+          role="tab"
+          aria-selected={tab === "json"}
+          aria-controls={panelJsonId}
+          tabIndex={tab === "json" ? 0 : -1}
+          className="task-event-data-tab"
+          data-active={tab === "json" ? "true" : undefined}
+          onClick={() => setTab("json")}
+        >
+          Raw JSON
+        </button>
+      </div>
+      <div
+        id={panelOverviewId}
+        role="tabpanel"
+        aria-labelledby={tabOverviewId}
+        hidden={tab !== "overview"}
+        className="task-event-data-panel"
+      >
+        {overviewBody}
+      </div>
+      <div
+        id={panelJsonId}
+        role="tabpanel"
+        aria-labelledby={tabJsonId}
+        hidden={tab !== "json"}
+        className="task-event-data-panel"
+      >
+        {jsonPre}
+      </div>
     </div>
   );
 }

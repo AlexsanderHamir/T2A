@@ -67,7 +67,8 @@ describe("TaskEventDetailPage", () => {
     expect(calls).toBe(2);
   });
 
-  it("loads one event and shows type, time, actor, and JSON data", async () => {
+  it("loads one event and shows type, time, actor, overview fields, and raw JSON", async () => {
+    const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url === "/tasks/t1/events/2") {
@@ -97,6 +98,16 @@ describe("TaskEventDetailPage", () => {
     );
     expect(pill).not.toBeNull();
     expect(screen.getByText(/event data/i)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /^overview$/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("From")).toBeInTheDocument();
+    expect(screen.getByText("a")).toBeInTheDocument();
+    expect(screen.getByText("To")).toBeInTheDocument();
+    expect(screen.getByText("b")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /^raw json$/i }));
     expect(screen.getByText(/"from"/)).toBeInTheDocument();
   });
 

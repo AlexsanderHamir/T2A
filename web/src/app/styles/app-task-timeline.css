@@ -866,6 +866,67 @@ button.btn-utility:focus-visible {
   margin-top: 0.25rem;
 }
 
+/* Generic event payload overview (non-phase events) */
+.task-event-generic-overview {
+  font-family: var(--font-prose);
+}
+
+.task-event-generic-overview--empty {
+  padding: 0.25rem 0;
+}
+
+.task-event-generic-dl {
+  display: grid;
+  gap: 0.65rem 1rem;
+  margin: 0;
+}
+
+.task-event-generic-dl > div {
+  display: grid;
+  grid-template-columns: minmax(6rem, 28%) 1fr;
+  gap: 0.5rem 1rem;
+  align-items: start;
+}
+
+@media (max-width: 520px) {
+  .task-event-generic-dl > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+.task-event-generic-dl dt {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.task-event-generic-dl dd {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.task-event-generic-str {
+  white-space: pre-wrap;
+}
+
+.task-event-generic-nested-pre {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  max-height: 16rem;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-primary);
+  background: var(--neutral-fill-ghost);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+}
+
 .task-event-phase-overview {
   display: flex;
   flex-direction: column;
