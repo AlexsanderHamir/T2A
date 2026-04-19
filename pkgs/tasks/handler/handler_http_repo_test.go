@@ -200,6 +200,86 @@ func TestHTTP_repo_validate_range_reject_overlong_start_end(t *testing.T) {
 	}
 }
 
+// TestHTTP_repo_file_resolve_error_doesNotLeakInternalPrefix pins the wire
+// shape for repo /file Resolve failures so the SPA never has to render the
+// raw "tasks: invalid input: " prefix that domain.ErrInvalidInput stamps on
+// every Resolve / ValidateRange / LineCount return path. Without the
+// repoErrUserMessage helper, the GET /repo/file path-segment-traversal
+// reject was returning {"error":"tasks: invalid input: invalid path", ...}
+// — the same body the SPA echoes verbatim into the @-mention sidebar tooltip,
+// which then surfaced an internal-looking phrase to end users that other
+// handlers had already stripped via storeErrorClientMessage. The asymmetry
+// (only repoValidateRange's ValidateRange branch trimmed the prefix) made
+// the leak hard to spot through black-box testing — both /repo/file and
+// /repo/validate-range's Resolve branch leaked it, but only one half of
+// the latter was covered.
+func TestHTTP_repo_file_resolve_error_doesNotLeakInternalPrefix(t *testing.T) {
+	dir := t.TempDir()
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/file?path=foo/..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(body.Error, "tasks: invalid input") {
+		t.Errorf("error message must not leak internal ErrInvalidInput prefix; got %q", body.Error)
+	}
+	if !strings.Contains(body.Error, "invalid path") {
+		t.Errorf("error message must still surface the underlying reason; got %q", body.Error)
+	}
+}
+
+// TestHTTP_repo_validate_range_resolve_error_doesNotLeakInternalPrefix is
+// the sibling test for repoValidateRange's Resolve branch (the warning
+// field on the 200-with-OK-false response). The validate-range handler
+// already stripped the prefix on its ValidateRange branch (see line
+// ~165 of repo_handlers.go), but the earlier Resolve branch (line ~149)
+// fell through with the raw err.Error() until repoErrUserMessage
+// centralized the strip.
+func TestHTTP_repo_validate_range_resolve_error_doesNotLeakInternalPrefix(t *testing.T) {
+	dir := t.TempDir()
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/validate-range?path=foo/..&start=1&end=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var payload struct {
+		OK      bool   `json:"ok"`
+		Warning string `json:"warning"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.OK {
+		t.Fatalf("expected ok=false for traversal reject; got %#v", payload)
+	}
+	if strings.Contains(payload.Warning, "tasks: invalid input") {
+		t.Errorf("warning must not leak internal ErrInvalidInput prefix; got %q", payload.Warning)
+	}
+	if !strings.Contains(payload.Warning, "invalid path") {
+		t.Errorf("warning must still surface the underlying reason; got %q", payload.Warning)
+	}
+}
+
 func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "a.txt")

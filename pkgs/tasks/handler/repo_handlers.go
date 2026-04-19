@@ -11,7 +11,6 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 type repoSearchResponse struct {
@@ -50,6 +49,28 @@ const maxRepoLineQueryParamBytes = 32
 type repoUnavailableErrorBody struct {
 	Error  string `json:"error"`
 	Reason string `json:"reason"`
+}
+
+// repoErrUserMessage strips the internal "tasks: invalid input: " prefix
+// that pkgs/repo wraps onto every Resolve / ValidateRange / LineCount
+// return path so the wire body the SPA renders matches the clean phrasing
+// other handlers already produce via storeErrorClientMessage. Resolve
+// failures are always wrapped with domain.ErrInvalidInput so the prefix
+// is always present; LineCount can also surface raw OS errors (e.g. file
+// vanished mid-read), in which case invalidInputDetail returns "" and the
+// helper falls back to err.Error() unchanged.
+//
+// Without this helper, GET /repo/file and the Resolve branch of GET
+// /repo/validate-range echoed the raw "tasks: invalid input: <reason>"
+// string into the wire body — a phrase the SPA had no logic to strip
+// and which other 400-emitting handlers had been laundering for years
+// (see invalidInputDetail above).
+func repoErrUserMessage(err error) string {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.repoErrUserMessage")
+	if d := invalidInputDetail(err); d != "" {
+		return d
+	}
+	return err.Error()
 }
 
 // requireRepo resolves the active workspace via the configured
@@ -150,7 +171,7 @@ func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.R
 	if err != nil {
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:      false,
-			Warning: err.Error(),
+			Warning: repoErrUserMessage(err),
 		})
 		return
 	}
@@ -158,20 +179,15 @@ func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.R
 	if err != nil {
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:      false,
-			Warning: err.Error(),
+			Warning: repoErrUserMessage(err),
 		})
 		return
 	}
 	if err := repo.ValidateRange(abs, start, end); err != nil {
-		msg := err.Error()
-		if errors.Is(err, domain.ErrInvalidInput) {
-			msg = strings.TrimPrefix(msg, domain.ErrInvalidInput.Error())
-			msg = strings.TrimPrefix(msg, ": ")
-		}
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:        false,
 			LineCount: n,
-			Warning:   msg,
+			Warning:   repoErrUserMessage(err),
 		})
 		return
 	}
@@ -201,7 +217,7 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 	}
 	abs, err := root.Resolve(path)
 	if err != nil {
-		writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
+		writeJSONError(w, r, op, http.StatusBadRequest, repoErrUserMessage(err))
 		return
 	}
 	t0 := time.Now()
