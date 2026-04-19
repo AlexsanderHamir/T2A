@@ -23,6 +23,13 @@ const LABELS: Record<TaskEventType, string> = {
   approval_granted: "Approval granted",
   task_completed: "Task completed",
   task_failed: "Task failed",
+  cycle_started: "Execution cycle started",
+  cycle_completed: "Execution cycle completed",
+  cycle_failed: "Execution cycle failed",
+  phase_started: "Phase started",
+  phase_completed: "Phase completed",
+  phase_failed: "Phase failed",
+  phase_skipped: "Phase skipped",
   sync_ping: "Live sync check (legacy dev ping)",
 };
 

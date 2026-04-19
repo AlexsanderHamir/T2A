@@ -114,6 +114,21 @@ export const TASK_EVENT_TYPES = [
   "approval_granted",
   "task_completed",
   "task_failed",
+  // Execution-cycle audit mirrors. The backend writes these in the same
+  // SQL transaction as task_cycles / task_cycle_phases rows so GET
+  // /tasks/{id}/events is a complete witness of cycle activity (see
+  // pkgs/tasks/domain/enums.go and docs/EXECUTION-CYCLES.md). They land
+  // on the timeline as soon as the agent worker dispatches a real task,
+  // so omitting them from this allow-list makes parseTaskApi reject the
+  // entire /events response with "event type must be a known value" and
+  // collapses the Updates section into an error banner.
+  "cycle_started",
+  "cycle_completed",
+  "cycle_failed",
+  "phase_started",
+  "phase_completed",
+  "phase_failed",
+  "phase_skipped",
   "sync_ping",
 ] as const;
 

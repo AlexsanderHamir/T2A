@@ -13,6 +13,7 @@ import {
   parseTaskListResponse,
   parseTaskStatsResponse,
 } from "./parseTaskApi";
+import { TASK_EVENT_TYPES } from "@/types";
 
 const validTask = {
   id: "a1",
@@ -317,6 +318,31 @@ describe("parseTaskEventsResponse", () => {
       has_more_newer: false,
       has_more_older: false,
     });
+  });
+
+  it("accepts every server-declared EventType (regression: cycle/phase mirrors)", () => {
+    // The backend emits cycle_started / cycle_completed / cycle_failed /
+    // phase_started / phase_completed / phase_failed / phase_skipped audit
+    // mirrors as soon as a real agent run dispatches (see
+    // pkgs/tasks/domain/enums.go). When TASK_EVENT_TYPES drifted from the
+    // server enum, parseTaskEventsResponse rejected the entire /events
+    // payload with "event type must be a known value" the moment any of
+    // those rows landed, collapsing the whole Updates section into an
+    // error banner. Walk every declared TaskEventType through the parser
+    // so future server-side additions either get mirrored here or fail
+    // this test loudly instead of breaking the timeline silently in prod.
+    const at = "2026-01-01T12:00:00Z";
+    const events = TASK_EVENT_TYPES.map((type, idx) => ({
+      seq: idx + 1,
+      at,
+      type,
+      by: "agent" as const,
+      data: {},
+    }));
+    const out = parseTaskEventsResponse({ task_id: "tid", events });
+    expect(out.events.map((e) => e.type)).toEqual(
+      TASK_EVENT_TYPES as readonly string[],
+    );
   });
 
   it("parses keyset-paged envelope", () => {
