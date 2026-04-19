@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { taskQueryKeys } from "../task-query";
 import { useTaskDetailChecklist } from "./useTaskDetailChecklist";
 
 const { mockAdd, mockPatch, mockDelete } = vi.hoisted(() => ({
@@ -156,6 +157,183 @@ describe("useTaskDetailChecklist", () => {
     expect(inv).toHaveBeenCalled();
     await waitFor(() => {
       expect(result.current.checklistModalOpen).toBe(false);
+    });
+  });
+
+  describe("addChecklistMutation race", () => {
+    it("drops the form-clear + modal-close branch when the user dismissed and reopened mid-flight", async () => {
+      // Race scenario: user types criterion A, submits, then (now that
+      // the add ChecklistCriterionModal is dismissibleWhileBusy)
+      // closes the modal mid-flight, reopens, types a different
+      // criterion B. A's late onSuccess MUST NOT clear B's text or
+      // close B's freshly-opened modal.
+      const qc = newQueryClient();
+      const inv = vi.spyOn(qc, "invalidateQueries");
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      let resolveA: ((value: unknown) => void) | undefined;
+      mockAdd.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveA = resolve;
+          }),
+      );
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openChecklistModal();
+        result.current.setNewChecklistText("Criterion A");
+      });
+      await act(async () => {
+        result.current.submitNewChecklistCriterion(ev);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(result.current.addChecklistMutation.isPending).toBe(true);
+      });
+
+      act(() => {
+        result.current.closeChecklistModal();
+        result.current.openChecklistModal();
+        result.current.setNewChecklistText("Criterion B");
+      });
+      expect(result.current.checklistModalOpen).toBe(true);
+      expect(result.current.newChecklistText).toBe("Criterion B");
+
+      await act(async () => {
+        resolveA?.({
+          id: ITEM_ID,
+          task_id: TASK_A,
+          text: "Criterion A",
+          done: false,
+        });
+        await Promise.resolve();
+      });
+
+      // Server-truth invalidations DID fire — the new criterion is real.
+      await waitFor(() => {
+        const keys = inv.mock.calls.map((call) => call[0]?.queryKey);
+        expect(keys).toEqual(
+          expect.arrayContaining([
+            taskQueryKeys.checklist(TASK_A),
+            taskQueryKeys.detail(TASK_A),
+          ]),
+        );
+      });
+      // But the form-clear + modal-close branch was guard-dropped, so
+      // Criterion B's freshly-typed text is intact.
+      expect(result.current.checklistModalOpen).toBe(true);
+      expect(result.current.newChecklistText).toBe("Criterion B");
+    });
+
+    it("happy path: in-flight resolution closes the add modal and clears the text", async () => {
+      const qc = newQueryClient();
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openChecklistModal();
+        result.current.setNewChecklistText("Sole");
+      });
+
+      await act(async () => {
+        result.current.submitNewChecklistCriterion(ev);
+      });
+
+      await waitFor(() => {
+        expect(result.current.checklistModalOpen).toBe(false);
+      });
+      expect(result.current.newChecklistText).toBe("");
+    });
+  });
+
+  describe("updateChecklistTextMutation race", () => {
+    it("drops closeEditCriterionModal() when the user reopened the edit modal on a different item mid-flight", async () => {
+      const otherItemId = "44444444-4444-4444-8444-444444444444";
+      const qc = newQueryClient();
+      const inv = vi.spyOn(qc, "invalidateQueries");
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      let resolveA: ((value: unknown) => void) | undefined;
+      mockPatch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveA = resolve;
+          }),
+      );
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openEditCriterionModal(ITEM_ID, "old A");
+        result.current.setEditChecklistText("new A");
+      });
+      await act(async () => {
+        result.current.submitEditChecklistCriterion(ev);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(result.current.updateChecklistTextMutation.isPending).toBe(true);
+      });
+
+      act(() => {
+        result.current.openEditCriterionModal(otherItemId, "old B");
+      });
+      expect(result.current.editingChecklistItemId).toBe(otherItemId);
+      expect(result.current.editChecklistText).toBe("old B");
+
+      await act(async () => {
+        resolveA?.({
+          id: ITEM_ID,
+          task_id: TASK_A,
+          text: "new A",
+          done: false,
+        });
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        const keys = inv.mock.calls.map((call) => call[0]?.queryKey);
+        expect(keys).toEqual(
+          expect.arrayContaining([
+            taskQueryKeys.checklist(TASK_A),
+            taskQueryKeys.detail(TASK_A),
+          ]),
+        );
+      });
+      expect(result.current.editCriterionModalOpen).toBe(true);
+      expect(result.current.editingChecklistItemId).toBe(otherItemId);
+      expect(result.current.editChecklistText).toBe("old B");
+    });
+
+    it("happy path: in-flight resolution closes the edit modal", async () => {
+      const qc = newQueryClient();
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openEditCriterionModal(ITEM_ID, "old");
+        result.current.setEditChecklistText("new");
+      });
+      await act(async () => {
+        result.current.submitEditChecklistCriterion(ev);
+      });
+
+      await waitFor(() => {
+        expect(result.current.editCriterionModalOpen).toBe(false);
+      });
+      expect(result.current.editingChecklistItemId).toBeNull();
     });
   });
 

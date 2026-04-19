@@ -13,6 +13,18 @@ type Props = {
   /** When opened above another dialog (e.g. new-task modal). */
   modalStack?: "default" | "nested";
   lockBodyScroll?: boolean;
+  /**
+   * Allow Escape / backdrop click to dismiss the modal even while the
+   * underlying mutation is `pending`. Caller is responsible for
+   * ensuring the mutation's settle handler is race-hardened against a
+   * stale resolution after dismiss (see
+   * `.agent/frontend-improvement-agent.log` Session 30 for the
+   * `useTaskDetailChecklist` add/edit flows). Default `false`
+   * preserves the legacy "busy locks close" contract for the
+   * `TaskComposeFields` caller, where the modal manages local state
+   * only and `pending` is permanently false anyway.
+   */
+  dismissibleWhileBusy?: boolean;
 };
 
 export function ChecklistCriterionModal({
@@ -25,6 +37,7 @@ export function ChecklistCriterionModal({
   onSubmit,
   modalStack = "default",
   lockBodyScroll = true,
+  dismissibleWhileBusy = false,
 }: Props) {
   const disabled = pending || saving;
   const titleId =
@@ -43,6 +56,7 @@ export function ChecklistCriterionModal({
       busyLabel={busyLabel}
       stack={modalStack}
       lockBodyScroll={lockBodyScroll}
+      dismissibleWhileBusy={dismissibleWhileBusy}
     >
       <section className="panel modal-sheet task-checklist-criterion-modal-sheet">
         <h2 id={titleId}>

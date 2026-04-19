@@ -184,6 +184,16 @@ export function TaskDetailChecklistSection({
           text={newCriterionText}
           onTextChange={onNewCriterionTextChange}
           onSubmit={onSubmitNewCriterion}
+          // Safe because `useTaskDetailChecklist.addChecklistMutation`
+          // is race-hardened: `onSuccess` only fires the form-clear +
+          // modal-close branch when its captured `submissionToken`
+          // still matches `addSubmissionTokenRef.current`. Server-truth
+          // invalidations (`taskQueryKeys.checklist(taskId)`,
+          // `taskQueryKeys.detail(taskId)`) still fire so the new
+          // criterion appears in the list even when the modal is
+          // already gone. See `.agent/frontend-improvement-agent.log`
+          // Session 30.
+          dismissibleWhileBusy
         />
       ) : null}
       {editModalOpen && !checklistInherit && editingItemId ? (
@@ -195,6 +205,15 @@ export function TaskDetailChecklistSection({
           text={editCriterionText}
           onTextChange={onEditCriterionTextChange}
           onSubmit={onSubmitEditCriterion}
+          // Safe because `useTaskDetailChecklist.updateChecklistTextMutation`
+          // is race-hardened: `onSuccess` only fires
+          // `closeEditCriterionModal()` when its captured
+          // `variables.itemId` still matches `editingChecklistItemId`.
+          // Server-truth invalidations still fire so the persisted
+          // text appears in the list even when the modal is already
+          // gone. See `.agent/frontend-improvement-agent.log`
+          // Session 30.
+          dismissibleWhileBusy
         />
       ) : null}
     </div>
