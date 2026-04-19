@@ -325,10 +325,22 @@
  * full hierarchy step below the primary CTA (Create). On the task
  * detail page the same buttons are the page's primary affordance, so
  * we override scoped to .task-create-modal-sheet only.
+ *
+ * `min-width` is what makes the pair read as symmetric: the natural
+ * widths differ ("New criterion" = 13 chars, "New subtask" = 11
+ * chars) which produced visibly mismatched buttons stacked across
+ * the two adjacent section heads. Snapping both to the longer
+ * label's width (~7.5rem covers it at the current var(--text-xs))
+ * keeps the visual rhythm without hard-coding a pixel value that
+ * would drift if the labels are translated. The text inside is still
+ * left-padded by the existing 0.7rem horizontal padding, so the
+ * label hugs the start edge instead of centering inside an
+ * over-wide button.
  */
 .task-create-modal-sheet button.task-detail-add-checklist-btn,
 .task-create-modal-sheet button.task-detail-add-subtask-btn {
   min-height: 2rem;
+  min-width: 7.5rem;
   padding: 0.3rem 0.7rem;
   font-size: var(--text-xs);
   font-weight: 500;
