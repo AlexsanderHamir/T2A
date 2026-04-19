@@ -99,6 +99,29 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			result.Summary = "cancelled by operator"
 		}
 	}
+	// On a successful run, mark the task's checklist criteria as
+	// done before closing the phase so the subsequent
+	// transitionTask(StatusDone) passes ValidateCanMarkDoneInTx
+	// (which requires a completion row for every inherited item).
+	// Without this the task would be silently stuck in `running` for
+	// any task that has done-criteria, even though the runner
+	// succeeded — see process.go::transitionTask, which only logs a
+	// warning and returns false on the validation reject. If the
+	// completion writes themselves fail we degrade the whole run to
+	// failed so the cycle / task end up consistent rather than half
+	// transitioned.
+	if runErr == nil && !operatorCancelled {
+		if err := w.completeChecklistOnSuccess(parentCtx, task.ID); err != nil {
+			slog.Warn("agent worker checklist completion failed",
+				"cmd", workerLogCmd,
+				"operation", "agent.worker.Worker.processOne.checklist_err",
+				"task_id", task.ID, "err", err)
+			phaseStatus = domain.PhaseStatusFailed
+			cycleStatus = domain.CycleStatusFailed
+			taskStatus = domain.StatusFailed
+			reason = checklistCompletionFailedReason
+		}
+	}
 	if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
 		// CompletePhase failed (phase row indeterminate). The cycle
 		// row is still ours to close — without this terminate the
@@ -354,6 +377,34 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	w.publish(taskID, state.cycleID)
 	w.recordRun(string(status), w.runner.Name(), state.startedAt)
 	return true
+}
+
+// completeChecklistOnSuccess marks every still-open checklist item on
+// taskID as done. The agent is the only actor permitted to toggle
+// completion (store/internal/checklist.SetDone), and a successful run
+// is the implicit signal that the criteria the user attached to the
+// task have been satisfied. Items already done are skipped so the call
+// is idempotent across re-runs (a future retry path can call this
+// without producing duplicate audit events).
+//
+// Tasks with no checklist items short-circuit to nil — the e2e happy
+// path tests in worker_test.go exercise this case and must not regress.
+func (w *Worker) completeChecklistOnSuccess(ctx context.Context, taskID string) error {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.completeChecklistOnSuccess",
+		"task_id", taskID)
+	items, err := w.store.ListChecklistForSubject(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	for _, it := range items {
+		if it.Done {
+			continue
+		}
+		if err := w.store.SetChecklistItemDone(ctx, taskID, it.ID, true, domain.ActorAgent); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // classifyRunOutcome maps runner.Run's (Result, error) tuple to the

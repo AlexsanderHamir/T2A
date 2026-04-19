@@ -60,6 +60,15 @@ const ShutdownReason = "shutdown"
 // audit trail makes the rare write-failure mode greppable.
 const completePhaseFailedReason = "complete_phase_failed"
 
+// checklistCompletionFailedReason is the cycle termination reason
+// written when the runner reported success but the worker could not
+// mark the task's checklist criteria as done (a precondition for the
+// final transition to StatusDone — see ValidateCanMarkDoneInTx). The
+// run is degraded to failed so the task does not sit half-transitioned
+// in `running`; the reason is distinct from runner_* so post-mortems
+// can tell "runner failed" from "runner ok but bookkeeping broke".
+const checklistCompletionFailedReason = "checklist_completion_failed"
+
 // CycleChangeNotifier is the optional SSE seam. cmd/taskapi wires an
 // adapter that calls hub.Publish(handler.TaskCycleChanged{...}); tests
 // pass nil and every PublishCycleChange call becomes a no-op.
