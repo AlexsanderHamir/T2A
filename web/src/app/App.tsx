@@ -72,6 +72,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               subtaskCount={app.deleteTarget.subtaskCount}
               saving={app.saving}
               deletePending={app.deletePending}
+              error={app.deleteError}
               onCancel={app.cancelDelete}
               onConfirm={() => void app.confirmDelete()}
             />
@@ -89,6 +90,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               canInheritChecklist={Boolean(app.editing.parent_id)}
               saving={app.saving}
               patchPending={app.patchPending}
+              error={app.patchError}
               onTitleChange={app.setEditTitle}
               onPromptChange={app.setEditPrompt}
               onPriorityChange={app.setEditPriority}

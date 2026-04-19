@@ -138,4 +138,63 @@ describe("DeleteConfirmDialog", () => {
     );
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
+
+  describe("error prop (session #34: surface deleteError inline)", () => {
+    it("does not render an alert region when error is null", () => {
+      // No `error` prop = no empty `role="alert"` callout in the DOM.
+      // Pins the "no live-region churn at idle" contract.
+      render(
+        <DeleteConfirmDialog
+          taskTitle="X"
+          saving={false}
+          deletePending={false}
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("renders the underlying delete error message when error is set", () => {
+      // Pins the user-visible feedback path: when the global ErrorBanner
+      // is hidden behind the modal backdrop, the user must still see
+      // why the DELETE failed (#33-style gap closed for the delete flow).
+      render(
+        <DeleteConfirmDialog
+          taskTitle="X"
+          saving={false}
+          deletePending={false}
+          error="task busy: cannot delete"
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(/task busy: cannot delete/i);
+    });
+
+    it("keeps action buttons enabled when an error is showing so the user can retry", () => {
+      // Same retry-affordance contract as the create / evaluate / subtask
+      // / checklist callouts (#31-#33): the user must be able to click
+      // Delete again immediately. `saving` is false here because the
+      // mutation has settled into an error (react-query flips
+      // `isPending` back to `false` on settle).
+      render(
+        <DeleteConfirmDialog
+          taskTitle="X"
+          saving={false}
+          deletePending={false}
+          error="boom"
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+      expect(
+        screen.getByRole("button", { name: /^cancel$/i }),
+      ).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /^delete$/i }),
+      ).not.toBeDisabled();
+    });
+  });
 });

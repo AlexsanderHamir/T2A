@@ -14,6 +14,20 @@ type Props = {
    * source-compatible (no warning line rendered).
    */
   subtaskCount?: number;
+  /**
+   * Inline error from the most recent delete attempt (already coerced to a
+   * user-presentable string by `useTaskDeleteFlow.deleteError`). Rendered as
+   * a `.err role="alert"` callout above the action buttons when non-null.
+   *
+   * Why surface this in the dialog and not just rely on the global
+   * `<ErrorBanner />`: when the dialog is open the modal backdrop covers the
+   * banner above `<main>`, so a failed DELETE silently re-enables the button
+   * with no feedback. Same gap as the create / evaluate / subtask /
+   * checklist surfaces hardened in sessions #31-#33; see the corresponding
+   * notes in `.agent/frontend-improvement-agent.log`. The action buttons
+   * stay enabled so the user can immediately retry.
+   */
+  error?: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -23,6 +37,7 @@ export function DeleteConfirmDialog({
   saving,
   deletePending,
   subtaskCount = 0,
+  error = null,
   onCancel,
   onConfirm,
 }: Props) {
@@ -86,6 +101,11 @@ export function DeleteConfirmDialog({
         <p className="confirm-dialog__footnote">
           This action cannot be undone.
         </p>
+        {error ? (
+          <div className="err confirm-dialog__err" role="alert">
+            <p>{error}</p>
+          </div>
+        ) : null}
         <div className="row stack-row-actions">
           <button
             ref={cancelRef}

@@ -160,6 +160,50 @@ describe("useTaskPatchFlow", () => {
     });
   });
 
+  it("resetError clears a settled error without firing a new request (session #34)", async () => {
+    // Pins the lifecycle wiring useTasksApp uses to wipe a stale
+    // patchError when `editing` flips to null. Without this, reopening
+    // any edit modal would render an old `.err` callout before the
+    // user had interacted. `resetError` must NOT call patchTask again.
+    mockedPatch.mockRejectedValueOnce(new Error("boom"));
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask(baseInput);
+    });
+    await waitFor(() => {
+      expect(result.current.patchError).toBe("boom");
+    });
+    expect(mockedPatch).toHaveBeenCalledTimes(1);
+    act(() => {
+      result.current.resetError();
+    });
+    await waitFor(() => {
+      expect(result.current.patchError).toBeNull();
+    });
+    expect(mockedPatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resetError is a no-op while idle (no extra reset churn)", () => {
+    // Cheap idle-guard pin: useTasksApp's effect runs on every render
+    // where `editing` is null (the steady-state for most of the
+    // session); resetError must skip the underlying mutation.reset()
+    // call when already idle so we don't churn the react-query state
+    // tree on every render.
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    expect(result.current.patchError).toBeNull();
+    act(() => {
+      result.current.resetError();
+    });
+    expect(result.current.patchError).toBeNull();
+    expect(mockedPatch).not.toHaveBeenCalled();
+  });
+
   it("calls onPatched with the id from the most recent patch", async () => {
     mockedPatch.mockResolvedValue(undefined as unknown as never);
     const { Wrapper } = makeWrapper();

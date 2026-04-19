@@ -17,6 +17,19 @@ type Props = {
   canInheritChecklist: boolean;
   saving: boolean;
   patchPending: boolean;
+  /**
+   * Inline error from the most recent PATCH attempt (already coerced to a
+   * user-presentable string by `useTaskPatchFlow.patchError`). Rendered as
+   * a `.err role="alert"` callout above the form actions when non-null.
+   *
+   * Same backdrop-hides-banner gap as the create / evaluate / subtask /
+   * checklist / delete surfaces hardened in sessions #31-#34: while the
+   * edit modal is open, the global `<ErrorBanner />` above `<main>` is
+   * covered by the modal backdrop so a failed PATCH silently re-enables
+   * the Save button with no feedback. The action buttons stay enabled so
+   * the user can immediately retry.
+   */
+  error?: string | null;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
@@ -38,6 +51,7 @@ export function TaskEditForm({
   canInheritChecklist,
   saving,
   patchPending,
+  error = null,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
@@ -153,6 +167,11 @@ export function TaskEditForm({
               placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
             />
           </div>
+          {error ? (
+            <div className="err task-edit-form-err" role="alert">
+              <p>{error}</p>
+            </div>
+          ) : null}
           <div className="row stack-row-actions">
             <button type="submit" disabled={saving}>
               Save

@@ -55,4 +55,36 @@ describe("TaskEditForm", () => {
     renderForm({ patchPending: true, saving: true });
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
+
+  describe("error prop (session #34: surface patchError inline)", () => {
+    it("does not render an alert region when error is null", () => {
+      // No `error` prop = no empty `role="alert"` callout in the DOM.
+      // Pins the "no live-region churn at idle" contract.
+      renderForm();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("renders the underlying patch error message when error is set", () => {
+      // Pins the user-visible feedback path: when the global ErrorBanner
+      // is hidden behind the modal backdrop, the user must still see
+      // why the PATCH failed (#33-style gap closed for the edit flow).
+      renderForm({ error: "title cannot be empty" });
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(/title cannot be empty/i);
+    });
+
+    it("keeps action buttons enabled when an error is showing so the user can retry", () => {
+      // Same retry-affordance contract as the create / evaluate / subtask
+      // / checklist / delete callouts (#31-#34): the user must be able
+      // to click Save again immediately. `saving` is false here because
+      // the mutation has settled into an error.
+      renderForm({ error: "boom" });
+      expect(
+        screen.getByRole("button", { name: /^save$/i }),
+      ).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /^cancel$/i }),
+      ).not.toBeDisabled();
+    });
+  });
 });

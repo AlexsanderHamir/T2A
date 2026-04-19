@@ -21,6 +21,15 @@ export type UseTaskPatchFlowResult = {
   patchPending: boolean;
   /** User-presentable error from the most recent patch attempt, or null. */
   patchError: string | null;
+  /**
+   * Clear the most recent settled state (error or success) without firing a
+   * new request. Lets `useTasksApp` wipe a stale `patchError` when the edit
+   * form closes (so a failed-then-cancelled save doesn't render its old
+   * error callout the next time the user opens any edit dialog — mirrors
+   * the `createMutation.reset()` lifecycle wired in session #33 and the
+   * `useTaskDeleteFlow.resetError` companion shipped in session #34).
+   */
+  resetError: () => void;
 };
 
 /**
@@ -67,9 +76,15 @@ export function useTaskPatchFlow(opts: {
     [mutation],
   );
 
+  const resetError = useCallback(() => {
+    if (mutation.isIdle) return;
+    mutation.reset();
+  }, [mutation]);
+
   return {
     patchTask,
     patchPending: mutation.isPending,
     patchError: mutation.isError ? errorMessage(mutation.error) : null,
+    resetError,
   };
 }

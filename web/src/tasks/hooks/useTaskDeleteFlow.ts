@@ -45,6 +45,14 @@ export type UseTaskDeleteFlowResult = {
   deleteSuccess: boolean;
   /** The variables of the most recent settled delete (used by the detail page to navigate away). */
   deleteVariables: DeleteVariables | undefined;
+  /**
+   * Clear the most recent settled state (error or success) without firing a
+   * new request. Lets `useTasksApp` wipe a stale `deleteError` when the
+   * confirm dialog closes (so a failed-then-cancelled delete doesn't render
+   * its old error callout the next time the user reopens any delete dialog —
+   * mirrors the `createMutation.reset()` lifecycle wired in session #33).
+   */
+  resetError: () => void;
 };
 
 /**
@@ -110,6 +118,11 @@ export function useTaskDeleteFlow(opts: {
     });
   }, [deleteTarget, mutation]);
 
+  const resetError = useCallback(() => {
+    if (mutation.isIdle) return;
+    mutation.reset();
+  }, [mutation]);
+
   return {
     deleteTarget,
     requestDelete,
@@ -119,5 +132,6 @@ export function useTaskDeleteFlow(opts: {
     deleteError: mutation.isError ? errorMessage(mutation.error) : null,
     deleteSuccess: mutation.isSuccess,
     deleteVariables: mutation.variables,
+    resetError,
   };
 }

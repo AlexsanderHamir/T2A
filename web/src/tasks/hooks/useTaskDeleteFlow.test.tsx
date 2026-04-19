@@ -196,6 +196,54 @@ describe("useTaskDeleteFlow", () => {
     expect(onDeleted).not.toHaveBeenCalled();
   });
 
+  it("resetError clears a settled error without firing a new request (session #34)", async () => {
+    // Pins the lifecycle wiring useTasksApp uses to wipe a stale
+    // deleteError when `deleteTarget` flips to null. Without this,
+    // reopening any delete confirm dialog would render an old `.err`
+    // callout before the user had interacted. resetError must NOT
+    // call deleteTask again.
+    mockedDelete.mockRejectedValueOnce(new Error("boom"));
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "t1", title: "X" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+    await waitFor(() => {
+      expect(result.current.deleteError).toBe("boom");
+    });
+    expect(mockedDelete).toHaveBeenCalledTimes(1);
+    act(() => {
+      result.current.resetError();
+    });
+    await waitFor(() => {
+      expect(result.current.deleteError).toBeNull();
+    });
+    expect(mockedDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("resetError is a no-op while idle (no extra reset churn)", () => {
+    // Cheap idle-guard pin: useTasksApp's effect runs on every render
+    // where `deleteTarget` is null (the steady-state for most of the
+    // session); resetError must skip the underlying mutation.reset()
+    // call when already idle so we don't churn the react-query state
+    // tree on every render.
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    expect(result.current.deleteError).toBeNull();
+    act(() => {
+      result.current.resetError();
+    });
+    expect(result.current.deleteError).toBeNull();
+    expect(mockedDelete).not.toHaveBeenCalled();
+  });
+
   it("omits parent_id from the API variables when the target has no parent", async () => {
     mockedDelete.mockResolvedValueOnce(undefined as unknown as void);
     const { Wrapper } = makeWrapper();

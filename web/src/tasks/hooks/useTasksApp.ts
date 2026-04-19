@@ -110,6 +110,7 @@ export function useTasksApp() {
     deleteError,
     deleteSuccess,
     deleteVariables,
+    resetError: resetDeleteError,
   } = useTaskDeleteFlow({
     onDeleted: (deletedId) => {
       setEditing((prev) => (prev?.id === deletedId ? null : prev));
@@ -417,11 +418,24 @@ export function useTasksApp() {
     patchTask: runPatch,
     patchPending,
     patchError,
+    resetError: resetPatchError,
   } = useTaskPatchFlow({
     onPatched: (patchedId) => {
       setEditing((prev) => (prev?.id === patchedId ? null : prev));
     },
   });
+
+  // Wipe stale errors when their hosting modals close so the next open
+  // doesn't render an old `.err role="alert"` callout before the user has
+  // interacted. Mirrors the `createMutation.reset()` / `evaluateDraftMutation.reset()`
+  // lifecycle wired in session #33; pinned by the per-component error tests.
+  useEffect(() => {
+    if (!editing) resetPatchError();
+  }, [editing, resetPatchError]);
+
+  useEffect(() => {
+    if (!deleteTarget) resetDeleteError();
+  }, [deleteTarget, resetDeleteError]);
 
   const saveDraftMutation = useMutation({
     /**
@@ -1009,6 +1023,30 @@ export function useTasksApp() {
      * needs to know which action just failed.
      */
     evaluateError: evaluateDraftMutation.error,
+    /**
+     * String error from the most recent in-modal `useTaskPatchFlow`
+     * attempt — already coerced via `errorMessage(...)` inside the
+     * flow hook. Lifted into its own field so `TaskEditForm` can
+     * render an inline `.err` callout, since the global `app.error`
+     * banner sits behind the modal backdrop while the edit form is
+     * open. Cleared automatically when `editing` flips to null via
+     * `resetPatchError()`. Same shape as `deleteError` below; same
+     * gap-and-fix as `createError` / `evaluateError` above (#33);
+     * pinned by `TaskEditForm.test.tsx` and `App.test.tsx`.
+     */
+    patchError,
+    /**
+     * String error from the most recent in-modal `useTaskDeleteFlow`
+     * attempt — already coerced via `errorMessage(...)` inside the
+     * flow hook. Lifted so `DeleteConfirmDialog` can render an inline
+     * `.err` callout, since the global `app.error` banner sits behind
+     * the modal backdrop while the confirm dialog is open. Cleared
+     * automatically when `deleteTarget` flips to null via
+     * `resetDeleteError()`. Same shape as `patchError`; same
+     * gap-and-fix as `createError` / `evaluateError` above (#33);
+     * pinned by `DeleteConfirmDialog.test.tsx` and `App.test.tsx`.
+     */
+    deleteError,
     sseLive,
     taskStats: taskStatsQuery.data,
     /**
