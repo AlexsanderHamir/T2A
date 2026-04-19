@@ -1,0 +1,559 @@
+---
+description: >-
+  Code commenting standards for Go and TypeScript/React. Comments explain why,
+  not what. Required for complex logic, edge cases, non-obvious decisions, and
+  public APIs. Forbidden on self-explanatory code. Enforced across all agents
+  and manual review.
+globs:
+  - "**/*.go"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.css"
+  - "**/*.sql"
+alwaysApply: true
+---
+
+# Code Commenting Standards
+
+Comments are not decoration. They are not a sign of thoroughness. They are a last resort — used only when the code itself cannot communicate the full truth. A comment that describes what the code does is a failure. A comment that explains why the code does it that way, or warns about a non-obvious consequence, is invaluable.
+
+The standard is simple: if a competent engineer reading the code would immediately understand it, the comment is noise. If they might not, the comment is necessary.
+
+---
+
+## PART 1 — THE CORE RULE
+
+### Write comments for:
+- Why, never what
+- Non-obvious decisions and their reasoning
+- Edge cases and the specific inputs that triggered them
+- Invariants the code relies on but cannot enforce alone
+- Known limitations and intentional trade-offs
+- Warnings that prevent future engineers from "fixing" correct code
+
+### Never write comments for:
+- Anything the code already says clearly
+- Variable or function names that are already descriptive
+- Standard patterns any competent engineer recognizes
+- What a function does when the signature and name make it obvious
+
+---
+
+## PART 2 — THE TEST
+
+Before writing any comment, apply this test:
+
+"Would a competent engineer on their first day with this codebase, reading only this code, understand exactly what is happening and why?"
+
+- If yes: no comment needed
+- If yes, but only after 10 seconds of thought: better name or simpler code, not a comment
+- If no, because the reasoning lives outside the code: comment required
+- If no, because this protects against a specific non-obvious failure: comment required
+
+---
+
+## PART 3 — GO COMMENTING STANDARDS
+
+### 3.1 Package Comments
+
+Every package that is part of a public or internal API gets a package comment.
+It appears directly above the package declaration with no blank line between them.
+
+```go
+// Package store implements the persistence layer for the tasks domain.
+// All methods translate driver-specific errors (GORM, pq) to domain sentinel
+// errors before returning. Callers should never inspect raw driver errors.
+package store
+```
+
+```go
+// Package domain defines the core task types, state machine transitions,
+// and sentinel errors for the tasks bounded context. This package has no
+// dependency on any persistence or transport layer.
+package domain
+```
+
+Single-file utility packages with obvious purpose do not need a package comment.
+
+### 3.2 Exported Function and Type Comments
+
+Every exported function, type, method, and constant must have a godoc comment.
+The comment starts with the name of the thing being documented.
+
+```go
+// ErrNotFound is returned by store methods when a requested resource does
+// not exist. Handlers should map this to HTTP 404.
+var ErrNotFound = errors.New("not found")
+
+// TaskStore defines the persistence contract for the task domain.
+// Implementations must translate all driver errors to domain errors before
+// returning — callers are not permitted to inspect driver-specific types.
+type TaskStore interface {
+    GetByID(ctx context.Context, id uuid.UUID) (*Task, error)
+    Create(ctx context.Context, task *Task) error
+}
+
+// ValidateTransition reports whether moving a task from src to dst status
+// is permitted by the state machine. It returns an error describing the
+// illegal transition if the move is not allowed.
+func ValidateTransition(src, dst Status) error { ... }
+```
+
+Do not write godoc comments that merely restate the name:
+
+```go
+// BAD — says nothing the name does not already say
+// GetByID gets a task by its ID.
+func GetByID(...) {}
+
+// GOOD — adds the non-obvious contract
+// GetByID returns the task with the given ID. Returns ErrNotFound if no
+// task exists. The returned task is a shallow copy — mutations do not
+// affect the store.
+func GetByID(...) {}
+```
+
+### 3.3 Unexported Functions
+
+Unexported functions do not require comments unless the logic is non-obvious.
+When a comment is needed, it explains why, not what.
+
+```go
+// BAD
+// parseFilters parses the query filters from the request.
+func parseFilters(r *http.Request) (Filters, error) { ... }
+
+// GOOD — only when there is something non-obvious to say
+// parseFilters treats a missing status param as "all statuses" rather
+// than returning an error. This matches the API contract in docs/API-HTTP.md
+// section 3.2 where omitting a filter means no restriction.
+func parseFilters(r *http.Request) (Filters, error) { ... }
+```
+
+### 3.4 Inline Comments
+
+Inline comments are used only for the following situations.
+
+Non-obvious algorithmic decisions:
+
+```go
+// Use a read lock here rather than a full lock because subscribers only
+// need consistent iteration — writes to the map happen on a separate path
+// under the write lock in Subscribe() and Unsubscribe().
+s.mu.RLock()
+defer s.mu.RUnlock()
+```
+
+Edge case protection with a specific reason:
+
+```go
+// Postgres returns a zero time for nullable timestamps rather than sql.NullTime
+// in this driver version. Treat zero as absent to avoid surfacing
+// 0001-01-01T00:00:00Z to clients.
+if completedAt.IsZero() {
+    task.CompletedAt = nil
+}
+```
+
+Intentional empty blocks:
+
+```go
+select {
+case <-ctx.Done():
+    // Intentional: context cancellation is the normal shutdown path.
+    // No cleanup needed here — deferred calls handle resource release.
+case msg := <-s.ch:
+    s.process(msg)
+}
+```
+
+Non-obvious error ignoring:
+
+```go
+// Closing an already-closed channel panics. The sync.Once above guarantees
+// this runs at most once, but the recover below catches any race that
+// escapes the Once boundary during shutdown.
+_ = recover()
+```
+
+Subtle correctness dependencies:
+
+```go
+// Order matters: notify AFTER the transaction commits. Notifying before
+// commit means subscribers may query and find the old state.
+if err := tx.Commit(); err != nil {
+    return fmt.Errorf("commit: %w", err)
+}
+s.hub.Notify(TaskChanged{ID: task.ID})
+```
+
+### 3.5 TODO and FIXME
+
+Use structured markers. Never leave a bare TODO without context.
+
+```go
+// TODO(username): Replace with a proper work-stealing queue once task
+// volume exceeds ~10k/day. Current approach serialises all processing
+// through a single goroutine which will become a bottleneck. Tracked in
+// issue #142.
+
+// FIXME(username): This silently drops events when the channel is full.
+// Under load, subscribers may miss updates. Needs backpressure design.
+// See docs/DESIGN.md for the intended approach.
+```
+
+Format: TODO(owner): what needs doing and why it is not done now.
+Every TODO must link to a tracking issue or have a clear resolution condition.
+Never use TODO as a permanent note.
+
+### 3.6 What Never Gets a Comment in Go
+
+```go
+ctx := r.Context()
+
+if err != nil {
+    return fmt.Errorf("create task: %w", err)
+}
+
+defer rows.Close()
+
+var tasks []domain.Task
+
+logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+```
+
+---
+
+## PART 4 — TYPESCRIPT/REACT COMMENTING STANDARDS
+
+### 4.1 Module-Level Comments
+
+Add a module comment only when the file purpose is not fully captured by its name.
+Most files do not need one.
+
+```ts
+/**
+ * SSE invalidation bridge between the server-sent event stream and the
+ * React Query cache. Subscribes to task change events and invalidates
+ * the relevant query keys so components refetch automatically.
+ *
+ * Important: invalidation is intentionally coarse-grained (invalidates the
+ * full task list) to avoid stale reads from partial cache updates. This
+ * trades a small amount of over-fetching for correctness.
+ */
+```
+
+### 4.2 Exported Functions and Hooks
+
+Public functions and hooks get a JSDoc comment when the name alone does not
+convey the full contract.
+
+```ts
+/**
+ * Parses a raw API response into a typed Task. Throws if required fields
+ * are absent or of the wrong type — this is intentional. A malformed
+ * response indicates a contract violation between client and server that
+ * should surface immediately rather than propagate as undefined behaviour.
+ */
+export function parseTask(raw: unknown): Task { ... }
+
+/**
+ * Subscribes to the task SSE stream and invalidates React Query cache
+ * on change events. Safe to mount multiple times — deduplication is
+ * handled by the SSE hub on the server side.
+ *
+ * Cleans up the EventSource connection on unmount. Do not call .close()
+ * manually on the returned source — the hook owns its lifecycle.
+ */
+export function useTaskSSE(): void { ... }
+```
+
+### 4.3 Inline Comments
+
+Same principle as Go: explain why, not what.
+
+Non-obvious React behaviour:
+
+```tsx
+// useLayoutEffect rather than useEffect because we need the DOM measurement
+// to happen synchronously before the browser paints. useEffect would cause
+// a one-frame flicker as the tooltip repositions after initial render.
+useLayoutEffect(() => {
+    const rect = ref.current?.getBoundingClientRect();
+    setPosition(calculatePosition(rect, viewport));
+}, [viewport]);
+```
+
+Intentional dependency omissions:
+
+```tsx
+useEffect(() => {
+    subscribe(taskId);
+    return () => unsubscribe(taskId);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+// Intentionally omitting subscribe and unsubscribe — they are stable
+// module-level functions, not closures. Including them would re-run this
+// effect on every render due to a limitation in the lint rule's static analysis.
+}, [taskId]);
+```
+
+Non-obvious state decisions:
+
+```ts
+// Store the previous value in a ref rather than state so that updating it
+// does not trigger a re-render. This value is only needed for comparison
+// on the next render cycle, not for driving the UI.
+const prevTaskId = useRef(taskId);
+```
+
+Subtle ordering or timing:
+
+```ts
+// Cancel the in-flight request before starting the new one. Without this,
+// a slow previous request can resolve after the new one and overwrite
+// the correct data with stale results.
+abortControllerRef.current?.abort();
+abortControllerRef.current = new AbortController();
+```
+
+Edge case protection:
+
+```ts
+// Empty string is a valid task title during optimistic creation before
+// the server assigns a real value. Guard against rendering an empty
+// string as falsy, which would show the fallback title incorrectly.
+const displayTitle = task.title !== undefined ? task.title : 'Untitled';
+```
+
+Non-obvious type decisions:
+
+```ts
+// Cast is safe: the server guarantees status is one of the TaskStatus
+// enum values. parseTask() validates this at the boundary. The cast here
+// avoids re-validating in hot render paths.
+const status = raw.status as TaskStatus;
+```
+
+### 4.4 CSS Comments
+
+Comment only non-obvious rules. Layout tricks, magic numbers, and
+browser-specific workarounds always need a comment.
+
+```css
+.task-card {
+  /* Promotes to its own compositor layer, preventing the shimmer animation
+     on skeleton children from triggering layout in the parent. Without this,
+     animating opacity on a child forces a repaint of the whole card list. */
+  will-change: transform;
+
+  /* 52px = 44px touch target (Apple HIG minimum) + 4px top and bottom
+     padding. Do not reduce below 52px on mobile breakpoints. */
+  min-height: 52px;
+}
+
+.dropdown {
+  /* z-index 200 places this above cards (z: 1) and modals (z: 100) but
+     below the command palette (z: 300). See docs/DESIGN.md z-index scale
+     for the full layer map. */
+  z-index: 200;
+}
+```
+
+Magic numbers always get a comment:
+
+```css
+/* BAD */
+margin-top: 13px;
+
+/* GOOD */
+/* 13px = line-height (20px) - cap-height (7px). Optically aligns the
+   label baseline with the adjacent icon centre. */
+margin-top: 13px;
+```
+
+### 4.5 What Never Gets a Comment in TypeScript
+
+```ts
+const [isOpen, setIsOpen] = useState(false);
+
+if (!task) return null;
+
+const tasks = data?.tasks ?? [];
+
+router.push(`/tasks/${id}`);
+
+export default TaskCard;
+```
+
+---
+
+## PART 5 — SQL COMMENTING STANDARDS
+
+### 5.1 Migration Files
+
+Each migration file gets a header comment explaining what it does and why.
+
+```sql
+-- Migration: 003_add_task_events_index.up.sql
+--
+-- Adds a composite index on (task_id, created_at) for task_events.
+-- Without this index, the event history query for a task with many events
+-- performs a full table scan. At ~10k events/day this became measurable
+-- at p95 after load testing (see issue #89).
+--
+-- The index is partial (WHERE task_id IS NOT NULL) to exclude the small
+-- number of system-level events that have no associated task.
+
+CREATE INDEX CONCURRENTLY idx_task_events_task_id_created_at
+    ON task_events (task_id, created_at DESC)
+    WHERE task_id IS NOT NULL;
+```
+
+### 5.2 Complex Queries
+
+Non-trivial queries in Go store files get a comment explaining the intent,
+especially when joins, CTEs, or window functions are involved.
+
+```go
+// selectLatestPhasePerCycle uses a lateral join rather than a subquery
+// because the planner produces a significantly better plan when the
+// outer query is already filtered by cycle_id. A correlated subquery
+// here caused a sequential scan on task_cycle_phases in testing.
+const q = `
+    SELECT cp.*
+    FROM task_cycles c
+    CROSS JOIN LATERAL (
+        SELECT * FROM task_cycle_phases
+        WHERE cycle_id = c.id
+        ORDER BY seq DESC
+        LIMIT 1
+    ) cp
+    WHERE c.task_id = $1
+`
+```
+
+---
+
+## PART 6 — GOOD VS BAD EXAMPLES
+
+### Error handling
+
+```go
+// BAD — explains what, not why
+// Check if error is not found
+if errors.Is(err, domain.ErrNotFound) {
+    return http.StatusNotFound
+}
+
+// GOOD — no comment needed, code is self-explanatory
+if errors.Is(err, domain.ErrNotFound) {
+    return http.StatusNotFound
+}
+
+// GOOD — comment only when the mapping is non-obvious
+// ErrInvalidInput covers both missing required fields and illegal state
+// transitions. Both surface to the client as 400 with the error detail
+// in the body — the distinction is in the message, not the status code.
+if errors.Is(err, domain.ErrInvalidInput) {
+    respondError(w, http.StatusBadRequest, err.Error())
+    return
+}
+```
+
+### Concurrency
+
+```go
+// BAD — describes the code, not the reason
+// Lock the mutex
+s.mu.Lock()
+defer s.mu.Unlock()
+
+// GOOD — explains the invariant being protected
+// Both the subscriber map and the closed flag must be read atomically.
+// A subscriber added after close() would never receive the close signal
+// and would leak. The write lock here ensures close() and Subscribe()
+// are mutually exclusive.
+s.mu.Lock()
+defer s.mu.Unlock()
+```
+
+### React hook
+
+```tsx
+// BAD — restates the code
+// Reset the form when taskId changes
+useEffect(() => {
+    reset();
+}, [taskId, reset]);
+
+// GOOD — no comment needed, intent is clear from the code
+
+// GOOD — comment only when the behaviour is surprising
+// Reset fires on mount (taskId going from undefined to string) which is
+// intentional — it clears any state left from a previously edited task.
+// This avoids a flash of stale data when navigating between tasks.
+useEffect(() => {
+    reset();
+}, [taskId, reset]);
+```
+
+### A necessary warning
+
+```go
+// WARNING: do not add a cache here without also invalidating on task
+// deletion. A previous attempt (removed in commit a3f9d2) caused deleted
+// tasks to remain visible to users for up to 60 seconds. The performance
+// gain was not worth the correctness risk at current scale.
+func (s *PostgresTaskStore) GetByID(ctx context.Context, id uuid.UUID) (*Task, error) {
+```
+
+---
+
+## PART 7 — COMMENT MAINTENANCE RULES
+
+Comments rot faster than code. A wrong comment is worse than no comment.
+
+- Update comments in the same commit as the code they describe. A PR that
+  changes logic without updating the relevant comment is incomplete.
+- Delete comments when the condition they describe is resolved. A FIXME that
+  no longer applies is misinformation.
+- Never leave commented-out code in a commit. Git is the history.
+- If you cannot update a comment because you do not understand it, surface it
+  in review. Do not leave it and hope.
+
+---
+
+## PART 8 — DO NOT
+
+- Do not write "increment counter" above count++
+- Do not use comments to apologise for bad code — fix the code
+- Do not write section dividers in files short enough to navigate without them
+- Do not comment every struct field unless the name is genuinely ambiguous
+- Do not write comments in a different language than the rest of the codebase
+- Do not disable linter warnings without explaining why the warning is a false positive
+- Do not leave TODO comments without an owner and a resolution condition
+- Do not write commented-out code — delete it, git has the history
+
+---
+
+## PART 9 — QUICK REFERENCE
+
+SITUATION                                        COMMENT?
+Standard CRUD handler                            No
+Error mapping domain to HTTP status              No
+Non-obvious error mapping with edge case         Yes — explain the edge
+Mutex lock in a simple setter                    No
+Mutex protecting multiple fields atomically      Yes — explain what is protected and why
+useEffect with obvious deps                      No
+useEffect with intentionally omitted dep         Yes — explain why plus eslint-disable
+Standard React Query hook                        No
+SSE cleanup with subtle ordering                 Yes — explain the order dependency
+Simple DB query                                  No
+CTE or lateral join chosen for plan reasons      Yes — explain the query plan decision
+Magic number (z-index, pixel offset)             Yes — always explain magic numbers
+Token from the design system                     No
+Migration that adds an index                     Yes — explain why the index is needed
+Exported function with obvious signature         Godoc only if contract is non-trivial
+Exported function with non-obvious contract      Godoc always
+Unexported function with obvious purpose         No
+Unexported function with non-obvious logic       Yes — explain the why
