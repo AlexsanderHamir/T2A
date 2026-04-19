@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 /** Matches `userAttention` return shape from `task-display/taskAttention.ts`. */
 export type TaskDetailAttention = {
   show: boolean;
@@ -10,6 +12,11 @@ type Props = {
   saving: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  /** When set, shows "Run again" to requeue the task for the agent (PATCH status → ready). */
+  onRequeue?: () => void;
+  requeuePending?: boolean;
+  /** Link to Settings → Cursor agent (model / CLI) after a failed run. */
+  failedRunnerHint?: boolean;
 };
 
 export function TaskDetailAttentionBar({
@@ -17,6 +24,9 @@ export function TaskDetailAttentionBar({
   saving,
   onEdit,
   onDelete,
+  onRequeue,
+  requeuePending,
+  failedRunnerHint,
 }: Props) {
   return (
     <>
@@ -40,6 +50,16 @@ export function TaskDetailAttentionBar({
       )}
 
       <div className="task-detail-actions">
+        {onRequeue ? (
+          <button
+            type="button"
+            className="task-detail-btn-requeue"
+            onClick={onRequeue}
+            disabled={saving || requeuePending}
+          >
+            {requeuePending ? "Queueing…" : "Run again"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="task-detail-btn-edit"
@@ -57,6 +77,14 @@ export function TaskDetailAttentionBar({
           Delete
         </button>
       </div>
+
+      {failedRunnerHint ? (
+        <p className="muted task-detail-runner-hint">
+          <Link to="/settings#cursor-agent">Cursor agent settings</Link> — set an
+          optional CLI model (or leave empty for Cursor&apos;s default). Headless
+          runs always use <code>--force</code> so tools auto-approve.
+        </p>
+      ) : null}
     </>
   );
 }

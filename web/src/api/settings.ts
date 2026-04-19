@@ -12,6 +12,8 @@ export type AppSettings = {
   runner: string;
   repo_root: string;
   cursor_bin: string;
+  /** Empty string = Cursor default model (`cursor-agent` omits `--model`). */
+  cursor_model: string;
   max_run_duration_seconds: number;
   updated_at?: string;
 };
@@ -27,6 +29,7 @@ export type AppSettingsPatch = Partial<{
   runner: string;
   repo_root: string;
   cursor_bin: string;
+  cursor_model: string;
   max_run_duration_seconds: number;
 }>;
 
@@ -58,12 +61,14 @@ function assertSettings(raw: unknown): AppSettings {
   const runner = o.runner;
   const repoRoot = o.repo_root;
   const cursorBin = o.cursor_bin;
+  const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
     typeof cursorBin !== "string" ||
+    typeof cursorModel !== "string" ||
     typeof maxDur !== "number"
   ) {
     throw new Error("unexpected settings response shape");
@@ -73,6 +78,7 @@ function assertSettings(raw: unknown): AppSettings {
     runner,
     repo_root: repoRoot,
     cursor_bin: cursorBin,
+    cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
   };
   if (typeof o.updated_at === "string") {

@@ -24,6 +24,8 @@ import (
 //     repo endpoints respond 409 repo_root_not_configured.
 //   - CursorBin: cursor binary path. Empty means "auto-detect from PATH"
 //     (the supervisor probes `cursor --version` at boot).
+//   - CursorModel: optional `cursor-agent --model` value. Empty means omit
+//     the flag so Cursor picks its default model for the account.
 //   - MaxRunDurationSeconds: per-run wall-clock cap in seconds. 0 means
 //     "no limit" — the worker does not wrap runner.Run with a timeout.
 type AppSettings struct {
@@ -32,6 +34,7 @@ type AppSettings struct {
 	Runner                string    `gorm:"not null;default:'cursor'"`
 	RepoRoot              string    `gorm:"not null;default:''"`
 	CursorBin             string    `gorm:"not null;default:''"`
+	CursorModel           string    `gorm:"not null;default:''"`
 	MaxRunDurationSeconds int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
 	UpdatedAt             time.Time `gorm:"not null"`
 }

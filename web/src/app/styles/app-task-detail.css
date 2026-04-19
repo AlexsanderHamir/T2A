@@ -124,6 +124,58 @@
   padding-top: 1.5rem;
 }
 
+.task-detail-runner-hint {
+  margin-top: 0.75rem;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.task-detail-runner-hint code {
+  font-size: 0.92em;
+}
+
+/* Primary: requeue failed task for another agent run (PATCH → ready). */
+button.task-detail-btn-requeue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.5rem 1.15rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: var(--text-button-tracking);
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: 1px solid var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-requeue:not(:disabled):hover {
+  background: var(--brand-hover);
+  filter: none;
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+button.task-detail-btn-requeue:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+button.task-detail-btn-requeue:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+}
+
+button.task-detail-btn-requeue:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
 button.task-detail-btn-edit {
   display: inline-flex;

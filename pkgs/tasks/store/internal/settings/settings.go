@@ -25,6 +25,7 @@ type Patch struct {
 	Runner                *string
 	RepoRoot              *string
 	CursorBin             *string
+	CursorModel           *string
 	MaxRunDurationSeconds *int
 }
 
@@ -38,6 +39,7 @@ func (p Patch) IsEmpty() bool {
 		p.Runner == nil &&
 		p.RepoRoot == nil &&
 		p.CursorBin == nil &&
+		p.CursorModel == nil &&
 		p.MaxRunDurationSeconds == nil
 }
 
@@ -142,6 +144,9 @@ func validatePatch(patch Patch) error {
 	if patch.MaxRunDurationSeconds != nil && *patch.MaxRunDurationSeconds < 0 {
 		return fmt.Errorf("%w: max_run_duration_seconds must be >= 0", domain.ErrInvalidInput)
 	}
+	if patch.CursorModel != nil && len(strings.TrimSpace(*patch.CursorModel)) > 256 {
+		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
+	}
 	return nil
 }
 
@@ -158,6 +163,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.CursorBin != nil {
 		row.CursorBin = strings.TrimSpace(*patch.CursorBin)
+	}
+	if patch.CursorModel != nil {
+		row.CursorModel = strings.TrimSpace(*patch.CursorModel)
 	}
 	if patch.MaxRunDurationSeconds != nil {
 		row.MaxRunDurationSeconds = *patch.MaxRunDurationSeconds

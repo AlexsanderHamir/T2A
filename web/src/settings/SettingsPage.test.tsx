@@ -20,6 +20,7 @@ function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
     runner: "cursor",
     repo_root: "/Users/me/code/example",
     cursor_bin: "/usr/local/bin/cursor-agent",
+    cursor_model: "",
     max_run_duration_seconds: 0,
     updated_at: "2026-04-18T12:00:00Z",
     ...overrides,

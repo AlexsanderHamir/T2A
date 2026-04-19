@@ -12,6 +12,7 @@ type FormState = {
   runner: string;
   repoRoot: string;
   cursorBin: string;
+  cursorModel: string;
   maxRunDurationSeconds: string;
 };
 
@@ -21,6 +22,7 @@ function toFormState(s: AppSettings): FormState {
     runner: s.runner,
     repoRoot: s.repo_root,
     cursorBin: s.cursor_bin,
+    cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
   };
 }
@@ -38,6 +40,9 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   }
   if (initial.cursor_bin !== form.cursorBin.trim()) {
     out.cursor_bin = form.cursorBin.trim();
+  }
+  if (initial.cursor_model !== form.cursorModel.trim()) {
+    out.cursor_model = form.cursorModel.trim();
   }
   const parsedMax = Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10);
   if (Number.isFinite(parsedMax) && parsedMax !== initial.max_run_duration_seconds) {
@@ -148,6 +153,9 @@ export function SettingsPage() {
         }
         if (cur.cursorBin === formAtSubmit.cursorBin) {
           merged.cursorBin = next.cursor_bin;
+        }
+        if (cur.cursorModel === formAtSubmit.cursorModel) {
+          merged.cursorModel = next.cursor_model;
         }
         if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
           merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
@@ -300,8 +308,26 @@ export function SettingsPage() {
           </p>
         </fieldset>
 
-        <fieldset className="settings-fieldset">
-          <legend>Cursor binary</legend>
+        <fieldset className="settings-fieldset" id="cursor-agent">
+          <legend>Cursor agent (CLI)</legend>
+          <label className="settings-field">
+            <span className="settings-field-label">Model override</span>
+            <input
+              type="text"
+              value={form.cursorModel}
+              onChange={(e) => handleField("cursorModel", e.target.value)}
+              placeholder="(default — omit --model)"
+              spellCheck={false}
+              autoComplete="off"
+            />
+          </label>
+          <p className="settings-field-help">
+            Optional <code>cursor-agent --model</code> value. Leave empty to use
+            Cursor&apos;s default model for your account (recommended when you
+            want automatic routing). Set this after a usage-limit failure to
+            switch models without opening the Cursor app.
+          </p>
+
           <label className="settings-field">
             <span className="settings-field-label">Cursor CLI path</span>
             <input

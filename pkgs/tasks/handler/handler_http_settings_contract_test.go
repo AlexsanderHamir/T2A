@@ -115,6 +115,9 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 	if resp.MaxRunDurationSeconds != 0 {
 		t.Errorf("MaxRunDurationSeconds=%d, want 0 (no limit)", resp.MaxRunDurationSeconds)
 	}
+	if resp.CursorModel != "" {
+		t.Errorf("CursorModel=%q, want empty default", resp.CursorModel)
+	}
 }
 
 // TestHTTP_GetSettings_worksWithoutAgentControl confirms read-only

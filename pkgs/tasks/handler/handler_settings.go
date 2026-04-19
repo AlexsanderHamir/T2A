@@ -25,6 +25,7 @@ type settingsResponse struct {
 	Runner                string `json:"runner"`
 	RepoRoot              string `json:"repo_root"`
 	CursorBin             string `json:"cursor_bin"`
+	CursorModel           string `json:"cursor_model"`
 	MaxRunDurationSeconds int    `json:"max_run_duration_seconds"`
 	UpdatedAt             string `json:"updated_at,omitempty"`
 }
@@ -40,6 +41,7 @@ type settingsPatchBody struct {
 	Runner                *string `json:"runner,omitempty"`
 	RepoRoot              *string `json:"repo_root,omitempty"`
 	CursorBin             *string `json:"cursor_bin,omitempty"`
+	CursorModel           *string `json:"cursor_model,omitempty"`
 	MaxRunDurationSeconds *int    `json:"max_run_duration_seconds,omitempty"`
 }
 
@@ -112,6 +114,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		Runner:                body.Runner,
 		RepoRoot:              body.RepoRoot,
 		CursorBin:             body.CursorBin,
+		CursorModel:           body.CursorModel,
 		MaxRunDurationSeconds: body.MaxRunDurationSeconds,
 	}
 	if patch.IsEmpty() {
@@ -219,6 +222,7 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		Runner:                cfg.Runner,
 		RepoRoot:              cfg.RepoRoot,
 		CursorBin:             cfg.CursorBin,
+		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {

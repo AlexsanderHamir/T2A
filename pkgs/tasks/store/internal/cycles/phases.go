@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
@@ -15,6 +16,11 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
+
+// maxPhaseEventDetailRunes caps each string value inside the optional
+// "details" object attached to phase_* audit events so a pathological
+// runner payload cannot blow up SSE payloads.
+const maxPhaseEventDetailRunes = 8192
 
 // StartPhase appends a new phase row to a running cycle. PhaseSeq is
 // assigned by the store (max + 1 within the cycle). Enforces:
@@ -295,11 +301,71 @@ func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, e
 	if p.Summary != nil && *p.Summary != "" {
 		out["summary"] = *p.Summary
 	}
+	if d := phaseDetailsForEventPayload(p.DetailsJSON); len(d) > 0 {
+		out["details"] = d
+	}
 	b, err := json.Marshal(out)
 	if err != nil {
 		return nil, fmt.Errorf("marshal phase_terminated payload: %w", err)
 	}
 	return b, nil
+}
+
+// phaseDetailsForEventPayload returns a deep-copied, size-clamped JSON object
+// suitable for task_events.data_json so the timeline can show stderr tails,
+// token usage, etc., without a separate cycle-phase fetch.
+func phaseDetailsForEventPayload(detailsJSON datatypes.JSON) map[string]any {
+	if len(detailsJSON) == 0 {
+		return nil
+	}
+	var obj map[string]any
+	if err := json.Unmarshal(detailsJSON, &obj); err != nil || len(obj) == 0 {
+		return nil
+	}
+	out := truncatePhaseEventDetailValue(obj, maxPhaseEventDetailRunes)
+	if m, ok := out.(map[string]any); ok {
+		return m
+	}
+	return nil
+}
+
+func truncatePhaseEventDetailValue(v any, maxRunes int) any {
+	switch x := v.(type) {
+	case string:
+		return truncateStringRunes(x, maxRunes)
+	case map[string]any:
+		for k, vv := range x {
+			x[k] = truncatePhaseEventDetailValue(vv, maxRunes)
+		}
+		return x
+	case []any:
+		for i, vv := range x {
+			x[i] = truncatePhaseEventDetailValue(vv, maxRunes)
+		}
+		return x
+	default:
+		return v
+	}
+}
+
+func truncateStringRunes(s string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return ""
+	}
+	if utf8.RuneCountInString(s) <= maxRunes {
+		return s
+	}
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= maxRunes {
+			b.WriteRune('…')
+			break
+		}
+		b.WriteRune(r)
+		n++
+	}
+	return b.String()
 }
 
 // mirrorEventTypeForPhaseStatus picks which audit row type to write

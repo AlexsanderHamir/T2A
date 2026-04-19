@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getTask, listChecklist } from "@/api";
+import { getTask, listChecklist, patchTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { errorMessage } from "@/lib/errorMessage";
 import {
@@ -98,6 +98,14 @@ export function TaskDetailPage({ app }: Props) {
     enabled: Boolean(taskId) && taskQuery.isSuccess,
   });
 
+  const requeueMutation = useMutation({
+    mutationFn: () => patchTask(taskId, { status: "ready" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+    },
+  });
+
   const taskDocTitle =
     taskId && taskQuery.isSuccess && taskQuery.data
       ? taskQuery.data.title.trim() || "Untitled task"
@@ -159,7 +167,25 @@ export function TaskDetailPage({ app }: Props) {
             subtaskCount: taskDescendantCount(task),
           })
         }
+        onRequeue={
+          task.status === "failed"
+            ? () => {
+                requeueMutation.mutate();
+              }
+            : undefined
+        }
+        requeuePending={requeueMutation.isPending}
+        failedRunnerHint={task.status === "failed"}
       />
+
+      {requeueMutation.isError ? (
+        <p className="err" role="alert">
+          {errorMessage(
+            requeueMutation.error,
+            "Could not queue this task for the agent again.",
+          )}
+        </p>
+      ) : null}
 
       <div className="task-detail-section" id="task-detail-subtasks">
         <TaskDetailSubtasksHead

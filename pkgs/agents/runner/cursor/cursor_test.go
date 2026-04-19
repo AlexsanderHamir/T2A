@@ -206,6 +206,9 @@ func TestRun_nonZeroExit(t *testing.T) {
 	if !strings.Contains(res.Summary, "exit 7") {
 		t.Errorf("Summary should mention exit code: got %q", res.Summary)
 	}
+	if !strings.Contains(res.Summary, "compile failed") {
+		t.Errorf("Summary should include first stderr line hint: got %q", res.Summary)
+	}
 	var details struct {
 		StderrTail string `json:"stderr_tail"`
 	}

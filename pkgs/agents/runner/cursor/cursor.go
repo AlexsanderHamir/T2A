@@ -32,6 +32,11 @@ const (
 // final Details payload comfortably fits even after JSON wrapping.
 const stderrTailBytes = 8 * 1024
 
+// stderrSummaryHintRunes caps the first-line stderr excerpt appended to the
+// phase summary on non-zero exit so operators see why the CLI failed
+// without opening raw logs, while staying within runner.MaxSummaryRunes.
+const stderrSummaryHintRunes = 280
+
 // ExecFn is the seam unit tests use to avoid shelling out. It receives
 // everything the adapter would pass to os/exec and returns the captured
 // stdout, stderr, exit code, and error. A nil error with a non-zero
@@ -167,8 +172,24 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	if exitCode != 0 {
 		details := stderrTailDetails(stderr, a.homePaths)
-		return runner.NewResult(domain.PhaseStatusFailed,
-				fmt.Sprintf("cursor: exit %d", exitCode), details, rawOutput),
+		combined := string(stderr) + "\n" + string(stdout)
+		kind, stdMsg := classifyCursorFailure(combined)
+		if kind != "" {
+			details = mergeDetailsJSON(details, map[string]any{
+				"failure_kind":         kind,
+				"standardized_message": stdMsg,
+			})
+		}
+		summary := fmt.Sprintf("cursor: exit %d", exitCode)
+		switch kind {
+		case FailureKindCursorUsageLimit:
+			summary = titleForFailureKind(kind)
+		default:
+			if hint := stderrFirstLineHint(stderr, a.homePaths); hint != "" {
+				summary = summary + ": " + hint
+			}
+		}
+		return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
 			fmt.Errorf("cursor: %w: exit %d", runner.ErrNonZeroExit, exitCode)
 	}
 
@@ -292,6 +313,45 @@ func combineStreams(stdout, stderr []byte) string {
 	if len(stderr) > 0 {
 		b.WriteString("[stderr]\n")
 		b.Write(stderr)
+	}
+	return b.String()
+}
+
+// stderrFirstLineHint returns a short, redacted first non-empty line from
+// stderr for human-readable summaries when cursor-agent exits non-zero.
+func stderrFirstLineHint(stderr []byte, homePaths []string) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.stderrFirstLineHint",
+		"stderr_bytes", len(stderr))
+	if len(stderr) == 0 {
+		return ""
+	}
+	normalized := strings.ReplaceAll(string(stderr), "\r\n", "\n")
+	for _, line := range strings.Split(normalized, "\n") {
+		t := strings.TrimSpace(line)
+		if t == "" {
+			continue
+		}
+		return clipSummaryRunes(redact(t, homePaths), stderrSummaryHintRunes)
+	}
+	return ""
+}
+
+func clipSummaryRunes(s string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return ""
+	}
+	if utf8.RuneCountInString(s) <= maxRunes {
+		return s
+	}
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= maxRunes {
+			b.WriteRune('…')
+			break
+		}
+		b.WriteRune(r)
+		n++
 	}
 	return b.String()
 }

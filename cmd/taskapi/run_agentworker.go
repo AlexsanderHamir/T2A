@@ -128,6 +128,7 @@ type effectiveSettingsLog struct {
 	Runner                string
 	RepoRoot              string
 	CursorBin             string
+	CursorModel           string
 	MaxRunDurationSeconds int
 	RunnerVersion         string
 	Idle                  bool
@@ -272,6 +273,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		s.logEffective(phase, effectiveSettingsLog{
 			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			Idle:                  true, IdleReason: reason,
 		})
@@ -295,6 +297,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		s.logEffective(phase, effectiveSettingsLog{
 			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			Idle:                  true, IdleReason: "probe_failed",
 		})
@@ -306,6 +309,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		s.logEffective(phase, effectiveSettingsLog{
 			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			RunnerVersion:         version,
 		})
@@ -320,8 +324,9 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	}
 
 	r, err := registry.Build(cfg.Runner, registry.BuildOptions{
-		BinaryPath: cfg.CursorBin,
-		Version:    version,
+		BinaryPath:  cfg.CursorBin,
+		Version:     version,
+		CursorModel: cfg.CursorModel,
 	})
 	if err != nil {
 		stopWorkerInstance(prev, "build_failed")
@@ -372,6 +377,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	s.logEffective(phase, effectiveSettingsLog{
 		WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
 		RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 		RunnerVersion:         version,
 	})
@@ -403,6 +409,7 @@ func (s *agentWorkerSupervisor) logEffective(phase string, eff effectiveSettings
 		"idle", eff.Idle, "idle_reason", eff.IdleReason,
 		"runner", eff.Runner, "runner_version", eff.RunnerVersion,
 		"repo_root", eff.RepoRoot, "cursor_bin", eff.CursorBin,
+		"cursor_model", eff.CursorModel,
 		"max_run_duration_sec", eff.MaxRunDurationSeconds)
 }
 
@@ -453,6 +460,9 @@ func instanceMatchesSettings(inst *agentWorkerInstance, cfg store.AppSettings, v
 		return false
 	}
 	if inst.settings.CursorBin != cfg.CursorBin {
+		return false
+	}
+	if inst.settings.CursorModel != cfg.CursorModel {
 		return false
 	}
 	if inst.settings.RepoRoot != cfg.RepoRoot {

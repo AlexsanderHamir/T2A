@@ -210,6 +210,23 @@ a.task-timeline-item-hit {
   border-color: var(--warning-border);
 }
 
+.task-timeline-phase-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.task-timeline-standardized-msg {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-primary);
+  padding: 0.5rem 0.65rem;
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+}
+
 .task-timeline-data {
   margin: 0;
   padding: 0.5rem 0.65rem;

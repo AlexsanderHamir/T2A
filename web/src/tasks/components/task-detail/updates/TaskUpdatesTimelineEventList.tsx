@@ -185,6 +185,21 @@ function EventDataPreview({
       return <pre className="task-timeline-data">{title}</pre>;
     }
   }
+  if (eventType === "phase_failed" || eventType === "phase_completed") {
+    const details = data.details;
+    if (details && typeof details === "object" && details !== null) {
+      const d = details as Record<string, unknown>;
+      const std = d.standardized_message;
+      if (typeof std === "string" && std.trim() !== "") {
+        return (
+          <div className="task-timeline-phase-details">
+            <p className="task-timeline-standardized-msg">{std}</p>
+            <pre className="task-timeline-data">{JSON.stringify(data, null, 2)}</pre>
+          </div>
+        );
+      }
+    }
+  }
   return (
     <pre className="task-timeline-data">{JSON.stringify(data, null, 2)}</pre>
   );

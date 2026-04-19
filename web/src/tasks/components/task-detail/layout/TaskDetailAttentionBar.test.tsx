@@ -69,4 +69,21 @@ describe("TaskDetailAttentionBar", () => {
     expect(screen.getByRole("button", { name: /edit task/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
   });
+
+  it("renders Run again when onRequeue is provided", async () => {
+    const user = userEvent.setup();
+    const onRequeue = vi.fn();
+    render(
+      <TaskDetailAttentionBar
+        attention={{ show: false, headline: "", body: "" }}
+        saving={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onRequeue={onRequeue}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^run again$/i }));
+    expect(onRequeue).toHaveBeenCalledOnce();
+  });
 });

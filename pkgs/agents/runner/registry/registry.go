@@ -33,6 +33,9 @@ type Descriptor struct {
 type BuildOptions struct {
 	BinaryPath string
 	Version    string
+	// CursorModel is forwarded only for the cursor runner: non-empty values
+	// become `cursor-agent --model <value>`; empty means omit the flag.
+	CursorModel string
 }
 
 // ErrUnknownRunner is returned when the supervisor or handler asks
@@ -96,9 +99,15 @@ func Build(id string, opts BuildOptions) (runner.Runner, error) {
 	}
 	switch desc.ID {
 	case CursorRunnerID:
+		args := []string{"--print", "--output-format", "json"}
+		if m := strings.TrimSpace(opts.CursorModel); m != "" {
+			args = append(args, "--model", m)
+		}
+		args = append(args, "--force")
 		return cursor.New(cursor.Options{
 			BinaryPath: bin,
 			Version:    opts.Version,
+			Args:       args,
 		}), nil
 	default:
 		// Defensive: List + Lookup should make this unreachable, but
