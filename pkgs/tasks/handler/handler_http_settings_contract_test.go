@@ -160,14 +160,18 @@ func TestHTTP_PatchSettings_persistsAndReloads(t *testing.T) {
 
 // TestHTTP_PatchSettings_emptyBodyRejected stops the SPA from
 // accidentally clearing the row by sending {} (which used to be a
-// no-op valid request). 400 with a clear message lets the SPA surface
-// the error inline next to the Save button.
+// no-op valid request). 400 with the documented bare phrase
+// `patch body must include at least one field` lets the SPA surface
+// the error inline next to the Save button — and pins the exact wire
+// phrase from docs/API-HTTP.md §App settings PATCH so a refactor that
+// shortened it to "at least one field required" or moved it into the
+// store layer would fail loudly here. Asserting the full envelope key
+// set ({error, request_id?}) catches an accidental field rename like
+// {message: "..."} that a substring check on the message would miss.
 func TestHTTP_PatchSettings_emptyBodyRejected(t *testing.T) {
 	srv, _, _, _ := settingsTestServer(t)
 	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings", `{}`, http.StatusBadRequest)
-	if !strings.Contains(string(resp), "at least one field") {
-		t.Fatalf("error body did not mention 'at least one field': %s", resp)
-	}
+	assertSettingsBareError(t, resp, "patch body must include at least one field")
 }
 
 // TestHTTP_PatchSettings_validationError ensures the store-level
@@ -186,24 +190,41 @@ func TestHTTP_PatchSettings_validationError(t *testing.T) {
 // TestHTTP_PatchSettings_503WithoutAgent confirms the documented
 // "agent control unavailable" branch: writes are blocked when no
 // supervisor is wired, so we never persist a row the worker won't
-// pick up.
+// pick up. Pins the exact 503 wire phrase
+// `agent worker control unavailable` from docs/API-HTTP.md §App
+// settings PATCH so a refactor that shortened it (e.g. "supervisor
+// not wired") would fail loudly here. The same phrase is shared
+// across PATCH /settings, POST /settings/probe-cursor, and POST
+// /settings/cancel-current-run; each route has its own pin so a
+// future per-route divergence is caught at the route that diverged.
 func TestHTTP_PatchSettings_503WithoutAgent(t *testing.T) {
 	srv, _ := settingsTestServerNoAgent(t)
-	mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
+	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
 		`{"repo_root":"/tmp/x"}`, http.StatusServiceUnavailable)
+	assertSettingsBareError(t, resp, "agent worker control unavailable")
 }
 
 // TestHTTP_PatchSettings_reloadFailureSurfaces500 protects the audit
 // trail: if Reload fails after the row was written, the operator
 // sees an error so they know the live worker is out of sync and can
 // retry. Silent success here would mask divergence between settings
-// and worker state.
+// and worker state. Pins the exact 500 wire phrase
+// `settings saved but worker reload failed` from docs/API-HTTP.md
+// §App settings PATCH — the phrase is what the SPA shows in its
+// "Save failed" toast, so a refactor that changed it to a generic
+// "internal error" or that leaked the underlying reload error
+// (e.g. "synthetic reload failure" from the fake) would silently
+// break the operator-facing message contract. Note the documented
+// phrase intentionally does NOT echo the reload error itself so we
+// don't leak supervisor internals; a future refactor that decided
+// to surface the reload error verbatim would also fail this pin.
 func TestHTTP_PatchSettings_reloadFailureSurfaces500(t *testing.T) {
 	srv, _, _, ctrl := settingsTestServer(t)
 	e := errors.New("synthetic reload failure")
 	ctrl.reloadErr.Store(&e)
-	mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
+	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
 		`{"repo_root":"/tmp/x"}`, http.StatusInternalServerError)
+	assertSettingsBareError(t, resp, "settings saved but worker reload failed")
 }
 
 // TestHTTP_ProbeCursor_returnsVersionFromControl pins the happy path
@@ -393,10 +414,36 @@ func TestHTTP_CancelCurrentRun_noopReturnsFalseAndNoSSE(t *testing.T) {
 
 // TestHTTP_CancelCurrentRun_503WithoutAgent matches the PATCH branch:
 // no supervisor wired = endpoint disabled, never silently returns
-// "cancelled=false" (which would lie to the operator).
+// "cancelled=false" (which would lie to the operator). Pins the same
+// `agent worker control unavailable` phrase from docs/API-HTTP.md
+// §App settings POST /settings/cancel-current-run so a future
+// divergence (e.g. emitting `cancel unavailable` here while leaving
+// PATCH /settings on the documented phrase) is caught at this route
+// rather than silently drifting from the docs.
 func TestHTTP_CancelCurrentRun_503WithoutAgent(t *testing.T) {
 	srv, _ := settingsTestServerNoAgent(t)
-	mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/cancel-current-run", "", http.StatusServiceUnavailable)
+	resp := mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/cancel-current-run",
+		"", http.StatusServiceUnavailable)
+	assertSettingsBareError(t, resp, "agent worker control unavailable")
+}
+
+// TestHTTP_ProbeCursor_503WithoutAgent closes the third documented
+// 503 branch in docs/API-HTTP.md §App settings POST
+// /settings/probe-cursor (the route says **503 JSON** —
+// `agent worker control unavailable`). The PATCH /settings and
+// POST /settings/cancel-current-run 503 paths each have their own
+// pin above; this one was the gap. Without it, a refactor that
+// removed the `if h.agent == nil` guard from probeCursor (e.g. by
+// pushing it into a middleware layer that only ran for PATCH) would
+// silently change the route's 503 behaviour to a panic-on-nil-deref
+// or to a misleading 200 with `ok=false` and an empty error string.
+// Pinning both the status code AND the wire phrase here covers both
+// regression classes (status drift; phrase drift).
+func TestHTTP_ProbeCursor_503WithoutAgent(t *testing.T) {
+	srv, _ := settingsTestServerNoAgent(t)
+	resp := mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/probe-cursor",
+		`{"runner":"cursor","binary_path":"/usr/bin/cursor"}`, http.StatusServiceUnavailable)
+	assertSettingsBareError(t, resp, "agent worker control unavailable")
 }
 
 // helpers
@@ -443,6 +490,38 @@ func mustSettingsHTTP(t *testing.T, method, url, body string, want int) []byte {
 		t.Fatalf("%s %s status=%d want=%d body=%s", method, url, res.StatusCode, want, b)
 	}
 	return b
+}
+
+// assertSettingsBareError pins the documented bare error envelope for
+// the /settings surface: status code already verified by the caller
+// (mustSettingsHTTP fatals on mismatch); this helper confirms the
+// JSON body decodes into the canonical jsonErrorBody shape AND that
+// the `error` field equals the exact wire phrase from
+// docs/API-HTTP.md §App settings (no substring tolerance — substring
+// matches let a future refactor like
+// "patch body must include at least one field; pointer fields only"
+// silently change the message under a still-passing test).
+//
+// The shared envelope comes from handler_http_json.go::jsonErrorBody:
+//
+//	{ "error": "<bare phrase>", "request_id": "<uuid?>" }
+//
+// `request_id` is `omitempty` and only set when the access middleware
+// stamped one; the test does not assert on it because the documented
+// contract is just the `error` field. Mirrors the pattern in
+// handler_http_drafts_contract_test.go::assertBareError but is local
+// here because the drafts helper additionally takes the http.Response
+// to assert the status code (this helper assumes the caller already
+// verified status via mustSettingsHTTP, which fatals on mismatch).
+func assertSettingsBareError(t *testing.T, raw []byte, wantError string) {
+	t.Helper()
+	var body jsonErrorBody
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Fatalf("decode error envelope: %v body=%s", err, raw)
+	}
+	if body.Error != wantError {
+		t.Fatalf("error=%q want %q (docs/API-HTTP.md §App settings wire phrase)", body.Error, wantError)
+	}
 }
 
 func ptrStr(s string) *string { return &s }
