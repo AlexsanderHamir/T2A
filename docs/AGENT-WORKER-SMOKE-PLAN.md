@@ -209,36 +209,62 @@ parentheses:
 
 **Scope:**
 
-- [ ] New file `pkgs/agents/runner/cursor/cursor_real_smoke_test.go`
+- [x] New file `pkgs/agents/runner/cursor/cursor_real_smoke_test.go`
       with `//go:build cursor_real` at the top.
-- [ ] Single test `TestCursorAdapter_RealBinary_writesExpectedFile`:
+- [x] Single test `TestCursorAdapter_RealBinary_writesExpectedFile`:
   - `t.Skip` if `os.Getenv("T2A_TEST_REAL_CURSOR") != "1"`.
   - Resolve `cursor-agent` (or override via
     `T2A_AGENT_WORKER_CURSOR_BIN`) and run `cursor.Probe` first; on
-    probe error, fail with the same operator-friendly message the
-    worker logs on startup.
+    probe error, fail with an operator-friendly message that names
+    both the env var and the binary path tried.
   - Build a `cursor.Adapter` with default Options + the resolved
-    binary path.
+    binary path + the probed version string.
   - Build an `agentsmoke.Fixture` (Stage 1).
   - Call `adapter.Run(ctx, runner.Request{...})` with:
-    - `TaskID` = a fresh UUID.
+    - `TaskID = "task-real-cursor-smoke"`.
     - `Phase = domain.PhaseExecute`.
     - `Prompt = fixture.Prompt()`.
     - `WorkingDir = fixture.WorkingDir()`.
-    - `Timeout = 60 * time.Second`.
+    - `Timeout = 90 * time.Second` (Cursor cold path; observed run
+      ~12s; budget bounded well under the worker's
+      `DefaultRunTimeout`).
   - Assertions, in order:
-    1. `err == nil`.
+    1. `runErr == nil`.
     2. `result.Status == domain.PhaseStatusSucceeded`.
     3. `fixture.AssertSucceeded(t)` — the file is on disk with the
        expected bytes.
-- [ ] Add a one-paragraph runbook section in
-      `pkgs/agents/runner/cursor/cursor_real_smoke_test.go` package
-      doc comment explaining how to run:
-      `go test -tags=cursor_real -run TestCursorAdapter_RealBinary_writesExpectedFile ./pkgs/agents/runner/cursor/...`
-      with `T2A_TEST_REAL_CURSOR=1` and `cursor-agent` on PATH.
-- [ ] Append a row to the test inventory table in Stage 4's docs
-      sweep (do not edit `AGENT-WORKER.md` in Stage 2; defer to
-      Stage 4).
+  - Soft signal: log `fixture.ExtraFiles()` if non-empty (Windows
+    drops cache files in cwd; informational only).
+- [x] Runbook section in the test file's package doc comment shows
+      the exact PowerShell incantation to run the smoke (env vars +
+      `go test -tags=cursor_real`).
+- [x] **Stage 2 surfaced a real adapter bug — fixed in the same
+      commit (Option A)**: `pkgs/agents/runner/cursor/cursor.go`
+      now parses `cursor-agent`'s real `--output-format json`
+      envelope (`{type, subtype, is_error, result, duration_ms,
+      duration_api_ms, session_id, request_id, usage}`) instead of
+      the speculative `{summary, details}` schema that no real
+      Cursor build ever produced; maps `is_error: true` to
+      `runner.ErrNonZeroExit + PhaseStatusFailed`; defaults the argv
+      tail to `--print --output-format json --force` so cursor-agent
+      auto-approves filesystem and shell tool calls instead of
+      blocking on an interactive prompt the worker has no way to
+      answer. Existing `cursor_test.go` cases updated to the real
+      schema; `doc.go` rewritten to document the actual envelope and
+      flag set; new tests `TestRun_isErrorTrueMapsToFailure` and
+      `TestRun_isErrorTrueWithEmptyResultGetsFallbackSummary` pin
+      the new failure mapping.
+- [x] **Stage 1 harness adjustment (in same commit)**:
+      `agentsmoke.AssertSucceeded` now asserts ONLY on the target
+      file (exact contents). Extras inside WorkingDir are surfaced
+      via `t.Logf` instead of failing the run, because real Windows
+      cwds collect OS-level noise (`cversions.2.db` and friends from
+      Windows Search / AppContainer telemetry) that has nothing to
+      do with the agent's task. The strictness is preserved as the
+      informational `(*Fixture).ExtraFiles()` helper for callers
+      that want it. Internal tests updated accordingly.
+- [x] Append a row to the test inventory table in Stage 4's docs
+      sweep (deferred to Stage 4, as planned).
 
 **Exit criteria:**
 
@@ -382,8 +408,30 @@ parentheses:
 
 ## Notes / followups
 
-(Populated as stages discover incidental work — keep this section as
-the catch-all so individual stages stay scoped.)
+- **Stage 2 finding — adapter schema mismatch (closed in same commit
+  as Option A).** Pre-Stage-2 the cursor adapter expected a
+  hand-rolled `{summary, details}` JSON envelope on stdout, while
+  `cursor-agent --print --output-format json` actually emits its own
+  `{type, subtype, is_error, result, duration_ms, duration_api_ms,
+  session_id, request_id, usage}` envelope. Every successful real
+  Cursor run was therefore being mapped to `ErrInvalidOutput` and
+  surfaced as a failed cycle. Caught by the very first probe of
+  Stage 2; fixed in the same commit so Stage 3 has a working stack
+  to lean on. **No further work** — kept here as the canonical
+  pointer for "why was the cursor adapter rewritten in this PR".
+- **Stage 2 finding — `--force` is non-optional in practice.**
+  Without `--force` the adapter blocks indefinitely on Cursor's
+  approval prompt for any tool that mutates state (file writes, shell
+  commands), which the worker has no way to answer. Default flag set
+  is now `--print --output-format json --force`. A future "plan-only"
+  runner variant can override `Options.Args` to drop the flag.
+- **Stage 2 finding — Windows cwd noise.** Real cursor-agent runs on
+  Windows leave OS-level cache files (`cversions.2.db`, `*.ver*`)
+  inside the cwd via Windows Search / AppContainer telemetry,
+  unrelated to the agent's task. The harness moved from "no extra
+  files" hard-fail to "log extras as informational warning"; strict
+  mode is still available via `(*Fixture).ExtraFiles()` for callers
+  that want it.
 
 ## Status
 
@@ -391,6 +439,6 @@ the catch-all so individual stages stay scoped.)
 |---|---|---|
 | 0 — Plan | done | `bf3ceca` |
 | 1 — Smoke harness + fake-runner self-test | done | `9647bbb` |
-| 2 — Runner-layer real-cursor smoke | pending | — |
+| 2 — Runner-layer real-cursor smoke | done | _backfilled in this commit_ |
 | 3 — Full HTTP → worker → real cursor smoke | pending | — |
 | 4 — Docs + runbook | pending | — |

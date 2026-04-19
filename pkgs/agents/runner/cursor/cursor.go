@@ -45,7 +45,12 @@ type Options struct {
 	// (resolved against PATH).
 	BinaryPath string
 	// Args is the fixed argv tail appended after BinaryPath. Defaults to
-	// []string{"--print", "--output-format", "json"}.
+	// []string{"--print", "--output-format", "json", "--force"}. The
+	// "--force" flag instructs cursor-agent to auto-approve filesystem
+	// and shell tool calls instead of blocking on an interactive prompt
+	// the worker has no way to answer; without it the child would
+	// reliably wedge until Request.Timeout. Override only if a runner
+	// variant should not auto-approve (e.g. a future "plan-only" mode).
 	Args []string
 	// Name is the runner.Name() value (recorded in TaskCyclePhase MetaJSON
 	// by the worker). Defaults to "cursor-cli".
@@ -93,7 +98,7 @@ func New(opts Options) *Adapter {
 		a.binaryPath = defaultBinaryPath
 	}
 	if a.args == nil {
-		a.args = []string{"--print", "--output-format", "json"}
+		a.args = []string{"--print", "--output-format", "json", "--force"}
 	}
 	if a.name == "" {
 		a.name = defaultName
@@ -173,12 +178,51 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, parseErr)
 	}
 
-	return runner.NewResult(domain.PhaseStatusSucceeded, parsed.Summary, parsed.Details, rawOutput), nil
+	summary := redact(parsed.Result, a.homePaths)
+	details := buildDetails(parsed)
+
+	if parsed.IsError {
+		if summary == "" {
+			summary = "cursor: agent reported is_error=true"
+		}
+		return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
+			fmt.Errorf("cursor: %w: agent reported is_error=true", runner.ErrNonZeroExit)
+	}
+
+	return runner.NewResult(domain.PhaseStatusSucceeded, summary, details, rawOutput), nil
 }
 
+// cursorOutput is the cursor-agent --output-format json envelope.
+//
+// Schema (as observed against cursor-agent 2026.04.x; missing fields
+// are zero-valued so the parser stays forward-compatible with new
+// cursor-agent metadata):
+//
+//	{
+//	  "type": "result",
+//	  "subtype": "success",
+//	  "is_error": false,
+//	  "duration_ms": 17590,
+//	  "duration_api_ms": 17590,
+//	  "result": "<human-readable summary the agent emitted>",
+//	  "session_id": "...",
+//	  "request_id": "...",
+//	  "usage": { "inputTokens": ..., "outputTokens": ..., ... }
+//	}
+//
+// On is_error=true cursor-agent still exits 0; the adapter maps that
+// to runner.ErrNonZeroExit with PhaseStatusFailed so the worker
+// records a failed cycle instead of silently treating it as success.
 type cursorOutput struct {
-	Summary string          `json:"summary"`
-	Details json.RawMessage `json:"details,omitempty"`
+	Type          string          `json:"type,omitempty"`
+	Subtype       string          `json:"subtype,omitempty"`
+	IsError       bool            `json:"is_error,omitempty"`
+	Result        string          `json:"result,omitempty"`
+	DurationMs    int64           `json:"duration_ms,omitempty"`
+	DurationAPIMs int64           `json:"duration_api_ms,omitempty"`
+	SessionID     string          `json:"session_id,omitempty"`
+	RequestID     string          `json:"request_id,omitempty"`
+	Usage         json.RawMessage `json:"usage,omitempty"`
 }
 
 func parseStdout(stdout []byte) (cursorOutput, error) {
@@ -192,6 +236,44 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 		return cursorOutput{}, fmt.Errorf("decode stdout: %w", err)
 	}
 	return out, nil
+}
+
+// buildDetails serialises the cursor-agent metadata fields (everything
+// other than "result") into the runner.Result.Details payload so the
+// task_cycle_phases audit trail keeps the session/request IDs, timing
+// breakdown, and token usage. The "result" text becomes Summary and
+// is therefore intentionally elided here to avoid duplication.
+func buildDetails(p cursorOutput) json.RawMessage {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.buildDetails",
+		"type", p.Type, "subtype", p.Subtype, "is_error", p.IsError,
+		"session_id", p.SessionID, "request_id", p.RequestID)
+	d := struct {
+		Type          string          `json:"type,omitempty"`
+		Subtype       string          `json:"subtype,omitempty"`
+		IsError       bool            `json:"is_error,omitempty"`
+		DurationMs    int64           `json:"duration_ms,omitempty"`
+		DurationAPIMs int64           `json:"duration_api_ms,omitempty"`
+		SessionID     string          `json:"session_id,omitempty"`
+		RequestID     string          `json:"request_id,omitempty"`
+		Usage         json.RawMessage `json:"usage,omitempty"`
+	}{
+		Type:          p.Type,
+		Subtype:       p.Subtype,
+		IsError:       p.IsError,
+		DurationMs:    p.DurationMs,
+		DurationAPIMs: p.DurationAPIMs,
+		SessionID:     p.SessionID,
+		RequestID:     p.RequestID,
+		Usage:         p.Usage,
+	}
+	b, err := json.Marshal(d)
+	if err != nil {
+		// Marshalling a struct of strings/ints/RawMessage cannot fail
+		// in practice; fall back to nil so NewResult emits no details
+		// rather than a malformed payload.
+		return nil
+	}
+	return b
 }
 
 func combineStreams(stdout, stderr []byte) string {

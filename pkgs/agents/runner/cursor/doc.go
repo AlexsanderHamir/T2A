@@ -7,20 +7,37 @@
 //
 // V1 invokes the binary as:
 //
-//	cursor-agent --print --output-format json
+//	cursor-agent --print --output-format json --force
 //
 // with the prompt sent on stdin. The binary path is configurable via
-// Options.BinaryPath; the flag set is currently fixed in code (pin a
-// comment here when it changes so callers know the wire format).
+// Options.BinaryPath; the argv tail is configurable via Options.Args.
+// "--force" instructs cursor-agent to auto-approve filesystem and
+// shell tool calls instead of blocking on an interactive prompt the
+// worker has no way to answer; without it the child reliably wedges
+// until Request.Timeout. Pin a comment here when the default flag set
+// changes so callers know the wire format.
 //
-// The CLI is expected to emit a single JSON object on stdout with the
-// shape:
+// The CLI emits a single JSON object on stdout with cursor-agent's
+// own envelope:
 //
-//	{ "summary": "...", "details": { ... } }
+//	{
+//	  "type": "result",
+//	  "subtype": "success",
+//	  "is_error": false,
+//	  "duration_ms": 17590,
+//	  "duration_api_ms": 17590,
+//	  "result": "<human-readable summary the agent emitted>",
+//	  "session_id": "...",
+//	  "request_id": "...",
+//	  "usage": { "inputTokens": ..., "outputTokens": ..., ... }
+//	}
 //
-// "details" is forwarded as runner.Result.Details unchanged. "summary"
-// becomes runner.Result.Summary. Anything else in the JSON is ignored
-// for forward-compatibility.
+// "result" becomes runner.Result.Summary (after redaction). Everything
+// else (type, subtype, is_error, durations, session/request IDs,
+// usage) is packed into runner.Result.Details so the
+// task_cycle_phases audit trail keeps the runner-side metadata.
+// Unknown top-level fields are silently ignored for forward
+// compatibility with future cursor-agent metadata.
 //
 // # Environment policy
 //
@@ -55,6 +72,9 @@
 //   - ctx.Err() (DeadlineExceeded or Canceled): runner.ErrTimeout
 //   - non-zero exit code: runner.ErrNonZeroExit, with the redacted tail
 //     of stderr in Result.Details under {"stderr_tail": "..."}
+//   - cursor-agent reported {"is_error": true} (process still exits 0):
+//     runner.ErrNonZeroExit with PhaseStatusFailed and the agent's own
+//     "result" text as Summary
 //   - exec start failure or stdout JSON parse failure:
 //     runner.ErrInvalidOutput
 //

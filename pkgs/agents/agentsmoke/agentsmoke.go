@@ -115,14 +115,27 @@ func (f *Fixture) ExpectedContents() string {
 }
 
 // AssertSucceeded asserts the smoke post-condition: the target file
-// exists with exactly ExpectedContents, and no other file was
-// created anywhere inside WorkingDir. On failure it calls t.Fatalf
-// with a diff so callers do not have to thread the error.
+// exists with exactly ExpectedContents. On failure it calls t.Fatalf
+// with a side-by-side want/got diff so callers do not have to thread
+// the error.
+//
+// The assertion is intentionally narrow: it does NOT fail on extra
+// files inside WorkingDir, because real Windows runs see OS-level
+// noise (Windows Search / AppContainer drop cache files like
+// cversions.2.db into the cwd of arbitrary processes) that has
+// nothing to do with the agent's task. Tests that want to inspect
+// what else landed can call ExtraFiles for an informational list.
 func (f *Fixture) AssertSucceeded(t *testing.T) {
 	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.AssertSucceeded")
 	t.Helper()
 	if err := f.verifySucceeded(); err != nil {
 		t.Fatalf("agentsmoke: %v", err)
+	}
+	if extras, err := f.extraFiles(); err == nil && len(extras) > 0 {
+		// Soft signal so a verbose runner is visible to the operator
+		// without failing CI on unrelated OS noise.
+		t.Logf("agentsmoke: target ok; %d extra file(s) in workdir (informational): %s",
+			len(extras), strings.Join(extras, ", "))
 	}
 }
 
@@ -138,9 +151,8 @@ func (f *Fixture) AssertNotMutated(t *testing.T) {
 }
 
 // verifySucceeded returns nil iff TargetPath holds exactly
-// ExpectedContents and no other regular file exists inside
-// WorkingDir. Exposed unexported so internal tests can exercise the
-// assertion logic without going through testing.T.Fatalf.
+// ExpectedContents. Exposed unexported so internal tests can exercise
+// the assertion logic without going through testing.T.Fatalf.
 func (f *Fixture) verifySucceeded() error {
 	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.verifySucceeded")
 	got, err := os.ReadFile(f.targetPath)
@@ -151,15 +163,22 @@ func (f *Fixture) verifySucceeded() error {
 		return fmt.Errorf("target %s contents mismatch:\n  want (%d bytes): %q\n  got  (%d bytes): %q",
 			f.targetPath, len(f.expectedContents), f.expectedContents, len(got), string(got))
 	}
+	return nil
+}
+
+// ExtraFiles returns every regular file in WorkingDir other than
+// TargetPath, slash-separated relative paths, sorted. Useful as an
+// informational signal: callers can log the list to detect verbose
+// runners without failing on OS-level noise (Windows Search / AV
+// caches, transient lock files, etc.). Errors walking the directory
+// surface as a single best-effort entry rather than a hard failure.
+func (f *Fixture) ExtraFiles() []string {
+	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.ExtraFiles")
 	extras, err := f.extraFiles()
 	if err != nil {
-		return err
+		return []string{fmt.Sprintf("[walk error] %v", err)}
 	}
-	if len(extras) > 0 {
-		return fmt.Errorf("unexpected extra files in %s: %s",
-			f.workingDir, strings.Join(extras, ", "))
-	}
-	return nil
+	return extras
 }
 
 // verifyNotMutated returns nil iff WorkingDir contains zero entries.

@@ -72,7 +72,7 @@ func defaultRequest() runner.Request {
 func TestRun_successPath(t *testing.T) {
 	t.Parallel()
 
-	stdout := []byte(`{"summary":"all good","details":{"files_changed":3}}`)
+	stdout := []byte(`{"type":"result","subtype":"success","is_error":false,"duration_ms":1200,"duration_api_ms":1100,"result":"all good","session_id":"sess-abc","request_id":"req-xyz","usage":{"inputTokens":10,"outputTokens":3}}`)
 	var c captured
 	a := newAdapter(fakeExec(&c, stdout, nil, 0, nil, false))
 
@@ -87,18 +87,36 @@ func TestRun_successPath(t *testing.T) {
 		t.Errorf("Summary: got %q", res.Summary)
 	}
 	var details struct {
-		FilesChanged int `json:"files_changed"`
+		Type       string          `json:"type"`
+		Subtype    string          `json:"subtype"`
+		IsError    bool            `json:"is_error"`
+		DurationMs int64           `json:"duration_ms"`
+		SessionID  string          `json:"session_id"`
+		RequestID  string          `json:"request_id"`
+		Usage      json.RawMessage `json:"usage"`
 	}
 	if err := json.Unmarshal(res.Details, &details); err != nil {
-		t.Fatalf("Details unmarshal: %v", err)
+		t.Fatalf("Details unmarshal: %v (raw=%s)", err, res.Details)
 	}
-	if details.FilesChanged != 3 {
-		t.Errorf("Details.files_changed: got %d", details.FilesChanged)
+	if details.Type != "result" || details.Subtype != "success" {
+		t.Errorf("Details type/subtype: got %q/%q want result/success", details.Type, details.Subtype)
+	}
+	if details.IsError {
+		t.Errorf("Details.is_error must be false on happy path")
+	}
+	if details.SessionID != "sess-abc" || details.RequestID != "req-xyz" {
+		t.Errorf("Details ids: got session=%q request=%q", details.SessionID, details.RequestID)
+	}
+	if details.DurationMs != 1200 {
+		t.Errorf("Details.duration_ms: got %d", details.DurationMs)
+	}
+	if len(details.Usage) == 0 {
+		t.Errorf("Details.usage missing; got %s", res.Details)
 	}
 	if c.name != "fake-cursor-agent" {
 		t.Errorf("invoked name: got %q", c.name)
 	}
-	wantArgs := []string{"--print", "--output-format", "json"}
+	wantArgs := []string{"--print", "--output-format", "json", "--force"}
 	if !equalStrSlice(c.args, wantArgs) {
 		t.Errorf("args: got %v want %v", c.args, wantArgs)
 	}
@@ -107,6 +125,62 @@ func TestRun_successPath(t *testing.T) {
 	}
 	if c.dir != "/repo/work" {
 		t.Errorf("dir: got %q", c.dir)
+	}
+}
+
+// TestRun_isErrorTrueMapsToFailure pins the contract that an exit-0
+// run with cursor-agent reporting "is_error": true is treated as a
+// recoverable runner failure (ErrNonZeroExit + PhaseStatusFailed) so
+// the worker writes a failed cycle instead of silently treating the
+// run as success. The agent's own "result" text becomes the Summary.
+func TestRun_isErrorTrueMapsToFailure(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(`{"type":"result","subtype":"error","is_error":true,"result":"could not authenticate","session_id":"sess-err","request_id":"req-err"}`)
+	a := newAdapter(fakeExec(&captured{}, stdout, nil, 0, nil, false))
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if !errors.Is(err, runner.ErrNonZeroExit) {
+		t.Fatalf("err: got %v want errors.Is(_, ErrNonZeroExit)", err)
+	}
+	if res.Status != domain.PhaseStatusFailed {
+		t.Errorf("Status: got %q want %q", res.Status, domain.PhaseStatusFailed)
+	}
+	if res.Summary != "could not authenticate" {
+		t.Errorf("Summary: got %q want the agent's result text", res.Summary)
+	}
+	var details struct {
+		IsError   bool   `json:"is_error"`
+		Subtype   string `json:"subtype"`
+		SessionID string `json:"session_id"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v (raw=%s)", err, res.Details)
+	}
+	if !details.IsError || details.Subtype != "error" {
+		t.Errorf("Details mismatch: got is_error=%v subtype=%q", details.IsError, details.Subtype)
+	}
+	if details.SessionID != "sess-err" {
+		t.Errorf("Details.session_id: got %q", details.SessionID)
+	}
+}
+
+// TestRun_isErrorTrueWithEmptyResultGetsFallbackSummary covers the
+// edge case where cursor-agent sets is_error=true but does not emit a
+// "result" string. The Summary must still be non-empty so the audit
+// row is honest about the failure.
+func TestRun_isErrorTrueWithEmptyResultGetsFallbackSummary(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(`{"type":"result","is_error":true}`)
+	a := newAdapter(fakeExec(&captured{}, stdout, nil, 0, nil, false))
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if !errors.Is(err, runner.ErrNonZeroExit) {
+		t.Fatalf("err: got %v want errors.Is(_, ErrNonZeroExit)", err)
+	}
+	if res.Summary == "" {
+		t.Errorf("Summary must not be empty on is_error fallback")
 	}
 }
 
@@ -291,7 +365,7 @@ func TestRun_envAllowlist(t *testing.T) {
 
 	var c captured
 	a := newAdapter(
-		fakeExec(&c, []byte(`{"summary":"ok"}`), nil, 0, nil, false),
+		fakeExec(&c, []byte(`{"type":"result","subtype":"success","result":"ok"}`), nil, 0, nil, false),
 		func(o *cursor.Options) {
 			o.ExtraAllowedEnvKeys = []string{"ALLOWED_EXTRA"}
 		},
@@ -337,7 +411,7 @@ func TestRun_envAllowlist(t *testing.T) {
 func TestRun_envRequestShadowsParent(t *testing.T) {
 	t.Setenv("PATH", "/parent/path")
 	var c captured
-	a := newAdapter(fakeExec(&c, []byte(`{"summary":"ok"}`), nil, 0, nil, false))
+	a := newAdapter(fakeExec(&c, []byte(`{"type":"result","subtype":"success","result":"ok"}`), nil, 0, nil, false))
 	req := defaultRequest()
 	req.Env = map[string]string{"PATH": "/request/path"}
 
@@ -355,7 +429,7 @@ func TestRun_workingDirPropagated(t *testing.T) {
 	t.Parallel()
 
 	var c captured
-	a := newAdapter(fakeExec(&c, []byte(`{"summary":"ok"}`), nil, 0, nil, false))
+	a := newAdapter(fakeExec(&c, []byte(`{"type":"result","subtype":"success","result":"ok"}`), nil, 0, nil, false))
 	req := defaultRequest()
 	req.WorkingDir = "/some/other/repo"
 
