@@ -1,5 +1,5 @@
 import { useMutation, type QueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { addChecklistItem, createTask } from "@/api";
 import {
   DEFAULT_NEW_TASK_TYPE,
@@ -22,7 +22,28 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
   const [subtaskInherit, setSubtaskInherit] = useState(false);
   const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
 
+  /**
+   * Monotonically-increasing token used to defend `createSubtaskMutation`
+   * against stale resolutions. The subtask doesn't have a stable
+   * user-visible id pre-create (the parent `taskId` is the same across
+   * every submission), so we use a per-submission counter as the
+   * "this is the create the user is currently waiting on" identity.
+   *
+   * Incremented (a) on every `submitNewSubtask` call so each in-flight
+   * mutation carries its own snapshot, AND (b) inside `resetSubtaskForm`
+   * so any user-initiated close / open / taskId-change / fresh form
+   * supersedes any in-flight create — without that second clear, an
+   * in-flight A's late resolution would slam closed the freshly-opened
+   * modal for a different submission B that the user hasn't tried to
+   * submit yet (the comparison would still match because no new submit
+   * had bumped the counter). Same shape as `requestedResumeRef` from
+   * #26 in `.agent/frontend-improvement-agent.log`, but a counter
+   * instead of an id since the modal has no caller-supplied identity.
+   */
+  const submissionTokenRef = useRef(0);
+
   const resetSubtaskForm = useCallback(() => {
+    submissionTokenRef.current += 1;
     setSubtaskTitle("");
     setSubtaskPrompt("");
     setSubtaskPriority("");
@@ -75,6 +96,13 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
       task_type: TaskType;
       checklist_inherit: boolean;
       checklistItems: string[];
+      /**
+       * Per-submission token captured synchronously at `submitNewSubtask`
+       * time and compared against `submissionTokenRef.current` in
+       * `onSuccess` to detect stale resolutions. Not part of the server
+       * contract — `createTask` ignores extra fields.
+       */
+      submissionToken: number;
     }) => {
       const child = await createTask({
         title: input.title,
@@ -94,11 +122,24 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
       }
       return child;
     },
-    onSuccess: async () => {
+    onSuccess: async (_child, variables) => {
+      // Server-truth invalidations always fire: the new subtask is real
+      // regardless of whether the user is still looking at the modal
+      // they submitted from. The list / detail must reflect it.
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.detail(taskId),
       });
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+      // Form-clear + modal-close branch is gated on the id-aware compare:
+      // if the user dismissed the modal mid-flight, switched parent task,
+      // or started typing a different subtask, `submissionTokenRef.current`
+      // has moved past `variables.submissionToken` and we MUST NOT clobber
+      // the now-current state. Same shape as the create / save / evaluate
+      // / resume / patch / delete races hardened in #20-#26 — see
+      // `.agent/frontend-improvement-agent.log`.
+      if (submissionTokenRef.current !== variables.submissionToken) {
+        return;
+      }
       closeSubtaskModal();
     },
   });
@@ -113,6 +154,7 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
       ) {
         return;
       }
+      const submissionToken = ++submissionTokenRef.current;
       createSubtaskMutation.mutate({
         title: subtaskTitle.trim(),
         initial_prompt: subtaskPrompt,
@@ -120,6 +162,7 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
         task_type: subtaskTaskType,
         checklist_inherit: subtaskInherit,
         checklistItems: subtaskInherit ? [] : subtaskChecklistItems,
+        submissionToken,
       });
     },
     [

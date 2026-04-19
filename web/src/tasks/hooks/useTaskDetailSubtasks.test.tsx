@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { taskQueryKeys } from "../task-query";
 import { useTaskDetailSubtasks } from "./useTaskDetailSubtasks";
 
 const { mockCreateTask, mockAddChecklistItem } = vi.hoisted(() => ({
@@ -224,6 +225,107 @@ describe("useTaskDetailSubtasks", () => {
     expect(inv).toHaveBeenCalled();
     await waitFor(() => {
       expect(result.current.subtaskModalOpen).toBe(false);
+    });
+  });
+
+  describe("createSubtaskMutation race", () => {
+    it("drops the form-clear + modal-close branch when the user dismissed and reopened mid-flight", async () => {
+      // Race scenario: user fills + submits subtask A, then (now that
+      // SubtaskCreateModal is dismissibleWhileBusy) closes the modal
+      // mid-flight, reopens it, types a different subtask B. A's
+      // late `onSuccess` MUST NOT closeSubtaskModal()/resetSubtaskForm()
+      // — that would slam shut B's form and erase what the user typed.
+      const qc = newQueryClient();
+      const inv = vi.spyOn(qc, "invalidateQueries");
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      let resolveA: ((value: unknown) => void) | undefined;
+      mockCreateTask.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveA = resolve;
+          }),
+      );
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openSubtaskModal();
+        result.current.setSubtaskTitle("Subtask A");
+        result.current.setSubtaskPriority("high");
+      });
+      await act(async () => {
+        result.current.submitNewSubtask(ev);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(result.current.createSubtaskMutation.isPending).toBe(true);
+      });
+
+      act(() => {
+        result.current.closeSubtaskModal();
+        result.current.openSubtaskModal();
+        result.current.setSubtaskTitle("Subtask B");
+        result.current.setSubtaskPriority("low");
+      });
+      expect(result.current.subtaskModalOpen).toBe(true);
+      expect(result.current.subtaskTitle).toBe("Subtask B");
+
+      await act(async () => {
+        resolveA?.({
+          id: CHILD_ID,
+          title: "Subtask A",
+          initial_prompt: "",
+          status: "ready",
+          priority: "high",
+          task_type: "general",
+          checklist_inherit: false,
+        });
+        await Promise.resolve();
+      });
+
+      // Server-truth invalidations DID fire — the subtask is real.
+      await waitFor(() => {
+        const keys = inv.mock.calls.map((call) => call[0]?.queryKey);
+        expect(keys).toEqual(
+          expect.arrayContaining([
+            taskQueryKeys.detail(PARENT_ID),
+            taskQueryKeys.listRoot(),
+          ]),
+        );
+      });
+      // But the form-clear + modal-close branch was guarded out so
+      // Subtask B's freshly-typed form is intact.
+      expect(result.current.subtaskModalOpen).toBe(true);
+      expect(result.current.subtaskTitle).toBe("Subtask B");
+      expect(result.current.subtaskPriority).toBe("low");
+    });
+
+    it("happy path: in-flight resolution closes the modal and resets the form", async () => {
+      const qc = newQueryClient();
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+
+      act(() => {
+        result.current.openSubtaskModal();
+        result.current.setSubtaskTitle("Sub");
+        result.current.setSubtaskPriority("high");
+      });
+
+      await act(async () => {
+        result.current.submitNewSubtask(ev);
+      });
+
+      await waitFor(() => {
+        expect(result.current.subtaskModalOpen).toBe(false);
+      });
+      expect(result.current.subtaskTitle).toBe("");
+      expect(result.current.subtaskPriority).toBe("");
     });
   });
 

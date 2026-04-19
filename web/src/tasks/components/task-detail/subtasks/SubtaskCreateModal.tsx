@@ -56,6 +56,21 @@ export function SubtaskCreateModal({
       size="wide"
       busy={pending}
       busyLabel="Creating subtask…"
+      // The spinner still gives in-flight feedback, but the user can
+      // step away (Escape / backdrop) without being trapped behind a
+      // slow create. Safe because `useTaskDetailSubtasks` race-hardens
+      // `createSubtaskMutation.onSuccess`: the form-clear + modal-close
+      // branch is gated on a per-submission `submissionToken` compared
+      // against `submissionTokenRef.current`, which is bumped inside
+      // `resetSubtaskForm` (called by both `closeSubtaskModal` and
+      // `openSubtaskModal`). So a stale resolution after the user
+      // dismissed or reopened the modal cannot clobber the now-current
+      // form. Server-truth invalidations (`taskQueryKeys.detail(taskId)`,
+      // `taskQueryKeys.listRoot()`) still fire so the new subtask
+      // appears in the list / detail even when the modal is already
+      // gone. Same pattern as `TaskCreateModal` (#27),
+      // `DeleteConfirmDialog`, and `TaskEditForm` (#28).
+      dismissibleWhileBusy
     >
       <section className="panel modal-sheet modal-sheet--edit task-subtask-modal-sheet">
         <h2 id="subtask-create-title">New subtask</h2>
