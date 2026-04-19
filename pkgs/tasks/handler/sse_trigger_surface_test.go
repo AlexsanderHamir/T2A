@@ -335,6 +335,42 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			// per the explicit "GET /settings still works without it" contract
 			// in handler.go::NewHandler.
 			{http.MethodGet, srv.URL + "/settings"},
+			// Health probes — no business logic but the routes are bound on
+			// the same mux that publishes SSE, so a future global middleware
+			// that fired SSE on every request (audit shim, request counter
+			// notifier, etc.) would catch these without breaking any other
+			// test before this row.
+			{http.MethodGet, srv.URL + "/health"},
+			{http.MethodGet, srv.URL + "/health/live"},
+			{http.MethodGet, srv.URL + "/health/ready"},
+			// GET /tasks/{id}/events/{seq} (single-event get) — Session 21
+			// pinned this route's read-only invariant inside its own
+			// contract file (TestHTTP_getEvent_neverPublishesSSE +
+			// TestHTTP_getEvent_errorPathsNeverPublish), but the cross-route
+			// table never exercised it. Adding both happy (seq=1, the
+			// task_created event from postTaskJSON above) and error (seq=0,
+			// invalid; seq=999, not-found) variants here protects the same
+			// invariant against a global middleware regression that the
+			// per-route file would not catch.
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/events/1"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/events/0"},
+			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/events/999"},
+			// GET /task-drafts (empty list — no drafts seeded). The list
+			// route is read-only and the SSE channel for drafts is fed by
+			// POST/DELETE /task-drafts. A future cache-warming refactor
+			// that re-emitted draft_saved on list could silently leak.
+			{http.MethodGet, srv.URL + "/task-drafts"},
+			// GET /repo/* routes return 409 here because newSSETriggerServer
+			// does not configure a repo root (RepoProvider yields
+			// ErrRepoRootNotConfigured). Treat the 409 path as the
+			// read-only-equivalent: a route that fails before reaching any
+			// store mutation must also stay silent on SSE. The 409 wire
+			// shape itself is pinned by handler_http_repo_settings_provider_test.go;
+			// what this row protects against is a future middleware that
+			// would publish on the failure path.
+			{http.MethodGet, srv.URL + "/repo/search?q=foo"},
+			{http.MethodGet, srv.URL + "/repo/file?path=README.md"},
+			{http.MethodGet, srv.URL + "/repo/validate-range?path=README.md&start=1&end=1"},
 		}
 		for _, r := range readOnly {
 			req, err := http.NewRequest(r.method, r.url, nil)
