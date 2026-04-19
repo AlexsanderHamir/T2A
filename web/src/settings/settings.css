@@ -84,6 +84,15 @@
   font-size: 14px;
 }
 
+/* Checkbox rows: the input must sit inline with its label text, not stacked
+   above it. Without this override the column layout floats the checkbox on
+   its own line and the adjacent text reads as an unrelated paragraph. */
+.settings-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-field-label {
   font-weight: 500;
 }

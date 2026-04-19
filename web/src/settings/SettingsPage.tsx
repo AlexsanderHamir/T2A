@@ -244,13 +244,13 @@ export function SettingsPage() {
       <form className="settings-form" onSubmit={(e) => void handleSubmit(e)}>
         <fieldset className="settings-fieldset">
           <legend>Agent worker</legend>
-          <label className="settings-field">
+          <label className="settings-field settings-field--inline">
             <input
               type="checkbox"
               checked={form.workerEnabled}
               onChange={(e) => handleField("workerEnabled", e.target.checked)}
             />
-            Enable agent worker
+            <span className="settings-field-label">Enable agent worker</span>
           </label>
           <p className="settings-field-help">
             When enabled, the worker pulls ready tasks and dispatches them to
