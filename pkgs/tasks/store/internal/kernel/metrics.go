@@ -53,6 +53,8 @@ const (
 	OpStartCyclePhase         = "start_cycle_phase"
 	OpCompleteCyclePhase      = "complete_cycle_phase"
 	OpListCyclePhases         = "list_cycle_phases"
+	OpGetAppSettings          = "get_app_settings"
+	OpUpdateAppSettings       = "update_app_settings"
 )
 
 // opDurationBuckets favor sub-100ms resolution for SQL point reads and short tx.
