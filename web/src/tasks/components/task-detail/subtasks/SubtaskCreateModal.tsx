@@ -1,8 +1,8 @@
 import type { FormEvent } from "react";
 import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/types";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
-import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../../shared/Modal";
+import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { TaskComposeFields } from "../../task-compose";
 
 type Props = {
@@ -121,11 +121,11 @@ export function SubtaskCreateModal({
               <FieldRequirementBadge requirement="optional" />
             </span>
           </label>
-          {error ? (
-            <div className="err task-subtask-modal-err" role="alert">
-              {errorMessage(error, "Could not create subtask.")}
-            </div>
-          ) : null}
+          <MutationErrorBanner
+            error={error}
+            fallback="Could not create subtask."
+            className="task-subtask-modal-err"
+          />
           <div className="row stack-row-actions task-subtask-modal-actions">
             <button
               type="button"

@@ -1,8 +1,8 @@
 import type { FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
 import type { PendingSubtaskDraft, TaskWithDepth } from "../../task-tree";
-import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../shared/Modal";
+import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";
 import { TaskCreateModalPendingSubtasksField } from "./fields/TaskCreateModalPendingSubtasksField";
@@ -240,23 +240,17 @@ export function TaskCreateModal({
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
 
-            {evaluateError ? (
-              <div
-                className="err task-create-modal-err task-create-modal-err--evaluate"
-                role="alert"
-              >
-                {errorMessage(evaluateError, "Could not evaluate draft.")}
-              </div>
-            ) : null}
+            <MutationErrorBanner
+              error={evaluateError}
+              fallback="Could not evaluate draft."
+              className="task-create-modal-err task-create-modal-err--evaluate"
+            />
 
-            {createError ? (
-              <div
-                className="err task-create-modal-err task-create-modal-err--create"
-                role="alert"
-              >
-                {errorMessage(createError, "Could not create task.")}
-              </div>
-            ) : null}
+            <MutationErrorBanner
+              error={createError}
+              fallback="Could not create task."
+              className="task-create-modal-err task-create-modal-err--create"
+            />
 
             <TaskCreateModalFooterActions
               disabled={disabled}

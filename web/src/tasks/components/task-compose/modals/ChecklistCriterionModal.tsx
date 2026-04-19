@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { FieldLabel } from "@/shared/FieldLabel";
-import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../../shared/Modal";
+import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 
 type Props = {
   mode: "add" | "edit";
@@ -113,20 +113,16 @@ export function ChecklistCriterionModal({
               aria-required="true"
             />
           </div>
-          {error ? (
-            <div
-              className="err task-checklist-criterion-modal-err"
-              role="alert"
-            >
-              {errorMessage(
-                error,
-                errorFallback ??
-                  (mode === "add"
-                    ? "Could not add criterion."
-                    : "Could not save changes."),
-              )}
-            </div>
-          ) : null}
+          <MutationErrorBanner
+            error={error}
+            fallback={
+              errorFallback ??
+              (mode === "add"
+                ? "Could not add criterion."
+                : "Could not save changes.")
+            }
+            className="task-checklist-criterion-modal-err"
+          />
           <div className="row stack-row-actions task-checklist-criterion-modal-actions">
             <button
               type="button"

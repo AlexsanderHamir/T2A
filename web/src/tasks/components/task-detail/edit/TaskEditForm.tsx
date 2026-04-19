@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { STATUSES, type Priority, type Status, type TaskType } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
+import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { PrioritySelect, TaskTypeSelect } from "../../task-compose";
 import { RichPromptEditor } from "../../rich-prompt";
 
@@ -167,11 +168,7 @@ export function TaskEditForm({
               placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
             />
           </div>
-          {error ? (
-            <div className="err task-edit-form-err" role="alert">
-              <p>{error}</p>
-            </div>
-          ) : null}
+          <MutationErrorBanner error={error} className="task-edit-form-err" />
           <div className="row stack-row-actions">
             <button type="submit" disabled={saving}>
               Save

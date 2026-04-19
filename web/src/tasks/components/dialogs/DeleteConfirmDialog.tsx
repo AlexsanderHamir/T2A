@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Modal } from "../../../shared/Modal";
+import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 
 type Props = {
   taskTitle: string;
@@ -101,11 +102,7 @@ export function DeleteConfirmDialog({
         <p className="confirm-dialog__footnote">
           This action cannot be undone.
         </p>
-        {error ? (
-          <div className="err confirm-dialog__err" role="alert">
-            <p>{error}</p>
-          </div>
-        ) : null}
+        <MutationErrorBanner error={error} className="confirm-dialog__err" />
         <div className="row stack-row-actions">
           <button
             ref={cancelRef}
