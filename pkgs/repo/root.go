@@ -78,8 +78,20 @@ func (r *Root) Resolve(rel string) (string, error) {
 	rel = strings.TrimSpace(rel)
 	rel = filepath.ToSlash(rel)
 	rel = strings.TrimPrefix(rel, "/")
-	if rel == "" || strings.Contains(rel, "..") {
+	if rel == "" {
 		return "", fmt.Errorf("%w: invalid path", domain.ErrInvalidInput)
+	}
+	// Reject only when ".." appears as its own path component
+	// (a parent-directory traversal). The previous broad
+	// strings.Contains(rel, "..") check rejected legitimate filenames
+	// like "foo..bar.go", "eslint..config.js", and "..gitkeep". The
+	// downstream pathEscapesRoot(relOut) check after filepath.Rel is
+	// the authoritative containment guard for any traversal that
+	// survives Clean (e.g. "../outside" → "..", "a/../../b" → "../b").
+	for _, seg := range strings.Split(rel, "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("%w: invalid path", domain.ErrInvalidInput)
+		}
 	}
 	joined := filepath.Join(r.abs, filepath.FromSlash(rel))
 	clean := filepath.Clean(joined)

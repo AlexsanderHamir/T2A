@@ -43,6 +43,82 @@ func TestOpenRoot_and_Resolve(t *testing.T) {
 	}
 }
 
+// TestRoot_Resolve_acceptsFilenamesContainingDoubleDot pins the contract
+// that filenames with a ".." substring (e.g. "foo..bar.go", "..hidden",
+// "eslint..config.js") are valid and must resolve, as long as no path
+// component is literally "..". The previous early-reject
+// `strings.Contains(rel, "..")` was overly broad and rejected such files
+// despite the downstream `pathEscapesRoot(relOut)` check being the
+// authoritative traversal guard. The traversal cases ("../outside",
+// "a/../../b", "..") continue to be rejected — see the partner tests
+// TestOpenRoot_and_Resolve and TestRoot_Resolve_rejectsTraversal.
+func TestRoot_Resolve_acceptsFilenamesContainingDoubleDot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cases := []string{
+		"foo..bar.go",
+		"eslint..config.js",
+		"..gitkeep",
+		"deep/dir/something..min.js",
+	}
+	for _, rel := range cases {
+		full := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("mkdir for %q: %v", rel, err)
+		}
+		if err := os.WriteFile(full, []byte("ok"), 0o644); err != nil {
+			t.Fatalf("write for %q: %v", rel, err)
+		}
+	}
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range cases {
+		got, err := r.Resolve(rel)
+		if err != nil {
+			t.Errorf("Resolve(%q) unexpected error: %v", rel, err)
+			continue
+		}
+		want := filepath.Join(dir, filepath.FromSlash(rel))
+		if got != want {
+			t.Errorf("Resolve(%q) = %q want %q", rel, got, want)
+		}
+	}
+}
+
+// TestRoot_Resolve_rejectsTraversal pins the symmetric contract: any
+// path that resolves outside the root after Clean — whether via a
+// leading "..", an embedded "a/../../b", or a bare ".." — must be
+// rejected with ErrInvalidInput. This guards against the fix to
+// TestRoot_Resolve_acceptsFilenamesContainingDoubleDot accidentally
+// loosening the traversal guard.
+func TestRoot_Resolve_rejectsTraversal(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []string{
+		"..",
+		"../outside",
+		"../../way/outside",
+		"a/../../b",
+		"a/b/../../../c",
+	}
+	for _, rel := range cases {
+		_, err := r.Resolve(rel)
+		if err == nil {
+			t.Errorf("Resolve(%q) expected error, got nil", rel)
+			continue
+		}
+		if !errors.Is(err, domain.ErrInvalidInput) {
+			t.Errorf("Resolve(%q) expected ErrInvalidInput, got %v", rel, err)
+		}
+	}
+}
+
 func TestRoot_Ready_ok(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
