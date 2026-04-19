@@ -326,6 +326,57 @@ What an operator sees in logs and in `task_events` for one happy-path attempt of
 
 A failed attempt swaps `phase_completed` → `phase_failed`, `cycle_completed` → `cycle_failed` (with `reason` payload), and `status_changed (running → failed)`. A panic adds `reason="panic"`. A shutdown adds `reason="shutdown"` and the cycle ends in `aborted` instead of `failed`.
 
+### Smoke run (operator-only, real cursor-agent)
+
+The fake-runner test suite covers every wiring decision in V1, but it cannot prove the wired-up system actually drives a real Cursor CLI invocation to completion. That gap is closed by the **real-cursor smoke test** specified in [AGENT-WORKER-SMOKE-PLAN.md](./AGENT-WORKER-SMOKE-PLAN.md) and shipped in two layers:
+
+| Layer | What it proves | File |
+|-------|----------------|------|
+| Runner-only | The `cursor.Adapter` correctly invokes `cursor-agent`, parses its JSON envelope, and the working directory ends up with the expected file. | [`pkgs/agents/runner/cursor/cursor_real_smoke_test.go`](../pkgs/agents/runner/cursor/cursor_real_smoke_test.go) |
+| Full flow | A `POST /tasks` with `status=ready` flows through reconcile → worker → real `cursor-agent`, the cycle/phase audit lands correctly, the file is on disk, the SSE hub emits `task_cycle_changed`, and the Prometheus metrics record exactly one `succeeded` run. | [`pkgs/tasks/agentreconcile/agent_real_cursor_e2e_test.go`](../pkgs/tasks/agentreconcile/agent_real_cursor_e2e_test.go) |
+
+**When to run.** Any change to `pkgs/agents/runner/cursor/`, the `pkgs/agents/worker/` happy path, or the wiring in `cmd/taskapi/run_agentworker.go`. CI does not run these tests because CI does not have a Cursor login; the smoke is an operator-run gate before merging changes that touch those areas.
+
+**Prerequisites.**
+
+- `cursor-agent` installed and on `PATH` (or override via `T2A_AGENT_WORKER_CURSOR_BIN`; the Windows shim is `cursor-agent.cmd`).
+- Cursor logged in for the local user account that runs the test.
+- Both stages take ~12–14 s wall-clock against a warm Cursor session; budget 60 s on a cold cache.
+
+**How to run.**
+
+```powershell
+# Runner-only smoke (cursor.Adapter against the live binary)
+$env:T2A_TEST_REAL_CURSOR='1'
+go test -tags=cursor_real -run TestCursorAdapter_RealBinary `
+    ./pkgs/agents/runner/cursor/... -count=1
+
+# Full flow (HTTP -> worker -> cursor-agent -> file on disk)
+$env:T2A_TEST_REAL_CURSOR='1'
+go test -tags=cursor_real -run TestAgentE2E_RealCursor `
+    ./pkgs/tasks/agentreconcile/... -count=1
+```
+
+```bash
+# bash equivalent
+T2A_TEST_REAL_CURSOR=1 go test -tags=cursor_real -run TestCursorAdapter_RealBinary \
+    ./pkgs/agents/runner/cursor/... -count=1
+
+T2A_TEST_REAL_CURSOR=1 go test -tags=cursor_real -run TestAgentE2E_RealCursor \
+    ./pkgs/tasks/agentreconcile/... -count=1
+```
+
+Both tests are **double-gated**: they no-op without the `cursor_real` build tag *and* without `T2A_TEST_REAL_CURSOR=1`, so a stray `go test ./...` can never trigger a paid Cursor run.
+
+**When the smoke fails.** The tests print operator-readable failure context before exiting:
+
+- `cursor probe failed` → `cursor-agent` is missing or not executable. Install it or set `T2A_AGENT_WORKER_CURSOR_BIN` to the absolute path of the binary (Windows: typically `C:\Users\<you>\AppData\Local\cursor-agent\cursor-agent.cmd`).
+- `task ... final status = "failed"` → the test dumps the cycle's `MetaJSON` and per-phase `Summary` + `DetailsJSON` tail. Check Cursor login (`cursor-agent --version` should succeed without a login prompt) and inspect the `details_tail` for the redacted CLI output.
+- `unexpected extra files` warnings (informational only) → on Windows, OS-level cache files (`cversions.2.db`, `*.ver*`) sometimes drop into the test's temp working directory. The harness logs these and continues; the only authoritative assertion is the target file's contents.
+- Test wall-clock above 90 s → Cursor cold-cache or a network blip. Re-run; if persistent, raise it locally first before opening an issue.
+
+The plan document ([AGENT-WORKER-SMOKE-PLAN.md](./AGENT-WORKER-SMOKE-PLAN.md)) records the full reasoning behind the deterministic prompt shape, the gating strategy, and the adapter bugs the smoke surfaced during its own rollout.
+
 ## Metrics
 
 The worker exposes two Prometheus series, registered by `taskapi.RegisterAgentWorkerMetrics()` in `internal/taskapi/agent_worker_metrics.go` and observed through the `worker.RunMetrics` interface so the worker package itself does not depend on Prometheus:

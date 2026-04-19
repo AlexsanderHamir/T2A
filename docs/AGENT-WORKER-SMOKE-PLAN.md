@@ -356,25 +356,27 @@ parentheses:
 
 **Scope:**
 
-- [ ] Append a **"Smoke run"** subsection under
+- [x] Append a **"Smoke run"** subsection under
       [`AGENT-WORKER.md`](./AGENT-WORKER.md) "Operator quick-look"
-      explaining:
-  - When to run (any change to `pkgs/agents/runner/cursor` or the
-    `pkgs/agents/worker` happy path).
-  - How to run both stages:
-    - Runner-only:
-      `T2A_TEST_REAL_CURSOR=1 go test -tags=cursor_real -run TestCursorAdapter_RealBinary ./pkgs/agents/runner/cursor/...`
-    - Full flow:
-      `T2A_TEST_REAL_CURSOR=1 go test -tags=cursor_real -run TestAgentE2E_RealCursor ./pkgs/tasks/agentreconcile/...`
-  - Prerequisites: `cursor-agent` on PATH and Cursor logged in.
-  - What to do when the smoke fails (read the redacted RawOutput tail
-    the test prints, check Cursor login, check
-    `T2A_AGENT_WORKER_WORKING_DIR`).
-- [ ] Update `docs/README.md` to link to
-      `docs/AGENT-WORKER-SMOKE-PLAN.md` under the testing/runbooks
-      section.
-- [ ] Tick all stage checkboxes above; update the status table.
-- [ ] Append a **"Smoke shipped"** note to `### Notes / followups`
+      covering: when to run (changes to `pkgs/agents/runner/cursor`,
+      `pkgs/agents/worker` happy path, or the `cmd/taskapi`
+      worker wiring), the two-layer test table (runner-only +
+      full flow), prerequisites (`cursor-agent` on PATH +
+      `T2A_AGENT_WORKER_CURSOR_BIN` override + Cursor logged in),
+      copy-paste PowerShell **and** bash invocations, the
+      double-gating reminder, and four operator-readable failure
+      modes (probe failure, task failed, Windows extra-files
+      warnings, wall-clock above budget).
+- [x] Update `docs/README.md`: the existing "Operator-run
+      real-cursor smoke" row in the **Where to put updates** table
+      now points at `docs/AGENT-WORKER.md` "Smoke run" as the
+      operator runbook and at `AGENT-WORKER-SMOKE-PLAN.md` as the
+      rollout history (the "once Stage 4 lands" hedge is removed
+      because Stage 4 has now landed). The plan itself stays linked
+      from the **What to read** table where it has been since
+      Stage 0.
+- [x] Tick all stage checkboxes above; update the status table.
+- [x] Append a **"Smoke shipped"** note to `### Notes / followups`
       below.
 
 **Exit criteria:**
@@ -458,6 +460,19 @@ parentheses:
   applies to the metrics adapter: the test reuses the production
   shape via the new `RegisterAgentWorkerMetricsOn` seam, so there is
   exactly one source of truth for metric names + labels + buckets.
+- **Smoke shipped (plan close-out).** The four-stage plan is fully
+  green: the deterministic prompt + `agentsmoke.Fixture` (Stage 1)
+  feed both a runner-layer real-cursor test (Stage 2) and a full
+  HTTP→worker→cursor e2e (Stage 3); the operator runbook
+  ([`AGENT-WORKER.md`](./AGENT-WORKER.md) "Smoke run") explains when
+  and how to run them, what double-gating prevents accidental paid
+  runs, and how to read failure dumps. Both real-cursor tests pass
+  locally in ~12–14 s wall-clock and are excluded from CI by build
+  tag + env gate. The plan stays in-tree (rather than being archived)
+  because future runner-layer changes — for example a "plan-only"
+  variant that drops `--force`, or a second adapter — will reuse this
+  document's edge-case taxonomy and add their own per-runner smoke
+  variants alongside the cursor one.
 
 ## Status
 
@@ -467,4 +482,4 @@ parentheses:
 | 1 — Smoke harness + fake-runner self-test | done | `9647bbb` |
 | 2 — Runner-layer real-cursor smoke | done | `2288d22` |
 | 3 — Full HTTP → worker → real cursor smoke | done | `be7b188` |
-| 4 — Docs + runbook | pending | — |
+| 4 — Docs + runbook | done | `pending-backfill` |
