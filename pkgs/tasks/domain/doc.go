@@ -1,6 +1,6 @@
 // Package domain defines task types ([Task], [TaskEvent], [TaskCycle], [TaskCyclePhase]),
 // enums ([Status], [Priority], [EventType], [Actor], [Phase], [CycleStatus], [PhaseStatus]),
-// sentinel errors ([ErrNotFound], [ErrInvalidInput]), and database driver Scan/Value methods
+// sentinel errors ([ErrNotFound], [ErrInvalidInput], [ErrConflict]), and database driver Scan/Value methods
 // for those enums. Execution-cycle state-machine helpers ([ValidPhaseTransition],
 // [TerminalCycleStatus], [TerminalPhaseStatus]) live in cycle_state.go.
 //
