@@ -29,7 +29,7 @@ export function TaskCreateModalFooterActions({
     <div className="row stack-row-actions task-create-modal-actions">
       <button
         type="button"
-        className="secondary"
+        className="secondary task-create-cancel-btn"
         disabled={disabled}
         onClick={onClose}
       >

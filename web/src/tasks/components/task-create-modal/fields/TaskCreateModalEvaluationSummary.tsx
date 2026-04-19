@@ -9,25 +9,30 @@ type Props = {
 };
 
 export function TaskCreateModalEvaluationSummary({ evaluation }: Props) {
+  // Keep the live region mounted (so the first evaluation result
+  // announces) but render no visible chrome until a score lands —
+  // an always-on "no score yet" panel is pure scaffolding noise.
+  const stateClass = evaluation
+    ? "task-create-evaluation-summary task-create-evaluation-summary--filled"
+    : "task-create-evaluation-summary task-create-evaluation-summary--empty";
+
   return (
     <section
-      className="task-create-evaluation-summary"
+      className={stateClass}
       aria-label="Draft evaluation summary"
       aria-live="polite"
     >
-      <div className="task-create-evaluation-head">
-        <h3 className="task-create-evaluation-title">
-          Latest evaluation score
-        </h3>
-        {evaluation ? (
-          <p className="task-create-evaluation-score-badge">
-            {evaluation.overallScore}
-            <span>/100</span>
-          </p>
-        ) : null}
-      </div>
       {evaluation ? (
         <>
+          <div className="task-create-evaluation-head">
+            <h3 className="task-create-evaluation-title">
+              Latest evaluation score
+            </h3>
+            <p className="task-create-evaluation-score-badge">
+              {evaluation.overallScore}
+              <span>/100</span>
+            </p>
+          </div>
           <p className="task-create-evaluation-overall">
             <strong>Overall:</strong> {evaluation.overallSummary}
           </p>
@@ -40,12 +45,7 @@ export function TaskCreateModalEvaluationSummary({ evaluation }: Props) {
             ))}
           </ul>
         </>
-      ) : (
-        <p className="muted task-create-evaluation-empty">
-          No score yet. Click <strong>Evaluate</strong> and your result appears
-          here before you create the task.
-        </p>
-      )}
+      ) : null}
     </section>
   );
 }

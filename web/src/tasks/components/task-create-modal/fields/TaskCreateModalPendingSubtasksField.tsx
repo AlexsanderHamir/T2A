@@ -37,10 +37,6 @@ export function TaskCreateModalPendingSubtasksField({
           New subtask
         </button>
       </div>
-      <p className="task-create-subtasks-hint muted">
-        <strong>New subtask</strong> opens another form. Subtasks are created
-        when you click <strong>Create</strong>.
-      </p>
       {pendingSubtasks.length > 0 ? (
         <ul className="task-checklist-list" aria-labelledby={SUBTASKS_HEADING_ID}>
           {pendingSubtasks.map((d, index) => (

@@ -74,13 +74,17 @@ describe("TaskCreateModal", () => {
     expect(within(panel).getByText(/title/i)).toBeInTheDocument();
   });
 
-  it("shows where score appears before evaluation", () => {
+  it("keeps the evaluation live region mounted but visually silent before any score", () => {
     renderModal({ evaluation: null });
+    // Region stays in the DOM so the first evaluation result is
+    // announced by assistive tech, but it renders no visible chrome
+    // (the Evaluate button in the footer is the affordance, not a
+    // boxed empty-state panel).
     const panel = screen.getByRole("region", {
       name: /draft evaluation summary/i,
     });
-    expect(within(panel).getByText(/no score yet/i)).toBeInTheDocument();
-    expect(within(panel).getByText(/click/i)).toBeInTheDocument();
+    expect(panel).toBeEmptyDOMElement();
+    expect(panel).toHaveClass("task-create-evaluation-summary--empty");
   });
 
   it("shows Save draft action and calls onSaveDraft", async () => {

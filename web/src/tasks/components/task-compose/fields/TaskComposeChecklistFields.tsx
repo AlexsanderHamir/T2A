@@ -38,11 +38,6 @@ export function TaskComposeChecklistFields({
           New criterion
         </button>
       </div>
-      <p className="task-create-checklist-hint muted">
-        All items must be satisfied before the task is done.{" "}
-        <strong>New criterion</strong> adds one; saved when you click{" "}
-        <strong>Create</strong>.
-      </p>
       {checklistItems.length > 0 ? (
         <div className="task-checklist-surface">
           <ul

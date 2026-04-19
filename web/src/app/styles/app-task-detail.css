@@ -430,6 +430,35 @@ button.task-home-new-task-btn:disabled {
   justify-content: flex-end;
 }
 
+/*
+ * Cancel is the quietest action in this footer — Escape and the
+ * backdrop both close the modal too, so the explicit button only
+ * needs to be discoverable, not loud. Pushing it to the far left
+ * (margin-right: auto) also separates "leave" from the Save / Eval
+ * / Create cluster so the eye doesn't have to disambiguate intent
+ * across four equally-weighted buttons.
+ */
+.task-create-modal-actions .task-create-cancel-btn {
+  margin-right: auto;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.task-create-modal-actions .task-create-cancel-btn:not(:disabled):hover {
+  background: var(--neutral-fill-subtle);
+  border-color: transparent;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.task-create-modal-actions .task-create-cancel-btn:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--brand-muted);
+}
+
 button.task-detail-checklist-add-btn {
   display: inline-flex;
   align-items: center;
