@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getTask } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
+import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { Priority, Status } from "@/types";
 import { TaskGraphPageSkeleton } from "../components/skeletons";
 import { priorityPillClass, statusPillClass } from "../task-display";
@@ -140,6 +141,26 @@ export function TaskGraphPage() {
     queryFn: ({ signal }) => getGraphTask(taskId, { signal }),
     enabled: Boolean(taskId),
   });
+
+  // WCAG 2.4.2 — every routed page sets a unique, content-aware
+  // document title so browser tabs / history / screen-reader page
+  // announcements identify which task's graph the user is on.
+  // Mirrors `TaskDetailPage` / `TaskEventDetailPage` /
+  // `TaskDraftsPage` / `SettingsPage` / `NotFoundPage`; this page
+  // was the only routed view in the app missing the hook. The
+  // computation matches `TaskDetailPage`'s convention: while
+  // loading or errored we leave it `null` so `useDocumentTitle`
+  // renders only the app-default suffix; on success we surface
+  // the loaded task title (with the same `Untitled task` fallback
+  // the detail page uses) plus a "Graph" prefix so the tab text
+  // distinguishes the graph view from the detail view of the same
+  // task ("Graph: My task" vs. "My task" — a task that's open in
+  // both views shouldn't get two tabs that read identically).
+  const taskGraphDocTitle =
+    taskId && taskQuery.isSuccess && taskQuery.data
+      ? `Graph: ${taskQuery.data.title.trim() || "Untitled task"}`
+      : null;
+  useDocumentTitle(taskGraphDocTitle);
 
   const layout = useMemo(() => {
     if (!taskQuery.data) {

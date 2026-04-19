@@ -100,6 +100,42 @@ describe("TaskGraphPage", () => {
     expect(calls).toBe(2);
   });
 
+  it("sets the document title to the loaded task title once data resolves", async () => {
+    // Session #38 — WCAG 2.4.2 regression. Every other routed page
+    // (TaskDetailPage / TaskEventDetailPage / TaskDraftsPage /
+    // SettingsPage / NotFoundPage) sets `document.title` from the
+    // loaded resource so browser tabs / history / screen-reader
+    // page announcements identify the view. TaskGraphPage was the
+    // only routed view missing the hook. The "Graph: " prefix lets
+    // the same task open in both the detail and the graph view
+    // distinguish their tabs.
+    stubEventSource();
+    vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/groot") {
+        return Response.json({
+          id: "groot",
+          title: "My large project",
+          initial_prompt: "",
+          status: "ready",
+          priority: "high",
+          checklist_inherit: false,
+          children: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const originalTitle = document.title;
+    renderGraph("/tasks/groot/graph");
+
+    await screen.findByRole("heading", { name: /task graph/i });
+    expect(document.title).toMatch(/Graph: My large project/);
+    expect(document.title).toMatch(/T2A — Tasks/);
+    document.title = originalTitle;
+  });
+
   it("renders virtualized graph with node count and links", async () => {
     stubEventSource();
     vi.stubEnv("VITE_TASK_GRAPH_MOCK_URL", "");
