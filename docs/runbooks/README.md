@@ -10,6 +10,7 @@ Operator playbooks for alerts shipped or referenced in [`deploy/prometheus/t2a-t
 | `TaskAPIHighMutatingLatencyP99` | [alert-mutating-latency.md](./alert-mutating-latency.md) |
 | `TaskAPIHTTPInFlightHigh` | [alert-in-flight-high.md](./alert-in-flight-high.md) |
 | `TaskAPIDatabasePoolWaitElevated` | [alert-db-pool-wait.md](./alert-db-pool-wait.md) |
+| `TaskAPISSEDroppedFramesElevated` | [alert-sse-dropped-frames.md](./alert-sse-dropped-frames.md) |
 | Readiness (external probe) | [alert-readiness.md](./alert-readiness.md) |
 
 **Roadmap:** further metrics (domain counters, store latency) are listed in [OBSERVABILITY-ROADMAP.md](../OBSERVABILITY-ROADMAP.md).

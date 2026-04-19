@@ -84,6 +84,24 @@ groups:
           description: "Connections are waiting on the pool (rate > 5/s for 10m). Check taskapi_db_pool_* gauges and Postgres capacity."
           runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-db-pool-wait.md"
 
+      # SSE fanout-pressure: counter wired in pkgs/tasks/handler/sse.go via
+      # middleware.RecordSSEDroppedFrames whenever a subscriber's bounded
+      # channel was full at Publish time. Drops are silent at the wire — UI
+      # updates are simply missed — so a sustained drop rate is the only
+      # observable signal that a slow client is degrading other subscribers'
+      # views. Threshold is conservative (>0.5 frames/s for 5m) because
+      # any sustained drop usually indicates a stuck client that requires
+      # operator intervention; tune higher for high-fanout deployments.
+      - alert: TaskAPISSEDroppedFramesElevated
+        expr: rate(taskapi_sse_dropped_frames_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "taskapi SSE fanout dropping frames (5m)"
+          description: "Sustained SSE drop rate ({{ $value }} frames/s) — at least one subscriber is too slow to keep up with the bounded fanout channel. Affected clients miss UI updates silently. Cross-reference taskapi_sse_subscribers and the `sse fanout dropped frames` Warn log to find the stuck connection."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-sse-dropped-frames.md"
+
       # Readiness is usually probed outside taskapi metrics (blackbox / k8s). Example expr
       # when you export probe_success{job="blackbox-taskapi-ready"}:
       #
