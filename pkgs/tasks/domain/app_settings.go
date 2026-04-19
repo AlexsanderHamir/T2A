@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"context"
-	"log/slog"
 	"time"
 )
 
@@ -49,11 +47,10 @@ const DefaultRunner = "cursor"
 
 // DefaultAppSettings returns the hard-coded first-boot defaults. Used
 // by the store's Get path when the row doesn't exist yet, so callers
-// always observe a fully populated value.
+// always observe a fully populated value. Skip-listed in
+// cmd/funclogmeasure/analyze.go: pure struct constructor; the calling
+// store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.DefaultAppSettings")
-	}
 	return AppSettings{
 		ID:                    AppSettingsRowID,
 		WorkerEnabled:         true,
@@ -65,11 +62,6 @@ func DefaultAppSettings() AppSettings {
 }
 
 // TableName pins the table name so Postgres migrations match between
-// dialects (gorm pluralizer would emit "app_settings" anyway, but
-// pinning avoids surprises if the struct is ever renamed).
-func (AppSettings) TableName() string {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.AppSettings.TableName")
-	}
-	return "app_settings"
-}
+// dialects. Skip-listed in cmd/funclogmeasure/analyze.go for the same
+// reason as TaskChecklistItem.TableName.
+func (AppSettings) TableName() string { return "app_settings" }

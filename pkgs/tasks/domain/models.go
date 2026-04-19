@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"context"
-	"log/slog"
 	"time"
 
 	"gorm.io/datatypes"
@@ -27,12 +25,10 @@ type TaskChecklistItem struct {
 	Text      string `json:"text" gorm:"not null;type:text"`
 }
 
-func (TaskChecklistItem) TableName() string {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.TaskChecklistItem.TableName")
-	}
-	return "task_checklist_items"
-}
+// TableName returns the GORM table name. Skip-listed in
+// cmd/funclogmeasure/analyze.go: pure constant return called at GORM
+// reflection time, no decision logic to trace.
+func (TaskChecklistItem) TableName() string { return "task_checklist_items" }
 
 // TaskChecklistCompletion records that subject TaskID satisfied checklist item ItemID.
 type TaskChecklistCompletion struct {
@@ -42,12 +38,8 @@ type TaskChecklistCompletion struct {
 	By     Actor     `json:"by" gorm:"column:done_by;not null"`
 }
 
-func (TaskChecklistCompletion) TableName() string {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.TaskChecklistCompletion.TableName")
-	}
-	return "task_checklist_completions"
-}
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskChecklistCompletion) TableName() string { return "task_checklist_completions" }
 
 type TaskEvent struct {
 	TaskID string    `gorm:"primaryKey;index:task_events_task_id_at,priority:1;index:task_events_task_id_type,priority:1"`
@@ -108,12 +100,8 @@ type TaskCycle struct {
 	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-func (TaskCycle) TableName() string {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.TaskCycle.TableName")
-	}
-	return "task_cycles"
-}
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCycle) TableName() string { return "task_cycles" }
 
 // TaskCyclePhase is one phase entry within a cycle. A single cycle can have
 // multiple rows for the same Phase value (for example a corrective Verify after
@@ -140,9 +128,5 @@ type TaskCyclePhase struct {
 	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-func (TaskCyclePhase) TableName() string {
-	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		slog.Debug("trace", "operation", "domain.TaskCyclePhase.TableName")
-	}
-	return "task_cycle_phases"
-}
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCyclePhase) TableName() string { return "task_cycle_phases" }

@@ -99,6 +99,45 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tContextWithLogSeq":              {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tlogSeqFromContext":              {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tWrapSlogHandlerWithLogSequence": {},
+
+	// pkgs/tasks/domain: per-row hot path. Every database/sql Scan and Value
+	// call goes through one of the typed Scan/Value pairs below; logging on
+	// each per-type wrapper would emit two trace lines per row (the wrapper
+	// + the underlying scanStringEnum / valueStringEnum). The two generic
+	// helpers carry a single slog.Debug each and ARE the canonical trace
+	// line for these per-row mutations. See Session 26 in
+	// .agent/backend-improvement-agent.log.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Status.Scan":      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStatus.Value":      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Priority.Scan":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tPriority.Value":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*TaskType.Scan":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskType.Value":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*EventType.Scan":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tEventType.Value":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Actor.Scan":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tActor.Value":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Phase.Scan":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tPhase.Value":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*CycleStatus.Scan": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tCycleStatus.Value": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*PhaseStatus.Scan": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tPhaseStatus.Value": {},
+	// pkgs/tasks/domain: GORM TableName methods are pure constant-string
+	// returns invoked at reflection time by GORM (no per-row hit, but also
+	// no decision logic); their callers (gorm itself) own the SQL trace.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskChecklistItem.TableName":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskChecklistCompletion.TableName": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycle.TableName":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCyclePhase.TableName":          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tAppSettings.TableName":             {},
+	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
+	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)
+	// already logs the surrounding decision with the relevant context.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidPhaseTransition": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":   {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {
