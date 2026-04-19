@@ -450,8 +450,9 @@ export function SettingsPage() {
             className="secondary"
             onClick={handleReset}
             disabled={!isDirty || patch.isPending}
+            title="Revert any unsaved edits back to the last saved values."
           >
-            Reset
+            Discard changes
           </button>
           <button
             type="button"
