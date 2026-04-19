@@ -373,3 +373,92 @@ func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 		t.Fatalf("got %v want ErrNotFound", err)
 	}
 }
+
+// TestStore_AppendTaskEvent_normalizes_data_json pins the on-disk
+// invariant for task_events.data_json: the column is documented in
+// docs/API-HTTP.md (`GET /tasks/{id}/events`) as "always a JSON object,
+// defaults to {}". The kernel.AppendEvent chokepoint must collapse nil,
+// empty, whitespace-only, and the literal "null" to "{}" so a future
+// caller that forwards a json.RawMessage(nil) (typed-nil pointer
+// marshal yields the bare token `null`) cannot poison the audit log
+// past the read-side normalizeJSONObjectForResponse defense, and
+// non-object payloads (string/number/array/bool/malformed) must surface
+// as ErrInvalidInput so the bug is caught at the writing call site
+// rather than masked into "{}". Mirrors the
+// nonObjectJSONFixtures table that pkgs/tasks/handler exercises on the
+// read side, applied to the public AppendTaskEvent boundary so writes
+// and responses share one truth.
+func TestStore_AppendTaskEvent_normalizes_data_json(t *testing.T) {
+	collapseToEmptyObject := []struct {
+		name string
+		in   []byte
+	}{
+		{"nil", nil},
+		{"empty_bytes", []byte{}},
+		{"whitespace_only", []byte("   \n\t")},
+		{"json_null_literal", []byte("null")},
+		{"padded_json_null", []byte("  null  ")},
+	}
+	rejectAsInvalidInput := []struct {
+		name string
+		in   []byte
+	}{
+		{"json_string", []byte(`"hi"`)},
+		{"json_number", []byte("123")},
+		{"json_array", []byte(`[1,2,3]`)},
+		{"json_bool_true", []byte("true")},
+		{"json_bool_false", []byte("false")},
+		{"malformed_unclosed", []byte(`{"k":`)},
+	}
+
+	for _, tc := range collapseToEmptyObject {
+		t.Run("collapse/"+tc.name, func(t *testing.T) {
+			s := NewStore(tasktestdb.OpenSQLite(t))
+			ctx := context.Background()
+			tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.AppendTaskEvent(ctx, tsk.ID, domain.EventSyncPing, domain.ActorUser, tc.in); err != nil {
+				t.Fatalf("AppendTaskEvent(%s): %v", tc.name, err)
+			}
+			seq, err := s.LastEventSeq(ctx, tsk.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ev, err := s.GetTaskEvent(ctx, tsk.ID, seq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := string(ev.Data); got != "{}" {
+				t.Fatalf("data_json = %q, want %q (docs/API-HTTP.md events invariant: always a JSON object)", got, "{}")
+			}
+		})
+	}
+
+	for _, tc := range rejectAsInvalidInput {
+		t.Run("reject/"+tc.name, func(t *testing.T) {
+			s := NewStore(tasktestdb.OpenSQLite(t))
+			ctx := context.Background()
+			tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before, err := s.TaskEventCount(ctx, tsk.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = s.AppendTaskEvent(ctx, tsk.ID, domain.EventSyncPing, domain.ActorUser, tc.in)
+			if !errors.Is(err, domain.ErrInvalidInput) {
+				t.Fatalf("AppendTaskEvent(%s) err = %v, want wraps ErrInvalidInput", tc.name, err)
+			}
+			after, err := s.TaskEventCount(ctx, tsk.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if after != before {
+				t.Fatalf("event count changed (%d -> %d) on rejected input %q (write must not partially commit)", before, after, tc.name)
+			}
+		})
+	}
+}

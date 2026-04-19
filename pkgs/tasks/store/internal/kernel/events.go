@@ -25,13 +25,24 @@ func NextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 }
 
 // AppendEvent inserts one task_events row inside the open transaction tx.
-// data may be nil; callers wanting an empty JSON object should pass nil and
-// the helper substitutes "{}" so downstream consumers never see SQL NULL.
+//
+// data is normalized through NormalizeJSONObject so the on-disk shape of
+// task_events.data_json honours the documented "always a JSON object"
+// invariant (see docs/API-HTTP.md GET /tasks/{id}/events). nil, empty,
+// whitespace-only, or the literal "null" all collapse to "{}" so downstream
+// consumers (handler readers, SSE fan-out, /events keyset paging) never
+// observe SQL NULL or a JSON null literal even if a future caller forgets
+// the chokepoint at its own boundary. Non-object payloads (string / number
+// / array / bool / malformed) surface as domain.ErrInvalidInput so the bug
+// is caught at the writing call site instead of leaking past the read-side
+// normalizeJSONObjectForResponse defense.
 func AppendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by domain.Actor, data []byte) error {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.AppendEvent")
-	if data == nil {
-		data = []byte("{}")
+	normalized, err := NormalizeJSONObject(data, "data")
+	if err != nil {
+		return err
 	}
+	data = normalized
 	ev := domain.TaskEvent{
 		TaskID: taskID,
 		Seq:    seq,
