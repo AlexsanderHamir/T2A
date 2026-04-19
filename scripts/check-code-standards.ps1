@@ -11,14 +11,21 @@ if (-not (Test-Path (Join-Path $root "go.mod"))) {
 
 $failed = $false
 
+function Test-IsUnderWebSrcApi {
+    param([string]$FullPath)
+    # CI (Linux) uses `/`; Windows uses `\`. `-like '*\web\src\api\*'` only matched Windows.
+    $n = $FullPath.Replace('\', '/')
+    return $n.Contains('/web/src/api/')
+}
+
 # TypeScript: fetch() must only appear under web/src/api/ (exclude tests).
-$srcRoot = Join-Path $root "web\src"
+$srcRoot = Join-Path $root (Join-Path "web" "src")
 if (Test-Path $srcRoot) {
     $tsFiles = Get-ChildItem -Path $srcRoot -Recurse -Include *.ts, *.tsx -File |
         Where-Object {
-            $_.FullName -notlike "*\web\src\api\*" -and
+            (-not (Test-IsUnderWebSrcApi $_.FullName)) -and
             $_.Name -notmatch '\.test\.(ts|tsx)$' -and
-            $_.FullName -notmatch '\\test\\'
+            ($_.FullName.Replace('\', '/') -notmatch '/test/')
         }
     # Match global `fetch(` only: exclude `.refetch(` / `prefetch(` and JSDoc
     # lines like "stats fetch (" where `fetch` is not the global.
@@ -38,7 +45,7 @@ if (Test-Path $srcRoot) {
 # purity is a later CODE_STANDARDS stage (split models vs pure domain).
 
 # Go: handler must not import database drivers directly.
-$handlerRoot = Join-Path $root "pkgs\tasks\handler"
+$handlerRoot = Join-Path $root (Join-Path "pkgs" (Join-Path "tasks" "handler"))
 if (Test-Path $handlerRoot) {
     $goFiles = Get-ChildItem -Path $handlerRoot -Recurse -Filter *.go -File |
         Where-Object { $_.Name -notmatch '_test\.go$' }
