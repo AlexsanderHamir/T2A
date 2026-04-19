@@ -118,6 +118,37 @@ describe("useTaskEventStream", () => {
     }
   });
 
+  it("invalidates the home-page KPI stats cache on task/cycle frames so Ready/Critical counts stay live", () => {
+    // Regression: the home-page KPI cards (Total / Ready / Critical) are
+    // backed by a separate ["task-stats"] query that lives outside the
+    // taskQueryKeys tree. SSE used to invalidate only listRoot + detail,
+    // so a worker-driven `running → done` transition refreshed the row
+    // in the table but left "Ready tasks: 1" frozen until a manual
+    // mutation or a hard refresh — exactly the staleness the user
+    // reported on the main page.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    act(() => {
+      mockES!.onmessage?.({
+        data: '{"type":"task_cycle_changed","id":"task-stats-1","cycle_id":"cyc-1"}',
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(950);
+    });
+
+    const calls = inv.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual({ queryKey: ["task-stats"] });
+  });
+
   it("falls back to broad invalidation when no recognised frame arrives", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");

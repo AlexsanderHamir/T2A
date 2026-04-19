@@ -78,6 +78,13 @@ export function useTaskEventStream(): boolean {
     clearPending(pendingRef.current);
     if (taskIds.length === 0 && cycleEntries.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      // Home-page KPI cards (Total / Ready / Critical) read a separate
+      // ["task-stats"] query keyed outside taskQueryKeys.all, so the
+      // broad task fallback above does not touch them. Without this
+      // companion invalidation the cards stay frozen on their
+      // pre-event values until the next manual mutation or page
+      // refresh — exactly the staleness we just fixed for the list.
+      void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       return;
     }
     if (taskIds.length > 0) {
@@ -97,6 +104,16 @@ export function useTaskEventStream(): boolean {
         queryKey: taskQueryKeys.cycles(taskId),
       });
     }
+    // Any task/cycle frame can flip a status (running → done), change
+    // priority, or add/remove a task — all of which feed the home-page
+    // KPI counts. The stats query lives outside taskQueryKeys, so we
+    // have to invalidate it explicitly here; the existing list/detail
+    // invalidations above do not cover it. Mutation handlers
+    // (useTaskPatchFlow / useTaskDeleteFlow / useTasksApp.create*) also
+    // invalidate ["task-stats"], but those only fire for user-initiated
+    // edits — agent-driven worker transitions reach the SPA solely
+    // through this SSE path.
+    void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
   }, [queryClient]);
 
   const scheduleInvalidateFromStream = useCallback(
