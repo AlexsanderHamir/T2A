@@ -31,7 +31,8 @@ func getTask(t *testing.T, baseURL, id string) (*http.Response, []byte) {
 //   - `children` is **omitted entirely** (not "children":[] and not "children":null)
 //     because the row has no descendants.
 //
-// The remaining seven keys must always be present. A future change that
+// The remaining keys (including pickup_not_before when the default agent
+// pickup delay applies) must always be present for this envelope. A future change that
 // emitted "parent_id":null or "children":[] for leaves would silently break
 // the doc claim and double the wire size of large list/get responses.
 func TestHTTP_getTask_leafRootEnvelope(t *testing.T) {
@@ -50,7 +51,7 @@ func TestHTTP_getTask_leafRootEnvelope(t *testing.T) {
 		t.Fatalf("decode envelope: %v body=%s", err, raw)
 	}
 
-	wantKeys := []string{"checklist_inherit", "cursor_model", "id", "initial_prompt", "priority", "runner", "status", "task_type", "title"}
+	wantKeys := []string{"checklist_inherit", "cursor_model", "id", "initial_prompt", "pickup_not_before", "priority", "runner", "status", "task_type", "title"}
 	gotKeys := make([]string, 0, len(top))
 	for k := range top {
 		gotKeys = append(gotKeys, k)

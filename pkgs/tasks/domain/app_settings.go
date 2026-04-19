@@ -28,9 +28,10 @@ import (
 //     the flag so Cursor picks its default model for the account.
 //   - MaxRunDurationSeconds: per-run wall-clock cap in seconds. 0 means
 //     "no limit" — the worker does not wrap runner.Run with a timeout.
-//   - AgentPickupDelaySeconds: when > 0, new ready tasks get pickup_not_before =
-//     created_at + this many seconds so the agent does not dequeue them
-//     immediately (smoother UX right after create). 0 disables the delay.
+//   - AgentPickupDelaySeconds: new ready tasks get pickup_not_before (see tasks
+//     model) deferred by this many seconds so the worker does not dequeue them
+//     immediately (smoother UX right after create). Default 5. Set to 0 to
+//     disable the delay.
 type AppSettings struct {
 	ID                      uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
 	WorkerEnabled           bool      `gorm:"not null;default:true"`
@@ -39,7 +40,7 @@ type AppSettings struct {
 	CursorBin               string    `gorm:"not null;default:''"`
 	CursorModel             string    `gorm:"not null;default:''"`
 	MaxRunDurationSeconds   int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds int       `gorm:"not null;default:0;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	AgentPickupDelaySeconds int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
 	UpdatedAt               time.Time `gorm:"not null"`
 }
 
@@ -51,6 +52,10 @@ const AppSettingsRowID uint = 1
 // DefaultRunner is the seed value for AppSettings.Runner on first boot.
 // Mirrors the only registered runner today (pkgs/agents/runner/cursor).
 const DefaultRunner = "cursor"
+
+// DefaultAgentPickupDelaySeconds is the seed value for AgentPickupDelaySeconds
+// on first boot (seconds before the worker may dequeue a newly created ready task).
+const DefaultAgentPickupDelaySeconds = 5
 
 // DefaultAppSettings returns the hard-coded first-boot defaults. Used
 // by the store's Get path when the row doesn't exist yet, so callers
@@ -65,7 +70,7 @@ func DefaultAppSettings() AppSettings {
 		RepoRoot:                "",
 		CursorBin:               "",
 		MaxRunDurationSeconds:   0,
-		AgentPickupDelaySeconds: 0,
+		AgentPickupDelaySeconds: DefaultAgentPickupDelaySeconds,
 	}
 }
 

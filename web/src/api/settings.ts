@@ -15,10 +15,7 @@ export type AppSettings = {
   /** Empty string = Cursor default model (`cursor-agent` omits `--model`). */
   cursor_model: string;
   max_run_duration_seconds: number;
-  /**
-   * Seconds to wait after a new ready task is created before the worker may
-   * dequeue it. 0 = pick up immediately.
-   */
+  /** Minimum seconds before the worker runs a new ready task. Default 5; 0 = no wait. */
   agent_pickup_delay_seconds: number;
   updated_at?: string;
 };

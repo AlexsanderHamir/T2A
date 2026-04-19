@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -115,8 +116,8 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 	if resp.MaxRunDurationSeconds != 0 {
 		t.Errorf("MaxRunDurationSeconds=%d, want 0 (no limit)", resp.MaxRunDurationSeconds)
 	}
-	if resp.AgentPickupDelaySeconds != 0 {
-		t.Errorf("AgentPickupDelaySeconds=%d, want 0 (no agent pickup delay)", resp.AgentPickupDelaySeconds)
+	if resp.AgentPickupDelaySeconds != domain.DefaultAgentPickupDelaySeconds {
+		t.Errorf("AgentPickupDelaySeconds=%d, want %d (default pickup delay)", resp.AgentPickupDelaySeconds, domain.DefaultAgentPickupDelaySeconds)
 	}
 	if resp.CursorModel != "" {
 		t.Errorf("CursorModel=%q, want empty default", resp.CursorModel)

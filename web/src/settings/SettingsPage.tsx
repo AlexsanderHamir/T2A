@@ -347,6 +347,7 @@ export function SettingsPage() {
               min={0}
               max={604800}
               step={1}
+              placeholder="5"
               value={form.agentPickupDelaySeconds}
               onChange={(e) =>
                 handleField("agentPickupDelaySeconds", e.target.value)
@@ -355,9 +356,8 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            After you create a ready task, wait this many seconds before the
-            worker may start it — avoids the agent grabbing the task while
-            the create UI is still finishing. <code>0</code> = no delay.
+            Minimum wait before the worker runs a new ready task. Default{" "}
+            <code>5</code>s. <code>0</code> = no wait.
           </p>
           {pickupInvalid ? (
             <p role="alert" className="settings-field-error">
