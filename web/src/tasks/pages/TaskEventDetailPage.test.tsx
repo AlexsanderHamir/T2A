@@ -96,7 +96,7 @@ describe("TaskEventDetailPage", () => {
       "code.task-timeline-type-pill[data-event-type='message_added']",
     );
     expect(pill).not.toBeNull();
-    expect(screen.getByText(/data \(json\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/event data/i)).toBeInTheDocument();
     expect(screen.getByText(/"from"/)).toBeInTheDocument();
   });
 
@@ -173,6 +173,49 @@ describe("TaskEventDetailPage", () => {
       screen.getByText(/invalid event sequence/i),
     ).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows Overview tab and usage for phase_completed events", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t1/events/9") {
+        return Response.json({
+          task_id: "t1",
+          seq: 9,
+          at: "2026-04-19T15:46:35.000Z",
+          type: "phase_completed",
+          by: "agent",
+          data: {
+            phase: "execute",
+            status: "succeeded",
+            cycle_id: "d60be771-3b1c-49a1-8710-2a11a963455a",
+            phase_seq: 2,
+            summary: "Hello **world**",
+            details: {
+              duration_ms: 1000,
+              request_id: "r1",
+              usage: { inputTokens: 100, outputTokens: 10 },
+            },
+          },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderEventPage("/tasks/t1/events/9");
+
+    expect(await screen.findByRole("tab", { name: /^overview$/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("execute")).toBeInTheDocument();
+    expect(screen.getByText("succeeded")).toBeInTheDocument();
+    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.getByText("world")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /^raw json$/i }));
+    expect(screen.getByText(/"phase"/)).toBeInTheDocument();
   });
 
   it("rejects partially numeric seq values instead of coercing", () => {

@@ -10,6 +10,8 @@ import {
   eventTypeLabel,
   eventTypeNeedsUserInput,
 } from "../task-events";
+import { CopyableId } from "@/shared/CopyableId";
+import { TaskEventDataPanel } from "../components/task-event-detail/TaskEventDataPanel";
 import { TaskEventDetailSkeleton } from "../components/skeletons";
 import { taskQueryKeys } from "../task-query";
 
@@ -106,7 +108,6 @@ export function TaskEventDetailPage() {
   }
 
   const ev = q.data;
-  const dataJson = JSON.stringify(ev.data, null, 2);
   const needsInput = eventTypeNeedsUserInput(ev.type);
   const awaitingUser = needsInput && awaitingUserReply(ev);
 
@@ -142,12 +143,13 @@ export function TaskEventDetailPage() {
               : "You replied — waiting on agent"
             : "Informational"}
         </p>
-        <p className="muted task-event-detail-task-id">
-          Task <code>{ev.task_id}</code>
+        <p className="task-event-detail-task-id">
+          <span className="task-event-detail-task-id-label">Task</span>{" "}
+          <CopyableId value={ev.task_id} />
         </p>
       </header>
 
-      <dl className="task-event-detail-dl">
+      <dl className="task-event-detail-dl task-event-detail-dl--readable">
         <div>
           <dt>Type</dt>
           <dd>
@@ -220,14 +222,7 @@ export function TaskEventDetailPage() {
         </div>
       ) : null}
 
-      <div className="task-event-detail-data-block">
-        <h3 className="task-detail-subheading term-prompt">
-          <span>Data (JSON)</span>
-        </h3>
-        <pre className="task-timeline-data task-event-detail-data-pre">
-          {dataJson}
-        </pre>
-      </div>
+      <TaskEventDataPanel eventType={ev.type} data={ev.data} />
 
       {ev.response_thread && ev.response_thread.length > 0 ? (
         <div

@@ -191,8 +191,10 @@ textarea {
   resize: vertical;
 }
 
-/* Primary CTA buttons only — combobox triggers are separate (see .custom-select-trigger). */
-button:not(.custom-select-trigger) {
+/* Primary CTA defaults for unclassified buttons. :where() keeps specificity at 0 so
+   scoped rules like button.task-detail-btn-edit / button.secondary stay authoritative.
+   .btn-utility / .task-event-data-tab are excluded (see app-task-timeline.css). */
+:where(button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab)) {
   font: inherit;
   font-weight: 500;
   letter-spacing: var(--text-button-tracking);
@@ -208,14 +210,18 @@ button:not(.custom-select-trigger) {
   box-shadow: var(--shadow-sm);
 }
 
-button:not(.custom-select-trigger):not(:disabled):hover {
+:where(button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab)):not(
+    :disabled
+  ):hover {
   background: var(--brand-hover);
   box-shadow: var(--shadow-md);
   transform: none;
   filter: none;
 }
 
-button:not(.custom-select-trigger):not(:disabled):active {
+:where(button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab)):not(
+    :disabled
+  ):active {
   transform: scale(0.98);
   box-shadow: var(--shadow-sm);
 }
