@@ -272,7 +272,15 @@ describe("App", () => {
     await choosePriorityInDialog(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: /^evaluate$/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/evaluate failed/i);
+    // The error now surfaces both globally (in the page-level
+    // ErrorBanner above <main>) and inside the dialog (via the new
+    // `evaluateError` prop landed alongside the checklist + subtask
+    // error UX). Scope the assertion to the dialog so it pins the
+    // user-visible feedback path that lives ON TOP of the modal
+    // backdrop — without that, the global banner is hidden behind
+    // the modal and the in-dialog callout is the user's only signal.
+    const dialogAlert = await within(dialog).findByRole("alert");
+    expect(dialogAlert).toHaveTextContent(/evaluate failed/i);
   });
 
   it("creates a task and shows it in the table after refresh", async () => {

@@ -134,6 +134,8 @@ export function TaskHome({ app }: Props) {
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}
+          createError={app.createError}
+          evaluateError={app.evaluateError}
         />
       ) : null}
       {app.draftPickerOpen ? (

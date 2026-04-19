@@ -115,6 +115,49 @@ describe("TaskCreateModal", () => {
     );
   });
 
+  it("does not render mutation error callouts on the happy path", () => {
+    renderModal();
+    expect(
+      screen.queryByText(/could not (create task|evaluate draft)/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the underlying createError message inside the modal", () => {
+    renderModal({ createError: new Error("server returned 500") });
+    const callout = document.querySelector(".task-create-modal-err--create");
+    expect(callout).not.toBeNull();
+    expect(callout).toHaveTextContent(/server returned 500/i);
+  });
+
+  it("renders the underlying evaluateError message inside the modal", () => {
+    renderModal({ evaluateError: new Error("LLM timeout") });
+    const callout = document.querySelector(".task-create-modal-err--evaluate");
+    expect(callout).not.toBeNull();
+    expect(callout).toHaveTextContent(/LLM timeout/i);
+  });
+
+  it("can render both create + evaluate errors simultaneously", () => {
+    renderModal({
+      createError: new Error("create boom"),
+      evaluateError: new Error("eval boom"),
+    });
+    expect(
+      document.querySelector(".task-create-modal-err--create"),
+    ).toHaveTextContent(/create boom/i);
+    expect(
+      document.querySelector(".task-create-modal-err--evaluate"),
+    ).toHaveTextContent(/eval boom/i);
+  });
+
+  it("keeps Create / Evaluate buttons reachable while an error is showing", () => {
+    renderModal({
+      title: "Reproduce me",
+      createError: new Error("boom"),
+    });
+    expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /^create$/i })).not.toBeDisabled();
+  });
+
   it("shows DMAP-specific fields when task type is DMAP", () => {
     renderModal({ taskType: "dmap" });
     expect(screen.getByText(/dmap configuration/i)).toBeInTheDocument();

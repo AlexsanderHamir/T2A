@@ -510,6 +510,21 @@ export function useTasksApp() {
     }
   }, [createModalOpen, saveDraftMutation]);
 
+  // Clear stale create / evaluate errors when the modal closes so the
+  // user does not see a leftover banner from the previous session the
+  // next time they reopen the modal. Without this, a failed submit
+  // followed by close + reopen would render the old `.err` callout
+  // before the user has even interacted with the new draft. Mirrors
+  // the `saveDraftMutation.reset()` lifecycle above. Both mutations
+  // are independent: only reset whichever has actually settled into
+  // an error / success state (skip when `isIdle`).
+  useEffect(() => {
+    if (!createModalOpen) {
+      if (!createMutation.isIdle) createMutation.reset();
+      if (!evaluateDraftMutation.isIdle) evaluateDraftMutation.reset();
+    }
+  }, [createModalOpen, createMutation, evaluateDraftMutation]);
+
   const deleteDraftMutation = useMutation({
     mutationFn: (id: string) => apiDeleteDraft(id),
     onSuccess: async () => {
@@ -974,6 +989,26 @@ export function useTasksApp() {
     deleteSuccess,
     deleteVariables,
     error,
+    /**
+     * Error from the most recent in-modal `createMutation`. Lifted
+     * into its own field so `TaskCreateModal` can render an inline
+     * `.err` callout — the global `app.error` banner sits behind the
+     * modal backdrop and is invisible to the user once a modal is
+     * open. `null` when the mutation has not failed (idle / pending /
+     * success). Cleared via the same `mutation.reset()` lifecycle
+     * react-query gives every mutation; today the modal close path
+     * reopens with a fresh state because `useTasksApp` resets on
+     * `closeCreateModal` → `resetNewTaskForm`, so consumers do not
+     * have to call reset themselves.
+     */
+    createError: createMutation.error,
+    /**
+     * Same as `createError` but for the AI evaluation step that
+     * runs from the same modal. Surfaced separately because the
+     * user might evaluate multiple times before submitting and
+     * needs to know which action just failed.
+     */
+    evaluateError: evaluateDraftMutation.error,
     sseLive,
     taskStats: taskStatsQuery.data,
     /**

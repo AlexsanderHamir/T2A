@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
 import type { PendingSubtaskDraft, TaskWithDepth } from "../../task-tree";
+import { errorMessage } from "@/lib/errorMessage";
 import { Modal } from "../../../shared/Modal";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { TaskCreateModalParentField } from "./fields/TaskCreateModalParentField";
@@ -59,6 +60,24 @@ type Props = {
   onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
+  /**
+   * Error from the most recent `createMutation` (POST `/tasks`).
+   * Surfaced as a `.err role="alert"` callout above the footer
+   * actions so the user sees the failure inside the modal — without
+   * this, the modal stays open with no feedback after a failed
+   * submit because the global `app.error` banner is hidden behind
+   * the modal backdrop. Pass `createMutation.error` directly (typed
+   * as `Error | null` per react-query v5).
+   */
+  createError?: Error | null;
+  /**
+   * Error from the most recent `evaluateDraftMutation`. Same gap as
+   * `createError`: the global banner is hidden behind the modal,
+   * so without this prop a failed evaluation produces a click that
+   * appears to do nothing. Surfaced near the evaluation summary
+   * so the user understands which action failed.
+   */
+  evaluateError?: Error | null;
 };
 
 export function TaskCreateModal({
@@ -103,6 +122,8 @@ export function TaskCreateModal({
   onSaveDraft,
   onEvaluate,
   onSubmit,
+  createError = null,
+  evaluateError = null,
 }: Props) {
   const disabled = pending || saving;
   const hasParent = Boolean(parentId.trim());
@@ -218,6 +239,24 @@ export function TaskCreateModal({
             ) : null}
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
+
+            {evaluateError ? (
+              <div
+                className="err task-create-modal-err task-create-modal-err--evaluate"
+                role="alert"
+              >
+                {errorMessage(evaluateError, "Could not evaluate draft.")}
+              </div>
+            ) : null}
+
+            {createError ? (
+              <div
+                className="err task-create-modal-err task-create-modal-err--create"
+                role="alert"
+              >
+                {errorMessage(createError, "Could not create task.")}
+              </div>
+            ) : null}
 
             <TaskCreateModalFooterActions
               disabled={disabled}
