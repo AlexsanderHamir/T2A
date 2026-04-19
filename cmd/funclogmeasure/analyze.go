@@ -15,9 +15,44 @@ import (
 
 const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure"
 
-// skipSlogRequirement marks pkg+func pairs that intentionally omit log/slog.
-// Keep this tiny: pure helpers on hot paths (e.g. health JSON) or inner-loop
-// predicates where Debug each call would flood logs. See docs/OBSERVABILITY.md.
+// skipSlogRequirement marks pkg+func pairs that intentionally omit log/slog
+// despite funclogmeasure -enforce. Each entry MUST carry a per-block
+// rationale comment explaining why logging here would be redundant or
+// harmful, so a future contributor adding a new entry has a concrete
+// model to follow.
+//
+// There are exactly four legitimate categories for entries in this map.
+// New entries that don't fit one of these categories should be questioned:
+//
+//  1. Tool-required no-ops — pure helpers / attribute builders / context
+//     wiring whose only relationship to slog was a `_ = slog.Default()
+//     .Enabled(...)` stub added solely to satisfy this analyzer. The
+//     surrounding caller already logs the decision (e.g. taskCreateInputFields
+//     runs only inside debugHTTPRequest's gate; cmd/taskapi/main runs
+//     before the slog JSON sink is installed). See Sessions 25 and 27 in
+//     .agent/backend-improvement-agent.log.
+//
+//  2. Hot-path optimizations — per-row / per-frame / per-scrape helpers
+//     where one slog.Debug per invocation would flood the trace volume
+//     for marginal observability value. The canonical trace lives on a
+//     chokepoint one layer down (e.g. scanStringEnum / valueStringEnum
+//     for the per-type Scan/Value methods on enum types; the access-log
+//     middleware for context-id reads). See Session 26.
+//
+//  3. Delegate-already-logs orchestration — public helpers whose body is
+//     a one-line call to a private helper that already emits the trace
+//     line (e.g. HelperIOIn → helperDebugIn → slog.Log). A per-function
+//     log here would multi-count every observed invocation. See
+//     Session 27.
+//
+//  4. Re-export thin wrappers — package-boundary aliases that exist
+//     only to avoid leaking the dependency on the real implementation
+//     (e.g. handler.WithRecovery wraps middleware.WithRecovery; slog
+//     lives on the real one). The wrapper carries no decision logic.
+//
+// Entries are grouped below by category; each block begins with a short
+// comment naming the category and the per-package rationale. See
+// docs/OBSERVABILITY.md for the broader trace-line contract.
 var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/version\tString":                    {},
 	"github.com/AlexsanderHamir/T2A/internal/version\tPrometheusBuildInfoLabels": {},
