@@ -18,7 +18,7 @@ describe("DeleteConfirmDialog", () => {
     );
     expect(
       screen.getByRole("dialog", {
-        description: /this cannot be undone/i,
+        description: /will be permanently deleted/i,
       }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^cancel$/i }));
@@ -61,7 +61,7 @@ describe("DeleteConfirmDialog", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("does not render the cascade warning when subtaskCount is 0/omitted", () => {
+  it("does not render the cascade callout when subtaskCount is 0/omitted", () => {
     render(
       <DeleteConfirmDialog
         taskTitle="leaf"
@@ -71,12 +71,13 @@ describe("DeleteConfirmDialog", () => {
         onConfirm={vi.fn()}
       />,
     );
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/will also be permanently deleted/i),
+      screen.queryByText(/subtask.*will also be deleted/i),
     ).not.toBeInTheDocument();
   });
 
-  it("warns about the cascade when subtaskCount > 0 (singular phrasing)", () => {
+  it("renders the cascade callout when subtaskCount > 0 (singular phrasing)", () => {
     render(
       <DeleteConfirmDialog
         taskTitle="parent"
@@ -87,14 +88,12 @@ describe("DeleteConfirmDialog", () => {
         onConfirm={vi.fn()}
       />,
     );
-    expect(
-      screen.getByText(
-        /its 1 subtask will also be permanently deleted/i,
-      ),
-    ).toBeInTheDocument();
+    const callout = screen.getByRole("note");
+    expect(callout).toBeInTheDocument();
+    expect(callout).toHaveTextContent(/1 subtask will also be deleted\./i);
   });
 
-  it("warns about the cascade when subtaskCount > 1 (plural phrasing)", () => {
+  it("renders the cascade callout when subtaskCount > 1 (plural phrasing)", () => {
     render(
       <DeleteConfirmDialog
         taskTitle="parent"
@@ -105,10 +104,23 @@ describe("DeleteConfirmDialog", () => {
         onConfirm={vi.fn()}
       />,
     );
+    const callout = screen.getByRole("note");
+    expect(callout).toBeInTheDocument();
+    expect(callout).toHaveTextContent(/4 subtasks will also be deleted\./i);
+  });
+
+  it("always renders the muted 'cannot be undone' footnote", () => {
+    render(
+      <DeleteConfirmDialog
+        taskTitle="X"
+        saving={false}
+        deletePending={false}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
     expect(
-      screen.getByText(
-        /its 4 subtasks will also be permanently deleted/i,
-      ),
+      screen.getByText(/this action cannot be undone\./i),
     ).toBeInTheDocument();
   });
 

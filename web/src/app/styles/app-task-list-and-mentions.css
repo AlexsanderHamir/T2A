@@ -445,6 +445,48 @@
   margin-top: 0;
 }
 
+/* Primary "what will happen" statement — strong but not screaming.
+   The task title inside is bolded so the eye lands on the noun being
+   deleted, not on decorative chrome. Body weight, normal text colour. */
+.confirm-dialog__statement {
+  margin: var(--space-2) 0 0;
+  color: var(--text-primary);
+}
+
+/* Cascade-impact callout. Only rendered when the delete fans out to
+   descendants; uses the shared --warning-* token family so it matches
+   the rest of the app's "heads up" surfaces. The triangle icon is an
+   inline SVG so we avoid pulling an icon dep just for one screen. */
+.confirm-dialog__cascade {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+  font-size: var(--text-help);
+  line-height: 1.4;
+}
+
+.confirm-dialog__cascade-icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  color: var(--warning-ink);
+}
+
+/* Bottom caption — the "this is permanent" reminder lives here so it
+   does not compete with the primary statement for attention. */
+.confirm-dialog__footnote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-help);
+  color: var(--text-secondary);
+}
+
 .mention-wrap {
   position: relative;
 }
