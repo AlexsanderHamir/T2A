@@ -83,6 +83,26 @@ type agentWorkerSupervisor struct {
 	probe      func(ctx context.Context, id, binaryPath string, timeout time.Duration) (string, error)
 	probeBudge time.Duration
 
+	// applyMu serializes Start / Reload end-to-end so the read-prev,
+	// probe, build, spawn, swap-current sequence in applySettings runs
+	// atomically with respect to concurrent calls. Without this, the
+	// brief s.mu critical section that snapshots prev releases the
+	// lock during the long-running probe + build + spawn — two
+	// concurrent Reloads (e.g. two PATCH /settings requests landing
+	// inside the probe budget) could both observe the same prev
+	// pointer, both proceed to spawn fresh worker goroutines, and the
+	// loser of the s.current swap would be leaked (its cancelCtx
+	// never fires, its goroutine drains the ready queue forever
+	// alongside the visible worker — see TestSupervisor_ConcurrentReloadIsSerialized).
+	// applyMu is intentionally separate from s.mu so the in-flight
+	// apply does not block CancelCurrentRun / Drain / Subscribe-style
+	// short, hot-path s.mu critical sections; Drain still races the
+	// in-flight apply via the s.drained flag (checked twice — at the
+	// top under s.mu and again before swapping s.current — so a Drain
+	// that lands mid-apply tears down the just-spawned worker and the
+	// apply returns the "drained mid-start" error).
+	applyMu sync.Mutex
+
 	mu      sync.Mutex
 	current *agentWorkerInstance
 	drained bool
@@ -221,6 +241,13 @@ func (s *agentWorkerSupervisor) Drain() {
 func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string) error {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.applySettings",
 		"phase", phase)
+	// Serialize the entire apply pipeline. See applyMu doc on
+	// agentWorkerSupervisor for why s.mu alone is insufficient
+	// (the brief s.mu critical sections release before the long
+	// probe/build/spawn section, opening a window for two
+	// concurrent Reloads to both spawn workers and leak one).
+	s.applyMu.Lock()
+	defer s.applyMu.Unlock()
 	cfg, err := s.store.GetSettings(ctx)
 	if err != nil {
 		return fmt.Errorf("agent worker supervisor: read settings: %w", err)

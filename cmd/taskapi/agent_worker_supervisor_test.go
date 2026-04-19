@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -278,6 +280,127 @@ func TestSupervisor_DrainAfterDrainIsNoOp(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, nil)
 	rig.sup.Drain()
 	rig.sup.Drain()
+}
+
+// TestSupervisor_ConcurrentReloadIsSerialized pins the supervisor's
+// Reload contract: concurrent calls (e.g. two PATCH /settings requests
+// landing within the probe budget) must be serialized end-to-end so
+// they observe each other's effects on s.current. Before the
+// applyMu fix, applySettings released the lifecycle mutex during the
+// long-running probe + build + spawn section: two Reloads could both
+// snapshot the same prev pointer, both proceed to spawn fresh worker
+// goroutines, and the second one would overwrite s.current — leaking
+// the worker the first call had just spawned (its cancelCtx never
+// fires, its goroutine drains the ready queue forever). The defect
+// surfaces as "two probes ran concurrently": probe is the slowest
+// observable step and a fast-and-loose proxy for the spawn race
+// because both paths must traverse it before the supervisor mutates
+// s.current. We also assert that applyMu's contract is end-to-end —
+// the second Reload's probe MUST run after the first Reload has
+// already updated s.current, so it can observe the new prev (set by
+// instanceMatchesSettings to a no-op respawn or correctly tear down
+// the previous-previous worker via stopWorkerInstance).
+func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		probeMu       sync.Mutex
+		concurrentMax int32
+		concurrentNow int32
+		// blockProbe gate is replaced under probeMu when we want
+		// to switch the probe behaviour from fast (Start) to slow
+		// (concurrent Reload).
+		blockProbe = make(chan struct{})
+	)
+	close(blockProbe) // Start phase: no blocking.
+
+	getGate := func() chan struct{} {
+		probeMu.Lock()
+		defer probeMu.Unlock()
+		return blockProbe
+	}
+
+	probe := func(_ context.Context, _, _ string, _ time.Duration) (string, error) {
+		n := atomic.AddInt32(&concurrentNow, 1)
+		defer atomic.AddInt32(&concurrentNow, -1)
+		for {
+			cur := atomic.LoadInt32(&concurrentMax)
+			if n <= cur || atomic.CompareAndSwapInt32(&concurrentMax, cur, n) {
+				break
+			}
+		}
+		<-getGate()
+		return "v1", nil
+	}
+
+	rig := newSupervisorTestRig(t, ctx, probe)
+	dirA := t.TempDir()
+	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
+		RepoRoot: ptrString(dirA),
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := rig.sup.Start(ctx); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	if atomic.LoadInt32(&concurrentMax) != 1 {
+		t.Fatalf("Start should have probed exactly once (concurrentMax=%d)", concurrentMax)
+	}
+
+	// Switch to a blocking gate so concurrent Reloads pile up
+	// inside the probe and we can measure overlap.
+	probeMu.Lock()
+	blockProbe = make(chan struct{})
+	probeMu.Unlock()
+	atomic.StoreInt32(&concurrentMax, 0)
+	atomic.StoreInt32(&concurrentNow, 0)
+
+	dirB := t.TempDir()
+	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
+		RepoRoot: ptrString(dirB),
+	}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- rig.sup.Reload(ctx)
+		}()
+	}
+	// Give both goroutines time to enter the probe (or be blocked
+	// at applyMu, depending on the fix). 200ms is comfortably above
+	// the 5ms scheduling jitter floor on Windows runners and well
+	// below the t.Cleanup -> Drain bound.
+	time.Sleep(200 * time.Millisecond)
+	probeMu.Lock()
+	close(blockProbe)
+	probeMu.Unlock()
+	wg.Wait()
+	close(errs)
+	for e := range errs {
+		if e != nil {
+			t.Fatalf("Reload failed: %v", e)
+		}
+	}
+
+	if got := atomic.LoadInt32(&concurrentMax); got > 1 {
+		t.Errorf("Reload not serialized: %d probes ran concurrently (want <=1) — concurrent applySettings can leak worker goroutines by overwriting s.current after both probes return", got)
+	}
+	rig.sup.mu.Lock()
+	cur := rig.sup.current
+	rig.sup.mu.Unlock()
+	if cur == nil {
+		t.Fatal("supervisor lost worker after concurrent Reload")
+	}
+	if cur.settings.RepoRoot != dirB {
+		t.Errorf("final worker settings.RepoRoot = %q, want %q (last write wins)", cur.settings.RepoRoot, dirB)
+	}
 }
 
 func ptrBool(v bool) *bool       { return &v }
