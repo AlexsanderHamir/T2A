@@ -126,9 +126,18 @@ export function useTaskEventStream(): boolean {
           // and don't touch task data; refetch the settings cache
           // directly without joining the debounce batch (the SPA
           // Settings page should reflect the change instantly).
+          // Returning here is load-bearing: the trailing debounce below
+          // would otherwise arm a timer that, on an empty pendingRef,
+          // falls through to the broad ["tasks"] fallback in
+          // flushStreamInvalidation and silently refetches every active
+          // task query SSE_INVALIDATE_WINDOW_MS later — exactly what the
+          // documented contract in docs/API-SSE.md forbids. This is also
+          // why settings/cancel frames live BEFORE the timer scheduling
+          // rather than alongside task/cycle accumulation.
           void queryClient.invalidateQueries({
             queryKey: settingsQueryKeys.app(),
           });
+          return;
         }
       }
       // Trailing debounce that respects a hard maxWait ceiling. New
@@ -141,6 +150,12 @@ export function useTaskEventStream(): boolean {
       // bug we are fixing here. Date.now() is intentional (not
       // performance.now()) because vitest fake timers mock the wall
       // clock and the existing test suite advances timers in ms ticks.
+      //
+      // NOTE: unrecognised frames (parseTaskChangeFrame returns null,
+      // e.g. a future event type or a malformed payload) intentionally
+      // fall through to here so the broad-fallback branch in
+      // flushStreamInvalidation refetches the task tree — better to
+      // over-refetch than to silently miss a server-side state change.
       const now = Date.now();
       if (firstQueuedAtRef.current === null) {
         firstQueuedAtRef.current = now;
