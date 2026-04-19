@@ -466,5 +466,5 @@ parentheses:
 | 0 — Plan | done | `bf3ceca` |
 | 1 — Smoke harness + fake-runner self-test | done | `9647bbb` |
 | 2 — Runner-layer real-cursor smoke | done | `2288d22` |
-| 3 — Full HTTP → worker → real cursor smoke | done | `pending-backfill` |
+| 3 — Full HTTP → worker → real cursor smoke | done | `be7b188` |
 | 4 — Docs + runbook | pending | — |
