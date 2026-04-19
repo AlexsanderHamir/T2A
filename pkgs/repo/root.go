@@ -156,7 +156,7 @@ func (r *Root) ValidatePromptMentions(prompt string) error {
 			var err error
 			abs, err = r.Resolve(m.Path)
 			if err != nil {
-				return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
+				return wrapMention(m.mentionLabel(), err)
 			}
 			resolvedPaths[m.Path] = abs
 		}
@@ -164,32 +164,74 @@ func (r *Root) ValidatePromptMentions(prompt string) error {
 			fi, err := os.Stat(abs)
 			if err != nil {
 				if os.IsNotExist(err) {
-					return fmt.Errorf("%w: mention @%s: file does not exist", domain.ErrInvalidInput, m.Path)
+					return wrapMentionMsg(m.mentionLabel(), "file does not exist")
 				}
-				return fmt.Errorf("%w: mention @%s: %v", domain.ErrInvalidInput, m.Path, err)
+				return wrapMention(m.mentionLabel(), err)
 			}
 			if fi.IsDir() {
-				return fmt.Errorf("%w: mention @%s: path is a directory, not a file", domain.ErrInvalidInput, m.Path)
+				return wrapMentionMsg(m.mentionLabel(), "path is a directory, not a file")
 			}
 			seenFiles[abs] = struct{}{}
 		}
 		if m.HasRange {
 			if err := validateRangeBounds(m.StartLine, m.EndLine); err != nil {
-				return fmt.Errorf("%w: mention @%s(%d-%d): %v", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
+				return wrapMention(m.mentionLabel(), err)
 			}
 			n, ok := lineCounts[abs]
 			if !ok {
 				lineCount, lineErr := LineCount(abs)
 				if lineErr != nil {
-					return fmt.Errorf("%w: mention @%s(%d-%d): %w", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, lineErr)
+					return wrapMention(m.mentionLabel(), lineErr)
 				}
 				n = lineCount
 				lineCounts[abs] = n
 			}
 			if err := validateRangeWithLineCount(m.StartLine, m.EndLine, n); err != nil {
-				return fmt.Errorf("%w: mention @%s(%d-%d): %v", domain.ErrInvalidInput, m.Path, m.StartLine, m.EndLine, err)
+				return wrapMention(m.mentionLabel(), err)
 			}
 		}
 	}
 	return nil
+}
+
+// invalidInputPrefix is the text form of domain.ErrInvalidInput as it
+// appears when stringified via fmt.Errorf("%w: ...", domain.ErrInvalidInput).
+// Kept as a package var initialized once (rather than recomputed on every
+// wrap) since hot prompts can carry many mentions.
+var invalidInputPrefix = domain.ErrInvalidInput.Error() + ": "
+
+// wrapMention wraps cause with a single "tasks: invalid input: <label>: <reason>"
+// prefix. If cause already carries the "tasks: invalid input: " prefix (it
+// will whenever cause came from r.Resolve, validateRangeBounds, LineCount, or
+// any other ErrInvalidInput-wrapped sink in this package), the duplicated
+// prefix is stripped from cause's message so clients see exactly one prefix
+// on the wire instead of the historical doubled "tasks: invalid input: mention
+// @<path>: tasks: invalid input: <reason>". errors.Is(err, domain.ErrInvalidInput)
+// remains true via the %w on domain.ErrInvalidInput, so all existing 400
+// mappings in pkgs/tasks/handler/handler_http_json.go::storeErrorClientMessage
+// continue to fire unchanged.
+func wrapMention(label string, cause error) error {
+	slog.Debug("trace", "operation", "repo.wrapMention")
+	return wrapMentionMsg(label, strings.TrimPrefix(cause.Error(), invalidInputPrefix))
+}
+
+// wrapMentionMsg is the literal-message variant of wrapMention used when the
+// reason is a hardcoded sentinel string ("file does not exist",
+// "path is a directory, not a file") rather than an error value. Keeping a
+// single shared format keeps the wire phrase identical across both code paths.
+func wrapMentionMsg(label, reason string) error {
+	slog.Debug("trace", "operation", "repo.wrapMentionMsg")
+	return fmt.Errorf("%w: %s: %s", domain.ErrInvalidInput, label, reason)
+}
+
+// mentionLabel formats the human-readable "mention @<path>" or
+// "mention @<path>(<start>-<end>)" prefix used in error messages so range
+// failures still pinpoint the offending line span (the substring clients in
+// docs/API-HTTP.md are documented to rely on for form UI highlighting).
+func (m Mention) mentionLabel() string {
+	slog.Debug("trace", "operation", "repo.Mention.mentionLabel")
+	if m.HasRange {
+		return fmt.Sprintf("mention @%s(%d-%d)", m.Path, m.StartLine, m.EndLine)
+	}
+	return "mention @" + m.Path
 }

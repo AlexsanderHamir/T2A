@@ -218,6 +218,124 @@ func TestValidatePromptMentions(t *testing.T) {
 	}
 }
 
+// TestValidatePromptMentions_singlePrefix pins the "single tasks: invalid input
+// prefix on the wire" invariant for every error path inside
+// repo.Root.ValidatePromptMentions. Before this fix every mention failure
+// whose underlying cause itself wrapped domain.ErrInvalidInput (i.e. r.Resolve
+// rejections, validateRangeBounds rejections, LineCount rejections,
+// validateRangeWithLineCount rejections) produced
+// "tasks: invalid input: mention @<path>: tasks: invalid input: <reason>"
+// — a doubled prefix the docs explicitly called out as an "implementation
+// detail" caveat (docs/API-HTTP.md POST /tasks repo-mention validation
+// section). The wrapMention helper strips the inner prefix so the wire phrase
+// always carries it exactly once. errors.Is(err, domain.ErrInvalidInput)
+// must still hold for the 400 mapping in
+// pkgs/tasks/handler/handler_http_json.go::storeErrorClientMessage.
+//
+// Cases covered:
+//   - resolveEscape: r.Resolve fails with "invalid path" / "path escapes
+//     repo root" — every escape path inside Resolve re-wraps ErrInvalidInput,
+//     historically the worst offender for double-wrapping.
+//   - rangeOutOfBounds: validateRangeBounds rejects (1,0) with "end line must
+//     be >= start line" — wraps ErrInvalidInput inside repo/range_validation.go.
+//   - rangeStartZero: validateRangeBounds rejects (0,1) with "line numbers
+//     must be >= 1" — same wrap.
+//   - rangeBeyondFileLength: validateRangeWithLineCount rejects (1,99) on a
+//     2-line file — wraps ErrInvalidInput at the post-LineCount boundary.
+//
+// Skip cases (not double-wrapped before the fix):
+//   - file-does-not-exist: synthesized literal string in this package, never
+//     had a doubled prefix.
+//   - directory-not-file: synthesized literal string in this package, never
+//     had a doubled prefix.
+func TestValidatePromptMentions_singlePrefix(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "two.txt"), []byte("a\nb\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name   string
+		prompt string
+	}{
+		{"resolveEscape", "see @../escape.txt"},
+		{"rangeOutOfBounds", "see @two.txt(1-0)"},
+		{"rangeStartZero", "see @two.txt(0-1)"},
+		{"rangeBeyondFileLength", "see @two.txt(1-99)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := r.ValidatePromptMentions(tc.prompt)
+			if err == nil {
+				t.Fatalf("expected error for %q", tc.prompt)
+			}
+			msg := err.Error()
+			n := strings.Count(msg, domain.ErrInvalidInput.Error())
+			if n != 1 {
+				t.Fatalf("error=%q has %d occurrences of %q want exactly 1 (wire prefix must not double-wrap)", msg, n, domain.ErrInvalidInput.Error())
+			}
+			if !errors.Is(err, domain.ErrInvalidInput) {
+				t.Fatalf("error=%q must still satisfy errors.Is(domain.ErrInvalidInput) so handler 400 mapping fires", msg)
+			}
+			if !strings.Contains(msg, "@") {
+				t.Fatalf("error=%q must include the offending @<path> mention substring (docs/API-HTTP.md contract)", msg)
+			}
+		})
+	}
+}
+
+// TestValidatePromptMentions_singlePrefix_synthesized covers the two cases
+// whose reasons are literal strings synthesized inside ValidatePromptMentions
+// (rather than borrowed from Resolve/LineCount/range validators). These never
+// double-wrapped before the fix but they share the wrapMentionMsg path with
+// the wrapped cases, so a future copy-edit that switched back to direct
+// fmt.Errorf would silently drift only the wrapped cases. Pinning both
+// halves of the format keeps wrapMentionMsg honest as the single source of
+// truth for the wire phrase.
+func TestValidatePromptMentions_singlePrefix_synthesized(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "subdir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	r, err := OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name   string
+		prompt string
+		want   string
+	}{
+		{"missingFile", "see @nope.txt", "file does not exist"},
+		{"directoryNotFile", "see @subdir", "path is a directory, not a file"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := r.ValidatePromptMentions(tc.prompt)
+			if err == nil {
+				t.Fatalf("expected error for %q", tc.prompt)
+			}
+			msg := err.Error()
+			if n := strings.Count(msg, domain.ErrInvalidInput.Error()); n != 1 {
+				t.Fatalf("error=%q has %d prefix occurrences want 1", msg, n)
+			}
+			if !strings.Contains(msg, tc.want) {
+				t.Fatalf("error=%q missing reason %q", msg, tc.want)
+			}
+			if !errors.Is(err, domain.ErrInvalidInput) {
+				t.Fatalf("error=%q must satisfy errors.Is(domain.ErrInvalidInput)", msg)
+			}
+		})
+	}
+}
+
 func TestRootResolve_rejects_symlink_escape(t *testing.T) {
 	dir := t.TempDir()
 	outsideDir := t.TempDir()
