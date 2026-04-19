@@ -323,6 +323,18 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=0"},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=abc"},
 			{http.MethodGet, srv.URL + "/tasks/" + task.ID + "/cycles?before_attempt_seq=-1"},
+			// GET /settings is the read-only side of the app-settings surface
+			// added by the agent worker UI plan. handler_settings.go::getSettings
+			// is a pure DB read; the SSE channel for settings is fed by the
+			// PATCH /settings handler (settings_changed event). A future
+			// refactor that mistakenly fired settings_changed on every GET
+			// (eg. as part of a "subscribe to current value" feature) would
+			// silently flood subscribers without breaking any other test.
+			// newSSETriggerServer wires the route via NewHandler(_, _, nil) —
+			// the agent worker arg is nil but GET /settings tolerates that
+			// per the explicit "GET /settings still works without it" contract
+			// in handler.go::NewHandler.
+			{http.MethodGet, srv.URL + "/settings"},
 		}
 		for _, r := range readOnly {
 			req, err := http.NewRequest(r.method, r.url, nil)
