@@ -329,6 +329,7 @@ func stderrTailDetails(stderr []byte, homePaths []string) json.RawMessage {
 // rune-start, which bounds the loop. Returns the input unchanged when
 // the first byte is already a rune-start (the common case).
 func trimLeadingPartialRune(b []byte) []byte {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "agents.runner.cursor.trimLeadingPartialRune", "bytes", len(b))
 	for len(b) > 0 && !utf8.RuneStart(b[0]) {
 		b = b[1:]
 	}

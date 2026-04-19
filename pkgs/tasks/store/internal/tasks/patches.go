@@ -190,6 +190,7 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 // caller's `seq` cursor belongs to the **child** task being patched, not to
 // the parent receiving the audit row.
 func appendParentChildEvent(tx *gorm.DB, parentID, childID, childTitle string, t domain.EventType, by domain.Actor) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.appendParentChildEvent")
 	pseq, err := kernel.NextEventSeq(tx, parentID)
 	if err != nil {
 		return err
