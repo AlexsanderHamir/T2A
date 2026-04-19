@@ -53,7 +53,7 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `PATCH /settings`                                      | `settings_changed` (no id) after the supervisor finishes its in-process reload |
 | `POST /settings/cancel-current-run`                    | `agent_run_cancelled` (no id) when a run was actually cancelled (`{"cancelled": true}`); no event when nothing was running |
 
-Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`) and the draft scorer (`POST /tasks/evaluate`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row.
+Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`), the draft scorer (`POST /tasks/evaluate`), and the cursor binary probe (`POST /settings/probe-cursor`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row, and the probe is a best-effort one-shot read against the runner that never mutates app state.
 
 ## Dev-only: SSE “cron” (`T2A_SSE_TEST=1`)
 
@@ -81,7 +81,7 @@ There are no extra dev-only HTTP paths; only normal REST + `GET /events` apply.
 Clients typically use `EventSource` in the browser (or any SSE-capable client), parse each `data` line, then call `GET /tasks` or `GET /tasks/{id}`. Treat REST and the database as authoritative. The SPA debounces bursts, then routes each frame to the narrowest cache slot that can hold the change:
 
 - `task_created` / `task_updated` / `task_deleted` invalidate the cached **list** queries plus the affected **detail** subtree (`["tasks","detail",id,…]`).
-- `task_cycle_changed` invalidates **only** the cycles slot (`["tasks","detail",id,"cycles"]`), so open task pages keep their checklist, events, and detail caches warm — only the cycle list / cycle detail refetches. When the same task already has a broad detail invalidation pending in the same debounce window, the cycle slot is suppressed (it would be redundant).
+- `task_cycle_changed` invalidates the **list** plus the affected task's full **detail** subtree (`["tasks","detail",id,…]`). The agent worker is the primary emitter of this frame and never publishes `task_updated`, so worker-driven status flips (running → done), audit-event appends, and checklist toggles must be reflected via the cycle frame or the open task detail page would silently go stale until the user manually refreshed. The cycle id is still bucketed for analytics, but a standalone `["tasks","detail",id,"cycles"]` invalidation is suppressed because the broader `detail` invalidation already covers it.
 - `settings_changed` and `agent_run_cancelled` invalidate **only** the settings cache slot (`["settings","app"]`) so the SPA Settings page reflects new values instantly without disturbing task caches; they bypass the debounce batch.
 - A frame with no recognisable `id` (and no recognised id-less type above) falls back to invalidating all task queries so nothing goes stale.
 

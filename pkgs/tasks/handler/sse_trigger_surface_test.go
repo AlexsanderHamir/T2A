@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -292,6 +293,116 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		mustEqualEvents(t, "PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}", got, []string{
 			"task_cycle_changed:" + task.ID + "/" + cycleID,
 		})
+	})
+
+	t.Run("PATCH /settings emits settings_changed", func(t *testing.T) {
+		// Settings write surface — the supervisor-aware fixture is
+		// required because PATCH /settings without WithAgentWorkerControl
+		// returns 503 (handler.go::NewHandler "GET /settings still works
+		// without it" contract). settingsTestServer wires fakeAgentControl
+		// so the Reload call succeeds and the publish below fires. The
+		// per-route pin in handler_http_settings_contract_test.go
+		// (TestHTTP_PatchSettings_persistsAndReloads) asserts the same
+		// settings_changed:[empty-id] event; this row is the cross-route
+		// trigger surface guarantee that catches a global middleware
+		// regression that would route PATCH /settings around the publish.
+		// Both settings_changed and agent_run_cancelled are id-less per
+		// docs/API-SSE.md "id-less notifications" — summarize formats them
+		// as "type:" with an empty ID portion (the same format the
+		// per-route settings test uses on the want-side).
+		srv, _, hub, _ := settingsTestServer(t)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
+			`{"repo_root":"/tmp/sse-trigger"}`, http.StatusOK)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "PATCH /settings", got, []string{"settings_changed:"})
+	})
+
+	t.Run("POST /settings/cancel-current-run emits agent_run_cancelled when a run was cancelled", func(t *testing.T) {
+		// Mirrors the PATCH /settings rationale above — the per-route pin
+		// in handler_http_settings_contract_test.go
+		// (TestHTTP_CancelCurrentRun_publishesSSEWhenCancelled) asserts the
+		// same event; this is the cross-route trigger surface guarantee.
+		// The negative branch (no run to cancel) is covered in the
+		// "non-publishing write routes" subtest below alongside probe-cursor
+		// and tasks/evaluate so all three "documented as never publishing"
+		// settings/evaluate paths share one drain-and-assert-empty fixture.
+		srv, _, hub, ctrl := settingsTestServer(t)
+		ctrl.cancelResult.Store(true)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/cancel-current-run",
+			"", http.StatusOK)
+		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+		mustEqualEvents(t, "POST /settings/cancel-current-run", got,
+			[]string{"agent_run_cancelled:"})
+	})
+
+	t.Run("non-publishing write routes", func(t *testing.T) {
+		// Cross-route pin for the four documented "write but never
+		// publish" routes. docs/API-SSE.md trigger table omits these by
+		// design (the trailing prose at the bottom of API-SSE.md spells
+		// it out for /task-drafts/* and POST /tasks/evaluate; this
+		// session adds POST /settings/probe-cursor to the same prose so
+		// docs and code agree). Per-route SSE pins exist for each in
+		// their own contract files — this row catches a global middleware
+		// regression that would route around the per-route silence:
+		//
+		//   POST /settings/probe-cursor       — tested per-route in
+		//                                       handler_http_settings_contract_test.go
+		//                                       (no SSE assertion until this row)
+		//   POST /settings/cancel-current-run — TestHTTP_CancelCurrentRun_noopReturnsFalseAndNoSSE
+		//                                       (per-route, ctrl.cancelResult=false branch)
+		//   POST /tasks/evaluate              — TestHTTP_evaluateDraft_doesNotPublishSSE
+		//                                       (per-route)
+		//
+		// All four hit the same single subscription; we drain once with
+		// want=1 and assert zero events. Mirrors the read-only block's
+		// drain pattern. Probe-cursor exercises both happy (probeVersion
+		// set) and failure (probeErr set) branches because the failure
+		// branch returns 200 with ok=false (not a 4xx/5xx — see
+		// TestHTTP_ProbeCursor_failureReturnsOKfalseNot500); a future
+		// regression that fired SSE only on the failure response path
+		// would slip past a happy-only assertion.
+		srv, _, hub, ctrl := settingsTestServer(t)
+		ch, cancel := hub.Subscribe()
+		defer cancel()
+
+		v := "cursor 1.0"
+		ctrl.probeVersion.Store(&v)
+		mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/probe-cursor",
+			`{"runner":"cursor","binary_path":"/usr/bin/cursor"}`, http.StatusOK)
+
+		probeErr := errors.New("synthetic probe failure")
+		ctrl.probeErr.Store(&probeErr)
+		mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/probe-cursor",
+			`{"runner":"cursor","binary_path":"/usr/bin/cursor"}`, http.StatusOK)
+
+		ctrl.cancelResult.Store(false)
+		mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/cancel-current-run",
+			"", http.StatusOK)
+
+		// POST /tasks/evaluate goes through the same handler mux on the
+		// same fixture (settingsTestServer wires the full handler tree
+		// via NewHandler; the agent control option only affects the
+		// /settings routes). 201 is the documented happy path.
+		res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json",
+			strings.NewReader(`{"title":"sse-trigger-evaluate","priority":"high"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+		if res.StatusCode != http.StatusCreated {
+			t.Fatalf("POST /tasks/evaluate status=%d want=201", res.StatusCode)
+		}
+
+		got := summarize(drainSSE(t, ch, 1, 200*time.Millisecond))
+		if len(got) != 0 {
+			t.Fatalf("non-publishing write routes published unexpectedly: %v", got)
+		}
 	})
 
 	t.Run("read-only routes do not publish", func(t *testing.T) {
