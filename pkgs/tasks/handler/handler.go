@@ -34,20 +34,26 @@ type AgentWorkerControl interface {
 }
 
 type Handler struct {
-	store *store.Store
-	hub   *SSEHub
-	repo  *repo.Root
-	agent AgentWorkerControl
+	store    *store.Store
+	hub      *SSEHub
+	repoProv RepoProvider
+	agent    AgentWorkerControl
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
-// rep is optional: when nil, /repo routes return 503 and initial_prompt is not validated for file mentions.
+//
+// rep is the legacy static workspace root: pass nil to disable /repo
+// routes (they return 409 repo_root_not_configured) or pre-open one
+// for tests that want a fixed tmpdir. The production wiring should
+// instead pass nil here and call WithRepoProvider with a settings-
+// backed provider so the repo follows AppSettings.RepoRoot live.
+//
 // agent is optional: when nil, settings-control endpoints (PATCH /settings,
 // POST /settings/probe-cursor, POST /settings/cancel-current-run) respond 503.
 // GET /settings still works without it (read-only).
 func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOption) http.Handler {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.NewHandler")
-	h := &Handler{store: s, hub: hub, repo: rep}
+	h := &Handler{store: s, hub: hub, repoProv: NewStaticRepoProvider(rep)}
 	for _, opt := range opts {
 		opt(h)
 	}
@@ -104,5 +110,19 @@ func WithAgentWorkerControl(c AgentWorkerControl) HandlerOption {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.WithAgentWorkerControl")
 	return func(h *Handler) {
 		h.agent = c
+	}
+}
+
+// WithRepoProvider replaces the default static repo wiring with a
+// dynamic provider. cmd/taskapi passes a NewSettingsRepoProvider so
+// /repo/* and prompt-mention validation always look at the current
+// AppSettings.RepoRoot; tests rarely need this option (the rep
+// argument to NewHandler covers the static case).
+func WithRepoProvider(p RepoProvider) HandlerOption {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.WithRepoProvider")
+	return func(h *Handler) {
+		if p != nil {
+			h.repoProv = p
+		}
 	}
 }

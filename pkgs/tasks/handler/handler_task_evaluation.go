@@ -24,11 +24,9 @@ func (h *Handler) evaluateDraft(w http.ResponseWriter, r *http.Request) {
 		"initial_prompt_len", len(body.InitialPrompt),
 		"checklist_items_count", len(body.ChecklistItems),
 	)
-	if h.repo != nil {
-		if err := h.repo.ValidatePromptMentions(body.InitialPrompt); err != nil {
-			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
-			return
-		}
+	if err := h.validatePromptMentionsIfRepo(r, body.InitialPrompt); err != nil {
+		writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
+		return
 	}
 	out, err := h.store.EvaluateDraftTask(r.Context(), store.EvaluateDraftTaskInput{
 		DraftID:          body.ID,

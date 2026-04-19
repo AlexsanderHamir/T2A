@@ -57,8 +57,19 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	}
 	checks["database"] = "ok"
 
-	if h.repo != nil {
-		if err := h.repo.Ready(); err != nil {
+	root, _, repoErr := h.repoProv.Repo(ctx)
+	if repoErr != nil {
+		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "workspace_repo", "err", repoErr)
+		checks["workspace_repo"] = "fail"
+		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
+			"status":  "degraded",
+			"checks":  checks,
+			"version": ServerVersion(),
+		})
+		return
+	}
+	if root != nil {
+		if err := root.Ready(); err != nil {
 			slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "workspace_repo", "err", err)
 			checks["workspace_repo"] = "fail"
 			writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{

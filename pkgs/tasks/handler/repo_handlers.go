@@ -43,6 +43,41 @@ const maxRepoRelPathQueryBytes = 4096
 // Line numbers fit in a small decimal string; huge query values waste CPU in strconv and slog fields.
 const maxRepoLineQueryParamBytes = 32
 
+// repoUnavailableErrorBody is the JSON envelope the SPA expects when
+// a /repo/* call can't reach a workspace. The reason field lets the
+// SPA disambiguate "not configured" (link to Settings) vs "open
+// failed" (show the OpenRoot error). Pinned by docs/SETTINGS.md.
+type repoUnavailableErrorBody struct {
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
+}
+
+// requireRepo resolves the active workspace via the configured
+// RepoProvider and writes the canonical "repo unavailable" response
+// when no usable repo is available. Returns (root, true) when the
+// caller can continue; (nil, false) when an error has already been
+// written and the caller must return.
+func (h *Handler) requireRepo(w http.ResponseWriter, r *http.Request, op string) (*repo.Root, bool) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.requireRepo", "http_op", op)
+	root, reason, err := h.repoProv.Repo(r.Context())
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "repo provider failed",
+			"cmd", calltrace.LogCmd, "operation", op, "reason", reason, "err", err)
+		writeJSON(w, r, op, http.StatusInternalServerError, repoUnavailableErrorBody{
+			Error: err.Error(), Reason: reason,
+		})
+		return nil, false
+	}
+	if root == nil {
+		writeJSON(w, r, op, http.StatusConflict, repoUnavailableErrorBody{
+			Error:  "repo root is not configured",
+			Reason: reason,
+		})
+		return nil, false
+	}
+	return root, true
+}
+
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	r = calltrace.WithRequestRoot(r, op)
@@ -51,8 +86,8 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	if h.repo == nil {
-		writeJSONError(w, r, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
+	root, ok := h.requireRepo(w, r, op)
+	if !ok {
 		return
 	}
 	q := r.URL.Query().Get("q")
@@ -61,7 +96,7 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t0 := time.Now()
-	paths, err := h.repo.Search(q)
+	paths, err := root.Search(q)
 	dur := time.Since(t0)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, "repo operation failed", "cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
@@ -83,8 +118,8 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	if h.repo == nil {
-		writeJSONError(w, r, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
+	root, ok := h.requireRepo(w, r, op)
+	if !ok {
 		return
 	}
 	if path == "" || startStr == "" || endStr == "" {
@@ -106,12 +141,12 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusBadRequest, "start and end must be integers")
 		return
 	}
-	h.writeRepoValidateRangeOutcome(w, r, op, path, start, end)
+	h.writeRepoValidateRangeOutcome(w, r, op, root, path, start, end)
 }
 
-func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.Request, op, path string, start, end int) {
+func (h *Handler) writeRepoValidateRangeOutcome(w http.ResponseWriter, r *http.Request, op string, root *repo.Root, path string, start, end int) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.writeRepoValidateRangeOutcome")
-	abs, err := h.repo.Resolve(path)
+	abs, err := root.Resolve(path)
 	if err != nil {
 		writeJSON(w, r, op, http.StatusOK, repoValidateRangeResponse{
 			OK:      false,
@@ -152,8 +187,8 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	if h.repo == nil {
-		writeJSONError(w, r, op, http.StatusServiceUnavailable, "repo is not configured (set REPO_ROOT)")
+	root, ok := h.requireRepo(w, r, op)
+	if !ok {
 		return
 	}
 	if path == "" {
@@ -164,7 +199,7 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusBadRequest, "path too long")
 		return
 	}
-	abs, err := h.repo.Resolve(path)
+	abs, err := root.Resolve(path)
 	if err != nil {
 		writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
 		return

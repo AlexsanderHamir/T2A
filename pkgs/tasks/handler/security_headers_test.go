@@ -13,7 +13,7 @@ import (
 
 func TestStreamEvents_sets_security_headers(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
-	h := &Handler{store: store.NewStore(db), hub: NewSSEHub(), repo: nil}
+	h := &Handler{store: store.NewStore(db), hub: NewSSEHub(), repoProv: NewStaticRepoProvider(nil)}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	req := httptest.NewRequest(http.MethodGet, "/events", nil).WithContext(ctx)

@@ -32,11 +32,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	by := actorFromRequest(r)
 	debugHTTPRequest(r, op, taskCreateInputFields(&body, string(by))...)
-	if h.repo != nil {
-		if err := h.repo.ValidatePromptMentions(body.InitialPrompt); err != nil {
-			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
-			return
-		}
+	if err := h.validatePromptMentionsIfRepo(r, body.InitialPrompt); err != nil {
+		writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
+		return
 	}
 	inherit := false
 	if body.ChecklistInherit != nil {
@@ -165,8 +163,8 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 			in.Parent = &store.ParentFieldPatch{ID: body.ParentID.SetID}
 		}
 	}
-	if h.repo != nil && body.InitialPrompt != nil {
-		if err := h.repo.ValidatePromptMentions(*body.InitialPrompt); err != nil {
+	if body.InitialPrompt != nil {
+		if err := h.validatePromptMentionsIfRepo(r, *body.InitialPrompt); err != nil {
 			writeJSONError(w, r, op, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -264,4 +262,21 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 		offset = n
 	}
 	return limit, offset, afterID, nil
+}
+
+// validatePromptMentionsIfRepo runs ValidatePromptMentions only when
+// the active workspace can be opened. When the repo root is not yet
+// configured (or fails to open) we skip validation so task creation
+// keeps working from an empty install; the agent worker enforces the
+// same check at run-time once the SPA Settings page wires a root.
+func (h *Handler) validatePromptMentionsIfRepo(r *http.Request, prompt string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsIfRepo")
+	if h.repoProv == nil {
+		return nil
+	}
+	root, _, err := h.repoProv.Repo(r.Context())
+	if err != nil || root == nil {
+		return nil
+	}
+	return root.ValidatePromptMentions(prompt)
 }
