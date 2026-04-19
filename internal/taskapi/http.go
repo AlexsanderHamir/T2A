@@ -15,7 +15,15 @@ const cmdLog = "taskapi"
 
 // NewHTTPHandler returns the REST + SSE task API with the standard middleware stack
 // (see pkgs/tasks/middleware.Stack) wrapping handler.NewHandler.
-func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root) http.Handler {
+//
+// Pass a nil agent control to opt out of the supervisor-aware
+// /settings sub-routes (PATCH /settings, POST /settings/probe-cursor,
+// POST /settings/cancel-current-run); GET /settings still works.
+func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl) http.Handler {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "internal.taskapi.NewHTTPHandler")
-	return middleware.Stack(handler.NewHandler(s, hub, rep), calltrace.Path)
+	opts := []handler.HandlerOption{}
+	if agent != nil {
+		opts = append(opts, handler.WithAgentWorkerControl(agent))
+	}
+	return middleware.Stack(handler.NewHandler(s, hub, rep, opts...), calltrace.Path)
 }

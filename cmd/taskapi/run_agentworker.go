@@ -114,13 +114,14 @@ type effectiveSettingsLog struct {
 	IdleReason            string
 }
 
-// AgentWorkerSupervisor is the public alias the HTTP handler (Gate 3)
-// will use to talk to the supervisor without taking a dependency on
-// the unexported struct. Kept as a Go interface so handler tests can
-// stub it.
+// AgentWorkerSupervisor is the public alias the HTTP handler uses to
+// talk to the supervisor without taking a dependency on the unexported
+// struct. Mirrors handler.AgentWorkerControl one-for-one so the
+// supervisor satisfies the handler interface implicitly.
 type AgentWorkerSupervisor interface {
 	CancelCurrentRun() bool
 	Reload(ctx context.Context) error
+	ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (string, error)
 }
 
 // newAgentWorkerSupervisor wires the supervisor with its dependencies.
@@ -157,6 +158,22 @@ func (s *agentWorkerSupervisor) Start(ctx context.Context) error {
 func (s *agentWorkerSupervisor) Reload(ctx context.Context) error {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.Reload")
 	return s.applySettings(ctx, "reload")
+}
+
+// ProbeRunner exposes the runner registry probe to the HTTP handler so
+// the SPA "Test cursor binary" button can verify a binary path before
+// Save. Reuses the same registry.Probe the supervisor uses on boot so
+// the probe result the operator sees is identical to what would be
+// observed at the next reload.
+func (s *agentWorkerSupervisor) ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (string, error) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.ProbeRunner",
+		"runner", runnerID, "binary", binaryPath)
+	if timeout <= 0 {
+		timeout = s.probeBudge
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return s.probe(probeCtx, runnerID, binaryPath, timeout)
 }
 
 // CancelCurrentRun cancels the in-flight runner.Run, if any. Returns
