@@ -1,15 +1,18 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
-import { DeleteConfirmDialog, StreamStatusHint } from "../tasks/components/dialogs";
-import { TaskEditForm } from "../tasks/components/task-detail";
-import { useTasksApp } from "../tasks/hooks/useTasksApp";
-import { TaskDetailPage } from "../tasks/pages/TaskDetailPage";
-import { TaskEventDetailPage } from "../tasks/pages/TaskEventDetailPage";
-import { TaskGraphPage } from "../tasks/pages/TaskGraphPage";
-import { TaskDraftsPage } from "../tasks/pages/TaskDraftsPage";
-import { TaskHome } from "../tasks/pages/TaskHome";
+import {
+  DeleteConfirmDialog,
+  StreamStatusHint,
+  TaskEditForm,
+  TaskDetailPage,
+  TaskDraftsPage,
+  TaskEventDetailPage,
+  TaskGraphPage,
+  TaskHome,
+  useTasksApp,
+} from "@/tasks";
+import { SettingsPage } from "@/settings";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
-import { SettingsPage } from "../settings";
 import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import { RoutedMainOutlet } from "./RoutedMainOutlet";
