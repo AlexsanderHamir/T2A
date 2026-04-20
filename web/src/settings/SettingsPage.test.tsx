@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { requestUrl } from "../test/requestUrl";
 import { SettingsPage } from "./SettingsPage";
 
@@ -23,7 +24,7 @@ function stubListCursorModelsFetch(
     if (u.endsWith("/settings/list-cursor-models")) {
       return jsonResponse({
         ok: true,
-        runner: "cursor",
+        runner: TASK_TEST_DEFAULTS.runner,
         binary_path: "/usr/local/bin/cursor-agent",
         models: [{ id: "auto", label: "Auto" }],
       });
@@ -35,10 +36,9 @@ function stubListCursorModelsFetch(
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     worker_enabled: true,
-    runner: "cursor",
     repo_root: "/Users/me/code/example",
     cursor_bin: "/usr/local/bin/cursor-agent",
-    cursor_model: "",
+    ...TASK_TEST_DEFAULTS,
     max_run_duration_seconds: 0,
     agent_pickup_delay_seconds: 5,
     updated_at: "2026-04-18T12:00:00Z",
@@ -142,7 +142,7 @@ describe("SettingsPage", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings/probe-cursor")) {
-        return jsonResponse({ ok: true, runner: "cursor", version: "2026.04" });
+        return jsonResponse({ ok: true, runner: TASK_TEST_DEFAULTS.runner, version: "2026.04" });
       }
       if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
         return jsonResponse(defaultSettings());
@@ -169,7 +169,7 @@ describe("SettingsPage", () => {
         if (url.endsWith("/settings/probe-cursor")) {
           return jsonResponse({
             ok: true,
-            runner: "cursor",
+            runner: TASK_TEST_DEFAULTS.runner,
             binary_path: "/opt/local/bin/cursor-agent",
             version: "2026.05",
           });
@@ -204,7 +204,7 @@ describe("SettingsPage", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
       const url = requestUrl(input);
       if (url.endsWith("/settings/probe-cursor")) {
-        return jsonResponse({ ok: false, runner: "cursor", error: "spawn ENOENT" });
+        return jsonResponse({ ok: false, runner: TASK_TEST_DEFAULTS.runner, error: "spawn ENOENT" });
       }
       if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
         return jsonResponse(defaultSettings());
