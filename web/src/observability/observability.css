@@ -178,16 +178,28 @@
 
 /* The pill classes use background+text+border tokens; the bar segments
    only need the background, so we just inherit the pill's background. */
-.obs-bar-segment.cell-pill--status-ready { background: var(--pill-ready-bg); }
-.obs-bar-segment.cell-pill--status-running { background: var(--brand); }
-.obs-bar-segment.cell-pill--status-blocked { background: var(--warning-ink); }
-.obs-bar-segment.cell-pill--status-review { background: var(--pill-review-text); }
-.obs-bar-segment.cell-pill--status-done { background: var(--pill-success-fill-text); }
-.obs-bar-segment.cell-pill--status-failed { background: var(--pill-danger-fill-text); }
-.obs-bar-segment.cell-pill--priority-low { background: var(--pill-priority-low-text); }
-.obs-bar-segment.cell-pill--priority-medium { background: var(--pill-priority-medium-text); }
-.obs-bar-segment.cell-pill--priority-high { background: var(--pill-priority-high-text); }
-.obs-bar-segment.cell-pill--priority-critical { background: var(--pill-danger-fill-text); }
+/*
+ * Chart fills bind to the dedicated --obs-fill-* palette (see
+ * app-design-tokens.css "Observability chart palette"), NOT to the
+ * task-table pill colors. The pill colors are tuned for tiny
+ * text-on-tinted-background pills where context disambiguates;
+ * reusing them as solid fills made adjacent segments collapse into
+ * one warm/cool blob (e.g. priority high vs critical, status
+ * blocked vs failed). The chart palette is colorblind-safer and
+ * has deliberately spaced hues so an 8 px swatch in the legend is
+ * unambiguous against its neighbors.
+ */
+.obs-bar-segment.cell-pill--status-ready { background: var(--obs-fill-status-ready); }
+.obs-bar-segment.cell-pill--status-running { background: var(--obs-fill-status-running); }
+.obs-bar-segment.cell-pill--status-blocked { background: var(--obs-fill-status-blocked); }
+.obs-bar-segment.cell-pill--status-review { background: var(--obs-fill-status-review); }
+.obs-bar-segment.cell-pill--status-done { background: var(--obs-fill-status-done); }
+.obs-bar-segment.cell-pill--status-failed { background: var(--obs-fill-status-failed); }
+.obs-bar-segment.cell-pill--cycle-aborted { background: var(--obs-fill-cycle-aborted); }
+.obs-bar-segment.cell-pill--priority-low { background: var(--obs-fill-priority-low); }
+.obs-bar-segment.cell-pill--priority-medium { background: var(--obs-fill-priority-medium); }
+.obs-bar-segment.cell-pill--priority-high { background: var(--obs-fill-priority-high); }
+.obs-bar-segment.cell-pill--priority-critical { background: var(--obs-fill-priority-critical); }
 
 .obs-bar-empty {
   display: block;
@@ -220,22 +232,35 @@
 }
 
 .obs-bar-legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  border: 1px solid var(--border-hairline);
+  /* 12 px (was 10 px) — legend swatches are the only visual key to
+     distinguish two adjacent bar segments when the bar is tall and
+     narrow. At 10 px the saturated chart palette colors were still
+     readable but the eye had to dart between bar and legend; 12 px
+     reads cleanly at a glance and matches the donut legend size. */
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  /* Lower-contrast border so saturated fills aren't outlined into
+     looking like outlined chips; the inner color carries the signal. */
+  border: 1px solid rgb(0 0 0 / 12%);
+}
+@media (prefers-color-scheme: dark) {
+  .obs-bar-legend-swatch { border-color: rgb(255 255 255 / 14%); }
 }
 
-.obs-bar-legend-swatch.cell-pill--status-ready { background: var(--pill-ready-bg); }
-.obs-bar-legend-swatch.cell-pill--status-running { background: var(--brand); }
-.obs-bar-legend-swatch.cell-pill--status-blocked { background: var(--warning-ink); }
-.obs-bar-legend-swatch.cell-pill--status-review { background: var(--pill-review-text); }
-.obs-bar-legend-swatch.cell-pill--status-done { background: var(--pill-success-fill-text); }
-.obs-bar-legend-swatch.cell-pill--status-failed { background: var(--pill-danger-fill-text); }
-.obs-bar-legend-swatch.cell-pill--priority-low { background: var(--pill-priority-low-text); }
-.obs-bar-legend-swatch.cell-pill--priority-medium { background: var(--pill-priority-medium-text); }
-.obs-bar-legend-swatch.cell-pill--priority-high { background: var(--pill-priority-high-text); }
-.obs-bar-legend-swatch.cell-pill--priority-critical { background: var(--pill-danger-fill-text); }
+/* Same palette as obs-bar-segment above — keeps the legend swatch
+   the exact colour of the bar segment it labels. */
+.obs-bar-legend-swatch.cell-pill--status-ready { background: var(--obs-fill-status-ready); }
+.obs-bar-legend-swatch.cell-pill--status-running { background: var(--obs-fill-status-running); }
+.obs-bar-legend-swatch.cell-pill--status-blocked { background: var(--obs-fill-status-blocked); }
+.obs-bar-legend-swatch.cell-pill--status-review { background: var(--obs-fill-status-review); }
+.obs-bar-legend-swatch.cell-pill--status-done { background: var(--obs-fill-status-done); }
+.obs-bar-legend-swatch.cell-pill--status-failed { background: var(--obs-fill-status-failed); }
+.obs-bar-legend-swatch.cell-pill--cycle-aborted { background: var(--obs-fill-cycle-aborted); }
+.obs-bar-legend-swatch.cell-pill--priority-low { background: var(--obs-fill-priority-low); }
+.obs-bar-legend-swatch.cell-pill--priority-medium { background: var(--obs-fill-priority-medium); }
+.obs-bar-legend-swatch.cell-pill--priority-high { background: var(--obs-fill-priority-high); }
+.obs-bar-legend-swatch.cell-pill--priority-critical { background: var(--obs-fill-priority-critical); }
 
 .obs-bar-legend-label {
   color: var(--text-primary);

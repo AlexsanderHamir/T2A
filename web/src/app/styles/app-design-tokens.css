@@ -371,6 +371,41 @@
   --pill-priority-high-text: rgb(194 65 12);
   --pill-priority-high-border: rgb(254 215 170);
 
+  /*
+   * Observability chart palette (DS §10b — chart fills only).
+   *
+   * The task-table pill colors above are tuned for tiny text-on-tinted-
+   * background pills where context (the column, the label next to the
+   * pill) does most of the disambiguation. When the same hues are
+   * reused as solid bar/legend fills on the observability page, several
+   * pairs collapse visually:
+   *   - priority-high (burnt orange #c2410c) vs priority-critical
+   *     (crimson #be123c) read as one warm band
+   *   - status-blocked (dark brown #78350f) vs status-failed (crimson)
+   *     read as the same dark warm hue
+   *   - cycle aborted (which reuses status-blocked) vs cycle failed
+   *     (which reuses status-failed) inherit the same collision
+   *
+   * These tokens are a chart-only palette with deliberately spaced
+   * hues drawn from the Okabe–Ito colorblind-safe set where it fits
+   * the existing brand temperature, so adjacent segments and legend
+   * swatches are unambiguous even at 8 px. They never replace the
+   * pill colors — only the obs-bar / obs-donut chart fills bind to
+   * them (see observability.css). Keep these in sync between the
+   * light and dark blocks below.
+   */
+  --obs-fill-status-ready: rgb(148 163 184);    /* slate */
+  --obs-fill-status-running: rgb(37 99 235);    /* royal blue */
+  --obs-fill-status-blocked: rgb(217 119 6);    /* amber-700 (warm) */
+  --obs-fill-status-review: rgb(124 58 237);    /* violet */
+  --obs-fill-status-done: rgb(5 150 105);       /* emerald-600 */
+  --obs-fill-status-failed: rgb(220 38 38);     /* red-600 */
+  --obs-fill-priority-low: rgb(100 116 139);    /* slate-500 */
+  --obs-fill-priority-medium: rgb(14 165 233);  /* sky-500 */
+  --obs-fill-priority-high: rgb(245 158 11);    /* amber-500 — clearly distinct from the next */
+  --obs-fill-priority-critical: rgb(190 18 60); /* rose-700 */
+  --obs-fill-cycle-aborted: rgb(120 113 108);   /* stone-500 — distinct from failed-red */
+
   /* @file code preview — Prism-like token hues (see app-task-list-and-mentions.css) */
   --mention-syntax-keyword: #7c5cff;
   --mention-syntax-string: #0f8f67;
@@ -525,6 +560,26 @@
     --pill-priority-high-bg: rgb(251 146 60 / 12%);
     --pill-priority-high-text: rgb(253 186 116);
     --pill-priority-high-border: rgb(251 146 60 / 32%);
+
+    /*
+     * Dark-mode mirror of the chart palette. Each hue is shifted ~1
+     * step lighter than its light counterpart so the segments
+     * maintain WCAG-AA contrast against the dark surface (target
+     * ≥3:1 for non-text graphical elements per WCAG 2.1 §1.4.11).
+     * Same intent: clearly distinct adjacent hues, no two segments
+     * collapsing into one warm/cool blob.
+     */
+    --obs-fill-status-ready: rgb(148 163 184);     /* slate-400 */
+    --obs-fill-status-running: rgb(96 165 250);    /* blue-400 */
+    --obs-fill-status-blocked: rgb(251 191 36);    /* amber-400 */
+    --obs-fill-status-review: rgb(167 139 250);    /* violet-400 */
+    --obs-fill-status-done: rgb(52 211 153);       /* emerald-400 */
+    --obs-fill-status-failed: rgb(248 113 113);    /* red-400 */
+    --obs-fill-priority-low: rgb(148 163 184);     /* slate-400 */
+    --obs-fill-priority-medium: rgb(56 189 248);   /* sky-400 */
+    --obs-fill-priority-high: rgb(251 191 36);     /* amber-400 */
+    --obs-fill-priority-critical: rgb(244 114 182); /* pink-400 */
+    --obs-fill-cycle-aborted: rgb(168 162 158);    /* stone-400 */
 
     --mention-syntax-keyword: #b19cff;
     --mention-syntax-string: #69d3a8;

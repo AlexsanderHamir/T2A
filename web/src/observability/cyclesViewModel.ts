@@ -94,7 +94,16 @@ export function cycleStatusFillClass(s: CycleStatus): string {
     case "failed":
       return "cell-pill--status-failed";
     case "aborted":
-      return "cell-pill--status-blocked";
+      // Aborted intentionally maps to a *dedicated* class rather than
+      // aliasing onto status-blocked. Reason: the chart palette
+      // overhaul moved blocked to amber to disambiguate the status
+      // bar; if aborted kept the alias it would render amber too,
+      // making "aborted" visually indistinguishable from a hot
+      // blocked task even though semantically it is a quiet,
+      // deliberate stop. A dedicated class lets us bind aborted to
+      // a neutral stone hue (--obs-fill-cycle-aborted) for both the
+      // chart segment and the text pill (see app-task-list-and-mentions.css).
+      return "cell-pill--cycle-aborted";
   }
 }
 

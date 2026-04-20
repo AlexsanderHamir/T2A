@@ -232,6 +232,25 @@
   border-color: var(--pill-danger-fill-border);
 }
 
+/* Cycle outcome (cycleStatusFillClass) — `aborted` no longer aliases
+   onto status-blocked because the chart palette overhaul re-tinted
+   blocked to amber, which would otherwise make a quiet cancellation
+   look identical to a hot blocked task. The text-pill version uses
+   the neutral stone hue from the chart palette so pills, legend
+   swatches, and bar segments all read as the same "quiet stop". */
+.cell-pill--cycle-aborted {
+  background: rgb(120 113 108 / 12%);
+  color: rgb(87 83 78);
+  border-color: rgb(120 113 108 / 26%);
+}
+@media (prefers-color-scheme: dark) {
+  .cell-pill--cycle-aborted {
+    background: rgb(168 162 158 / 14%);
+    color: rgb(214 211 209);
+    border-color: rgb(168 162 158 / 30%);
+  }
+}
+
 /* Priority — escalation (low → critical) */
 .cell-pill--priority-low {
   background: var(--pill-priority-low-bg);
