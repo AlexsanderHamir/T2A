@@ -212,16 +212,24 @@ func TestHTTP_getEvent_errorPathsNeverPublish(t *testing.T) {
 	cases := []struct {
 		name, taskID, seq string
 		wantStatus        int
+		wantError         string
 	}{
-		{"overlongSeq", task.ID, overlongSeq, http.StatusBadRequest},
-		{"seqZero", task.ID, "0", http.StatusBadRequest},
-		{"unknownTask", missingID, "1", http.StatusNotFound},
-		{"unknownSeq", task.ID, "999", http.StatusNotFound},
+		{"overlongSeq", task.ID, overlongSeq, http.StatusBadRequest, "seq too long"},
+		{"seqZero", task.ID, "0", http.StatusBadRequest, "seq must be a positive integer"},
+		{"unknownTask", missingID, "1", http.StatusNotFound, "not found"},
+		{"unknownSeq", task.ID, "999", http.StatusNotFound, "not found"},
 	}
 	for _, tc := range cases {
 		res, raw := getEvent(t, srv.URL, tc.taskID, tc.seq)
 		if res.StatusCode != tc.wantStatus {
 			t.Fatalf("%s: status %d (want %d) body=%s", tc.name, res.StatusCode, tc.wantStatus, raw)
+		}
+		var errBody jsonErrorBody
+		if err := json.Unmarshal(raw, &errBody); err != nil {
+			t.Fatalf("%s: decode error body: %v raw=%s", tc.name, err, raw)
+		}
+		if errBody.Error != tc.wantError {
+			t.Fatalf("%s: error=%q want %q (docs/API-HTTP.md GET /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
 		}
 	}
 
