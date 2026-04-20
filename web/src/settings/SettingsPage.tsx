@@ -312,13 +312,27 @@ export function SettingsPage() {
 
   if (isLoading || !form || !settings) {
     return (
-      <section className="settings-page" aria-busy="true">
-        <h2 className="settings-page-title term-arrow">
-          <span>Settings</span>
-        </h2>
-        <p>{error ? `Error: ${error.message}` : "Loading settings…"}</p>
+      <section className="settings-page settings-page--loading" aria-busy="true">
+        <header className="settings-page-header">
+          <div className="settings-page-heading">
+            <h2 className="settings-page-title term-arrow">
+              <span>Settings</span>
+            </h2>
+            <p className="settings-page-subtitle">
+              Runtime, workspace, and rollout configuration for this
+              installation.
+            </p>
+          </div>
+        </header>
+        <p className="settings-page-loading-msg">
+          {error ? `Error: ${error.message}` : "Loading settings…"}
+        </p>
         {error ? (
-          <button type="button" onClick={() => void refetch()}>
+          <button
+            type="button"
+            className="settings-btn settings-btn--secondary"
+            onClick={() => void refetch()}
+          >
             Retry
           </button>
         ) : null}
