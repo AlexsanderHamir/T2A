@@ -6,6 +6,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import {
   SubtaskCreateModal,
   SubtaskTree,
+  TaskCyclesPanel,
   TaskDetailAttentionBar,
   TaskDetailChecklistSection,
   TaskDetailHeader,
@@ -252,6 +253,8 @@ export function TaskDetailPage({ app }: Props) {
         initialPrompt={task.initial_prompt}
         sanitizedInitialPrompt={sanitizedInitialPrompt}
       />
+
+      <TaskCyclesPanel taskId={taskId} enabled={taskQuery.isSuccess} />
 
       <TaskDetailUpdatesSection
         taskId={taskId}

@@ -1,5 +1,6 @@
 export * from "./subtasks/SubtaskCreateModal";
 export * from "./subtasks/SubtaskTree";
+export * from "./cycles/TaskCyclesPanel";
 export * from "./layout/TaskDetailAttentionBar";
 export * from "./checklist/TaskDetailChecklistItemList";
 export * from "./checklist/TaskDetailChecklistSection";

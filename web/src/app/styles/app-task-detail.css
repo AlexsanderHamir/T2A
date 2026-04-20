@@ -1512,3 +1512,195 @@ button.task-detail-checklist-remove:focus-visible {
   margin-top: 0.5rem;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Execution cycles panel (TaskCyclesPanel)
+   Per-task observability surface — live "current phase" ticker on top,
+   newest-first cycle history below. Composes cell-pill--status-* swatches
+   so the colour story stays uniform with the observability page and the
+   task-list status column.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.task-cycles-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Live ticker: a single horizontal row of metadata + a phase line below.
+   Using a soft brand-tinted surface so it visually pops above the neutral
+   history list without screaming for attention (the running cycle is
+   the user's focus, but they're already looking at the task page —
+   no need for a banner). */
+.task-cycle-ticker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--brand-border-soft);
+  background: var(--brand-muted);
+  border-radius: var(--radius-md);
+}
+
+.task-cycle-ticker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.7rem;
+}
+
+.task-cycle-ticker-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+  /* A tiny pulsing dot would be nice but is easy to overuse — leaving
+     this as a static eyebrow keeps the ticker calm, matching the
+     SystemStatusChip rhythm in the header. */
+}
+
+.task-cycle-ticker-attempt,
+.task-cycle-ticker-elapsed {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.task-cycle-ticker-phase {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.task-cycle-ticker-phase--pending,
+.task-cycle-ticker-phase--idle,
+.task-cycle-ticker-phase--error {
+  color: var(--text-secondary);
+}
+
+.task-cycle-ticker-phase-elapsed {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* History list — neutral rows that expand to reveal phases. */
+.task-cycles-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.task-cycle-row {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  padding: 0;
+  overflow: hidden;
+}
+
+.task-cycle-row--skeleton {
+  height: 2.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-1) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: task-cycle-skeleton-shimmer 1.6s linear infinite;
+  border-color: var(--border-chrome-hairline);
+}
+
+@keyframes task-cycle-skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+
+.task-cycle-row > details {
+  margin: 0;
+}
+
+.task-cycle-row-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  list-style: none; /* hide native triangle on Chromium */
+  user-select: none;
+}
+
+/* Hide the native disclosure triangle in Safari/Firefox too —
+   the cycle status pill is doing the visual work. */
+.task-cycle-row-summary::-webkit-details-marker { display: none; }
+
+.task-cycle-row-summary:hover {
+  background: var(--surface-2);
+}
+
+.task-cycle-row-attempt {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.task-cycle-row-when,
+.task-cycle-row-trigger {
+  font-size: var(--text-xs);
+}
+
+.task-cycle-row-livehint {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--brand-deep);
+  background: var(--brand-muted);
+  border: 1px solid var(--brand-border-soft);
+  border-radius: var(--radius-full);
+  padding: 0.1rem 0.5rem;
+}
+
+/* Phase strip rendered when a cycle row is expanded. */
+.task-cycle-phase-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 0.75rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px solid var(--border-chrome-hairline);
+}
+
+.task-cycle-phase-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
+  font-size: var(--text-sm);
+}
+
+.task-cycle-phase-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 5.5rem; /* keep names aligned across phases */
+}
+
+.task-cycle-phase-duration {
+  font-size: var(--text-xs);
+}
+
+.task-cycle-phase-summary {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  flex-basis: 100%; /* drop to its own line so long summaries don't crush the row */
+  margin-left: 6.1rem; /* line up under the phase name */
+}
+
+.task-cycle-row-phases {
+  padding: 0.4rem 0.75rem 0.7rem;
+  border-top: 1px solid var(--border-chrome-hairline);
+  margin: 0;
+}
+
