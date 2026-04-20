@@ -185,7 +185,16 @@ export function TaskHome({ app }: Props) {
           >
             <p className="task-home-kpi-label">Critical</p>
             <KpiValue state={criticalState} label="Critical tasks" />
-            <p className="task-home-kpi-meta">needs attention</p>
+            {/* The count is tasks whose *priority* is "critical" —
+                it does NOT mean the operator has something to act on
+                (those are covered by the Needs-user rail on the list
+                and the "Attention needed" chip on the detail page).
+                The earlier copy ("needs attention") conflated the two
+                and led operators to open critical tasks expecting an
+                action item. Mirror the Observability overview's
+                "critical priority" caption so both KPIs stay in
+                lockstep. */}
+            <p className="task-home-kpi-meta">critical priority</p>
           </article>
         </section>
 

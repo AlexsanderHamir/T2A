@@ -129,6 +129,15 @@ describe("TaskHome KPI cards", () => {
     expect(within(overview).getByText("4")).toBeInTheDocument();
     expect(within(overview).getByText("2")).toBeInTheDocument();
     expect(within(overview).getByText("7 parent • 5 subtasks")).toBeInTheDocument();
+    // The Critical card's meta copy must describe the *priority bucket*
+    // (how many tasks carry priority=critical), not a user-action
+    // signal. Pin "critical priority" so nobody quietly reverts it to
+    // "needs attention" — that phrasing conflated the count with the
+    // Needs-user rail and made operators open critical tasks
+    // expecting a ready-for-me action item. Also assert the old copy
+    // is gone so the regression is impossible to miss.
+    expect(within(overview).getByText("critical priority")).toBeInTheDocument();
+    expect(within(overview).queryByText("needs attention")).not.toBeInTheDocument();
   });
 
   it("uses singular subtask noun when by_scope.subtask is 1", () => {
