@@ -465,13 +465,30 @@ export function SettingsPage() {
 
         <fieldset className="settings-fieldset">
           <legend>Realtime rollout</legend>
+          {/* The prior layout carried three paragraphs of copy per
+              toggle (fieldset subtitle + current-state line +
+              technical help), which added up to a wall of text
+              before the operator could even see the checkboxes.
+              Keep the at-a-glance surface tight: a one-line
+              subtitle, the toggle + default pill, and a short
+              current-state line. Anything operational (rollout
+              playbook, affected API surfaces, header contract)
+              moves behind a native `<details>` disclosure so the
+              information is still one click away but doesn't
+              dominate the page. */}
           <p className="settings-fieldset-subtitle">
-            Opt-in realtime enhancements layered on top of the stable
-            defaults. Both default to <strong>off</strong> — the product
-            is fully usable without either. Enable one at a time after a
-            full SLO window of green rollback-rate and error-rate
-            metrics in staging (see <code>docs/SLOs.md</code>).
+            Opt-in enhancements. Both default to <strong>off</strong>.
           </p>
+          <details className="settings-learn-more">
+            <summary>Rollout guidance</summary>
+            <p>
+              Enable one flag at a time after a full SLO window of
+              green rollback-rate and error-rate metrics in staging
+              (see <code>docs/SLOs.md</code>). The product is fully
+              usable with both off — these are layered on top of
+              stable defaults.
+            </p>
+          </details>
 
           <div className="settings-rollout-toggle">
             <label className="settings-field settings-field--inline">
@@ -495,14 +512,17 @@ export function SettingsPage() {
             >
               <span className="settings-rollout-state-dot" aria-hidden="true" />
               {form.optimisticMutationsEnabled
-                ? "Currently on — the UI updates immediately and rolls back on server error."
-                : "Currently off — the UI waits for the server round-trip before updating (legacy pessimistic path)."}
+                ? "On — UI updates instantly; rolls back on error."
+                : "Off — UI waits for the server round-trip."}
             </p>
-            <p className="settings-field-help">
-              Affects PATCH, DELETE, checklist, requeue, and subtask
-              create flows. Purely a client-side behavior — the server
-              is unaware of the flag.
-            </p>
+            <details className="settings-learn-more settings-learn-more--nested">
+              <summary>Learn more</summary>
+              <p>
+                Affects PATCH, DELETE, checklist, requeue, and subtask
+                create flows. Purely a client-side behavior — the
+                server is unaware of the flag.
+              </p>
+            </details>
           </div>
 
           <div className="settings-rollout-toggle">
@@ -529,14 +549,18 @@ export function SettingsPage() {
             >
               <span className="settings-rollout-state-dot" aria-hidden="true" />
               {form.sseReplayEnabled
-                ? "Currently on — /events replays buffered events on reconnect so nothing is missed during a brief disconnect."
-                : "Currently off — /events is live-only; a reconnect starts cold and any events during the gap are dropped."}
+                ? "On — reconnects replay buffered events."
+                : "Off — events during a reconnect gap are dropped."}
             </p>
-            <p className="settings-field-help">
-              Honors the browser&apos;s <code>Last-Event-ID</code> header
-              on reconnect. Purely additive server-side; the SPA&apos;s
-              resume header is a no-op when this flag is off.
-            </p>
+            <details className="settings-learn-more settings-learn-more--nested">
+              <summary>Learn more</summary>
+              <p>
+                Honors the browser&apos;s <code>Last-Event-ID</code>{" "}
+                header on reconnect. Purely additive server-side; the
+                SPA&apos;s resume header is a no-op when this flag is
+                off.
+              </p>
+            </details>
           </div>
         </fieldset>
 

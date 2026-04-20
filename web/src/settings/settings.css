@@ -326,9 +326,92 @@
   padding-left: 26px;
 }
 
+/*
+ * "Learn more" disclosure — native `<details>` styled to match the
+ * rest of the settings surface instead of the browser default chrome.
+ * Two positions share the same component:
+ *   - fieldset-level (Rollout guidance): sits right under the
+ *     subtitle, flush-left because it's speaking to the section as a
+ *     whole.
+ *   - per-toggle (Learn more, `--nested`): sits under the
+ *     current-state line, indented 26px so it stacks with the toggle
+ *     label and the state dot. The word "Learn" has to align with
+ *     "Currently on/off" above it, otherwise the eye reads it as
+ *     unrelated copy.
+ * Summary visuals: small, muted, underline-on-hover link affordance
+ * with a tiny rotating triangle. We keep the native triangle (via a
+ * CSS marker substitute) because the rotate-on-open animation is the
+ * strongest "this is collapsible" signal at this size; removing it
+ * and replacing with an SVG would be more code for the same result.
+ */
+.settings-learn-more {
+  margin: 2px 0 0;
+}
+
+.settings-learn-more--nested {
+  padding-left: 26px;
+}
+
+.settings-learn-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  border-radius: 4px;
+}
+
+/* Strip the default disclosure triangle so our own caret (::before)
+   renders as the single affordance. Webkit needs its own hook. */
+.settings-learn-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-learn-more > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 5px;
+  border-color: transparent transparent transparent currentColor;
+  transform: translateY(0) rotate(0deg);
+  transition: transform var(--duration-short, 150ms) ease;
+}
+
+.settings-learn-more[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.settings-learn-more > summary:hover {
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+.settings-learn-more > summary:focus-visible {
+  outline: 2px solid var(--brand, #0a84ff);
+  outline-offset: 2px;
+}
+
+.settings-learn-more > p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+.settings-learn-more > p code {
+  font-size: 11px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .settings-rollout-state,
-  .settings-rollout-state-dot {
+  .settings-rollout-state-dot,
+  .settings-learn-more > summary::before {
     transition: none;
   }
 }
