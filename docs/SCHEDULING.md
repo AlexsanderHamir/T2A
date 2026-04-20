@@ -90,3 +90,24 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   Rationale: matches the SQL filter `pickup_not_before <= now()`
   byte-for-byte. Inverting either side would create a 1ns window
   where the two queues disagree.
+
+- **2026-04-19 — [Stage 1] — Prepend "UTC" to
+  `Intl.supportedValuesOf("timeZone")` in `supportedTimezones()`.**
+  Rationale: `supportedValuesOf` returns the canonical IANA names and
+  intentionally omits the legacy alias "UTC" (its canonical name is
+  "Etc/UTC"). The backend's seed default is the literal string "UTC"
+  (`domain.DefaultDisplayTimezone`); without prepending, a fresh
+  install's SettingsPage would show no "UTC" option even though every
+  timestamp on the page is currently in UTC. Operator-friendly UI
+  trumps strict canonicalisation here. Rejected alternative: rewrite
+  the backend default to "Etc/UTC" — that would gratuitously change
+  the wire shape and the seed log line for every existing install.
+
+- **2026-04-19 — [Stage 1] — `formatInAppTimezone` returns the input
+  string verbatim on parse failure rather than empty.**
+  Rationale: an unparseable timestamp is almost certainly a bug
+  somewhere upstream (truncated string, wrong field). Showing the
+  raw value gives the operator (and us) a fighting chance to spot
+  the malformed payload during triage; silently rendering nothing
+  hides the problem. Empty string is reserved for the "no value"
+  case (null/undefined/empty), where blank IS the correct render.

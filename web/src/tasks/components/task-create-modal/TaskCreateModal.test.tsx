@@ -17,6 +17,7 @@ const testAppSettings: AppSettings = {
   ...TASK_TEST_DEFAULTS,
   max_run_duration_seconds: 0,
   agent_pickup_delay_seconds: 5,
+  display_timezone: "UTC",
 };
 
 const testCursorModelsEmpty: ListCursorModelsResult = {

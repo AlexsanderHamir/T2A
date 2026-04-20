@@ -29,6 +29,10 @@ type Patch struct {
 	CursorModel             *string
 	MaxRunDurationSeconds   *int
 	AgentPickupDelaySeconds *int
+	// DisplayTimezone is an IANA timezone identifier validated via
+	// time.LoadLocation. Empty string is rejected; to "reset" the
+	// timezone, callers PATCH to "UTC" explicitly.
+	DisplayTimezone *string
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -44,7 +48,8 @@ func (p Patch) IsEmpty() bool {
 		p.CursorBin == nil &&
 		p.CursorModel == nil &&
 		p.MaxRunDurationSeconds == nil &&
-		p.AgentPickupDelaySeconds == nil
+		p.AgentPickupDelaySeconds == nil &&
+		p.DisplayTimezone == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -79,7 +84,8 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 		"worker_enabled", row.WorkerEnabled, "agent_paused", row.AgentPaused,
 		"runner", row.Runner,
 		"repo_root", row.RepoRoot, "cursor_bin", row.CursorBin,
-		"max_run_duration_seconds", row.MaxRunDurationSeconds)
+		"max_run_duration_seconds", row.MaxRunDurationSeconds,
+		"display_timezone", row.DisplayTimezone)
 	return row, nil
 }
 
@@ -158,6 +164,15 @@ func validatePatch(patch Patch) error {
 	if patch.CursorModel != nil && len(strings.TrimSpace(*patch.CursorModel)) > 256 {
 		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
 	}
+	if patch.DisplayTimezone != nil {
+		trimmed := strings.TrimSpace(*patch.DisplayTimezone)
+		if trimmed == "" {
+			return fmt.Errorf("%w: display_timezone must be non-empty (use \"UTC\" to reset)", domain.ErrInvalidInput)
+		}
+		if _, err := time.LoadLocation(trimmed); err != nil {
+			return fmt.Errorf("%w: display_timezone %q is not a valid IANA timezone: %v", domain.ErrInvalidInput, trimmed, err)
+		}
+	}
 	return nil
 }
 
@@ -186,5 +201,12 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.AgentPickupDelaySeconds != nil {
 		row.AgentPickupDelaySeconds = *patch.AgentPickupDelaySeconds
+	}
+	if patch.DisplayTimezone != nil {
+		// validatePatch already confirmed the zone parses; store the
+		// trimmed-but-unmodified string so the operator's choice round-trips
+		// verbatim (LoadLocation is forgiving about case but the SPA selects
+		// from Intl.supportedValuesOf which is canonical).
+		row.DisplayTimezone = strings.TrimSpace(*patch.DisplayTimezone)
 	}
 }

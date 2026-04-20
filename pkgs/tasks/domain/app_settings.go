@@ -41,6 +41,12 @@ import (
 //     model) deferred by this many seconds so the worker does not dequeue them
 //     immediately (smoother UX right after create). Default 5. Set to 0 to
 //     disable the delay.
+//   - DisplayTimezone: IANA timezone identifier (e.g. "America/New_York")
+//     used by the SPA to render every operator-facing timestamp
+//     (scheduled pickup time, "last updated", etc.). Validated server-side
+//     via time.LoadLocation on PATCH; stored as the canonical name returned
+//     by the lookup. Default "UTC". The wire format for every timestamp
+//     stays RFC3339 UTC — this column governs PRESENTATION only.
 type AppSettings struct {
 	ID                      uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
 	WorkerEnabled           bool      `gorm:"not null;default:true"`
@@ -51,6 +57,7 @@ type AppSettings struct {
 	CursorModel             string    `gorm:"not null;default:''"`
 	MaxRunDurationSeconds   int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
 	AgentPickupDelaySeconds int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	DisplayTimezone         string    `gorm:"not null;default:'UTC'"`
 	UpdatedAt               time.Time `gorm:"not null"`
 }
 
@@ -67,6 +74,13 @@ const DefaultRunner = "cursor"
 // on first boot (seconds before the worker may dequeue a newly created ready task).
 const DefaultAgentPickupDelaySeconds = 5
 
+// DefaultDisplayTimezone is the seed value for DisplayTimezone on first
+// boot. UTC is the safest default — every existing render is in UTC,
+// and operators in other zones explicitly opt in via the SettingsPage
+// selector. Must be a name accepted by time.LoadLocation; "UTC" is the
+// only zone the Go runtime is guaranteed to know without zoneinfo.zip.
+const DefaultDisplayTimezone = "UTC"
+
 // DefaultAppSettings returns the hard-coded first-boot defaults. Used
 // by the store's Get path when the row doesn't exist yet, so callers
 // always observe a fully populated value. Skip-listed in
@@ -82,6 +96,7 @@ func DefaultAppSettings() AppSettings {
 		CursorBin:               "",
 		MaxRunDurationSeconds:   0,
 		AgentPickupDelaySeconds: DefaultAgentPickupDelaySeconds,
+		DisplayTimezone:         DefaultDisplayTimezone,
 	}
 }
 

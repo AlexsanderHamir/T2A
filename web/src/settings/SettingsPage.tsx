@@ -4,6 +4,11 @@ import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
 import { listCursorModels } from "@/api/settings";
+import {
+  DEFAULT_APP_TIMEZONE,
+  formatInAppTimezone,
+  supportedTimezones,
+} from "@/shared/time/appTimezone";
 import { useAppSettings } from "./useAppSettings";
 import "./settings.css";
 
@@ -18,6 +23,7 @@ type FormState = {
   cursorModel: string;
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
+  displayTimezone: string;
 };
 
 function toFormState(s: AppSettings): FormState {
@@ -30,6 +36,7 @@ function toFormState(s: AppSettings): FormState {
     cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
+    displayTimezone: s.display_timezone,
   };
 }
 
@@ -71,6 +78,10 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
     parsedPickup !== initial.agent_pickup_delay_seconds
   ) {
     out.agent_pickup_delay_seconds = parsedPickup;
+  }
+  const tzTrimmed = form.displayTimezone.trim();
+  if (tzTrimmed !== "" && tzTrimmed !== initial.display_timezone) {
+    out.display_timezone = tzTrimmed;
   }
   return out;
 }
@@ -222,6 +233,9 @@ export function SettingsPage() {
             next.agent_pickup_delay_seconds,
           );
         }
+        if (cur.displayTimezone === formAtSubmit.displayTimezone) {
+          merged.displayTimezone = next.display_timezone;
+        }
         return merged;
       });
       setStatus({ kind: "success", message: "Settings saved." });
@@ -293,6 +307,17 @@ export function SettingsPage() {
 
   const repoRootEmpty = form.repoRoot.trim() === "";
   const lastUpdated = settings.updated_at ?? "";
+  const tzOptions = supportedTimezones();
+  // Tolerate operator-pasted custom zones that aren't in the
+  // Intl.supportedValuesOf list — show them as a synthetic option so
+  // the <select> can display the saved value rather than silently
+  // falling back to the first list item.
+  const showCustomTz =
+    form.displayTimezone.trim() !== "" &&
+    !tzOptions.includes(form.displayTimezone.trim());
+  const lastUpdatedFormatted = lastUpdated
+    ? formatInAppTimezone(lastUpdated, form.displayTimezone || DEFAULT_APP_TIMEZONE)
+    : "";
 
   return (
     <section className="settings-page">
@@ -302,7 +327,8 @@ export function SettingsPage() {
         </h2>
         {lastUpdated ? (
           <p className="settings-page-subtitle" data-testid="settings-last-updated">
-            Last updated: <time dateTime={lastUpdated}>{lastUpdated}</time>
+            Last updated:{" "}
+            <time dateTime={lastUpdated}>{lastUpdatedFormatted || lastUpdated}</time>
           </p>
         ) : null}
       </header>
@@ -400,6 +426,35 @@ export function SettingsPage() {
               Must be between 0 and 604800 (7 days).
             </p>
           ) : null}
+        </fieldset>
+
+        <fieldset className="settings-fieldset">
+          <legend>Display</legend>
+          <label className="settings-field">
+            <span className="settings-field-label">Timezone</span>
+            <select
+              data-testid="settings-display-timezone-select"
+              value={form.displayTimezone}
+              onChange={(e) => handleField("displayTimezone", e.target.value)}
+            >
+              {tzOptions.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+              {showCustomTz ? (
+                <option value={form.displayTimezone.trim()}>
+                  {form.displayTimezone.trim()} (saved — not in current list)
+                </option>
+              ) : null}
+            </select>
+          </label>
+          <p className="settings-field-help">
+            Operator-facing timestamps (scheduled task pickup time,
+            &quot;last updated&quot;, etc.) render in this timezone. The wire
+            format every API uses stays RFC3339 UTC; this only affects
+            display. Default <code>UTC</code>.
+          </p>
         </fieldset>
 
         <fieldset className="settings-fieldset">

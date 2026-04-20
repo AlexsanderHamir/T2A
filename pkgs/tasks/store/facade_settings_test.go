@@ -49,6 +49,12 @@ func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 	if got.AgentPickupDelaySeconds != want.AgentPickupDelaySeconds {
 		t.Errorf("AgentPickupDelaySeconds = %d, want %d", got.AgentPickupDelaySeconds, want.AgentPickupDelaySeconds)
 	}
+	if got.DisplayTimezone != want.DisplayTimezone {
+		t.Errorf("DisplayTimezone = %q, want %q", got.DisplayTimezone, want.DisplayTimezone)
+	}
+	if got.DisplayTimezone != "UTC" {
+		t.Errorf("DisplayTimezone default = %q, want UTC (the safest IANA zone every Go runtime knows)", got.DisplayTimezone)
+	}
 	if got.UpdatedAt.IsZero() {
 		t.Error("UpdatedAt should be set after seed")
 	}
@@ -214,6 +220,51 @@ func TestStore_UpdateSettings_trimsAndClamps(t *testing.T) {
 		}
 		if got.WorkerEnabled {
 			t.Error("WorkerEnabled did not persist as false")
+		}
+	})
+
+	t.Run("accepts_valid_iana_timezone", func(t *testing.T) {
+		s, ctx := newSettingsStore(t)
+		updated, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("America/New_York")})
+		if err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		if updated.DisplayTimezone != "America/New_York" {
+			t.Errorf("DisplayTimezone = %q, want America/New_York", updated.DisplayTimezone)
+		}
+		got, err := s.GetSettings(ctx)
+		if err != nil {
+			t.Fatalf("re-get: %v", err)
+		}
+		if got.DisplayTimezone != "America/New_York" {
+			t.Errorf("DisplayTimezone did not persist: got %q", got.DisplayTimezone)
+		}
+	})
+
+	t.Run("rejects_invalid_iana_timezone", func(t *testing.T) {
+		s, ctx := newSettingsStore(t)
+		_, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("Not/A_Real_Zone")})
+		if !errors.Is(err, domain.ErrInvalidInput) {
+			t.Fatalf("err = %v, want ErrInvalidInput", err)
+		}
+	})
+
+	t.Run("rejects_empty_timezone", func(t *testing.T) {
+		s, ctx := newSettingsStore(t)
+		_, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("   ")})
+		if !errors.Is(err, domain.ErrInvalidInput) {
+			t.Fatalf("err = %v, want ErrInvalidInput (empty must be rejected; PATCH to UTC to reset)", err)
+		}
+	})
+
+	t.Run("trims_timezone", func(t *testing.T) {
+		s, ctx := newSettingsStore(t)
+		updated, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("  Europe/London  ")})
+		if err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		if updated.DisplayTimezone != "Europe/London" {
+			t.Errorf("DisplayTimezone = %q, want Europe/London (trimmed)", updated.DisplayTimezone)
 		}
 	})
 }

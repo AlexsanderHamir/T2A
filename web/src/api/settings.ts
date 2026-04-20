@@ -27,6 +27,15 @@ export type AppSettings = {
   max_run_duration_seconds: number;
   /** Minimum seconds before the worker runs a new ready task. Default 5; 0 = no wait. */
   agent_pickup_delay_seconds: number;
+  /**
+   * IANA timezone identifier (e.g. "America/New_York"). Used for
+   * EVERY operator-facing timestamp render in the SPA. The wire
+   * format for every timestamp stays RFC3339 UTC; this field
+   * governs PRESENTATION only. Default "UTC". Validated server-side
+   * via time.LoadLocation; the SPA can trust the value parses in
+   * Intl.DateTimeFormat without further checking.
+   */
+  display_timezone: string;
   updated_at?: string;
 };
 
@@ -45,6 +54,11 @@ export type AppSettingsPatch = Partial<{
   cursor_model: string;
   max_run_duration_seconds: number;
   agent_pickup_delay_seconds: number;
+  /**
+   * IANA timezone identifier (e.g. "America/New_York"). Empty string
+   * is rejected server-side; PATCH to "UTC" to reset to default.
+   */
+  display_timezone: string;
 }>;
 
 export type ProbeCursorResult = {
@@ -93,6 +107,14 @@ function assertSettings(raw: unknown): AppSettings {
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
   const pickupDelay = o.agent_pickup_delay_seconds;
+  // Default display_timezone to "UTC" when the server omits the field
+  // so older builds (pre-Stage-1 of the scheduling plan) stay
+  // decodable by a freshly-deployed SPA. Intl.DateTimeFormat accepts
+  // "UTC" everywhere; falling back keeps the SPA from crashing on
+  // first paint just because a stale binary is still serving GETs.
+  const tz = typeof o.display_timezone === "string" && o.display_timezone.length > 0
+    ? o.display_timezone
+    : "UTC";
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||
@@ -113,6 +135,7 @@ function assertSettings(raw: unknown): AppSettings {
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
     agent_pickup_delay_seconds: pickupDelay,
+    display_timezone: tz,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

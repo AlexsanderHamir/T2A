@@ -31,6 +31,7 @@ type settingsResponse struct {
 	CursorModel             string `json:"cursor_model"`
 	MaxRunDurationSeconds   int    `json:"max_run_duration_seconds"`
 	AgentPickupDelaySeconds int    `json:"agent_pickup_delay_seconds"`
+	DisplayTimezone         string `json:"display_timezone"`
 	UpdatedAt               string `json:"updated_at,omitempty"`
 }
 
@@ -49,6 +50,7 @@ type settingsPatchBody struct {
 	CursorModel             *string `json:"cursor_model,omitempty"`
 	MaxRunDurationSeconds   *int    `json:"max_run_duration_seconds,omitempty"`
 	AgentPickupDelaySeconds *int    `json:"agent_pickup_delay_seconds,omitempty"`
+	DisplayTimezone         *string `json:"display_timezone,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -144,6 +146,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		CursorModel:             body.CursorModel,
 		MaxRunDurationSeconds:   body.MaxRunDurationSeconds,
 		AgentPickupDelaySeconds: body.AgentPickupDelaySeconds,
+		DisplayTimezone:         body.DisplayTimezone,
 	}
 	if patch.IsEmpty() {
 		writeJSONError(w, r, op, http.StatusBadRequest, "patch body must include at least one field")
@@ -311,6 +314,7 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		CursorModel:             cfg.CursorModel,
 		MaxRunDurationSeconds:   cfg.MaxRunDurationSeconds,
 		AgentPickupDelaySeconds: cfg.AgentPickupDelaySeconds,
+		DisplayTimezone:         cfg.DisplayTimezone,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

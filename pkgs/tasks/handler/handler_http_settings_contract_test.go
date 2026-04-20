@@ -569,3 +569,79 @@ func assertSettingsBareError(t *testing.T, raw []byte, wantError string) {
 }
 
 func ptrStr(s string) *string { return &s }
+
+// TestHTTP_GetSettings_includesDisplayTimezoneDefault pins the
+// scheduling-plan Stage 1 contract: GET /settings returns
+// "display_timezone":"UTC" by default so the SPA always has a valid
+// IANA zone to feed Intl.DateTimeFormat. An older SPA that ignores
+// the field still works (any unknown JSON keys are dropped); a newer
+// SPA that depends on it never has to special-case "missing".
+func TestHTTP_GetSettings_includesDisplayTimezoneDefault(t *testing.T) {
+	srv, _, _, _ := settingsTestServer(t)
+	body := mustGetSettingsJSON(t, srv.URL+"/settings", http.StatusOK)
+	var resp settingsResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, body)
+	}
+	if resp.DisplayTimezone != "UTC" {
+		t.Errorf("DisplayTimezone=%q, want UTC (default seed)", resp.DisplayTimezone)
+	}
+	if !strings.Contains(string(body), `"display_timezone":"UTC"`) {
+		t.Fatalf("response body missing display_timezone key: %s", body)
+	}
+}
+
+// TestHTTP_PatchSettings_displayTimezoneRoundtripAndSSE pins the full
+// PATCH path for the new field: a valid IANA zone persists, a
+// settings_changed SSE fans out (so the SPA can re-render every
+// timestamp without polling), and the row reads back canonical.
+func TestHTTP_PatchSettings_displayTimezoneRoundtripAndSSE(t *testing.T) {
+	srv, _, hub, _ := settingsTestServer(t)
+	ch, cancel := hub.Subscribe()
+	defer cancel()
+
+	body := mustPatchSettingsJSON(t, srv.URL+"/settings",
+		`{"display_timezone":"America/New_York"}`,
+		http.StatusOK)
+	var resp settingsResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, body)
+	}
+	if resp.DisplayTimezone != "America/New_York" {
+		t.Errorf("response display_timezone=%q, want America/New_York", resp.DisplayTimezone)
+	}
+
+	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	mustEqualEvents(t, "PATCH /settings display_timezone", got, []string{"settings_changed:"})
+
+	getBody := mustGetSettingsJSON(t, srv.URL+"/settings", http.StatusOK)
+	var afterGet settingsResponse
+	if err := json.Unmarshal(getBody, &afterGet); err != nil {
+		t.Fatalf("decode GET: %v body=%s", err, getBody)
+	}
+	if afterGet.DisplayTimezone != "America/New_York" {
+		t.Errorf("subsequent GET display_timezone=%q, want America/New_York", afterGet.DisplayTimezone)
+	}
+}
+
+// TestHTTP_PatchSettings_displayTimezoneInvalidRejected guards
+// against accidental persistence of garbage that would later crash
+// Intl.DateTimeFormat in the browser. Server-side time.LoadLocation
+// is the single source of truth.
+func TestHTTP_PatchSettings_displayTimezoneInvalidRejected(t *testing.T) {
+	srv, _, _, _ := settingsTestServer(t)
+	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
+		`{"display_timezone":"Not/A_Real_Zone"}`, http.StatusBadRequest)
+	// The exact phrase comes from settings.validatePatch and includes
+	// the offending value plus the LoadLocation error; assert the
+	// stable prefix so a future LoadLocation error rewording doesn't
+	// brittlely fail this contract test, while still pinning that
+	// the operator sees the field name and offending value.
+	var body jsonErrorBody
+	if err := json.Unmarshal(resp, &body); err != nil {
+		t.Fatalf("decode error envelope: %v body=%s", err, resp)
+	}
+	if !strings.Contains(body.Error, "display_timezone") || !strings.Contains(body.Error, "Not/A_Real_Zone") {
+		t.Fatalf("error=%q must mention display_timezone and the offending value", body.Error)
+	}
+}
