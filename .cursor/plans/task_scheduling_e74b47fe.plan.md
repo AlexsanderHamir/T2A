@@ -4,25 +4,25 @@ overview: "Give operators end-to-end control over when the agent worker is allow
 todos:
   - id: stage0_race_fix
     content: "Stage 0 (prereq): close the notifyReadyTask race so a task with pickup_not_before in the future is NOT pushed to the in-memory queue until the time has passed; add a regression test that fails on main today."
-    status: pending
+    status: completed
   - id: stage1_settings_tz
     content: "Stage 1: add display_timezone IANA string to app_settings (domain + store + handler + SettingsPage), default 'UTC', validated against time.LoadLocation."
-    status: pending
+    status: completed
   - id: stage2_api_create_edit
     content: "Stage 2: accept pickup_not_before on POST /tasks and PATCH /tasks/{id} (currently server-set only); validate parse + UTC + reject pre-2000 sentinel; document in API-HTTP.md."
-    status: pending
+    status: completed
   - id: stage3_create_modal_ui
     content: "Stage 3: create-modal 'Schedule for' field with native datetime-local + quick-pick chips ('In 1 h', 'Tonight 9pm', 'Tomorrow 9am', 'Next Monday 9am', 'Clear'); render in app timezone; clear == null."
-    status: pending
+    status: completed
   - id: stage4_detail_edit_ui
     content: "Stage 4: TaskDetailPage 'Scheduled' badge + edit/clear control reusing the same picker; PATCH integrates with optimistic flow; SSE task_updated already covers refresh."
-    status: pending
+    status: completed
   - id: stage5_bulk_reschedule
     content: "Stage 5: task list multi-select + 'Reschedule' bulk action calling PATCH N times with shared concurrency cap; status filter learns a 'Scheduled' bucket (status=ready AND pickup_not_before > now)."
-    status: pending
+    status: completed
   - id: stage6_observability
     content: "Stage 6: surface 'Scheduled (deferred)' as a KPI on the observability overview + new agent idle reason 'awaiting_scheduled_task' when ready queue is empty only because every ready task is in the future."
-    status: pending
+    status: completed
 isProject: false
 ---
 
