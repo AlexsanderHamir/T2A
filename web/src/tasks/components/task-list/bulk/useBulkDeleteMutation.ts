@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { deleteTask as deleteTaskApi } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
@@ -31,6 +31,8 @@ export function useBulkDeleteMutation() {
   const queryClient = useQueryClient();
   const [isPending, setPending] = useState(false);
   const [lastResult, setLastResult] = useState<BulkDeleteResult | null>(null);
+  /** Overlapping `run()` calls share one spinner; only clear when all finish. */
+  const inFlightRef = useRef(0);
 
   const reset = useCallback(() => {
     setLastResult(null);
@@ -47,6 +49,7 @@ export function useBulkDeleteMutation() {
         setLastResult(empty);
         return empty;
       }
+      inFlightRef.current += 1;
       setPending(true);
       try {
         const calls = taskIds.map(
@@ -79,7 +82,8 @@ export function useBulkDeleteMutation() {
         await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
         return summary;
       } finally {
-        setPending(false);
+        inFlightRef.current -= 1;
+        if (inFlightRef.current === 0) setPending(false);
       }
     },
     [queryClient],

@@ -3,7 +3,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { taskQueryKeys } from "../../../task-query";
-import { useBulkDeleteMutation } from "./useBulkDeleteMutation";
+import {
+  type BulkDeleteResult,
+  useBulkDeleteMutation,
+} from "./useBulkDeleteMutation";
 import { useBulkScheduleMutation } from "./useBulkScheduleMutation";
 
 const { mockDeleteTask, mockPatchTask } = vi.hoisted(() => ({
@@ -123,12 +126,17 @@ describe("useBulkScheduleMutation", () => {
 });
 
 describe("useBulkDeleteMutation overlapping runs", () => {
+  beforeEach(() => {
+    mockedDelete.mockReset();
+  });
+
   /**
    * Overlapping `run()` calls must not clear `isPending` until all complete.
-   * `it.fails` until hooks track in-flight depth; remove `.fails` in the fix commit.
-   * Kept in its own describe: long-lived `act` + deferred promises; order avoids flakes.
+   * Avoid one long `await act(async () => …)` around the overlap: React 18 defers
+   * state flushes until that act callback returns, so `isPending` would still
+   * read `false` mid-flight.
    */
-  it.fails("keeps isPending true until every overlapping bulk run has finished", async () => {
+  it("keeps isPending true until every overlapping bulk run has finished", async () => {
     const dSlow = deferred<void>();
     const { Wrapper } = makeWrapper();
 
@@ -145,26 +153,27 @@ describe("useBulkDeleteMutation overlapping runs", () => {
     });
 
     let slowDone = false;
-    const pSlow = act(async () => {
-      await result.current.run(["slow"]);
-      slowDone = true;
+    let pSlow!: Promise<BulkDeleteResult>;
+
+    await act(() => {
+      pSlow = result.current.run(["slow"]).finally(() => {
+        slowDone = true;
+      });
     });
 
     await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith("slow"));
+    expect(result.current.isPending).toBe(true);
 
     await act(async () => {
       await result.current.run(["fast"]);
     });
+    expect(slowDone).toBe(false);
+    expect(result.current.isPending).toBe(true);
 
-    try {
-      expect(slowDone).toBe(false);
-      expect(result.current.isPending).toBe(true);
-    } finally {
-      await act(async () => {
-        dSlow.resolve(undefined);
-      });
+    await act(async () => {
+      dSlow.resolve(undefined);
       await pSlow;
-    }
+    });
     expect(slowDone).toBe(true);
     expect(result.current.isPending).toBe(false);
   });
