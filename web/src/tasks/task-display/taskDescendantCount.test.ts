@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "@/types/task";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { taskDescendantCount } from "./taskDescendantCount";
 
 const leaf = (id: string, children?: Task[]): Task => ({
@@ -9,9 +10,8 @@ const leaf = (id: string, children?: Task[]): Task => ({
   status: "ready",
   priority: "medium",
   task_type: "general",
-  runner: "cursor",
-  cursor_model: "",
   checklist_inherit: false,
+  ...TASK_TEST_DEFAULTS,
   ...(children ? { children } : {}),
 });
 
