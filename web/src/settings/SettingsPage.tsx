@@ -539,12 +539,12 @@ export function SettingsPage() {
               technical help), which added up to a wall of text
               before the operator could even see the checkboxes.
               Keep the at-a-glance surface tight: a one-line
-              subtitle, the toggle + default pill, and a short
-              current-state line. Anything operational (rollout
-              playbook, affected API surfaces, header contract)
-              moves behind a native `<details>` disclosure so the
-              information is still one click away but doesn't
-              dominate the page. */}
+              subtitle (defaults stated once for the section), the
+              toggle, and a short current-state line. Anything
+              operational (rollout playbook, affected API surfaces,
+              header contract) moves behind a native `<details>`
+              disclosure so the information is still one click away
+              but doesn't dominate the page. */}
           <p className="settings-fieldset-subtitle">
             Opt-in enhancements. Both default to <strong>off</strong>.
           </p>
@@ -570,9 +570,6 @@ export function SettingsPage() {
                 }
               />
               <span className="settings-field-label">Optimistic mutations</span>
-              <span className="settings-default-badge" aria-hidden="true">
-                Default: Off
-              </span>
             </label>
             <p
               className="settings-rollout-state"
@@ -606,9 +603,6 @@ export function SettingsPage() {
               />
               <span className="settings-field-label">
                 SSE replay (lossless events)
-              </span>
-              <span className="settings-default-badge" aria-hidden="true">
-                Default: Off
               </span>
             </label>
             <p

@@ -640,13 +640,10 @@
  * instantly readable without the operator having to parse a paragraph:
  *   1. Section intent — a subtitle right under the legend that states
  *      "these are optional, both default off, the product works fine
- *      without them".
- *   2. Default per toggle — a small "Default: Off" pill next to each
- *      label so the baseline is visible even when the checkbox has been
- *      toggled back and forth during the session.
- *   3. Current live effect — a status line under each toggle that
- *      reads "Currently on/off — <consequence in plain language>" with
- *      a colored dot that flips between muted (off) and brand (on).
+ *      without them" (defaults are stated once; no per-toggle pills).
+ *   2. Current live effect — a status line under each toggle that
+ *      reads "On/Off — <consequence in plain language>" with a
+ *      colored dot that flips between muted (off) and success (on).
  * The longer technical help text stays below the status line but no
  * longer carries the operational-safety burden (that moved to the
  * subtitle), so it can be short and purely descriptive.
@@ -677,10 +674,9 @@
  *
  * The inline `<label>` inside each card uses CSS `order` to push the
  * (now visually restyled) checkbox to the right of the row, iOS-
- * Settings-style, with the label text leading on the left and the
- * Default pill sitting snug against the switch. Accessibility stays
- * intact because the input is still a native checkbox — the switch
- * is purely visual.
+ * Settings-style, with the label text leading on the left.
+ * Accessibility stays intact because the input is still a native
+ * checkbox — the switch is purely visual.
  */
 .settings-rollout-toggle {
   display: flex;
@@ -721,7 +717,7 @@
 }
 
 /*
- * Label row layout: [label] [default pill] [switch].
+ * Label row layout: [label] [switch].
  * The native checkbox sits first in source order (accessibility —
  * screenreaders read the name with the label), but `order` pushes
  * it to the visual end of the row where operators expect a toggle
@@ -748,10 +744,6 @@
   font-weight: 600;
   letter-spacing: -0.005em;
   color: var(--text-primary, var(--color-text, #1a1a1a));
-}
-
-.settings-rollout-toggle .settings-default-badge {
-  order: 2;
 }
 
 /*
@@ -810,20 +802,6 @@
      product uses brand purple for focus rings globally. */
   outline: 2px solid var(--brand, #635bff);
   outline-offset: 2px;
-}
-
-.settings-default-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--text-secondary, var(--color-text-muted, #555));
-  background: var(--surface-glass-pill, color-mix(in srgb, currentColor 6%, transparent));
-  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-  border-radius: 999px;
-  white-space: nowrap;
 }
 
 .settings-rollout-state {
