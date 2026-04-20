@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import {
   draftAutosaveSignature,
   normalizeDraftPromptForDirty,
@@ -13,8 +14,8 @@ function baseInput(): DraftAutosaveSignatureInput {
     prompt: "<p>body</p>",
     priority: "medium",
     taskType: "general",
-    runner: "cursor",
-    cursorModel: "",
+    runner: TASK_TEST_DEFAULTS.runner,
+    cursorModel: TASK_TEST_DEFAULTS.cursor_model,
     parentId: "",
     checklistInherit: false,
     checklistItems: [],
@@ -117,8 +118,7 @@ describe("draftAutosaveSignature", () => {
         initial_prompt: "<p>Body</p>",
         priority: "medium",
         task_type: "general",
-        runner: "cursor",
-        cursor_model: "",
+        ...TASK_TEST_DEFAULTS,
         parent_id: "",
         checklist_inherit: false,
         checklist_items: [],
