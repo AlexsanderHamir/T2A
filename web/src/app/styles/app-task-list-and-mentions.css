@@ -193,6 +193,15 @@
   border-radius: var(--radius-full);
   text-transform: capitalize;
   border: 1px solid transparent;
+  /* When optimistic mutations or SSE patch a task's status/priority
+     the class list changes in place; without a transition the pill
+     snaps between hues, which reads as a jank frame. Reduced-motion
+     already globally overrides all `transition` properties to `none`
+     in app-base.css, so this respects user preference. */
+  transition:
+    background-color var(--duration-moderate) var(--ease-default),
+    color var(--duration-moderate) var(--ease-default),
+    border-color var(--duration-moderate) var(--ease-default);
 }
 
 /* Status — distinct semantic hues */
