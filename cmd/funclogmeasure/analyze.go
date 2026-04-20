@@ -196,6 +196,33 @@ var skipSlogRequirement = map[string]struct{}{
 	// for the no-op short-circuit on PATCH /settings; the surrounding
 	// handler emits the trace line with the decision context.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/settings\tPatch.IsEmpty": {},
+
+	// Session 38 — Category (2) pure transforms / hot-path helpers and one
+	// Category (3)-style argv builder: recent commits added these without
+	// slog; logging at each site would duplicate traces already emitted by
+	// the caller (OpenPostgres, phase event marshal, Adapter.Run, ListModels,
+	// handler.Handler.create).
+	//
+	// pkgs/tasks/postgres: DSN string normalization only; connection open path
+	// logs outcomes.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres\tensureQueryExecModeSimpleProtocol": {},
+	// pkgs/tasks/store/internal/cycles: JSON copy + rune clamp for phase event
+	// payloads; store write paths already trace via kernel / mirror helpers.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/cycles\tphaseDetailsForEventPayload":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/cycles\ttruncatePhaseEventDetailValue": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/cycles\ttruncateStringRunes":           {},
+	// pkgs/agents/runner/cursor: argv assembly each Run; Adapter.Run logs first.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\t*Adapter.argvFor": {},
+	// clipSummaryRunes: stderrFirstLineHint logs before calling clipSummaryRunes.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tclipSummaryRunes": {},
+	// Deterministic shaping of Result.Details; Run / worker surfaces failures.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\ttitleForFailureKind":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tclassifyCursorFailure": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tmergeDetailsJSON":      {},
+	// parseListModelsOutput: ListModels logs at entry before parsing stdout.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tparseListModelsOutput": {},
+	// resolveTaskRunnerModel: handler.Handler.create logs the request trace first.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tresolveTaskRunnerModel": {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {
