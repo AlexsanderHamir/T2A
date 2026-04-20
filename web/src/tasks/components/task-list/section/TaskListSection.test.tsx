@@ -343,6 +343,33 @@ describe("TaskListSection", () => {
   });
 
   describe("bulk reschedule", () => {
+    it("disables Reschedule when any selected task is done", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeRow("a", "Alpha", { status: "done" }),
+        makeRow("b", "Beta", { status: "ready" }),
+      ];
+      renderWithRouter(
+        <TaskListSection
+          tasks={tasks}
+          loading={false}
+          refreshing={false}
+          saving={false}
+          {...listPagerDefaults}
+          rootTasksOnPage={2}
+          onEdit={vi.fn()}
+          onRequestDelete={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByTestId("task-list-select-row-a"));
+      const reschedule = screen.getByTestId("task-list-bulk-bar-reschedule");
+      expect(reschedule).toBeDisabled();
+      expect(reschedule).toHaveAttribute(
+        "title",
+        "Completed tasks cannot be rescheduled from the list.",
+      );
+    });
+
     it("shows the bulk action bar only after at least one row is selected", async () => {
       const user = userEvent.setup();
       const tasks = [

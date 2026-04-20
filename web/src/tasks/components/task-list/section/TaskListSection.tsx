@@ -135,6 +135,13 @@ export function TaskListSection({
       .map((t) => t.id);
   }, [filteredTasks, selection.selectedVisibleIds]);
 
+  const selectedIncludesDone = useMemo(() => {
+    const visibleSelected = new Set(selection.selectedVisibleIds);
+    return filteredTasks.some(
+      (t) => visibleSelected.has(t.id) && t.status === "done",
+    );
+  }, [filteredTasks, selection.selectedVisibleIds]);
+
   const skipFiltersResetOnMount = useRef(true);
   // Pull `clearSelection` out of `selection` so the filter-reset
   // effect's dependency array doesn't include the whole selection
@@ -175,6 +182,14 @@ export function TaskListSection({
         setRescheduleModalOpen(false);
         return;
       }
+      if (
+        ids.some(
+          (id) => filteredTasks.find((t) => t.id === id)?.status === "done",
+        )
+      ) {
+        setRescheduleModalOpen(false);
+        return;
+      }
       const result = await bulkSchedule.run(ids, next);
       if (result.failed.length === 0) {
         setRescheduleModalOpen(false);
@@ -184,7 +199,7 @@ export function TaskListSection({
         setBulkErrorBanner(formatBulkFailure(result.failed.length, result.attempted));
       }
     },
-    [bulkSchedule, selection],
+    [bulkSchedule, filteredTasks, selection],
   );
 
   const handleClearSchedule = useCallback(async () => {
@@ -285,8 +300,10 @@ export function TaskListSection({
       <TaskListBulkActionBar
         selectedCount={selection.selectedVisibleIds.length}
         scheduledCount={selectedScheduledIds.length}
+        rescheduleDisabled={selectedIncludesDone}
         busy={bulkSchedule.isPending}
         onReschedule={() => {
+          if (selectedIncludesDone) return;
           setBulkErrorBanner(null);
           setRescheduleModalOpen(true);
         }}

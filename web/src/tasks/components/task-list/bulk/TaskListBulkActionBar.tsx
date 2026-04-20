@@ -7,6 +7,13 @@ type Props = {
    * disable the button and label it accordingly.
    */
   scheduledCount: number;
+  /**
+   * When true, the selection includes at least one completed task
+   * (`status === "done"`). Those rows cannot be given a new pickup
+   * time from the list — same rule as the task detail schedule
+   * panel (terminal tasks are not schedulable).
+   */
+  rescheduleDisabled: boolean;
   busy: boolean;
   onReschedule: () => void;
   onClearSchedule: () => void;
@@ -21,8 +28,8 @@ type Props = {
  *
  * Three actions:
  *  - **Reschedule** (primary): opens TaskBulkRescheduleModal with
- *    the shared SchedulePicker. Always enabled when the bar is
- *    visible.
+ *    the shared SchedulePicker. Disabled when `rescheduleDisabled`
+ *    (e.g. a selected row is already done) or while `busy`.
  *  - **Clear schedule** (secondary): immediate PATCH N times with
  *    `pickup_not_before: null`. Disabled when none of the
  *    selected rows have a schedule (the operator's mental model
@@ -39,6 +46,7 @@ type Props = {
 export function TaskListBulkActionBar({
   selectedCount,
   scheduledCount,
+  rescheduleDisabled,
   busy,
   onReschedule,
   onClearSchedule,
@@ -65,7 +73,12 @@ export function TaskListBulkActionBar({
           type="button"
           className="task-create-submit"
           onClick={onReschedule}
-          disabled={busy}
+          disabled={busy || rescheduleDisabled}
+          title={
+            rescheduleDisabled
+              ? "Completed tasks cannot be rescheduled from the list."
+              : undefined
+          }
           data-testid="task-list-bulk-bar-reschedule"
         >
           Reschedule
