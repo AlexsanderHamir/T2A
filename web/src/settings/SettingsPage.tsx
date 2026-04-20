@@ -465,47 +465,79 @@ export function SettingsPage() {
 
         <fieldset className="settings-fieldset">
           <legend>Realtime rollout</legend>
-          <label className="settings-field settings-field--inline">
-            <input
-              type="checkbox"
-              data-testid="settings-optimistic-mutations-toggle"
-              checked={form.optimisticMutationsEnabled}
-              onChange={(e) =>
-                handleField("optimisticMutationsEnabled", e.target.checked)
-              }
-            />
-            <span className="settings-field-label">
-              Optimistic mutations enabled
-            </span>
-          </label>
-          <p className="settings-field-help">
-            When on, the SPA renders mutation results (status change,
-            delete, checklist, requeue, subtask create) immediately and
-            rolls back on server error. When off, every mutation waits
-            for the server round-trip before the UI updates (the legacy
-            pessimistic path). Leave off until a full SLO window of
-            green rollback-rate and error-rate metrics in staging. See{" "}
-            <code>docs/SLOs.md</code>.
+          <p className="settings-fieldset-subtitle">
+            Opt-in realtime enhancements layered on top of the stable
+            defaults. Both default to <strong>off</strong> — the product
+            is fully usable without either. Enable one at a time after a
+            full SLO window of green rollback-rate and error-rate
+            metrics in staging (see <code>docs/SLOs.md</code>).
           </p>
-          <label className="settings-field settings-field--inline">
-            <input
-              type="checkbox"
-              data-testid="settings-sse-replay-toggle"
-              checked={form.sseReplayEnabled}
-              onChange={(e) => handleField("sseReplayEnabled", e.target.checked)}
-            />
-            <span className="settings-field-label">
-              SSE replay enabled (lossless events)
-            </span>
-          </label>
-          <p className="settings-field-help">
-            When on, the <code>/events</code> stream honors the
-            browser&apos;s <code>Last-Event-ID</code> header on reconnect
-            and replays buffered events so the SPA doesn&apos;t miss
-            mutations during a brief disconnect. Off = live-only fanout
-            (reconnect = cold start). Purely additive server-side; the
-            SPA&apos;s resume header is a no-op when this flag is off.
-          </p>
+
+          <div className="settings-rollout-toggle">
+            <label className="settings-field settings-field--inline">
+              <input
+                type="checkbox"
+                data-testid="settings-optimistic-mutations-toggle"
+                checked={form.optimisticMutationsEnabled}
+                onChange={(e) =>
+                  handleField("optimisticMutationsEnabled", e.target.checked)
+                }
+              />
+              <span className="settings-field-label">Optimistic mutations</span>
+              <span className="settings-default-badge" aria-hidden="true">
+                Default: Off
+              </span>
+            </label>
+            <p
+              className="settings-rollout-state"
+              data-testid="settings-optimistic-mutations-state"
+              data-on={form.optimisticMutationsEnabled ? "true" : "false"}
+            >
+              <span className="settings-rollout-state-dot" aria-hidden="true" />
+              {form.optimisticMutationsEnabled
+                ? "Currently on — the UI updates immediately and rolls back on server error."
+                : "Currently off — the UI waits for the server round-trip before updating (legacy pessimistic path)."}
+            </p>
+            <p className="settings-field-help">
+              Affects PATCH, DELETE, checklist, requeue, and subtask
+              create flows. Purely a client-side behavior — the server
+              is unaware of the flag.
+            </p>
+          </div>
+
+          <div className="settings-rollout-toggle">
+            <label className="settings-field settings-field--inline">
+              <input
+                type="checkbox"
+                data-testid="settings-sse-replay-toggle"
+                checked={form.sseReplayEnabled}
+                onChange={(e) =>
+                  handleField("sseReplayEnabled", e.target.checked)
+                }
+              />
+              <span className="settings-field-label">
+                SSE replay (lossless events)
+              </span>
+              <span className="settings-default-badge" aria-hidden="true">
+                Default: Off
+              </span>
+            </label>
+            <p
+              className="settings-rollout-state"
+              data-testid="settings-sse-replay-state"
+              data-on={form.sseReplayEnabled ? "true" : "false"}
+            >
+              <span className="settings-rollout-state-dot" aria-hidden="true" />
+              {form.sseReplayEnabled
+                ? "Currently on — /events replays buffered events on reconnect so nothing is missed during a brief disconnect."
+                : "Currently off — /events is live-only; a reconnect starts cold and any events during the gap are dropped."}
+            </p>
+            <p className="settings-field-help">
+              Honors the browser&apos;s <code>Last-Event-ID</code> header
+              on reconnect. Purely additive server-side; the SPA&apos;s
+              resume header is a no-op when this flag is off.
+            </p>
+          </div>
         </fieldset>
 
         <fieldset className="settings-fieldset">

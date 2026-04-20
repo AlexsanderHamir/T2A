@@ -224,3 +224,111 @@
   font-size: 13px;
   color: var(--color-text-muted, #444);
 }
+
+/*
+ * Realtime rollout fieldset — the two flags (optimistic mutations, SSE
+ * replay) both default to off and are opt-in enhancements rather than
+ * required configuration. The UX goal here is to make three things
+ * instantly readable without the operator having to parse a paragraph:
+ *   1. Section intent — a subtitle right under the legend that states
+ *      "these are optional, both default off, the product works fine
+ *      without them".
+ *   2. Default per toggle — a small "Default: Off" pill next to each
+ *      label so the baseline is visible even when the checkbox has been
+ *      toggled back and forth during the session.
+ *   3. Current live effect — a status line under each toggle that
+ *      reads "Currently on/off — <consequence in plain language>" with
+ *      a colored dot that flips between muted (off) and brand (on).
+ * The longer technical help text stays below the status line but no
+ * longer carries the operational-safety burden (that moved to the
+ * subtitle), so it can be short and purely descriptive.
+ */
+
+.settings-fieldset-subtitle {
+  margin: -4px 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+.settings-fieldset-subtitle strong {
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  font-weight: 600;
+}
+
+.settings-rollout-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+}
+
+.settings-rollout-toggle:first-of-type {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.settings-rollout-toggle .settings-field--inline {
+  gap: 10px;
+}
+
+.settings-default-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+  background: var(--surface-glass-pill, color-mix(in srgb, currentColor 6%, transparent));
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  border-radius: 999px;
+  white-space: nowrap;
+  /* Keep the badge snug to the label text, not stretched to fill. */
+  margin-left: 2px;
+}
+
+.settings-rollout-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-left: 26px; /* align with the label text past the checkbox */
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+  transition: color var(--duration-short, 150ms) ease;
+}
+
+.settings-rollout-state-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 35%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 8%, transparent);
+  transition:
+    background var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 150ms) ease;
+}
+
+.settings-rollout-state[data-on="true"] {
+  color: var(--brand, #0a84ff);
+}
+
+.settings-rollout-state[data-on="true"] .settings-rollout-state-dot {
+  background: var(--brand, #0a84ff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #0a84ff) 18%, transparent);
+}
+
+.settings-rollout-toggle .settings-field-help {
+  padding-left: 26px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-rollout-state,
+  .settings-rollout-state-dot {
+    transition: none;
+  }
+}
