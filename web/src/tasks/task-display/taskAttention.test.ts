@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Status, Task } from "@/types";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { userAttention } from "./taskAttention";
 
 function minimalTask(status: Status): Task {
@@ -9,9 +10,8 @@ function minimalTask(status: Status): Task {
     initial_prompt: "",
     status,
     priority: "medium",
-    runner: "cursor",
-    cursor_model: "",
     checklist_inherit: false,
+    ...TASK_TEST_DEFAULTS,
   };
 }
 
