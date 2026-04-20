@@ -54,6 +54,24 @@ func (h *harness) createReadyTask(ctx context.Context, title string) *domain.Tas
 	return tsk
 }
 
+// createReadyTaskWithModel mirrors createReadyTask but pins the
+// operator-intent CursorModel on the task row. Used by Phase 1a-ii
+// tests that exercise the buildCycleMeta wiring.
+func (h *harness) createReadyTaskWithModel(ctx context.Context, title, model string) *domain.Task {
+	h.t.Helper()
+	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
+		Title:         title,
+		InitialPrompt: "do the thing",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+		CursorModel:   model,
+	}, domain.ActorUser)
+	if err != nil {
+		h.t.Fatalf("create task: %v", err)
+	}
+	return tsk
+}
+
 func (h *harness) startWorker(ctx context.Context, r runner.Runner, opts worker.Options) (*worker.Worker, <-chan error) {
 	h.t.Helper()
 	if opts.Notifier == nil {
@@ -263,6 +281,20 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 	if meta["runner"] != "fake" || meta["runner_version"] != "v0" || len(meta["prompt_hash"]) != 64 {
 		t.Fatalf("meta json shape = %+v", meta)
 	}
+	// Phase 1a-ii: cursor_model + cursor_model_effective MUST be
+	// present even when empty so the audit trail can distinguish
+	// "no model configured anywhere" from "key was never recorded
+	// (pre-feature cycle)". The harness task has no CursorModel and
+	// the runnerfake has no default model, so both should be "".
+	if _, ok := meta["cursor_model"]; !ok {
+		t.Fatalf("meta missing cursor_model (must be present, even empty): %+v", meta)
+	}
+	if _, ok := meta["cursor_model_effective"]; !ok {
+		t.Fatalf("meta missing cursor_model_effective (must be present, even empty): %+v", meta)
+	}
+	if meta["cursor_model"] != "" || meta["cursor_model_effective"] != "" {
+		t.Fatalf("meta cursor_model/cursor_model_effective expected empty for default-only harness task: %+v", meta)
+	}
 
 	phases, err := h.store.ListPhasesForCycle(bg, cycle.ID)
 	if err != nil {
@@ -315,6 +347,99 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 		if c.TaskID != tsk.ID || c.CycleID != cycle.ID {
 			t.Fatalf("publish[%d] = %+v, want task=%s cycle=%s", i, c, tsk.ID, cycle.ID)
 		}
+	}
+}
+
+// TestWorker_StartCycle_recordsRunnerModelAttribution covers Phase
+// 1a-ii of the per-task runner/model attribution plan: every cycle
+// MUST persist both the operator's intent (Task.CursorModel verbatim)
+// and the runner's resolved effective model (Runner.EffectiveModel)
+// into TaskCycle.MetaJSON. The audit trail relies on having BOTH so
+// callers can answer "operator asked for X but adapter ran Y" without
+// a separate join.
+//
+// The matrix covers the four meaningful combinations of (operator
+// intent, adapter default). The fifth row (both empty) is already
+// pinned by TestWorker_HappyPath_writesTwoPhasesAndSixMirrors.
+func TestWorker_StartCycle_recordsRunnerModelAttribution(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		taskModel     string
+		runnerDefault string
+		wantIntent    string
+		wantEffective string
+	}{
+		{
+			name:          "intent_overrides_default",
+			taskModel:     "sonnet-4.5",
+			runnerDefault: "opus",
+			wantIntent:    "sonnet-4.5",
+			wantEffective: "sonnet-4.5",
+		},
+		{
+			name:          "intent_only_no_default",
+			taskModel:     "sonnet-4.5",
+			runnerDefault: "",
+			wantIntent:    "sonnet-4.5",
+			wantEffective: "sonnet-4.5",
+		},
+		{
+			name:          "default_fills_when_intent_empty",
+			taskModel:     "",
+			runnerDefault: "opus",
+			wantIntent:    "",
+			wantEffective: "opus",
+		},
+		{
+			name:          "intent_with_whitespace_falls_back_to_default",
+			taskModel:     "   ",
+			runnerDefault: "opus",
+			// Persisted verbatim — the audit trail records the
+			// raw operator input, not a normalised version.
+			wantIntent:    "   ",
+			wantEffective: "opus",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			tsk := h.createReadyTaskWithModel(ctx, "model-attr-"+tc.name, tc.taskModel)
+
+			r := runnerfake.New().WithDefaultModel(tc.runnerDefault)
+			r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+				domain.PhaseStatusSucceeded, "ok", nil, ""))
+
+			_, done := h.startWorker(ctx, r, worker.Options{})
+			h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+			cancel()
+			if err := <-done; err != nil {
+				t.Fatalf("worker exit err: %v", err)
+			}
+
+			cycle := assertCycleStatus(t, h.store, tsk.ID, 1, domain.CycleStatusSucceeded)
+			var meta map[string]string
+			if err := json.Unmarshal(cycle.MetaJSON, &meta); err != nil {
+				t.Fatalf("unmarshal meta: %v (raw=%s)", err, cycle.MetaJSON)
+			}
+			if got := meta["cursor_model"]; got != tc.wantIntent {
+				t.Errorf("meta.cursor_model = %q, want %q (full meta=%+v)", got, tc.wantIntent, meta)
+			}
+			if got := meta["cursor_model_effective"]; got != tc.wantEffective {
+				t.Errorf("meta.cursor_model_effective = %q, want %q (full meta=%+v)", got, tc.wantEffective, meta)
+			}
+			// Pre-existing keys MUST stay populated; this test
+			// also pins the no-regression invariant.
+			if meta["runner"] != "fake" || meta["runner_version"] != "v0" || len(meta["prompt_hash"]) != 64 {
+				t.Errorf("meta legacy keys regressed: %+v", meta)
+			}
+		})
 	}
 }
 

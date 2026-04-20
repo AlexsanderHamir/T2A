@@ -206,13 +206,28 @@ func (w *Worker) transitionTask(ctx context.Context, taskID string, next domain.
 }
 
 // startCycle writes the StartCycle row and updates state on success.
-// MetaJSON carries runner identity + prompt hash so the audit trail can
-// distinguish runs by adapter version even before per-runner labels
-// land in metrics.
+// MetaJSON carries runner identity, prompt hash, AND the operator's
+// model intent + the runner's resolved effective model (Phase 1a-ii of
+// the per-task runner/model attribution plan) so the audit trail and
+// observability slice-and-dice can distinguish runs by adapter
+// version, intent, and effective model — without depending on runtime
+// metric scrapes.
+//
+// The Request is the same shape invokeRunner builds later (sans
+// per-run timeout, which is irrelevant to attribution). Intent is
+// recorded verbatim from task.CursorModel; the runner resolves
+// effective via Runner.EffectiveModel — both may be "" and that
+// empty string is the truth, not a placeholder.
 func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.startCycle",
 		"task_id", task.ID)
-	meta := buildCycleMeta(w.runner, task.InitialPrompt)
+	meta := buildCycleMeta(w.runner, task.InitialPrompt, runner.Request{
+		TaskID:      task.ID,
+		Phase:       domain.PhaseExecute,
+		Prompt:      task.InitialPrompt,
+		WorkingDir:  w.options.WorkingDir,
+		CursorModel: task.CursorModel,
+	})
 	cycle, err := w.store.StartCycle(ctx, store.StartCycleInput{
 		TaskID:      task.ID,
 		TriggeredBy: domain.ActorAgent,

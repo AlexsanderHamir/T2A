@@ -17,16 +17,42 @@ import (
 // isolation.
 
 // buildCycleMeta produces the JSON body written to TaskCycle.MetaJSON.
-// The Stage-3 audit contract pins these three keys; adding more later
-// is allowed but renames require a coordinated migration of the
-// substrate's mirror payloads.
-func buildCycleMeta(r runner.Runner, prompt string) []byte {
+// The Stage-3 audit contract pins these keys; adding more later is
+// allowed but renames require a coordinated migration of the substrate's
+// mirror payloads.
+//
+// Keys (V2):
+//   - runner               adapter Name() (e.g. "cursor-cli", "fake")
+//   - runner_version       adapter Version() at the time of the cycle
+//   - prompt_hash          sha256 of task.InitialPrompt (correlation only)
+//   - cursor_model         OPERATOR INTENT: the model string the task
+//                          was queued with (Task.CursorModel). Empty
+//                          string means "use the global default", and
+//                          MUST be persisted as "" not omitted, so the
+//                          UI/observability code can render the explicit
+//                          "default" choice.
+//   - cursor_model_effective EFFECTIVE: the concrete model identifier
+//                          the runner resolved for this cycle (calls
+//                          Runner.EffectiveModel). Empty string is
+//                          truthful: it means no model was configured
+//                          anywhere (operator picked the global default
+//                          AND no DefaultCursorModel is set in
+//                          app_settings). The Observability runner
+//                          breakdown panel renders that bucket as
+//                          "default model".
+//
+// Keeping both intent and effective lets us answer "the operator
+// asked for X but the adapter actually ran Y" without a separate
+// audit table.
+func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.buildCycleMeta",
 		"runner", r.Name())
 	out := map[string]string{
-		"runner":         r.Name(),
-		"runner_version": r.Version(),
-		"prompt_hash":    sha256Hex(prompt),
+		"runner":                 r.Name(),
+		"runner_version":         r.Version(),
+		"prompt_hash":            sha256Hex(prompt),
+		"cursor_model":           req.CursorModel,
+		"cursor_model_effective": r.EffectiveModel(req),
 	}
 	b, err := json.Marshal(out)
 	if err != nil {
