@@ -153,6 +153,18 @@ describe("getTaskStats", () => {
   });
 
   it("returns typed global stats response", async () => {
+    const cyclesPhasesEmpty = {
+      cycles: { by_status: {}, by_triggered_by: {} },
+      phases: {
+        by_phase_status: {
+          diagnose: {},
+          execute: {},
+          verify: {},
+          persist: {},
+        },
+      },
+      recent_failures: [],
+    };
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -162,6 +174,7 @@ describe("getTaskStats", () => {
           by_status: { ready: 3, running: 4, done: 3 },
           by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
           by_scope: { parent: 6, subtask: 4 },
+          ...cyclesPhasesEmpty,
         }),
         {
           status: 200,
@@ -178,6 +191,7 @@ describe("getTaskStats", () => {
       by_status: { ready: 3, running: 4, done: 3 },
       by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
       by_scope: { parent: 6, subtask: 4 },
+      ...cyclesPhasesEmpty,
     });
     expect(fetch).toHaveBeenCalledWith(
       "/tasks/stats",

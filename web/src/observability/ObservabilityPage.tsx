@@ -1,13 +1,15 @@
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { ObservabilityCycles } from "./ObservabilityCycles";
 import { ObservabilityOverview } from "./ObservabilityOverview";
 import { useObservabilityStats } from "./useObservabilityStats";
 
 /**
- * Top-level observability route. Stage 1 ships only the Overview pane;
- * future stages will add Cycles & Phases and System & API tabs as
- * sibling sections inside this shell (see the observability rollout
- * plan). Keeping the shell here from day one means we don't have to
- * rewire `App.tsx` when the additional panes land.
+ * Top-level observability route. Composes the Overview (KPI counters
+ * and distribution charts) with the Cycles & Phases section (heatmap
+ * and recent failures). Both panes share the same `useObservabilityStats`
+ * snapshot so they stay perfectly in sync, and the SSE invalidation
+ * wired in `useTaskEventStream` keeps the whole page live without
+ * extra polling.
  */
 export function ObservabilityPage() {
   useDocumentTitle("Observability");
@@ -22,6 +24,7 @@ export function ObservabilityPage() {
         </p>
       </header>
       <ObservabilityOverview stats={stats} loading={loading} />
+      <ObservabilityCycles stats={stats} loading={loading} />
     </div>
   );
 }

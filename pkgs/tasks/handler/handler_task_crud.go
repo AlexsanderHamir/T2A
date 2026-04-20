@@ -155,14 +155,7 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, taskStatsResponse{
-		Total:      stats.Total,
-		Ready:      stats.Ready,
-		Critical:   stats.Critical,
-		ByStatus:   stats.ByStatus,
-		ByPriority: stats.ByPriority,
-		ByScope:    stats.ByScope,
-	})
+	writeJSON(w, r, op, http.StatusOK, taskStatsResponseFromStore(stats))
 }
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {

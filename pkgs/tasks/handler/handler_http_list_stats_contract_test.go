@@ -22,12 +22,24 @@ type listResponseRaw struct {
 
 // statsResponseRaw mirrors the documented `GET /tasks/stats` envelope keys.
 type statsResponseRaw struct {
-	Total      int64            `json:"total"`
-	Ready      int64            `json:"ready"`
-	Critical   int64            `json:"critical"`
-	ByStatus   map[string]int64 `json:"by_status"`
-	ByPriority map[string]int64 `json:"by_priority"`
-	ByScope    map[string]int64 `json:"by_scope"`
+	Total          int64                        `json:"total"`
+	Ready          int64                        `json:"ready"`
+	Critical       int64                        `json:"critical"`
+	ByStatus       map[string]int64             `json:"by_status"`
+	ByPriority     map[string]int64             `json:"by_priority"`
+	ByScope        map[string]int64             `json:"by_scope"`
+	Cycles         statsCyclesRaw               `json:"cycles"`
+	Phases         statsPhasesRaw               `json:"phases"`
+	RecentFailures []map[string]json.RawMessage `json:"recent_failures"`
+}
+
+type statsCyclesRaw struct {
+	ByStatus      map[string]int64 `json:"by_status"`
+	ByTriggeredBy map[string]int64 `json:"by_triggered_by"`
+}
+
+type statsPhasesRaw struct {
+	ByPhaseStatus map[string]map[string]int64 `json:"by_phase_status"`
 }
 
 func mustGetJSON(t *testing.T, baseURL, path string) ([]byte, *http.Response) {
@@ -234,6 +246,9 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 		if got.Total != 0 || got.Ready != 0 || got.Critical != 0 {
 			t.Fatalf("totals=%+v want all 0 on empty DB", got)
 		}
+		assertCyclesEmpty(t, raw, got)
+		assertPhasesAllZeroEnumKeys(t, raw, got)
+		assertRecentFailuresEmptyArray(t, raw, got)
 	})
 
 	t.Run("populatedRootAndSubtask", func(t *testing.T) {
@@ -347,7 +362,11 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 	if err := json.Unmarshal(raw, &top); err != nil {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
-	want := map[string]struct{}{"total": {}, "ready": {}, "critical": {}, "by_status": {}, "by_priority": {}, "by_scope": {}}
+	want := map[string]struct{}{
+		"total": {}, "ready": {}, "critical": {},
+		"by_status": {}, "by_priority": {}, "by_scope": {},
+		"cycles": {}, "phases": {}, "recent_failures": {},
+	}
 	for k := range want {
 		if _, ok := top[k]; !ok {
 			t.Errorf("GET /tasks/stats 200 missing key %q (docs/API-HTTP.md): %s", k, raw)
@@ -382,4 +401,74 @@ func sumIntMap(m map[string]int64) int64 {
 		s += v
 	}
 	return s
+}
+
+// assertCyclesEmpty pins the documented invariant that the `cycles`
+// block is the two-key object `{by_status, by_triggered_by}` with
+// **non-null** empty maps on a fresh database. Catches a future
+// refactor that ships sparse keys or omitempty.
+func assertCyclesEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
+	t.Helper()
+	if !bytes.Contains(raw, []byte(`"by_status":{}`)) {
+		// At least one of the maps must serialize as `{}` on empty
+		// DB; both should. The substring guard is over-broad on
+		// purpose because by_status appears twice (top-level +
+		// cycles); the structural check below is the precise one.
+	}
+	if got.Cycles.ByStatus == nil {
+		t.Fatalf("cycles.by_status is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	if got.Cycles.ByTriggeredBy == nil {
+		t.Fatalf("cycles.by_triggered_by is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	if len(got.Cycles.ByStatus) != 0 {
+		t.Fatalf("cycles.by_status=%v want {} on empty DB", got.Cycles.ByStatus)
+	}
+	if len(got.Cycles.ByTriggeredBy) != 0 {
+		t.Fatalf("cycles.by_triggered_by=%v want {} on empty DB", got.Cycles.ByTriggeredBy)
+	}
+}
+
+// assertPhasesAllZeroEnumKeys pins the documented invariant that
+// `phases.by_phase_status` always carries every domain.Phase enum value
+// as a key, with an empty inner map on a fresh database. The
+// Observability heatmap relies on the four-key shape so it can render
+// every cell (rather than guess which phases are missing).
+func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw) {
+	t.Helper()
+	if got.Phases.ByPhaseStatus == nil {
+		t.Fatalf("phases.by_phase_status is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	wantPhases := []string{"diagnose", "execute", "verify", "persist"}
+	for _, p := range wantPhases {
+		inner, ok := got.Phases.ByPhaseStatus[p]
+		if !ok {
+			t.Errorf("phases.by_phase_status missing key %q; the 4-key heatmap shape is mandatory (docs/API-HTTP.md): %s",
+				p, raw)
+			continue
+		}
+		if inner == nil {
+			t.Errorf("phases.by_phase_status[%q] is null; want {} on empty DB", p)
+		}
+		if len(inner) != 0 {
+			t.Errorf("phases.by_phase_status[%q]=%v want {} on empty DB", p, inner)
+		}
+	}
+}
+
+// assertRecentFailuresEmptyArray pins the documented invariant that
+// `recent_failures` is the literal `[]` (never `null` or omitted) on a
+// fresh database, mirroring the existing `tasks:[]` rule for the list
+// envelope.
+func assertRecentFailuresEmptyArray(t *testing.T, raw []byte, got statsResponseRaw) {
+	t.Helper()
+	if !bytes.Contains(raw, []byte(`"recent_failures":[]`)) {
+		t.Errorf("empty DB must serialize \"recent_failures\":[] verbatim, got %s", raw)
+	}
+	if got.RecentFailures == nil {
+		t.Fatalf("recent_failures is null; want [] on empty DB (docs/API-HTTP.md)")
+	}
+	if len(got.RecentFailures) != 0 {
+		t.Fatalf("recent_failures=%v want [] on empty DB", got.RecentFailures)
+	}
 }

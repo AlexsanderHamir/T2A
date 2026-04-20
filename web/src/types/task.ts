@@ -53,6 +53,50 @@ export type TaskListResponse = {
   has_more: boolean;
 };
 
+/**
+ * One entry in `recent_failures` from `GET /tasks/stats`. Mirrors the
+ * server projection in pkgs/tasks/handler/handler_task_json.go (struct
+ * taskStatsFailureJSON). `task_id` + `event_seq` deep-link to
+ * `GET /tasks/{task_id}/events/{event_seq}`; `status` is the original
+ * terminal cycle status (`failed` or `aborted`) recovered from the
+ * cycle_failed payload (the mirror folds aborts into cycle_failed).
+ */
+export type TaskStatsRecentFailure = {
+  task_id: string;
+  event_seq: number;
+  /** ISO 8601 from API. */
+  at: string;
+  cycle_id: string;
+  attempt_seq: number;
+  status: "failed" | "aborted";
+  /** Free-form short note recorded at terminate time; "" when none. */
+  reason: string;
+};
+
+/**
+ * Cycle aggregates from `GET /tasks/stats`. Both maps are always
+ * present (`{}` on empty database). Inner enums match
+ * `pkgs/tasks/domain` exactly so a future enum change trips the
+ * parser, the contract test, and the heatmap in the same PR.
+ */
+export type TaskStatsCycles = {
+  by_status: Partial<Record<import("./cycle").CycleStatus, number>>;
+  by_triggered_by: Partial<Record<"user" | "agent", number>>;
+};
+
+/**
+ * Phase aggregates from `GET /tasks/stats`. The outer map is the four
+ * `domain.Phase` values; every key is always present (the inner map is
+ * `{}` for phases that have never run). The `(phase x status)` shape
+ * is the source of the Observability heatmap.
+ */
+export type TaskStatsPhases = {
+  by_phase_status: Record<
+    import("./cycle").Phase,
+    Partial<Record<import("./cycle").PhaseStatus, number>>
+  >;
+};
+
 export type TaskStatsResponse = {
   total: number;
   ready: number;
@@ -63,6 +107,10 @@ export type TaskStatsResponse = {
     parent: number;
     subtask: number;
   };
+  cycles: TaskStatsCycles;
+  phases: TaskStatsPhases;
+  /** Newest first; capped server-side at 25. Always an array (never null). */
+  recent_failures: TaskStatsRecentFailure[];
 };
 
 export type TaskChangeType =

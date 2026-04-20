@@ -29,6 +29,9 @@ import {
   type TaskEventType,
   type TaskEventsResponse,
   type TaskListResponse,
+  type TaskStatsCycles,
+  type TaskStatsPhases,
+  type TaskStatsRecentFailure,
   type TaskStatsResponse,
 } from "@/types";
 import { errorMessage } from "@/lib/errorMessage";
@@ -171,6 +174,9 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     parent: parseFiniteNumber(byScopeRaw.parent, "by_scope.parent"),
     subtask: parseFiniteNumber(byScopeRaw.subtask, "by_scope.subtask"),
   };
+  const cycles = parseTaskStatsCycles(value.cycles);
+  const phases = parseTaskStatsPhases(value.phases);
+  const recent_failures = parseTaskStatsRecentFailures(value.recent_failures);
   return {
     total: parseFiniteNumber(value.total, "total"),
     ready: parseFiniteNumber(value.ready, "ready"),
@@ -178,6 +184,115 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     by_status,
     by_priority,
     by_scope,
+    cycles,
+    phases,
+    recent_failures,
+  };
+}
+
+function parseTaskStatsCycles(value: unknown): TaskStatsCycles {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: cycles must be an object");
+  }
+  const byStatusRaw = value.by_status;
+  if (!isRecord(byStatusRaw)) {
+    throw new Error("Invalid API response: cycles.by_status must be an object");
+  }
+  const byTriggeredByRaw = value.by_triggered_by;
+  if (!isRecord(byTriggeredByRaw)) {
+    throw new Error("Invalid API response: cycles.by_triggered_by must be an object");
+  }
+  const by_status: Partial<Record<CycleStatus, number>> = {};
+  for (const [key, rawCount] of Object.entries(byStatusRaw)) {
+    if (!(CYCLE_STATUSES as readonly string[]).includes(key)) {
+      throw new Error(`Invalid API response: cycles.by_status.${key} is not a known cycle status`);
+    }
+    by_status[key as CycleStatus] = parseFiniteNumber(rawCount, `cycles.by_status.${key}`);
+  }
+  const by_triggered_by: Partial<Record<"user" | "agent", number>> = {};
+  for (const [key, rawCount] of Object.entries(byTriggeredByRaw)) {
+    if (key !== "user" && key !== "agent") {
+      throw new Error(
+        `Invalid API response: cycles.by_triggered_by.${key} must be "user" or "agent"`,
+      );
+    }
+    by_triggered_by[key] = parseFiniteNumber(rawCount, `cycles.by_triggered_by.${key}`);
+  }
+  return { by_status, by_triggered_by };
+}
+
+function parseTaskStatsPhases(value: unknown): TaskStatsPhases {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: phases must be an object");
+  }
+  const byPhaseStatusRaw = value.by_phase_status;
+  if (!isRecord(byPhaseStatusRaw)) {
+    throw new Error("Invalid API response: phases.by_phase_status must be an object");
+  }
+  // Seed every Phase enum so consumers (heatmap) can always index.
+  const by_phase_status = {} as TaskStatsPhases["by_phase_status"];
+  for (const phase of PHASES) {
+    by_phase_status[phase] = {};
+  }
+  for (const [phaseKey, inner] of Object.entries(byPhaseStatusRaw)) {
+    if (!(PHASES as readonly string[]).includes(phaseKey)) {
+      throw new Error(
+        `Invalid API response: phases.by_phase_status.${phaseKey} is not a known phase`,
+      );
+    }
+    if (!isRecord(inner)) {
+      throw new Error(
+        `Invalid API response: phases.by_phase_status.${phaseKey} must be an object`,
+      );
+    }
+    const bucket: Partial<Record<PhaseStatus, number>> = {};
+    for (const [statusKey, rawCount] of Object.entries(inner)) {
+      if (!(PHASE_STATUSES as readonly string[]).includes(statusKey)) {
+        throw new Error(
+          `Invalid API response: phases.by_phase_status.${phaseKey}.${statusKey} is not a known phase status`,
+        );
+      }
+      bucket[statusKey as PhaseStatus] = parseFiniteNumber(
+        rawCount,
+        `phases.by_phase_status.${phaseKey}.${statusKey}`,
+      );
+    }
+    by_phase_status[phaseKey as Phase] = bucket;
+  }
+  return { by_phase_status };
+}
+
+function parseTaskStatsRecentFailures(value: unknown): TaskStatsRecentFailure[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Invalid API response: recent_failures must be an array");
+  }
+  return value.map((item, i) => parseTaskStatsRecentFailure(item, i));
+}
+
+function parseTaskStatsRecentFailure(
+  value: unknown,
+  index: number,
+): TaskStatsRecentFailure {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: recent_failures[${index}] must be an object`);
+  }
+  const status = value.status;
+  if (status !== "failed" && status !== "aborted") {
+    throw new Error(
+      `Invalid API response: recent_failures[${index}].status must be "failed" or "aborted"`,
+    );
+  }
+  return {
+    task_id: parseNonEmptyString(value.task_id, `recent_failures[${index}].task_id`),
+    event_seq: parseFiniteNumber(value.event_seq, `recent_failures[${index}].event_seq`),
+    at: parseNonEmptyString(value.at, `recent_failures[${index}].at`),
+    cycle_id: parseNonEmptyString(value.cycle_id, `recent_failures[${index}].cycle_id`),
+    attempt_seq: parseFiniteNumber(
+      value.attempt_seq,
+      `recent_failures[${index}].attempt_seq`,
+    ),
+    status,
+    reason: parseString(value.reason, `recent_failures[${index}].reason`),
   };
 }
 

@@ -11,6 +11,14 @@ import (
 // Aliased to internal/stats so the wire shape lives next to the SQL.
 type TaskStats = stats.TaskStats
 
+// CycleStats / PhaseStats / RecentFailure are re-exported so handler
+// JSON projection can reference them without reaching into internal/.
+type (
+	CycleStats    = stats.CycleStats
+	PhaseStats    = stats.PhaseStats
+	RecentFailure = stats.RecentFailure
+)
+
 // TaskStats returns global counters across all tasks (totals plus by-status,
 // by-priority, by-scope breakdowns).
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {

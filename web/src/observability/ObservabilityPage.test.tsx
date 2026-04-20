@@ -42,6 +42,16 @@ describe("ObservabilityPage", () => {
           by_status: { ready: 1, done: 2, failed: 1 },
           by_priority: { medium: 3, critical: 1 },
           by_scope: { parent: 2, subtask: 2 },
+          cycles: { by_status: {}, by_triggered_by: {} },
+          phases: {
+            by_phase_status: {
+              diagnose: {},
+              execute: {},
+              verify: {},
+              persist: {},
+            },
+          },
+          recent_failures: [],
         });
       }
       return new Response("not found", { status: 404 });

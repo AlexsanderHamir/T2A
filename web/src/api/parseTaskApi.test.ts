@@ -186,6 +186,22 @@ describe("parseTaskListResponse", () => {
 });
 
 describe("parseTaskStatsResponse", () => {
+  // emptyExtras covers the cycle/phase/recent_failures blocks the
+  // server always sends — most assertions in this suite focus on the
+  // task-counter half of the envelope and reuse this stub.
+  const emptyExtras = {
+    cycles: { by_status: {}, by_triggered_by: {} },
+    phases: {
+      by_phase_status: {
+        diagnose: {},
+        execute: {},
+        verify: {},
+        persist: {},
+      },
+    },
+    recent_failures: [],
+  };
+
   it("parses task stats envelope", () => {
     expect(
       parseTaskStatsResponse({
@@ -195,6 +211,7 @@ describe("parseTaskStatsResponse", () => {
         by_status: { ready: 7, running: 5 },
         by_priority: { critical: 2, high: 4 },
         by_scope: { parent: 10, subtask: 12 },
+        ...emptyExtras,
       }),
     ).toEqual({
       total: 22,
@@ -203,6 +220,7 @@ describe("parseTaskStatsResponse", () => {
       by_status: { ready: 7, running: 5 },
       by_priority: { critical: 2, high: 4 },
       by_scope: { parent: 10, subtask: 12 },
+      ...emptyExtras,
     });
   });
 
@@ -215,6 +233,7 @@ describe("parseTaskStatsResponse", () => {
         by_status: {},
         by_priority: {},
         by_scope: { parent: 0, subtask: 0 },
+        ...emptyExtras,
       }),
     ).toThrow(/total/);
   });
@@ -228,6 +247,7 @@ describe("parseTaskStatsResponse", () => {
         by_status: { nope: 1 },
         by_priority: {},
         by_scope: { parent: 10, subtask: 12 },
+        ...emptyExtras,
       }),
     ).toThrow(/known status/);
 
@@ -239,6 +259,7 @@ describe("parseTaskStatsResponse", () => {
         by_status: {},
         by_priority: { urgent: 1 },
         by_scope: { parent: 10, subtask: 12 },
+        ...emptyExtras,
       }),
     ).toThrow(/known priority/);
   });
@@ -252,8 +273,128 @@ describe("parseTaskStatsResponse", () => {
         by_status: { ready: 7 },
         by_priority: { critical: 2 },
         by_scope: { parent: 10 },
+        ...emptyExtras,
       }),
     ).toThrow(/by_scope\.subtask/);
+  });
+
+  it("parses cycles aggregates and rejects unknown enums", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      cycles: {
+        by_status: { running: 1, succeeded: 4, failed: 2, aborted: 1 },
+        by_triggered_by: { user: 3, agent: 5 },
+      },
+    });
+    expect(got.cycles.by_status).toEqual({
+      running: 1,
+      succeeded: 4,
+      failed: 2,
+      aborted: 1,
+    });
+    expect(got.cycles.by_triggered_by).toEqual({ user: 3, agent: 5 });
+
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 0,
+        ready: 0,
+        critical: 0,
+        by_status: {},
+        by_priority: {},
+        by_scope: { parent: 0, subtask: 0 },
+        ...emptyExtras,
+        cycles: {
+          by_status: { weird: 1 },
+          by_triggered_by: {},
+        },
+      }),
+    ).toThrow(/cycles\.by_status/);
+  });
+
+  it("parses phases heatmap with all four phases always present", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      phases: {
+        by_phase_status: {
+          // Server omits phases with no data; parser must still seed
+          // every Phase enum value with `{}` so the heatmap renders.
+          diagnose: { succeeded: 4 },
+          execute: { failed: 2, succeeded: 1 },
+          verify: {},
+          persist: {},
+        },
+      },
+    });
+    expect(Object.keys(got.phases.by_phase_status).sort()).toEqual([
+      "diagnose",
+      "execute",
+      "persist",
+      "verify",
+    ]);
+    expect(got.phases.by_phase_status.execute).toEqual({
+      failed: 2,
+      succeeded: 1,
+    });
+  });
+
+  it("parses recent_failures and rejects bad rows", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      recent_failures: [
+        {
+          task_id: "t-1",
+          event_seq: 7,
+          at: "2026-04-19T12:00:00Z",
+          cycle_id: "c-1",
+          attempt_seq: 2,
+          status: "failed",
+          reason: "execute blew up",
+        },
+      ],
+    });
+    expect(got.recent_failures).toHaveLength(1);
+    expect(got.recent_failures[0].cycle_id).toBe("c-1");
+
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 0,
+        ready: 0,
+        critical: 0,
+        by_status: {},
+        by_priority: {},
+        by_scope: { parent: 0, subtask: 0 },
+        ...emptyExtras,
+        recent_failures: [
+          {
+            task_id: "t-1",
+            event_seq: 7,
+            at: "2026-04-19T12:00:00Z",
+            cycle_id: "c-1",
+            attempt_seq: 2,
+            status: "succeeded",
+            reason: "",
+          },
+        ],
+      }),
+    ).toThrow(/recent_failures\[0\]\.status/);
   });
 });
 

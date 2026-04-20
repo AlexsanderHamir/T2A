@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"log/slog"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -58,12 +60,81 @@ type listResponse struct {
 }
 
 type taskStatsResponse struct {
-	Total      int64                     `json:"total"`
-	Ready      int64                     `json:"ready"`
-	Critical   int64                     `json:"critical"`
-	ByStatus   map[domain.Status]int64   `json:"by_status"`
-	ByPriority map[domain.Priority]int64 `json:"by_priority"`
-	ByScope    map[string]int64          `json:"by_scope"`
+	Total          int64                     `json:"total"`
+	Ready          int64                     `json:"ready"`
+	Critical       int64                     `json:"critical"`
+	ByStatus       map[domain.Status]int64   `json:"by_status"`
+	ByPriority     map[domain.Priority]int64 `json:"by_priority"`
+	ByScope        map[string]int64          `json:"by_scope"`
+	Cycles         taskStatsCyclesJSON       `json:"cycles"`
+	Phases         taskStatsPhasesJSON       `json:"phases"`
+	RecentFailures []taskStatsFailureJSON    `json:"recent_failures"`
+}
+
+// taskStatsCyclesJSON is the always-present `cycles` block of
+// /tasks/stats. Both maps are non-nil (`{}` on empty database) per the
+// store-layer invariant in stats.Get.
+type taskStatsCyclesJSON struct {
+	ByStatus      map[domain.CycleStatus]int64 `json:"by_status"`
+	ByTriggeredBy map[domain.Actor]int64       `json:"by_triggered_by"`
+}
+
+// taskStatsPhasesJSON is the always-present `phases` block. The outer
+// map carries every domain.Phase enum value (4 keys); inner maps are
+// non-nil but only carry enum keys with nonzero count. The (phase x
+// status) shape is the source of the Observability heatmap.
+type taskStatsPhasesJSON struct {
+	ByPhaseStatus map[domain.Phase]map[domain.PhaseStatus]int64 `json:"by_phase_status"`
+}
+
+// taskStatsFailureJSON is one row in the `recent_failures` array. The
+// frontend deep-links to `/tasks/{task_id}/events/{event_seq}` so both
+// fields are mandatory; reason / cycle_id / attempt_seq / status round
+// out the "what happened" summary card.
+type taskStatsFailureJSON struct {
+	TaskID     string    `json:"task_id"`
+	EventSeq   int64     `json:"event_seq"`
+	At         time.Time `json:"at"`
+	CycleID    string    `json:"cycle_id"`
+	AttemptSeq int64     `json:"attempt_seq"`
+	Status     string    `json:"status"`
+	Reason     string    `json:"reason"`
+}
+
+// taskStatsResponseFromStore projects the store-level TaskStats onto
+// the wire envelope. The store guarantees every map is non-nil and
+// RecentFailures is a non-nil slice; this projector preserves both
+// invariants so JSON encoding never emits `null` for those fields.
+func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskStatsResponseFromStore")
+	failures := make([]taskStatsFailureJSON, 0, len(s.RecentFailures))
+	for _, f := range s.RecentFailures {
+		failures = append(failures, taskStatsFailureJSON{
+			TaskID:     f.TaskID,
+			EventSeq:   f.EventSeq,
+			At:         f.At,
+			CycleID:    f.CycleID,
+			AttemptSeq: f.AttemptSeq,
+			Status:     f.Status,
+			Reason:     f.Reason,
+		})
+	}
+	return taskStatsResponse{
+		Total:      s.Total,
+		Ready:      s.Ready,
+		Critical:   s.Critical,
+		ByStatus:   s.ByStatus,
+		ByPriority: s.ByPriority,
+		ByScope:    s.ByScope,
+		Cycles: taskStatsCyclesJSON{
+			ByStatus:      s.Cycles.ByStatus,
+			ByTriggeredBy: s.Cycles.ByTriggeredBy,
+		},
+		Phases: taskStatsPhasesJSON{
+			ByPhaseStatus: s.Phases.ByPhaseStatus,
+		},
+		RecentFailures: failures,
+	}
 }
 
 type taskEventLine struct {
