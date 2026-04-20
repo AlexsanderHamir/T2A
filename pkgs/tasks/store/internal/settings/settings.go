@@ -76,6 +76,13 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 	var row domain.AppSettings
 	err := db.WithContext(ctx).First(&row, "id = ?", domain.AppSettingsRowID).Error
 	if err == nil {
+		if !row.OptimisticMutationsEnabled || !row.SSEReplayEnabled {
+			t := true
+			return Update(ctx, db, Patch{
+				OptimisticMutationsEnabled: &t,
+				SSEReplayEnabled:           &t,
+			})
+		}
 		return row, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {

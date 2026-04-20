@@ -51,23 +51,13 @@ import (
 //     any non-empty IANA zone (including "UTC") is a deliberate override
 //     that wins over auto-detect. The wire format for every timestamp
 //     stays RFC3339 UTC — this column governs PRESENTATION only.
-//   - OptimisticMutationsEnabled: feature flag introduced in
-//     .cursor/plans/production_realtime_smoothness_b17202b6.plan.md
-//     Phase 1. When true, the SPA uses the onMutate/onError optimistic
-//     code path for PATCH, DELETE, checklist, requeue, and subtask
-//     create; when false it falls back to the legacy await-then-render
-//     path. Default false on first ship; flip to true after one full
-//     SLO window of green metrics in staging. Hook code branches on
-//     this flag without any server involvement — the flag is purely a
-//     kill-switch for a client behavior.
-//   - SSEReplayEnabled: feature flag introduced by the same plan for
-//     Phase 2 (lossless SSE). When true, the `/events` handler honors
-//     Last-Event-ID replay and emits resync directives from the ring
-//     buffer. When false, the handler behaves as it did before the
-//     ring-buffer work (live fanout only; reconnect = cold start).
-//     Default false on first ship. The client-side EventSource resume
-//     header is harmless when the server ignores it, so flipping the
-//     flag server-side is fully additive.
+//   - OptimisticMutationsEnabled: when true, the SPA uses optimistic
+//     mutations for PATCH, DELETE, checklist, requeue, and subtask
+//     create. Stored for API compatibility; always true for new rows
+//     and no longer exposed in Settings (not user-configurable).
+//   - SSEReplayEnabled: retained for API/DB compatibility. Lossless
+//     SSE replay is always active in the `/events` handler; this column
+//     is migrated to true on read for older databases.
 type AppSettings struct {
 	ID                         uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
 	WorkerEnabled              bool      `gorm:"not null;default:true"`
@@ -79,8 +69,8 @@ type AppSettings struct {
 	MaxRunDurationSeconds      int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
 	AgentPickupDelaySeconds    int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
 	DisplayTimezone            string    `gorm:"not null;default:''"`
-	OptimisticMutationsEnabled bool      `gorm:"not null;default:false"`
-	SSEReplayEnabled           bool      `gorm:"not null;default:false"`
+	OptimisticMutationsEnabled bool      `gorm:"not null;default:true"`
+	SSEReplayEnabled           bool      `gorm:"not null;default:true"`
 	UpdatedAt                  time.Time `gorm:"not null"`
 }
 
@@ -124,8 +114,8 @@ func DefaultAppSettings() AppSettings {
 		MaxRunDurationSeconds:      0,
 		AgentPickupDelaySeconds:    DefaultAgentPickupDelaySeconds,
 		DisplayTimezone:            DefaultDisplayTimezone,
-		OptimisticMutationsEnabled: false,
-		SSEReplayEnabled:           false,
+		OptimisticMutationsEnabled: true,
+		SSEReplayEnabled:           true,
 	}
 }
 

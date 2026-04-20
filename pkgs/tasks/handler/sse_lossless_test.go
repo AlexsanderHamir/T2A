@@ -293,7 +293,6 @@ func TestHTTP_SSE_emitsIDLineForEventSourceResume(t *testing.T) {
 func TestHTTP_SSE_replaysOnReconnectWithLastEventID(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := store.NewStore(db)
-	enableSSEReplay(t, s)
 	hub := NewSSEHubWith(SSEHubOptions{RingSize: 16, SubscriberBuffer: 32})
 	h := NewHandler(s, hub, nil)
 	srv := httptest.NewServer(h)
@@ -347,7 +346,6 @@ func TestHTTP_SSE_replaysOnReconnectWithLastEventID(t *testing.T) {
 func TestHTTP_SSE_emitsResyncWhenLastEventIDOutsideRing(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := store.NewStore(db)
-	enableSSEReplay(t, s)
 	// 4-entry ring + 6 publishes → ids 1..2 are evicted, oldest
 	// retained id = 3.
 	hub := NewSSEHubWith(SSEHubOptions{RingSize: 4, SubscriberBuffer: 32})
@@ -493,17 +491,3 @@ func TestSSEHub_Publish_concurrentSafetyUnderLoad(t *testing.T) {
 	}
 }
 
-// enableSSEReplay flips the sse_replay_enabled AppSettings flag on for
-// the given store so the Last-Event-ID replay path is exercised. The
-// rollout gate (see pkgs/tasks/handler/sse.go) short-circuits the
-// replay branch when this flag is false; the lossless-SSE tests here
-// assert the replay branch itself, so they need the flag flipped.
-func enableSSEReplay(t *testing.T, s *store.Store) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	enabled := true
-	if _, err := s.UpdateSettings(ctx, store.SettingsPatch{SSEReplayEnabled: &enabled}); err != nil {
-		t.Fatalf("enable sse_replay_enabled: %v", err)
-	}
-}

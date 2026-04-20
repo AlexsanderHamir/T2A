@@ -25,8 +25,6 @@ type FormState = {
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
   displayTimezone: string;
-  optimisticMutationsEnabled: boolean;
-  sseReplayEnabled: boolean;
 };
 
 function toFormState(s: AppSettings): FormState {
@@ -39,8 +37,6 @@ function toFormState(s: AppSettings): FormState {
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
     displayTimezone: s.display_timezone,
-    optimisticMutationsEnabled: s.optimistic_mutations_enabled,
-    sseReplayEnabled: s.sse_replay_enabled,
   };
 }
 
@@ -91,12 +87,6 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== initial.display_timezone) {
     out.display_timezone = tzTrimmed;
-  }
-  if (initial.optimistic_mutations_enabled !== form.optimisticMutationsEnabled) {
-    out.optimistic_mutations_enabled = form.optimisticMutationsEnabled;
-  }
-  if (initial.sse_replay_enabled !== form.sseReplayEnabled) {
-    out.sse_replay_enabled = form.sseReplayEnabled;
   }
   return out;
 }
@@ -257,14 +247,6 @@ export function SettingsPage() {
         if (cur.displayTimezone === formAtSubmit.displayTimezone) {
           merged.displayTimezone = next.display_timezone;
         }
-        if (
-          cur.optimisticMutationsEnabled === formAtSubmit.optimisticMutationsEnabled
-        ) {
-          merged.optimisticMutationsEnabled = next.optimistic_mutations_enabled;
-        }
-        if (cur.sseReplayEnabled === formAtSubmit.sseReplayEnabled) {
-          merged.sseReplayEnabled = next.sse_replay_enabled;
-        }
         return merged;
       });
       setStatus({ kind: "success", message: "Settings saved." });
@@ -368,8 +350,7 @@ export function SettingsPage() {
             <span>Settings</span>
           </h2>
           <p className="settings-page-subtitle">
-            Runtime, workspace, and rollout configuration for this
-            installation.
+            Runtime and workspace configuration for this installation.
           </p>
         </div>
         {lastUpdated ? (
@@ -512,143 +493,6 @@ export function SettingsPage() {
               }
             />
           </label>
-        </fieldset>
-
-        <fieldset className="settings-fieldset settings-fieldset--rollout">
-          <legend>
-            <span
-              className="settings-legend-dot"
-              aria-hidden="true"
-            />
-            Realtime rollout
-          </legend>
-          {/* At-a-glance: one-line subtitle, toggles, short state lines;
-              optional detail per toggle stays in nested Learn more. */}
-          <p className="settings-fieldset-subtitle">
-            Opt-in enhancements. Both default to <strong>off</strong>.
-          </p>
-
-          <div className="settings-rollout-toggle">
-            <label className="settings-field settings-field--inline">
-              <input
-                type="checkbox"
-                data-testid="settings-optimistic-mutations-toggle"
-                checked={form.optimisticMutationsEnabled}
-                onChange={(e) =>
-                  handleField("optimisticMutationsEnabled", e.target.checked)
-                }
-              />
-              <span className="settings-field-label">Optimistic mutations</span>
-            </label>
-            <p
-              className="settings-rollout-state"
-              data-testid="settings-optimistic-mutations-state"
-              data-on={form.optimisticMutationsEnabled ? "true" : "false"}
-            >
-              <span className="settings-rollout-state-dot" aria-hidden="true" />
-              {form.optimisticMutationsEnabled
-                ? "On — UI updates instantly; rolls back on error."
-                : "Off — UI waits for the server round-trip."}
-            </p>
-            <details className="settings-learn-more settings-learn-more--nested">
-              <summary>Learn more</summary>
-              <p>
-                Affects saving edits, deletes, checklist changes, requeue,
-                and creating subtasks. Purely client-side — the server does
-                not read this flag.
-              </p>
-              <p className="settings-learn-more-subheading">Pros</p>
-              <ul className="settings-learn-more-list">
-                <li>
-                  Feels instant: the table and detail views update as soon
-                  as you act, instead of waiting on the network.
-                </li>
-                <li>
-                  Less &quot;stuck&quot; UI on slow connections or busy
-                  servers.
-                </li>
-              </ul>
-              <p className="settings-learn-more-subheading">Cons</p>
-              <ul className="settings-learn-more-list">
-                <li>
-                  If the server rejects a change, the UI rewinds that
-                  update and shows an error — there can be a brief moment
-                  where what you saw didn&apos;t match the server.
-                </li>
-                <li>
-                  Slightly more moving parts on the client (rollback
-                  paths), which can make rare bugs easier to trigger.
-                </li>
-              </ul>
-            </details>
-          </div>
-
-          <div className="settings-rollout-toggle">
-            <label className="settings-field settings-field--inline">
-              <input
-                type="checkbox"
-                data-testid="settings-sse-replay-toggle"
-                checked={form.sseReplayEnabled}
-                onChange={(e) =>
-                  handleField("sseReplayEnabled", e.target.checked)
-                }
-              />
-              <span className="settings-field-label">
-                Replay missed live updates
-              </span>
-            </label>
-            <p
-              className="settings-rollout-state"
-              data-testid="settings-sse-replay-state"
-              data-on={form.sseReplayEnabled ? "true" : "false"}
-            >
-              <span className="settings-rollout-state-dot" aria-hidden="true" />
-              {form.sseReplayEnabled
-                ? "On — after a disconnect, the app can ask the server for updates you missed."
-                : "Off — updates that arrived while you were disconnected are skipped (refresh may be needed)."}
-            </p>
-            <details className="settings-learn-more settings-learn-more--nested">
-              <summary>Learn more</summary>
-              <p>
-                The app keeps a live connection for task and run updates.
-                If that connection drops—even briefly—there can be a gap
-                where something changed on the server before you were
-                listening again.
-              </p>
-              <p className="settings-learn-more-subheading">Pros</p>
-              <ul className="settings-learn-more-list">
-                <li>
-                  After a short disconnect (e.g. Wi‑Fi flicker), the UI can
-                  catch up: a task moving to &quot;done&quot; while you
-                  were offline can still appear in the list and detail
-                  views without a full page reload.
-                </li>
-                <li>
-                  Fewer &quot;stale until I refreshed&quot; moments when
-                  the live stream hiccups.
-                </li>
-              </ul>
-              <p className="settings-learn-more-subheading">Cons</p>
-              <ul className="settings-learn-more-list">
-                <li>
-                  Only helps if the <strong>server</strong> supports
-                  resending missed events. If the backend doesn&apos;t,
-                  this setting has no effect.
-                </li>
-                <li>
-                  Reconnecting after a long gap may mean more work for the
-                  server to replay what you missed (usually still fine,
-                  but not free).
-                </li>
-              </ul>
-              <p>
-                Implementation note: reconnects send the browser&apos;s{" "}
-                <code>Last-Event-ID</code> so the server knows where to
-                resume. Operators wiring the backend should expose replay
-                accordingly.
-              </p>
-            </details>
-          </div>
         </fieldset>
 
         <fieldset className="settings-fieldset">

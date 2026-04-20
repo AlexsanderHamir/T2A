@@ -41,22 +41,12 @@ export type AppSettings = {
    */
   display_timezone: string;
   /**
-   * Rollout flag for the Phase 1 optimistic-mutation code path introduced
-   * in `.cursor/plans/production_realtime_smoothness_b17202b6.plan.md`.
-   * When false, the SPA falls back to the legacy await-then-render path
-   * on every mutation hook (patch / delete / checklist / requeue /
-   * subtask create). When true, the hooks run their onMutate / onError
-   * rollback logic. Defaults to false until a full SLO window of green
-   * metrics in staging. See docs/SLOs.md and `useOptimisticFlag()` for
-   * the consumer side.
+   * Stored for API compatibility; optimistic mutations are always on.
+   * Not user-configurable in Settings.
    */
   optimistic_mutations_enabled: boolean;
   /**
-   * Rollout flag for the Phase 2 lossless-SSE path (ring buffer +
-   * `Last-Event-ID` replay + resync directive). When false, /events
-   * behaves as a live-only fanout and reconnect = cold start. Purely
-   * additive server-side; the SPA's `EventSource` resume header is a
-   * no-op when the server ignores it.
+   * Stored for API compatibility; lossless SSE replay is always on server-side.
    */
   sse_replay_enabled: boolean;
   updated_at?: string;
@@ -144,16 +134,13 @@ function assertSettings(raw: unknown): AppSettings {
   // back to "" too, which routes through the same auto-detect path —
   // safer than hard-coding UTC for every operator on a new SPA build.
   const tz = typeof o.display_timezone === "string" ? o.display_timezone : "";
-  // New rollout flags default to false when the server omits them, so
-  // an old binary keeps decodable by a new SPA. Decode as `boolean` but
-  // never throw on missing — we WANT the pessimistic (legacy) path to
-  // be the fallback when the field is absent.
+  // Rollout flags default to true when omitted (legacy responses).
   const optimistic = typeof o.optimistic_mutations_enabled === "boolean"
     ? o.optimistic_mutations_enabled
-    : false;
+    : true;
   const sseReplay = typeof o.sse_replay_enabled === "boolean"
     ? o.sse_replay_enabled
-    : false;
+    : true;
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||

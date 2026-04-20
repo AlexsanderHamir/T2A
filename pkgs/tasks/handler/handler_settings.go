@@ -142,17 +142,17 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	patch := store.SettingsPatch{
-		WorkerEnabled:              body.WorkerEnabled,
-		AgentPaused:                body.AgentPaused,
-		Runner:                     body.Runner,
-		RepoRoot:                   body.RepoRoot,
-		CursorBin:                  body.CursorBin,
-		CursorModel:                body.CursorModel,
-		MaxRunDurationSeconds:      body.MaxRunDurationSeconds,
-		AgentPickupDelaySeconds:    body.AgentPickupDelaySeconds,
-		DisplayTimezone:            body.DisplayTimezone,
-		OptimisticMutationsEnabled: body.OptimisticMutationsEnabled,
-		SSEReplayEnabled:           body.SSEReplayEnabled,
+		WorkerEnabled:           body.WorkerEnabled,
+		AgentPaused:             body.AgentPaused,
+		Runner:                  body.Runner,
+		RepoRoot:                body.RepoRoot,
+		CursorBin:               body.CursorBin,
+		CursorModel:             body.CursorModel,
+		MaxRunDurationSeconds:   body.MaxRunDurationSeconds,
+		AgentPickupDelaySeconds: body.AgentPickupDelaySeconds,
+		DisplayTimezone:         body.DisplayTimezone,
+		// optimistic_mutations_enabled / sse_replay_enabled are not
+		// user-configurable; ignore if present in the JSON body.
 	}
 	if patch.IsEmpty() {
 		writeJSONError(w, r, op, http.StatusBadRequest, "patch body must include at least one field")
