@@ -318,6 +318,18 @@
   box-shadow: var(--shadow-xs);
 }
 
+/*
+ * Shared `.table-wrap` (app-custom-select.css) adds horizontal padding +
+ * negative margin so generic tables align with surrounding copy. That
+ * inset exposes this container's background beside the `<table>`, so
+ * selected-row `<tr>` backgrounds (which only cover the table grid) show
+ * thin white strips left/right. Flush the scroll box for the task list.
+ */
+.task-list-table-wrap.table-wrap {
+  margin: 0;
+  padding: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .task-list-table-wrap {
     transition: none;
