@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FormEvent, ReactNode } from "react";
 import { useTasksApp } from "./useTasksApp";
 import { stubEventSource } from "../../test/browserMocks";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import type { DraftTaskEvaluation, TaskDraftDetail } from "@/types";
 
 vi.mock("../../api", () => ({
@@ -461,8 +462,8 @@ describe("useTasksApp createMutation race", () => {
         initial_prompt: input.initial_prompt ?? "",
         status: "ready",
         priority: input.priority,
-        runner: input.runner ?? "cursor",
-        cursor_model: input.cursor_model ?? "",
+        runner: input.runner ?? TASK_TEST_DEFAULTS.runner,
+        cursor_model: input.cursor_model ?? TASK_TEST_DEFAULTS.cursor_model,
         checklist_inherit: false,
       };
     });
@@ -541,8 +542,8 @@ describe("useTasksApp createMutation race", () => {
       initial_prompt: input.initial_prompt ?? "",
       status: "ready",
       priority: input.priority,
-      runner: input.runner ?? "cursor",
-      cursor_model: input.cursor_model ?? "",
+      runner: input.runner ?? TASK_TEST_DEFAULTS.runner,
+      cursor_model: input.cursor_model ?? TASK_TEST_DEFAULTS.cursor_model,
       checklist_inherit: false,
     }));
 
