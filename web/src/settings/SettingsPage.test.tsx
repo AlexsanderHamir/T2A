@@ -84,6 +84,27 @@ describe("SettingsPage", () => {
     expect(screen.getByLabelText(/Max run duration/)).toHaveValue(0);
   });
 
+  it("formats Last saved in the selected display timezone (explicit IANA)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput) => {
+      if (requestUrl(input).endsWith("/settings")) {
+        return jsonResponse(
+          defaultSettings({
+            display_timezone: "Europe/Berlin",
+            // 10:00 UTC → 12:00 in Berlin on 2026-07-18 (CEST, UTC+2).
+            updated_at: "2026-07-18T10:00:00Z",
+          }),
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    renderPage();
+    const chip = await screen.findByTestId("settings-last-updated");
+    expect(chip.textContent).toMatch(/12:00/);
+    // longOffset-style suffix for CEST (UTC+2), not a US abbreviation.
+    expect(chip.textContent).toMatch(/GMT\+2|GMT\+02:00/i);
+  });
+
   it("never PATCHes agent_paused from the form and does not render a badge for it", async () => {
     // `agent_paused` is owned by automation (agents/scripts hitting
     // PATCH /settings directly). The SettingsPage must:

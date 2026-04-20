@@ -347,8 +347,16 @@ export function SettingsPage() {
   // committing. Recomputed per-render — detectBrowserTimezone is a
   // single Intl.DateTimeFormat() call, negligible cost.
   const browserTz = detectBrowserTimezone();
+  // Same effective zone as the timezone <select>: explicit IANA, or
+  // browser when Auto-detect (empty). Trim so whitespace-only never
+  // bypasses auto-detect or slips an invalid zone to Intl.
+  const effectiveDisplayTimezone = form.displayTimezone.trim() || browserTz;
+  // longOffset aligns the suffix with Meet-style menu labels (GMT±hh:mm)
+  // instead of a separate abbreviation (e.g. PDT) that looks mismatched.
   const lastUpdatedFormatted = lastUpdated
-    ? formatInAppTimezone(lastUpdated, form.displayTimezone || browserTz)
+    ? formatInAppTimezone(lastUpdated, effectiveDisplayTimezone, {
+        timeZoneName: "longOffset",
+      })
     : "";
 
   return (
@@ -493,7 +501,7 @@ export function SettingsPage() {
               onChange={(e) => handleField("displayTimezone", e.target.value)}
             >
               <option value="">
-                Auto-detect ({formatTimezoneMenuLabel(browserTz)})
+                Auto-detect — {formatTimezoneMenuLabel(browserTz)}
               </option>
               {tzSelectOptions.map((tz) => (
                 <option key={tz.value} value={tz.value}>
