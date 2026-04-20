@@ -99,6 +99,13 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /settings/probe-cursor", http.HandlerFunc(h.probeCursor))
 	m.Handle("POST /settings/list-cursor-models", http.HandlerFunc(h.listCursorModels))
 	m.Handle("POST /settings/cancel-current-run", http.HandlerFunc(h.cancelCurrentRun))
+	// /v1/rum is the SPA-side Real User Monitoring beacon. Documented
+	// in docs/SLOs.md; the browser ships batches via
+	// `navigator.sendBeacon` so the server returns 204 with no body.
+	// Rate-limited via the global per-IP middleware (WithRateLimit),
+	// not separately, so a misbehaving SPA cannot amplify a load
+	// incident into a metrics-storage bill.
+	m.Handle("POST /v1/rum", http.HandlerFunc(h.postRUM))
 	return m
 }
 

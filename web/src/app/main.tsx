@@ -7,8 +7,14 @@ import App from "./App";
 import { createAppQueryClient } from "../lib/queryClient";
 import { ROUTER_FUTURE_FLAGS } from "../lib/routerFutureFlags";
 import { AppErrorBoundary } from "../shared/AppErrorBoundary";
+import { installRUM } from "../observability";
 
 const queryClient = createAppQueryClient();
+
+// Install the RUM beacon once at module load. Idempotent under
+// React.StrictMode and tolerant of missing window/document so SSR or
+// jsdom test imports don't blow up.
+installRUM();
 
 function AppWithRecoveryBoundary() {
   const [appKey, setAppKey] = useState(0);
