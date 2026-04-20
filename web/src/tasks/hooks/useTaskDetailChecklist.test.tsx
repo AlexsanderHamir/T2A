@@ -4,6 +4,8 @@ import type { FormEvent, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { taskQueryKeys } from "../task-query";
 import { useTaskDetailChecklist } from "./useTaskDetailChecklist";
+import { ToastProvider } from "@/shared/toast";
+import type { TaskChecklistResponse } from "@/types";
 
 const { mockAdd, mockPatch, mockDelete } = vi.hoisted(() => ({
   mockAdd: vi.fn(),
@@ -27,7 +29,11 @@ const ITEM_ID = "33333333-3333-4333-8333-333333333333";
 
 function createWrapper(qc: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -362,5 +368,148 @@ describe("useTaskDetailChecklist", () => {
     await waitFor(() => {
       expect(result.current.editCriterionModalOpen).toBe(false);
     });
+  });
+
+  // Optimistic add: a synthetic checklist item appears in the cache
+  // immediately on submit. Pinning this catches a regression where
+  // onMutate was dropped (or the temp id collision logic broke) and
+  // the user clicks "Add" -> sees nothing -> 200ms later the row
+  // appears. Phase 1d explicitly calls this out.
+  it("optimistically appends a synthetic checklist item on submit", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockAdd.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveFn = resolve; }),
+    );
+    const qc = newQueryClient();
+    qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
+      items: [{ id: "i1", sort_order: 0, text: "existing", done: false }],
+    });
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      wrapper: createWrapper(qc),
+    });
+    act(() => {
+      result.current.openChecklistModal();
+      result.current.setNewChecklistText("new criterion");
+    });
+    act(() => {
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      result.current.submitNewChecklistCriterion(ev);
+    });
+    await waitFor(() => {
+      expect(result.current.addChecklistMutation.isPending).toBe(true);
+    });
+    const cached = qc.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A));
+    expect(cached?.items).toHaveLength(2);
+    expect(cached?.items[1]?.text).toBe("new criterion");
+    expect(cached?.items[1]?.id.startsWith("optimistic-")).toBe(true);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.addChecklistMutation.isPending).toBe(false);
+    });
+  });
+
+  // Optimistic edit: text updates in cache immediately. Without this
+  // the user clicks "Save" in the edit modal, sees the old text
+  // until the API resolves, then the new text snaps in.
+  it("optimistically updates checklist item text on edit", async () => {
+    let resolveFn: ((v: unknown) => void) | undefined;
+    mockPatch.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveFn = resolve; }),
+    );
+    const qc = newQueryClient();
+    qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
+      items: [{ id: ITEM_ID, sort_order: 0, text: "old", done: false }],
+    });
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      wrapper: createWrapper(qc),
+    });
+    act(() => {
+      result.current.openEditCriterionModal(ITEM_ID, "old");
+      result.current.setEditChecklistText("new");
+    });
+    act(() => {
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      result.current.submitEditChecklistCriterion(ev);
+    });
+    await waitFor(() => {
+      expect(result.current.updateChecklistTextMutation.isPending).toBe(true);
+    });
+    const cached = qc.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A));
+    expect(cached?.items[0]?.text).toBe("new");
+    act(() => {
+      resolveFn?.({ items: [{ id: ITEM_ID, sort_order: 0, text: "new", done: false }] });
+    });
+    await waitFor(() => {
+      expect(result.current.updateChecklistTextMutation.isPending).toBe(false);
+    });
+  });
+
+  // Optimistic delete: row gone from cache immediately. PLUS the
+  // missing detail invalidation: the original hook only invalidated
+  // checklist on delete success — the parent task detail caches a
+  // derived count that went stale. Plan 1d explicitly says "fix the
+  // missed detail invalidation on delete while we're in there".
+  it("optimistically removes checklist item AND invalidates detail on delete success", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockDelete.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveFn = resolve; }),
+    );
+    const qc = newQueryClient();
+    qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
+      items: [
+        { id: ITEM_ID, sort_order: 0, text: "doomed", done: false },
+        { id: "keep", sort_order: 1, text: "keep", done: false },
+      ],
+    });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      wrapper: createWrapper(qc),
+    });
+    act(() => {
+      result.current.deleteChecklistMutation.mutate(ITEM_ID);
+    });
+    await waitFor(() => {
+      expect(result.current.deleteChecklistMutation.isPending).toBe(true);
+    });
+    const cached = qc.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A));
+    expect(cached?.items.map((i) => i.id)).toEqual(["keep"]);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.deleteChecklistMutation.isPending).toBe(false);
+    });
+    expect(inv).toHaveBeenCalledWith({ queryKey: taskQueryKeys.checklist(TASK_A) });
+    expect(inv).toHaveBeenCalledWith({ queryKey: taskQueryKeys.detail(TASK_A) });
+  });
+
+  // Rollback on add failure: the cache snaps back to "existing only"
+  // when the server rejects. Without rollback the user sees the row
+  // appear, the API silently fails, and the row stays as a phantom
+  // until they refresh.
+  it("rolls back the optimistic add on server error", async () => {
+    mockAdd.mockRejectedValueOnce(new Error("server says no"));
+    const qc = newQueryClient();
+    qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
+      items: [{ id: "i1", sort_order: 0, text: "existing", done: false }],
+    });
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      wrapper: createWrapper(qc),
+    });
+    act(() => {
+      result.current.openChecklistModal();
+      result.current.setNewChecklistText("doomed");
+    });
+    act(() => {
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      result.current.submitNewChecklistCriterion(ev);
+    });
+    await waitFor(() => {
+      expect(result.current.addChecklistMutation.isError).toBe(true);
+    });
+    const cached = qc.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A));
+    expect(cached?.items.map((i) => i.id)).toEqual(["i1"]);
   });
 });

@@ -20,7 +20,7 @@ type Props = {
    * safely render `<MutationErrorBanner error={mutation.error} ... />`
    * unconditionally without an outer `error ? ... : null` gate.
    */
-  error?: Error | string | null;
+  error?: unknown;
   /**
    * Kinder default the surrounding UI prefers over the raw `String(e)`
    * coercion for non-Error / non-string inputs (e.g. "Could not save

@@ -40,9 +40,9 @@ export type TaskDetailChecklistSectionProps = {
    * open & the buttons re-enable, but without this the user has no
    * idea anything went wrong). `null` for happy path / idle / pending.
    */
-  addCriterionError?: Error | null;
-  editCriterionError?: Error | null;
-  removeItemError?: Error | null;
+  addCriterionError?: unknown;
+  editCriterionError?: unknown;
+  removeItemError?: unknown;
 };
 
 export function TaskDetailChecklistSection({

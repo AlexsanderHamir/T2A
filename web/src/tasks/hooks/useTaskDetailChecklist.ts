@@ -5,9 +5,61 @@ import {
   deleteChecklistItem,
   patchChecklistItemText,
 } from "@/api";
+import {
+  rumMutationOptimisticApplied,
+  rumMutationRolledBack,
+  rumMutationSettled,
+  rumMutationStarted,
+  type RUMMutationKind,
+} from "@/observability";
+import { useOptionalToast } from "@/shared/toast";
 import { taskQueryKeys } from "../task-query";
+import type { TaskChecklistItemView, TaskChecklistResponse } from "@/types";
+
+interface ChecklistOptimisticContext {
+  prev: TaskChecklistResponse | undefined;
+  startedAtMs: number;
+  /** Identifier we used for the synthetic add — onSuccess swaps it
+   * for the real id in the cache so subsequent edits don't reference
+   * the temp id. */
+  tempItemId?: string;
+}
+
+let optimisticChecklistTempCounter = 0;
+function nextOptimisticChecklistId(): string {
+  optimisticChecklistTempCounter += 1;
+  return `optimistic-${optimisticChecklistTempCounter}`;
+}
+
+function snapshotChecklist(
+  queryClient: QueryClient,
+  taskId: string,
+): TaskChecklistResponse | undefined {
+  return queryClient.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(taskId));
+}
+
+function restoreChecklist(
+  queryClient: QueryClient,
+  taskId: string,
+  prev: TaskChecklistResponse | undefined,
+): void {
+  if (prev !== undefined) {
+    queryClient.setQueryData(taskQueryKeys.checklist(taskId), prev);
+  } else {
+    queryClient.removeQueries({ queryKey: taskQueryKeys.checklist(taskId) });
+  }
+}
+
+function recordRollback(
+  kind: RUMMutationKind,
+  startedAtMs: number,
+): void {
+  rumMutationRolledBack(kind, performance.now() - startedAtMs);
+  rumMutationSettled(kind, performance.now() - startedAtMs, 0);
+}
 
 export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient) {
+  const toast = useOptionalToast();
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState("");
   const [editCriterionModalOpen, setEditCriterionModalOpen] = useState(false);
@@ -70,10 +122,45 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     setNewChecklistText("");
   }, []);
 
-  const addChecklistMutation = useMutation({
-    mutationFn: (input: { text: string; submissionToken: number }) =>
-      addChecklistItem(taskId, input.text),
-    onSuccess: async (_item, variables) => {
+  const addChecklistMutation = useMutation<
+    void,
+    unknown,
+    { text: string; submissionToken: number },
+    ChecklistOptimisticContext
+  >({
+    mutationFn: (input) => addChecklistItem(taskId, input.text),
+    onMutate: async (input) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("checklist_add");
+      await queryClient.cancelQueries({
+        queryKey: taskQueryKeys.checklist(taskId),
+      });
+      const prev = snapshotChecklist(queryClient, taskId);
+      const tempId = nextOptimisticChecklistId();
+      const sortOrder = prev?.items.length
+        ? Math.max(...prev.items.map((i) => i.sort_order)) + 1
+        : 0;
+      const synthetic: TaskChecklistItemView = {
+        id: tempId,
+        sort_order: sortOrder,
+        text: input.text,
+        done: false,
+      };
+      const next: TaskChecklistResponse = {
+        items: [...(prev?.items ?? []), synthetic],
+      };
+      queryClient.setQueryData(taskQueryKeys.checklist(taskId), next);
+      rumMutationOptimisticApplied("checklist_add", performance.now() - startedAtMs);
+      return { prev, startedAtMs, tempItemId: tempId };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) {
+        restoreChecklist(queryClient, taskId, context.prev);
+        recordRollback("checklist_add", context.startedAtMs);
+      }
+      toast.error("Couldn't add criterion - reverted.");
+    },
+    onSuccess: async (_item, variables, context) => {
       // Server-truth invalidations always fire: the new criterion is
       // real regardless of which modal state the user is now in.
       await queryClient.invalidateQueries({
@@ -95,6 +182,13 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
       }
       setNewChecklistText("");
       setChecklistModalOpen(false);
+      if (context) {
+        rumMutationSettled(
+          "checklist_add",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
     },
   });
 
@@ -109,10 +203,40 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     [newChecklistText, addChecklistMutation],
   );
 
-  const updateChecklistTextMutation = useMutation({
-    mutationFn: (input: { itemId: string; text: string }) =>
+  const updateChecklistTextMutation = useMutation<
+    TaskChecklistResponse,
+    unknown,
+    { itemId: string; text: string },
+    ChecklistOptimisticContext
+  >({
+    mutationFn: (input) =>
       patchChecklistItemText(taskId, input.itemId, input.text),
-    onSuccess: async (_item, variables) => {
+    onMutate: async (input) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("checklist_edit");
+      await queryClient.cancelQueries({
+        queryKey: taskQueryKeys.checklist(taskId),
+      });
+      const prev = snapshotChecklist(queryClient, taskId);
+      if (prev) {
+        const next: TaskChecklistResponse = {
+          items: prev.items.map((it) =>
+            it.id === input.itemId ? { ...it, text: input.text } : it,
+          ),
+        };
+        queryClient.setQueryData(taskQueryKeys.checklist(taskId), next);
+      }
+      rumMutationOptimisticApplied("checklist_edit", performance.now() - startedAtMs);
+      return { prev, startedAtMs };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) {
+        restoreChecklist(queryClient, taskId, context.prev);
+        recordRollback("checklist_edit", context.startedAtMs);
+      }
+      toast.error("Couldn't update criterion - reverted.");
+    },
+    onSuccess: async (_item, variables, context) => {
       // Server-truth invalidations always fire: the criterion text was
       // persisted regardless of which item the user is now editing.
       await queryClient.invalidateQueries({
@@ -133,6 +257,13 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
         return;
       }
       closeEditCriterionModal();
+      if (context) {
+        rumMutationSettled(
+          "checklist_edit",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
     },
   });
 
@@ -147,12 +278,56 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     [editChecklistText, editingChecklistItemId, updateChecklistTextMutation],
   );
 
-  const deleteChecklistMutation = useMutation({
-    mutationFn: (itemId: string) => deleteChecklistItem(taskId, itemId),
-    onSuccess: async () => {
+  const deleteChecklistMutation = useMutation<
+    void,
+    unknown,
+    string,
+    ChecklistOptimisticContext
+  >({
+    mutationFn: (itemId) => deleteChecklistItem(taskId, itemId),
+    onMutate: async (itemId) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("checklist_delete");
+      await queryClient.cancelQueries({
+        queryKey: taskQueryKeys.checklist(taskId),
+      });
+      const prev = snapshotChecklist(queryClient, taskId);
+      if (prev) {
+        const next: TaskChecklistResponse = {
+          items: prev.items.filter((it) => it.id !== itemId),
+        };
+        queryClient.setQueryData(taskQueryKeys.checklist(taskId), next);
+      }
+      rumMutationOptimisticApplied("checklist_delete", performance.now() - startedAtMs);
+      return { prev, startedAtMs };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) {
+        restoreChecklist(queryClient, taskId, context.prev);
+        recordRollback("checklist_delete", context.startedAtMs);
+      }
+      toast.error("Couldn't delete criterion - reverted.");
+    },
+    onSuccess: async (_data, _itemId, context) => {
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.checklist(taskId),
       });
+      // The original deleteChecklistMutation only invalidated the
+      // checklist query — but the task detail caches a derived
+      // checklist count / summary that goes stale on delete. Add the
+      // detail invalidation here so the parent task page row + summary
+      // re-render after a checklist delete (the plan calls this out
+      // explicitly in Phase 1d).
+      await queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.detail(taskId),
+      });
+      if (context) {
+        rumMutationSettled(
+          "checklist_delete",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
     },
   });
 

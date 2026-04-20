@@ -37,7 +37,7 @@ type Props = {
    * callout for the `TaskComposeFields` caller, where the local-state
    * editor has no async error path to surface.
    */
-  error?: Error | null;
+  error?: unknown;
   errorFallback?: string;
 };
 
