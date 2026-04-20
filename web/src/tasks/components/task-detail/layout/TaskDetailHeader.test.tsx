@@ -54,4 +54,42 @@ describe("TaskDetailHeader", () => {
     );
     expect(screen.getByText("blocked")).toHaveAttribute("data-needs-user", "true");
   });
+
+  it("renders the runtime chip with runner and model intent (Phase 4a of plan)", () => {
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <TaskDetailHeader
+          task={{
+            title: "Has model",
+            status: "ready",
+            priority: "medium",
+            ...TASK_TEST_DEFAULTS,
+            cursor_model: "opus-4",
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const chip = screen.getByTestId("task-detail-runtime");
+    expect(chip).toHaveTextContent("Cursor CLI · opus-4");
+    expect(chip.className).toContain("cell-pill--runtime");
+  });
+
+  it("renders 'default model' copy in the runtime chip when task has no cursor_model selected", () => {
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <TaskDetailHeader
+          task={{
+            title: "No model",
+            status: "ready",
+            priority: "medium",
+            ...TASK_TEST_DEFAULTS,
+            cursor_model: "",
+          }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("task-detail-runtime")).toHaveTextContent(
+      "Cursor CLI · default model",
+    );
+  });
 });

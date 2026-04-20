@@ -318,6 +318,91 @@ describe("TaskCyclesPanel", () => {
     expect(within(list).getByLabelText(/shown in the live ticker above/i)).toBeInTheDocument();
   });
 
+  it("renders a runner/model chip on each cycle row and the live ticker (Phase 4b of plan)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = reqUrl(input);
+      if (url.endsWith("/tasks/task-1/cycles")) {
+        return okJSON({
+          task_id: "task-1",
+          cycles: [
+            {
+              id: "cyc-live",
+              task_id: "task-1",
+              attempt_seq: 2,
+              status: "running",
+              started_at: "2026-04-18T11:00:00.000Z",
+              triggered_by: "agent",
+              meta: {},
+              cycle_meta: {
+                runner: "cursor",
+                runner_version: "v1.2.3",
+                cursor_model: "opus-4",
+                cursor_model_effective: "opus-4",
+                prompt_hash: "abc",
+              },
+            },
+            {
+              id: "cyc-hist",
+              task_id: "task-1",
+              attempt_seq: 1,
+              status: "succeeded",
+              started_at: "2026-04-18T10:00:00.000Z",
+              ended_at: "2026-04-18T10:01:00.000Z",
+              triggered_by: "user",
+              meta: {},
+              cycle_meta: {
+                runner: "cursor",
+                runner_version: "v1.2.3",
+                cursor_model: "",
+                cursor_model_effective: "sonnet-4.5",
+                prompt_hash: "def",
+              },
+            },
+          ],
+          limit: 50,
+          has_more: false,
+        });
+      }
+      if (url === "/tasks/task-1/cycles/cyc-live") {
+        return okJSON({
+          id: "cyc-live",
+          task_id: "task-1",
+          attempt_seq: 2,
+          status: "running",
+          started_at: "2026-04-18T11:00:00.000Z",
+          triggered_by: "agent",
+          meta: {},
+          cycle_meta: {
+            runner: "cursor",
+            runner_version: "v1.2.3",
+            cursor_model: "opus-4",
+            cursor_model_effective: "opus-4",
+            prompt_hash: "abc",
+          },
+          phases: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPanel();
+
+    const ticker = await screen.findByTestId("task-cycle-ticker");
+    expect(within(ticker).getByTestId("task-cycle-ticker-runner")).toHaveTextContent(
+      "Cursor CLI · opus-4",
+    );
+
+    const list = screen.getByTestId("task-cycles-list");
+    const rowRunners = within(list).getAllByTestId("task-cycle-row-runner");
+    // Both rows render a runner chip (running cycle is also in history).
+    expect(rowRunners.length).toBeGreaterThanOrEqual(2);
+    // The terminal history cycle resolved to sonnet-4.5 even though
+    // the task's intent was empty — chip reads the effective value.
+    expect(rowRunners.map((el) => el.textContent)).toEqual(
+      expect.arrayContaining(["Cursor CLI · opus-4", "Cursor CLI · sonnet-4.5"]),
+    );
+  });
+
   it("falls back to a 'between phases' line when the running cycle has no in-flight phase", async () => {
     // Cycle is running but every phase has already terminated —
     // the worker is between StartCycle/StartPhase frames. The

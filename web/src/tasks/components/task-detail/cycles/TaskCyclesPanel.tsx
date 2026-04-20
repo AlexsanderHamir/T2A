@@ -7,7 +7,9 @@ import {
 import {
   cycleStatusLabel,
   cycleStatusFillClass,
+  cycleRunnerChipClass,
   formatDurationSeconds,
+  formatRunnerModel,
   phaseLabel,
   phaseStatusFillClass,
   phaseStatusLabel,
@@ -173,6 +175,12 @@ function CurrentPhaseTicker({
         </span>
         <span className="task-cycle-ticker-attempt">
           Attempt #{cycle.attempt_seq}
+        </span>
+        <span
+          className={`cell-pill ${cycleRunnerChipClass()}`}
+          data-testid="task-cycle-ticker-runner"
+        >
+          {formatRunnerModel(cycle.cycle_meta)}
         </span>
         <span
           className="task-cycle-ticker-elapsed"
@@ -346,6 +354,12 @@ function CycleRow({
           </span>
           <span className="task-cycle-row-trigger muted">
             by {cycle.triggered_by}
+          </span>
+          <span
+            className={`cell-pill ${cycleRunnerChipClass()}`}
+            data-testid="task-cycle-row-runner"
+          >
+            {formatRunnerModel(cycle.cycle_meta)}
           </span>
           {isLiveAbove ? (
             <span

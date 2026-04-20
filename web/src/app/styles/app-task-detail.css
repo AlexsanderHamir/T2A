@@ -59,12 +59,27 @@
   justify-content: flex-end;
 }
 
-.task-detail-agent-meta {
-  grid-column: 1;
-  grid-row: 3;
-  margin: 0;
-  font-size: var(--text-sm);
-  max-width: 40rem;
+/*
+ * Runtime chip rendered alongside status/priority in the task
+ * header (Phase 4a of the per-task runner & model attribution plan).
+ * Same neutral stone palette as cell-pill--cycle-aborted so it reads
+ * as "quiet identity" rather than a state signal — operators should
+ * not mistake the runner/model chip for an alert colour.
+ * Also used by TaskCyclesPanel rows (Phase 4b) and the observability
+ * breakdown panel (Phase 5) so the chip copy is visually identical
+ * wherever runner identity is surfaced.
+ */
+.cell-pill--runtime {
+  background: rgb(120 113 108 / 12%);
+  color: rgb(87 83 78);
+  border-color: rgb(120 113 108 / 26%);
+}
+@media (prefers-color-scheme: dark) {
+  .cell-pill--runtime {
+    background: rgb(168 162 158 / 14%);
+    color: rgb(214 211 209);
+    border-color: rgb(168 162 158 / 30%);
+  }
 }
 
 .task-create-agent-grid {

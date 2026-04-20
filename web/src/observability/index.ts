@@ -19,6 +19,10 @@ export {
   cycleStatusFillClass,
   phaseStatusFillClass,
   PHASE_DISPLAY_ORDER,
+  RUNNER_LABELS,
+  runnerLabel,
+  formatRunnerModel,
+  cycleRunnerChipClass,
 } from "./cyclesViewModel";
 
 // Operator-friendly duration formatter (matches journalctl/kubectl
