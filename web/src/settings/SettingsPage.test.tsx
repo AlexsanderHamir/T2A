@@ -225,6 +225,45 @@ describe("SettingsPage", () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
+  it(
+    "auto-dismisses the success banner after a few seconds",
+    async () => {
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
+          const url = requestUrl(input);
+          if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+            return jsonResponse(defaultSettings());
+          }
+          if (url.endsWith("/settings") && init?.method === "PATCH") {
+            return jsonResponse(
+              defaultSettings({
+                repo_root: "/var/repos/new",
+                updated_at: "2026-04-18T12:30:00Z",
+              }),
+            );
+          }
+          return new Response("not found", { status: 404 });
+        }),
+      );
+
+      renderPage();
+      const repoInput = await screen.findByLabelText(/Repository root/);
+      await userEvent.clear(repoInput);
+      await userEvent.type(repoInput, "/var/repos/new");
+      await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
+      );
+
+      await waitFor(
+        () => expect(screen.queryByTestId("settings-status")).not.toBeInTheDocument(),
+        { timeout: 6_000 },
+      );
+    },
+    12_000,
+  );
+
   it("disables Save when no fields have changed", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings()),

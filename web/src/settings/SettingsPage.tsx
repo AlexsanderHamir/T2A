@@ -108,6 +108,9 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
  */
 type Status = { kind: "success"; message: string } | { kind: "error"; message: string } | null;
 
+/** Matches `AUTO_DISMISS_MS` in `@/shared/toast/ToastProvider` — ephemeral success feedback. */
+const SETTINGS_SUCCESS_DISMISS_MS = 4_000;
+
 export function SettingsPage() {
   useDocumentTitle("Settings");
   const { settings, isLoading, error, patch, probe, refetch } =
@@ -126,6 +129,14 @@ export function SettingsPage() {
   const [resolvedDefaultBin, setResolvedDefaultBin] = useState<string | null>(
     null,
   );
+
+  useEffect(() => {
+    if (status?.kind !== "success") return;
+    const id = window.setTimeout(() => {
+      setStatus(null);
+    }, SETTINGS_SUCCESS_DISMISS_MS);
+    return () => window.clearTimeout(id);
+  }, [status]);
 
   useEffect(() => {
     if (settings && form === null) {
