@@ -1,0 +1,320 @@
+/* Observability page styles. Tokens come from app-design-tokens.css; status
+   and priority swatches reuse `.cell-pill--status-*` / `.cell-pill--priority-*`
+   from app-task-list-and-mentions.css so the colour language stays identical
+   to the task list. */
+
+.obs-page {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-6));
+}
+
+.obs-page-header {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.obs-page-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.obs-page-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  max-width: 60ch;
+}
+
+.obs-overview {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* KPI grid — 6 cards, responsive. */
+.obs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.obs-kpi-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.obs-kpi-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--brand);
+  opacity: 0.85;
+}
+
+.obs-kpi-card--positive::before {
+  background: var(--pill-success-fill-text, var(--brand));
+}
+
+.obs-kpi-card--danger::before {
+  background: var(--pill-danger-fill-text, var(--brand));
+}
+
+.obs-kpi-card--warning::before {
+  background: var(--warning-ink, var(--brand));
+}
+
+.obs-kpi-card--info::before {
+  background: var(--brand);
+}
+
+.obs-kpi-card--neutral::before {
+  background: var(--text-tertiary, var(--text-secondary));
+}
+
+.obs-kpi-label {
+  margin: 0;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.obs-kpi-value {
+  margin: 0;
+  font-size: var(--text-2xl, 1.75rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.obs-kpi-value--unavailable {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.obs-kpi-meta {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* Charts column. */
+.obs-charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 960px) {
+  .obs-charts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .obs-charts > .obs-bar:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.obs-bar,
+.obs-donut {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+.obs-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.obs-bar-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.obs-bar-caption {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.obs-bar-track {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-glass-pill, var(--surface-card));
+  border: 1px solid var(--border-hairline);
+}
+
+.obs-bar-segment {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
+/* The pill classes use background+text+border tokens; the bar segments
+   only need the background, so we just inherit the pill's background. */
+.obs-bar-segment.cell-pill--status-ready { background: var(--pill-ready-bg); }
+.obs-bar-segment.cell-pill--status-running { background: var(--brand); }
+.obs-bar-segment.cell-pill--status-blocked { background: var(--warning-ink); }
+.obs-bar-segment.cell-pill--status-review { background: var(--pill-review-text); }
+.obs-bar-segment.cell-pill--status-done { background: var(--pill-success-fill-text); }
+.obs-bar-segment.cell-pill--status-failed { background: var(--pill-danger-fill-text); }
+.obs-bar-segment.cell-pill--priority-low { background: var(--pill-priority-low-text); }
+.obs-bar-segment.cell-pill--priority-medium { background: var(--pill-priority-medium-text); }
+.obs-bar-segment.cell-pill--priority-high { background: var(--pill-priority-high-text); }
+.obs-bar-segment.cell-pill--priority-critical { background: var(--pill-danger-fill-text); }
+
+.obs-bar-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--border-hairline),
+    var(--border-hairline) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.obs-bar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.obs-bar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.obs-bar-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--border-hairline);
+}
+
+.obs-bar-legend-swatch.cell-pill--status-ready { background: var(--pill-ready-bg); }
+.obs-bar-legend-swatch.cell-pill--status-running { background: var(--brand); }
+.obs-bar-legend-swatch.cell-pill--status-blocked { background: var(--warning-ink); }
+.obs-bar-legend-swatch.cell-pill--status-review { background: var(--pill-review-text); }
+.obs-bar-legend-swatch.cell-pill--status-done { background: var(--pill-success-fill-text); }
+.obs-bar-legend-swatch.cell-pill--status-failed { background: var(--pill-danger-fill-text); }
+.obs-bar-legend-swatch.cell-pill--priority-low { background: var(--pill-priority-low-text); }
+.obs-bar-legend-swatch.cell-pill--priority-medium { background: var(--pill-priority-medium-text); }
+.obs-bar-legend-swatch.cell-pill--priority-high { background: var(--pill-priority-high-text); }
+.obs-bar-legend-swatch.cell-pill--priority-critical { background: var(--pill-danger-fill-text); }
+
+.obs-bar-legend-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.obs-bar-legend-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+/* Donut chart */
+.obs-donut-frame {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.obs-donut-svg {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+
+.obs-donut-track {
+  stroke: var(--border-hairline);
+  stroke-width: 14;
+}
+
+.obs-donut-arc {
+  stroke-width: 14;
+  transition: stroke-dasharray var(--duration-normal) var(--ease-out);
+}
+
+.obs-donut-arc--parent {
+  stroke: var(--brand);
+}
+
+.obs-donut-arc--subtask {
+  stroke: var(--pill-priority-medium-text, var(--brand));
+}
+
+.obs-donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.obs-donut-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.obs-donut-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border-hairline);
+}
+
+.obs-donut-legend-swatch.obs-donut-arc--parent { background: var(--brand); }
+.obs-donut-legend-swatch.obs-donut-arc--subtask {
+  background: var(--pill-priority-medium-text, var(--brand));
+}
+
+.obs-donut-legend-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.obs-donut-legend-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  margin-left: auto;
+}

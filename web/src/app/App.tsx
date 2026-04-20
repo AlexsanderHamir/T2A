@@ -11,6 +11,7 @@ import {
   useTasksApp,
 } from "@/tasks";
 import { SettingsPage } from "@/settings";
+import { ObservabilityPage } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
@@ -43,6 +44,12 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 </Link>
                 <Link to="/drafts" className="app-title-link app-title-link--drafts">
                   Drafts
+                </Link>
+                <Link
+                  to="/observability"
+                  className="app-title-link app-title-link--observability"
+                >
+                  Observability
                 </Link>
               </nav>
               <p className="app-tagline term-prompt">
@@ -137,6 +144,7 @@ export default function App() {
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
+        <Route path="observability" element={<ObservabilityPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"
