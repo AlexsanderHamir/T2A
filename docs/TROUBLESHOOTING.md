@@ -45,6 +45,25 @@ Cause: Local tree diverged from `main` or dependencies not installed.
 
 Fix: Run `(cd web && npm ci)` and `./scripts/check.sh` locally; fix `gofmt` with `go fmt ./...` or `gofmt -w` on listed files.
 
+## Observability "Runner & model" panel shows an empty model row
+
+The `ObservabilityRunnerBreakdown` panel displays buckets keyed by `cycle_meta.cursor_model_effective`. A row labelled "Cursor CLI · default model" is the expected rendering for cycles whose effective model resolved to the empty string — not a bug. Two causes, listed by likelihood:
+
+1. **Pre-feature cycles.** Cycles started before the runner/model attribution feature shipped carry only `{runner, runner_version, prompt_hash}` in `meta_json`; the aggregator reads the missing `cursor_model_effective` key as the empty string and buckets the row under the "default model" label. Confirm with `SELECT count(*) FROM task_cycles WHERE meta_json::jsonb ? 'cursor_model_effective' IS FALSE;`. These rows never backfill; they age out as newer cycles dominate the aggregates. See [EXECUTION-CYCLES.md § Cycle metadata](./EXECUTION-CYCLES.md#cycle-metadata-meta_json--cycle_meta).
+2. **Runner with no default model configured.** The cursor adapter falls back from `tasks.cursor_model` to `app_settings.cursor_model` to the empty string (see [SETTINGS.md](./SETTINGS.md)). If both are blank, every new cycle records `cursor_model_effective = ""` verbatim — this is the truthful audit value, not a placeholder. Set `app_settings.cursor_model` via `PATCH /settings` to pin a default.
+
+If the panel shows the row but nothing else — i.e. the only bucket is "default model" — inspect the most recent cycle: `SELECT id, meta_json FROM task_cycles ORDER BY started_at DESC LIMIT 1;`. The presence of the `cursor_model_effective` key confirms whether you are looking at (1) or (2).
+
+## Prometheus `t2a_agent_runs_by_model_total` has a high-cardinality label
+
+The `model` label on `t2a_agent_runs_by_model_total` / `t2a_agent_run_duration_by_model_seconds` is **not cardinality-capped** at the wire (plan decision D7). In practice fewer than ten Cursor models are in use simultaneously, but a misconfigured task or a future runner family could explode the series count. Watch with:
+
+```promql
+count({__name__="t2a_agent_runs_by_model_total"})
+```
+
+If cardinality spikes unexpectedly: (a) check for typos in `tasks.cursor_model` and `app_settings.cursor_model` via the SPA Settings page, and (b) cap label values at the scraper with a `metric_relabel_configs` rule that drops or buckets unexpected model names. The older `t2a_agent_runs_total{runner,terminal_status}` series is byte-identical to the pre-feature shape and is always safe to fall back to for alerting. See [AGENT-WORKER.md § Metrics](./AGENT-WORKER.md#metrics).
+
 ## Local checks and agent test failures (quick playbook)
 
 Use this in order when `go test`, `go vet`, or `web/` tests fail locally or in CI.

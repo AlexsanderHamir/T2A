@@ -114,6 +114,39 @@ Two consequences worth pinning:
 - **`event_seq` backfill.** `StartPhase` and `CompletePhase` capture the assigned `task_events.seq` and write it back into the phase row's `event_seq` column inside the same transaction. The pointer is one-shot: `CompletePhase` overwrites the `StartPhase` value with the terminal mirror seq.
 - **The seven mirror types are not interactive.** They are deliberately excluded from `domain.EventTypeAcceptsUserResponse` (see `pkgs/tasks/domain/event_user_response.go`); attempting `PATCH /tasks/{id}/events/{seq}` on a mirror row returns `400` because cycle/phase rows are the system of record for those transitions, not the audit row. The dual-write test asserts this so future drift fails CI.
 
+## Cycle metadata (`meta_json` / `cycle_meta`)
+
+`task_cycles.meta_json` is the adapter-facing sidecar for a cycle — free-form JSON the worker writes at `StartCycle` and never touches afterwards. The store treats the column as opaque bytes; the shape is a **runner contract**, not a database contract.
+
+The agent worker (`pkgs/agents/worker/meta.go::buildCycleMeta`) writes a stable five-key payload for every cycle it starts, regardless of runner:
+
+```json
+{
+  "runner": "cursor",
+  "runner_version": "2.x.y",
+  "cursor_model": "",
+  "cursor_model_effective": "opus-4",
+  "prompt_hash": "sha256:abc123…"
+}
+```
+
+| Key | Meaning | Empty-string semantics |
+|---|---|---|
+| `runner` | `runner.Runner.Name()` at cycle start (e.g. `"cursor"`). | Pre-feature cycle — renders as "unknown runner" in the SPA. |
+| `runner_version` | `runner.Runner.Version()` at cycle start. | Pre-feature cycle or runner does not advertise a version. |
+| `cursor_model` | Operator intent. Verbatim `tasks.cursor_model` at `StartCycle`. | Operator did not pin a model; the runner's default applies. |
+| `cursor_model_effective` | Resolved model the runner will actually execute against — `runner.Runner.EffectiveModel(req)`. This is the audit truth: chip copy, Prometheus `model` label, and `/tasks/stats` breakdown all read this key. | No model configured anywhere — renders as "default model" and buckets as `""` in `/tasks/stats`. |
+| `prompt_hash` | `sha256` of the prompt string handed to the runner. Used for correlation across retries. | Never empty for cycles the worker starts. |
+
+The API layer exposes the same keys under a typed projection (`cycle_meta`) on `/tasks/{id}/cycles[/{cycleId}]` so the SPA never has to re-parse the raw JSON. See [API-HTTP.md](./API-HTTP.md).
+
+**Invariants**
+
+- Keys are additive only. A future runner may include additional keys; consumers MUST ignore unknown keys.
+- Values are always strings. Empty strings are the intentional "no value" encoding; `null` / omission is equivalent but the worker always emits the empty string.
+- The pair (`cursor_model`, `cursor_model_effective`) can diverge whenever the operator left the task's model unset and the runner fell through to its default. That divergence is the point — it lets the breakdown panel attribute outcomes to the *resolved* model rather than the operator's intent.
+- Pre-feature cycles (before the V2 keys shipped) carry only `{runner, runner_version, prompt_hash}`. The SPA and the stats aggregator both treat missing keys as empty strings; no migration is needed.
+
 ## Where reads go
 
 | Question | Read from | Why not the other side |

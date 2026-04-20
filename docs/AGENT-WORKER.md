@@ -386,15 +386,19 @@ The worker exposes two Prometheus series, registered by `taskapi.RegisterAgentWo
 |--------|------|--------|--------|
 | `t2a_agent_runs_total` | counter | `runner`, `terminal_status` | Incremented exactly once per `TerminateCycle` write (happy path, panic, shutdown abort, best-effort intermediate failure). |
 | `t2a_agent_run_duration_seconds` | histogram | `runner` | Observes `now - state.startedAt` at the same call site, with buckets tuned for the V1 run-timeout range (`0.5s … 30m`). |
+| `t2a_agent_runs_by_model_total` | counter | `runner`, `model`, `terminal_status` | **Parallel series** emitted from the same `RecordRun` call as `t2a_agent_runs_total`. `model` is `runner.Runner.EffectiveModel(req)` resolved at cycle start — the concrete model the runner actually executed against (see [EXECUTION-CYCLES.md § Cycle metadata](./EXECUTION-CYCLES.md#cycle-metadata-meta_json--cycle_meta)). Empty string is recorded verbatim and means "no model configured". |
+| `t2a_agent_run_duration_by_model_seconds` | histogram | `runner`, `model` | Parallel histogram companion to the `by_model` counter. Same buckets as `t2a_agent_run_duration_seconds`. |
 
-Cardinality is bounded by construction: `runner` comes from `runner.Runner.Name()` (today: `cursor-cli`, `fake` in tests), and `terminal_status` is one of the three terminal `domain.CycleStatus` values (`succeeded`, `failed`, `aborted`). New runners add adapter implementations, not freeform labels.
+**Parallel series, not replacement.** The `_by_model_` companions were added for per-model dashboards without breaking any existing query or alert: `t2a_agent_runs_total{runner,terminal_status}` and `t2a_agent_run_duration_seconds{runner}` remain byte-identical. Every call to `RecordRun` emits both the original and the `_by_model_` observation, so the sums across models reconcile exactly with the original per-runner totals (modulo label-set differences). This additivity is tested in `internal/taskapi/agent_worker_metrics_test.go`. The cost is one extra `Inc()` + `Observe()` per terminated cycle, negligible.
+
+**Cardinality.** `runner` comes from `runner.Runner.Name()` (today: `cursor-cli`, `fake` in tests) and `terminal_status` is one of the three terminal `domain.CycleStatus` values (`succeeded`, `failed`, `aborted`). `model` is **not** capped at the wire — it ships verbatim as the effective model string. In practice fewer than ten Cursor models are in use simultaneously; watch `count({__name__="t2a_agent_runs_by_model_total"})` if you add a new runner family, and document any expected ceiling alongside it.
 
 The seam itself is `worker.RunMetrics`:
 
 ```go
 // pkgs/agents/worker/metrics.go
 type RunMetrics interface {
-    RecordRun(runner string, terminalStatus string, duration time.Duration)
+    RecordRun(runner string, model string, terminalStatus string, duration time.Duration)
 }
 ```
 

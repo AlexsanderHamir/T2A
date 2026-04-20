@@ -76,6 +76,8 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **In-use DB connections** (instant) | `taskapi_db_pool_in_use_connections` |
 | **Deployed binary** (labels only; value is 1) | `max by (version, revision, go_version) (taskapi_build_info)` — use a **table** or **stat** panel; compare **`version`** / **`revision`** to `GET /health` during rollouts. |
 | **Store op p95** (example: `create_task`) | `histogram_quantile(0.95, sum(rate(taskapi_store_operation_duration_seconds_bucket{op="create_task"}[5m])) by (le))` |
+| **Agent run success rate by model** | `sum by (runner, model) (rate(t2a_agent_runs_by_model_total{terminal_status="succeeded"}[5m])) / sum by (runner, model) (rate(t2a_agent_runs_by_model_total[5m]))` — see [AGENT-WORKER.md § Metrics](./AGENT-WORKER.md#metrics) for the parallel series contract. |
+| **Agent run p95 duration by model** | `histogram_quantile(0.95, sum by (runner, model, le) (rate(t2a_agent_run_duration_by_model_seconds_bucket[5m])))` — observes all terminal cycles (same population as the non-`_by_model_` histogram); the SPA's `ObservabilityRunnerBreakdown` panel answers a different question (p95 of **succeeded only** — see [API-HTTP.md § `/tasks/stats`](./API-HTTP.md#tasks-stats) `runner` block). |
 
 **Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Prefer the **recording rules** in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml) for heavy dashboards ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
 
