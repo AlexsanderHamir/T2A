@@ -30,6 +30,31 @@ export const PHASE_STATUSES: PhaseStatus[] = [
   "skipped",
 ];
 
+/**
+ * Typed projection of `TaskCycle.meta` (Phase 1b of per-task runner/model
+ * attribution). Always present on every cycle row from `GET /tasks/{id}/cycles`
+ * and `GET /tasks/{id}/cycles/{cycleId}`. Empty strings are SEMANTIC:
+ *
+ * - `cursor_model === ""` means the operator did not pin a model on the task
+ *   (will inherit the global default at run time).
+ * - `cursor_model_effective === ""` means the adapter had no
+ *   DefaultCursorModel either — i.e. no model was configured anywhere. The
+ *   Observability runner-breakdown panel renders that bucket as "default
+ *   model" instead of dropping the row.
+ *
+ * Pre-feature cycles (whose `meta` predates these keys) flow through with
+ * every field as `""`; the SPA renders that exactly the same as a cycle
+ * that ran with the global default — distinguishable only by joining on
+ * cycle date if needed.
+ */
+export type CycleMeta = {
+  runner: string;
+  runner_version: string;
+  cursor_model: string;
+  cursor_model_effective: string;
+  prompt_hash: string;
+};
+
 /** One row from `GET /tasks/{id}/cycles` (or the cycle envelope of `GET /tasks/{id}/cycles/{cycleId}`). */
 export type TaskCycle = {
   id: string;
@@ -45,6 +70,11 @@ export type TaskCycle = {
   parent_cycle_id?: string;
   /** Free-form runner metadata; defaults to `{}` server-side. */
   meta: Record<string, unknown>;
+  /**
+   * Typed projection of `meta`. Always present (zero-value when the
+   * server cycle row predates the projection keys); see {@link CycleMeta}.
+   */
+  cycle_meta: CycleMeta;
 };
 
 /** One row from `GET /tasks/{id}/cycles/{cycleId}::phases`. */

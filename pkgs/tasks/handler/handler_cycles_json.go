@@ -38,20 +38,50 @@ type phasePatchJSON struct {
 	Details json.RawMessage    `json:"details,omitempty"`
 }
 
+// cycleMetaProjection is the typed view of TaskCycle.MetaJSON the SPA
+// renders directly without re-parsing arbitrary JSON. The raw `meta`
+// object stays on the response (forwards-compat: we add keys to MetaJSON
+// without breaking older clients) but the SPA reads from `cycle_meta`
+// so the runner / model attribution chips and the Observability
+// breakdown panel never need a typed-cast on `unknown` (Phase 1b of
+// the per-task runner/model attribution plan).
+//
+// Empty strings are SEMANTIC: cursor_model="" means the operator did
+// not pin a model on the task; cursor_model_effective="" means the
+// adapter had no DefaultCursorModel either — i.e. "no model configured
+// anywhere". The SPA renders that bucket as "default model" instead
+// of dropping the row, so pre-feature cycles (whose MetaJSON predates
+// the keys) and explicit-default cycles end up in the same audit
+// bucket and can be told apart by the upcoming RunnerVersion field if
+// needed.
+type cycleMetaProjection struct {
+	Runner               string `json:"runner"`
+	RunnerVersion        string `json:"runner_version"`
+	CursorModel          string `json:"cursor_model"`
+	CursorModelEffective string `json:"cursor_model_effective"`
+	PromptHash           string `json:"prompt_hash"`
+}
+
 // taskCycleResponse is the JSON shape for a single cycle row. Mirrors
 // domain.TaskCycle but uses snake_case keys consistent with the rest of
 // taskapi and exposes meta as raw JSON so the client never sees a quoted
 // string. meta is always present (defaulted to "{}" by the store).
+//
+// cycle_meta is the typed projection of meta (Phase 1b). It is
+// always emitted (even for pre-feature cycles, where every field will
+// be "") so the SPA can read it unconditionally without a presence
+// check.
 type taskCycleResponse struct {
-	ID            string             `json:"id"`
-	TaskID        string             `json:"task_id"`
-	AttemptSeq    int64              `json:"attempt_seq"`
-	Status        domain.CycleStatus `json:"status"`
-	StartedAt     time.Time          `json:"started_at"`
-	EndedAt       *time.Time         `json:"ended_at,omitempty"`
-	TriggeredBy   domain.Actor       `json:"triggered_by"`
-	ParentCycleID *string            `json:"parent_cycle_id,omitempty"`
-	Meta          json.RawMessage    `json:"meta"`
+	ID            string              `json:"id"`
+	TaskID        string              `json:"task_id"`
+	AttemptSeq    int64               `json:"attempt_seq"`
+	Status        domain.CycleStatus  `json:"status"`
+	StartedAt     time.Time           `json:"started_at"`
+	EndedAt       *time.Time          `json:"ended_at,omitempty"`
+	TriggeredBy   domain.Actor        `json:"triggered_by"`
+	ParentCycleID *string             `json:"parent_cycle_id,omitempty"`
+	Meta          json.RawMessage     `json:"meta"`
+	CycleMeta     cycleMetaProjection `json:"cycle_meta"`
 }
 
 // taskCyclePhaseResponse is the JSON shape for a single phase row.
@@ -100,5 +130,6 @@ type taskCycleDetailResponse struct {
 	TriggeredBy   domain.Actor             `json:"triggered_by"`
 	ParentCycleID *string                  `json:"parent_cycle_id,omitempty"`
 	Meta          json.RawMessage          `json:"meta"`
+	CycleMeta     cycleMetaProjection      `json:"cycle_meta"`
 	Phases        []taskCyclePhaseResponse `json:"phases"`
 }

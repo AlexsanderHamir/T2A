@@ -645,12 +645,27 @@ const validCycle = {
   meta: { source: "manual" },
 };
 
+const emptyCycleMeta = {
+  runner: "",
+  runner_version: "",
+  cursor_model: "",
+  cursor_model_effective: "",
+  prompt_hash: "",
+};
+
 describe("parseTaskCycle", () => {
   it("accepts a well-formed running cycle and defaults meta when missing", () => {
-    expect(parseTaskCycle(validCycle)).toEqual(validCycle);
+    expect(parseTaskCycle(validCycle)).toEqual({
+      ...validCycle,
+      cycle_meta: emptyCycleMeta,
+    });
     const noMeta = { ...validCycle };
     delete (noMeta as Partial<typeof validCycle>).meta;
-    expect(parseTaskCycle(noMeta)).toEqual({ ...validCycle, meta: {} });
+    expect(parseTaskCycle(noMeta)).toEqual({
+      ...validCycle,
+      meta: {},
+      cycle_meta: emptyCycleMeta,
+    });
   });
 
   it("includes optional ended_at and parent_cycle_id when present", () => {
@@ -674,6 +689,71 @@ describe("parseTaskCycle", () => {
     expect(() =>
       parseTaskCycle({ ...validCycle, started_at: "not-a-date" }),
     ).toThrow(/started_at/);
+  });
+
+  it("extracts the typed cycle_meta projection when the server provides it", () => {
+    const out = parseTaskCycle({
+      ...validCycle,
+      meta: {
+        runner: "cursor-cli",
+        runner_version: "0.42.0",
+        cursor_model: "",
+        cursor_model_effective: "opus",
+        prompt_hash: "deadbeef",
+      },
+      cycle_meta: {
+        runner: "cursor-cli",
+        runner_version: "0.42.0",
+        cursor_model: "",
+        cursor_model_effective: "opus",
+        prompt_hash: "deadbeef",
+      },
+    });
+    expect(out.cycle_meta).toEqual({
+      runner: "cursor-cli",
+      runner_version: "0.42.0",
+      cursor_model: "",
+      cursor_model_effective: "opus",
+      prompt_hash: "deadbeef",
+    });
+  });
+
+  it("falls back to meta when cycle_meta is absent (forward/back compat)", () => {
+    const out = parseTaskCycle({
+      ...validCycle,
+      meta: {
+        runner: "cursor-cli",
+        runner_version: "0.42.0",
+        cursor_model: "opus",
+        cursor_model_effective: "opus",
+        prompt_hash: "deadbeef",
+      },
+    });
+    // Same shape as the cycle_meta object the server would have sent.
+    expect(out.cycle_meta).toEqual({
+      runner: "cursor-cli",
+      runner_version: "0.42.0",
+      cursor_model: "opus",
+      cursor_model_effective: "opus",
+      prompt_hash: "deadbeef",
+    });
+  });
+
+  it("preserves empty strings as semantic values, not coerced to undefined", () => {
+    const out = parseTaskCycle({
+      ...validCycle,
+      cycle_meta: {
+        runner: "cursor-cli",
+        runner_version: "0.42.0",
+        cursor_model: "",
+        cursor_model_effective: "",
+        prompt_hash: "",
+      },
+    });
+    // "" is the truth: no model anywhere — must NOT be coerced to undefined.
+    expect(out.cycle_meta.cursor_model).toBe("");
+    expect(out.cycle_meta.cursor_model_effective).toBe("");
+    expect(out.cycle_meta.prompt_hash).toBe("");
   });
 });
 

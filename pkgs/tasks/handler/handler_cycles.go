@@ -390,7 +390,32 @@ func taskCycleResponseFromDomain(c *domain.TaskCycle) taskCycleResponse {
 		TriggeredBy:   c.TriggeredBy,
 		ParentCycleID: c.ParentCycleID,
 		Meta:          meta,
+		CycleMeta:     projectCycleMeta(meta),
 	}
+}
+
+// projectCycleMeta extracts the typed runner / model / prompt-hash
+// fields from a normalized meta object (always a valid JSON object,
+// per normalizeJSONObjectForResponse). Unknown keys are ignored;
+// missing keys decode to "" — that empty string is meaningful and
+// MUST be preserved end-to-end (see cycleMetaProjection doc). Errors
+// from json.Unmarshal are not possible in practice (input is a
+// valid object) but we defensively log + return the zero projection
+// so a corrupt row never breaks the cycles endpoint.
+func projectCycleMeta(meta json.RawMessage) cycleMetaProjection {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectCycleMeta")
+	var out cycleMetaProjection
+	if len(meta) == 0 {
+		return out
+	}
+	if err := json.Unmarshal(meta, &out); err != nil {
+		slog.Warn("cycle meta projection failed",
+			"cmd", calltrace.LogCmd,
+			"operation", "handler.projectCycleMeta.err",
+			"err", err)
+		return cycleMetaProjection{}
+	}
+	return out
 }
 
 // taskCyclePhaseResponseFromDomain copies a TaskCyclePhase row into the
@@ -428,6 +453,7 @@ func taskCycleDetailFromDomain(c *domain.TaskCycle, phases []domain.TaskCyclePha
 		TriggeredBy:   c.TriggeredBy,
 		ParentCycleID: c.ParentCycleID,
 		Meta:          meta,
+		CycleMeta:     projectCycleMeta(meta),
 		Phases:        make([]taskCyclePhaseResponse, 0, len(phases)),
 	}
 	for i := range phases {

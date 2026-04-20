@@ -11,6 +11,7 @@ import {
   type PhaseStatus,
   type Priority,
   type DraftTaskEvaluation,
+  type CycleMeta,
   type TaskCycle,
   type TaskCycleDetail,
   type TaskCyclePhase,
@@ -812,11 +813,36 @@ function parseOptionalNonEmptyId(
   return parseNonEmptyString(v, field);
 }
 
+/**
+ * Validates the typed `cycle_meta` projection introduced in Phase 1b of
+ * the per-task runner/model attribution plan. The server always emits
+ * the full object (zero-value when the underlying `meta` predates the
+ * projection keys), so the parser tolerates a missing `cycle_meta`
+ * field — falling back to `meta` when present, then to all-empty
+ * strings — for forward and backward compatibility with older API
+ * snapshots embedded in tests / fixtures.
+ *
+ * Empty strings are SEMANTIC and propagated verbatim; see
+ * {@link CycleMeta} for the rendering contract.
+ */
+function parseCycleMeta(value: unknown, meta: Record<string, unknown>): CycleMeta {
+  const source = isRecord(value) ? value : meta;
+  const stringField = (raw: unknown): string => (typeof raw === "string" ? raw : "");
+  return {
+    runner: stringField(source.runner),
+    runner_version: stringField(source.runner_version),
+    cursor_model: stringField(source.cursor_model),
+    cursor_model_effective: stringField(source.cursor_model_effective),
+    prompt_hash: stringField(source.prompt_hash),
+  };
+}
+
 /** Validates one cycle row from `GET /tasks/{id}/cycles[*]` (also used by detail). */
 export function parseTaskCycle(value: unknown): TaskCycle {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: cycle must be an object");
   }
+  const meta = parseObjectField(value.meta, "meta");
   const out: TaskCycle = {
     id: parseNonEmptyString(value.id, "id"),
     task_id: parseNonEmptyString(value.task_id, "task_id"),
@@ -824,7 +850,8 @@ export function parseTaskCycle(value: unknown): TaskCycle {
     status: parseCycleStatus(value.status),
     started_at: parseISO8601Required(value.started_at, "started_at"),
     triggered_by: parseActor(value.triggered_by),
-    meta: parseObjectField(value.meta, "meta"),
+    meta,
+    cycle_meta: parseCycleMeta(value.cycle_meta, meta),
   };
   const ended = parseOptionalParseableDate(value.ended_at, "ended_at");
   if (ended !== undefined) out.ended_at = ended;
