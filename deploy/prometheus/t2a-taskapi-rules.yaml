@@ -35,6 +35,40 @@ groups:
             sum(rate(taskapi_http_request_duration_seconds_bucket[5m])) by (le)
           )
 
+      # Per-model agent run success rate (5m). Backed by the parallel
+      # series introduced alongside the per-task runner/model
+      # observability slice (D4 — additive, not a replacement for
+      # t2a_agent_runs_total). Pairs with the SPA Runner/Model
+      # breakdown panel; the panel scopes p50/p95 to succeeded-only,
+      # this rule scopes the success rate to all terminal cycles
+      # (which is what the operator wants for an alert numerator).
+      # Cardinality NOTE: model is unbounded (D7); if the {runner,model}
+      # cardinality grows past a few hundred, drop this recording rule
+      # before the raw counter to keep ingestion cheap.
+      - record: taskapi:agent_runs_by_model:success_rate5m
+        expr: |
+          sum(rate(t2a_agent_runs_by_model_total{terminal_status="succeeded"}[5m])) by (runner, model)
+          /
+          clamp_min(
+            sum(rate(t2a_agent_runs_by_model_total{terminal_status=~"succeeded|failed|aborted"}[5m])) by (runner, model),
+            1e-12
+          )
+
+      # Per-model agent run p95 wall-clock duration (seconds, 5m).
+      # Sources t2a_agent_run_duration_by_model_seconds_bucket which
+      # is observed for ALL terminal runs (matching the unlabeled
+      # histogram); the SPA panel uses a stricter succeeded-only
+      # scope explained in docs/OBSERVABILITY.md so the two answers
+      # to "how long does cursor-cli take?" are deliberately
+      # different. Use this rule for alerting / cross-model trend
+      # comparisons; use the SPA panel for ops drill-downs.
+      - record: taskapi:agent_run_duration_by_model:p95_seconds
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(t2a_agent_run_duration_by_model_seconds_bucket[5m])) by (le, runner, model)
+          )
+
   - name: t2a_taskapi_alerts
     rules:
       - alert: TaskAPIHighHTTP5xxRate

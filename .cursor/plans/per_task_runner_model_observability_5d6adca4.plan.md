@@ -4,52 +4,52 @@ overview: "Each task can pick its own runner and `cursor_model`, but neither the
 todos:
   - id: p1_runner_effective_model
     content: "Phase 1a-i: add Runner.EffectiveModel(req) to runner.Runner interface; implement on cursor + runnerfake; runner contract test"
-    status: pending
+    status: completed
   - id: p1_cycle_meta_model
     content: "Phase 1a-ii: persist cursor_model + cursor_model_effective alongside runner/runner_version/prompt_hash in TaskCycle.MetaJSON (worker.buildCycleMeta); thread req through process.go so the same Request feeds both buildCycleMeta and runner.Run"
-    status: pending
+    status: completed
   - id: p1_handler_cycle_meta_typed
     content: "Phase 1b: add typed cycle_meta projection (runner/runner_version/cursor_model/cursor_model_effective/prompt_hash) to handler_cycles_json so the SPA never has to parse free-form meta"
-    status: pending
+    status: completed
   - id: p1_web_cycle_types
     content: "Phase 1c: extend web/src/types/cycle.ts TaskCycle with typed cycle_meta and update parseTaskApi cycles parser + tests"
-    status: pending
+    status: completed
   - id: p2_stats_by_runner_model
     content: "Phase 2a: add RunnerStats (ByRunner / ByModel / ByRunnerModel + DurationP50/P95 succeeded-only) to pkgs/tasks/store/internal/stats.TaskStats; one new SQL pass keyed off cycle_meta.cursor_model_effective; no cardinality cap"
-    status: pending
+    status: completed
   - id: p2_handler_stats_wire
     content: "Phase 2b: extend GET /tasks/stats response with runner.{by_runner,by_model,by_runner_model,duration_p50_seconds_succeeded,duration_p95_seconds_succeeded}; pin in handler_http_list_stats_contract_test.go"
-    status: pending
+    status: completed
   - id: p2_web_stats_types
     content: "Phase 2c: extend web/src/types/task.ts TaskStatsResponse with the runner section; update parseTaskApi stats parser + tests"
-    status: pending
+    status: completed
   - id: p3_metrics_model_label
     content: "Phase 3: add NEW parallel series t2a_agent_runs_by_model_total{runner,model,terminal_status} + t2a_agent_run_duration_by_model_seconds{runner,model} alongside the existing unlabeled series (zero-break, D4); RunMetrics.RecordRun signature grows a model arg sourced from runner.EffectiveModel(req); update process.go + cleanup.go + e2e + recording rules"
-    status: pending
+    status: completed
   - id: p4_task_header_runtime
     content: "Phase 4a: TaskDetailHeader replaces the muted task-detail-agent-meta <p> with ONE combined cell-pill chip \"Cursor CLI · <model>\" rendered next to status/priority (D6); migrate test selectors to data-testid=task-detail-runtime"
-    status: pending
+    status: completed
   - id: p4_cycle_runner_chip
     content: "Phase 4b: TaskCyclesPanel — add a runner/model chip on each CycleRow summary and the CurrentPhaseTicker eyebrow; defensive when meta missing"
-    status: pending
+    status: completed
   - id: p4_view_model_helpers
     content: "Phase 4c: cyclesViewModel.ts — add formatRunnerModel + RUNNER_LABELS single-source-of-truth + cycleRunnerChipClass helpers re-exported from @/observability"
-    status: pending
+    status: completed
   - id: p5_obs_breakdown_panel
     content: "Phase 5a: new ObservabilityRunnerBreakdown.tsx mounted in ObservabilityPage between Overview and Cycles — per-runner table with per-model rows; columns: total / succeeded / failed / aborted / p50 / p95"
-    status: pending
+    status: completed
   - id: p5_obs_styles
     content: "Phase 5b: observability.css — table + sparkline-row classes; reuse cell-pill--cycle-* swatches; respects prefers-reduced-motion"
-    status: pending
+    status: completed
   - id: p5_obs_tests
     content: "Phase 5c: ObservabilityRunnerBreakdown.test.tsx — empty / single-runner / multi-runner-with-models / collapsed-default-model cases"
-    status: pending
+    status: completed
   - id: p6_docs
     content: "Phase 6: docs/EXECUTION-CYCLES.md (cycle_meta), docs/API-HTTP.md (/tasks/stats), docs/OBSERVABILITY.md (new metric label + new panel), docs/AGENT-WORKER.md (model label) — and TROUBLESHOOTING.md for empty buckets"
-    status: pending
+    status: completed
   - id: rollout_backfill
     content: "Rollout: no schema migration needed (MetaJSON is jsonb); add a one-shot startup log line counting cycles with empty cursor_model in meta so operators know how much of the history is pre-feature; keep the breakdown defensive for those rows"
-    status: pending
+    status: completed
 isProject: false
 ---
 

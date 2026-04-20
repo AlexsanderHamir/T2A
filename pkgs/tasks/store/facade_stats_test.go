@@ -153,6 +153,82 @@ func TestStore_TaskStats_runnerBreakdown_aggregatesByRunnerModelAndPair(t *testi
 	}
 }
 
+// TestStore_CountPreFeatureCycles_bucketsByMissingVsEmptyEffectiveModel
+// pins the rollout-count contract used by the agent worker supervisor's
+// startup log line. Three terminated cycles seed three buckets:
+//   - V2 row with a real effective model: NEITHER MissingKey nor
+//     EmptyValue increments (counted only in Total).
+//   - V2 row with explicit empty effective model: EmptyValue
+//     increments. This is the operator-friendly "feature ran but no
+//     model configured" bucket.
+//   - Pre-V2 row missing the key entirely: MissingKey increments.
+//     This is the "needs a one-shot rewrite to recover" bucket.
+//
+// Running cycles MUST NOT count (`ended_at IS NOT NULL` filter); the
+// log line is about historical, attributed runs, not in-flight work.
+func TestStore_CountPreFeatureCycles_bucketsByMissingVsEmptyEffectiveModel(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk := mustCreateTask(t, s, ctx)
+
+	seeds := []struct {
+		meta string
+	}{
+		{meta: `{"runner":"cursor-cli","cursor_model_effective":"opus-4"}`},
+		{meta: `{"runner":"cursor-cli","cursor_model_effective":""}`},
+		{meta: `{"runner":"cursor-cli"}`},
+	}
+	for i, sd := range seeds {
+		cyc, err := s.StartCycle(ctx, StartCycleInput{
+			TaskID:      tsk.ID,
+			TriggeredBy: domain.ActorAgent,
+			Meta:        []byte(sd.meta),
+		})
+		if err != nil {
+			t.Fatalf("seed %d StartCycle: %v", i, err)
+		}
+		if _, err := s.TerminateCycle(ctx, cyc.ID,
+			domain.CycleStatusSucceeded, "seed", domain.ActorAgent); err != nil {
+			t.Fatalf("seed %d TerminateCycle: %v", i, err)
+		}
+	}
+	// One running cycle to prove the ended_at filter excludes it.
+	if _, err := s.StartCycle(ctx, StartCycleInput{
+		TaskID: tsk.ID, TriggeredBy: domain.ActorAgent,
+		Meta: []byte(`{}`),
+	}); err != nil {
+		t.Fatalf("running-cycle seed StartCycle: %v", err)
+	}
+
+	got, err := s.CountPreFeatureCycles(ctx)
+	if err != nil {
+		t.Fatalf("CountPreFeatureCycles: %v", err)
+	}
+	if got.Total != 3 {
+		t.Errorf("Total=%d want 3 (running cycle must be excluded)", got.Total)
+	}
+	if got.MissingKey != 1 {
+		t.Errorf("MissingKey=%d want 1", got.MissingKey)
+	}
+	if got.EmptyValue != 1 {
+		t.Errorf("EmptyValue=%d want 1", got.EmptyValue)
+	}
+}
+
+// TestStore_CountPreFeatureCycles_emptyDatabase pins the boot-on-fresh-DB
+// behaviour: zero rows, no error. The supervisor relies on this so a
+// brand-new deployment logs "0 / 0 / 0" rather than failing startup.
+func TestStore_CountPreFeatureCycles_emptyDatabase(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	got, err := s.CountPreFeatureCycles(context.Background())
+	if err != nil {
+		t.Fatalf("CountPreFeatureCycles: %v", err)
+	}
+	if got.Total != 0 || got.MissingKey != 0 || got.EmptyValue != 0 {
+		t.Errorf("empty DB counts non-zero: %+v", got)
+	}
+}
+
 func mapKeys(m map[string]RunnerBucket) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

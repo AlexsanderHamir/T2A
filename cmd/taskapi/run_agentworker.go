@@ -170,7 +170,41 @@ func newAgentWorkerSupervisor(ctx context.Context, st *store.Store, q *agents.Me
 // spawn) pipeline.
 func (s *agentWorkerSupervisor) Start(ctx context.Context) error {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.Start")
+	s.logPreFeatureCycleCount(ctx)
 	return s.applySettings(ctx, "boot")
+}
+
+// logPreFeatureCycleCount emits ONE Info line at supervisor boot
+// reporting how many terminal cycles predate the V2 runner/model
+// attribution keys (see plan rollout_backfill / docs/TROUBLESHOOTING.md
+// "Observability 'Runner & model' panel shows an empty model row").
+//
+// Best-effort: a transient store error degrades to a single Warn line
+// and does NOT block startup — the count is operator information, not
+// a precondition for serving traffic. Bounded by
+// agentWorkerStartupSweepTimeout so a stalled DB cannot wedge boot.
+//
+// Called only from Start() so a `PATCH /settings` Reload does not
+// re-emit the line on every settings change. The numbers age out as
+// new cycles dominate the aggregates; there is no live re-count.
+func (s *agentWorkerSupervisor) logPreFeatureCycleCount(ctx context.Context) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.logPreFeatureCycleCount")
+	countCtx, cancel := context.WithTimeout(ctx, agentWorkerStartupSweepTimeout)
+	defer cancel()
+	counts, err := s.store.CountPreFeatureCycles(countCtx)
+	if err != nil {
+		slog.Warn("agent worker pre-feature cycle count skipped",
+			"cmd", cmdName,
+			"operation", "taskapi.agent_worker.pre_feature_count_err",
+			"err", err)
+		return
+	}
+	slog.Info("agent worker pre-feature cycles",
+		"cmd", cmdName,
+		"operation", "taskapi.agentWorkerSupervisor.startup.preFeatureCycleCount",
+		"terminal_cycles_total", counts.Total,
+		"missing_cursor_model_effective_key", counts.MissingKey,
+		"empty_cursor_model_effective_value", counts.EmptyValue)
 }
 
 // Reload re-reads AppSettings and respawns the worker if anything
