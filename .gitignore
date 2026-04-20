@@ -1,5 +1,6 @@
 .env
 .env.local
+.git-commit-msg.tmp
 coverage.out
 coverage*.out
 coverage
