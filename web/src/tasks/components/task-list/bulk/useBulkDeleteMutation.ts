@@ -76,7 +76,7 @@ export function useBulkDeleteMutation() {
         };
         setLastResult(summary);
         await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-        await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+        await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
         return summary;
       } finally {
         setPending(false);

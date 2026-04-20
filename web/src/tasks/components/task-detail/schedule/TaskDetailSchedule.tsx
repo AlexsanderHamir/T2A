@@ -49,7 +49,7 @@ const TERMINAL_STATUSES: ReadonlySet<Status> = new Set(["done", "failed"]);
  * status, priority, task_type, checklist_inherit) — semantics that
  * don't apply when only the schedule changes. The local mutation
  * does the same query-invalidations (`taskQueryKeys.all` +
- * `task-stats`) so consumers see the same cache-refresh behaviour.
+ * `taskQueryKeys.stats()`) so consumers see the same cache-refresh behaviour.
  */
 export function TaskDetailSchedule({ task }: Props) {
   const tz = useAppTimezone();
@@ -67,7 +67,7 @@ export function TaskDetailSchedule({ task }: Props) {
       patchTaskApi(task.id, { pickup_not_before: next }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
     },
   });
 

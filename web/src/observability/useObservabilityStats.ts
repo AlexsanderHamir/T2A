@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { getTaskStats } from "@/api/tasks";
+import { taskQueryKeys } from "@/tasks/task-query";
 import type { TaskStatsResponse } from "@/types/task";
 
 /**
  * The shared cache key with `useTasksApp.taskStatsQuery`. Re-using it lets the
  * Observability page light up instantly when the user navigates from Home,
  * and lets `useTaskEventStream` invalidate one key for both consumers — see
- * web/src/tasks/hooks/useTaskEventStream.ts (`["task-stats"]` invalidation).
+ * web/src/tasks/hooks/useTaskEventStream.ts (`taskQueryKeys.stats()` invalidation).
  */
-export const OBSERVABILITY_STATS_QUERY_KEY = ["task-stats"] as const;
+export const OBSERVABILITY_STATS_QUERY_KEY = taskQueryKeys.stats();
 
 export type ObservabilityStatsState = {
   /** `null` when the request errored after settling; `undefined` while pending. */

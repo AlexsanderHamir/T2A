@@ -212,7 +212,7 @@ export function useTaskPatchFlow(opts: {
     onSuccess: async (_, variables, context) => {
       const patchedId = variables.id;
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       onPatched?.(patchedId);
       if (context) {
         rumMutationSettled(

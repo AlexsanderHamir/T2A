@@ -66,4 +66,9 @@ describe("taskQueryKeys", () => {
       10,
     ]);
   });
+
+  it("defines stats and drafts keys for invalidation outside tasks tree", () => {
+    expect(taskQueryKeys.stats()).toEqual(["task-stats"]);
+    expect(taskQueryKeys.drafts()).toEqual(["task-drafts"]);
+  });
 });

@@ -167,7 +167,7 @@ describe("useTaskPatchFlow", () => {
       expect(onPatched).toHaveBeenCalledWith("t1");
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tasks"] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["task-stats"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskQueryKeys.stats() });
   });
 
   it("surfaces API errors via patchError; does not call onPatched", async () => {

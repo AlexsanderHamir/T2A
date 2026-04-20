@@ -185,12 +185,12 @@ export function useTasksApp() {
       ),
   });
   const draftsQuery = useQuery({
-    queryKey: ["task-drafts"],
+    queryKey: taskQueryKeys.drafts(),
     queryFn: ({ signal }) =>
       apiListDrafts(TASK_DRAFTS.createModalDraftListLimit, { signal }),
   });
   const taskStatsQuery = useQuery({
-    queryKey: ["task-stats"],
+    queryKey: taskQueryKeys.stats(),
     queryFn: async ({ signal }) => {
       try {
         return await getTaskStats({ signal });
@@ -378,8 +378,8 @@ export function useTasksApp() {
       // regardless of which draft the user is now editing in the create
       // modal, so list / stats / drafts caches must reflect it.
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
-      await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
       // Defensive id-aware guard. Today the create modal's `Modal
       // busy={pending}` lock blocks ESC / backdrop close while
       // `createMutation.isPending`, so the user *cannot* switch drafts
@@ -520,7 +520,7 @@ export function useTasksApp() {
       // and `resumeDraftByID`, so it reflects the freshest id even when
       // this `onSuccess` resolves in the same microtask as the switch.
       if (newDraftIDRef.current !== saved.id) {
-        await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
+        await queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
         return;
       }
       if (saved.id !== newDraftID) {
@@ -537,7 +537,7 @@ export function useTasksApp() {
       setDraftAutosaveBaseline(variables.signature);
       setDraftAutosaveBaselineID(saved.id);
       setLastDraftSavedAt(Date.now());
-      await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
     },
   });
 
@@ -565,7 +565,7 @@ export function useTasksApp() {
   const deleteDraftMutation = useMutation({
     mutationFn: (id: string) => apiDeleteDraft(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["task-drafts"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
     },
   });
   const resumeDraftMutation = useMutation({

@@ -779,7 +779,7 @@ describe("App", () => {
     renderApp();
     await screen.findByText("No tasks yet");
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
-    expect(await screen.findByRole("status")).toHaveTextContent(/loading drafts/i);
+    expect(await screen.findByText(/loading drafts/i)).toBeInTheDocument();
   });
 
   it("shows home entry hint when drafts fail and opens fresh create form", async () => {

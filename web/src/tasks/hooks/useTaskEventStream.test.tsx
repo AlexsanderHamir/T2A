@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { taskQueryKeys } from "../task-query";
 import { useTaskEventStream } from "./useTaskEventStream";
 
 type MockES = {
@@ -119,7 +120,7 @@ describe("useTaskEventStream", () => {
   });
 
   it("invalidates the task-stats query on task/cycle frames", () => {
-    // Regression: ["task-stats"] lives outside the taskQueryKeys tree.
+    // Regression: taskQueryKeys.stats() lives outside the taskQueryKeys.all tree.
     // SSE used to invalidate only listRoot + detail, so list rows updated
     // but aggregated stats stayed frozen until a manual mutation or hard
     // refresh.
@@ -143,7 +144,7 @@ describe("useTaskEventStream", () => {
     });
 
     const calls = inv.mock.calls.map((c) => c[0]);
-    expect(calls).toContainEqual({ queryKey: ["task-stats"] });
+    expect(calls).toContainEqual({ queryKey: taskQueryKeys.stats() });
   });
 
   it("falls back to broad invalidation when no recognised frame arrives", () => {
@@ -417,7 +418,7 @@ describe("useTaskEventStream", () => {
       (c) => (c[0] as { queryKey: readonly unknown[] }).queryKey,
     );
     expect(calls).toContainEqual(["tasks"]);
-    expect(calls).toContainEqual(["task-stats"]);
+    expect(calls).toContainEqual(taskQueryKeys.stats());
     expect(calls).toContainEqual(["settings", "app"]);
 
     // Even after letting any pending debounce drain, the broad

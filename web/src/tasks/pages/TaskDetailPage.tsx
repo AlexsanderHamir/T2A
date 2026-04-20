@@ -159,7 +159,7 @@ export function TaskDetailPage({ app }: Props) {
     },
     onSuccess: async (_data, _vars, context) => {
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       if (context) {
         rumMutationSettled(
           "task_requeue",

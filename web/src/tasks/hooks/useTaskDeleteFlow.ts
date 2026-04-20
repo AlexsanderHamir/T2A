@@ -203,7 +203,7 @@ export function useTaskDeleteFlow(opts: {
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.listRoot(),
       });
-      await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       onDeleted?.(deletedId);
       if (context) {
         rumMutationSettled(

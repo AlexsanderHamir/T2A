@@ -112,7 +112,7 @@ export function useBulkScheduleMutation() {
         // pre-attempt server-truth value, which is exactly what we
         // want the UI to reconcile to.
         await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-        await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+        await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
         return summary;
       } finally {
         setPending(false);

@@ -206,7 +206,7 @@ describe("useTaskDeleteFlow", () => {
       queryKey: ["tasks", "list"],
     });
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ["task-stats"],
+      queryKey: taskQueryKeys.stats(),
     });
   });
 

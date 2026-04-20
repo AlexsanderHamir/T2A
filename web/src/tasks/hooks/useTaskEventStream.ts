@@ -82,11 +82,11 @@ export function useTaskEventStream(): boolean {
     clearPending(pendingRef.current);
     if (taskIds.length === 0 && cycleEntries.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      // `["task-stats"]` (shared with Observability) is keyed outside
+      // `taskQueryKeys.stats()` (shared with Observability) is keyed outside
       // taskQueryKeys.all, so the broad task fallback above does not
       // touch it. Without this companion invalidation, aggregated counts
       // stay stale until the next manual mutation or page refresh.
-      void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       return;
     }
     if (taskIds.length > 0) {
@@ -118,10 +118,10 @@ export function useTaskEventStream(): boolean {
     // have to invalidate it explicitly here; the existing list/detail
     // invalidations above do not cover it. Mutation handlers
     // (useTaskPatchFlow / useTaskDeleteFlow / useTasksApp.create*) also
-    // invalidate ["task-stats"], but those only fire for user-initiated
+    // invalidate taskQueryKeys.stats(), but those only fire for user-initiated
     // edits — agent-driven worker transitions reach the SPA solely
     // through this SSE path.
-    void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+    void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
   }, [queryClient]);
 
   const scheduleInvalidateFromStream = useCallback(
@@ -172,7 +172,7 @@ export function useTaskEventStream(): boolean {
           firstQueuedAtRef.current = null;
           clearPending(pendingRef.current);
           void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-          void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
           void queryClient.invalidateQueries({
             queryKey: settingsQueryKeys.app(),
           });
