@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { useTasksApp } from "../hooks/useTasksApp";
 import type { TaskStatsResponse } from "@/types/task";
 import { TaskHome } from "./TaskHome";
@@ -70,7 +71,7 @@ function statsFixture(overrides: Partial<TaskStatsResponse> = {}): TaskStatsResp
 
 function renderHome(app: App) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
       <TaskHome app={app} />
     </MemoryRouter>,
   );
