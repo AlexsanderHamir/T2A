@@ -4,6 +4,18 @@ import { getTask, listChecklist, patchTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { errorMessage } from "@/lib/errorMessage";
 import {
+  rumMutationOptimisticApplied,
+  rumMutationRolledBack,
+  rumMutationSettled,
+  rumMutationStarted,
+} from "@/observability";
+import { useOptionalToast } from "@/shared/toast";
+import {
+  bumpOptimisticVersion,
+  clearOptimisticVersion,
+} from "../hooks/optimisticVersion";
+import type { Task } from "@/types";
+import {
   SubtaskCreateModal,
   SubtaskTree,
   TaskCyclesPanel,
@@ -100,11 +112,54 @@ export function TaskDetailPage({ app }: Props) {
     enabled: Boolean(taskId) && taskQuery.isSuccess,
   });
 
-  const requeueMutation = useMutation({
+  const toast = useOptionalToast();
+  const requeueMutation = useMutation<
+    unknown,
+    unknown,
+    void,
+    { prev: Task | undefined; startedAtMs: number }
+  >({
     mutationFn: () => patchTask(taskId, { status: "ready" }),
-    onSuccess: async () => {
+    onMutate: async () => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("task_requeue");
+      bumpOptimisticVersion(taskId);
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
+      const detailKey = taskQueryKeys.detail(taskId);
+      const prev = queryClient.getQueryData<Task>(detailKey);
+      if (prev) {
+        queryClient.setQueryData<Task>(detailKey, { ...prev, status: "ready" });
+      }
+      rumMutationOptimisticApplied("task_requeue", performance.now() - startedAtMs);
+      return { prev, startedAtMs };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(taskQueryKeys.detail(taskId), context.prev);
+      }
+      if (context) {
+        rumMutationRolledBack("task_requeue", performance.now() - context.startedAtMs);
+        rumMutationSettled(
+          "task_requeue",
+          performance.now() - context.startedAtMs,
+          0,
+        );
+      }
+      toast.error("Couldn't requeue - reverted.");
+    },
+    onSuccess: async (_data, _vars, context) => {
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+      if (context) {
+        rumMutationSettled(
+          "task_requeue",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
+    },
+    onSettled: () => {
+      clearOptimisticVersion(taskId);
     },
   });
 
