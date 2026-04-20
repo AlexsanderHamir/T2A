@@ -461,6 +461,8 @@ describe("useTasksApp createMutation race", () => {
         initial_prompt: input.initial_prompt ?? "",
         status: "ready",
         priority: input.priority,
+        runner: input.runner ?? "cursor",
+        cursor_model: input.cursor_model ?? "",
         checklist_inherit: false,
       };
     });
@@ -539,6 +541,8 @@ describe("useTasksApp createMutation race", () => {
       initial_prompt: input.initial_prompt ?? "",
       status: "ready",
       priority: input.priority,
+      runner: input.runner ?? "cursor",
+      cursor_model: input.cursor_model ?? "",
       checklist_inherit: false,
     }));
 

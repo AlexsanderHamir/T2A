@@ -9,6 +9,15 @@ import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
 
+/** Task create modal loads models via POST /settings/list-cursor-models; mocks must not 404 here. */
+function jsonListCursorModelsOk(): Response {
+  return Response.json({
+    ok: true,
+    runner: "cursor",
+    models: [{ id: "test", label: "Test" }],
+  });
+}
+
 async function openNewTaskModal(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /^new task$/i }));
   return screen.findByRole("dialog");
@@ -225,6 +234,9 @@ describe("App", () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      if (url.endsWith("/settings/list-cursor-models") && init?.method === "POST") {
+        return jsonListCursorModelsOk();
+      }
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
       }
@@ -341,6 +353,9 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      if (url.endsWith("/settings/list-cursor-models") && init?.method === "POST") {
+        return jsonListCursorModelsOk();
+      }
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
       }
@@ -382,6 +397,9 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      if (url.endsWith("/settings/list-cursor-models") && init?.method === "POST") {
+        return jsonListCursorModelsOk();
+      }
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
       }
@@ -765,8 +783,11 @@ describe("App", () => {
 
   it("shows home entry hint when drafts fail and opens fresh create form", async () => {
     const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      if (url.endsWith("/settings/list-cursor-models") && init?.method === "POST") {
+        return jsonListCursorModelsOk();
+      }
       if (url.startsWith("/tasks?")) {
         return Response.json({ tasks: [], limit: 200, offset: 0 });
       }
@@ -790,7 +811,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
 
     expect(await screen.findByRole("dialog", { name: /^new task$/i })).toBeInTheDocument();
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    const draftsHintAlert = await screen.findByRole("alert");
+    expect(draftsHintAlert).toHaveTextContent(
       /saved drafts are unavailable right now/i,
     );
     expect(

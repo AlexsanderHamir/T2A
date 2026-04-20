@@ -9,6 +9,8 @@ const leaf = (id: string, children?: Task[]): Task => ({
   status: "ready",
   priority: "medium",
   task_type: "general",
+  runner: "cursor",
+  cursor_model: "",
   checklist_inherit: false,
   ...(children ? { children } : {}),
 });

@@ -11,6 +11,8 @@ function row(
     checklist_inherit: false,
     depth: 0,
     ...partial,
+    runner: partial.runner ?? "cursor",
+    cursor_model: partial.cursor_model ?? "",
   };
 }
 

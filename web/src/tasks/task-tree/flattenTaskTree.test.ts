@@ -7,6 +7,8 @@ const child = {
   initial_prompt: "",
   status: "ready" as const,
   priority: "medium" as const,
+  runner: "cursor" as const,
+  cursor_model: "",
   checklist_inherit: false as const,
 };
 
@@ -16,6 +18,8 @@ const root = {
   initial_prompt: "",
   status: "ready" as const,
   priority: "medium" as const,
+  runner: "cursor" as const,
+  cursor_model: "",
   checklist_inherit: false as const,
   children: [child],
 };
@@ -41,6 +45,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
     };
     const mid = {
@@ -49,6 +55,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
       children: [grand],
     };
@@ -58,6 +66,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
       children: [mid],
     };
@@ -67,6 +77,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "done" as const,
       priority: "low" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
     };
     const flat = flattenTaskTree([top, other]);
@@ -98,6 +110,8 @@ describe("flattenTaskTreeRoots", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "low" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
     };
     const b = {
@@ -106,6 +120,8 @@ describe("flattenTaskTreeRoots", () => {
       initial_prompt: "",
       status: "done" as const,
       priority: "high" as const,
+      runner: "cursor" as const,
+      cursor_model: "",
       checklist_inherit: false as const,
       children: [child],
     };

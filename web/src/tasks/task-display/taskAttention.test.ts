@@ -9,6 +9,8 @@ function minimalTask(status: Status): Task {
     initial_prompt: "",
     status,
     priority: "medium",
+    runner: "cursor",
+    cursor_model: "",
     checklist_inherit: false,
   };
 }
