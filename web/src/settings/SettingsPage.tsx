@@ -11,6 +11,7 @@ import {
   getTimezoneSelectOptions,
 } from "@/shared/time/appTimezone";
 import { useAppSettings } from "./useAppSettings";
+import { TimezoneCombobox } from "./TimezoneCombobox";
 import "./settings.css";
 
 const RUNNERS = [{ id: "cursor", label: "Cursor (cursor-agent CLI)" }] as const;
@@ -495,26 +496,21 @@ export function SettingsPage() {
           <legend>Display</legend>
           <label className="settings-field">
             <span className="settings-field-label">Timezone</span>
-            <select
-              data-testid="settings-display-timezone-select"
+            <TimezoneCombobox
+              testId="settings-display-timezone-select"
               value={form.displayTimezone}
-              onChange={(e) => handleField("displayTimezone", e.target.value)}
-            >
-              <option value="">
-                Auto-detect — {formatTimezoneMenuLabel(browserTz)}
-              </option>
-              {tzSelectOptions.map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {tz.label}
-                </option>
-              ))}
-              {showCustomTz ? (
-                <option value={form.displayTimezone.trim()}>
-                  {formatTimezoneMenuLabel(form.displayTimezone.trim())}{" "}
-                  (saved — not in list)
-                </option>
-              ) : null}
-            </select>
+              onChange={(v) => handleField("displayTimezone", v)}
+              browserTz={browserTz}
+              options={tzSelectOptions}
+              customSaved={
+                showCustomTz
+                  ? {
+                      value: form.displayTimezone.trim(),
+                      label: `${formatTimezoneMenuLabel(form.displayTimezone.trim())} (saved — not in list)`,
+                    }
+                  : null
+              }
+            />
           </label>
         </fieldset>
 
@@ -557,10 +553,33 @@ export function SettingsPage() {
             <details className="settings-learn-more settings-learn-more--nested">
               <summary>Learn more</summary>
               <p>
-                Affects PATCH, DELETE, checklist, requeue, and subtask
-                create flows. Purely a client-side behavior — the
-                server is unaware of the flag.
+                Affects saving edits, deletes, checklist changes, requeue,
+                and creating subtasks. Purely client-side — the server does
+                not read this flag.
               </p>
+              <p className="settings-learn-more-subheading">Pros</p>
+              <ul className="settings-learn-more-list">
+                <li>
+                  Feels instant: the table and detail views update as soon
+                  as you act, instead of waiting on the network.
+                </li>
+                <li>
+                  Less &quot;stuck&quot; UI on slow connections or busy
+                  servers.
+                </li>
+              </ul>
+              <p className="settings-learn-more-subheading">Cons</p>
+              <ul className="settings-learn-more-list">
+                <li>
+                  If the server rejects a change, the UI rewinds that
+                  update and shows an error — there can be a brief moment
+                  where what you saw didn&apos;t match the server.
+                </li>
+                <li>
+                  Slightly more moving parts on the client (rollback
+                  paths), which can make rare bugs easier to trigger.
+                </li>
+              </ul>
             </details>
           </div>
 
@@ -575,7 +594,7 @@ export function SettingsPage() {
                 }
               />
               <span className="settings-field-label">
-                SSE replay (lossless events)
+                Replay missed live updates
               </span>
             </label>
             <p
@@ -585,16 +604,48 @@ export function SettingsPage() {
             >
               <span className="settings-rollout-state-dot" aria-hidden="true" />
               {form.sseReplayEnabled
-                ? "On — reconnects replay buffered events."
-                : "Off — events during a reconnect gap are dropped."}
+                ? "On — after a disconnect, the app can ask the server for updates you missed."
+                : "Off — updates that arrived while you were disconnected are skipped (refresh may be needed)."}
             </p>
             <details className="settings-learn-more settings-learn-more--nested">
               <summary>Learn more</summary>
               <p>
-                Honors the browser&apos;s <code>Last-Event-ID</code>{" "}
-                header on reconnect. Purely additive server-side; the
-                SPA&apos;s resume header is a no-op when this flag is
-                off.
+                The app keeps a live connection for task and run updates.
+                If that connection drops—even briefly—there can be a gap
+                where something changed on the server before you were
+                listening again.
+              </p>
+              <p className="settings-learn-more-subheading">Pros</p>
+              <ul className="settings-learn-more-list">
+                <li>
+                  After a short disconnect (e.g. Wi‑Fi flicker), the UI can
+                  catch up: a task moving to &quot;done&quot; while you
+                  were offline can still appear in the list and detail
+                  views without a full page reload.
+                </li>
+                <li>
+                  Fewer &quot;stale until I refreshed&quot; moments when
+                  the live stream hiccups.
+                </li>
+              </ul>
+              <p className="settings-learn-more-subheading">Cons</p>
+              <ul className="settings-learn-more-list">
+                <li>
+                  Only helps if the <strong>server</strong> supports
+                  resending missed events. If the backend doesn&apos;t,
+                  this setting has no effect.
+                </li>
+                <li>
+                  Reconnecting after a long gap may mean more work for the
+                  server to replay what you missed (usually still fine,
+                  but not free).
+                </li>
+              </ul>
+              <p>
+                Implementation note: reconnects send the browser&apos;s{" "}
+                <code>Last-Event-ID</code> so the server knows where to
+                resume. Operators wiring the backend should expose replay
+                accordingly.
               </p>
             </details>
           </div>

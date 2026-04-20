@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_APP_TIMEZONE,
   detectBrowserTimezone,
+  filterTimezoneSelectOptions,
   formatInAppTimezone,
   formatTimezoneMenuLabel,
   getTimezoneOffsetMinutesAt,
+  getTimezoneSearchHaystack,
   getTimezoneSelectOptions,
   isoToZonedDatetimeLocal,
+  matchesTimezoneSearchQuery,
   supportedTimezones,
   zonedDatetimeLocalToIso,
 } from "./appTimezone";
@@ -114,6 +117,29 @@ describe("formatTimezoneMenuLabel / getTimezoneSelectOptions", () => {
 
   it("getTimezoneOffsetMinutesAt matches Tokyo +9 in July", () => {
     expect(getTimezoneOffsetMinutesAt("Asia/Tokyo", summerUtc)).toBe(9 * 60);
+  });
+});
+
+describe("timezone search helpers", () => {
+  const summerUtc = new Date("2026-07-15T12:00:00Z");
+  const tokyo = {
+    value: "Asia/Tokyo",
+    label: formatTimezoneMenuLabel("Asia/Tokyo", summerUtc),
+  };
+
+  it("matchesTimezoneSearchQuery requires every token to appear", () => {
+    const h = getTimezoneSearchHaystack(tokyo);
+    expect(matchesTimezoneSearchQuery(h, "tokyo")).toBe(true);
+    expect(matchesTimezoneSearchQuery(h, "asia tokyo")).toBe(true);
+    expect(matchesTimezoneSearchQuery(h, "tokyo paris")).toBe(false);
+  });
+
+  it("filterTimezoneSelectOptions finds Tokyo by city or offset token", () => {
+    const opts = getTimezoneSelectOptions(summerUtc);
+    const byCity = filterTimezoneSelectOptions(opts, "tokyo");
+    expect(byCity.some((o) => o.value === "Asia/Tokyo")).toBe(true);
+    const byGmt = filterTimezoneSelectOptions(opts, "+09");
+    expect(byGmt.some((o) => o.value === "Asia/Tokyo")).toBe(true);
   });
 });
 

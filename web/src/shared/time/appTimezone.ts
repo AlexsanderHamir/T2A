@@ -163,6 +163,65 @@ export function supportedTimezones(): string[] {
 export type TimezoneSelectOption = { value: string; label: string };
 
 /**
+ * Lowercase search haystack for a timezone row: IANA id, Meet label,
+ * region + city tokens (so "tokyo", "asia", "gmt+9" can all match).
+ */
+export function getTimezoneSearchHaystack(opt: TimezoneSelectOption): string {
+  const v = opt.value;
+  const segments = v.split("/");
+  const region = segments.length > 1 ? segments[0] : "";
+  const city =
+    segments.length > 0 ? segments[segments.length - 1].replace(/_/g, " ") : v;
+  const flatSlashes = v.replace(/\//g, " ");
+  const flatUnderscores = v.replace(/_/g, " ");
+  const labelLo = opt.label.toLowerCase();
+  return [
+    v,
+    labelLo,
+    region,
+    city,
+    flatSlashes,
+    flatUnderscores,
+    // e.g. "(gmt-07:00)" → extra tokens for "7" / "07" seekers
+    labelLo.replace(/[()]/g, " "),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+/** True when every whitespace-separated token appears in `haystack`. */
+export function matchesTimezoneSearchQuery(
+  haystack: string,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  return tokens.every((t) => haystack.includes(t));
+}
+
+/**
+ * Filters IANA timezone options by substring / token search. Empty
+ * `query` returns the full list (caller may cap UI height).
+ */
+export function filterTimezoneSelectOptions(
+  options: TimezoneSelectOption[],
+  query: string,
+  maxResults = 200,
+): TimezoneSelectOption[] {
+  const q = query.trim();
+  if (!q) return options;
+  const out: TimezoneSelectOption[] = [];
+  for (const o of options) {
+    if (out.length >= maxResults) break;
+    const h = getTimezoneSearchHaystack(o);
+    if (matchesTimezoneSearchQuery(h, q)) out.push(o);
+  }
+  return out;
+}
+
+/**
  * Parses `GMT+9`, `GMT-05:30`, etc. from Intl `longOffset` to minutes
  * east of UTC.
  */
