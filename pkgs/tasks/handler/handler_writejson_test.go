@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -16,7 +16,12 @@ func TestWriteJSON_encodeFailureReturns500JSON(t *testing.T) {
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status: got %d want %d body=%q", rr.Code, http.StatusInternalServerError, rr.Body.String())
 	}
-	if !strings.Contains(rr.Body.String(), "internal server error") {
-		t.Fatalf("body should mention internal error: %q", rr.Body.String())
+	var body jsonErrorBody
+	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v body=%q", err, rr.Body.String())
+	}
+	const want = "internal server error" // handler_http_json.go::writeJSON encode-fallback → writeJSONError
+	if body.Error != want {
+		t.Fatalf("error: got %q want %q (same bare phrase as stack_test.go recovery path)", body.Error, want)
 	}
 }
