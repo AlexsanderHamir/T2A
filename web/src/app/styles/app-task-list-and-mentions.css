@@ -1169,6 +1169,25 @@
   flex-wrap: wrap;
 }
 
+/*
+ * Global `button.secondary` is transparent (ghost). On the brand-tinted
+ * bulk bar that hides Clear / Cancel until hover. Solid elevated surface
+ * by default; hover shifts to `--bg-subtle` (same intent as global hover).
+ */
+.task-list-bulk-bar-actions button.secondary {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (hover: hover) {
+  .task-list-bulk-bar-actions button.secondary:not(:disabled):hover {
+    background: var(--bg-subtle);
+    border-color: var(--border-interactive-hover);
+    box-shadow: var(--shadow-sm);
+    transform: none;
+  }
+}
+
 .task-list-bulk-error {
   margin-top: 0.5rem;
 }
