@@ -25,6 +25,7 @@ type statsResponseRaw struct {
 	Total          int64                        `json:"total"`
 	Ready          int64                        `json:"ready"`
 	Critical       int64                        `json:"critical"`
+	Scheduled      int64                        `json:"scheduled"`
 	ByStatus       map[string]int64             `json:"by_status"`
 	ByPriority     map[string]int64             `json:"by_priority"`
 	ByScope        map[string]int64             `json:"by_scope"`
@@ -257,7 +258,7 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 		if len(got.ByPriority) != 0 {
 			t.Fatalf("by_priority=%v want {} on empty DB", got.ByPriority)
 		}
-		if got.Total != 0 || got.Ready != 0 || got.Critical != 0 {
+		if got.Total != 0 || got.Ready != 0 || got.Critical != 0 || got.Scheduled != 0 {
 			t.Fatalf("totals=%+v want all 0 on empty DB", got)
 		}
 		assertCyclesEmpty(t, raw, got)
@@ -378,7 +379,7 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
 	want := map[string]struct{}{
-		"total": {}, "ready": {}, "critical": {},
+		"total": {}, "ready": {}, "critical": {}, "scheduled": {},
 		"by_status": {}, "by_priority": {}, "by_scope": {},
 		"cycles": {}, "phases": {}, "runner": {}, "recent_failures": {},
 	}

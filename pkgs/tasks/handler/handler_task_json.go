@@ -68,9 +68,16 @@ type listResponse struct {
 }
 
 type taskStatsResponse struct {
-	Total          int64                     `json:"total"`
-	Ready          int64                     `json:"ready"`
-	Critical       int64                     `json:"critical"`
+	Total    int64 `json:"total"`
+	Ready    int64 `json:"ready"`
+	Critical int64 `json:"critical"`
+	// Scheduled mirrors store.TaskStats.Scheduled — the count of
+	// status='ready' tasks deferred via pickup_not_before > now.
+	// Always present (0 on a fresh database) so the wire shape
+	// stays stable; the SPA distinguishes "0 ready, 12 scheduled"
+	// (intentionally deferred — agent worker is correctly idle)
+	// from "0 ready, 0 scheduled" (truly idle, nothing to do).
+	Scheduled      int64                     `json:"scheduled"`
 	ByStatus       map[domain.Status]int64   `json:"by_status"`
 	ByPriority     map[domain.Priority]int64 `json:"by_priority"`
 	ByScope        map[string]int64          `json:"by_scope"`
@@ -168,6 +175,7 @@ func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
 		Total:      s.Total,
 		Ready:      s.Ready,
 		Critical:   s.Critical,
+		Scheduled:  s.Scheduled,
 		ByStatus:   s.ByStatus,
 		ByPriority: s.ByPriority,
 		ByScope:    s.ByScope,

@@ -8,6 +8,7 @@ package stats
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
@@ -21,9 +22,15 @@ const logCmd = "taskapi"
 // `null`) and that RecentFailures is non-nil (empty slice). The HTTP
 // handler relies on this invariant to serve a stable wire shape.
 type TaskStats struct {
-	Total          int64
-	Ready          int64
-	Critical       int64
+	Total    int64
+	Ready    int64
+	Critical int64
+	// Scheduled is the count of ready tasks deferred into the
+	// future via `pickup_not_before > now`. Surfaces the
+	// "intentionally deferred" state on the Observability page so
+	// "0 ready, 12 scheduled" reads differently from "0 ready, 0
+	// scheduled" — see docs/SCHEDULING.md "the two queues" section.
+	Scheduled      int64
 	ByStatus       map[domain.Status]int64
 	ByPriority     map[domain.Priority]int64
 	ByScope        map[string]int64
@@ -75,7 +82,7 @@ var allPhases = []domain.Phase{
 func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 	defer kernel.DeferLatency(kernel.OpTaskStats)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.Get")
-	r, err := scanTotals(ctx, db)
+	r, err := scanTotals(ctx, db, time.Now().UTC())
 	if err != nil {
 		return TaskStats{}, err
 	}
@@ -83,6 +90,7 @@ func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 		Total:      r.Total,
 		Ready:      r.Ready,
 		Critical:   r.Critical,
+		Scheduled:  r.Scheduled,
 		ByStatus:   map[domain.Status]int64{},
 		ByPriority: map[domain.Priority]int64{},
 		ByScope: map[string]int64{
