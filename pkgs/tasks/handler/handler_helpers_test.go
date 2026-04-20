@@ -63,7 +63,9 @@ func TestDecodeJSON_rejectsTrailingJSON(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, domain.ErrInvalidInput) && !strings.Contains(err.Error(), "trailing") {
+	// decodeJSON uses the literal "json trailing data" for both the ErrInvalidInput
+	// wrap (extra value after first object) and the decode-failure wrap — see handler_http_json.go.
+	if !errors.Is(err, domain.ErrInvalidInput) && !strings.Contains(err.Error(), "json trailing data") {
 		t.Fatalf("unexpected err: %v", err)
 	}
 }
