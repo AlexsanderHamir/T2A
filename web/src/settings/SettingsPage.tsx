@@ -463,8 +463,14 @@ export function SettingsPage() {
           </p>
         </fieldset>
 
-        <fieldset className="settings-fieldset">
-          <legend>Realtime rollout</legend>
+        <fieldset className="settings-fieldset settings-fieldset--rollout">
+          <legend>
+            <span
+              className="settings-legend-dot"
+              aria-hidden="true"
+            />
+            Realtime rollout
+          </legend>
           {/* The prior layout carried three paragraphs of copy per
               toggle (fieldset subtitle + current-state line +
               technical help), which added up to a wall of text

@@ -100,6 +100,43 @@
   padding: 0 6px;
 }
 
+/*
+ * Realtime rollout fieldset variant — the base `.settings-fieldset`
+ * stays neutral for the other sections (Workspace, Cursor binary,
+ * etc.) where card-per-field styling would be overkill. This
+ * variant upgrades the Realtime rollout section to a stronger
+ * Stripe/Apple settings aesthetic (soft surface, slight shadow,
+ * brand-accented legend) because its toggles are the operational
+ * lever — they deserve visual weight.
+ */
+.settings-fieldset--rollout {
+  background:
+    linear-gradient(
+      180deg,
+      var(--brand-surface-faint, color-mix(in srgb, var(--brand) 4%, transparent)) 0%,
+      var(--surface-card, #fff) 60%
+    );
+  border-color: var(--brand-border-faint, color-mix(in srgb, var(--brand) 14%, transparent));
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+  padding: 18px 20px 20px;
+  gap: 14px;
+}
+
+.settings-fieldset--rollout legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand, #635bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 18%, transparent);
+  flex-shrink: 0;
+}
+
 .settings-field {
   display: flex;
   flex-direction: column;
@@ -256,21 +293,139 @@
   font-weight: 600;
 }
 
+/*
+ * Each rollout toggle is its own card (Stripe-style "setting card" —
+ * also used in their dashboard billing / developer toggles):
+ *   - resting:  hairline border, --surface-card fill, tiny shadow.
+ *   - enabled:  brand-tinted border + faint brand wash over the card,
+ *               driven by `:has(input:checked)`. The accent is how
+ *               the operator scans which flags are on without reading
+ *               the state line — the "all gray" page before this
+ *               redesign had nothing signalling on vs off except a
+ *               8px dot which was too easy to miss.
+ *
+ * The inline `<label>` inside each card uses CSS `order` to push the
+ * (now visually restyled) checkbox to the right of the row, iOS-
+ * Settings-style, with the label text leading on the left and the
+ * Default pill sitting snug against the switch. Accessibility stays
+ * intact because the input is still a native checkbox — the switch
+ * is purely visual.
+ */
 .settings-rollout-toggle {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-}
-
-.settings-rollout-toggle:first-of-type {
-  border-top: none;
-  padding-top: 4px;
-}
-
-.settings-rollout-toggle .settings-field--inline {
   gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-card, #fff);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+  transition:
+    border-color var(--duration-normal, 200ms) var(--ease-out, ease-out),
+    background-color var(--duration-normal, 200ms) var(--ease-out, ease-out),
+    box-shadow var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+.settings-rollout-toggle:has(input[type="checkbox"]:checked) {
+  border-color: var(--brand-border-subtle, color-mix(in srgb, var(--brand) 22%, transparent));
+  background:
+    linear-gradient(
+      180deg,
+      var(--brand-surface-faint, color-mix(in srgb, var(--brand) 5%, transparent)) 0%,
+      var(--surface-card, #fff) 70%
+    );
+  box-shadow:
+    var(--shadow-sm, 0 1px 3px rgb(0 0 0 / 6%)),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand) 6%, transparent);
+}
+
+/*
+ * Label row layout: [label] [default pill] [switch].
+ * The native checkbox sits first in source order (accessibility —
+ * screenreaders read the name with the label), but `order` pushes
+ * it to the visual end of the row where operators expect a toggle
+ * to live on a settings screen.
+ */
+.settings-rollout-toggle .settings-field--inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.settings-rollout-toggle .settings-field--inline > input[type="checkbox"] {
+  order: 3;
+  margin-left: auto;
+}
+
+.settings-rollout-toggle .settings-field-label {
+  order: 1;
+  flex: 1 1 auto;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+.settings-rollout-toggle .settings-default-badge {
+  order: 2;
+}
+
+/*
+ * iOS-style switch carved out of the real <input type="checkbox">.
+ * Sized 40×24 (thumb 20×20) to match Stripe's dashboard toggle, with
+ * a brand-colored fill on `:checked` and a crisp white thumb that
+ * slides on a 150ms ease. Keeping it as a styled checkbox (rather
+ * than a hidden input + decorative span) means HTML form semantics,
+ * keyboard focus, and screen-reader announcements all come free.
+ */
+.settings-rollout-toggle input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 150ms) ease;
+}
+
+.settings-rollout-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 18%),
+    0 0 0 0.5px rgb(0 0 0 / 4%);
+  transition: transform var(--duration-short, 150ms) var(--ease-out, ease-out);
+}
+
+.settings-rollout-toggle input[type="checkbox"]:checked {
+  background: var(--brand, #635bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 14%, transparent);
+}
+
+.settings-rollout-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(16px);
+}
+
+.settings-rollout-toggle input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--brand, #635bff);
+  outline-offset: 2px;
 }
 
 .settings-default-badge {
@@ -285,8 +440,6 @@
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
   border-radius: 999px;
   white-space: nowrap;
-  /* Keep the badge snug to the label text, not stretched to fill. */
-  margin-left: 2px;
 }
 
 .settings-rollout-state {
@@ -294,7 +447,6 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding-left: 26px; /* align with the label text past the checkbox */
   font-size: 13px;
   line-height: 1.45;
   color: var(--text-secondary, var(--color-text-muted, #555));
@@ -314,16 +466,13 @@
 }
 
 .settings-rollout-state[data-on="true"] {
-  color: var(--brand, #0a84ff);
+  color: var(--brand, #635bff);
+  font-weight: 500;
 }
 
 .settings-rollout-state[data-on="true"] .settings-rollout-state-dot {
-  background: var(--brand, #0a84ff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #0a84ff) 18%, transparent);
-}
-
-.settings-rollout-toggle .settings-field-help {
-  padding-left: 26px;
+  background: var(--brand, #635bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 22%, transparent);
 }
 
 /*
@@ -348,8 +497,14 @@
   margin: 2px 0 0;
 }
 
+/*
+ * Per-toggle learn-more sits inside a card now, so the prior 26-px
+ * indent (compensating for a checkbox on the left) is gone. The
+ * summary text gets the same line-height as the state line above
+ * it so the two stack without visual wobble.
+ */
 .settings-learn-more--nested {
-  padding-left: 26px;
+  padding-left: 0;
 }
 
 .settings-learn-more > summary {
@@ -409,6 +564,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .settings-rollout-toggle,
+  .settings-rollout-toggle input[type="checkbox"],
+  .settings-rollout-toggle input[type="checkbox"]::after,
   .settings-rollout-state,
   .settings-rollout-state-dot,
   .settings-learn-more > summary::before {
