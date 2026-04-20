@@ -315,6 +315,11 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 		slog.Error("sse publish marshal failed", "cmd", calltrace.LogCmd, "operation", "tasks.sse.publish", "err", err)
 		return
 	}
+	// Count every Publish that will actually fanout (post-coalesce,
+	// post-marshal). Denominator for slo_sse_resync_rate; must match
+	// the emit-side of what subscribers observe, else the SLI ratio
+	// drifts under coalesce churn.
+	middleware.RecordSSEPublish()
 	id := h.nextID.Add(1)
 	be := bufferedEvent{id: id, line: string(b), at: now}
 
@@ -323,6 +328,17 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 	out := make([]*subscriber, 0, len(h.subs))
 	for s := range h.subs {
 		out = append(out, s)
+	}
+	// Compute a cheap upper bound on subscriber lag: the oldest
+	// retained ring entry's age. This is an overestimate for
+	// well-behaved subscribers (their oldest pending frame is much
+	// newer than the ring's oldest) but a tight bound at eviction
+	// time, which is when we actually care.
+	var ringOldestAge time.Duration
+	if len(h.ring) > 0 {
+		if age := now.Sub(h.ring[0].at); age > 0 {
+			ringOldestAge = age
+		}
 	}
 	h.mu.Unlock()
 
@@ -343,10 +359,25 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 		}
 		select {
 		case s.ch <- be:
+			// A near-empty channel means this subscriber is keeping up:
+			// observe 0 lag so healthy operation pulls the p99 down.
+			// (When capacity−1 slots are free the oldest pending frame
+			// is by definition this one, at ~0s age.) For non-empty
+			// channels this is an underestimate, but a cheap one; the
+			// useful signal is the eviction branch below where we
+			// observe the upper bound explicitly.
+			if len(s.ch) <= 1 {
+				middleware.RecordSSESubscriberLag(0)
+			}
 		default:
 			// Slow consumer: evict instead of silently dropping.
 			// Eviction closes cancel so the writer goroutine sends
-			// a resync frame and shuts the HTTP stream down.
+			// a resync frame and shuts the HTTP stream down. Observe
+			// the ring-entry-age upper bound on this subscriber's lag
+			// (we can't cheaply look inside the Go channel itself).
+			if ringOldestAge > 0 {
+				middleware.RecordSSESubscriberLag(ringOldestAge.Seconds())
+			}
 			h.evictSubscriber(s)
 			evicted++
 			dropped++

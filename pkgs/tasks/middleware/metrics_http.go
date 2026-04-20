@@ -99,6 +99,29 @@ var (
 		Name:      "sse_subscriber_evictions_total",
 		Help:      "Total slow-consumer SSE subscriber evictions (paired with a resync directive on the wire).",
 	})
+	// taskapiSSEPublishTotal counts every successful Publish() call on the
+	// SSE hub — the denominator for the `slo_sse_resync_rate` SLO. Per
+	// docs/SLOs.md the resync-rate SLI is
+	// `sse_resync_emitted_total / sse_publish_total`, so this counter
+	// MUST be incremented once per Publish regardless of how many
+	// subscribers fanout to.
+	taskapiSSEPublishTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "sse_publish_total",
+		Help:      "Total SSE events published to the hub (denominator for slo_sse_resync_rate).",
+	})
+	// taskapiSSESubscriberLagSeconds observes the age (in seconds) of
+	// the oldest pending frame in each subscriber's bounded channel at
+	// Publish time. Drives the `slo_sse_subscriber_lag_p99_seconds ≤ 2`
+	// SLO. Histogram (not Gauge) so the p99 is first-class Prometheus.
+	taskapiSSESubscriberLagSeconds = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "taskapi",
+		Name:      "sse_subscriber_lag_seconds",
+		Help:      "Age of the oldest pending frame in each subscriber's bounded channel at Publish time.",
+		// 10ms..30s — the SLO target is 2s at p99; generous tail so
+		// pathological backpressure doesn't saturate the last bucket.
+		Buckets: []float64{0.010, 0.025, 0.050, 0.100, 0.250, 0.500, 1.0, 2.0, 5.0, 10.0, 30.0},
+	})
 
 	// rumLatencyBuckets are tuned for the click-to-confirmed SLO
 	// `slo_click_to_confirmed_p95_ms ≤ 100` documented in docs/SLOs.md.
@@ -243,6 +266,39 @@ func RecordSSEResyncEmitted(n int) {
 func SSEResyncEmittedCounter() prometheus.Counter {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSEResyncEmittedCounter")
 	return taskapiSSEResyncEmittedTotal
+}
+
+// RecordSSEPublish bumps the publish counter by 1. Call once per
+// SSE hub Publish() invocation regardless of how many subscribers
+// fanout to — this is the denominator for slo_sse_resync_rate.
+func RecordSSEPublish() {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSEPublish")
+	taskapiSSEPublishTotal.Inc()
+}
+
+// SSEPublishCounter exposes the publish counter for tests that need
+// to assert publish volume without hitting /metrics.
+func SSEPublishCounter() prometheus.Counter {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSEPublishCounter")
+	return taskapiSSEPublishTotal
+}
+
+// RecordSSESubscriberLag observes the age (in seconds) of the oldest
+// pending frame in a subscriber's bounded channel at Publish time.
+// Non-positive values are clamped to zero so a clock-skew or monotonic
+// mis-order never produces a bogus negative sample.
+func RecordSSESubscriberLag(seconds float64) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSESubscriberLag", "seconds", seconds)
+	if seconds < 0 {
+		seconds = 0
+	}
+	taskapiSSESubscriberLagSeconds.Observe(seconds)
+}
+
+// SSESubscriberLagHistogram exposes the lag histogram for tests.
+func SSESubscriberLagHistogram() prometheus.Histogram {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSESubscriberLagHistogram")
+	return taskapiSSESubscriberLagSeconds
 }
 
 // RecordSSESubscriberEvictions bumps the slow-consumer eviction counter
