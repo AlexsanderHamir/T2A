@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { flattenTaskTree, flattenTaskTreeRoots } from "./flattenTaskTree";
 
 const child = {
@@ -7,9 +8,8 @@ const child = {
   initial_prompt: "",
   status: "ready" as const,
   priority: "medium" as const,
-  runner: "cursor" as const,
-  cursor_model: "",
   checklist_inherit: false as const,
+  ...TASK_TEST_DEFAULTS,
 };
 
 const root = {
@@ -18,9 +18,8 @@ const root = {
   initial_prompt: "",
   status: "ready" as const,
   priority: "medium" as const,
-  runner: "cursor" as const,
-  cursor_model: "",
   checklist_inherit: false as const,
+  ...TASK_TEST_DEFAULTS,
   children: [child],
 };
 
@@ -45,9 +44,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
     };
     const mid = {
       id: "m1",
@@ -55,9 +53,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       children: [grand],
     };
     const top = {
@@ -66,9 +63,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       children: [mid],
     };
     const other = {
@@ -77,9 +73,8 @@ describe("flattenTaskTree", () => {
       initial_prompt: "",
       status: "done" as const,
       priority: "low" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
     };
     const flat = flattenTaskTree([top, other]);
     expect(flat.map((t) => ({ id: t.id, depth: t.depth }))).toEqual([
@@ -110,9 +105,8 @@ describe("flattenTaskTreeRoots", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "low" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
     };
     const b = {
       id: "b",
@@ -120,9 +114,8 @@ describe("flattenTaskTreeRoots", () => {
       initial_prompt: "",
       status: "done" as const,
       priority: "high" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       children: [child],
     };
     const flat = flattenTaskTreeRoots([a, b]);
