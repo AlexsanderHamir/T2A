@@ -54,6 +54,10 @@ func TestHTTP_error_JSON_includes_request_id_with_access_middleware(t *testing.T
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		t.Fatal(err)
 	}
+	const wantErr = `json: unknown field "unknown_field"`
+	if out.Error != wantErr {
+		t.Fatalf("error %q want %q (encoding/json with DisallowUnknownFields)", out.Error, wantErr)
+	}
 	if out.RequestID != ridHeader {
 		t.Fatalf("request_id %q want %q", out.RequestID, ridHeader)
 	}
