@@ -5,6 +5,7 @@ import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../shared/useDocumentTitle";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
@@ -13,7 +14,7 @@ import { requestUrl } from "../test/requestUrl";
 function jsonListCursorModelsOk(): Response {
   return Response.json({
     ok: true,
-    runner: "cursor",
+    runner: TASK_TEST_DEFAULTS.runner,
     models: [{ id: "test", label: "Test" }],
   });
 }
