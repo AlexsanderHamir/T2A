@@ -8,8 +8,9 @@ import { ROUTER_FUTURE_FLAGS } from "../../../../lib/routerFutureFlags";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskListSection } from "./TaskListSection";
 
-const { mockPatchTask } = vi.hoisted(() => ({
+const { mockPatchTask, mockDeleteTask } = vi.hoisted(() => ({
   mockPatchTask: vi.fn(),
+  mockDeleteTask: vi.fn(),
 }));
 
 vi.mock("@/api", async (importOriginal) => {
@@ -17,11 +18,14 @@ vi.mock("@/api", async (importOriginal) => {
   return {
     ...actual,
     patchTask: mockPatchTask,
+    deleteTask: mockDeleteTask,
   };
 });
 
 beforeEach(() => {
   mockPatchTask.mockReset();
+  mockDeleteTask.mockReset();
+  mockDeleteTask.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -624,6 +628,7 @@ describe("TaskListSection", () => {
       await user.click(screen.getByTestId("task-list-select-all"));
       await user.click(screen.getByTestId("task-list-bulk-bar-cancel"));
       expect(mockPatchTask).not.toHaveBeenCalled();
+      expect(mockDeleteTask).not.toHaveBeenCalled();
       expect(
         screen.queryByTestId("task-list-bulk-bar"),
       ).not.toBeInTheDocument();
@@ -684,6 +689,46 @@ describe("TaskListSection", () => {
       expect(screen.getByText("Future ready")).toBeInTheDocument();
       expect(screen.queryByText("Past ready")).not.toBeInTheDocument();
       expect(screen.queryByText("Plain ready")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("bulk delete", () => {
+    it("opens confirm and DELETEs each selected task", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeRow("a", "Alpha"),
+        makeRow("b", "Beta"),
+        makeRow("c", "Gamma"),
+      ];
+      renderWithRouter(
+        <TaskListSection
+          tasks={tasks}
+          loading={false}
+          refreshing={false}
+          saving={false}
+          {...listPagerDefaults}
+          rootTasksOnPage={3}
+          onEdit={vi.fn()}
+          onRequestDelete={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByTestId("task-list-select-row-a"));
+      await user.click(screen.getByTestId("task-list-select-row-b"));
+      await user.click(screen.getByTestId("task-list-bulk-bar-delete"));
+      expect(
+        screen.getByRole("heading", { name: /delete 2 tasks/i }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByTestId("task-bulk-delete-confirm"));
+      await waitFor(() => {
+        expect(mockDeleteTask).toHaveBeenCalledTimes(2);
+      });
+      const ids = mockDeleteTask.mock.calls.map((c) => c[0]).sort();
+      expect(ids).toEqual(["a", "b"]);
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("task-list-bulk-bar"),
+        ).not.toBeInTheDocument();
+      });
     });
   });
 

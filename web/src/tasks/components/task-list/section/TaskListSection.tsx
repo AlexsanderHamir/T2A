@@ -24,8 +24,10 @@ import { taskListPagerSummary } from "../pager/taskListPagerSummary";
 import { TaskListTableSkeleton } from "../table/TaskListTableSkeleton";
 import { useAppTimezone } from "@/shared/time/appTimezone";
 import {
+  TaskBulkDeleteConfirmModal,
   TaskBulkRescheduleModal,
   TaskListBulkActionBar,
+  useBulkDeleteMutation,
   useBulkScheduleMutation,
   useTaskListSelection,
 } from "../bulk";
@@ -122,8 +124,12 @@ export function TaskListSection({
   const selection = useTaskListSelection(visibleIds);
   const appTimezone = useAppTimezone();
   const bulkSchedule = useBulkScheduleMutation();
+  const bulkDelete = useBulkDeleteMutation();
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [bulkErrorBanner, setBulkErrorBanner] = useState<string | null>(null);
+  /** Inline error inside the bulk-delete modal only (not the list banner). */
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
   const selectedScheduledIds = useMemo(() => {
     const visibleSelected = new Set(selection.selectedVisibleIds);
@@ -140,6 +146,17 @@ export function TaskListSection({
     return filteredTasks.some(
       (t) => visibleSelected.has(t.id) && t.status === "done",
     );
+  }, [filteredTasks, selection.selectedVisibleIds]);
+
+  const selectedRowsForBulkDelete = useMemo(() => {
+    const visibleSelected = new Set(selection.selectedVisibleIds);
+    return filteredTasks
+      .filter((t) => visibleSelected.has(t.id))
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        descendantCount: t.descendantCount,
+      }));
   }, [filteredTasks, selection.selectedVisibleIds]);
 
   const skipFiltersResetOnMount = useRef(true);
@@ -174,6 +191,12 @@ export function TaskListSection({
     setRescheduleModalOpen(false);
     bulkSchedule.reset();
   }, [bulkSchedule]);
+
+  const closeBulkDelete = useCallback(() => {
+    setBulkDeleteModalOpen(false);
+    bulkDelete.reset();
+    setBulkDeleteError(null);
+  }, [bulkDelete]);
 
   const handleRescheduleSubmit = useCallback(
     async (next: string | null) => {
@@ -220,10 +243,34 @@ export function TaskListSection({
     }
   }, [bulkSchedule, selectedScheduledIds, selection]);
 
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    const ids = selection.selectedVisibleIds;
+    if (ids.length === 0) {
+      closeBulkDelete();
+      return;
+    }
+    const result = await bulkDelete.run(ids);
+    if (result.failed.length === 0) {
+      setBulkDeleteModalOpen(false);
+      bulkDelete.reset();
+      selection.clearSelection();
+      setBulkDeleteError(null);
+    } else {
+      setBulkDeleteError(
+        formatBulkDeleteFailure(result.failed.length, result.attempted),
+      );
+    }
+  }, [bulkDelete, closeBulkDelete, selection]);
+
   const handleCancelSelection = useCallback(() => {
     selection.clearSelection();
     setBulkErrorBanner(null);
-  }, [selection]);
+    setBulkDeleteModalOpen(false);
+    bulkDelete.reset();
+    setBulkDeleteError(null);
+    setRescheduleModalOpen(false);
+    bulkSchedule.reset();
+  }, [bulkDelete, bulkSchedule, selection]);
 
   const showTaskPager =
     !loading && (hasPrevPage || hasNextPage || tasks.length === listPageSize);
@@ -301,15 +348,33 @@ export function TaskListSection({
         selectedCount={selection.selectedVisibleIds.length}
         scheduledCount={selectedScheduledIds.length}
         rescheduleDisabled={selectedIncludesDone}
-        busy={bulkSchedule.isPending}
+        busy={bulkSchedule.isPending || bulkDelete.isPending}
         onReschedule={() => {
+          setBulkDeleteModalOpen(false);
+          bulkDelete.reset();
           if (selectedIncludesDone) return;
           setBulkErrorBanner(null);
           setRescheduleModalOpen(true);
         }}
         onClearSchedule={handleClearSchedule}
+        onDelete={() => {
+          setRescheduleModalOpen(false);
+          bulkSchedule.reset();
+          setBulkErrorBanner(null);
+          setBulkDeleteError(null);
+          setBulkDeleteModalOpen(true);
+        }}
         onCancel={handleCancelSelection}
       />
+      {bulkDeleteModalOpen && selectedRowsForBulkDelete.length > 0 ? (
+        <TaskBulkDeleteConfirmModal
+          tasks={selectedRowsForBulkDelete}
+          busy={bulkDelete.isPending}
+          error={bulkDeleteError}
+          onCancel={closeBulkDelete}
+          onConfirm={handleBulkDeleteConfirm}
+        />
+      ) : null}
       {rescheduleModalOpen ? (
         <TaskBulkRescheduleModal
           selectedCount={selection.selectedVisibleIds.length}
@@ -326,4 +391,8 @@ export function TaskListSection({
 
 function formatBulkFailure(failedCount: number, attempted: number): string {
   return `${failedCount} of ${attempted} reschedules failed. The successful ones already updated; the failed rows kept their previous schedule. Try again or check the task detail pages for details.`;
+}
+
+function formatBulkDeleteFailure(failedCount: number, attempted: number): string {
+  return `${failedCount} of ${attempted} deletes failed. Tasks that were removed stay deleted; try again for the rest.`;
 }

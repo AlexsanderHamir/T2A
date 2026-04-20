@@ -17,6 +17,7 @@ type Props = {
   busy: boolean;
   onReschedule: () => void;
   onClearSchedule: () => void;
+  onDelete: () => void;
   onCancel: () => void;
 };
 
@@ -36,8 +37,10 @@ type Props = {
  *    is "remove the deferred-pickup time"; if nothing has one,
  *    there's nothing to clear). For N > 5 the parent renders a
  *    `confirm()` step before firing.
+ *  - **Delete** (destructive): opens a confirmation modal; on confirm
+ *    the parent DELETEs each selected task (server cascade per id).
  *  - **Cancel** (tertiary): clears the running selection without
- *    firing any PATCHes.
+ *    firing any mutations.
  *
  * Visibility (`selectedCount > 0`) and selection lifecycle
  * (clearing on filter/sort change or successful bulk action) are
@@ -50,6 +53,7 @@ export function TaskListBulkActionBar({
   busy,
   onReschedule,
   onClearSchedule,
+  onDelete,
   onCancel,
 }: Props) {
   if (selectedCount === 0) return null;
@@ -98,6 +102,15 @@ export function TaskListBulkActionBar({
           data-testid="task-list-bulk-bar-clear"
         >
           Clear schedule
+        </button>
+        <button
+          type="button"
+          className="danger"
+          onClick={onDelete}
+          disabled={busy}
+          data-testid="task-list-bulk-bar-delete"
+        >
+          Delete
         </button>
         <button
           type="button"
