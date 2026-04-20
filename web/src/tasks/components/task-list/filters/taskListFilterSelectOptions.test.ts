@@ -18,22 +18,23 @@ function optionValues(opts: CustomSelectOption[]): string[] {
 
 describe("taskListFilterSelectOptions", () => {
   describe("TASK_LIST_STATUS_FILTER_OPTIONS", () => {
-    it("starts with All then section headers", () => {
+    it("starts with All then the synthetic Scheduled bucket then section headers", () => {
       const o = TASK_LIST_STATUS_FILTER_OPTIONS;
       expect(o[0]).toEqual({ value: "all", label: "All" });
-      expect(isCustomSelectHeader(o[1])).toBe(true);
-      if (isCustomSelectHeader(o[1])) {
-        expect(o[1].label).toBe("Agent needs input");
+      expect(o[1]).toEqual({ value: "scheduled", label: "Scheduled (deferred)" });
+      expect(isCustomSelectHeader(o[2])).toBe(true);
+      if (isCustomSelectHeader(o[2])) {
+        expect(o[2].label).toBe("Agent needs input");
       }
       const otherHeaderIdx = o.findIndex(
         (x) => isCustomSelectHeader(x) && x.label === "Other activity",
       );
-      expect(otherHeaderIdx).toBeGreaterThan(1);
+      expect(otherHeaderIdx).toBeGreaterThan(2);
     });
 
-    it("includes every status once plus all", () => {
+    it("includes every status once plus all and the synthetic scheduled bucket", () => {
       const values = optionValues(TASK_LIST_STATUS_FILTER_OPTIONS);
-      expect(values.sort()).toEqual(["all", ...STATUSES].sort());
+      expect(values.sort()).toEqual(["all", "scheduled", ...STATUSES].sort());
     });
 
     it("lists needs-user statuses before the other-activity header", () => {
