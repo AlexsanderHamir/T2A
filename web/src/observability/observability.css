@@ -573,3 +573,109 @@
   color: var(--text-tertiary, var(--text-secondary));
   font-style: italic;
 }
+
+/* System health pane ------------------------------------------------------ */
+.obs-system {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  position: relative;
+}
+
+/* Left-edge accent borrowed from the KPI cards so the pane's overall
+   level is legible at-a-glance — green when nothing is wrong, amber
+   when summarize() flagged something worth looking at, neutral while
+   the snapshot is still loading. */
+.obs-system::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--border-hairline);
+}
+.obs-system--ok::before {
+  background: var(--pill-success-fill-text, var(--brand));
+}
+.obs-system--degraded::before {
+  background: var(--warning-ink, var(--brand));
+}
+.obs-system--unknown::before {
+  background: var(--border-hairline);
+}
+
+.obs-system-head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.obs-system-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.obs-system-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.obs-system-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .obs-system-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.obs-system-foot {
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-hairline);
+}
+
+.obs-system-meta {
+  display: grid;
+  /* Two-column "label + value" rows that wrap into one column on
+     narrow viewports. Each row is its own grid cell so labels and
+     values stay aligned across the pane. */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.obs-system-meta-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.obs-system-meta-row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.obs-system-meta-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.obs-system-meta-row code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.9em;
+}

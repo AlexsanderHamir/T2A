@@ -223,6 +223,36 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tparseListModelsOutput": {},
 	// resolveTaskRunnerModel: handler.Handler.create logs the request trace first.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tresolveTaskRunnerModel": {},
+
+	// Session 39 — Stage 3 system health aggregator (GET /system/health).
+	// internal/systemhealth.Read is the canonical chokepoint trace for one
+	// snapshot scrape; everything below is either a Category (1) pure
+	// helper / constructor, a Category (2) per-MetricFamily dispatcher
+	// invoked once per scrape per family (logging here would emit ~30+
+	// lines per /system/health hit and bury the actual scrape outcome),
+	// or a Category (3) thin wrapper whose body is a one-line call back
+	// into Read (the snapshot trace already fires there). See
+	// internal/systemhealth/snapshot.go for the chokepoint.
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tnewZeroSnapshot":       {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\treadBuildFromVersion":  {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tapplyFamily":           {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tapplyHTTPRequests":     {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tclassifyStatus":        {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tapplyHTTPDuration":     {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tmergeHistograms":       {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tpercentileFromBuckets": {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tapplyAgentRuns":        {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tapplyUptime":           {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tgaugeSum":              {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tcounterSum":            {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tlabelValue":            {},
+	"github.com/AlexsanderHamir/T2A/internal/systemhealth\tSnapshot.String":       {},
+	// Handler thin wrappers: defaultSystemHealthSnapshotter returns a
+	// closure over systemhealth.Read; *Handler.snapshotSystemHealth is a
+	// one-line dispatch to that closure or the test override. Both are
+	// invoked from systemHealth (which DOES log the operation).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tdefaultSystemHealthSnapshotter": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*Handler.snapshotSystemHealth":  {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

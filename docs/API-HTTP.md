@@ -71,6 +71,28 @@ HTTP traffic that **does** pass through the API stack records:
 
 There is **no authentication** on `/metrics`; restrict at the network or reverse proxy in production.
 
+## System health (`GET /system/health`)
+
+`GET /system/health` is the **operator-facing** snapshot consumed by the SPA `/observability` page. It is **distinct from** the orchestrator probes under `/health/*`: those stay tiny (one ping + version) so kubelet can poll them every few seconds; **`/system/health`** aggregates a richer view — build info, uptime, HTTP / SSE / DB-pool / agent counters — by reading the in-process Prometheus default registry. No parallel counters, so every number matches what `GET /metrics` exposes.
+
+The endpoint follows the same authentication and rate-limit posture as **`GET /tasks/stats`**: it is **not** auth-exempt (the kubelet probes are; this one isn't because request volumes leak operational signal). The handler is a pure read; it does **not** publish on the SSE hub (pinned by `TestHTTP_systemHealth_doesNotPublishSSE` and the read-only-no-publish surface table in `sse_trigger_surface_test.go`).
+
+Response is always **`200`** with the envelope below. Every nested map is **non-nil and seeded** with the documented enum keys (zero-valued on a freshly-booted process) so the SPA can render against a stable shape without branching on missing fields.
+
+| Top-level key | Type | Notes |
+| ------------- | ---- | ----- |
+| `build` | object | `{version, revision, go_version}` — same triple as **`taskapi_build_info`** labels (sourced from `internal/version.PrometheusBuildInfoLabels`); always populated even before the gauge is registered. |
+| `uptime_seconds` | number | Wall-clock seconds since `process_start_time_seconds` (the standard Process collector gauge). **`0`** when the gauge is not yet registered. |
+| `now` | string (RFC 3339, UTC) | Server wall clock at the moment the snapshot was assembled — pair with `uptime_seconds` to compute the start time client-side. |
+| `http` | object | `{in_flight, requests_total, requests_by_class, duration_seconds}`. `in_flight` mirrors `taskapi_http_in_flight`. `requests_total` and `requests_by_class` are aggregated across `(method, route, code)` from `taskapi_http_requests_total`; `requests_by_class` always has **`2xx`/`3xx`/`4xx`/`5xx`/`other`** keys. `duration_seconds` is `{p50, p95, count}` interpolated from the merged `taskapi_http_request_duration_seconds` histogram (Prometheus-style linear interpolation; `count == 0` → `p50/p95 = 0`). |
+| `sse` | object | `{subscribers, dropped_frames_total}` — direct mirrors of `taskapi_sse_subscribers` and `taskapi_sse_dropped_frames_total`. |
+| `db_pool` | object | `{max_open_connections, open_connections, in_use_connections, idle_connections, wait_count_total, wait_duration_seconds_total}` — the operator-relevant subset of the `taskapi_db_pool_*` family (the additional close-reason counters stay only on `/metrics`). |
+| `agent` | object | `{queue_depth, queue_capacity, runs_total, runs_by_terminal_status}`. The first two mirror `taskapi_agent_queue_depth` / `_capacity`; `runs_total` and `runs_by_terminal_status` aggregate `t2a_agent_runs_total` across `(runner, terminal_status)`. `runs_by_terminal_status` always has **`succeeded`/`failed`/`aborted`** keys; an unknown status (worker bug) lands under **`other`**. |
+
+The handler logs a single **`trace`** line per request (`operation` **`handler.systemHealth`**) and is wired into the standard middleware stack, so every hit also produces an `http.access` line and `taskapi_http_*` observations. **Failures of the underlying Prometheus gather are non-fatal**: the response is still **`200`** with a zero-valued envelope and a **Warn** log (`operation` **`systemhealth.Read`**, msg **`systemhealth gather failed`**) so the operator UI degrades gracefully.
+
+Pinned by `pkgs/tasks/handler/handler_http_system_health_contract_test.go` (envelope keys, populated wiring, method-not-allowed, no-SSE-publish).
+
 ## Task resource (`/tasks`)
 
 | Capability     | Method / path            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

@@ -31,6 +31,33 @@ describe("ObservabilityPage", () => {
     vi.unstubAllGlobals();
   });
 
+  const emptySystemHealth = {
+    build: { version: "v0.0.0-test", revision: "test", go_version: "go1.23.0" },
+    uptime_seconds: 0,
+    now: "2026-04-19T12:00:00Z",
+    http: {
+      in_flight: 0,
+      requests_total: 0,
+      requests_by_class: { "2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0, other: 0 },
+      duration_seconds: { p50: 0, p95: 0, count: 0 },
+    },
+    sse: { subscribers: 0, dropped_frames_total: 0 },
+    db_pool: {
+      max_open_connections: 0,
+      open_connections: 0,
+      in_use_connections: 0,
+      idle_connections: 0,
+      wait_count_total: 0,
+      wait_duration_seconds_total: 0,
+    },
+    agent: {
+      queue_depth: 0,
+      queue_capacity: 0,
+      runs_total: 0,
+      runs_by_terminal_status: { succeeded: 0, failed: 0, aborted: 0 },
+    },
+  };
+
   it("loads /tasks/stats and renders the overview", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const u = requestUrl(input);
@@ -54,6 +81,9 @@ describe("ObservabilityPage", () => {
           recent_failures: [],
         });
       }
+      if (u.endsWith("/system/health")) {
+        return jsonResponse(emptySystemHealth);
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -68,11 +98,18 @@ describe("ObservabilityPage", () => {
     });
     expect(screen.getByTestId("obs-kpi-done")).toHaveTextContent("2");
     expect(screen.getByTestId("obs-kpi-failed")).toHaveTextContent("1");
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "System health" })).toBeInTheDocument();
+    });
   });
 
   it("renders the unavailable state when the stats request fails", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (requestUrl(input).endsWith("/tasks/stats")) {
+      const u = requestUrl(input);
+      if (u.endsWith("/tasks/stats")) {
+        return new Response("boom", { status: 500 });
+      }
+      if (u.endsWith("/system/health")) {
         return new Response("boom", { status: 500 });
       }
       return new Response("not found", { status: 404 });
@@ -84,5 +121,8 @@ describe("ObservabilityPage", () => {
       expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     });
     expect(screen.getByText("Breakdown unavailable")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("System snapshot unavailable.")).toBeInTheDocument();
+    });
   });
 });

@@ -454,6 +454,11 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			{http.MethodGet, srv.URL + "/health"},
 			{http.MethodGet, srv.URL + "/health/live"},
 			{http.MethodGet, srv.URL + "/health/ready"},
+			// GET /system/health — operator-facing observability snapshot.
+			// Pure read over the in-process Prometheus registry; must not
+			// publish or the SPA's react-query SSE invalidation would
+			// loop (poll → invalidate → poll).
+			{http.MethodGet, srv.URL + "/system/health"},
 			// GET /tasks/{id}/events/{seq} (single-event get) — Session 21
 			// pinned this route's read-only invariant inside its own
 			// contract file (TestHTTP_getEvent_neverPublishesSSE +

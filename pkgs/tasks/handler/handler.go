@@ -37,10 +37,11 @@ type AgentWorkerControl interface {
 // helpers, and optional agent worker control. Use NewHandler; the zero value
 // is not usable.
 type Handler struct {
-	store    *store.Store
-	hub      *SSEHub
-	repoProv RepoProvider
-	agent    AgentWorkerControl
+	store          *store.Store
+	hub            *SSEHub
+	repoProv       RepoProvider
+	agent          AgentWorkerControl
+	systemHealthFn systemHealthSnapshotter
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
@@ -64,6 +65,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /health", http.HandlerFunc(health))
 	m.Handle("GET /health/live", http.HandlerFunc(healthLive))
 	m.Handle("GET /health/ready", http.HandlerFunc(h.healthReady))
+	m.Handle("GET /system/health", http.HandlerFunc(h.systemHealth))
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("POST /tasks/evaluate", http.HandlerFunc(h.evaluateDraft))
