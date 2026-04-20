@@ -27,6 +27,7 @@ const baseHealth: SystemHealthResponse = {
     queue_capacity: 64,
     runs_total: 12,
     runs_by_terminal_status: { succeeded: 10, failed: 2, aborted: 0 },
+    paused: false,
   },
 };
 

@@ -138,8 +138,8 @@ export function formatRatio(current: number, capacity: number): string {
 }
 
 export type SystemHealthSummary = {
-  /** "OK" / "Degraded" / "Unknown" — drives the section accent. */
-  level: "ok" | "degraded" | "unknown";
+  /** "OK" / "Paused" / "Degraded" / "Unknown" — drives the section accent. */
+  level: "ok" | "paused" | "degraded" | "unknown";
   /** Short human sentence shown next to the section title. */
   caption: string;
 };
@@ -149,6 +149,13 @@ export type SystemHealthSummary = {
  * whether anything is wrong without scanning every cell. Conservative
  * on purpose: anything beyond the listed signals stays "OK" so we
  * don't false-positive in a still-warming process.
+ *
+ * Precedence is **paused > degraded > ok > unknown**: an explicit
+ * operator pause is the most actionable state (it's intentional and
+ * we want the chip to broadcast it loudly) and it dominates the
+ * heuristic degradation signals — when the worker is idle on
+ * purpose, "5xx response present" is usually noise from before the
+ * pause and should not bury the "you paused this" reminder.
  */
 export function summarize(
   health: SystemHealthResponse | null | undefined,
@@ -158,6 +165,12 @@ export function summarize(
     return {
       level: "unknown",
       caption: loading ? "Loading system snapshot…" : "System snapshot unavailable.",
+    };
+  }
+  if (health.agent.paused) {
+    return {
+      level: "paused",
+      caption: `Agent paused • build ${health.build.version}`,
     };
   }
   const reasons: string[] = [];

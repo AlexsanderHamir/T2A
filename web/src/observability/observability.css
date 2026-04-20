@@ -601,6 +601,9 @@
 .obs-system--ok::before {
   background: var(--pill-success-fill-text, var(--brand));
 }
+.obs-system--paused::before {
+  background: var(--warning-ink, var(--brand));
+}
 .obs-system--degraded::before {
   background: var(--warning-ink, var(--brand));
 }

@@ -4,3 +4,4 @@
  * instead of deep paths.
  */
 export { ObservabilityPage } from "./ObservabilityPage";
+export { SystemStatusChip } from "./SystemStatusChip";

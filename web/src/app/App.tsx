@@ -1,7 +1,6 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import {
   DeleteConfirmDialog,
-  StreamStatusHint,
   TaskEditForm,
   TaskDetailPage,
   TaskDraftsPage,
@@ -11,7 +10,7 @@ import {
   useTasksApp,
 } from "@/tasks";
 import { SettingsPage } from "@/settings";
-import { ObservabilityPage } from "@/observability";
+import { ObservabilityPage, SystemStatusChip } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
@@ -76,10 +75,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               </Link>
             </nav>
             <div className="app-header-actions">
-              <StreamStatusHint
-                connected={app.sseLive}
-                listSyncing={app.sseLive ? false : app.listRefreshing}
-              />
+              <SystemStatusChip connected={app.sseLive} />
               <Link
                 to="/settings"
                 className="app-header-settings-link"

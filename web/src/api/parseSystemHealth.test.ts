@@ -25,12 +25,36 @@ const minimalEnvelope = {
     queue_capacity: 0,
     runs_total: 0,
     runs_by_terminal_status: { succeeded: 0, failed: 0, aborted: 0 },
+    paused: false,
   },
 };
 
 describe("parseSystemHealthResponse", () => {
   it("accepts a well-formed empty envelope", () => {
     expect(parseSystemHealthResponse(minimalEnvelope)).toEqual(minimalEnvelope);
+  });
+
+  it("defaults agent.paused to false when the server omits the field (pre-4a backend)", () => {
+    const noPaused: Record<string, unknown> = {
+      ...minimalEnvelope,
+      agent: {
+        queue_depth: 0,
+        queue_capacity: 0,
+        runs_total: 0,
+        runs_by_terminal_status: { succeeded: 0, failed: 0, aborted: 0 },
+      },
+    };
+    const got = parseSystemHealthResponse(noPaused);
+    expect(got.agent.paused).toBe(false);
+  });
+
+  it("preserves agent.paused=true when the server reports the operator pause flag", () => {
+    const paused = {
+      ...minimalEnvelope,
+      agent: { ...minimalEnvelope.agent, paused: true },
+    };
+    const got = parseSystemHealthResponse(paused);
+    expect(got.agent.paused).toBe(true);
   });
 
   it("accepts a fully-populated envelope", () => {

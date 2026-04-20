@@ -197,10 +197,16 @@ function parseAgent(value: unknown): SystemHealthAgent {
     runs_by_terminal_status[key as SystemHealthAgentTerminalStatus] =
       parseFiniteNumber(raw, `agent.runs_by_terminal_status.${key}`);
   }
+  // Default agent_paused to false when the server omits the field so
+  // a pre-4a backend stays decodable by a freshly-deployed SPA. The
+  // strict envelope check elsewhere rejects unknown keys, so any
+  // future schema-tightening still flows through this seam.
+  const paused = typeof value.paused === "boolean" ? value.paused : false;
   return {
     queue_depth: parseFiniteNumber(value.queue_depth, "agent.queue_depth"),
     queue_capacity: parseFiniteNumber(value.queue_capacity, "agent.queue_capacity"),
     runs_total: parseFiniteNumber(value.runs_total, "agent.runs_total"),
     runs_by_terminal_status,
+    paused,
   };
 }

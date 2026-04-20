@@ -60,6 +60,14 @@ export type SystemHealthAgent = {
   runs_by_terminal_status: Partial<
     Record<SystemHealthAgentTerminalStatus, number>
   >;
+  /**
+   * Operator-facing soft pause. Mirrors `app_settings.agent_paused`
+   * (NOT a Prometheus counter) so the SPA can flip the header chip
+   * to amber the very next poll after the operator clicks pause.
+   * Defaults to false on parse when the server omits the field so a
+   * pre-4a backend stays decodable.
+   */
+  paused: boolean;
 };
 
 export type SystemHealthResponse = {
