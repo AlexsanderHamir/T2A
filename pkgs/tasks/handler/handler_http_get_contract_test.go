@@ -246,11 +246,28 @@ func TestHTTP_getTask_neverPublishesOnSSE(t *testing.T) {
 	if res, raw := getTask(t, srv.URL, parent); res.StatusCode != http.StatusOK {
 		t.Fatalf("get parent status %d body=%s", res.StatusCode, raw)
 	}
-	if res, raw := getTask(t, srv.URL, "11111111-1111-4111-8111-111111111111"); res.StatusCode != http.StatusNotFound {
-		t.Fatalf("get unknown status %d body=%s", res.StatusCode, raw)
+	res404, raw404 := getTask(t, srv.URL, "11111111-1111-4111-8111-111111111111")
+	if res404.StatusCode != http.StatusNotFound {
+		t.Fatalf("get unknown status %d body=%s", res404.StatusCode, raw404)
 	}
-	if res, raw := getTask(t, srv.URL, "%20"); res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("get bad-id status %d body=%s", res.StatusCode, raw)
+	var unkErr jsonErrorBody
+	if err := json.Unmarshal(raw404, &unkErr); err != nil {
+		t.Fatalf("decode unknown-task error: %v body=%s", err, raw404)
+	}
+	if unkErr.Error != "not found" {
+		t.Fatalf("unknown-task error=%q want %q (docs/API-HTTP.md GET /tasks/{id})", unkErr.Error, "not found")
+	}
+
+	res400, raw400 := getTask(t, srv.URL, "%20")
+	if res400.StatusCode != http.StatusBadRequest {
+		t.Fatalf("get bad-id status %d body=%s", res400.StatusCode, raw400)
+	}
+	var idErr jsonErrorBody
+	if err := json.Unmarshal(raw400, &idErr); err != nil {
+		t.Fatalf("decode bad-id error: %v body=%s", err, raw400)
+	}
+	if idErr.Error != "id" {
+		t.Fatalf("bad-id error=%q want %q (path-segment guard; docs/API-HTTP.md GET /tasks/{id})", idErr.Error, "id")
 	}
 
 	got := summarize(drainSSE(t, ch, 0, 200*time.Millisecond))
