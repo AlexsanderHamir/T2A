@@ -189,9 +189,7 @@ func TestHTTP_PatchSettings_validationError(t *testing.T) {
 	srv, _, _, _ := settingsTestServer(t)
 	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
 		`{"max_run_duration_seconds":-1}`, http.StatusBadRequest)
-	if len(resp) == 0 {
-		t.Fatal("empty error body for invalid patch")
-	}
+	assertSettingsBareError(t, resp, "max_run_duration_seconds must be >= 0")
 }
 
 // TestHTTP_PatchSettings_503WithoutAgent confirms the documented
