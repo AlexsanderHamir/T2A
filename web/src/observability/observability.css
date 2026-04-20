@@ -459,6 +459,29 @@
   letter-spacing: 0.02em;
 }
 
+/* Resolved-model sub-rows: one per (runner, effective, resolved)
+   triple. These read as a drill-down under their parent (runner,
+   model) row — the CLI tells us what model `auto` actually routed to,
+   and the row shows it as "↳ Auto → Claude 4 Sonnet". We keep the
+   visual weight lighter than peer rows so the eye glides past them on
+   the first pass and only lands when drilling in. */
+.obs-runner-row--resolved th,
+.obs-runner-row--resolved td {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.obs-runner-row--resolved .obs-runner-cell--label {
+  padding-left: var(--space-5, 1.25rem);
+}
+
+.obs-runner-pill--resolved {
+  background: transparent;
+  border: 1px dashed var(--border-hairline);
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
 .obs-runner-cell--rate-high {
   color: var(--pill-success-fill-text, var(--text-primary));
 }

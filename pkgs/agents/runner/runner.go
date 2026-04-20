@@ -91,6 +91,18 @@ type Result struct {
 	Details   json.RawMessage    `json:"details,omitempty"`
 	RawOutput string             `json:"raw_output,omitempty"`
 	Truncated bool               `json:"truncated,omitempty"`
+	// ResolvedModel is the concrete model the underlying tool reported
+	// having used for this run, distinct from EffectiveModel which is
+	// the intent-level identifier resolved before the run starts. Set
+	// only by adapters that can observe the tool's own "which model did
+	// I pick" signal — e.g. the cursor adapter reads it from the
+	// `system.init.model` event of `--output-format stream-json`, which
+	// is the only cursor-agent surface that reveals the actual routed
+	// model when the operator picked `auto`. Empty string means the
+	// adapter had no way to observe a resolved model for this run (not
+	// an error) and callers MUST treat it as "unknown", not substitute
+	// a default.
+	ResolvedModel string `json:"resolved_model,omitempty"`
 }
 
 // Typed errors. Adapters wrap these (fmt.Errorf("%w", ErrTimeout)) so

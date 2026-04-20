@@ -122,11 +122,19 @@ export type TaskStatsRunnerBucket = {
  *  - `by_model` is keyed by the resolved effective model; the
  *    empty-string key is preserved (means "no model configured")
  *  - `by_runner_model` is the (runner, model) pair joined by `|`
+ *  - `by_runner_model_resolved` is the (runner, effective model,
+ *    resolved model) triple joined by `|`. Only populated for cycles
+ *    whose execute-phase details surfaced a concrete resolved model
+ *    (today: cursor-agent's `system.init.model` event under
+ *    `--output-format stream-json`). Cycles without a resolved model
+ *    are intentionally absent so the SPA only renders a "→ actual
+ *    model" sub-row when we have a real observation, not a guess.
  */
 export type TaskStatsRunner = {
   by_runner: Record<string, TaskStatsRunnerBucket>;
   by_model: Record<string, TaskStatsRunnerBucket>;
   by_runner_model: Record<string, TaskStatsRunnerBucket>;
+  by_runner_model_resolved: Record<string, TaskStatsRunnerBucket>;
 };
 
 export type TaskStatsResponse = {

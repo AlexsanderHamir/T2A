@@ -50,6 +50,17 @@ type RunnerStats struct {
 	// delimiter to render the two-level table; pipe is used because
 	// neither runner names nor model names contain "|" today.
 	ByRunnerModel map[string]RunnerBucket
+	// ByRunnerModelResolved keys the (runner|effective|resolved)
+	// triple using a pipe-delimited composite key. Only populated
+	// for cycles whose execute-phase details_json surfaced a non-
+	// empty resolved_model (the cursor adapter lifts this from
+	// cursor-agent's stream-json `system.init.model` event — the
+	// only signal that exposes what model `auto` actually routed
+	// to). Cycles without a resolved model are intentionally absent
+	// from this map so the SPA can render "Cursor CLI · Auto →
+	// Claude 4 Sonnet" style sub-rows only when there is a real
+	// observation, not a placeholder.
+	ByRunnerModelResolved map[string]RunnerBucket
 }
 
 // RunnerBucket is the per-bucket payload: the by-status counter the
@@ -82,11 +93,19 @@ const RunnerUnknownKey = "unknown"
 // running bucket would skew duration percentiles and the
 // by-status counts already have a "running" cell pinned by the
 // global block.
+//
+// ExecDetails is the execute-phase details_json (LEFT JOIN'd via
+// task_cycle_phases.phase='execute'). Nullable because a cycle may
+// have no execute phase row yet (diagnose-only skip path). The cursor
+// adapter stuffs the stream-json-derived resolved_model in there, so
+// scanRunnerStats lifts the value out without needing a second
+// round-trip to the worker or a separate table.
 type runnerStatsRow struct {
-	Status    domain.CycleStatus
-	StartedAt time.Time
-	EndedAt   *time.Time
-	Meta      datatypes.JSON `gorm:"column:meta_json"`
+	Status      domain.CycleStatus
+	StartedAt   time.Time
+	EndedAt     *time.Time
+	Meta        datatypes.JSON `gorm:"column:meta_json"`
+	ExecDetails datatypes.JSON `gorm:"column:exec_details_json"`
 }
 
 // runnerStatsMetaProjection mirrors the keys buildCycleMeta
@@ -98,22 +117,48 @@ type runnerStatsMetaProjection struct {
 	CursorModelEffective string `json:"cursor_model_effective"`
 }
 
+// runnerStatsExecDetailsProjection mirrors the keys the cursor adapter
+// writes into the execute phase's details_json via buildDetails. Only
+// resolved_model is consumed by stats today; the rest of the payload
+// (session/request ids, usage, etc.) is scoped to the per-phase audit
+// trail and is not meaningful at the aggregate level.
+type runnerStatsExecDetailsProjection struct {
+	ResolvedModel string `json:"resolved_model"`
+}
+
 // scanRunnerStats reads every terminal cycle row, decodes the meta
-// projection in Go, and assembles the three breakdown maps with
+// projection in Go, and assembles the four breakdown maps with
 // succeeded-only p50/p95 percentiles per bucket. One SQL round-trip;
 // O(N) memory in terminal cycle count (same scale as the existing
 // scanCyclesByStatus query).
+//
+// The query LEFT JOINs task_cycle_phases filtered to phase='execute'
+// so the execute-phase details_json is available on the same row.
+// That JSON is where the cursor adapter persists the resolved_model
+// (lifted from cursor-agent's stream-json `system.init.model` event).
+// LEFT so pre-feature cycles and cycles that never reached the
+// execute phase (e.g. diagnose-only skip path) still contribute to
+// the first three maps; they simply don't populate
+// ByRunnerModelResolved.
 func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanRunnerStats")
 	out := RunnerStats{
-		ByRunner:      map[string]RunnerBucket{},
-		ByModel:       map[string]RunnerBucket{},
-		ByRunnerModel: map[string]RunnerBucket{},
+		ByRunner:              map[string]RunnerBucket{},
+		ByModel:               map[string]RunnerBucket{},
+		ByRunnerModel:         map[string]RunnerBucket{},
+		ByRunnerModelResolved: map[string]RunnerBucket{},
 	}
 	var rows []runnerStatsRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
-		Select("status, started_at, ended_at, meta_json").
-		Where("ended_at IS NOT NULL").
+		Select(
+			"task_cycles.status AS status, " +
+				"task_cycles.started_at AS started_at, " +
+				"task_cycles.ended_at AS ended_at, " +
+				"task_cycles.meta_json AS meta_json, " +
+				"p.details_json AS exec_details_json").
+		Joins("LEFT JOIN task_cycle_phases p ON p.cycle_id = task_cycles.id AND p.phase = ?",
+			domain.PhaseExecute).
+		Where("task_cycles.ended_at IS NOT NULL").
 		Scan(&rows).Error; err != nil {
 		return RunnerStats{}, fmt.Errorf("runner stats: %w", err)
 	}
@@ -128,6 +173,7 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	runnerAcc := map[string]*bucketAcc{}
 	modelAcc := map[string]*bucketAcc{}
 	pairAcc := map[string]*bucketAcc{}
+	resolvedAcc := map[string]*bucketAcc{}
 
 	for _, r := range rows {
 		runner := RunnerUnknownKey
@@ -144,6 +190,18 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 					runner = p.Runner
 				}
 				model = p.CursorModelEffective
+			}
+		}
+		resolved := ""
+		if len(r.ExecDetails) > 0 {
+			var d runnerStatsExecDetailsProjection
+			if err := json.Unmarshal(r.ExecDetails, &d); err != nil {
+				slog.Debug("runner stats exec details decode skipped",
+					"cmd", logCmd,
+					"operation", "tasks.store.stats.scanRunnerStats.exec_details_decode_skip",
+					"err", err)
+			} else {
+				resolved = d.ResolvedModel
 			}
 		}
 		pair := runner + "|" + model
@@ -166,6 +224,19 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 		ra.byStatus[r.Status]++
 		ma.byStatus[r.Status]++
 		pa.byStatus[r.Status]++
+		// Only record in the resolved-model breakdown when the
+		// adapter actually observed one. Avoids polluting the
+		// panel with "<unknown>" sub-rows for pre-feature cycles.
+		var resolvedBucket *bucketAcc
+		if resolved != "" {
+			triple := runner + "|" + model + "|" + resolved
+			resolvedBucket = resolvedAcc[triple]
+			if resolvedBucket == nil {
+				resolvedBucket = newBucket()
+				resolvedAcc[triple] = resolvedBucket
+			}
+			resolvedBucket.byStatus[r.Status]++
+		}
 		if r.Status == domain.CycleStatusSucceeded && r.EndedAt != nil {
 			d := r.EndedAt.Sub(r.StartedAt).Seconds()
 			if d < 0 {
@@ -177,6 +248,9 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 			ra.succeededDur = append(ra.succeededDur, d)
 			ma.succeededDur = append(ma.succeededDur, d)
 			pa.succeededDur = append(pa.succeededDur, d)
+			if resolvedBucket != nil {
+				resolvedBucket.succeededDur = append(resolvedBucket.succeededDur, d)
+			}
 		}
 	}
 
@@ -188,6 +262,9 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	}
 	for k, b := range pairAcc {
 		out.ByRunnerModel[k] = bucketFromAcc(b)
+	}
+	for k, b := range resolvedAcc {
+		out.ByRunnerModelResolved[k] = bucketFromAcc(b)
 	}
 	return out, nil
 }

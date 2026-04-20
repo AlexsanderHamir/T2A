@@ -105,9 +105,10 @@ func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 			ByPhaseStatus: make(map[domain.Phase]map[domain.PhaseStatus]int64, len(allPhases)),
 		},
 		Runner: RunnerStats{
-			ByRunner:      map[string]RunnerBucket{},
-			ByModel:       map[string]RunnerBucket{},
-			ByRunnerModel: map[string]RunnerBucket{},
+			ByRunner:              map[string]RunnerBucket{},
+			ByModel:               map[string]RunnerBucket{},
+			ByRunnerModel:         map[string]RunnerBucket{},
+			ByRunnerModelResolved: map[string]RunnerBucket{},
 		},
 		RecentFailures: []RecentFailure{},
 	}

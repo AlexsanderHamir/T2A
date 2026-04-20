@@ -18,7 +18,9 @@ function bucket(
   };
 }
 
-function statsWithRunner(runner: TaskStatsResponse["runner"]): TaskStatsResponse {
+function statsWithRunner(
+  runner: Partial<TaskStatsResponse["runner"]>,
+): TaskStatsResponse {
   return {
     total: 0,
     ready: 0,
@@ -36,7 +38,13 @@ function statsWithRunner(runner: TaskStatsResponse["runner"]): TaskStatsResponse
         persist: {},
       },
     },
-    runner,
+    runner: {
+      by_runner: {},
+      by_model: {},
+      by_runner_model: {},
+      by_runner_model_resolved: {},
+      ...runner,
+    },
     recent_failures: [],
   };
 }
@@ -68,6 +76,7 @@ describe("ObservabilityRunnerBreakdown", () => {
           by_runner: {},
           by_model: {},
           by_runner_model: {},
+          by_runner_model_resolved: {},
         })}
         loading={false}
       />,
@@ -220,6 +229,105 @@ describe("ObservabilityRunnerBreakdown", () => {
     // not "—", because terminal cycles exist (failed + aborted = 3).
     expect(emDashes.length).toBe(2);
     expect(within(row).getByText("0%")).toBeInTheDocument();
+  });
+
+  it("renders a resolved-model sub-row when the adapter observed a concrete model for an auto pick", () => {
+    const stats = statsWithRunner({
+      by_runner: {
+        "cursor-cli": bucket({
+          by_status: { succeeded: 3 },
+          succeeded: 3,
+          duration_p50_succeeded_seconds: 2,
+          duration_p95_succeeded_seconds: 7,
+        }),
+      },
+      by_model: {
+        "": bucket({
+          by_status: { succeeded: 3 },
+          succeeded: 3,
+          duration_p50_succeeded_seconds: 2,
+          duration_p95_succeeded_seconds: 7,
+        }),
+      },
+      by_runner_model: {
+        "cursor-cli|": bucket({
+          by_status: { succeeded: 3 },
+          succeeded: 3,
+          duration_p50_succeeded_seconds: 2,
+          duration_p95_succeeded_seconds: 7,
+        }),
+      },
+      by_runner_model_resolved: {
+        // Operator picked `auto` (empty effective model); cursor-agent
+        // routed to Claude 4 Sonnet on 3 cycles. The sub-row is the
+        // whole point of the feature — without it the operator sees
+        // "default model" and has no way to know what actually ran.
+        "cursor-cli||Claude 4 Sonnet": bucket({
+          by_status: { succeeded: 3 },
+          succeeded: 3,
+          duration_p50_succeeded_seconds: 2,
+          duration_p95_succeeded_seconds: 7,
+        }),
+      },
+    });
+    render(
+      <ObservabilityRunnerBreakdown stats={stats} loading={false} />,
+    );
+    const resolvedRow = screen.getByTestId(
+      "obs-runner-row-runner|cursor-cli||Claude 4 Sonnet",
+    );
+    expect(
+      within(resolvedRow).getByText("↳ Auto → Claude 4 Sonnet"),
+    ).toBeInTheDocument();
+    // Total (3) and Succeeded (3) columns both read "3"; assert via
+    // getAllByText so the test stays robust to column order without
+    // coupling to cell classnames.
+    expect(within(resolvedRow).getAllByText("3").length).toBe(2);
+    expect(within(resolvedRow).getByText("100%")).toBeInTheDocument();
+    // Parent (runner, model) row still exists and is unchanged — the
+    // resolved sub-row is additive, not a replacement, so success-rate
+    // & percentile columns still report the effective-model totals.
+    expect(
+      screen.getByTestId("obs-runner-row-runner|cursor-cli|"),
+    ).toBeInTheDocument();
+  });
+
+  it("suppresses the resolved sub-row when the resolved model equals the effective model", () => {
+    // When the operator picked a concrete model ("opus-4") and the
+    // CLI reported back the same model, the resolved sub-row would
+    // just duplicate its parent — visual noise with no information.
+    // Pin that it is NOT rendered.
+    const stats = statsWithRunner({
+      by_runner: {
+        "cursor-cli": bucket({
+          by_status: { succeeded: 2 },
+          succeeded: 2,
+        }),
+      },
+      by_model: {
+        "opus-4": bucket({ by_status: { succeeded: 2 }, succeeded: 2 }),
+      },
+      by_runner_model: {
+        "cursor-cli|opus-4": bucket({
+          by_status: { succeeded: 2 },
+          succeeded: 2,
+        }),
+      },
+      by_runner_model_resolved: {
+        "cursor-cli|opus-4|opus-4": bucket({
+          by_status: { succeeded: 2 },
+          succeeded: 2,
+        }),
+      },
+    });
+    render(
+      <ObservabilityRunnerBreakdown stats={stats} loading={false} />,
+    );
+    expect(
+      screen.queryByTestId(
+        "obs-runner-row-runner|cursor-cli|opus-4|opus-4",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("labels pre-feature model buckets as 'default model'", () => {

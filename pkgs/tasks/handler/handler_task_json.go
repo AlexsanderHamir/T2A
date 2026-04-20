@@ -119,14 +119,29 @@ type taskStatsPhasesJSON struct {
 //   - by_runner_model:  pipe-delimited "<runner>|<model>" composite
 //                       key. The frontend splits on "|" to render
 //                       the two-level table.
+//   - by_runner_model_resolved:
+//                       pipe-delimited "<runner>|<effective>|<resolved>"
+//                       triple-composite key. Only populated for
+//                       cycles whose execute-phase details_json
+//                       surfaced a non-empty resolved_model — the
+//                       cursor adapter lifts that value from
+//                       cursor-agent's stream-json `system.init.model`
+//                       event, which is the only surface that reveals
+//                       what model `auto` actually routed to. The
+//                       SPA uses this map to render "Cursor CLI ·
+//                       Auto → Claude 4 Sonnet" style sub-rows only
+//                       when there is a real observation, so
+//                       pre-feature / non-cursor cycles don't get
+//                       phantom entries.
 //
 // Each bucket carries the by-status counter (mirrors the global
 // cycles.by_status shape) plus succeeded-only p50/p95 durations
 // (decision D3): failed/aborted runs do not skew the latency cells.
 type taskStatsRunnerJSON struct {
-	ByRunner      map[string]taskStatsRunnerBucketJSON `json:"by_runner"`
-	ByModel       map[string]taskStatsRunnerBucketJSON `json:"by_model"`
-	ByRunnerModel map[string]taskStatsRunnerBucketJSON `json:"by_runner_model"`
+	ByRunner              map[string]taskStatsRunnerBucketJSON `json:"by_runner"`
+	ByModel               map[string]taskStatsRunnerBucketJSON `json:"by_model"`
+	ByRunnerModel         map[string]taskStatsRunnerBucketJSON `json:"by_runner_model"`
+	ByRunnerModelResolved map[string]taskStatsRunnerBucketJSON `json:"by_runner_model_resolved"`
 }
 
 // taskStatsRunnerBucketJSON is the per-bucket payload. Empty-bucket
@@ -198,9 +213,10 @@ func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
 func taskStatsRunnerFromStore(s store.RunnerStats) taskStatsRunnerJSON {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskStatsRunnerFromStore")
 	out := taskStatsRunnerJSON{
-		ByRunner:      make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunner)),
-		ByModel:       make(map[string]taskStatsRunnerBucketJSON, len(s.ByModel)),
-		ByRunnerModel: make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunnerModel)),
+		ByRunner:              make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunner)),
+		ByModel:               make(map[string]taskStatsRunnerBucketJSON, len(s.ByModel)),
+		ByRunnerModel:         make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunnerModel)),
+		ByRunnerModelResolved: make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunnerModelResolved)),
 	}
 	for k, b := range s.ByRunner {
 		out.ByRunner[k] = bucketJSONFromStore(b)
@@ -210,6 +226,9 @@ func taskStatsRunnerFromStore(s store.RunnerStats) taskStatsRunnerJSON {
 	}
 	for k, b := range s.ByRunnerModel {
 		out.ByRunnerModel[k] = bucketJSONFromStore(b)
+	}
+	for k, b := range s.ByRunnerModelResolved {
+		out.ByRunnerModelResolved[k] = bucketJSONFromStore(b)
 	}
 	return out
 }

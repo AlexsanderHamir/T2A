@@ -22,7 +22,12 @@ function emptyStats(overrides: Partial<TaskStatsResponse> = {}): TaskStatsRespon
         persist: {},
       },
     },
-    runner: { by_runner: {}, by_model: {}, by_runner_model: {} },
+    runner: {
+      by_runner: {},
+      by_model: {},
+      by_runner_model: {},
+      by_runner_model_resolved: {},
+    },
     recent_failures: [],
     ...overrides,
   };

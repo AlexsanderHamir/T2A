@@ -119,15 +119,101 @@ func TestRun_successPath(t *testing.T) {
 	if c.name != "fake-cursor-agent" {
 		t.Errorf("invoked name: got %q", c.name)
 	}
-	wantArgs := []string{"--print", "--output-format", "json", "--force"}
+	wantArgs := []string{"--print", "--output-format", "stream-json", "--force"}
 	if !equalStrSlice(c.args, wantArgs) {
 		t.Errorf("args: got %v want %v", c.args, wantArgs)
+	}
+	if res.ResolvedModel != "" {
+		t.Errorf("ResolvedModel on legacy single-object stdout should be empty; got %q", res.ResolvedModel)
 	}
 	if string(c.stdin) != "do the thing" {
 		t.Errorf("stdin: got %q", c.stdin)
 	}
 	if c.dir != "/repo/work" {
 		t.Errorf("dir: got %q", c.dir)
+	}
+}
+
+// TestRun_streamJSONCapturesResolvedModel pins the new plumbing: when
+// cursor-agent emits its --output-format stream-json NDJSON, the
+// adapter must
+//   - extract the resolved model from the first `system.init` event
+//     (the ONLY surface where cursor-agent reveals what model `auto`
+//     routed to — the terminal `result` event has no model field; see
+//     https://cursor.com/docs/cli/reference/output-format),
+//   - still recover the Summary / session_id / timing from the
+//     terminal `result` event (wire-identical to the old json format),
+//   - surface the captured model both on Result.ResolvedModel (so the
+//     worker can record it in cycle MetaJSON as
+//     cursor_model_resolved) AND inside Result.Details.resolved_model
+//     (so the per-phase details_json audit row carries it too).
+func TestRun_streamJSONCapturesResolvedModel(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/tmp","session_id":"sess-abc","model":"Claude 4 Sonnet","permissionMode":"default"}` + "\n" +
+			`{"type":"user","message":{"role":"user","content":[{"type":"text","text":"do the thing"}]},"session_id":"sess-abc"}` + "\n" +
+			`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"working"}]},"session_id":"sess-abc"}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"duration_ms":1200,"duration_api_ms":1100,"result":"all good","session_id":"sess-abc","request_id":"req-xyz"}` + "\n",
+	)
+	a := newAdapter(fakeExec(&captured{}, stdout, nil, 0, nil, false))
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Status != domain.PhaseStatusSucceeded {
+		t.Errorf("Status: got %q want %q", res.Status, domain.PhaseStatusSucceeded)
+	}
+	if res.Summary != "all good" {
+		t.Errorf("Summary: got %q want %q", res.Summary, "all good")
+	}
+	if res.ResolvedModel != "Claude 4 Sonnet" {
+		t.Errorf("ResolvedModel: got %q want %q", res.ResolvedModel, "Claude 4 Sonnet")
+	}
+	var details struct {
+		ResolvedModel string `json:"resolved_model"`
+		SessionID     string `json:"session_id"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v (raw=%s)", err, res.Details)
+	}
+	if details.ResolvedModel != "Claude 4 Sonnet" {
+		t.Errorf("Details.resolved_model: got %q want %q", details.ResolvedModel, "Claude 4 Sonnet")
+	}
+	if details.SessionID != "sess-abc" {
+		t.Errorf("Details.session_id should come from the terminal result event: got %q", details.SessionID)
+	}
+}
+
+// TestRun_streamJSONMissingSystemEventLeavesResolvedModelEmpty covers
+// the forward-compat gap: an older cursor-agent build might emit a
+// stream without a `system.init` event (e.g. if a future version
+// reshapes the init shape or drops it entirely). The adapter must
+// still succeed by finding the terminal result event, and record
+// ResolvedModel="" — truthful "unknown" rather than a fabricated
+// fallback.
+func TestRun_streamJSONMissingSystemEventLeavesResolvedModelEmpty(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"working"}]},"session_id":"sess-no-init"}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"sess-no-init"}` + "\n",
+	)
+	a := newAdapter(fakeExec(&captured{}, stdout, nil, 0, nil, false))
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Status != domain.PhaseStatusSucceeded {
+		t.Errorf("Status: got %q", res.Status)
+	}
+	if res.ResolvedModel != "" {
+		t.Errorf("ResolvedModel must stay empty when the stream lacks a system.init event; got %q", res.ResolvedModel)
+	}
+	if res.Summary != "done" {
+		t.Errorf("Summary: got %q", res.Summary)
 	}
 }
 

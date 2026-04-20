@@ -130,7 +130,18 @@ func (a *Adapter) argvFor(req runner.Request) []string {
 	if m == "" {
 		m = a.defaultCursorModel
 	}
-	out := []string{"--print", "--output-format", "json"}
+	// stream-json is a strict superset of json: it emits the same
+	// terminal {"type":"result",...} event at the end, plus a
+	// {"type":"system","subtype":"init","model":"<resolved>"} event
+	// at the start that carries the concrete model cursor-agent
+	// actually routed to (the only signal available when the
+	// operator picked `auto` or the global default). Per
+	// https://cursor.com/docs/cli/reference/output-format, the json
+	// format explicitly does NOT include a model field. Switching to
+	// stream-json is additive: the parser below still extracts the
+	// same Summary / Details from the terminal result event, and
+	// also captures resolved_model from the initial system event.
+	out := []string{"--print", "--output-format", "stream-json"}
 	if m != "" {
 		out = append(out, "--model", m)
 	}
@@ -243,18 +254,21 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 		if summary == "" {
 			summary = "cursor: agent reported is_error=true"
 		}
-		return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
-			fmt.Errorf("cursor: %w: agent reported is_error=true", runner.ErrNonZeroExit)
+		res := runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput)
+		res.ResolvedModel = parsed.ResolvedModel
+		return res, fmt.Errorf("cursor: %w: agent reported is_error=true", runner.ErrNonZeroExit)
 	}
 
-	return runner.NewResult(domain.PhaseStatusSucceeded, summary, details, rawOutput), nil
+	res := runner.NewResult(domain.PhaseStatusSucceeded, summary, details, rawOutput)
+	res.ResolvedModel = parsed.ResolvedModel
+	return res, nil
 }
 
-// cursorOutput is the cursor-agent --output-format json envelope.
-//
-// Schema (as observed against cursor-agent 2026.04.x; missing fields
-// are zero-valued so the parser stays forward-compatible with new
-// cursor-agent metadata):
+// cursorOutput is the cursor-agent terminal `result` event. When the
+// adapter invokes cursor-agent with `--output-format stream-json`
+// (see argvFor) the stream ends with a line of this shape, identical
+// to what `--output-format json` would have emitted as the sole
+// output:
 //
 //	{
 //	  "type": "result",
@@ -267,6 +281,14 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 //	  "request_id": "...",
 //	  "usage": { "inputTokens": ..., "outputTokens": ..., ... }
 //	}
+//
+// ResolvedModel is NOT present in this event — cursor-agent only
+// surfaces the concrete routed model through the earlier
+// `{"type":"system","subtype":"init","model":"<display name>"}`
+// event of the same NDJSON stream. parseStdout lifts it out of that
+// system event and stores it on cursorOutput.ResolvedModel so the
+// rest of the adapter can treat it as "one more field on the terminal
+// result" without having to know about event ordering.
 //
 // On is_error=true cursor-agent still exits 0; the adapter maps that
 // to runner.ErrNonZeroExit with PhaseStatusFailed so the worker
@@ -281,19 +303,139 @@ type cursorOutput struct {
 	SessionID     string          `json:"session_id,omitempty"`
 	RequestID     string          `json:"request_id,omitempty"`
 	Usage         json.RawMessage `json:"usage,omitempty"`
+	// ResolvedModel is the display name cursor-agent reported having
+	// routed to for this run (e.g. "Claude 4 Sonnet" when the
+	// operator picked `auto`). Extracted from the stream-json
+	// `system.init.model` field by parseStdout; empty when the
+	// upstream stream did not surface one (older cursor-agent
+	// version, or the adapter is being fed legacy single-object
+	// output via test fixtures that predate stream-json).
+	ResolvedModel string `json:"-"`
 }
 
+// streamEventHead is the narrow view parseStdout uses to classify each
+// NDJSON line without committing to one decoder per event type. The
+// `model` field is only meaningful on the `system.init` event; other
+// event types leave it zero-valued.
+type streamEventHead struct {
+	Type    string `json:"type,omitempty"`
+	Subtype string `json:"subtype,omitempty"`
+	Model   string `json:"model,omitempty"`
+}
+
+// parseStdout decodes the cursor-agent print-mode output. It accepts
+// two shapes:
+//
+//  1. stream-json (the format the adapter requests today): newline-
+//     delimited JSON events. We walk every line and collect
+//     - the `system.init.model` value as ResolvedModel, and
+//     - the terminal `{"type":"result",...}` event as the result
+//     envelope that populates Summary/Details. Non-`result`,
+//     non-`system` events are ignored.
+//
+//  2. Single JSON object (legacy `--output-format json` output, and
+//     what every unit-test fixture in this package emits). We detect
+//     this by attempting one json.Unmarshal over the full buffer and
+//     falling through on success. ResolvedModel stays "" in that case
+//     — the legacy format never carried a model field anyway.
+//
+// Empty / whitespace-only stdout is rejected as invalid output so the
+// caller maps it to runner.ErrInvalidOutput rather than silently
+// treating it as a success with an empty summary.
 func parseStdout(stdout []byte) (cursorOutput, error) {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.parseStdout", "bytes", len(stdout))
 	stdout = bytes.TrimSpace(stdout)
 	if len(stdout) == 0 {
 		return cursorOutput{}, errors.New("empty stdout")
 	}
-	var out cursorOutput
-	if err := json.Unmarshal(stdout, &out); err != nil {
-		return cursorOutput{}, fmt.Errorf("decode stdout: %w", err)
+
+	// Fast-path for legacy single-object output (used by every
+	// unit-test fixture and by older cursor-agent binaries that
+	// only support --output-format json). When the whole buffer
+	// parses cleanly as one object AND that object is a terminal
+	// result event, skip the NDJSON walk.
+	var single cursorOutput
+	if err := json.Unmarshal(stdout, &single); err == nil && single.Type == "result" {
+		return single, nil
+	}
+
+	var (
+		out        cursorOutput
+		gotResult  bool
+		lastDecErr error
+	)
+	for _, raw := range splitNDJSON(stdout) {
+		if len(raw) == 0 {
+			continue
+		}
+		var head streamEventHead
+		if err := json.Unmarshal(raw, &head); err != nil {
+			lastDecErr = err
+			continue
+		}
+		switch head.Type {
+		case "system":
+			if head.Subtype == "init" && out.ResolvedModel == "" {
+				out.ResolvedModel = strings.TrimSpace(head.Model)
+			}
+		case "result":
+			var evt cursorOutput
+			if err := json.Unmarshal(raw, &evt); err != nil {
+				lastDecErr = err
+				continue
+			}
+			// Preserve any ResolvedModel captured from an
+			// earlier system event — the terminal result
+			// event does not carry that field and its own
+			// ResolvedModel decode is always "".
+			resolved := out.ResolvedModel
+			out = evt
+			out.ResolvedModel = resolved
+			gotResult = true
+		}
+	}
+
+	if !gotResult {
+		if lastDecErr != nil {
+			return cursorOutput{}, fmt.Errorf("decode stdout: %w", lastDecErr)
+		}
+		return cursorOutput{}, errors.New("stream-json: no terminal result event")
 	}
 	return out, nil
+}
+
+// splitNDJSON splits NDJSON on literal newlines, tolerating CRLF,
+// stripping blank lines, and returning the raw byte slices unchanged
+// so each element can be fed straight to json.Unmarshal. No allocation
+// of intermediate strings so the hot path on large streams stays
+// GC-friendly.
+func splitNDJSON(b []byte) [][]byte {
+	if len(b) == 0 {
+		return nil
+	}
+	out := make([][]byte, 0, 8)
+	start := 0
+	for i := 0; i < len(b); i++ {
+		if b[i] != '\n' {
+			continue
+		}
+		line := b[start:i]
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) > 0 {
+			out = append(out, line)
+		}
+		start = i + 1
+	}
+	if start < len(b) {
+		tail := bytes.TrimSpace(b[start:])
+		if len(tail) > 0 {
+			out = append(out, tail)
+		}
+	}
+	return out
 }
 
 // buildDetails serialises the cursor-agent metadata fields (everything
@@ -304,7 +446,8 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 func buildDetails(p cursorOutput) json.RawMessage {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.buildDetails",
 		"type", p.Type, "subtype", p.Subtype, "is_error", p.IsError,
-		"session_id", p.SessionID, "request_id", p.RequestID)
+		"session_id", p.SessionID, "request_id", p.RequestID,
+		"resolved_model", p.ResolvedModel)
 	d := struct {
 		Type          string          `json:"type,omitempty"`
 		Subtype       string          `json:"subtype,omitempty"`
@@ -314,6 +457,7 @@ func buildDetails(p cursorOutput) json.RawMessage {
 		SessionID     string          `json:"session_id,omitempty"`
 		RequestID     string          `json:"request_id,omitempty"`
 		Usage         json.RawMessage `json:"usage,omitempty"`
+		ResolvedModel string          `json:"resolved_model,omitempty"`
 	}{
 		Type:          p.Type,
 		Subtype:       p.Subtype,
@@ -323,6 +467,7 @@ func buildDetails(p cursorOutput) json.RawMessage {
 		SessionID:     p.SessionID,
 		RequestID:     p.RequestID,
 		Usage:         p.Usage,
+		ResolvedModel: p.ResolvedModel,
 	}
 	b, err := json.Marshal(d)
 	if err != nil {

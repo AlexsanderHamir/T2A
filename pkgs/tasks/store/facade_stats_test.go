@@ -22,7 +22,11 @@ func assertEmptyRunnerStats(t *testing.T, got TaskStats) {
 	if got.Runner.ByRunnerModel == nil {
 		t.Fatalf("Runner.ByRunnerModel must be non-nil on empty DB")
 	}
-	if len(got.Runner.ByRunner) != 0 || len(got.Runner.ByModel) != 0 || len(got.Runner.ByRunnerModel) != 0 {
+	if got.Runner.ByRunnerModelResolved == nil {
+		t.Fatalf("Runner.ByRunnerModelResolved must be non-nil on empty DB")
+	}
+	if len(got.Runner.ByRunner) != 0 || len(got.Runner.ByModel) != 0 ||
+		len(got.Runner.ByRunnerModel) != 0 || len(got.Runner.ByRunnerModelResolved) != 0 {
 		t.Fatalf("Runner block non-empty on empty DB: %+v", got.Runner)
 	}
 }
@@ -150,6 +154,139 @@ func TestStore_TaskStats_runnerBreakdown_aggregatesByRunnerModelAndPair(t *testi
 	}
 	if pair.ByStatus[domain.CycleStatusSucceeded] != 1 || pair.ByStatus[domain.CycleStatusFailed] != 1 {
 		t.Errorf("ByRunnerModel[%q]=%+v want succeeded=1, failed=1", pairKey, pair.ByStatus)
+	}
+}
+
+// TestStore_TaskStats_runnerBreakdown_resolvedModelFromExecDetails
+// pins the new by_runner_model_resolved aggregation: the cursor
+// adapter lifts the CLI's `system.init.model` event into the execute
+// phase's details_json as {"resolved_model":"<display name>"}, and
+// the stats scanner LEFT JOINs that column so the SPA can render
+// "Cursor CLI · Auto → Claude 4 Sonnet" style sub-rows. Three seeded
+// cycles cover:
+//
+//  1. Auto-routed cycle resolved to "Claude 4 Sonnet" → contributes
+//     to the tri-key "cursor-cli|auto|Claude 4 Sonnet".
+//  2. Auto-routed cycle resolved to "Composer 1" → contributes to a
+//     different tri-key so operators can see `auto` splitting into
+//     multiple concrete models.
+//  3. Cycle with no resolved_model on the execute phase (pre-feature
+//     or non-cursor runner) → MUST NOT appear in the new map, so the
+//     SPA never renders phantom "→ <unknown>" sub-rows.
+func TestStore_TaskStats_runnerBreakdown_resolvedModelFromExecDetails(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk := mustCreateTask(t, s, ctx)
+
+	seeds := []struct {
+		meta        string
+		execDetails string // "" = no execute phase seeded
+		status      domain.CycleStatus
+	}{
+		{
+			meta:        `{"runner":"cursor-cli","cursor_model_effective":"auto"}`,
+			execDetails: `{"resolved_model":"Claude 4 Sonnet","session_id":"s1"}`,
+			status:      domain.CycleStatusSucceeded,
+		},
+		{
+			meta:        `{"runner":"cursor-cli","cursor_model_effective":"auto"}`,
+			execDetails: `{"resolved_model":"Composer 1","session_id":"s2"}`,
+			status:      domain.CycleStatusSucceeded,
+		},
+		{
+			meta:        `{"runner":"cursor-cli","cursor_model_effective":"auto"}`,
+			execDetails: "", // no execute phase — pre-feature path
+			status:      domain.CycleStatusSucceeded,
+		},
+	}
+	for i, sd := range seeds {
+		cyc, err := s.StartCycle(ctx, StartCycleInput{
+			TaskID:      tsk.ID,
+			TriggeredBy: domain.ActorAgent,
+			Meta:        []byte(sd.meta),
+		})
+		if err != nil {
+			t.Fatalf("seed %d StartCycle: %v", i, err)
+		}
+		if sd.execDetails != "" {
+			// The state machine requires a terminated diagnose
+			// phase before execute can start; mirror the worker's
+			// runSkippedDiagnose path.
+			diag, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
+			if err != nil {
+				t.Fatalf("seed %d StartPhase(diagnose): %v", i, err)
+			}
+			if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+				CycleID:  cyc.ID,
+				PhaseSeq: diag.PhaseSeq,
+				Status:   domain.PhaseStatusSkipped,
+				By:       domain.ActorAgent,
+			}); err != nil {
+				t.Fatalf("seed %d CompletePhase(diagnose): %v", i, err)
+			}
+			ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
+			if err != nil {
+				t.Fatalf("seed %d StartPhase(execute): %v", i, err)
+			}
+			if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+				CycleID:  cyc.ID,
+				PhaseSeq: ph.PhaseSeq,
+				Status:   domain.PhaseStatusSucceeded,
+				Details:  []byte(sd.execDetails),
+				By:       domain.ActorAgent,
+			}); err != nil {
+				t.Fatalf("seed %d CompletePhase(execute): %v", i, err)
+			}
+		}
+		if _, err := s.TerminateCycle(ctx, cyc.ID, sd.status, "seed", domain.ActorAgent); err != nil {
+			t.Fatalf("seed %d TerminateCycle: %v", i, err)
+		}
+	}
+
+	got, err := s.TaskStats(ctx)
+	if err != nil {
+		t.Fatalf("TaskStats: %v", err)
+	}
+
+	wantSonnet := "cursor-cli|auto|Claude 4 Sonnet"
+	sonnetBucket, ok := got.Runner.ByRunnerModelResolved[wantSonnet]
+	if !ok {
+		t.Fatalf("ByRunnerModelResolved missing %q; got keys=%v",
+			wantSonnet, mapKeys(got.Runner.ByRunnerModelResolved))
+	}
+	if sonnetBucket.ByStatus[domain.CycleStatusSucceeded] != 1 {
+		t.Errorf("ByRunnerModelResolved[%q].succeeded=%d want 1",
+			wantSonnet, sonnetBucket.ByStatus[domain.CycleStatusSucceeded])
+	}
+	wantComposer := "cursor-cli|auto|Composer 1"
+	composerBucket, ok := got.Runner.ByRunnerModelResolved[wantComposer]
+	if !ok {
+		t.Fatalf("ByRunnerModelResolved missing %q; got keys=%v",
+			wantComposer, mapKeys(got.Runner.ByRunnerModelResolved))
+	}
+	if composerBucket.ByStatus[domain.CycleStatusSucceeded] != 1 {
+		t.Errorf("ByRunnerModelResolved[%q].succeeded=%d want 1",
+			wantComposer, composerBucket.ByStatus[domain.CycleStatusSucceeded])
+	}
+
+	// Exactly two resolved-model entries; the third cycle (no exec
+	// details) MUST NOT appear — no phantom sub-rows in the panel.
+	if len(got.Runner.ByRunnerModelResolved) != 2 {
+		t.Errorf("ByRunnerModelResolved should contain exactly 2 entries (one per resolved model); got %d: %v",
+			len(got.Runner.ByRunnerModelResolved),
+			mapKeys(got.Runner.ByRunnerModelResolved))
+	}
+
+	// The existing by_runner_model aggregation is unchanged: still
+	// keys on (runner|effective) and still counts the third cycle.
+	pairKey := "cursor-cli|auto"
+	pair, ok := got.Runner.ByRunnerModel[pairKey]
+	if !ok {
+		t.Fatalf("ByRunnerModel missing %q", pairKey)
+	}
+	if pair.ByStatus[domain.CycleStatusSucceeded] != 3 {
+		t.Errorf("ByRunnerModel[%q].succeeded=%d want 3 (all three cycles)",
+			pairKey, pair.ByStatus[domain.CycleStatusSucceeded])
 	}
 }
 

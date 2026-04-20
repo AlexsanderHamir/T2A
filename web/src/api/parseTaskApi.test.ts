@@ -203,6 +203,7 @@ describe("parseTaskStatsResponse", () => {
       by_runner: {},
       by_model: {},
       by_runner_model: {},
+      by_runner_model_resolved: {},
     },
     recent_failures: [],
   };
@@ -478,6 +479,39 @@ describe("parseTaskStatsResponse", () => {
     expect(got.runner.by_runner["cursor-cli"].succeeded).toBe(2);
     expect(got.runner.by_model[""].by_status.failed).toBe(1);
     expect(got.runner.by_runner_model["cursor-cli|sonnet-4.5"].duration_p95_succeeded_seconds).toBe(1);
+    // Older backends predate by_runner_model_resolved on the wire.
+    // Parser must tolerate the missing key by defaulting to `{}` so
+    // the SPA doesn't hard-error during a rollout.
+    expect(got.runner.by_runner_model_resolved).toEqual({});
+  });
+
+  it("parses by_runner_model_resolved when the server emits it", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      runner: {
+        by_runner: {},
+        by_model: {},
+        by_runner_model: {},
+        by_runner_model_resolved: {
+          "cursor-cli|auto|claude-4-sonnet": {
+            by_status: { succeeded: 3 },
+            succeeded: 3,
+            duration_p50_succeeded_seconds: 2,
+            duration_p95_succeeded_seconds: 7,
+          },
+        },
+      },
+    });
+    expect(
+      got.runner.by_runner_model_resolved["cursor-cli|auto|claude-4-sonnet"]
+        .succeeded,
+    ).toBe(3);
   });
 
   it("rejects unknown cycle status keys inside a runner bucket", () => {

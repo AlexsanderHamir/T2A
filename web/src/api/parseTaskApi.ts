@@ -291,6 +291,18 @@ function parseTaskStatsRunner(value: unknown): TaskStatsRunner {
     by_runner: parseRunnerBucketMap(value.by_runner, "runner.by_runner"),
     by_model: parseRunnerBucketMap(value.by_model, "runner.by_model"),
     by_runner_model: parseRunnerBucketMap(value.by_runner_model, "runner.by_runner_model"),
+    // by_runner_model_resolved was added after by_runner_model, so
+    // backends that predate it omit the key entirely. Default to `{}`
+    // instead of erroring so the SPA stays compatible with older
+    // server builds during rollouts; newer servers always emit `{}` on
+    // an empty database.
+    by_runner_model_resolved:
+      value.by_runner_model_resolved === undefined
+        ? {}
+        : parseRunnerBucketMap(
+            value.by_runner_model_resolved,
+            "runner.by_runner_model_resolved",
+          ),
   };
 }
 
