@@ -29,9 +29,11 @@ const SSE_INVALIDATE_MAX_WAIT_MS = 2500;
 const SSE_DISCONNECT_UI_MS = 900;
 
 /**
- * Pending invalidation slots collected between debounce ticks. `tasks`
- * invalidates the entire `["tasks","detail",id]` subtree (covers all child
- * queries: events, checklist, cycles, the task row itself).
+ * Pending invalidation slots collected between debounce ticks. On flush we
+ * invalidate the `["tasks","detail"]` prefix so every cached task detail
+ * (and nested checklist/events/cycles keys) refetches — required because
+ * subtask rows are embedded under the parent's `children` while SSE only
+ * names the updated task id.
  *
  * Cycle frames (`task_cycle_changed`) are the *only* SSE signal the agent
  * worker emits — `task_updated` is HTTP-handler-only — so the worker's
@@ -89,11 +91,17 @@ export function useTaskEventStream(): boolean {
     }
     if (taskIds.length > 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-      for (const id of taskIds) {
-        void queryClient.invalidateQueries({
-          queryKey: taskQueryKeys.detail(id),
-        });
-      }
+      // `GET /tasks/{id}` returns a nested tree: subtask rows live under the
+      // parent's `children` array in React Query cache
+      // `["tasks","detail",parentId]`. SSE payloads only carry the *updated*
+      // task id (subtask or root), so invalidating that id alone refreshes the
+      // subtask detail view but leaves the parent's cached tree stale until a
+      // hard reload — the Subtasks list on the parent task page. Prefix-
+      // match every `["tasks","detail", …]` subtree so open ancestor pages
+      // refetch too (checklist/events/cycle queries share the same prefix).
+      void queryClient.invalidateQueries({
+        queryKey: [...taskQueryKeys.all, "detail"],
+      });
     }
     for (const [taskId] of cycleEntries) {
       if (taskIds.includes(taskId)) {

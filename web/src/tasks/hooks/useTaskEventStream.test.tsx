@@ -108,7 +108,7 @@ describe("useTaskEventStream", () => {
     const calls = inv.mock.calls.map((c) => c[0]);
     expect(calls).toContainEqual({ queryKey: ["tasks", "list"] });
     expect(calls).toContainEqual({
-      queryKey: ["tasks", "detail", "task-1"],
+      queryKey: ["tasks", "detail"],
     });
     // Standalone "cycles only" invalidation must not also fire — it
     // would be redundant work and would defeat the dedup logic.
@@ -200,7 +200,7 @@ describe("useTaskEventStream", () => {
     );
     expect(cyclesOnlyCalls).toHaveLength(0);
     expect(calls).toContainEqual({
-      queryKey: ["tasks", "detail", "task-1"],
+      queryKey: ["tasks", "detail"],
     });
   });
 
@@ -242,7 +242,7 @@ describe("useTaskEventStream", () => {
 
     const detailCalls = inv.mock.calls
       .map((c) => (c[0] as { queryKey: readonly unknown[] }).queryKey)
-      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail", "task-burst"]));
+      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail"]));
     expect(detailCalls).toHaveLength(1);
   });
 
@@ -277,7 +277,7 @@ describe("useTaskEventStream", () => {
 
     const detailCalls = inv.mock.calls
       .map((c) => (c[0] as { queryKey: readonly unknown[] }).queryKey)
-      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail", "task-stream"]));
+      .filter((k) => JSON.stringify(k) === JSON.stringify(["tasks", "detail"]));
     expect(detailCalls.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -381,7 +381,7 @@ describe("useTaskEventStream", () => {
     );
     expect(calls).toContainEqual(["settings", "app"]);
     expect(calls).toContainEqual(["tasks", "list"]);
-    expect(calls).toContainEqual(["tasks", "detail", "task-mix"]);
+    expect(calls).toContainEqual(["tasks", "detail"]);
   });
 
   it("does not invalidate queries after unmount before debounce elapses", () => {
