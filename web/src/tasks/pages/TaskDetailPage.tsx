@@ -66,7 +66,7 @@ export function TaskDetailPage({ app }: Props) {
     updateSubtaskChecklistRow,
     createSubtaskMutation,
     submitNewSubtask,
-  } = useTaskDetailSubtasks(taskId, queryClient);
+  } = useTaskDetailSubtasks(taskId);
   const {
     checklistModalOpen,
     newChecklistText,
@@ -84,7 +84,7 @@ export function TaskDetailPage({ app }: Props) {
     updateChecklistTextMutation,
     submitEditChecklistCriterion,
     deleteChecklistMutation,
-  } = useTaskDetailChecklist(taskId, queryClient);
+  } = useTaskDetailChecklist(taskId);
 
   useTaskDetailDeleteNavigate(
     taskId,

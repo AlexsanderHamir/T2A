@@ -1,4 +1,4 @@
-import { useMutation, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { addChecklistItem, createTask } from "@/api";
 import {
@@ -31,7 +31,8 @@ type SubtaskOptimisticContext = {
   startedAtMs: number;
 };
 
-export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) {
+export function useTaskDetailSubtasks(taskId: string) {
+  const queryClient = useQueryClient();
   const { optimisticMutationsEnabled } = useRolloutFlags();
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskPrompt, setSubtaskPrompt] = useState("");

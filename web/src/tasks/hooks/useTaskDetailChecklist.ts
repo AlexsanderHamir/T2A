@@ -1,4 +1,4 @@
-import { useMutation, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   addChecklistItem,
@@ -59,7 +59,8 @@ function recordRollback(
   rumMutationSettled(kind, performance.now() - startedAtMs, 0);
 }
 
-export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient) {
+export function useTaskDetailChecklist(taskId: string) {
+  const queryClient = useQueryClient();
   const toast = useOptionalToast();
   const { optimisticMutationsEnabled } = useRolloutFlags();
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);

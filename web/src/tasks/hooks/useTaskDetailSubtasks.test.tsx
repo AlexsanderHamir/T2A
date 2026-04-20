@@ -105,7 +105,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("openSubtaskModal resets form and opens modal", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -128,7 +128,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("closeSubtaskModal closes and clears form", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -148,7 +148,7 @@ describe("useTaskDetailSubtasks", () => {
   it("resets subtask UI when taskId changes", () => {
     const qc = newQueryClient();
     const { result, rerender } = renderHook(
-      ({ taskId }: { taskId: string }) => useTaskDetailSubtasks(taskId, qc),
+      ({ taskId }: { taskId: string }) => useTaskDetailSubtasks(taskId),
       {
         wrapper: createWrapper(qc),
         initialProps: { taskId: PARENT_ID },
@@ -168,7 +168,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("clears checklist rows when checklist inherit is enabled", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -186,7 +186,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("append trims; remove and update rows", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -217,7 +217,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("submitNewSubtask no-ops without title or priority", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -235,7 +235,7 @@ describe("useTaskDetailSubtasks", () => {
   it("submitNewSubtask creates child, optional checklist items, invalidates, closes modal", async () => {
     const qc = newQueryClient();
     const inv = vi.spyOn(qc, "invalidateQueries");
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -284,7 +284,7 @@ describe("useTaskDetailSubtasks", () => {
       // — that would slam shut B's form and erase what the user typed.
       const qc = newQueryClient();
       const inv = vi.spyOn(qc, "invalidateQueries");
-      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
       });
 
@@ -352,7 +352,7 @@ describe("useTaskDetailSubtasks", () => {
 
     it("happy path: in-flight resolution closes the modal and resets the form", async () => {
       const qc = newQueryClient();
-      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
       });
 
@@ -378,7 +378,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("submitNewSubtask skips addChecklistItem when inheriting checklist", async () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+    const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
 
@@ -426,7 +426,7 @@ describe("useTaskDetailSubtasks", () => {
           }),
       );
 
-      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
       });
 
@@ -473,7 +473,7 @@ describe("useTaskDetailSubtasks", () => {
 
       mockCreateTask.mockRejectedValueOnce(new Error("boom"));
 
-      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
       });
 

@@ -87,7 +87,7 @@ describe("useTaskDetailChecklist", () => {
   it("clears checklist modals when taskId changes", () => {
     const qc = newQueryClient();
     const { result, rerender } = renderHook(
-      ({ taskId }: { taskId: string }) => useTaskDetailChecklist(taskId, qc),
+      ({ taskId }: { taskId: string }) => useTaskDetailChecklist(taskId),
       {
         wrapper: createWrapper(qc),
         initialProps: { taskId: TASK_A },
@@ -108,7 +108,7 @@ describe("useTaskDetailChecklist", () => {
 
   it("openChecklistModal and closeChecklistModal", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
 
@@ -127,7 +127,7 @@ describe("useTaskDetailChecklist", () => {
 
   it("openEditCriterionModal closes add modal and sets edit fields", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
 
@@ -147,7 +147,7 @@ describe("useTaskDetailChecklist", () => {
 
   it("submitNewChecklistCriterion no-ops when text is blank", () => {
     const qc = newQueryClient();
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
 
@@ -163,7 +163,7 @@ describe("useTaskDetailChecklist", () => {
   it("submitNewChecklistCriterion adds item, invalidates, closes add modal", async () => {
     const qc = newQueryClient();
     const inv = vi.spyOn(qc, "invalidateQueries");
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
 
@@ -196,7 +196,7 @@ describe("useTaskDetailChecklist", () => {
       // close B's freshly-opened modal.
       const qc = newQueryClient();
       const inv = vi.spyOn(qc, "invalidateQueries");
-      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
         wrapper: createWrapper(qc),
       });
 
@@ -258,7 +258,7 @@ describe("useTaskDetailChecklist", () => {
 
     it("happy path: in-flight resolution closes the add modal and clears the text", async () => {
       const qc = newQueryClient();
-      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
         wrapper: createWrapper(qc),
       });
 
@@ -285,7 +285,7 @@ describe("useTaskDetailChecklist", () => {
       const otherItemId = "44444444-4444-4444-8444-444444444444";
       const qc = newQueryClient();
       const inv = vi.spyOn(qc, "invalidateQueries");
-      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
         wrapper: createWrapper(qc),
       });
 
@@ -343,7 +343,7 @@ describe("useTaskDetailChecklist", () => {
 
     it("happy path: in-flight resolution closes the edit modal", async () => {
       const qc = newQueryClient();
-      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+      const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
         wrapper: createWrapper(qc),
       });
 
@@ -367,7 +367,7 @@ describe("useTaskDetailChecklist", () => {
   it("submitEditChecklistCriterion patches and closes edit modal", async () => {
     const qc = newQueryClient();
     const inv = vi.spyOn(qc, "invalidateQueries");
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
 
@@ -405,7 +405,7 @@ describe("useTaskDetailChecklist", () => {
     qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
       items: [{ id: "i1", sort_order: 0, text: "existing", done: false }],
     });
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
     act(() => {
@@ -443,7 +443,7 @@ describe("useTaskDetailChecklist", () => {
     qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
       items: [{ id: ITEM_ID, sort_order: 0, text: "old", done: false }],
     });
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
     act(() => {
@@ -485,7 +485,7 @@ describe("useTaskDetailChecklist", () => {
       ],
     });
     const inv = vi.spyOn(qc, "invalidateQueries");
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
     act(() => {
@@ -516,7 +516,7 @@ describe("useTaskDetailChecklist", () => {
     qc.setQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A), {
       items: [{ id: "i1", sort_order: 0, text: "existing", done: false }],
     });
-    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A, qc), {
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
       wrapper: createWrapper(qc),
     });
     act(() => {
