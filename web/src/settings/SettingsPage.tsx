@@ -38,9 +38,14 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   if (initial.worker_enabled !== form.workerEnabled) {
     out.worker_enabled = form.workerEnabled;
   }
-  if (initial.agent_paused !== form.agentPaused) {
-    out.agent_paused = form.agentPaused;
-  }
+  // agent_paused is intentionally NOT part of the form-driven diff:
+  // the UI shows the flag as a read-only status badge (humans flip
+  // pause through automation: agents, scripts, or another tool that
+  // calls PATCH /settings directly). Including it here would round-trip
+  // the user's last fetched value back as a no-op write and, worse,
+  // would race a parallel agent flip — the SettingsPage would
+  // silently undo a script's pause just because the operator hit
+  // Save on an unrelated field.
   if (initial.runner !== form.runner.trim()) {
     out.runner = form.runner.trim();
   }
@@ -326,20 +331,30 @@ export function SettingsPage() {
             the configured runner.
           </p>
 
-          <label className="settings-field settings-field--inline">
-            <input
-              type="checkbox"
-              checked={form.agentPaused}
-              onChange={(e) => handleField("agentPaused", e.target.checked)}
-              data-testid="settings-agent-paused"
-            />
-            <span className="settings-field-label">Pause agent</span>
-          </label>
+          <div
+            className="settings-field settings-field--inline"
+            data-testid="settings-agent-paused-status"
+            data-paused={form.agentPaused ? "true" : "false"}
+          >
+            <span className="settings-field-label">Agent pause status</span>
+            <span
+              className={`settings-pill ${
+                form.agentPaused
+                  ? "settings-pill--paused"
+                  : "settings-pill--running"
+              }`}
+              role="status"
+            >
+              {form.agentPaused ? "Paused" : "Running"}
+            </span>
+          </div>
           <p className="settings-field-help">
-            Soft pause. The worker stops dequeuing new tasks but stays
-            configured — flip it back off to resume. Use this for short
-            maintenance windows; use <em>Enable agent worker</em> for a
-            longer-term shutdown. The header chip turns amber while paused.
+            Read-only. The pause flag is operated by automation (agents
+            and scripts that <code>PATCH /settings</code> with{" "}
+            <code>{`{"agent_paused": true}`}</code>) so a human cannot
+            silently undo a script's pause by saving an unrelated field.
+            Use <em>Enable agent worker</em> above for a long-term
+            shutdown. The header chip turns amber while paused.
           </p>
 
           <label className="settings-field">
