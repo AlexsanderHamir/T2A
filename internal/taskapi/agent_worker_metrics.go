@@ -26,27 +26,45 @@ var agentRunDurationBuckets = []float64{
 var registerAgentWorkerMetrics sync.Once
 
 // workerMetricsAdapter satisfies worker.RunMetrics by fanning out to a
-// counter and a histogram. Owned by this package so the registration is
-// the single source of truth for label values; the worker package does
-// not import prometheus.
+// counter and a histogram (the original by-runner series), AND a
+// parallel pair scoped by (runner, model) for the per-task runner+model
+// attribution work. Owned by this package so the registration is the
+// single source of truth for label values; the worker package does not
+// import prometheus.
+//
+// The two series live side by side intentionally — Phase 3 of the plan
+// locked decision D4 ("non-breaking"): existing dashboards continue to
+// scrape the runner-only counter/histogram, and the new model-aware
+// pair lets operators slice by model without re-keying their queries.
 type workerMetricsAdapter struct {
-	runs     *prometheus.CounterVec
-	duration *prometheus.HistogramVec
+	runs            *prometheus.CounterVec
+	duration        *prometheus.HistogramVec
+	runsByModel     *prometheus.CounterVec
+	durationByModel *prometheus.HistogramVec
 }
 
-// RecordRun increments t2a_agent_runs_total and observes
-// t2a_agent_run_duration_seconds. Label values are bounded: runner is
-// the adapter Name() (today only "cursor", "fake" in tests), and
-// terminalStatus is one of the three terminal domain.CycleStatus
-// values ("succeeded", "failed", "aborted").
-func (a *workerMetricsAdapter) RecordRun(runnerName, terminalStatus string, d time.Duration) {
+// RecordRun increments both the by-runner and the by-(runner, model)
+// counters, and observes both duration histograms. Label values are
+// bounded: runner is the adapter Name() (today "cursor", "fake" in
+// tests), terminalStatus is one of the three terminal
+// domain.CycleStatus values, and model is the runner's resolved
+// effective model — empty string is recorded verbatim ("no model
+// configured") rather than substituted with a synthetic default.
+//
+// Per-model cardinality lives on the parallel `*_by_model_*` series
+// only, so a future fan-out of model identifiers cannot blow up the
+// existing runner-only series operators have alerts on.
+func (a *workerMetricsAdapter) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.RecordRun",
-		"runner", runnerName, "terminal_status", terminalStatus, "duration_ms", d.Milliseconds())
+		"runner", runnerName, "model", model,
+		"terminal_status", terminalStatus, "duration_ms", d.Milliseconds())
 	if a == nil {
 		return
 	}
 	a.runs.WithLabelValues(runnerName, terminalStatus).Inc()
 	a.duration.WithLabelValues(runnerName).Observe(d.Seconds())
+	a.runsByModel.WithLabelValues(runnerName, model, terminalStatus).Inc()
+	a.durationByModel.WithLabelValues(runnerName, model).Observe(d.Seconds())
 }
 
 // registerAgentWorkerMetricsOn registers the counter + histogram on
@@ -66,13 +84,42 @@ func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdap
 		Help:      "Wall-clock duration of one agent worker attempt (StartCycle → TerminateCycle), in seconds.",
 		Buckets:   agentRunDurationBuckets,
 	}, []string{"runner"})
+	// Phase 3 of the per-task runner+model attribution plan: the
+	// `_by_model_` series carry the same observation as the existing
+	// runner-only pair plus a `model` label. Empty model strings are
+	// emitted verbatim — that's the truthful "no model configured"
+	// bucket pre-feature cycles fall into. Cardinality risk is
+	// confined here; the runner-only pair stays untouched so existing
+	// dashboards/alerts keep working without any query rewrite.
+	runsByModel := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "t2a",
+		Name:      "agent_runs_by_model_total",
+		Help:      "Count of completed agent worker attempts, labelled by runner, effective model, and terminal cycle status.",
+	}, []string{"runner", "model", "terminal_status"})
+	durationByModel := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "t2a",
+		Name:      "agent_run_duration_by_model_seconds",
+		Help:      "Wall-clock duration of one agent worker attempt, labelled by runner and effective model.",
+		Buckets:   agentRunDurationBuckets,
+	}, []string{"runner", "model"})
 	if err := reg.Register(runs); err != nil {
 		return nil, fmt.Errorf("register t2a_agent_runs_total: %w", err)
 	}
 	if err := reg.Register(duration); err != nil {
 		return nil, fmt.Errorf("register t2a_agent_run_duration_seconds: %w", err)
 	}
-	return &workerMetricsAdapter{runs: runs, duration: duration}, nil
+	if err := reg.Register(runsByModel); err != nil {
+		return nil, fmt.Errorf("register t2a_agent_runs_by_model_total: %w", err)
+	}
+	if err := reg.Register(durationByModel); err != nil {
+		return nil, fmt.Errorf("register t2a_agent_run_duration_by_model_seconds: %w", err)
+	}
+	return &workerMetricsAdapter{
+		runs:            runs,
+		duration:        duration,
+		runsByModel:     runsByModel,
+		durationByModel: durationByModel,
+	}, nil
 }
 
 // RegisterAgentWorkerMetricsOn is the test-friendly variant of

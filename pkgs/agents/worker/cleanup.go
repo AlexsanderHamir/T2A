@@ -59,7 +59,7 @@ func (w *Worker) handleShutdownAfterRun(state *processState, taskID string) {
 				"cycle_id", state.cycleID, "err", err)
 		} else {
 			w.publish(taskID, state.cycleID)
-			w.recordRun(string(domain.CycleStatusAborted), w.runner.Name(), state.startedAt)
+			w.recordRun(string(domain.CycleStatusAborted), w.runner.Name(), state.effectiveModel, state.startedAt)
 		}
 		state.cycleStarted = false
 	}
@@ -114,7 +114,7 @@ func (w *Worker) recoverFromPanic(state *processState, task domain.Task) {
 				"cycle_id", state.cycleID, "err", err)
 		} else {
 			w.publish(task.ID, state.cycleID)
-			w.recordRun(string(domain.CycleStatusFailed), w.runner.Name(), state.startedAt)
+			w.recordRun(string(domain.CycleStatusFailed), w.runner.Name(), state.effectiveModel, state.startedAt)
 		}
 		state.cycleStarted = false
 	}
@@ -183,7 +183,7 @@ func (w *Worker) bestEffortTerminate(ctx context.Context, state *processState, t
 			}
 		} else {
 			w.publish(taskID, state.cycleID)
-			w.recordRun(string(status), w.runner.Name(), state.startedAt)
+			w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
 		}
 		state.cycleStarted = false
 	}

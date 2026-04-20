@@ -29,6 +29,16 @@ type processState struct {
 	// path (happy / panic / shutdown / best-effort) observes the same
 	// wall-clock duration into the metrics histogram.
 	startedAt time.Time
+	// effectiveModel is captured in startCycle from
+	// runner.EffectiveModel(req) so every TerminateCycle path
+	// (happy / panic / shutdown / best-effort) emits the SAME model
+	// label into the by-model Prometheus series the cycle's
+	// MetaJSON recorded — even if the operator edited
+	// task.CursorModel between StartCycle and TerminateCycle.
+	// Empty string is the truthful "no model configured" value;
+	// the metrics adapter renders it as the empty label rather
+	// than substituting a synthetic default.
+	effectiveModel string
 }
 
 // processOne runs the worker's full per-task lifecycle. The function is
@@ -221,13 +231,14 @@ func (w *Worker) transitionTask(ctx context.Context, taskID string, next domain.
 func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.startCycle",
 		"task_id", task.ID)
-	meta := buildCycleMeta(w.runner, task.InitialPrompt, runner.Request{
+	req := runner.Request{
 		TaskID:      task.ID,
 		Phase:       domain.PhaseExecute,
 		Prompt:      task.InitialPrompt,
 		WorkingDir:  w.options.WorkingDir,
 		CursorModel: task.CursorModel,
-	})
+	}
+	meta := buildCycleMeta(w.runner, task.InitialPrompt, req)
 	cycle, err := w.store.StartCycle(ctx, store.StartCycleInput{
 		TaskID:      task.ID,
 		TriggeredBy: domain.ActorAgent,
@@ -240,6 +251,7 @@ func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *proce
 	}
 	state.cycleID = cycle.ID
 	state.cycleStarted = true
+	state.effectiveModel = w.runner.EffectiveModel(req)
 	w.publish(task.ID, cycle.ID)
 	return cycle, true
 }
@@ -410,7 +422,7 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	}
 	state.cycleStarted = false
 	w.publish(taskID, state.cycleID)
-	w.recordRun(string(status), w.runner.Name(), state.startedAt)
+	w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
 	return true
 }
 

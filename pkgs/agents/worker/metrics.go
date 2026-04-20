@@ -17,11 +17,15 @@ import (
 //
 // terminalStatus is the string form of the terminal domain.CycleStatus
 // (one of "succeeded", "failed", "aborted"). runner is whatever the
-// adapter returned from runner.Runner.Name(). Cardinality is bounded
-// because both label values come from a small fixed set; new runners
-// add adapter implementations, not freeform labels.
+// adapter returned from runner.Runner.Name(). model is whatever
+// runner.EffectiveModel(req) returned for this cycle's request — may
+// be empty when no model is configured anywhere; the adapter records
+// "" verbatim rather than substituting a synthetic default. Per-runner
+// label cardinality is bounded; per-model cardinality is shaped by
+// the parallel `*_by_model_*` series only — see Phase 3 of the
+// per-task runner+model attribution plan.
 type RunMetrics interface {
-	RecordRun(runner string, terminalStatus string, duration time.Duration)
+	RecordRun(runner string, model string, terminalStatus string, duration time.Duration)
 }
 
 // recordRun fans out to the configured RunMetrics, if any. It is the
@@ -33,9 +37,9 @@ type RunMetrics interface {
 // negative observation, and skip the record entirely when the worker
 // did not actually start the cycle (state.startedAt zero) so we do not
 // pollute the histogram with sub-millisecond garbage.
-func (w *Worker) recordRun(terminalStatus, runnerName string, started time.Time) {
+func (w *Worker) recordRun(terminalStatus, runnerName, model string, started time.Time) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.recordRun",
-		"terminal_status", terminalStatus, "runner", runnerName)
+		"terminal_status", terminalStatus, "runner", runnerName, "model", model)
 	if w == nil || w.options.Metrics == nil {
 		return
 	}
@@ -46,5 +50,5 @@ func (w *Worker) recordRun(terminalStatus, runnerName string, started time.Time)
 	if d < 0 {
 		d = 0
 	}
-	w.options.Metrics.RecordRun(runnerName, terminalStatus, d)
+	w.options.Metrics.RecordRun(runnerName, model, terminalStatus, d)
 }

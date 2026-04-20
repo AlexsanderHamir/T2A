@@ -17,6 +17,7 @@ import (
 
 type recordedRun struct {
 	Runner         string
+	Model          string
 	TerminalStatus string
 	Duration       time.Duration
 }
@@ -26,11 +27,12 @@ type recordingMetrics struct {
 	calls []recordedRun
 }
 
-func (m *recordingMetrics) RecordRun(runnerName, terminalStatus string, d time.Duration) {
+func (m *recordingMetrics) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls = append(m.calls, recordedRun{
 		Runner:         runnerName,
+		Model:          model,
 		TerminalStatus: terminalStatus,
 		Duration:       d,
 	})
@@ -158,6 +160,66 @@ func TestWorker_RunMetrics_observesShutdownAbort(t *testing.T) {
 	if calls[0].TerminalStatus != string(domain.CycleStatusAborted) {
 		t.Fatalf("terminal_status = %q, want %q",
 			calls[0].TerminalStatus, domain.CycleStatusAborted)
+	}
+}
+
+// TestWorker_RunMetrics_recordsEffectiveModelLabel locks in Phase 3
+// of the per-task runner+model attribution plan: the value
+// runner.EffectiveModel(req) returned at startCycle MUST appear in
+// the RecordRun observation, regardless of which terminate path
+// fires. Exercises the happy path (req.CursorModel wins) and the
+// runner-default path (empty req.CursorModel falls back to the
+// runner's default), and also pins the empty-string case (no
+// task model, no runner default) through as a verbatim empty
+// label rather than a synthetic default.
+func TestWorker_RunMetrics_recordsEffectiveModelLabel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		taskModel     string
+		runnerDefault string
+		wantModel     string
+	}{
+		{name: "task_wins_over_default", taskModel: "sonnet-4.5", runnerDefault: "opus-4", wantModel: "sonnet-4.5"},
+		{name: "fallback_to_runner_default", taskModel: "", runnerDefault: "opus-4", wantModel: "opus-4"},
+		{name: "no_model_configured_anywhere", taskModel: "", runnerDefault: "", wantModel: ""},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			tsk := h.createReadyTaskWithModel(ctx, "metrics-model-"+tc.name, tc.taskModel)
+
+			r := runnerfake.New().WithName("fake").WithDefaultModel(tc.runnerDefault)
+			r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+				domain.PhaseStatusSucceeded, "ok",
+				json.RawMessage(`{"ok":true}`), ""))
+
+			metrics := &recordingMetrics{}
+			_, done := h.startWorker(ctx, r, worker.Options{Metrics: metrics})
+			h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+			cancel()
+			if err := <-done; err != nil {
+				t.Fatalf("worker exit err: %v", err)
+			}
+
+			calls := metrics.snapshot()
+			if len(calls) != 1 {
+				t.Fatalf("RecordRun calls = %d, want 1 (calls=%+v)", len(calls), calls)
+			}
+			if calls[0].Model != tc.wantModel {
+				t.Fatalf("model label = %q, want %q (taskModel=%q runnerDefault=%q)",
+					calls[0].Model, tc.wantModel, tc.taskModel, tc.runnerDefault)
+			}
+			if calls[0].Runner != "fake" {
+				t.Fatalf("runner label = %q, want %q", calls[0].Runner, "fake")
+			}
+		})
 	}
 }
 

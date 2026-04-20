@@ -15,16 +15,16 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	adapter.RecordRun("cursor", "succeeded", 750*time.Millisecond)
-	adapter.RecordRun("cursor", "failed", 5*time.Second)
-	adapter.RecordRun("cursor", "succeeded", 12*time.Second)
+	adapter.RecordRun("cursor", "sonnet-4.5", "succeeded", 750*time.Millisecond)
+	adapter.RecordRun("cursor", "sonnet-4.5", "failed", 5*time.Second)
+	adapter.RecordRun("cursor", "opus-4", "succeeded", 12*time.Second)
 
 	mfs, err := reg.Gather()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var foundCounter, foundHistogram bool
+	var foundCounter, foundHistogram, foundCounterByModel, foundHistogramByModel bool
 	for _, mf := range mfs {
 		switch mf.GetName() {
 		case "t2a_agent_runs_total":
@@ -34,6 +34,25 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 		case "t2a_agent_run_duration_seconds":
 			foundHistogram = true
 			assertHistogramSampleCount(t, mf, map[string]string{"runner": "cursor"}, 3)
+		case "t2a_agent_runs_by_model_total":
+			foundCounterByModel = true
+			assertCounterValue(t, mf, map[string]string{
+				"runner": "cursor", "model": "sonnet-4.5", "terminal_status": "succeeded",
+			}, 1)
+			assertCounterValue(t, mf, map[string]string{
+				"runner": "cursor", "model": "sonnet-4.5", "terminal_status": "failed",
+			}, 1)
+			assertCounterValue(t, mf, map[string]string{
+				"runner": "cursor", "model": "opus-4", "terminal_status": "succeeded",
+			}, 1)
+		case "t2a_agent_run_duration_by_model_seconds":
+			foundHistogramByModel = true
+			assertHistogramSampleCount(t, mf, map[string]string{
+				"runner": "cursor", "model": "sonnet-4.5",
+			}, 2)
+			assertHistogramSampleCount(t, mf, map[string]string{
+				"runner": "cursor", "model": "opus-4",
+			}, 1)
 		}
 	}
 	if !foundCounter {
@@ -41,6 +60,49 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 	}
 	if !foundHistogram {
 		t.Fatal("expected t2a_agent_run_duration_seconds in registry")
+	}
+	if !foundCounterByModel {
+		t.Fatal("expected t2a_agent_runs_by_model_total in registry")
+	}
+	if !foundHistogramByModel {
+		t.Fatal("expected t2a_agent_run_duration_by_model_seconds in registry")
+	}
+}
+
+// TestRegisterAgentWorkerMetricsOn_emptyModelRecordedVerbatim pins
+// decision D2 from the plan: the effective model may legitimately be
+// "" (no cursor_model configured + no app_settings default) and the
+// adapter MUST record the empty string verbatim rather than
+// substituting a synthetic "default" label. That way the audit trail
+// stays truthful and the by-model panel can render "(no model)" as
+// its own bucket.
+func TestRegisterAgentWorkerMetricsOn_emptyModelRecordedVerbatim(t *testing.T) {
+	reg := prometheus.NewPedanticRegistry()
+	adapter, err := registerAgentWorkerMetricsOn(reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter.RecordRun("cursor", "", "succeeded", time.Second)
+
+	mfs, err := reg.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saw bool
+	for _, mf := range mfs {
+		if mf.GetName() != "t2a_agent_runs_by_model_total" {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			if matchLabels(m.GetLabel(), map[string]string{
+				"runner": "cursor", "model": "", "terminal_status": "succeeded",
+			}) {
+				saw = true
+			}
+		}
+	}
+	if !saw {
+		t.Fatalf("expected empty model label recorded verbatim in t2a_agent_runs_by_model_total; mfs=%+v", mfs)
 	}
 }
 
@@ -52,7 +114,7 @@ func TestRegisterAgentWorkerMetricsOn_bucketsCoverV1RunTimeoutRange(t *testing.T
 	}
 	// One observation forces the histogram to emit its bucket layout
 	// in the Gather output (Prometheus prunes empty histograms).
-	adapter.RecordRun("cursor", "succeeded", time.Second)
+	adapter.RecordRun("cursor", "sonnet-4.5", "succeeded", time.Second)
 	mfs, err := reg.Gather()
 	if err != nil {
 		t.Fatal(err)
