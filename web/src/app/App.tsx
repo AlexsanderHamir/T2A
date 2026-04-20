@@ -9,6 +9,7 @@ import {
   TaskHome,
   useTasksApp,
 } from "@/tasks";
+import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
 import { ObservabilityPage, SystemStatusChip } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
@@ -158,7 +159,8 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
 }
 
 export default function App() {
-  const app = useTasksApp();
+  const sseLive = useTaskEventStream();
+  const app = useTasksApp({ sseLive });
 
   return (
     <Routes>

@@ -37,7 +37,6 @@ import {
 } from "@/types";
 import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
-import { useTaskEventStream } from "./useTaskEventStream";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { useTaskPatchFlow } from "./useTaskPatchFlow";
 
@@ -46,9 +45,13 @@ const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
 const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
-export function useTasksApp() {
+export type UseTasksAppOptions = {
+  /** Whether the task change SSE stream is connected; owned by `App` via `useTaskEventStream`. */
+  sseLive: boolean;
+};
+
+export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const queryClient = useQueryClient();
-  const sseLive = useTaskEventStream();
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");

@@ -99,7 +99,7 @@ describe("useTasksApp evaluateDraftMutation race", () => {
     );
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     // Wait for initial drafts query to settle so openCreateModal can take the
     // "no drafts → straight to fresh form" branch.
@@ -158,7 +158,7 @@ describe("useTasksApp evaluateDraftMutation race", () => {
     );
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -242,7 +242,7 @@ describe("useTasksApp saveDraftMutation race", () => {
     });
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -310,7 +310,7 @@ describe("useTasksApp saveDraftMutation race", () => {
     });
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -361,7 +361,7 @@ describe("useTasksApp saveDraftMutation race", () => {
     });
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -486,7 +486,7 @@ describe("useTasksApp createMutation race", () => {
     });
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -548,7 +548,7 @@ describe("useTasksApp createMutation race", () => {
     }));
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
@@ -639,7 +639,7 @@ describe("useTasksApp resumeDraftMutation race", () => {
     });
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
     });
@@ -689,7 +689,7 @@ describe("useTasksApp resumeDraftMutation race", () => {
     );
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
     });
@@ -719,7 +719,7 @@ describe("useTasksApp resumeDraftMutation race", () => {
     mockedGetDraft.mockResolvedValueOnce(makeDraftDetail("draft-A", "Title A"));
 
     const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTasksApp(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), { wrapper: Wrapper });
     await waitFor(() => {
       expect(result.current.draftListLoading).toBe(false);
     });
