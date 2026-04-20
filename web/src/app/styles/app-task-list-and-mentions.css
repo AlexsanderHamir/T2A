@@ -1134,7 +1134,9 @@
 }
 
 /* Sticky bottom action bar shown only when at least one row is
-   selected. Slides in from the bottom; respects reduced-motion. */
+   selected. Slides in from the bottom; respects reduced-motion.
+   Uses a brand-tinted gradient + lift so it doesn’t disappear against
+   the same `--bg-elevated` as `.panel`. */
 .task-list-bulk-bar {
   position: sticky;
   bottom: 0;
@@ -1142,13 +1144,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 0.75rem;
-  padding: 0.6rem 1rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
+  margin-top: 0.85rem;
+  padding: 0.65rem 1.1rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 11%, var(--bg-elevated)) 0%,
+    color-mix(in srgb, var(--brand) 5%, var(--bg-subtle)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border-hairline));
   border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-md, 0 8px 16px rgba(0, 0, 0, 0.08));
-  z-index: 1;
+  box-shadow: var(--shadow-lg);
+  z-index: 2;
   animation: task-list-bulk-bar-slide-in var(--duration-normal, 200ms) var(--ease-out, ease-out);
 }
 
