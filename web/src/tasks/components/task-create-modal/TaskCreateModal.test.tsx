@@ -6,21 +6,21 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskCreateModal } from "./TaskCreateModal";
 
 const testAppSettings: AppSettings = {
   worker_enabled: false,
-  runner: "cursor",
   repo_root: "",
   cursor_bin: "",
-  cursor_model: "",
+  ...TASK_TEST_DEFAULTS,
   max_run_duration_seconds: 0,
   agent_pickup_delay_seconds: 5,
 };
 
 const testCursorModelsEmpty: ListCursorModelsResult = {
   ok: true,
-  runner: "cursor",
+  runner: TASK_TEST_DEFAULTS.runner,
   models: [],
 };
 
@@ -56,8 +56,8 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onDmapCommitLimitChange: vi.fn(),
     onDmapDomainChange: vi.fn(),
     onDmapDescriptionChange: vi.fn(),
-    taskRunner: "cursor",
-    taskCursorModel: "",
+    taskRunner: TASK_TEST_DEFAULTS.runner,
+    taskCursorModel: TASK_TEST_DEFAULTS.cursor_model,
     onTaskRunnerChange: vi.fn(),
     onTaskCursorModelChange: vi.fn(),
     onSaveDraft: vi.fn(),
