@@ -9,5 +9,6 @@ export * from "./prompt/TaskDetailPromptSection";
 export * from "./subtasks/TaskDetailSubtasksHead";
 export * from "./updates/TaskDetailUpdatesSection";
 export * from "./edit/TaskEditForm";
+export * from "./schedule/TaskDetailSchedule";
 export * from "./updates/TaskUpdatesTimeline";
 export * from "./updates/TaskUpdatesTimelineEventList";

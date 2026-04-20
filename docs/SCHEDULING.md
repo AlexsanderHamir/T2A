@@ -158,7 +158,7 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   the operator's chosen `display_timezone` as the only source of
   truth for the rendered wall-clock literal — never the host
   browser's zone.**
-  Rationale: a native `<input type=""datetime-local"">` shows naive
+  Rationale: a native `<input type="datetime-local">` shows naive
   local time without a zone suffix. If we let the browser interpret
   that literal in the user's host zone, an operator in Tokyo
   configuring a fleet that displays in `America/New_York` would
@@ -171,23 +171,23 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
 
 - **2026-04-19 — [Stage 3] — Quick-pick chips never produce a
   no-op deferral into the past.**
-  Rationale: an operator clicking ""Tonight 9 PM"" at 22:00 means
-  ""the next 21:00"", not ""an hour ago"". `computeQuickPickIso` falls
+  Rationale: an operator clicking "Tonight 9 PM" at 22:00 means
+  "the next 21:00", not "an hour ago". `computeQuickPickIso` falls
   forward to tomorrow's 21:00 when today's 21:00 has already passed
-  in the app TZ. Similarly, ""Next Monday 9 AM"" on a Monday goes
-  to next week (+7 days), not today, because typing ""Next Monday""
-  on a Monday almost never means ""today"". DST forward + backward
+  in the app TZ. Similarly, "Next Monday 9 AM" on a Monday goes
+  to next week (+7 days), not today, because typing "Next Monday"
+  on a Monday almost never means "today". DST forward + backward
   are covered by tests (spring-forward 2026-03-08 and fall-back
   2026-11-01 in America/New_York).
 
 - **2026-04-19 — [Stage 3] — The `newSchedule` value is NOT
   persisted to the autosave draft.**
   Rationale: drafts capture the *content* of a future task; the
-  operator's notion ""I want this picked up 4 hours from now"" is
+  operator's notion "I want this picked up 4 hours from now" is
   anchored to wall-clock time, which would silently drift if we
   serialised the absolute UTC instant into the draft and the user
-  resumed days later (e.g. ""4 hours from now"" becoming ""4 hours
-  ago"" after a long weekend). A schedule chosen during a draft
+  resumed days later (e.g. "4 hours from now" becoming "4 hours
+  ago" after a long weekend). A schedule chosen during a draft
   edit session is reset on close + on draft resume. If draft-side
   scheduling becomes a request, store the chip *kind* + a `now`
   snapshot rather than the absolute instant so the resumed draft
@@ -203,3 +203,50 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   scope. Today the create modal looks up the zone once via
   `useAppTimezone()` in `TaskHome.tsx` and forwards it; later
   stages should follow the same pattern.
+
+
+- **2026-04-19 — [Stage 4] — TaskDetailSchedule renders nothing
+  when the task is in a terminal status (`done` / `failed`)
+  AND has no schedule.**
+  Rationale: terminal tasks never pick up again. Showing a
+  "Schedule" button that has no observable effect would be a
+  classic dead-affordance UX trap. Edge case: a terminal task that
+  *already* carries a schedule (rare — happens when a PATCH flips
+  status to `done` while `pickup_not_before` is still set) shows
+  a read-only badge with no Edit/Clear controls. Surfacing the
+  badge keeps the historical fact visible (operators looking at a
+  done task can still tell "this was scheduled for X"), while
+  hiding the controls makes it clear the field can no longer be
+  meaningfully changed.
+
+- **2026-04-19 — [Stage 4] — TaskDetailSchedule uses a local
+  `useMutation` instead of routing through `useTaskPatchFlow`.**
+  Rationale: `useTaskPatchFlow` is shaped around the full edit form
+  (`title`/`initial_prompt`/`status`/`priority`/`task_type`/`checklist_inherit`)
+  and would force the schedule panel to fabricate or thread those
+  unrelated fields. The local mutation only sends
+  `{ pickup_not_before }` and performs the same query
+  invalidations (`taskQueryKeys.all` + `task-stats`) so cache
+  refresh behaviour is identical. If `useTaskPatchFlow` ever grows
+  a "patch only these fields" mode (or splits per concern), this
+  panel can adopt it.
+
+- **2026-04-19 — [Stage 4] — The Edit modal seeds its draft from
+  `task.pickup_not_before` only while the modal is closed.**
+  Rationale: if a remote PATCH wins via SSE invalidation and the
+  underlying task value changes mid-edit, blindly re-seeding the
+  draft would clobber the operator's in-progress edit. Re-seeding
+  only when the modal isn't open keeps the next "Edit" click
+  starting from server truth without stomping on a live editor
+  session. Documented because it's the kind of subtle gate where
+  the obvious code (always sync) is wrong.
+
+- **2026-04-19 — [Stage 4] — The "Edit" button on an unscheduled
+  non-terminal task is labelled "Schedule".**
+  Rationale: "Edit" implies an existing value being modified.
+  Operators landing on a task that has never been scheduled need
+  the affordance to read as "create" semantics, otherwise the
+  button feels like dead chrome. Same `data-testid`
+  (`task-detail-schedule-edit`) for both states because they're
+  the same control wired to the same modal — only the label
+  flips.

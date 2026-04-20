@@ -1719,3 +1719,69 @@ button.task-detail-checklist-remove:focus-visible {
   margin: 0;
 }
 
+
+
+.task-detail-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  background: var(--surface-soft, transparent);
+}
+
+.task-detail-schedule[data-state="scheduled"] {
+  border-color: var(--brand-soft, var(--border-hairline));
+}
+
+.task-detail-schedule-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.task-detail-schedule-badge-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--brand, currentColor);
+}
+
+.task-detail-schedule-empty {
+  font-size: var(--text-sm);
+}
+
+.task-detail-schedule-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.task-detail-schedule-edit,
+.task-detail-schedule-clear {
+  font-size: var(--text-xs);
+  padding: 0.25rem 0.7rem;
+}
+
+.task-detail-schedule-err {
+  flex-basis: 100%;
+  margin: 0.25rem 0 0;
+}
+
+.task-detail-schedule-modal-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: min(420px, 90vw);
+}
+
+.task-detail-schedule-modal-err {
+  margin: 0.25rem 0;
+}
