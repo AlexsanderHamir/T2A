@@ -435,12 +435,25 @@
    custom prop set by the heatmap component (0..1). The base background
    carries the colour family (status pill class); we paint a translucent
    overlay scaled by the intensity so empty cells stay neutral and the
-   hottest cell reaches full saturation. */
+   hottest cell remains comfortably below full saturation — the previous
+   0.9 ceiling drowned the digit on hot cells (saturated red/green
+   washed out the dark numeral). 0.45 keeps the heat signal obvious
+   while leaving the number readable; the digit gets a subtle white
+   halo on top of that as a belt-and-braces contrast guarantee. */
 .obs-heatmap-cell--data {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   --cell-intensity: 0;
+  /* The digit colour is independent of the fill colour driven by
+     `currentColor` on ::before. We force it back to text-primary so
+     the number always reads as foreground text, never as the same hue
+     as the fill. */
+  color: var(--text-primary);
+  font-weight: 600;
+  text-shadow:
+    0 0 2px color-mix(in srgb, var(--surface-card) calc(var(--cell-intensity) * 100%), transparent),
+    0 1px 0 color-mix(in srgb, var(--surface-card) calc(var(--cell-intensity) * 60%), transparent);
 }
 
 .obs-heatmap-cell--data::before {
@@ -448,22 +461,18 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: calc(var(--cell-intensity) * 0.85 + 0.05);
-  background: currentColor;
+  opacity: calc(var(--cell-intensity) * 0.4 + 0.05);
+  background: var(--cell-fill, currentColor);
   transition: opacity var(--duration-normal) var(--ease-out);
 }
 
-.obs-heatmap-cell--data.cell-pill--status-running { color: var(--brand); }
-.obs-heatmap-cell--data.cell-pill--status-done { color: var(--pill-success-fill-text, var(--brand)); }
-.obs-heatmap-cell--data.cell-pill--status-failed { color: var(--pill-danger-fill-text, var(--brand)); }
-.obs-heatmap-cell--data.cell-pill--status-blocked { color: var(--warning-ink, var(--brand)); }
-
-.obs-heatmap-cell--data {
-  /* Restore the visible text color (the colour above is reused as the
-     fill via currentColor on ::before; the content needs its own
-     palette hook). */
-  color: var(--text-primary);
-}
+/* The pill class only sets `--cell-fill` (consumed by ::before), never
+   `color`, so the digit stays text-primary regardless of the heat
+   colour family. */
+.obs-heatmap-cell--data.cell-pill--status-running { --cell-fill: var(--brand); }
+.obs-heatmap-cell--data.cell-pill--status-done { --cell-fill: var(--pill-success-fill-text, var(--brand)); }
+.obs-heatmap-cell--data.cell-pill--status-failed { --cell-fill: var(--pill-danger-fill-text, var(--brand)); }
+.obs-heatmap-cell--data.cell-pill--status-blocked { --cell-fill: var(--warning-ink, var(--brand)); }
 
 /* Recent failures table --------------------------------------------------- */
 .obs-failures {
