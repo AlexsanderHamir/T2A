@@ -90,10 +90,36 @@
   clear: both;
 }
 
+/*
+ * Inline error banner rendered under the Model select when model
+ * discovery fails. Polished out of the bare red <p> it used to be
+ * into a DS-compliant semantic banner (DS §11): red-subtle fill,
+ * error-tinted border, leading alert glyph, readable copy.
+ */
 .task-create-agent-model-err {
-  margin: 0.35rem 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.625rem;
   font-size: var(--text-xs);
-  color: #d32f2f;
+  line-height: 1.4;
+  color: var(--danger-deep);
+  background: var(--color-error-subtle);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+}
+
+.task-create-agent-model-err > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: currentColor;
+}
+
+@media (prefers-color-scheme: dark) {
+  .task-create-agent-model-err {
+    color: var(--danger-on-subtle-text);
+  }
 }
 
 @media (max-width: 520px) {
