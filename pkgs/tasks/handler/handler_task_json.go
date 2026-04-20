@@ -22,6 +22,13 @@ type taskCreateJSON struct {
 	ChecklistInherit *bool           `json:"checklist_inherit"`
 	Runner           *string         `json:"runner"`
 	CursorModel      *string         `json:"cursor_model"`
+	// PickupNotBefore is an optional RFC3339 instant. When provided,
+	// the worker will not pick up the task until this time has passed
+	// (see docs/SCHEDULING.md). Omitted/null = no schedule = pick up
+	// as soon as the global agent_pickup_delay_seconds elapses. The
+	// pre-2000 sentinel is rejected to guard against accidental
+	// zero-value timestamps.
+	PickupNotBefore *string `json:"pickup_not_before,omitempty"`
 }
 
 type taskEvaluateJSON struct {
@@ -43,13 +50,14 @@ type taskDraftSaveJSON struct {
 }
 
 type taskPatchJSON struct {
-	Title            *string          `json:"title"`
-	InitialPrompt    *string          `json:"initial_prompt"`
-	Status           *domain.Status   `json:"status"`
-	Priority         *domain.Priority `json:"priority"`
-	TaskType         *domain.TaskType `json:"task_type"`
-	ParentID         patchParentField `json:"parent_id"`
-	ChecklistInherit *bool            `json:"checklist_inherit"`
+	Title            *string                   `json:"title"`
+	InitialPrompt    *string                   `json:"initial_prompt"`
+	Status           *domain.Status            `json:"status"`
+	Priority         *domain.Priority          `json:"priority"`
+	TaskType         *domain.TaskType          `json:"task_type"`
+	ParentID         patchParentField          `json:"parent_id"`
+	ChecklistInherit *bool                     `json:"checklist_inherit"`
+	PickupNotBefore  patchPickupNotBeforeField `json:"pickup_not_before"`
 }
 
 type listResponse struct {

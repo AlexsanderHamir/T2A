@@ -182,6 +182,14 @@ export async function createTask(input: {
   checklist_inherit?: boolean;
   runner?: string;
   cursor_model?: string;
+  /**
+   * Optional RFC3339 UTC instant for the agent worker's earliest pickup.
+   * Omit (or pass `undefined`) to keep the existing global-delay
+   * behaviour. The server rejects empty strings on create — to "no
+   * schedule" the task, just omit the field.
+   * See docs/SCHEDULING.md.
+   */
+  pickup_not_before?: string;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -210,6 +218,9 @@ export async function createTask(input: {
   }
   if (input.checklist_inherit === true) {
     body.checklist_inherit = true;
+  }
+  if (input.pickup_not_before !== undefined) {
+    body.pickup_not_before = input.pickup_not_before;
   }
   const res = await fetchWithTimeout("/tasks", {
     method: "POST",
@@ -328,6 +339,16 @@ export async function patchTask(
     task_type?: TaskType;
     parent_id?: string | null;
     checklist_inherit?: boolean;
+    /**
+     * Schedule wire encoding (see docs/SCHEDULING.md):
+     *  - omit/undefined: do not touch the column on PATCH.
+     *  - `null`: clear the schedule (server treats `null` and the
+     *    explicit empty string symmetrically).
+     *  - RFC3339 UTC string: set the schedule to that instant. The
+     *    server rejects pre-2000 sentinel timestamps and non-RFC3339
+     *    strings with a 400.
+     */
+    pickup_not_before?: string | null;
   },
 ): Promise<Task> {
   const tid = assertTaskPathId(id);
@@ -345,6 +366,9 @@ export async function patchTask(
   }
   if (patch.checklist_inherit !== undefined) {
     body.checklist_inherit = patch.checklist_inherit;
+  }
+  if (patch.pickup_not_before !== undefined) {
+    body.pickup_not_before = patch.pickup_not_before;
   }
   const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "PATCH",

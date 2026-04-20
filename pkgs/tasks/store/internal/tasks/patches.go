@@ -70,9 +70,35 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyStatusPatch(tx, taskID, cur, in.Status, by, &seqPtr); err != nil {
 		return err
 	}
+	if err := applyPickupNotBeforePatch(cur, in.PickupNotBefore); err != nil {
+		return err
+	}
 	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
 		return fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
+	return nil
+}
+
+// applyPickupNotBeforePatch mutates cur.PickupNotBefore in place. The
+// scheduling change is intentionally NOT recorded as a task event:
+// pickup_not_before is operator-facing scheduling metadata, not part
+// of the task's audit narrative. The wire-level slog line on the
+// HTTP handler (handler_task_crud.go: patch) is the audit trail
+// (commit body documents this rationale; see docs/SCHEDULING.md
+// Implementation decisions). The handler is responsible for
+// rejecting empty/invalid values on the way in; this layer trusts
+// that the time has already been validated and is UTC.
+func applyPickupNotBeforePatch(cur *domain.Task, p *PickupNotBeforePatch) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPickupNotBeforePatch")
+	if p == nil {
+		return nil
+	}
+	if p.Clear {
+		cur.PickupNotBefore = nil
+		return nil
+	}
+	t := p.At.UTC()
+	cur.PickupNotBefore = &t
 	return nil
 }
 

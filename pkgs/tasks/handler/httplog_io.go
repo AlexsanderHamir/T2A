@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
@@ -112,6 +113,11 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	if body.ParentID != nil {
 		out = append(out, "body_parent_id", strings.TrimSpace(*body.ParentID))
 	}
+	if body.PickupNotBefore != nil {
+		out = append(out, "body_pickup_not_before", strings.TrimSpace(*body.PickupNotBefore), "body_pickup_not_before_set", true)
+	} else {
+		out = append(out, "body_pickup_not_before_set", false)
+	}
 	return out
 }
 
@@ -147,6 +153,13 @@ func taskPatchInputFields(body *taskPatchJSON) []any {
 			out = append(out, "patch_parent_id", "clear")
 		} else {
 			out = append(out, "patch_parent_id", body.ParentID.SetID)
+		}
+	}
+	if body.PickupNotBefore.Defined {
+		if body.PickupNotBefore.Clear {
+			out = append(out, "patch_pickup_not_before", "clear")
+		} else {
+			out = append(out, "patch_pickup_not_before", body.PickupNotBefore.Set.UTC().Format(time.RFC3339))
 		}
 	}
 	return out

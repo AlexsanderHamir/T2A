@@ -46,6 +46,11 @@ type UpdateTaskInput = tasks.UpdateInput
 // helper used by UpdateTaskInput.Parent.
 type ParentFieldPatch = tasks.ParentFieldPatch
 
+// PickupNotBeforePatch is the public re-export of the
+// pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
+// See docs/SCHEDULING.md.
+type PickupNotBeforePatch = tasks.PickupNotBeforePatch
+
 // TaskNode is a task row plus nested children for API tree
 // responses. Re-exported from internal/tasks.
 type TaskNode = tasks.Node
@@ -78,16 +83,28 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 }
 
 // Update applies the patch and notifies the ready-task channel when
-// the task transitions into StatusReady. See tasks.Update for the
-// per-field rules.
+// the task transitions into StatusReady. Also notifies when a Ready
+// task's pickup_not_before patch makes it eligible right now (e.g.
+// operator cleared the schedule or pulled it into the past) — the
+// in-memory queue would otherwise stay empty until the next periodic
+// reconcile tick. See tasks.Update for the per-field rules and
+// docs/SCHEDULING.md for the two-queues invariant.
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
 	updated, prev, err := tasks.Update(ctx, s.db, id, in, by)
 	if err != nil {
 		return nil, err
 	}
-	if updated != nil && updated.Status == domain.StatusReady && prev != domain.StatusReady &&
-		shouldNotifyReadyNow(updated.PickupNotBefore, time.Now().UTC()) {
+	if updated == nil || updated.Status != domain.StatusReady {
+		return updated, nil
+	}
+	now := time.Now().UTC()
+	if !shouldNotifyReadyNow(updated.PickupNotBefore, now) {
+		return updated, nil
+	}
+	transitionedToReady := prev != domain.StatusReady
+	pickupTouched := in.PickupNotBefore != nil
+	if transitionedToReady || pickupTouched {
 		s.notifyReadyTask(ctx, *updated)
 	}
 	return updated, nil

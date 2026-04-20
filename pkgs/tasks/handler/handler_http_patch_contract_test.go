@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // patchTaskHelper centralizes the documented PATCH /tasks/{id} round-trip so
@@ -239,6 +240,144 @@ func TestHTTP_patchTask_doneBlockedByIncompleteChecklist(t *testing.T) {
 	if errBody.Error != want {
 		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, want)
 	}
+}
+
+// TestHTTP_patchTask_setsPickupNotBefore pins the Stage 2 happy path: a PATCH
+// with an RFC3339 `pickup_not_before` mutates the column and surfaces the new
+// time on the response envelope (UTC, second-precision).
+func TestHTTP_patchTask_setsPickupNotBefore(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL, `{"title":"sched","priority":"medium"}`)
+	want := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Second)
+	res, raw := patchTask(t, srv.URL, id, `{"pickup_not_before":"`+want.Format(time.RFC3339)+`"}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	var got domain.Task
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode: %v body=%s", err, raw)
+	}
+	if got.PickupNotBefore == nil || !got.PickupNotBefore.Equal(want) {
+		t.Fatalf("pickup_not_before=%v want %s", got.PickupNotBefore, want.Format(time.RFC3339))
+	}
+}
+
+// TestHTTP_patchTask_clearsPickupNotBefore pins the two documented "clear the
+// schedule" wire shapes: explicit JSON null AND explicit empty string. Both
+// must result in NULL on the column. The empty-string path is what the
+// SchedulePicker emits when the operator hits "Clear" in Stages 3+ — we keep
+// it symmetric with the null path so SPA code never needs to special-case
+// either.
+func TestHTTP_patchTask_clearsPickupNotBefore(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"jsonNull", `{"pickup_not_before":null}`},
+		{"emptyString", `{"pickup_not_before":""}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			id := mustCreateTask(t, srv.URL, `{"title":"clear","priority":"medium"}`)
+			seed := time.Now().UTC().Add(3 * time.Hour).Truncate(time.Second)
+			if _, err := st.Update(context.Background(), id,
+				store.UpdateTaskInput{PickupNotBefore: &store.PickupNotBeforePatch{At: seed}},
+				domain.ActorUser); err != nil {
+				t.Fatalf("seed pickup: %v", err)
+			}
+			res, raw := patchTask(t, srv.URL, id, tc.body)
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("status %d body=%s", res.StatusCode, raw)
+			}
+			var got domain.Task
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatalf("decode: %v body=%s", err, raw)
+			}
+			if got.PickupNotBefore != nil {
+				t.Fatalf("pickup_not_before=%s want nil after clear", got.PickupNotBefore.UTC().Format(time.RFC3339))
+			}
+		})
+	}
+}
+
+// TestHTTP_patchTask_rejectsBadPickupNotBefore pins the per-stage 400 strings
+// for malformed scheduling input on PATCH. The malformed-string path goes
+// through decodeJSON's `json decode:` envelope so the visible message is the
+// patchPickupNotBeforeField error verbatim. The pre-2000 sentinel path also
+// surfaces the bare error string because the same UnmarshalJSON gate fires
+// before the store layer ever sees the value.
+func TestHTTP_patchTask_rejectsBadPickupNotBefore(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL, `{"title":"x","priority":"medium"}`)
+	cases := []struct {
+		name       string
+		body       string
+		wantSubstr string
+	}{
+		{"malformed", `{"pickup_not_before":"yesterday"}`, "pickup_not_before must be RFC3339"},
+		{"pre2000", `{"pickup_not_before":"1999-12-31T23:59:59Z"}`, "pickup_not_before must be on or after 2000-01-01"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, raw := patchTask(t, srv.URL, id, tc.body)
+			if res.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
+			}
+			var errBody jsonErrorBody
+			if err := json.Unmarshal(raw, &errBody); err != nil {
+				t.Fatalf("decode: %v body=%s", err, raw)
+			}
+			if !strings.Contains(errBody.Error, tc.wantSubstr) {
+				t.Fatalf("error=%q want substring %q", errBody.Error, tc.wantSubstr)
+			}
+		})
+	}
+}
+
+// TestHTTP_patchTask_pickupNotBeforeAloneCounts pins the "no fields to update"
+// guard's awareness of the new field: a PATCH carrying ONLY pickup_not_before
+// (no title/status/etc.) must succeed, NOT 400 with "no fields to update". The
+// internal/tasks.Update guard was extended in Stage 2 to include
+// in.PickupNotBefore; this regression test fails on an upstream that forgets
+// to add the new field to that guard.
+func TestHTTP_patchTask_pickupNotBeforeAloneCounts(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL, `{"title":"alone","priority":"medium"}`)
+	want := time.Now().UTC().Add(15 * time.Minute).Truncate(time.Second)
+	res, raw := patchTask(t, srv.URL, id, `{"pickup_not_before":"`+want.Format(time.RFC3339)+`"}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d (want 200; pickup_not_before alone counts as a field) body=%s", res.StatusCode, raw)
+	}
+}
+
+// TestHTTP_patchTask_emitsTaskUpdatedSSE_onScheduleChange pins the documented
+// SSE side-effect for a schedule-only PATCH. The reuse of the existing
+// task_updated frame is decision D6 in the plan ("no new event type") — this
+// test is the regression gate for that reuse.
+func TestHTTP_patchTask_emitsTaskUpdatedSSE_onScheduleChange(t *testing.T) {
+	srv, _, hub := newSSETriggerServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL, `{"title":"sse","priority":"medium"}`)
+	ch, unsub := hub.Subscribe()
+	defer unsub()
+
+	want := time.Now().UTC().Add(10 * time.Minute).Truncate(time.Second)
+	res, raw := patchTask(t, srv.URL, id, `{"pickup_not_before":"`+want.Format(time.RFC3339)+`"}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	mustEqualEvents(t, "PATCH /tasks/{id} pickup_not_before", got, []string{string(TaskUpdated) + ":" + id})
 }
 
 // TestHTTP_patchTask_publishesTaskUpdated pins the documented SSE side effect:

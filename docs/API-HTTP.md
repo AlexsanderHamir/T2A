@@ -162,9 +162,14 @@ Pinned by `pkgs/tasks/handler/handler_http_system_health_contract_test.go` (enve
 - `task_type` — `task_type` is sent with a value outside the documented enum (the message is the bare field name; omitting `task_type` is fine and falls back to `general`).
 - `checklist_inherit requires parent_id` — body sets `checklist_inherit: true` while `parent_id` is omitted, `null`, or empty/whitespace (mirrors the same `PATCH` precondition).
 - `parent not found` — `parent_id` is a non-empty string that does not match any existing task row (cycle/self-parent are not possible at create time because `{id}` does not exist yet).
+- `pickup_not_before must be RFC3339 (e.g. 2026-04-19T15:30:00Z): <parser detail>` — optional `pickup_not_before` is a non-empty string that does not parse as RFC3339. See [SCHEDULING.md](./SCHEDULING.md).
+- `pickup_not_before must be on or after 2000-01-01T00:00:00Z` — `pickup_not_before` parses but predates the documented sentinel boundary; this guards against the Go zero-value `0001-01-01T00:00:00Z` sneaking in as "no schedule".
+- `pickup_not_before must not be empty on create (omit the field for no schedule)` — `pickup_not_before` is the explicit empty string `""` on `POST` (the empty-string "clear" path is **PATCH-only**; on create, omit the field).
 - **409** (not 400) `task id already exists` — caller-supplied `id` collides with an existing task row.
 
 Note: empty-or-whitespace `parent_id` is silently treated as **no parent** at create time (the handler trims and clears it before insertion). This differs from `PATCH /tasks/{id}` which rejects the same input with `parent_id must not be empty` — clients re-using a single payload shape across create/patch must send JSON `null` (or omit the key) when they mean "no parent".
+
+Note: when both an explicit `pickup_not_before` and a non-zero `app_settings.agent_pickup_delay_seconds` are in effect, the **explicit** value wins. The global delay only applies when the request omits `pickup_not_before` AND the task is being created with `status: ready` (the default). See [SCHEDULING.md](./SCHEDULING.md) for the full operator workflow and the "two queues" invariant the worker relies on.
 
 **`PATCH /tasks/{id}`** (after the path-segment length guard and JSON unmarshal step; all are mapped from `domain.ErrInvalidInput` → **400** with the bare phrase):
 
@@ -178,6 +183,11 @@ Note: empty-or-whitespace `parent_id` is silently treated as **no parent** at cr
 - `priority`, `status`, `task_type` — the corresponding field is sent with a value outside the documented enum (the message is the bare field name).
 - `all subtasks must be done before marking this task done` — `status` is being set to `done` while at least one descendant is not `done` (recursive walk via `parent_id`).
 - `all checklist items must be done before marking this task done` — `status` is being set to `done` while at least one checklist definition (own or inherited) has no completion row for `{id}`.
+- `pickup_not_before must be RFC3339 (e.g. 2026-04-19T15:30:00Z): <parser detail>` — `pickup_not_before` is a non-empty string that does not parse as RFC3339. See [SCHEDULING.md](./SCHEDULING.md).
+- `pickup_not_before must be on or after 2000-01-01T00:00:00Z` — same sentinel guard as `POST /tasks`.
+- `pickup_not_before must be null or an RFC3339 string` — `pickup_not_before` is sent with a non-string, non-null JSON type (e.g. a number).
+
+Note: on `PATCH /tasks/{id}`, `pickup_not_before` accepts **three** wire shapes — omit the field to leave the column unchanged; send JSON `null` (or the explicit empty string `""`) to clear the schedule; send a non-empty RFC3339 UTC string to set it. Clearing AND setting in the same request is naturally impossible because only one value can be sent. A schedule-only PATCH (the new field is the only one in the body) is **valid** and does not trigger `no fields to update`. See [SCHEDULING.md](./SCHEDULING.md).
 
 **`DELETE /tasks/{id}`** (path-segment guard runs before any store access; mapped from `domain.ErrInvalidInput` → **400** with the bare phrase):
 

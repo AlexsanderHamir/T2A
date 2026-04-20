@@ -34,6 +34,15 @@ type ParentFieldPatch struct {
 	ID    string
 }
 
+// PickupNotBeforePatch updates pickup_not_before when non-nil. Clear
+// true means set the column to NULL (the task is no longer
+// scheduled). Re-aliased by the public store facade as
+// store.PickupNotBeforePatch. See docs/SCHEDULING.md.
+type PickupNotBeforePatch struct {
+	Clear bool
+	At    time.Time
+}
+
 // UpdateInput is the task patch payload. Each pointer field is
 // optional; a nil pointer means "do not change". Re-aliased by the
 // public store facade as store.UpdateTaskInput.
@@ -45,6 +54,12 @@ type UpdateInput struct {
 	TaskType         *domain.TaskType
 	Parent           *ParentFieldPatch
 	ChecklistInherit *bool
+	// PickupNotBefore mutates tasks.pickup_not_before when non-nil.
+	// Clear true sets the column to NULL (the task is no longer
+	// scheduled and will be picked up as soon as the global
+	// agent_pickup_delay_seconds elapses). When non-nil the value MUST
+	// be UTC; the handler enforces this on the wire.
+	PickupNotBefore *PickupNotBeforePatch
 }
 
 // Node is a task row plus nested children for API tree responses.

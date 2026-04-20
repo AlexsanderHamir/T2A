@@ -304,6 +304,106 @@ func TestHTTP_createTask_201ResponseShape(t *testing.T) {
 	})
 }
 
+// TestHTTP_createTask_acceptsPickupNotBefore_overrideGlobalDelay pins the
+// Stage 2 contract from .cursor/plans/task_scheduling_e74b47fe.plan.md: an
+// explicit `pickup_not_before` on POST takes precedence over the global
+// `agent_pickup_delay_seconds` setting. The default delay is 5s in
+// DefaultAppSettings; a PATCH-and-POST round-trip with an explicit time at
+// now+1h must surface the explicit time on the wire (NOT now+5s) so operator
+// intent always wins over the system-wide deferral.
+func TestHTTP_createTask_acceptsPickupNotBefore_overrideGlobalDelay(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	want := time.Now().UTC().Add(1 * time.Hour).Truncate(time.Second)
+	body := `{"title":"explicit","priority":"medium","pickup_not_before":"` + want.Format(time.RFC3339) + `"}`
+	res, raw := postCreate(t, srv.URL, body)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("status %d (want 201) body=%s", res.StatusCode, raw)
+	}
+	var got domain.Task
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.PickupNotBefore == nil {
+		t.Fatalf("pickup_not_before nil; explicit value should win over global delay")
+	}
+	if !got.PickupNotBefore.Equal(want) {
+		t.Fatalf("pickup_not_before=%s want %s (explicit wins over global delay)",
+			got.PickupNotBefore.UTC().Format(time.RFC3339), want.Format(time.RFC3339))
+	}
+}
+
+// TestHTTP_createTask_rejectsBadPickupNotBefore pins the per-stage 400 strings
+// for malformed scheduling input on POST. Each subtest drives a distinct
+// rejection path so a future refactor breaks loudly here, in lockstep with
+// docs/SCHEDULING.md.
+func TestHTTP_createTask_rejectsBadPickupNotBefore(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	cases := []struct {
+		name       string
+		body       string
+		wantSubstr string
+	}{
+		{
+			name:       "malformed",
+			body:       `{"title":"x","priority":"medium","pickup_not_before":"yesterday"}`,
+			wantSubstr: "pickup_not_before must be RFC3339",
+		},
+		{
+			name:       "pre2000Sentinel",
+			body:       `{"title":"x","priority":"medium","pickup_not_before":"1999-12-31T23:59:59Z"}`,
+			wantSubstr: "pickup_not_before must be on or after 2000-01-01",
+		},
+		{
+			name:       "emptyStringOnCreate",
+			body:       `{"title":"x","priority":"medium","pickup_not_before":""}`,
+			wantSubstr: "pickup_not_before must not be empty on create",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, raw := postCreate(t, srv.URL, tc.body)
+			if res.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
+			}
+			var errBody jsonErrorBody
+			if err := json.Unmarshal(raw, &errBody); err != nil {
+				t.Fatalf("decode: %v body=%s", err, raw)
+			}
+			if !strings.Contains(errBody.Error, tc.wantSubstr) {
+				t.Fatalf("error=%q want substring %q", errBody.Error, tc.wantSubstr)
+			}
+		})
+	}
+}
+
+// TestHTTP_createTask_pickupNotBefore_pastIsAllowed pins the locked decision
+// that a past `pickup_not_before` is NOT a validation error. Operators
+// recovering from a typo (or pasting back an already-elapsed schedule) get a
+// no-op deferral that the worker treats as immediately eligible — see the
+// Stage 0 `shouldNotifyReadyNow` gate in pkgs/tasks/store/facade_tasks.go.
+func TestHTTP_createTask_pickupNotBefore_pastIsAllowed(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	past := time.Now().UTC().Add(-1 * time.Hour).Truncate(time.Second)
+	body := `{"title":"past","priority":"medium","pickup_not_before":"` + past.Format(time.RFC3339) + `"}`
+	res, raw := postCreate(t, srv.URL, body)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("status %d (want 201; past pickup is no-op deferral) body=%s", res.StatusCode, raw)
+	}
+	var got domain.Task
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.PickupNotBefore == nil || !got.PickupNotBefore.Equal(past) {
+		t.Fatalf("pickup_not_before=%v want %s (verbatim past time)", got.PickupNotBefore, past.Format(time.RFC3339))
+	}
+}
+
 // TestHTTP_createTask_publishesTaskCreatedAndParentTaskUpdated pins both
 // documented SSE side effects of a successful POST. Mirrors the existing
 // happy-path coverage in sse_trigger_surface_test.go but is colocated with the

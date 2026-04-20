@@ -111,3 +111,44 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   the malformed payload during triage; silently rendering nothing
   hides the problem. Empty string is reserved for the "no value"
   case (null/undefined/empty), where blank IS the correct render.
+
+- **2026-04-19 — [Stage 2] — Empty-string `pickup_not_before` on PATCH
+  is treated as "clear" (symmetric with JSON `null`).**
+  Rationale: the SchedulePicker UI in Stage 3 emits an empty string
+  from a cleared `<input type="datetime-local">`. Treating it the
+  same as JSON `null` means the SPA never has to special-case the two
+  shapes when serializing the picker's emit value. The semantically
+  cleaner alternative — reject empty string and require `null` — was
+  rejected because every API client would then need a coalescing
+  helper (`val === "" ? null : val`) at every call site. PATCH-only:
+  on `POST /tasks` the empty string is **rejected** so a missing
+  schedule on create has exactly one wire shape ("omit the field").
+
+- **2026-04-19 — [Stage 2] — `pickup_not_before` changes do NOT emit
+  a task-event audit row.**
+  Rationale: scheduling is operator-facing **metadata**, not part of
+  the task's narrative event log. The wire-level slog line on the
+  HTTP handler (`debugHTTPRequest` with `patch_pickup_not_before`)
+  IS the audit trail and is queryable in log search. Adding an
+  `EventScheduleChanged` would force a new domain enum value, an
+  SSE consumer wiring (today there is no consumer), and a doc
+  update for `domain.EventType` — three new abstractions for a
+  field that already round-trips through `task_updated`. Rejected
+  alternative: emit the event anyway "for symmetry with
+  `EventStatusChanged`". Symmetry isn't a goal in itself; the
+  status change has external behaviour consequences (descendant
+  done-checks, agent pickup eligibility) that justify a permanent
+  audit row. A schedule change has none.
+
+- **2026-04-19 — [Stage 2] — `Store.Update` notifies the in-memory
+  ready queue when ANY pickup-touching PATCH lands on a `ready`
+  task whose new `pickup_not_before` is "now or past" — not only on
+  `prev != ready` transitions.**
+  Rationale: clearing a future schedule (operator hits "Clear") on
+  an already-ready task must wake the worker immediately; otherwise
+  the task waits up to one reconcile interval (default 5 min) for
+  no good reason. The narrower "transition only" gate from Stage 0
+  was correct for `Create` and `Update`-into-`ready` but became
+  insufficient once schedules are operator-mutable. The
+  `shouldNotifyReadyNow` invariant is preserved: we only notify
+  when the SQL filter would also accept the row.

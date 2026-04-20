@@ -75,7 +75,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Parent == nil && in.ChecklistInherit == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
