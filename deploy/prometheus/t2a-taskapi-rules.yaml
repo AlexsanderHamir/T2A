@@ -69,6 +69,63 @@ groups:
             sum(rate(t2a_agent_run_duration_by_model_seconds_bucket[5m])) by (le, runner, model)
           )
 
+      # --- Realtime UX SLIs (docs/SLOs.md) -------------------------------
+      # These recordings feed both the Grafana dashboard at
+      # deploy/grafana/t2a-realtime-ux.json AND the burn-rate alerts
+      # below. Kept in one place so compliance gauges and alert
+      # thresholds can never diverge.
+
+      # slo_click_to_confirmed_p95_ms — p95 of the "felt-instant" latency
+      # the UX promise cares about. Picks the optimistic-render histogram
+      # when it fired, falls back to mutation_settled for kinds where no
+      # optimistic apply exists (rare; see docs/SLOs.md). p95 in SECONDS;
+      # Grafana converts to ms. Short 5m window so a burst violation shows
+      # up promptly; the 30-day SLO compliance uses last_over_time.
+      - record: taskapi:rum:click_to_confirmed_p95_seconds
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[5m])) by (le)
+          )
+
+      # slo_sse_resync_rate — fraction of all published events that had to
+      # escalate to a full resync directive. Denominator is post-coalesce
+      # publish count so the ratio is not inflated by frames we never
+      # fanned out.
+      - record: taskapi:sse:resync_rate5m
+        expr: |
+          sum(rate(taskapi_sse_resync_emitted_total[5m]))
+          /
+          clamp_min(sum(rate(taskapi_sse_publish_total[5m])), 1e-12)
+
+      # slo_sse_subscriber_lag_p99_seconds — p99 of the conservative lag
+      # bound recorded at Publish time. See pkgs/tasks/handler/sse.go
+      # for the emission semantics.
+      - record: taskapi:sse:subscriber_lag_p99_seconds
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(taskapi_sse_subscriber_lag_seconds_bucket[5m])) by (le)
+          )
+
+      # slo_optimistic_rollback_rate — rolled-back mutations over started
+      # mutations. Aggregated across all kinds because the SLO is about
+      # "did the optimistic UX stay honest," not per-kind correctness.
+      - record: taskapi:rum:optimistic_rollback_rate5m
+        expr: |
+          sum(rate(taskapi_rum_mutation_rolled_back_total[5m]))
+          /
+          clamp_min(sum(rate(taskapi_rum_mutation_started_total[5m])), 1e-12)
+
+      # slo_mutation_error_rate — 4xx+5xx settled mutations over started.
+      # Status label is recorded by the RUM handler when the SPA reports
+      # the HTTP result; `ok` is the success bucket.
+      - record: taskapi:rum:mutation_error_rate5m
+        expr: |
+          sum(rate(taskapi_rum_mutation_settled_seconds_count{status!~"ok|2.."}[5m]))
+          /
+          clamp_min(sum(rate(taskapi_rum_mutation_started_total[5m])), 1e-12)
+
   - name: t2a_taskapi_alerts
     rules:
       - alert: TaskAPIHighHTTP5xxRate
@@ -135,6 +192,172 @@ groups:
           summary: "taskapi SSE fanout dropping frames (5m)"
           description: "Sustained SSE drop rate ({{ $value }} frames/s) — at least one subscriber is too slow to keep up with the bounded fanout channel. Affected clients miss UI updates silently. Cross-reference taskapi_sse_subscribers and the `sse fanout dropped frames` Warn log to find the stuck connection."
           runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-sse-dropped-frames.md"
+
+      # --- Realtime UX SLO burn-rate alerts (docs/SLOs.md) --------------
+      # Multi-window multi-burn-rate per the Google SRE workbook. Each
+      # SLO gets a fast page (1h window, 14.4x burn → budget exhausted in
+      # ~50m if sustained) and a slower ticket (6h window, 6x burn →
+      # budget exhausted in ~5d). Targets are copied from docs/SLOs.md;
+      # update BOTH files together so the docs and the page thresholds
+      # can never drift.
+
+      # slo_click_to_confirmed_p95_ms target = 100 ms (0.1s).
+      - alert: TaskAPIClickToConfirmedP95BurnFast
+        expr: |
+          (
+            histogram_quantile(
+              0.95,
+              sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[1h])) by (le)
+            )
+          ) > 0.1
+          and
+          sum(rate(taskapi_rum_mutation_started_total[1h])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          slo: click_to_confirmed_p95_ms
+          burn_rate: fast
+        annotations:
+          summary: "click_to_confirmed p95 above 100 ms (1h)"
+          description: "Optimistic-apply latency p95 is {{ $value }}s over the last 1h, above the 100 ms SLO. Users will notice UI lag. Check RUM event volume and /v1/rum ingestion; cross-reference rum_sse_reconnected_total for a correlated network issue."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-click-to-confirmed.md"
+
+      - alert: TaskAPIClickToConfirmedP95BurnSlow
+        expr: |
+          (
+            histogram_quantile(
+              0.95,
+              sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[6h])) by (le)
+            )
+          ) > 0.1
+          and
+          sum(rate(taskapi_rum_mutation_started_total[6h])) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+          slo: click_to_confirmed_p95_ms
+          burn_rate: slow
+        annotations:
+          summary: "click_to_confirmed p95 above 100 ms (6h)"
+          description: "Optimistic-apply latency p95 is {{ $value }}s over the last 6h. Investigate sustained slowdown before burn-rate escalates."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-click-to-confirmed.md"
+
+      # slo_sse_resync_rate target <= 0.5 % → 14.4x burn = 7.2 %.
+      - alert: TaskAPISSEResyncRateBurnFast
+        expr: |
+          (
+            sum(rate(taskapi_sse_resync_emitted_total[1h]))
+            /
+            clamp_min(sum(rate(taskapi_sse_publish_total[1h])), 1e-12)
+          ) > 0.072
+          and
+          sum(rate(taskapi_sse_publish_total[1h])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          slo: sse_resync_rate
+          burn_rate: fast
+        annotations:
+          summary: "SSE resync ratio above 14.4x burn (1h)"
+          description: "{{ $value | humanizePercentage }} of published events escalated to a resync over the last 1h, burning the 0.5% SLO budget too fast. The ring buffer may be too small, a fanout client may be chronically slow, or a supervisor is publishing a flood that outruns coalescing."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-sse-resync.md"
+
+      - alert: TaskAPISSEResyncRateBurnSlow
+        expr: |
+          (
+            sum(rate(taskapi_sse_resync_emitted_total[6h]))
+            /
+            clamp_min(sum(rate(taskapi_sse_publish_total[6h])), 1e-12)
+          ) > 0.03
+          and
+          sum(rate(taskapi_sse_publish_total[6h])) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          slo: sse_resync_rate
+          burn_rate: slow
+        annotations:
+          summary: "SSE resync ratio above 6x burn (6h)"
+          description: "{{ $value | humanizePercentage }} of published events escalated to a resync over the last 6h. Slow burn — inspect the ring buffer size and slowest subscriber before the fast-burn page fires."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-sse-resync.md"
+
+      # slo_sse_subscriber_lag_p99_seconds target <= 2 s.
+      - alert: TaskAPISSESubscriberLagP99BurnFast
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(taskapi_sse_subscriber_lag_seconds_bucket[1h])) by (le)
+          ) > 2
+          and
+          sum(rate(taskapi_sse_subscriber_lag_seconds_count[1h])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          slo: sse_subscriber_lag_p99_seconds
+          burn_rate: fast
+        annotations:
+          summary: "SSE subscriber lag p99 above 2s (1h)"
+          description: "The worst-case fanout lag p99 is {{ $value }}s — some subscriber is getting stale frames. Cross-tab views will feel out of sync. Check for evicted slow consumers and any network egress pressure."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-sse-subscriber-lag.md"
+
+      # slo_optimistic_rollback_rate target <= 1 % → 14.4x burn = 14.4 %.
+      - alert: TaskAPIOptimisticRollbackRateBurnFast
+        expr: |
+          (
+            sum(rate(taskapi_rum_mutation_rolled_back_total[1h]))
+            /
+            clamp_min(sum(rate(taskapi_rum_mutation_started_total[1h])), 1e-12)
+          ) > 0.144
+          and
+          sum(rate(taskapi_rum_mutation_started_total[1h])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          slo: optimistic_rollback_rate
+          burn_rate: fast
+        annotations:
+          summary: "Optimistic-mutation rollback rate above 14.4x burn (1h)"
+          description: "{{ $value | humanizePercentage }} of optimistic mutations rolled back in the last 1h. The client is predicting wrong too often: check for a schema/validator drift between SPA and server, or a regression in the apply code-path."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-optimistic-rollback.md"
+
+      - alert: TaskAPIOptimisticRollbackRateBurnSlow
+        expr: |
+          (
+            sum(rate(taskapi_rum_mutation_rolled_back_total[6h]))
+            /
+            clamp_min(sum(rate(taskapi_rum_mutation_started_total[6h])), 1e-12)
+          ) > 0.06
+          and
+          sum(rate(taskapi_rum_mutation_started_total[6h])) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+          slo: optimistic_rollback_rate
+          burn_rate: slow
+        annotations:
+          summary: "Optimistic-mutation rollback rate above 6x burn (6h)"
+          description: "Sustained rollback rate {{ $value | humanizePercentage }} over 6h. Investigate before the fast-burn page fires."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-optimistic-rollback.md"
+
+      # slo_mutation_error_rate target <= 0.5 % → 14.4x burn = 7.2 %.
+      - alert: TaskAPIMutationErrorRateBurnFast
+        expr: |
+          (
+            sum(rate(taskapi_rum_mutation_settled_seconds_count{status!~"ok|2.."}[1h]))
+            /
+            clamp_min(sum(rate(taskapi_rum_mutation_started_total[1h])), 1e-12)
+          ) > 0.072
+          and
+          sum(rate(taskapi_rum_mutation_started_total[1h])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          slo: mutation_error_rate
+          burn_rate: fast
+        annotations:
+          summary: "Mutation error rate above 14.4x burn (1h)"
+          description: "{{ $value | humanizePercentage }} of SPA mutations returned a non-2xx status over the last 1h. Cross-reference taskapi:http:5xx_ratio5m to find whether this is a server-side or client-validation issue."
+          runbook_url: "https://github.com/AlexsanderHamir/T2A/blob/main/docs/runbooks/alert-mutation-error.md"
 
       # Readiness is usually probed outside taskapi metrics (blackbox / k8s). Example expr
       # when you export probe_success{job="blackbox-taskapi-ready"}:

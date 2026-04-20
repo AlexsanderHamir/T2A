@@ -1,0 +1,610 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus data source that scrapes taskapi_* metrics (see deploy/prometheus/README.md).",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "gauge", "name": "Gauge", "version": "" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Realtime UX SLO + smoothness dashboard for T2A taskapi. Pairs with docs/SLOs.md and deploy/prometheus/t2a-taskapi-rules.yaml. Source metrics: taskapi_rum_*, taskapi_sse_*. All thresholds here match the burn-rate alert thresholds; update both together.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "SLO definitions",
+      "url": "https://github.com/AlexsanderHamir/T2A/blob/main/docs/SLOs.md",
+      "type": "link",
+      "icon": "doc",
+      "targetBlank": true
+    },
+    {
+      "title": "Alert rules",
+      "url": "https://github.com/AlexsanderHamir/T2A/blob/main/deploy/prometheus/t2a-taskapi-rules.yaml",
+      "type": "link",
+      "icon": "doc",
+      "targetBlank": true
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "SLO compliance (30-day rolling)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "click_to_confirmed p95 (30d)",
+      "description": "30-day rolling p95 of optimistic-apply latency. Target <= 100ms. Source: taskapi_rum_mutation_optimistic_applied_seconds.",
+      "id": 10,
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[30d])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "sse_resync_rate (30d)",
+      "description": "Share of publishes that escalated to resync. Target <= 0.5%.",
+      "id": 11,
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.005 },
+              { "color": "red", "value": 0.02 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_sse_resync_emitted_total[30d])) / clamp_min(sum(rate(taskapi_sse_publish_total[30d])), 1e-12)",
+          "legendFormat": "resync / publish"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "sse_subscriber_lag p99 (30d)",
+      "description": "Worst-case subscriber lag p99. Target <= 2s. Source: taskapi_sse_subscriber_lag_seconds.",
+      "id": 12,
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.99, sum(rate(taskapi_sse_subscriber_lag_seconds_bucket[30d])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "optimistic_rollback_rate (30d)",
+      "description": "Share of optimistic mutations rolled back. Target <= 1%.",
+      "id": 13,
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_rum_mutation_rolled_back_total[30d])) / clamp_min(sum(rate(taskapi_rum_mutation_started_total[30d])), 1e-12)",
+          "legendFormat": "rolled_back / started"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "click_to_confirmed latency",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 2,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Click → optimistic apply (p50 / p95 / p99)",
+      "description": "Per-kind optimistic-apply latency quantiles from taskapi_rum_mutation_optimistic_applied_seconds.",
+      "id": 20,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.50, sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "{{kind}} p50"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "{{kind}} p95"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.99, sum(rate(taskapi_rum_mutation_optimistic_applied_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "{{kind}} p99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Click → server settled (p50 / p95)",
+      "description": "Settled latency per kind+status. Useful for separating optimistic-applied from non-optimistic kinds.",
+      "id": 21,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.50, sum(rate(taskapi_rum_mutation_settled_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "{{kind}} p50"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(taskapi_rum_mutation_settled_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "{{kind}} p95"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "SSE fanout health",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 3,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "SSE publish vs. resync rate (5m)",
+      "description": "Denominator (publish) vs. numerator (resync) for the resync SLI. Divergence in publish volume without a matching resync bump = healthy fanout.",
+      "id": 30,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_sse_publish_total[5m]))",
+          "legendFormat": "publish"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_sse_resync_emitted_total[5m]))",
+          "legendFormat": "resync_emitted"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_sse_dropped_frames_total[5m]))",
+          "legendFormat": "dropped_frames"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Subscriber lag p50/p99 (5m)",
+      "description": "Quantiles of the conservative subscriber-lag observation from pkgs/tasks/handler/sse.go.",
+      "id": 31,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.50, sum(rate(taskapi_sse_subscriber_lag_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.99, sum(rate(taskapi_sse_subscriber_lag_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Active subscribers",
+      "description": "taskapi_sse_subscribers gauge. Sudden drops to zero indicate a cluster-wide reconnect storm.",
+      "id": 32,
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "taskapi_sse_subscribers",
+          "legendFormat": "subscribers"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "SSE reconnects & resyncs reported by SPA",
+      "description": "Independent RUM side of the same signal (browsers reporting what they actually experienced).",
+      "id": 33,
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_rum_sse_reconnected_total[5m]))",
+          "legendFormat": "rum reconnect"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_rum_sse_resync_received_total[5m]))",
+          "legendFormat": "rum resync"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(taskapi_rum_sse_reconnect_gap_seconds_bucket[5m])) by (le))",
+          "legendFormat": "reconnect gap p95 (s)"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Optimistic mutations",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "id": 4,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Rollback rate per kind (5m)",
+      "description": "Per-mutation-kind rollback rate. If one kind drifts upward, that's the suspect code path.",
+      "id": 40,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_rum_mutation_rolled_back_total[5m])) by (kind) / clamp_min(sum(rate(taskapi_rum_mutation_started_total[5m])) by (kind), 1e-12)",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Mutation volume per kind (5m)",
+      "description": "Raw started-mutation rate per kind — context for the rollback %.",
+      "id": 41,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(taskapi_rum_mutation_started_total[5m])) by (kind)",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Web Vitals",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+      "id": 5,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Web Vitals p75 (5m)",
+      "description": "Core Web Vitals reported by the SPA via taskapi_rum_web_vitals. Units vary per metric: LCP/FCP/TTFB/INP/FID are ms (values are reported scaled), CLS is unitless.",
+      "id": 50,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 41 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.75, sum(rate(taskapi_rum_web_vitals_bucket[5m])) by (le, name))",
+          "legendFormat": "{{name}} p75"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["t2a", "slo", "realtime-ux"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "T2A — Realtime UX SLOs",
+  "uid": "t2a-realtime-ux",
+  "version": 1,
+  "weekStart": ""
+}
