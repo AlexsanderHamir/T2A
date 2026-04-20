@@ -326,17 +326,27 @@
     box-shadow var(--duration-normal, 200ms) var(--ease-out, ease-out);
 }
 
+/*
+ * On-state accent is --success (green), NOT --brand (purple). The
+ * enclosing fieldset (.settings-fieldset--rollout) already carries a
+ * brand-purple wash for section identity, so reusing brand purple
+ * on the card made the active card blend into the fieldset
+ * background. Green also reads as "live / healthy / on" everywhere
+ * else in the product (succeeded cycles, system-healthy chip), so
+ * the semantics line up: the card turns green the same way a
+ * succeeded cycle pill turns green.
+ */
 .settings-rollout-toggle:has(input[type="checkbox"]:checked) {
-  border-color: var(--brand-border-subtle, color-mix(in srgb, var(--brand) 22%, transparent));
+  border-color: var(--success-border, color-mix(in srgb, var(--success, #00a96e) 32%, transparent));
   background:
     linear-gradient(
       180deg,
-      var(--brand-surface-faint, color-mix(in srgb, var(--brand) 5%, transparent)) 0%,
-      var(--surface-card, #fff) 70%
+      var(--success-soft, color-mix(in srgb, var(--success, #00a96e) 12%, transparent)) 0%,
+      var(--surface-card, #fff) 75%
     );
   box-shadow:
     var(--shadow-sm, 0 1px 3px rgb(0 0 0 / 6%)),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 6%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--success, #00a96e) 10%, transparent);
 }
 
 /*
@@ -415,8 +425,8 @@
 }
 
 .settings-rollout-toggle input[type="checkbox"]:checked {
-  background: var(--brand, #635bff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 14%, transparent);
+  background: var(--success, #00a96e);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success, #00a96e) 18%, transparent);
 }
 
 .settings-rollout-toggle input[type="checkbox"]:checked::after {
@@ -424,6 +434,9 @@
 }
 
 .settings-rollout-toggle input[type="checkbox"]:focus-visible {
+  /* Focus ring stays brand-purple even when the switch is on —
+     focus is a separate signal ("keyboard is here") and the
+     product uses brand purple for focus rings globally. */
   outline: 2px solid var(--brand, #635bff);
   outline-offset: 2px;
 }
@@ -466,13 +479,13 @@
 }
 
 .settings-rollout-state[data-on="true"] {
-  color: var(--brand, #635bff);
+  color: var(--success, #00a96e);
   font-weight: 500;
 }
 
 .settings-rollout-state[data-on="true"] .settings-rollout-state-dot {
-  background: var(--brand, #635bff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 22%, transparent);
+  background: var(--success, #00a96e);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success, #00a96e) 25%, transparent);
 }
 
 /*
