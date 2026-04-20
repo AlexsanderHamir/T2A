@@ -480,7 +480,9 @@ export function SettingsPage() {
         <fieldset className="settings-fieldset">
           <legend>Display</legend>
           <p className="settings-section-subtitle">
-            How timestamps render for this operator.
+            Times on screen and in the schedule picker use this zone
+            (for example, &quot;9:00 AM&quot; means 9:00 AM in this
+            zone).
           </p>
           <label className="settings-field">
             <span className="settings-field-label">Timezone</span>
@@ -503,19 +505,11 @@ export function SettingsPage() {
             </select>
           </label>
           <p className="settings-field-help">
-            Operator-facing timestamps render in this zone. Default{" "}
-            <em>Auto-detect</em> follows the browser
-            (<code>{browserTz}</code>).
+            <em>Auto-detect</em> uses your browser&apos;s zone (
+            <code>{browserTz}</code>). Choose a fixed zone so everyone
+            sees the same labels and the same schedule inputs, even
+            when their browser is set differently.
           </p>
-          <details className="settings-learn-more">
-            <summary>How is this applied?</summary>
-            <p>
-              Only affects display; the wire format every API uses
-              stays RFC3339 UTC. Pin a specific IANA zone to keep
-              every operator on the same clock regardless of where
-              their browser is.
-            </p>
-          </details>
         </fieldset>
 
         <fieldset className="settings-fieldset settings-fieldset--rollout">
