@@ -307,27 +307,33 @@ func TestHTTP_patchEvent_errorPathsNeverPublish(t *testing.T) {
 	ch, unsub := hub.Subscribe()
 	defer unsub()
 
-	// 400 path-segment (whitespace id).
-	if res, raw := patchEventUserResponse(t, srv.URL, "%20", "2", `{"user_response":"x"}`, ""); res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("whitespace id status %d body=%s", res.StatusCode, raw)
+	unknownTask := "22222222-2222-4222-8222-222222222222"
+	cases := []struct {
+		name       string
+		taskID     string
+		seq        string
+		body       string
+		wantStatus int
+		wantError  string
+	}{
+		{"whitespaceID", "%20", "2", `{"user_response":"x"}`, http.StatusBadRequest, "id"},
+		{"whitespaceUserResponse", id, "2", `{"user_response":"   "}`, http.StatusBadRequest, "message cannot be empty"},
+		{"nonAcceptingType", id, "1", `{"user_response":"x"}`, http.StatusBadRequest, "this event type does not accept thread messages"},
+		{"unknownTask", unknownTask, "2", `{"user_response":"x"}`, http.StatusNotFound, "not found"},
+		{"missingSeq", id, "999", `{"user_response":"x"}`, http.StatusNotFound, "not found"},
 	}
-	// 400 body validation (empty user_response).
-	if res, raw := patchEventUserResponse(t, srv.URL, id, "2", `{"user_response":"   "}`, ""); res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("whitespace user_response status %d body=%s", res.StatusCode, raw)
-	}
-	// 400 non-accepting type (seq=1 is task_created).
-	if res, raw := patchEventUserResponse(t, srv.URL, id, "1", `{"user_response":"x"}`, ""); res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("non-accepting type status %d body=%s", res.StatusCode, raw)
-	}
-	// 404 unknown task.
-	if res, raw := patchEventUserResponse(t, srv.URL,
-		"22222222-2222-4222-8222-222222222222", "2",
-		`{"user_response":"x"}`, ""); res.StatusCode != http.StatusNotFound {
-		t.Fatalf("unknown task status %d body=%s", res.StatusCode, raw)
-	}
-	// 404 missing seq.
-	if res, raw := patchEventUserResponse(t, srv.URL, id, "999", `{"user_response":"x"}`, ""); res.StatusCode != http.StatusNotFound {
-		t.Fatalf("missing seq status %d body=%s", res.StatusCode, raw)
+	for _, tc := range cases {
+		res, raw := patchEventUserResponse(t, srv.URL, tc.taskID, tc.seq, tc.body, "")
+		if res.StatusCode != tc.wantStatus {
+			t.Fatalf("%s: status %d (want %d) body=%s", tc.name, res.StatusCode, tc.wantStatus, raw)
+		}
+		var errBody jsonErrorBody
+		if err := json.Unmarshal(raw, &errBody); err != nil {
+			t.Fatalf("%s: decode error body: %v raw=%s", tc.name, err, raw)
+		}
+		if errBody.Error != tc.wantError {
+			t.Fatalf("%s: error=%q want %q (docs/API-HTTP.md PATCH /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
+		}
 	}
 
 	got := summarize(drainSSE(t, ch, 0, 200*time.Millisecond))
