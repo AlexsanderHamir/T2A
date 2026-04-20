@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CSSProperties } from "react";
 import type { Task } from "@/types";
@@ -15,6 +15,16 @@ import {
   EmptyStateFilterGlyph,
   type EmptyStateAction,
 } from "@/shared/EmptyState";
+
+/**
+ * Matches the `task-list-row-fade-out` keyframe duration in
+ * app-task-list-and-mentions.css (--duration-normal ≈ 200ms).
+ * A hair longer than --duration-normal so we don't yank the row
+ * off in the final frame. Kept in JS so the cleanup timer doesn't
+ * fight the CSS fallback for users whose onAnimationEnd never
+ * fires (e.g. tab backgrounded mid-exit).
+ */
+const ROW_EXIT_MS = 220;
 
 /**
  * Optional bulk-selection bindings. When omitted, the table renders
@@ -79,6 +89,121 @@ export function TaskListDataTable({
     headerCheckboxRef.current.indeterminate = selection.someVisibleSelected;
   }, [selection]);
 
+  // Phase 3b: track ids we've already rendered so only newly-inserted
+  // rows animate in. A `useRef<Set<string>>` is used rather than state
+  // because we never want this to cause a re-render — it's a passive
+  // filter on top of React's own reconciliation. `enteringIds` is the
+  // mirror-state we compare against on render.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
+
+  // Phase 3c: track ids that just left `filteredTasks` so we can keep
+  // them mounted for ROW_EXIT_MS with the --exit class. The cached
+  // TaskWithDepth is pinned at the moment the id left so the row
+  // renders with its last-known data while it fades out (otherwise
+  // we'd have to look it back up in `tasks` and risk stale-column
+  // data races).
+  type ExitingRow = { task: TaskWithDepth; timeoutId: number };
+  const exitingRef = useRef<Map<string, ExitingRow>>(new Map());
+  const [exitingTick, setExitingTick] = useState(0);
+
+  const filteredIds = useMemo(
+    () => new Set(filteredTasks.map((t) => t.id)),
+    [filteredTasks],
+  );
+
+  const prevFilteredRef = useRef<TaskWithDepth[]>([]);
+  useEffect(() => {
+    const newlyEntering = new Set<string>();
+    for (const t of filteredTasks) {
+      if (!seenIdsRef.current.has(t.id)) {
+        newlyEntering.add(t.id);
+        seenIdsRef.current.add(t.id);
+      }
+      // If a row was in `exitingRef` (e.g. filter re-admitted an id
+      // that had just been removed) cancel its timeout and revive it.
+      const pendingExit = exitingRef.current.get(t.id);
+      if (pendingExit) {
+        clearTimeout(pendingExit.timeoutId);
+        exitingRef.current.delete(t.id);
+      }
+    }
+
+    // Schedule exit animations for ids that truly left the source
+    // data (delete / optimistic delete / SSE task_deleted), NOT ids
+    // that were merely filtered out by the status / priority / title
+    // chips. Filter-out should snap because (a) it's a user-initiated
+    // view change where instant feedback is expected, and (b) fading
+    // the whole filtered-out set would look like a long transition
+    // every time a chip changes. The discriminator is whether the id
+    // still exists in the unfiltered `tasks` prop.
+    const tasksIds = new Set(tasks.map((t) => t.id));
+    const prev = prevFilteredRef.current;
+    let scheduledExit = false;
+    for (const pr of prev) {
+      if (filteredIds.has(pr.id)) continue;
+      if (tasksIds.has(pr.id)) continue; // still in source; filter-out
+      if (exitingRef.current.has(pr.id)) continue;
+      const timeoutId = window.setTimeout(() => {
+        exitingRef.current.delete(pr.id);
+        seenIdsRef.current.delete(pr.id);
+        setExitingTick((x) => x + 1);
+      }, ROW_EXIT_MS);
+      exitingRef.current.set(pr.id, { task: pr, timeoutId });
+      scheduledExit = true;
+    }
+    // Drop ids from seenIds that are no longer visible AND aren't
+    // exiting, so when a filter chip is cleared they re-enter with
+    // an animation rather than snapping in silently. Exiting ids
+    // are removed by their own timeout cleanup above.
+    for (const id of Array.from(seenIdsRef.current)) {
+      if (filteredIds.has(id)) continue;
+      if (exitingRef.current.has(id)) continue;
+      seenIdsRef.current.delete(id);
+    }
+    prevFilteredRef.current = filteredTasks;
+
+    setEnteringIds((prev) => {
+      if (prev.size === 0 && newlyEntering.size === 0) return prev;
+      return newlyEntering;
+    });
+    if (scheduledExit) {
+      setExitingTick((x) => x + 1);
+    }
+  }, [filteredTasks, filteredIds, tasks]);
+
+  useEffect(() => {
+    const exiting = exitingRef.current;
+    return () => {
+      for (const { timeoutId } of exiting.values()) {
+        clearTimeout(timeoutId);
+      }
+      exiting.clear();
+    };
+  }, []);
+
+  // Merge filteredTasks with exiting rows for render. Exiting rows are
+  // appended at the bottom rather than their old position: the CSS
+  // fade-out with translateY(8px) reads naturally that way and we
+  // don't have to preserve the original interleaving across a tree
+  // flatten.
+  const rowsToRender: Array<{
+    task: TaskWithDepth;
+    isEntering: boolean;
+    isExiting: boolean;
+  }> = [];
+  for (const t of filteredTasks) {
+    rowsToRender.push({
+      task: t,
+      isEntering: enteringIds.has(t.id),
+      isExiting: false,
+    });
+  }
+  for (const { task } of exitingRef.current.values()) {
+    rowsToRender.push({ task, isEntering: false, isExiting: true });
+  }
+  void exitingTick;
+
   const colSpan = selection ? 6 : 5;
   const showSelectionCol = Boolean(selection);
   return (
@@ -129,7 +254,7 @@ export function TaskListDataTable({
                 />
               </td>
             </tr>
-          ) : filteredTasks.length === 0 ? (
+          ) : rowsToRender.length === 0 ? (
             <tr className="task-list-empty-row">
               <td colSpan={colSpan} className="task-list-empty-cell">
                 <EmptyState
@@ -141,14 +266,23 @@ export function TaskListDataTable({
               </td>
             </tr>
           ) : (
-            filteredTasks.map((t) => {
+            rowsToRender.map(({ task: t, isEntering, isExiting }) => {
               const promptPreview = previewTextFromPrompt(t.initial_prompt);
-              const rowSelected = selection ? selection.isSelected(t.id) : false;
+              const rowSelected =
+                !isExiting && selection ? selection.isSelected(t.id) : false;
+              const rowClass = [
+                "task-list-row",
+                isEntering ? "task-list-row--enter" : "",
+                isExiting ? "task-list-row--exit" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
               return (
                 <tr
                   key={t.id}
-                  className="task-list-row"
+                  className={rowClass}
                   data-selected={rowSelected ? "true" : undefined}
+                  aria-hidden={isExiting ? "true" : undefined}
                 >
                   {showSelectionCol && selection ? (
                     <td className="task-list-select-col">
@@ -163,6 +297,7 @@ export function TaskListDataTable({
                         checked={rowSelected}
                         onChange={() => selection.onRowToggle(t.id)}
                         data-testid={`task-list-select-row-${t.id}`}
+                        disabled={isExiting}
                       />
                     </td>
                   ) : null}
@@ -224,7 +359,7 @@ export function TaskListDataTable({
                         className="secondary btn-table"
                         aria-label={`Edit task "${t.title}"`}
                         onClick={() => onEdit(t)}
-                        disabled={saving}
+                        disabled={saving || isExiting}
                       >
                         Edit
                       </button>
@@ -238,7 +373,7 @@ export function TaskListDataTable({
                             subtaskCount: t.descendantCount ?? 0,
                           })
                         }
-                        disabled={saving}
+                        disabled={saving || isExiting}
                       >
                         Delete
                       </button>

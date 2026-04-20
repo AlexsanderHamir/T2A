@@ -115,6 +115,43 @@
   transition: background var(--duration-normal) var(--ease-out);
 }
 
+/* New-row enter animation (Phase 3b). Applied only to rows whose
+   id wasn't in the component's seenIdsRef on the render in which
+   they first appeared; existing rows get no animation during
+   background refetch / SSE invalidation. `both` fill holds the
+   start frame so there's never a one-frame flicker before the
+   animation kicks in. Tokens come from app-design-tokens.css. */
+.task-list-row--enter {
+  animation: ui-phase-fade-in var(--duration-ui-phase) var(--ease-ui) both;
+}
+
+/* Row exit animation (Phase 3c). RowExitGate holds the outgoing row
+   mounted for --duration-normal so a delete / filter-out fades out
+   instead of snapping. `both` fill keeps the final (invisible)
+   frame painted until unmount. */
+.task-list-row--exit {
+  animation: task-list-row-fade-out var(--duration-normal) var(--ease-in) both;
+  pointer-events: none;
+}
+
+@keyframes task-list-row-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-row--enter,
+  .task-list-row--exit {
+    animation: none;
+  }
+}
+
 @media (hover: hover) {
   .task-list-table tbody tr.task-list-row:hover {
     background: var(--chrome-fill-task-row-hover);
