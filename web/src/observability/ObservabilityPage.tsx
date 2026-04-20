@@ -1,6 +1,7 @@
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { ObservabilityCycles } from "./ObservabilityCycles";
 import { ObservabilityOverview } from "./ObservabilityOverview";
+import { ObservabilityRunnerBreakdown } from "./ObservabilityRunnerBreakdown";
 import { ObservabilitySystem } from "./ObservabilitySystem";
 import { useObservabilityStats } from "./useObservabilityStats";
 import { useSystemHealth } from "./useSystemHealth";
@@ -31,6 +32,7 @@ export function ObservabilityPage() {
         </p>
       </header>
       <ObservabilityOverview stats={stats} loading={loading} />
+      <ObservabilityRunnerBreakdown stats={stats} loading={loading} />
       <ObservabilityCycles stats={stats} loading={loading} />
       <ObservabilitySystem health={health} loading={healthLoading} />
     </div>

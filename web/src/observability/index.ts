@@ -4,6 +4,7 @@
  * instead of deep paths.
  */
 export { ObservabilityPage } from "./ObservabilityPage";
+export { ObservabilityRunnerBreakdown } from "./ObservabilityRunnerBreakdown";
 export { SystemStatusChip } from "./SystemStatusChip";
 
 // Cycle/phase display helpers — re-exported so feature areas

@@ -344,6 +344,125 @@
   margin-left: auto;
 }
 
+/* Runner & model breakdown ------------------------------------------------ */
+.obs-runner-breakdown {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+.obs-runner-breakdown-head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.obs-runner-breakdown-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.obs-runner-breakdown-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.obs-runner-breakdown-tablewrap {
+  overflow-x: auto;
+}
+
+.obs-runner-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.obs-runner-breakdown-table th,
+.obs-runner-breakdown-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-hairline);
+  text-align: left;
+}
+
+.obs-runner-breakdown-table thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  background: var(--surface-card);
+  z-index: 1;
+}
+
+.obs-runner-breakdown-table tbody tr:last-child td,
+.obs-runner-breakdown-table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.obs-runner-cell--num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+.obs-runner-cell--label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.obs-runner-cell--succeeded {
+  color: var(--pill-success-fill-text, var(--text-primary));
+}
+
+.obs-runner-cell--failed {
+  color: var(--pill-danger-fill-text, var(--text-primary));
+}
+
+.obs-runner-cell--aborted {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.obs-runner-row--total {
+  background: color-mix(in srgb, var(--brand) 4%, transparent);
+}
+
+.obs-runner-row--total th,
+.obs-runner-row--total td {
+  font-weight: 600;
+}
+
+.obs-runner-pill--total {
+  /* The "runner totals" row reuses the runtime chip but widens the
+     letter-spacing a touch so it reads as a header row rather than a
+     leaf. Background stays the neutral-stone surface — swapping to a
+     colour here would imply a state signal that doesn't exist. */
+  letter-spacing: 0.02em;
+}
+
+.obs-runner-cell--rate-high {
+  color: var(--pill-success-fill-text, var(--text-primary));
+}
+
+.obs-runner-cell--rate-mid {
+  color: var(--warning-ink, var(--text-primary));
+}
+
+.obs-runner-cell--rate-low {
+  color: var(--pill-danger-fill-text, var(--text-primary));
+}
+
+.obs-runner-cell--rate-unknown {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
 /* Cycles & phases section ------------------------------------------------- */
 .obs-cycles {
   display: grid;
