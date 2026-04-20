@@ -163,6 +163,7 @@ describe("getTaskStats", () => {
           persist: {},
         },
       },
+      runner: { by_runner: {}, by_model: {}, by_runner_model: {} },
       recent_failures: [],
     };
     vi.spyOn(globalThis, "fetch").mockResolvedValue(

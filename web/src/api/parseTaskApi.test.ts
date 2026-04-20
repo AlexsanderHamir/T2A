@@ -199,6 +199,11 @@ describe("parseTaskStatsResponse", () => {
         persist: {},
       },
     },
+    runner: {
+      by_runner: {},
+      by_model: {},
+      by_runner_model: {},
+    },
     recent_failures: [],
   };
 
@@ -395,6 +400,94 @@ describe("parseTaskStatsResponse", () => {
         ],
       }),
     ).toThrow(/recent_failures\[0\]\.status/);
+  });
+
+  it("parses runner breakdown across by_runner, by_model, and by_runner_model", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      runner: {
+        by_runner: {
+          "cursor-cli": {
+            by_status: { succeeded: 2, failed: 1 },
+            succeeded: 2,
+            duration_p50_succeeded_seconds: 1.5,
+            duration_p95_succeeded_seconds: 4.2,
+          },
+        },
+        by_model: {
+          "sonnet-4.5": {
+            by_status: { succeeded: 1 },
+            succeeded: 1,
+            duration_p50_succeeded_seconds: 1,
+            duration_p95_succeeded_seconds: 1,
+          },
+          "": {
+            by_status: { failed: 1 },
+            succeeded: 0,
+            duration_p50_succeeded_seconds: 0,
+            duration_p95_succeeded_seconds: 0,
+          },
+        },
+        by_runner_model: {
+          "cursor-cli|sonnet-4.5": {
+            by_status: { succeeded: 1 },
+            succeeded: 1,
+            duration_p50_succeeded_seconds: 1,
+            duration_p95_succeeded_seconds: 1,
+          },
+        },
+      },
+    });
+    expect(got.runner.by_runner["cursor-cli"].succeeded).toBe(2);
+    expect(got.runner.by_model[""].by_status.failed).toBe(1);
+    expect(got.runner.by_runner_model["cursor-cli|sonnet-4.5"].duration_p95_succeeded_seconds).toBe(1);
+  });
+
+  it("rejects unknown cycle status keys inside a runner bucket", () => {
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 0,
+        ready: 0,
+        critical: 0,
+        by_status: {},
+        by_priority: {},
+        by_scope: { parent: 0, subtask: 0 },
+        ...emptyExtras,
+        runner: {
+          by_runner: {
+            "cursor-cli": {
+              by_status: { weird: 1 },
+              succeeded: 0,
+              duration_p50_succeeded_seconds: 0,
+              duration_p95_succeeded_seconds: 0,
+            },
+          },
+          by_model: {},
+          by_runner_model: {},
+        },
+      }),
+    ).toThrow(/by_status\.weird/);
+  });
+
+  it("rejects missing runner block entirely", () => {
+    const { runner: _omit, ...withoutRunner } = emptyExtras;
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 0,
+        ready: 0,
+        critical: 0,
+        by_status: {},
+        by_priority: {},
+        by_scope: { parent: 0, subtask: 0 },
+        ...withoutRunner,
+      }),
+    ).toThrow(/runner must be an object/);
   });
 });
 

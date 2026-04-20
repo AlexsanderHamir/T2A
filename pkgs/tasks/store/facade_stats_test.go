@@ -8,6 +8,25 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+// emptyRunnerStats is the Phase 2 invariant: every map in the
+// Runner block must be non-nil ({} on the wire) so the SPA can
+// iterate without nil-guards. Asserted in the empty-DB test below.
+func assertEmptyRunnerStats(t *testing.T, got TaskStats) {
+	t.Helper()
+	if got.Runner.ByRunner == nil {
+		t.Fatalf("Runner.ByRunner must be non-nil on empty DB")
+	}
+	if got.Runner.ByModel == nil {
+		t.Fatalf("Runner.ByModel must be non-nil on empty DB")
+	}
+	if got.Runner.ByRunnerModel == nil {
+		t.Fatalf("Runner.ByRunnerModel must be non-nil on empty DB")
+	}
+	if len(got.Runner.ByRunner) != 0 || len(got.Runner.ByModel) != 0 || len(got.Runner.ByRunnerModel) != 0 {
+		t.Fatalf("Runner block non-empty on empty DB: %+v", got.Runner)
+	}
+}
+
 // TestStore_TaskStats_emptyDatabase pins the store-side invariant that
 // every map in TaskStats is non-nil and every domain.Phase enum key is
 // present in Phases.ByPhaseStatus on a fresh database. The handler's
@@ -50,6 +69,96 @@ func TestStore_TaskStats_emptyDatabase(t *testing.T) {
 	if len(got.RecentFailures) != 0 {
 		t.Fatalf("RecentFailures=%v want [] on empty DB", got.RecentFailures)
 	}
+	assertEmptyRunnerStats(t, got)
+}
+
+// TestStore_TaskStats_runnerBreakdown_aggregatesByRunnerModelAndPair
+// drives three terminated cycles through StartCycle / TerminateCycle
+// with different (runner, model) meta payloads and asserts the
+// Runner block aggregates them correctly across all three breakdowns
+// (by_runner / by_model / by_runner_model). This is the integration
+// guard for the Phase 2 wire shape on /tasks/stats.
+func TestStore_TaskStats_runnerBreakdown_aggregatesByRunnerModelAndPair(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk := mustCreateTask(t, s, ctx)
+
+	type seed struct {
+		meta   string
+		status domain.CycleStatus
+	}
+	seeds := []seed{
+		{meta: `{"runner":"cursor-cli","cursor_model_effective":"sonnet-4.5"}`, status: domain.CycleStatusSucceeded},
+		{meta: `{"runner":"cursor-cli","cursor_model_effective":"sonnet-4.5"}`, status: domain.CycleStatusFailed},
+		{meta: `{"runner":"cursor-cli","cursor_model_effective":"opus-4"}`, status: domain.CycleStatusSucceeded},
+	}
+	for i, sd := range seeds {
+		cyc, err := s.StartCycle(ctx, StartCycleInput{
+			TaskID:      tsk.ID,
+			TriggeredBy: domain.ActorAgent,
+			Meta:        []byte(sd.meta),
+		})
+		if err != nil {
+			t.Fatalf("seed %d StartCycle: %v", i, err)
+		}
+		if _, err := s.TerminateCycle(ctx, cyc.ID, sd.status, "seed", domain.ActorAgent); err != nil {
+			t.Fatalf("seed %d TerminateCycle: %v", i, err)
+		}
+	}
+
+	got, err := s.TaskStats(ctx)
+	if err != nil {
+		t.Fatalf("TaskStats: %v", err)
+	}
+
+	cursorBucket, ok := got.Runner.ByRunner["cursor-cli"]
+	if !ok {
+		t.Fatalf("Runner.ByRunner missing cursor-cli; got keys=%v", mapKeys(got.Runner.ByRunner))
+	}
+	if cursorBucket.ByStatus[domain.CycleStatusSucceeded] != 2 {
+		t.Errorf("ByRunner[cursor-cli].succeeded=%d want 2",
+			cursorBucket.ByStatus[domain.CycleStatusSucceeded])
+	}
+	if cursorBucket.ByStatus[domain.CycleStatusFailed] != 1 {
+		t.Errorf("ByRunner[cursor-cli].failed=%d want 1",
+			cursorBucket.ByStatus[domain.CycleStatusFailed])
+	}
+	if cursorBucket.Succeeded != 2 {
+		t.Errorf("ByRunner[cursor-cli].Succeeded=%d want 2", cursorBucket.Succeeded)
+	}
+
+	sonnet, ok := got.Runner.ByModel["sonnet-4.5"]
+	if !ok {
+		t.Fatalf("Runner.ByModel missing sonnet-4.5; got keys=%v", mapKeys(got.Runner.ByModel))
+	}
+	if sonnet.ByStatus[domain.CycleStatusSucceeded] != 1 || sonnet.ByStatus[domain.CycleStatusFailed] != 1 {
+		t.Errorf("ByModel[sonnet-4.5]=%+v want succeeded=1, failed=1", sonnet.ByStatus)
+	}
+	opus, ok := got.Runner.ByModel["opus-4"]
+	if !ok {
+		t.Fatalf("Runner.ByModel missing opus-4; got keys=%v", mapKeys(got.Runner.ByModel))
+	}
+	if opus.ByStatus[domain.CycleStatusSucceeded] != 1 {
+		t.Errorf("ByModel[opus-4].succeeded=%d want 1", opus.ByStatus[domain.CycleStatusSucceeded])
+	}
+
+	pairKey := "cursor-cli|sonnet-4.5"
+	pair, ok := got.Runner.ByRunnerModel[pairKey]
+	if !ok {
+		t.Fatalf("Runner.ByRunnerModel missing %q; got keys=%v",
+			pairKey, mapKeys(got.Runner.ByRunnerModel))
+	}
+	if pair.ByStatus[domain.CycleStatusSucceeded] != 1 || pair.ByStatus[domain.CycleStatusFailed] != 1 {
+		t.Errorf("ByRunnerModel[%q]=%+v want succeeded=1, failed=1", pairKey, pair.ByStatus)
+	}
+}
+
+func mapKeys(m map[string]RunnerBucket) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 // TestStore_TaskStats_populatesCyclesPhasesAndFailures drives one cycle

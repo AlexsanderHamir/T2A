@@ -21,6 +21,7 @@ function emptyStats(overrides: Partial<TaskStatsResponse> = {}): TaskStatsRespon
         persist: {},
       },
     },
+    runner: { by_runner: {}, by_model: {}, by_runner_model: {} },
     recent_failures: [],
     ...overrides,
   };

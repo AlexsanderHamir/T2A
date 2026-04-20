@@ -29,6 +29,13 @@ type TaskStats struct {
 	ByScope        map[string]int64
 	Cycles         CycleStats
 	Phases         PhaseStats
+	// Runner is the (runner, model, runner|model) breakdown of
+	// terminal cycles introduced in Phase 2 of the per-task
+	// runner/model attribution plan. Always populated (empty maps
+	// on a fresh database) so the wire shape stays stable; see
+	// RunnerStats for the per-bucket payload (by-status counts +
+	// succeeded-only p50/p95 durations).
+	Runner         RunnerStats
 	RecentFailures []RecentFailure
 }
 
@@ -89,6 +96,11 @@ func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 		Phases: PhaseStats{
 			ByPhaseStatus: make(map[domain.Phase]map[domain.PhaseStatus]int64, len(allPhases)),
 		},
+		Runner: RunnerStats{
+			ByRunner:      map[string]RunnerBucket{},
+			ByModel:       map[string]RunnerBucket{},
+			ByRunnerModel: map[string]RunnerBucket{},
+		},
 		RecentFailures: []RecentFailure{},
 	}
 	for _, p := range allPhases {
@@ -136,6 +148,11 @@ func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 		}
 		bucket[p.Status] = p.Count
 	}
+	runnerStats, err := scanRunnerStats(ctx, db)
+	if err != nil {
+		return TaskStats{}, err
+	}
+	out.Runner = runnerStats
 	failures, err := scanRecentFailures(ctx, db, RecentFailureLimit)
 	if err != nil {
 		return TaskStats{}, err

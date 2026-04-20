@@ -13,11 +13,19 @@ type TaskStats = stats.TaskStats
 
 // CycleStats / PhaseStats / RecentFailure are re-exported so handler
 // JSON projection can reference them without reaching into internal/.
+// RunnerStats / RunnerBucket carry the Phase 2 runner+model breakdown.
 type (
 	CycleStats    = stats.CycleStats
 	PhaseStats    = stats.PhaseStats
+	RunnerStats   = stats.RunnerStats
+	RunnerBucket  = stats.RunnerBucket
 	RecentFailure = stats.RecentFailure
 )
+
+// RunnerUnknownKey is the bucket key used for cycles whose meta
+// predates the V2 attribution keys. Re-exported so handler tests can
+// reference it without reaching into internal/.
+const RunnerUnknownKey = stats.RunnerUnknownKey
 
 // TaskStats returns global counters across all tasks (totals plus by-status,
 // by-priority, by-scope breakdowns).

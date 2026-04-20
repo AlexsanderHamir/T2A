@@ -34,6 +34,8 @@ import {
   type TaskStatsPhases,
   type TaskStatsRecentFailure,
   type TaskStatsResponse,
+  type TaskStatsRunner,
+  type TaskStatsRunnerBucket,
 } from "@/types";
 import { errorMessage } from "@/lib/errorMessage";
 
@@ -177,6 +179,7 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
   };
   const cycles = parseTaskStatsCycles(value.cycles);
   const phases = parseTaskStatsPhases(value.phases);
+  const runner = parseTaskStatsRunner(value.runner);
   const recent_failures = parseTaskStatsRecentFailures(value.recent_failures);
   return {
     total: parseFiniteNumber(value.total, "total"),
@@ -187,6 +190,7 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     by_scope,
     cycles,
     phases,
+    runner,
     recent_failures,
   };
 }
@@ -261,6 +265,73 @@ function parseTaskStatsPhases(value: unknown): TaskStatsPhases {
     by_phase_status[phaseKey as Phase] = bucket;
   }
   return { by_phase_status };
+}
+
+// parseTaskStatsRunner validates the Phase 2 `runner` block on
+// GET /tasks/stats. The three breakdown maps are required and must
+// be non-null objects ({} on empty database). Bucket keys are
+// arbitrary user-controlled strings (runner.Name(), effective
+// model, "runner|model" pair) so we do NOT enum-check them; we DO
+// enum-check `by_status` keys inside each bucket so a stale
+// CycleStatus on the wire trips here instead of silently rendering
+// "0".
+function parseTaskStatsRunner(value: unknown): TaskStatsRunner {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: runner must be an object");
+  }
+  return {
+    by_runner: parseRunnerBucketMap(value.by_runner, "runner.by_runner"),
+    by_model: parseRunnerBucketMap(value.by_model, "runner.by_model"),
+    by_runner_model: parseRunnerBucketMap(value.by_runner_model, "runner.by_runner_model"),
+  };
+}
+
+function parseRunnerBucketMap(
+  value: unknown,
+  field: string,
+): Record<string, TaskStatsRunnerBucket> {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${field} must be an object`);
+  }
+  const out: Record<string, TaskStatsRunnerBucket> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    out[key] = parseRunnerBucket(raw, `${field}.${key}`);
+  }
+  return out;
+}
+
+function parseRunnerBucket(value: unknown, field: string): TaskStatsRunnerBucket {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${field} must be an object`);
+  }
+  const byStatusRaw = value.by_status;
+  if (!isRecord(byStatusRaw)) {
+    throw new Error(`Invalid API response: ${field}.by_status must be an object`);
+  }
+  const by_status: Partial<Record<CycleStatus, number>> = {};
+  for (const [statusKey, rawCount] of Object.entries(byStatusRaw)) {
+    if (!(CYCLE_STATUSES as readonly string[]).includes(statusKey)) {
+      throw new Error(
+        `Invalid API response: ${field}.by_status.${statusKey} is not a known cycle status`,
+      );
+    }
+    by_status[statusKey as CycleStatus] = parseFiniteNumber(
+      rawCount,
+      `${field}.by_status.${statusKey}`,
+    );
+  }
+  return {
+    by_status,
+    succeeded: parseFiniteNumber(value.succeeded, `${field}.succeeded`),
+    duration_p50_succeeded_seconds: parseFiniteNumber(
+      value.duration_p50_succeeded_seconds,
+      `${field}.duration_p50_succeeded_seconds`,
+    ),
+    duration_p95_succeeded_seconds: parseFiniteNumber(
+      value.duration_p95_succeeded_seconds,
+      `${field}.duration_p95_succeeded_seconds`,
+    ),
+  };
 }
 
 function parseTaskStatsRecentFailures(value: unknown): TaskStatsRecentFailure[] {

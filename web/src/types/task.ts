@@ -97,6 +97,38 @@ export type TaskStatsPhases = {
   >;
 };
 
+/**
+ * One entry in the runner / model breakdown returned by
+ * `GET /tasks/stats` (Phase 2 of the per-task runner+model
+ * attribution work). `succeeded` mirrors `by_status.succeeded` so
+ * the SPA can branch on the percentile gate without a missing-key
+ * check; `duration_p50_succeeded_seconds` /
+ * `duration_p95_succeeded_seconds` are 0 when `succeeded === 0`
+ * (render "—" rather than "0.00s" in that case).
+ */
+export type TaskStatsRunnerBucket = {
+  by_status: Partial<Record<import("./cycle").CycleStatus, number>>;
+  succeeded: number;
+  duration_p50_succeeded_seconds: number;
+  duration_p95_succeeded_seconds: number;
+};
+
+/**
+ * Per-runner / per-model / per-(runner,model) aggregates on
+ * `GET /tasks/stats`. All three maps are always present (`{}` on
+ * empty database). Bucket keys are verbatim from cycle meta:
+ *  - `by_runner` is keyed by `runner.Name()` ("unknown" for cycles
+ *    whose meta predates the V2 keys)
+ *  - `by_model` is keyed by the resolved effective model; the
+ *    empty-string key is preserved (means "no model configured")
+ *  - `by_runner_model` is the (runner, model) pair joined by `|`
+ */
+export type TaskStatsRunner = {
+  by_runner: Record<string, TaskStatsRunnerBucket>;
+  by_model: Record<string, TaskStatsRunnerBucket>;
+  by_runner_model: Record<string, TaskStatsRunnerBucket>;
+};
+
 export type TaskStatsResponse = {
   total: number;
   ready: number;
@@ -109,6 +141,7 @@ export type TaskStatsResponse = {
   };
   cycles: TaskStatsCycles;
   phases: TaskStatsPhases;
+  runner: TaskStatsRunner;
   /** Newest first; capped server-side at 25. Always an array (never null). */
   recent_failures: TaskStatsRecentFailure[];
 };

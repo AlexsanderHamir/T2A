@@ -68,6 +68,7 @@ type taskStatsResponse struct {
 	ByScope        map[string]int64          `json:"by_scope"`
 	Cycles         taskStatsCyclesJSON       `json:"cycles"`
 	Phases         taskStatsPhasesJSON       `json:"phases"`
+	Runner         taskStatsRunnerJSON       `json:"runner"`
 	RecentFailures []taskStatsFailureJSON    `json:"recent_failures"`
 }
 
@@ -85,6 +86,42 @@ type taskStatsCyclesJSON struct {
 // status) shape is the source of the Observability heatmap.
 type taskStatsPhasesJSON struct {
 	ByPhaseStatus map[domain.Phase]map[domain.PhaseStatus]int64 `json:"by_phase_status"`
+}
+
+// taskStatsRunnerJSON is the always-present `runner` block of
+// /tasks/stats added in Phase 2 of the per-task runner/model
+// attribution plan. All three maps are non-nil ({} on empty database)
+// per the store-layer invariant in stats.Get. Bucket keys are:
+//
+//   - by_runner:        Runner.Name() (verbatim from cycle_meta.runner).
+//                       The literal "unknown" key (RunnerUnknownKey)
+//                       holds pre-feature cycles whose meta_json never
+//                       carried the runner key.
+//   - by_model:         Runner.EffectiveModel resolution (verbatim
+//                       from cycle_meta.cursor_model_effective). The
+//                       empty-string "" key is the explicit "default
+//                       model" bucket — the SPA renders it as such.
+//   - by_runner_model:  pipe-delimited "<runner>|<model>" composite
+//                       key. The frontend splits on "|" to render
+//                       the two-level table.
+//
+// Each bucket carries the by-status counter (mirrors the global
+// cycles.by_status shape) plus succeeded-only p50/p95 durations
+// (decision D3): failed/aborted runs do not skew the latency cells.
+type taskStatsRunnerJSON struct {
+	ByRunner      map[string]taskStatsRunnerBucketJSON `json:"by_runner"`
+	ByModel       map[string]taskStatsRunnerBucketJSON `json:"by_model"`
+	ByRunnerModel map[string]taskStatsRunnerBucketJSON `json:"by_runner_model"`
+}
+
+// taskStatsRunnerBucketJSON is the per-bucket payload. Empty-bucket
+// p50/p95 values are 0 (NOT null/omitted) — the SPA decides whether
+// to render "—" instead of "0.00s" by gating on succeeded > 0.
+type taskStatsRunnerBucketJSON struct {
+	ByStatus                    map[domain.CycleStatus]int64 `json:"by_status"`
+	Succeeded                   int64                        `json:"succeeded"`
+	DurationP50SucceededSeconds float64                      `json:"duration_p50_succeeded_seconds"`
+	DurationP95SucceededSeconds float64                      `json:"duration_p95_succeeded_seconds"`
 }
 
 // taskStatsFailureJSON is one row in the `recent_failures` array. The
@@ -133,7 +170,41 @@ func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
 		Phases: taskStatsPhasesJSON{
 			ByPhaseStatus: s.Phases.ByPhaseStatus,
 		},
+		Runner:         taskStatsRunnerFromStore(s.Runner),
 		RecentFailures: failures,
+	}
+}
+
+// taskStatsRunnerFromStore preserves the always-non-nil-map invariant
+// (every map is {} on a fresh database, never null on the wire) and
+// projects each per-bucket payload onto the JSON shape pinned by
+// taskStatsRunnerBucketJSON.
+func taskStatsRunnerFromStore(s store.RunnerStats) taskStatsRunnerJSON {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskStatsRunnerFromStore")
+	out := taskStatsRunnerJSON{
+		ByRunner:      make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunner)),
+		ByModel:       make(map[string]taskStatsRunnerBucketJSON, len(s.ByModel)),
+		ByRunnerModel: make(map[string]taskStatsRunnerBucketJSON, len(s.ByRunnerModel)),
+	}
+	for k, b := range s.ByRunner {
+		out.ByRunner[k] = bucketJSONFromStore(b)
+	}
+	for k, b := range s.ByModel {
+		out.ByModel[k] = bucketJSONFromStore(b)
+	}
+	for k, b := range s.ByRunnerModel {
+		out.ByRunnerModel[k] = bucketJSONFromStore(b)
+	}
+	return out
+}
+
+func bucketJSONFromStore(b store.RunnerBucket) taskStatsRunnerBucketJSON {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.bucketJSONFromStore")
+	return taskStatsRunnerBucketJSON{
+		ByStatus:                    b.ByStatus,
+		Succeeded:                   b.Succeeded,
+		DurationP50SucceededSeconds: b.DurationP50SucceededSeconds,
+		DurationP95SucceededSeconds: b.DurationP95SucceededSeconds,
 	}
 }
 

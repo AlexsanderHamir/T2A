@@ -30,6 +30,7 @@ type statsResponseRaw struct {
 	ByScope        map[string]int64             `json:"by_scope"`
 	Cycles         statsCyclesRaw               `json:"cycles"`
 	Phases         statsPhasesRaw               `json:"phases"`
+	Runner         statsRunnerRaw               `json:"runner"`
 	RecentFailures []map[string]json.RawMessage `json:"recent_failures"`
 }
 
@@ -40,6 +41,19 @@ type statsCyclesRaw struct {
 
 type statsPhasesRaw struct {
 	ByPhaseStatus map[string]map[string]int64 `json:"by_phase_status"`
+}
+
+type statsRunnerRaw struct {
+	ByRunner      map[string]statsRunnerBucketRaw `json:"by_runner"`
+	ByModel       map[string]statsRunnerBucketRaw `json:"by_model"`
+	ByRunnerModel map[string]statsRunnerBucketRaw `json:"by_runner_model"`
+}
+
+type statsRunnerBucketRaw struct {
+	ByStatus                    map[string]int64 `json:"by_status"`
+	Succeeded                   int64            `json:"succeeded"`
+	DurationP50SucceededSeconds float64          `json:"duration_p50_succeeded_seconds"`
+	DurationP95SucceededSeconds float64          `json:"duration_p95_succeeded_seconds"`
 }
 
 func mustGetJSON(t *testing.T, baseURL, path string) ([]byte, *http.Response) {
@@ -248,6 +262,7 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 		}
 		assertCyclesEmpty(t, raw, got)
 		assertPhasesAllZeroEnumKeys(t, raw, got)
+		assertRunnerEmpty(t, raw, got)
 		assertRecentFailuresEmptyArray(t, raw, got)
 	})
 
@@ -365,7 +380,7 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 	want := map[string]struct{}{
 		"total": {}, "ready": {}, "critical": {},
 		"by_status": {}, "by_priority": {}, "by_scope": {},
-		"cycles": {}, "phases": {}, "recent_failures": {},
+		"cycles": {}, "phases": {}, "runner": {}, "recent_failures": {},
 	}
 	for k := range want {
 		if _, ok := top[k]; !ok {
@@ -453,6 +468,26 @@ func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw)
 		if len(inner) != 0 {
 			t.Errorf("phases.by_phase_status[%q]=%v want {} on empty DB", p, inner)
 		}
+	}
+}
+
+// assertRunnerEmpty pins the Phase 2 invariant that the `runner`
+// block is the three-key object `{by_runner, by_model, by_runner_model}`
+// with non-null empty maps on a fresh database. Catches a future
+// refactor that ships sparse keys or omitempty.
+func assertRunnerEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
+	t.Helper()
+	if got.Runner.ByRunner == nil {
+		t.Fatalf("runner.by_runner is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	if got.Runner.ByModel == nil {
+		t.Fatalf("runner.by_model is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	if got.Runner.ByRunnerModel == nil {
+		t.Fatalf("runner.by_runner_model is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+	}
+	if len(got.Runner.ByRunner) != 0 || len(got.Runner.ByModel) != 0 || len(got.Runner.ByRunnerModel) != 0 {
+		t.Fatalf("runner block non-empty on empty DB: %+v", got.Runner)
 	}
 }
 
