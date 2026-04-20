@@ -22,6 +22,8 @@ import "./App.css";
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
+  const draftsIsCurrent = location.pathname.startsWith("/drafts");
+  const observabilityIsCurrent = location.pathname.startsWith("/observability");
 
   return (
     <ModalStackProvider>
@@ -31,31 +33,48 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         </a>
         <header className="app-header app-header--sticky">
           <div className="app-header-top">
-            <div className="app-brand-lockup">
-              <nav className="app-header-site-nav" aria-label="Site">
-                <Link
-                  to="/"
-                  className="app-title-link"
-                  {...(homeIsCurrent
-                    ? { "aria-current": "page" as const }
-                    : {})}
-                >
-                  <h1 className="app-title app-title--logo">T2A</h1>
-                </Link>
-                <Link to="/drafts" className="app-title-link app-title-link--drafts">
-                  Drafts
-                </Link>
-                <Link
-                  to="/observability"
-                  className="app-title-link app-title-link--observability"
-                >
-                  Observability
-                </Link>
-              </nav>
-              <p className="app-tagline term-prompt">
-                <span>capture --work --ship-with-clarity</span>
-              </p>
-            </div>
+            {/* Brand sits OUTSIDE <nav> so the wordmark is not announced
+                as a navigation destination peer to Tasks/Drafts/etc.
+                It still links home (with aria-current on /) so keyboard
+                + click affordance stays. */}
+            <Link
+              to="/"
+              className="app-brand"
+              {...(homeIsCurrent
+                ? { "aria-current": "page" as const }
+                : {})}
+            >
+              <h1 className="app-title app-title--logo">T2A</h1>
+            </Link>
+            <nav className="app-nav" aria-label="Primary">
+              <Link
+                to="/"
+                className="app-nav__link"
+                {...(homeIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Tasks
+              </Link>
+              <Link
+                to="/drafts"
+                className="app-nav__link"
+                {...(draftsIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Drafts
+              </Link>
+              <Link
+                to="/observability"
+                className="app-nav__link"
+                {...(observabilityIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Observability
+              </Link>
+            </nav>
             <div className="app-header-actions">
               <StreamStatusHint
                 connected={app.sseLive}
@@ -66,6 +85,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 className="app-header-settings-link"
                 aria-label="Open settings"
                 title="Settings"
+                {...(location.pathname.startsWith("/settings")
+                  ? { "aria-current": "page" as const }
+                  : {})}
               >
                 <svg
                   className="app-header-settings-icon"
@@ -88,6 +110,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               </Link>
             </div>
           </div>
+          <p className="app-tagline term-prompt" aria-hidden="true">
+            <span>capture --work --ship-with-clarity</span>
+          </p>
         </header>
         {app.error ? <ErrorBanner message={app.error} /> : null}
 
