@@ -6,11 +6,13 @@ import { StackedBar } from "./StackedBar";
 import {
   PRIORITY_DISPLAY_ORDER,
   STATUS_DISPLAY_ORDER,
+  blockedCount,
   doneCount,
   failedCount,
-  inFlightCount,
   priorityFillClass,
   priorityLabel,
+  reviewCount,
+  runningCount,
   statusFillClass,
   statusLabel,
 } from "./statsViewModel";
@@ -47,8 +49,18 @@ export function ObservabilityOverview({ stats, loading }: Props) {
     loading,
     hasStats,
   );
-  const inFlightState = kpiState(
-    stats ? inFlightCount(stats) : undefined,
+  const runningState = kpiState(
+    stats ? runningCount(stats) : undefined,
+    loading,
+    hasStats,
+  );
+  const blockedState = kpiState(
+    stats ? blockedCount(stats) : undefined,
+    loading,
+    hasStats,
+  );
+  const reviewState = kpiState(
+    stats ? reviewCount(stats) : undefined,
     loading,
     hasStats,
   );
@@ -117,11 +129,25 @@ export function ObservabilityOverview({ stats, loading }: Props) {
           testId="obs-kpi-failed"
         />
         <KpiCard
-          label="In flight"
-          state={inFlightState}
-          meta="running, blocked, or in review"
+          label="Running"
+          state={runningState}
+          meta="agent actively executing"
+          tone="info"
+          testId="obs-kpi-running"
+        />
+        <KpiCard
+          label="Blocked"
+          state={blockedState}
+          meta="waiting on a dependency"
           tone="warning"
-          testId="obs-kpi-in-flight"
+          testId="obs-kpi-blocked"
+        />
+        <KpiCard
+          label="In review"
+          state={reviewState}
+          meta="awaiting human approval"
+          tone="warning"
+          testId="obs-kpi-review"
         />
         <KpiCard
           label="Ready"

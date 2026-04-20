@@ -57,13 +57,29 @@ export function priorityFillClass(p: Priority): string {
 }
 
 /**
- * Sum of `running + blocked + review` from the by_status map. The wire
- * contract guarantees absent buckets are missing entries (never null), so
- * the `?? 0` short-circuit is the documented zero-coalesce.
+ * Three distinct in-flight states. They are intentionally NOT summed:
+ *   - `running` = the agent worker is actively executing this task.
+ *   - `blocked` = waiting on an external dependency / cannot proceed.
+ *   - `review`  = awaiting human approval / response.
+ *
+ * Lumping them hides whether the system is healthy (running), stuck
+ * (blocked), or waiting on a person (review) — three operational
+ * postures that demand different actions. Keep them as separate KPIs.
+ *
+ * The wire contract guarantees absent buckets are missing entries
+ * (never null), so the `?? 0` short-circuit is the documented
+ * zero-coalesce.
  */
-export function inFlightCount(stats: TaskStatsResponse): number {
-  const s = stats.by_status;
-  return (s.running ?? 0) + (s.blocked ?? 0) + (s.review ?? 0);
+export function runningCount(stats: TaskStatsResponse): number {
+  return stats.by_status.running ?? 0;
+}
+
+export function blockedCount(stats: TaskStatsResponse): number {
+  return stats.by_status.blocked ?? 0;
+}
+
+export function reviewCount(stats: TaskStatsResponse): number {
+  return stats.by_status.review ?? 0;
 }
 
 export function doneCount(stats: TaskStatsResponse): number {

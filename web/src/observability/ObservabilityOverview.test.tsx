@@ -33,7 +33,8 @@ describe("ObservabilityOverview", () => {
 
     const counters = screen.getByLabelText("Headline counters");
     const cards = within(counters).getAllByRole("article");
-    expect(cards).toHaveLength(6);
+    // total + done + failed + running + blocked + review + ready + critical
+    expect(cards).toHaveLength(8);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "true");
     });
@@ -46,22 +47,26 @@ describe("ObservabilityOverview", () => {
 
     const counters = screen.getByLabelText("Headline counters");
     const cards = within(counters).getAllByRole("article");
-    expect(cards).toHaveLength(6);
+    expect(cards).toHaveLength(8);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "false");
     });
-    expect(within(counters).getAllByText("—")).toHaveLength(6);
+    expect(within(counters).getAllByText("—")).toHaveLength(8);
     expect(within(counters).getByText("Breakdown unavailable")).toBeInTheDocument();
   });
 
-  it("renders all six headline KPI values from settled stats", () => {
+  it("renders all headline KPI values from settled stats, splitting in-flight into running / blocked / review", () => {
     render(<ObservabilityOverview stats={statsFixture()} loading={false} />);
 
     expect(screen.getByTestId("obs-kpi-total")).toHaveTextContent("18");
     expect(screen.getByTestId("obs-kpi-done")).toHaveTextContent("6");
     expect(screen.getByTestId("obs-kpi-failed")).toHaveTextContent("3");
-    // running 2 + blocked 1 + review 1 = 4
-    expect(screen.getByTestId("obs-kpi-in-flight")).toHaveTextContent("4");
+    // The three in-flight states are intentionally NOT summed: an operator
+    // needs to know whether the system is working (running), stuck
+    // (blocked), or waiting on a person (review).
+    expect(screen.getByTestId("obs-kpi-running")).toHaveTextContent("2");
+    expect(screen.getByTestId("obs-kpi-blocked")).toHaveTextContent("1");
+    expect(screen.getByTestId("obs-kpi-review")).toHaveTextContent("1");
     expect(screen.getByTestId("obs-kpi-ready")).toHaveTextContent("5");
     expect(screen.getByTestId("obs-kpi-critical")).toHaveTextContent("3");
     expect(
