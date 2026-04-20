@@ -250,3 +250,88 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   (`task-detail-schedule-edit`) for both states because they're
   the same control wired to the same modal — only the label
   flips.
+
+
+- **2026-04-19 — [Stage 5] — The synthetic "scheduled" status filter
+  lives next to the real statuses in the existing CustomSelect
+  rather than as a separate "schedule" checkbox.**
+  Rationale: operators reach for it the same way ("show me what is
+  deferred"), and a third filter row would crowd the toolbar for
+  zero functional gain. The synthetic value is plumbed through the
+  same `TaskListClientStatusFilter` union so the existing
+  reset-on-change wiring just works. The bucket matches
+  `status === "ready" && pickup_not_before > now`; rows with a
+  past `pickup_not_before` (an operator clicked the past, or the
+  schedule expired before pickup) are NOT shown — they are
+  effectively just "ready", which the regular `ready` filter
+  already covers. Per the locked decision `scope=agent_only`,
+  scheduled tasks are NEVER hidden from the default list — this
+  is a UX affordance only.
+
+- **2026-04-19 — [Stage 5] — Bulk selection state is section-local
+  React state, NOT URL-synced.**
+  Rationale: bulk selection is ephemeral by design. URL syncing
+  would make stale selections survive reloads and back-button
+  navigation, which is the opposite of what we want — the locked
+  guardrail "Selection state clears on filter change, sort change,
+  or successful bulk action" demands the selection be tied to the
+  current view. Implemented in `useTaskListSelection` with a
+  `clearSelection` callback the section invokes from its filter-
+  reset effect. Subtle bug fixed during implementation: the effect
+  must depend on the destructured `clearSelection` (stable via
+  useCallback) rather than the whole `selection` object literal,
+  because the hook returns a fresh object on every render and
+  depending on the object would clear the selection on every
+  checkbox toggle.
+
+- **2026-04-19 — [Stage 5] — Bulk PATCH uses a tiny local
+  `runWithConcurrency` helper instead of `useTaskPatchFlow` or an
+  external `pLimit` dependency.**
+  Rationale: `useTaskPatchFlow` requires a full `TaskPatchInput`
+  shape per task and runs an optimistic-per-row update path that
+  is overkill when every PATCH carries the same single field
+  (`pickup_not_before`). The local helper bounds concurrency at 5
+  (matches the locked plan: "shared concurrency cap") so a
+  200-row selection does not thundering-herd the API. Adding a
+  `pLimit` dependency for ~30 lines of code with one call site
+  would have been a clear over-engineering signal. The helper
+  returns per-task `{ ok, value | error }` results so the section
+  can aggregate failures into a single combined toast ("3 of 12
+  reschedules failed: ...") instead of N individual ones — exactly
+  the UX the plan calls out.
+
+- **2026-04-19 — [Stage 5] — Clear-schedule confirmation is a
+  native `window.confirm`, not a custom modal.**
+  Rationale: the plan calls for "a confirmation step ... if N > 5"
+  and `window.confirm` ships zero new components / zero new
+  styling decisions for a one-off destructive flow. The bulk
+  reschedule MODAL is custom because operators interact with the
+  picker; a single yes/no for a bulk clear does not justify the
+  same machinery. If the design system later grows a canonical
+  confirm component, switching here is a single-line edit.
+
+- **2026-04-19 — [Stage 5] — Bulk reschedule modal closes only on
+  full success; partial failure leaves it open with the error
+  banner.**
+  Rationale: when 1 of 3 reschedules fails, closing the modal
+  would force the operator to re-select the failed rows and
+  re-enter the picker just to retry. Leaving it open lets them
+  hit the same "Reschedule N" button again — react-query
+  invalidation has already refetched the rows, so the next
+  attempt will only retry the still-unscheduled ones (the
+  successful rows now carry the new `pickup_not_before` and would
+  be a no-op PATCH if the operator left them selected; we
+  deliberately do NOT auto-deselect succeeded rows because the
+  operator may want to deliberately overwrite them with a new
+  schedule).
+
+- **2026-04-19 — [Stage 5] — `TaskListDataTable` accepts
+  `selection` as an optional prop rather than always rendering
+  checkboxes.**
+  Rationale: future callers that embed the table in a no-bulk
+  context (subtask widget, embedded picker, etc.) get the
+  historical 5-column layout for free with zero conditionals at
+  the call site. The list section opts in by passing the
+  selection bindings; everywhere else the table is unchanged.
+  This is the "additive over destructive" principle from the
+  execution-discipline section: zero risk to non-list call sites.

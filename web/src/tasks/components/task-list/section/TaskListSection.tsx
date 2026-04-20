@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TaskListDataTable } from "../table/TaskListDataTable";
 import { TaskListFilters } from "../filters/TaskListFilters";
@@ -15,6 +22,13 @@ import {
 } from "../filters/taskListClientFilter";
 import { taskListPagerSummary } from "../pager/taskListPagerSummary";
 import { TaskListTableSkeleton } from "../table/TaskListTableSkeleton";
+import { useAppTimezone } from "@/shared/time/appTimezone";
+import {
+  TaskBulkRescheduleModal,
+  TaskListBulkActionBar,
+  useBulkScheduleMutation,
+  useTaskListSelection,
+} from "../bulk";
 
 type Props = {
   tasks: TaskWithDepth[];
@@ -101,14 +115,100 @@ export function TaskListSection({
     [tasks, statusFilter, priorityFilter, titleSearch],
   );
 
+  const visibleIds = useMemo(
+    () => filteredTasks.map((t) => t.id),
+    [filteredTasks],
+  );
+  const selection = useTaskListSelection(visibleIds);
+  const appTimezone = useAppTimezone();
+  const bulkSchedule = useBulkScheduleMutation();
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [bulkErrorBanner, setBulkErrorBanner] = useState<string | null>(null);
+
+  const selectedScheduledIds = useMemo(() => {
+    const visibleSelected = new Set(selection.selectedVisibleIds);
+    return filteredTasks
+      .filter(
+        (t) =>
+          visibleSelected.has(t.id) && Boolean(t.pickup_not_before),
+      )
+      .map((t) => t.id);
+  }, [filteredTasks, selection.selectedVisibleIds]);
+
   const skipFiltersResetOnMount = useRef(true);
+  // Pull `clearSelection` out of `selection` so the filter-reset
+  // effect's dependency array doesn't include the whole selection
+  // object (it's a fresh reference on every render — see
+  // useTaskListSelection — and depending on it would re-run the
+  // effect after every state update, which would *clear the
+  // running selection on every checkbox toggle*. The hook stabilises
+  // `clearSelection` via useCallback so this is safe.)
+  const { clearSelection } = selection;
   useEffect(() => {
     if (skipFiltersResetOnMount.current) {
       skipFiltersResetOnMount.current = false;
       return;
     }
     onListFiltersChange();
-  }, [statusFilter, priorityFilter, titleSearch, onListFiltersChange]);
+    // Per the locked plan: "Selection state clears on filter
+    // change, sort change, or successful bulk action — preventing
+    // the classic 'I selected 12, applied filter, now Apply to
+    // selection targets things I cant see'".
+    clearSelection();
+  }, [
+    statusFilter,
+    priorityFilter,
+    titleSearch,
+    onListFiltersChange,
+    clearSelection,
+  ]);
+
+  const closeReschedule = useCallback(() => {
+    setRescheduleModalOpen(false);
+    bulkSchedule.reset();
+  }, [bulkSchedule]);
+
+  const handleRescheduleSubmit = useCallback(
+    async (next: string | null) => {
+      const ids = selection.selectedVisibleIds;
+      if (ids.length === 0) {
+        setRescheduleModalOpen(false);
+        return;
+      }
+      const result = await bulkSchedule.run(ids, next);
+      if (result.failed.length === 0) {
+        setRescheduleModalOpen(false);
+        selection.clearSelection();
+        setBulkErrorBanner(null);
+      } else {
+        setBulkErrorBanner(formatBulkFailure(result.failed.length, result.attempted));
+      }
+    },
+    [bulkSchedule, selection],
+  );
+
+  const handleClearSchedule = useCallback(async () => {
+    const ids = selectedScheduledIds;
+    if (ids.length === 0) return;
+    if (ids.length > 5) {
+      const ok = window.confirm(
+        `Clear scheduled pickup on ${ids.length} tasks? They will be eligible for the agent immediately.`,
+      );
+      if (!ok) return;
+    }
+    const result = await bulkSchedule.run(ids, null);
+    if (result.failed.length === 0) {
+      selection.clearSelection();
+      setBulkErrorBanner(null);
+    } else {
+      setBulkErrorBanner(formatBulkFailure(result.failed.length, result.attempted));
+    }
+  }, [bulkSchedule, selectedScheduledIds, selection]);
+
+  const handleCancelSelection = useCallback(() => {
+    selection.clearSelection();
+    setBulkErrorBanner(null);
+  }, [selection]);
 
   const showTaskPager =
     !loading && (hasPrevPage || hasNextPage || tasks.length === listPageSize);
@@ -147,7 +247,23 @@ export function TaskListSection({
             emptyListAction={emptyListAction}
             onEdit={onEdit}
             onRequestDelete={onRequestDelete}
+            selection={{
+              isSelected: selection.isSelected,
+              onRowToggle: selection.toggle,
+              allVisibleSelected: selection.allVisibleSelected,
+              someVisibleSelected: selection.someVisibleSelected,
+              onToggleAllVisible: selection.toggleAllVisible,
+            }}
           />
+          {bulkErrorBanner ? (
+            <p
+              className="err task-list-bulk-error"
+              role="alert"
+              data-testid="task-list-bulk-error"
+            >
+              {bulkErrorBanner}
+            </p>
+          ) : null}
           {showTaskPager ? (
             <TaskPager
               navLabel="Task list pages"
@@ -166,6 +282,31 @@ export function TaskListSection({
           ) : null}
         </div>
       ) : null}
+      <TaskListBulkActionBar
+        selectedCount={selection.selectedVisibleIds.length}
+        scheduledCount={selectedScheduledIds.length}
+        busy={bulkSchedule.isPending}
+        onReschedule={() => {
+          setBulkErrorBanner(null);
+          setRescheduleModalOpen(true);
+        }}
+        onClearSchedule={handleClearSchedule}
+        onCancel={handleCancelSelection}
+      />
+      {rescheduleModalOpen ? (
+        <TaskBulkRescheduleModal
+          selectedCount={selection.selectedVisibleIds.length}
+          appTimezone={appTimezone}
+          busy={bulkSchedule.isPending}
+          error={bulkErrorBanner}
+          onClose={closeReschedule}
+          onSubmit={handleRescheduleSubmit}
+        />
+      ) : null}
     </section>
   );
+}
+
+function formatBulkFailure(failedCount: number, attempted: number): string {
+  return `${failedCount} of ${attempted} reschedules failed. The successful ones already updated; the failed rows kept their previous schedule. Try again or check the task detail pages for details.`;
 }

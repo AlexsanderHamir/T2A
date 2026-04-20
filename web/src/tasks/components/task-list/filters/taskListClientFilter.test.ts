@@ -105,8 +105,8 @@ describe("filterTasksForListView", () => {
     });
     const inFlight = sched({
       id: "if1",
-      title: "Future in flight (excluded)",
-      status: "in_progress",
+      title: "Future running (excluded)",
+      status: "running",
       pickup_not_before: future(60),
     });
     const malformed = sched({

@@ -1166,3 +1166,98 @@
   }
 }
 
+
+
+/* ─────────── Bulk selection (Stage 5) ─────────── */
+/* Sticky leftmost checkbox column on the task list. The column is
+   narrow (just enough for a checkbox + a touch target) so the title
+   column keeps its real estate. */
+.task-list-table .task-list-select-col {
+  width: 2.5rem;
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 0;
+  text-align: center;
+}
+
+.task-list-table .task-list-select-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--brand-fill);
+}
+
+.task-list-table tr.task-list-row[data-selected="true"] {
+  background: var(--surface-selected, var(--bg-subtle));
+}
+
+@media (hover: hover) {
+  .task-list-table tr.task-list-row[data-selected="true"]:hover {
+    background: var(--surface-selected-hover, var(--chrome-fill-task-row-hover));
+  }
+}
+
+/* Sticky bottom action bar shown only when at least one row is
+   selected. Slides in from the bottom; respects reduced-motion. */
+.task-list-bulk-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-md, 0 8px 16px rgba(0, 0, 0, 0.08));
+  z-index: 1;
+  animation: task-list-bulk-bar-slide-in var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+.task-list-bulk-bar-summary {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-list-bulk-bar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.task-list-bulk-error {
+  margin-top: 0.5rem;
+}
+
+@keyframes task-list-bulk-bar-slide-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-bulk-bar {
+    animation: none;
+  }
+}
+
+/* Bulk reschedule modal sheet shares the schedule picker layout
+   from the task-detail edit modal; only the spacing differs
+   slightly because the bulk modal carries a longer descriptive
+   paragraph. */
+.task-bulk-reschedule-modal-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-bulk-reschedule-modal-err {
+  margin-top: 0.25rem;
+}
