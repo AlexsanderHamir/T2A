@@ -348,28 +348,78 @@ export function SettingsPage() {
   return (
     <section className="settings-page">
       <header className="settings-page-header">
-        <h2 className="settings-page-title term-arrow">
-          <span>Settings</span>
-        </h2>
-        {lastUpdated ? (
-          <p className="settings-page-subtitle" data-testid="settings-last-updated">
-            Last updated:{" "}
-            <time dateTime={lastUpdated}>{lastUpdatedFormatted || lastUpdated}</time>
+        <div className="settings-page-heading">
+          <h2 className="settings-page-title term-arrow">
+            <span>Settings</span>
+          </h2>
+          <p className="settings-page-subtitle">
+            Runtime, workspace, and rollout configuration for this
+            installation.
           </p>
+        </div>
+        {lastUpdated ? (
+          <span
+            className="settings-page-saved-chip"
+            data-testid="settings-last-updated"
+          >
+            <span className="settings-page-saved-chip-label">Last saved</span>
+            <time
+              className="settings-page-saved-chip-time"
+              dateTime={lastUpdated}
+            >
+              {lastUpdatedFormatted || lastUpdated}
+            </time>
+          </span>
         ) : null}
       </header>
 
       {repoRootEmpty ? (
         <div role="alert" className="settings-banner settings-banner--warn">
-          <strong>Workspace not configured.</strong> Set the repository root
-          below to enable the agent worker, file mentions, and the
-          <code> /repo/* </code>endpoints.
+          {/* The warn banner gets an icon + structured two-line body
+              so it reads as an important callout instead of a flat
+              yellow paragraph. Title "Workspace not configured"
+              stays as the first line so the existing test
+              (`screen.getByText(/Workspace not configured/i)`) keeps
+              matching. */}
+          <svg
+            className="settings-banner-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3.5 2.75 19.5h18.5L12 3.5Z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M12 10v4"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+            />
+            <circle cx="12" cy="17" r="1" fill="currentColor" />
+          </svg>
+          <div className="settings-banner-body">
+            <p className="settings-banner-title">
+              <strong>Workspace not configured.</strong>
+            </p>
+            <p className="settings-banner-text">
+              Set the repository root below to enable the agent worker,
+              file mentions, and the <code>/repo/*</code> endpoints.
+            </p>
+          </div>
         </div>
       ) : null}
 
       <form className="settings-form" onSubmit={(e) => void handleSubmit(e)}>
         <fieldset className="settings-fieldset">
           <legend>Agent worker</legend>
+          <p className="settings-section-subtitle">
+            Pick up ready tasks and hand them to the configured runner.
+          </p>
+
           <label className="settings-field settings-field--inline">
             <input
               type="checkbox"
@@ -379,11 +429,16 @@ export function SettingsPage() {
             <span className="settings-field-label">Enable agent worker</span>
           </label>
           <p className="settings-field-help">
-            When enabled, the worker pulls ready tasks and dispatches them to
-            the configured runner. Live agent status (running / paused /
-            degraded) is surfaced on the header chip, not here — the
-            settings page is for configuration, not live system state.
+            When on, the worker pulls ready tasks and dispatches them.
           </p>
+          <details className="settings-learn-more">
+            <summary>Why isn&apos;t live status here?</summary>
+            <p>
+              Running / paused / degraded status is surfaced on the
+              header chip, not on this page — Settings is for
+              configuration, not live system state.
+            </p>
+          </details>
 
           <label className="settings-field">
             <span className="settings-field-label">Runner</span>
@@ -420,8 +475,8 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            Minimum wait before the worker runs a new ready task. Default{" "}
-            <code>5</code>s. <code>0</code> = no wait.
+            Minimum wait before the next ready task runs. Default{" "}
+            <code>5</code>s · <code>0</code> = no wait.
           </p>
           {pickupInvalid ? (
             <p role="alert" className="settings-field-error">
@@ -432,6 +487,9 @@ export function SettingsPage() {
 
         <fieldset className="settings-fieldset">
           <legend>Display</legend>
+          <p className="settings-section-subtitle">
+            How timestamps render for this operator.
+          </p>
           <label className="settings-field">
             <span className="settings-field-label">Timezone</span>
             <select
@@ -453,14 +511,19 @@ export function SettingsPage() {
             </select>
           </label>
           <p className="settings-field-help">
-            Operator-facing timestamps (scheduled task pickup time,
-            &quot;last updated&quot;, etc.) render in this timezone. The wire
-            format every API uses stays RFC3339 UTC; this only affects
-            display. Default <em>Auto-detect</em> — the SPA picks up the
-            operator&apos;s browser timezone (currently <code>{browserTz}</code>).
-            Choose a specific IANA zone to pin every operator to the
-            same display regardless of where their browser is.
+            Operator-facing timestamps render in this zone. Default{" "}
+            <em>Auto-detect</em> follows the browser
+            (<code>{browserTz}</code>).
           </p>
+          <details className="settings-learn-more">
+            <summary>How is this applied?</summary>
+            <p>
+              Only affects display; the wire format every API uses
+              stays RFC3339 UTC. Pin a specific IANA zone to keep
+              every operator on the same clock regardless of where
+              their browser is.
+            </p>
+          </details>
         </fieldset>
 
         <fieldset className="settings-fieldset settings-fieldset--rollout">
@@ -572,6 +635,9 @@ export function SettingsPage() {
 
         <fieldset className="settings-fieldset">
           <legend>Workspace</legend>
+          <p className="settings-section-subtitle">
+            The repository the agent will execute tasks in.
+          </p>
           <label className="settings-field">
             <span className="settings-field-label">Repository root (absolute path)</span>
             <input
@@ -584,15 +650,24 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            The project the agent will execute tasks on. The agent worker,{" "}
-            <code>/repo/*</code> endpoints, and <code>@file</code> mentions
-            all read this path. Leave empty to disable repo features until
-            you pick a workspace.
+            Leave empty to disable repo features until you pick a
+            workspace.
           </p>
+          <details className="settings-learn-more">
+            <summary>What reads this path?</summary>
+            <p>
+              The agent worker, <code>/repo/*</code> endpoints, and{" "}
+              <code>@file</code> mentions all resolve paths against
+              this root.
+            </p>
+          </details>
         </fieldset>
 
         <fieldset className="settings-fieldset" id="cursor-agent">
           <legend>Cursor agent (CLI)</legend>
+          <p className="settings-section-subtitle">
+            Model override and CLI binary used by the Cursor runner.
+          </p>
           <label className="settings-field">
             <span className="settings-field-label">Model override</span>
             <select
@@ -634,11 +709,16 @@ export function SettingsPage() {
             </p>
           ) : null}
           <p className="settings-field-help">
-            List comes from <code>cursor-agent --list-models</code> using the
-            binary path above. Pick a model here or leave &quot;Default&quot; to
-            omit <code>--model</code>. After a usage-limit error, choose another
-            model and save.
+            List comes from <code>cursor-agent --list-models</code>.
+            Leave <em>Default</em> to omit <code>--model</code>.
           </p>
+          <details className="settings-learn-more">
+            <summary>Hit a usage-limit error?</summary>
+            <p>
+              Pick a different model here and save to route new runs
+              through it.
+            </p>
+          </details>
 
           <label className="settings-field">
             <span className="settings-field-label">Cursor CLI path</span>
@@ -652,8 +732,8 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            Leave empty to auto-detect on PATH. Use the test button to verify
-            before saving.
+            Leave empty to auto-detect on PATH. Use the test button to
+            verify before saving.
           </p>
           {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
             <div className="settings-resolved-bin">
@@ -668,18 +748,24 @@ export function SettingsPage() {
               </code>
             </div>
           ) : null}
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void handleProbe()}
-            disabled={probe.isPending}
-          >
-            {probe.isPending ? "Testing…" : "Test cursor binary"}
-          </button>
+          <div className="settings-inline-actions">
+            <button
+              type="button"
+              className="settings-btn settings-btn--secondary"
+              onClick={() => void handleProbe()}
+              disabled={probe.isPending}
+            >
+              {probe.isPending ? "Testing…" : "Test cursor binary"}
+            </button>
+          </div>
         </fieldset>
 
         <fieldset className="settings-fieldset">
           <legend>Run timeout</legend>
+          <p className="settings-section-subtitle">
+            Hard ceiling on any single agent run&apos;s wall-clock
+            duration.
+          </p>
           <label className="settings-field">
             <span className="settings-field-label">Max run duration (seconds)</span>
             <input
@@ -692,8 +778,7 @@ export function SettingsPage() {
             />
           </label>
           <p className="settings-field-help">
-            Maximum wall-clock time per agent run. Set to <code>0</code> for
-            no limit.
+            Set to <code>0</code> for no limit.
           </p>
           {maxInvalid ? (
             <p role="alert" className="settings-field-error">
@@ -702,13 +787,48 @@ export function SettingsPage() {
           ) : null}
         </fieldset>
 
-        <div className="settings-actions">
-          <button
-            type="submit"
-            disabled={!isDirty || patch.isPending || maxInvalid || pickupInvalid}
-          >
-            {patch.isPending ? "Saving…" : "Save changes"}
-          </button>
+        <div className="settings-actions" data-dirty={isDirty ? "true" : "false"}>
+          {/* The left slot is the at-a-glance submit-context: it
+              tells the operator *why* Save is enabled/disabled
+              without making them hunt for an inline error. Dirty
+              → "Unsaved changes", validation failure → "Resolve
+              the errors above", clean → a neutral reminder that
+              the form is saved. */}
+          <div className="settings-actions-status" aria-hidden="true">
+            {maxInvalid || pickupInvalid ? (
+              <span className="settings-actions-hint settings-actions-hint--warn">
+                Resolve the errors above to save.
+              </span>
+            ) : isDirty ? (
+              <span className="settings-actions-hint settings-actions-hint--dirty">
+                <span className="settings-actions-dot" />
+                Unsaved changes
+              </span>
+            ) : (
+              <span className="settings-actions-hint settings-actions-hint--clean">
+                All changes saved
+              </span>
+            )}
+          </div>
+          <div className="settings-actions-buttons">
+            {isDirty ? (
+              <button
+                type="button"
+                className="settings-btn settings-btn--ghost"
+                onClick={() => settings && setForm(toFormState(settings))}
+                disabled={patch.isPending}
+              >
+                Discard
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              className="settings-btn settings-btn--primary"
+              disabled={!isDirty || patch.isPending || maxInvalid || pickupInvalid}
+            >
+              {patch.isPending ? "Saving…" : "Save changes"}
+            </button>
+          </div>
         </div>
 
         {status?.kind === "success" ? (
@@ -717,7 +837,22 @@ export function SettingsPage() {
             data-testid="settings-status"
             className="settings-status"
           >
-            {status.message}
+            <svg
+              className="settings-status-icon"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="m6 10.25 2.75 2.75L14 7.75"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>{status.message}</span>
           </p>
         ) : null}
         {status?.kind === "error" ? (

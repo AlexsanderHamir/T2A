@@ -46,58 +46,211 @@
   border-color: color-mix(in srgb, var(--brand) 22%, transparent);
 }
 
+/*
+ * Settings page shell.
+ * Width target 760px — wide enough for a two-line help paragraph
+ * to breathe, narrow enough that the eye doesn't need to scan across
+ * a full monitor to track label/control pairs. Mirrors the information-
+ * density Stripe / Vercel / Linear settings pages land on. Bottom
+ * padding leaves room for the action footer without it colliding with
+ * the page edge.
+ */
 .settings-page {
-  max-width: 720px;
-  margin: 24px auto;
-  padding: 0 16px 64px;
+  max-width: 760px;
+  margin: 32px auto 48px;
+  padding: 0 20px 56px;
 }
 
+/*
+ * Header is a two-region row: title/subtitle stack on the left, a
+ * "Last saved" chip on the right. Previously the subtitle was a
+ * plain paragraph under the title with no meta chip, which made the
+ * page read like an untitled form — no sense of scope, no reference
+ * for when the server last acknowledged a change. The chip solves
+ * both by making the freshness of the loaded state visible at a
+ * glance (also useful when troubleshooting a stale tab).
+ */
 .settings-page-header {
-  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+}
+
+.settings-page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .settings-page-title {
   margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
 }
 
 .settings-page-subtitle {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 13px;
-  color: var(--color-text-muted, #555);
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
 }
 
+.settings-page-saved-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px 5px 12px;
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  background: var(--surface-card, #fff);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+  white-space: nowrap;
+}
+
+.settings-page-saved-chip-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary, var(--color-text-muted, #777));
+}
+
+.settings-page-saved-chip-time {
+  font-weight: 500;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Warn banner. Structured: icon + title + body with a colored
+ * left-border instead of a uniform yellow fill. The prior flat
+ * banner shouted at the operator without making clear WHAT was
+ * wrong; this one reads like a Stripe/Linear notification card.
+ */
 .settings-banner {
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin: 12px 0 24px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  border-radius: var(--radius-md, 10px);
   border: 1px solid transparent;
+  background: var(--surface-card, #fff);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+  align-items: flex-start;
 }
 
 .settings-banner--warn {
-  background: #fff8e1;
-  border-color: #ffd54f;
-  color: #5d4500;
+  border-color: color-mix(in srgb, #d97706 24%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #f59e0b 10%, transparent) 0%,
+      var(--surface-card, #fff) 70%
+    );
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  border-left-width: 3px;
+  border-left-color: #d97706;
+}
+
+.settings-banner-icon {
+  width: 20px;
+  height: 20px;
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.settings-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-banner-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+.settings-banner-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+.settings-banner-text code {
+  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
+/*
+ * Section cards.
+ * Every fieldset is rendered as a flat card: surface-card fill,
+ * hairline border, tiny shadow, generous padding. The legend
+ * becomes a true section heading (block-level, type-scaled) and
+ * the subtitle right underneath sets the section's intent in a
+ * single line. The prior inset `<legend>` sitting astride the
+ * border was a 1990s form pattern — we explicitly reset it to a
+ * flow element so the card can own the visual frame.
+ */
 .settings-fieldset {
-  border: 1px solid var(--color-border, #e0e0e0);
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  margin: 0;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-card, #fff);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
 }
 
 .settings-fieldset legend {
+  display: block;
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
   font-weight: 600;
-  padding: 0 6px;
+  letter-spacing: -0.005em;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+/*
+ * Section subtitle — sits right under the legend, one-line
+ * description of what this section configures. Pairs with
+ * `.settings-field-help` (which is one-line per-field copy)
+ * to give the page a consistent two-tier typographic rhythm.
+ */
+.settings-section-subtitle {
+  margin: -8px 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
 }
 
 /*
@@ -140,7 +293,7 @@
 .settings-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 14px;
 }
 
@@ -150,26 +303,71 @@
 .settings-field--inline {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .settings-field-label {
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
 }
 
+/*
+ * Form controls.
+ * Uniform 10×12 padding, 8px radius, hairline border. The hover
+ * state lifts the border one tone for affordance, focus paints a
+ * 3px brand-faint ring with a 1px brand border — the standard
+ * "there is a keyboard here, don't lose track" treatment used by
+ * Stripe / Vercel / Linear. Using `outline` for the focus ring
+ * (rather than a shadow) means it cleanly clears the surrounding
+ * card without bleeding into neighbor controls.
+ */
 .settings-field input[type="text"],
 .settings-field input[type="number"],
 .settings-field select {
-  padding: 8px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border, #cccccc);
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
+  background: var(--surface-card, #fff);
+  color: var(--text-primary, var(--color-text, #1a1a1a));
   font: inherit;
+  font-size: 14px;
+  line-height: 1.3;
   width: 100%;
   box-sizing: border-box;
+  transition:
+    border-color var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 150ms) ease,
+    background-color var(--duration-short, 150ms) ease;
+}
+
+.settings-field input[type="text"]:hover,
+.settings-field input[type="number"]:hover,
+.settings-field select:hover {
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+}
+
+.settings-field input[type="text"]:focus-visible,
+.settings-field input[type="number"]:focus-visible,
+.settings-field select:focus-visible {
+  outline: none;
+  border-color: var(--brand, #635bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 20%, transparent);
+}
+
+.settings-field input[type="text"]::placeholder,
+.settings-field input[type="number"]::placeholder {
+  color: color-mix(in srgb, currentColor 42%, transparent);
 }
 
 .settings-field input[aria-invalid="true"] {
-  border-color: #d32f2f;
+  border-color: var(--danger, #d32f2f);
+}
+
+.settings-field input[aria-invalid="true"]:focus-visible {
+  border-color: var(--danger, #d32f2f);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #d32f2f) 20%, transparent);
 }
 
 .settings-field-help {
@@ -219,47 +417,220 @@
   word-break: break-all;
 }
 
-.settings-actions {
+/*
+ * Inline actions row inside a section — used for the "Test cursor
+ * binary" probe button. Separated from the main page-level action
+ * footer (`.settings-actions`) so probe actions stay co-located
+ * with the field they operate on.
+ */
+.settings-inline-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 2px;
 }
 
-/* Primary save — same language as global CTA (`app-custom-select.css`) but
-   explicit here because this file’s rules otherwise beat `:where()` zero
-   specificity and would flatten the button to a neutral chip. */
-.settings-actions button[type="submit"] {
-  color: var(--text-on-brand);
-  background: var(--brand);
-  border: none;
-  border-radius: var(--radius-md);
-  min-height: var(--touch-target-min);
-  padding: 0.625rem 1.25rem;
+/*
+ * Shared button treatment.
+ * Three variants sit on top of a neutral base:
+ *   - primary (Save changes) — brand fill, tiny shadow, 98% press
+ *   - secondary (Test cursor binary) — outlined, brightens on hover
+ *   - ghost (Discard) — text-only with a hover tint
+ * All three share min-height, padding, radius, typography so the
+ * page reads as a consistent visual family instead of a grab-bag
+ * of browser defaults.
+ */
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 16px;
   font: inherit;
-  font-weight: 500;
-  letter-spacing: var(--text-button-tracking);
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition:
-    background var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
-}
-
-.settings-actions button[type="submit"]:not(:disabled):hover {
-  background: var(--brand-hover);
-  box-shadow: var(--shadow-md);
-}
-
-.settings-actions button[type="submit"]:not(:disabled):active {
-  transform: scale(0.98);
-  box-shadow: var(--shadow-sm);
-}
-
-.settings-status {
-  margin: 0;
   font-size: 13px;
-  color: var(--color-text-muted, #444);
+  font-weight: 500;
+  letter-spacing: var(--text-button-tracking, -0.005em);
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-short, 150ms) ease,
+    border-color var(--duration-short, 150ms) ease,
+    color var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 150ms) ease,
+    transform var(--duration-fast, 100ms) ease;
+}
+
+.settings-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings-btn:focus-visible {
+  outline: 2px solid var(--brand, #635bff);
+  outline-offset: 2px;
+}
+
+.settings-btn--primary {
+  color: var(--text-on-brand, #fff);
+  background: var(--brand, #635bff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 6%));
+}
+
+.settings-btn--primary:not(:disabled):hover {
+  background: var(--brand-hover, color-mix(in srgb, var(--brand, #635bff) 88%, black));
+  box-shadow: var(--shadow-md, 0 4px 10px rgb(0 0 0 / 8%));
+}
+
+.settings-btn--primary:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 6%));
+}
+
+.settings-btn--secondary {
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  background: var(--surface-card, #fff);
+  border-color: var(--border-hairline, var(--color-border, #d0d0d5));
+}
+
+.settings-btn--secondary:not(:disabled):hover {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 4%, var(--surface-card, #fff));
+}
+
+.settings-btn--ghost {
+  color: var(--text-secondary, var(--color-text-muted, #555));
+  background: transparent;
+}
+
+.settings-btn--ghost:not(:disabled):hover {
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+/*
+ * Action footer.
+ * Two regions: a left-aligned context chip ("Unsaved changes" /
+ * "All changes saved" / "Resolve the errors above") and a right-
+ * aligned button cluster. The context chip solves the common
+ * Settings-page confusion of "why is Save disabled?" without
+ * forcing the operator to hunt for an inline validation error.
+ * Renders as a sticky-adjacent footer card so it reads as the
+ * committed-action surface, not just a stray button at the end
+ * of the form.
+ */
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 14px 18px;
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-card, #fff);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+}
+
+.settings-actions[data-dirty="true"] {
+  border-color: color-mix(in srgb, var(--brand, #635bff) 22%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--brand, #635bff) 5%, transparent) 0%,
+      var(--surface-card, #fff) 70%
+    );
+}
+
+.settings-actions-status {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-actions-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+.settings-actions-hint--dirty {
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  font-weight: 500;
+}
+
+.settings-actions-hint--warn {
+  color: var(--danger, #d32f2f);
+  font-weight: 500;
+}
+
+.settings-actions-hint--clean {
+  color: var(--text-tertiary, var(--color-text-muted, #777));
+}
+
+.settings-actions-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand, #635bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #635bff) 22%, transparent);
+  flex-shrink: 0;
+}
+
+.settings-actions-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/*
+ * Success status banner.
+ * Inline icon + message in a soft green card with a colored left
+ * border. Matches the treatment used elsewhere in the app for
+ * healthy-state callouts (succeeded cycles, system-healthy chip)
+ * so the operator's eye learns one visual vocabulary.
+ */
+.settings-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--success, #00a96e) 28%, transparent);
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--success, #00a96e) 8%, var(--surface-card, #fff));
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.settings-status-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--success, #00a96e);
+  flex-shrink: 0;
+}
+
+/*
+ * Error banner polish.
+ * The underlying `.err` class (global) renders a role="alert"
+ * with a muted danger background; we add spacing + radius here
+ * so it sits in the same visual rhythm as the success banner.
+ * Keeps the existing `MutationErrorBanner` contract — we only
+ * shape the margin/radius/border-treatment from the outside.
+ */
+.settings-status-err {
+  margin-top: 12px;
+  border-radius: var(--radius-md, 10px);
+  border-left-width: 3px;
 }
 
 /*
