@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../../../lib/routerFutureFlags";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskDetailHeader } from "./TaskDetailHeader";
 
 describe("TaskDetailHeader", () => {
@@ -13,8 +14,7 @@ describe("TaskDetailHeader", () => {
             title: "My task",
             status: "ready",
             priority: "high",
-            runner: "cursor",
-            cursor_model: "",
+            ...TASK_TEST_DEFAULTS,
           }}
         />
       </MemoryRouter>,
@@ -41,7 +41,7 @@ describe("TaskDetailHeader", () => {
             title: "Blocked",
             status: "blocked",
             priority: "medium",
-            runner: "cursor",
+            ...TASK_TEST_DEFAULTS,
             cursor_model: "opus",
           }}
         />
