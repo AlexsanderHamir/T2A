@@ -7,7 +7,10 @@ import {
   type BulkDeleteResult,
   useBulkDeleteMutation,
 } from "./useBulkDeleteMutation";
-import { useBulkScheduleMutation } from "./useBulkScheduleMutation";
+import {
+  type BulkScheduleResult,
+  useBulkScheduleMutation,
+} from "./useBulkScheduleMutation";
 
 const { mockDeleteTask, mockPatchTask } = vi.hoisted(() => ({
   mockDeleteTask: vi.fn(),
@@ -122,6 +125,63 @@ describe("useBulkScheduleMutation", () => {
       taskQueryKeys.all,
       taskQueryKeys.stats(),
     ]);
+  });
+});
+
+describe("useBulkScheduleMutation overlapping runs", () => {
+  beforeEach(() => {
+    mockedPatch.mockReset();
+  });
+
+  /**
+   * Same contract as bulk delete: shared `isPending` + in-flight ref.
+   * Split `act` boundaries for React 18 flush semantics (see delete overlap test).
+   */
+  it("keeps isPending true until every overlapping bulk run has finished", async () => {
+    const dSlow = deferred<void>();
+    const { Wrapper } = makeWrapper();
+    const when = "2026-01-01T00:00:00Z";
+
+    mockedPatch.mockImplementation(async (id: string) => {
+      if (id === "slow") {
+        await dSlow.promise;
+        return {} as never;
+      }
+      return {} as never;
+    });
+
+    const { result } = renderHook(() => useBulkScheduleMutation(), {
+      wrapper: Wrapper,
+    });
+
+    let slowDone = false;
+    let pSlow!: Promise<BulkScheduleResult>;
+
+    await act(() => {
+      pSlow = result.current.run(["slow"], when).finally(() => {
+        slowDone = true;
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockedPatch).toHaveBeenCalledWith("slow", {
+        pickup_not_before: when,
+      }),
+    );
+    expect(result.current.isPending).toBe(true);
+
+    await act(async () => {
+      await result.current.run(["fast"], when);
+    });
+    expect(slowDone).toBe(false);
+    expect(result.current.isPending).toBe(true);
+
+    await act(async () => {
+      dSlow.resolve(undefined);
+      await pSlow;
+    });
+    expect(slowDone).toBe(true);
+    expect(result.current.isPending).toBe(false);
   });
 });
 
