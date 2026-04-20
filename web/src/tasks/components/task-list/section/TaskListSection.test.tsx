@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../../../lib/routerFutureFlags";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskListSection } from "./TaskListSection";
 
 function renderWithRouter(ui: ReactElement) {
@@ -112,9 +113,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       depth: 0,
     };
     renderWithRouter(
@@ -151,9 +151,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "low" as const,
-        runner: "cursor" as const,
-        cursor_model: "",
         checklist_inherit: false as const,
+        ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
       {
@@ -162,9 +161,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "done" as const,
         priority: "high" as const,
-        runner: "cursor" as const,
-        cursor_model: "",
         checklist_inherit: false as const,
+        ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
     ];
@@ -224,9 +222,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
-        runner: "cursor" as const,
-        cursor_model: "",
         checklist_inherit: false as const,
+        ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
       {
@@ -235,9 +232,8 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
-        runner: "cursor" as const,
-        cursor_model: "",
         checklist_inherit: false as const,
+        ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
     ];
@@ -276,9 +272,8 @@ describe("TaskListSection", () => {
             initial_prompt: "",
             status: "ready" as const,
             priority: "medium" as const,
-            runner: "cursor" as const,
-            cursor_model: "",
             checklist_inherit: false as const,
+            ...TASK_TEST_DEFAULTS,
             depth: 0,
           },
         ]}
@@ -305,9 +300,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       depth: 0,
     };
     const filler = Array.from({ length: 19 }, (_, i) => ({
@@ -316,9 +310,8 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      runner: "cursor" as const,
-      cursor_model: "",
       checklist_inherit: false as const,
+      ...TASK_TEST_DEFAULTS,
       depth: 0,
     }));
     renderWithRouter(
