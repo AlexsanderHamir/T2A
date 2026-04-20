@@ -8,7 +8,27 @@ import {
   type Task,
   type TaskType,
 } from "@/types";
+import {
+  rumMutationOptimisticApplied,
+  rumMutationRolledBack,
+  rumMutationSettled,
+  rumMutationStarted,
+} from "@/observability";
+import { useOptionalToast } from "@/shared/toast";
 import { taskQueryKeys } from "../task-query";
+import { bumpOptimisticVersion, clearOptimisticVersion } from "./optimisticVersion";
+
+let optimisticSubtaskCounter = 0;
+function nextOptimisticSubtaskId(): string {
+  optimisticSubtaskCounter += 1;
+  return `optimistic-subtask-${optimisticSubtaskCounter}`;
+}
+
+type SubtaskOptimisticContext = {
+  prevParent: Task | undefined;
+  optimisticId: string;
+  startedAtMs: number;
+};
 
 export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) {
   const [subtaskTitle, setSubtaskTitle] = useState("");
@@ -89,8 +109,11 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
     setSubtaskChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
   }, []);
 
-  const createSubtaskMutation = useMutation({
-    mutationFn: async (input: {
+  const toast = useOptionalToast();
+  const createSubtaskMutation = useMutation<
+    Task,
+    unknown,
+    {
       title: string;
       initial_prompt: string;
       priority: Priority;
@@ -104,7 +127,10 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
        * contract — `createTask` ignores extra fields.
        */
       submissionToken: number;
-    }) => {
+    },
+    SubtaskOptimisticContext
+  >({
+    mutationFn: async (input) => {
       const parent = queryClient.getQueryData<Task>(
         taskQueryKeys.detail(taskId),
       );
@@ -132,25 +158,78 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
       }
       return child;
     },
-    onSuccess: async (_child, variables) => {
-      // Server-truth invalidations always fire: the new subtask is real
-      // regardless of whether the user is still looking at the modal
-      // they submitted from. The list / detail must reflect it.
+    onMutate: async (input) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("subtask_create");
+      bumpOptimisticVersion(taskId);
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
+      const detailKey = taskQueryKeys.detail(taskId);
+      const prevParent = queryClient.getQueryData<Task>(detailKey);
+      const optimisticId = nextOptimisticSubtaskId();
+      if (prevParent) {
+        const synthetic: Task = {
+          id: optimisticId,
+          title: input.title,
+          initial_prompt: input.initial_prompt,
+          status: "ready",
+          priority: input.priority,
+          task_type: input.task_type,
+          runner: prevParent.runner,
+          cursor_model: prevParent.cursor_model,
+          parent_id: taskId,
+          checklist_inherit: input.checklist_inherit,
+          children: [],
+        };
+        queryClient.setQueryData<Task>(detailKey, {
+          ...prevParent,
+          children: [...(prevParent.children ?? []), synthetic],
+        });
+      }
+      rumMutationOptimisticApplied(
+        "subtask_create",
+        performance.now() - startedAtMs,
+      );
+      return { prevParent, optimisticId, startedAtMs };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prevParent) {
+        queryClient.setQueryData(
+          taskQueryKeys.detail(taskId),
+          context.prevParent,
+        );
+      }
+      if (context) {
+        rumMutationRolledBack(
+          "subtask_create",
+          performance.now() - context.startedAtMs,
+        );
+        rumMutationSettled(
+          "subtask_create",
+          performance.now() - context.startedAtMs,
+          0,
+        );
+      }
+      toast.error("Couldn't create subtask - reverted.");
+    },
+    onSuccess: async (_child, variables, context) => {
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.detail(taskId),
       });
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-      // Form-clear + modal-close branch is gated on the id-aware compare:
-      // if the user dismissed the modal mid-flight, switched parent task,
-      // or started typing a different subtask, `submissionTokenRef.current`
-      // has moved past `variables.submissionToken` and we MUST NOT clobber
-      // the now-current state. Same shape as the create / save / evaluate
-      // / resume / patch / delete races hardened in #20-#26 — see
-      // `.agent/frontend-improvement-agent.log`.
+      if (context) {
+        rumMutationSettled(
+          "subtask_create",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
       if (submissionTokenRef.current !== variables.submissionToken) {
         return;
       }
       closeSubtaskModal();
+    },
+    onSettled: () => {
+      clearOptimisticVersion(taskId);
     },
   });
 

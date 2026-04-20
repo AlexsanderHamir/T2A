@@ -1,8 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Task } from "@/types";
+import { ToastProvider } from "@/shared/toast";
 import { taskQueryKeys } from "../task-query";
+import {
+  __resetOptimisticVersionsForTests,
+  shouldSuppressSSEFor,
+} from "./optimisticVersion";
 import { useTaskDetailSubtasks } from "./useTaskDetailSubtasks";
 
 const { mockCreateTask, mockAddChecklistItem } = vi.hoisted(() => ({
@@ -25,7 +31,27 @@ const CHILD_ID = "33333333-3333-4333-8333-333333333333";
 
 function createWrapper(qc: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    );
+  };
+}
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: PARENT_ID,
+    title: "Parent",
+    initial_prompt: "",
+    status: "ready",
+    priority: "medium",
+    task_type: "general",
+    runner: "cursor",
+    cursor_model: "",
+    checklist_inherit: false,
+    children: [],
+    ...overrides,
   };
 }
 
@@ -37,6 +63,7 @@ function newQueryClient() {
 
 describe("useTaskDetailSubtasks", () => {
   beforeEach(() => {
+    __resetOptimisticVersionsForTests();
     mockCreateTask.mockReset();
     mockAddChecklistItem.mockReset();
     mockCreateTask.mockResolvedValue({
@@ -360,5 +387,93 @@ describe("useTaskDetailSubtasks", () => {
 
     await waitFor(() => expect(mockCreateTask).toHaveBeenCalled());
     expect(mockAddChecklistItem).not.toHaveBeenCalled();
+  });
+
+  describe("optimistic subtask create", () => {
+    afterEach(() => {
+      __resetOptimisticVersionsForTests();
+    });
+
+    it("inserts a synthetic subtask into the parent's children immediately", async () => {
+      const qc = newQueryClient();
+      qc.setQueryData(taskQueryKeys.detail(PARENT_ID), makeTask());
+
+      let resolveCreate: ((value: Task) => void) | undefined;
+      mockCreateTask.mockImplementationOnce(
+        () =>
+          new Promise<Task>((resolve) => {
+            resolveCreate = resolve;
+          }),
+      );
+
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      act(() => {
+        result.current.openSubtaskModal();
+        result.current.setSubtaskTitle("Optimistic child");
+        result.current.setSubtaskPriority("high");
+      });
+      await act(async () => {
+        result.current.submitNewSubtask(ev);
+        await Promise.resolve();
+      });
+
+      const cached = qc.getQueryData<Task>(taskQueryKeys.detail(PARENT_ID));
+      expect(cached?.children).toHaveLength(1);
+      expect(cached?.children?.[0]?.title).toBe("Optimistic child");
+      expect(cached?.children?.[0]?.id).toMatch(/^optimistic-subtask-/);
+      expect(shouldSuppressSSEFor(PARENT_ID)).toBe(true);
+
+      await act(async () => {
+        resolveCreate?.({
+          id: CHILD_ID,
+          title: "Optimistic child",
+          initial_prompt: "",
+          status: "ready",
+          priority: "high",
+          task_type: "general",
+          runner: "cursor",
+          cursor_model: "",
+          checklist_inherit: false,
+        } as Task);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(result.current.createSubtaskMutation.isSuccess).toBe(true);
+      });
+      expect(shouldSuppressSSEFor(PARENT_ID)).toBe(false);
+    });
+
+    it("rolls back the synthetic subtask when the server rejects", async () => {
+      const qc = newQueryClient();
+      qc.setQueryData(taskQueryKeys.detail(PARENT_ID), makeTask());
+
+      mockCreateTask.mockRejectedValueOnce(new Error("boom"));
+
+      const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID, qc), {
+        wrapper: createWrapper(qc),
+      });
+
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      act(() => {
+        result.current.openSubtaskModal();
+        result.current.setSubtaskTitle("Doomed");
+        result.current.setSubtaskPriority("low");
+      });
+
+      await act(async () => {
+        result.current.submitNewSubtask(ev);
+      });
+      await waitFor(() => {
+        expect(result.current.createSubtaskMutation.isError).toBe(true);
+      });
+
+      const cached = qc.getQueryData<Task>(taskQueryKeys.detail(PARENT_ID));
+      expect(cached?.children ?? []).toHaveLength(0);
+      expect(shouldSuppressSSEFor(PARENT_ID)).toBe(false);
+    });
   });
 });

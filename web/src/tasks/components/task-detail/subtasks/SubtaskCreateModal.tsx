@@ -35,7 +35,7 @@ type Props = {
    * renders no callout, preserving the historical no-feedback
    * behaviour for callers that haven't opted in yet.
    */
-  error?: Error | null;
+  error?: unknown;
 };
 
 export function SubtaskCreateModal({
