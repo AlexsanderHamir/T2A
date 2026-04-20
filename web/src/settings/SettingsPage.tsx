@@ -431,14 +431,6 @@ export function SettingsPage() {
           <p className="settings-field-help">
             When on, the worker pulls ready tasks and dispatches them.
           </p>
-          <details className="settings-learn-more">
-            <summary>Why isn&apos;t live status here?</summary>
-            <p>
-              Running / paused / degraded status is surfaced on the
-              header chip, not on this page — Settings is for
-              configuration, not live system state.
-            </p>
-          </details>
 
           <label className="settings-field">
             <span className="settings-field-label">Runner</span>
