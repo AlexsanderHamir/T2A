@@ -171,6 +171,13 @@ func newBlockingRunner() *blockingRunner {
 func (b *blockingRunner) Name() string    { return b.name }
 func (b *blockingRunner) Version() string { return b.version }
 
+// EffectiveModel mirrors runnerfake/cursor: trim req.CursorModel; empty
+// stays empty (the worker tests don't pin a default for the blocking
+// runner, so empty here truthfully maps to "no model configured").
+func (b *blockingRunner) EffectiveModel(req runner.Request) string {
+	return strings.TrimSpace(req.CursorModel)
+}
+
 func (b *blockingRunner) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
 	b.starts <- req
 	if b.onStart != nil {
@@ -687,6 +694,9 @@ func (f *funcRunner) Name() string    { return f.name }
 func (f *funcRunner) Version() string { return f.version }
 func (f *funcRunner) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
 	return f.run(ctx, req)
+}
+func (f *funcRunner) EffectiveModel(req runner.Request) string {
+	return strings.TrimSpace(req.CursorModel)
 }
 
 // TestWorker_CompletePhaseFailure_terminatesCycleAndFailsTask pins the

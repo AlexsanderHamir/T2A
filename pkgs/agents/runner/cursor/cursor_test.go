@@ -686,3 +686,40 @@ func equalStrSlice(a, b []string) bool {
 	}
 	return true
 }
+
+// TestAdapter_EffectiveModel pins the per-adapter resolution rule the
+// worker depends on for cycle_meta.cursor_model_effective and the new
+// Prometheus model label: trim req.CursorModel and use it; otherwise
+// fall back to Options.DefaultCursorModel; otherwise return "" so the
+// audit row records the truth ("no model configured anywhere") rather
+// than a substituted placeholder.
+func TestAdapter_EffectiveModel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		defaultModel string
+		reqModel     string
+		want         string
+	}{
+		{"both empty", "", "", ""},
+		{"default only", "opus", "", "opus"},
+		{"request overrides default", "opus", "sonnet-4.5", "sonnet-4.5"},
+		{"request whitespace falls back", "opus", "   ", "opus"},
+		{"request trimmed", "opus", "  sonnet-4.5  ", "sonnet-4.5"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			a := cursor.New(cursor.Options{
+				DefaultCursorModel: tc.defaultModel,
+				ExecFn:             fakeExec(&captured{}, []byte("{}"), nil, 0, nil, false),
+			})
+			got := a.EffectiveModel(runner.Request{CursorModel: tc.reqModel})
+			if got != tc.want {
+				t.Errorf("EffectiveModel(req.CursorModel=%q) with default %q: got %q want %q",
+					tc.reqModel, tc.defaultModel, got, tc.want)
+			}
+		})
+	}
+}

@@ -414,6 +414,42 @@ func TestRunnerInterface_compileTime(t *testing.T) {
 	var _ runner.Runner = runnerfake.New()
 }
 
+// TestRunnerFake_EffectiveModel pins the contract every adapter must
+// satisfy: trim req.CursorModel and return it when non-empty,
+// otherwise fall back to the adapter's configured default. The empty
+// return value is intentional and means "no model configured anywhere"
+// — callers (worker recordRun, buildCycleMeta) MUST persist that
+// empty string verbatim into TaskCycle.MetaJSON / Prometheus labels so
+// the audit trail can distinguish pre-feature cycles from explicit
+// "use the global default" rows.
+func TestRunnerFake_EffectiveModel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		defaultModel string
+		reqModel     string
+		want         string
+	}{
+		{"both empty", "", "", ""},
+		{"default only", "opus", "", "opus"},
+		{"request overrides default", "opus", "sonnet-4.5", "sonnet-4.5"},
+		{"request whitespace falls back", "opus", "   ", "opus"},
+		{"request trimmed", "opus", "  sonnet-4.5  ", "sonnet-4.5"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			r := runnerfake.New().WithDefaultModel(tc.defaultModel)
+			got := r.EffectiveModel(runner.Request{CursorModel: tc.reqModel})
+			if got != tc.want {
+				t.Errorf("EffectiveModel(req.CursorModel=%q) with default %q: got %q want %q",
+					tc.reqModel, tc.defaultModel, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestRunnerFake_returnsScriptedResult covers the success path of the fake
 // (used by every later test in the worker plan).
 func TestRunnerFake_returnsScriptedResult(t *testing.T) {

@@ -40,6 +40,21 @@ type Runner interface {
 	Run(ctx context.Context, req Request) (Result, error)
 	Name() string
 	Version() string
+	// EffectiveModel returns the concrete model identifier the adapter
+	// would use for req after applying its own defaults (e.g. the cursor
+	// adapter falls back from req.CursorModel to its DefaultCursorModel
+	// from app_settings). Pure function: MUST NOT touch the network or
+	// the filesystem; called from the worker on the hot path before each
+	// cycle starts so the value can be recorded in TaskCycle.MetaJSON
+	// (cursor_model_effective) and emitted as the Prometheus model
+	// label.
+	//
+	// May return "" when no model is configured anywhere — that is the
+	// truthful audit value, NOT a placeholder. Callers MUST NOT
+	// substitute their own default; the empty string is what the
+	// breakdown panel renders as "default model" for pre-feature
+	// cycles.
+	EffectiveModel(req Request) string
 }
 
 // Request is the per-attempt input passed to Runner.Run. The JSON shape is

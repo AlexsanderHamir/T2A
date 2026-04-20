@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
@@ -28,8 +29,9 @@ const runnerfakeLogCmd = "taskapi"
 // matching script return runner.ErrInvalidOutput so missing scripts surface
 // as test failures rather than silently passing.
 type Runner struct {
-	name    string
-	version string
+	name           string
+	version        string
+	defaultModel   string
 
 	mu      sync.Mutex
 	scripts map[scriptKey]scripted
@@ -74,6 +76,18 @@ func (r *Runner) WithVersion(version string) *Runner {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.version = version
+	return r
+}
+
+// WithDefaultModel sets the model that EffectiveModel returns when
+// req.CursorModel is empty. Mirrors the cursor adapter's
+// DefaultCursorModel option so worker tests can pin the
+// cursor_model_effective audit value end-to-end.
+func (r *Runner) WithDefaultModel(model string) *Runner {
+	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.WithDefaultModel", "model", model)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.defaultModel = model
 	return r
 }
 
@@ -149,6 +163,21 @@ func (r *Runner) Version() string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.version
+}
+
+// EffectiveModel implements runner.Runner. Mirrors the cursor adapter
+// fallback: trim req.CursorModel and use it when non-empty; otherwise
+// fall back to the value set via WithDefaultModel (default "").
+func (r *Runner) EffectiveModel(req runner.Request) string {
+	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.EffectiveModel",
+		"task_id", req.TaskID)
+	m := strings.TrimSpace(req.CursorModel)
+	if m != "" {
+		return m
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.defaultModel
 }
 
 // Calls returns a copy of every Request seen by Run, in invocation order.

@@ -150,6 +150,24 @@ func (a *Adapter) Version() string {
 	return a.version
 }
 
+// EffectiveModel implements runner.Runner. Mirrors the fallback applied
+// inside argvFor: if req.CursorModel is set (after trimming) use it,
+// otherwise fall back to the adapter's DefaultCursorModel from
+// app_settings. Returns "" when neither is configured — the worker
+// records that empty string verbatim into TaskCycle.MetaJSON so the
+// audit trail can distinguish "operator picked the global default which
+// happened to be unset" from "operator explicitly picked the global
+// default which is opus".
+func (a *Adapter) EffectiveModel(req runner.Request) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.EffectiveModel",
+		"task_id", req.TaskID)
+	m := strings.TrimSpace(req.CursorModel)
+	if m != "" {
+		return m
+	}
+	return a.defaultCursorModel
+}
+
 // Run implements runner.Runner. See package documentation for the full
 // invocation contract, env policy, redaction guarantees, and error
 // mapping.
