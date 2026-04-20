@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -78,7 +79,7 @@ const LOADING_STATUS_DELAY_MS = 220;
 const TASK_LIST_TABLE_CAPTION =
   "All tasks: title, status, priority, prompt preview, and row actions.";
 
-export function TaskListSection({
+export const TaskListSection = memo(function TaskListSection({
   tasks,
   rootTasksOnPage,
   loading,
@@ -387,7 +388,7 @@ export function TaskListSection({
       ) : null}
     </section>
   );
-}
+});
 
 function formatBulkFailure(failedCount: number, attempted: number): string {
   return `${failedCount} of ${attempted} reschedules failed. The successful ones already updated; the failed rows kept their previous schedule. Try again or check the task detail pages for details.`;

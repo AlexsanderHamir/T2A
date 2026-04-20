@@ -15,7 +15,8 @@ import {
 
 describe("tasks component barrels", () => {
   it("re-exports primary symbols from each family index", () => {
-    expect(TaskListSection).toBeTypeOf("function");
+    // `memo(...)` is an object in modern React; plain function components stay `function`.
+    expect(["function", "object"]).toContain(typeof TaskListSection);
     expect(TaskPager).toBeTypeOf("function");
     expect(TaskCreateModal).toBeTypeOf("function");
     expect(CustomSelect).toBeTypeOf("function");

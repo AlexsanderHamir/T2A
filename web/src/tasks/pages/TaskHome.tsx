@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
@@ -12,6 +13,59 @@ type Props = {
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
   const appTimezone = useAppTimezone();
+
+  /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
+  const listSaving = app.patchPending || app.deletePending;
+
+  const listSectionProps = useMemo(
+    () => ({
+      tasks: app.tasks,
+      rootTasksOnPage: app.rootTasksOnPage,
+      loading: app.loading,
+      refreshing: app.listRefreshing,
+      saving: listSaving,
+      hideBackgroundRefreshHint: app.sseLive,
+      listPage: app.taskListPage,
+      listPageSize: app.taskListPageSize,
+      onListPageChange: app.setTaskListPage,
+      onListFiltersChange: app.resetTaskListPage,
+      hasNextPage: app.hasNextTaskPage,
+      hasPrevPage: app.hasPrevTaskPage,
+      onEdit: app.openEdit,
+      onRequestDelete: app.requestDelete,
+    }),
+    [
+      app.tasks,
+      app.rootTasksOnPage,
+      app.loading,
+      app.listRefreshing,
+      listSaving,
+      app.sseLive,
+      app.taskListPage,
+      app.taskListPageSize,
+      app.setTaskListPage,
+      app.resetTaskListPage,
+      app.hasNextTaskPage,
+      app.hasPrevTaskPage,
+      app.openEdit,
+      app.requestDelete,
+    ],
+  );
+
+  const listActions = useMemo(
+    () => (
+      <button
+        type="button"
+        className="task-home-new-task-btn"
+        onClick={app.openCreateModal}
+        disabled={app.createModalOpen}
+      >
+        New task
+      </button>
+    ),
+    [app.openCreateModal, app.createModalOpen],
+  );
+
   const handleResumeDraft = (id: string) => {
     void app.resumeDraftByID(id).catch(() => {
       // Error state is exposed by the hook and rendered in the modal.
@@ -99,32 +153,7 @@ export function TaskHome({ app }: Props) {
       ) : null}
 
       <div className="task-detail-content--enter">
-        <TaskListSection
-          actions={
-            <button
-              type="button"
-              className="task-home-new-task-btn"
-              onClick={app.openCreateModal}
-              disabled={app.createModalOpen}
-            >
-              New task
-            </button>
-          }
-          tasks={app.tasks}
-          rootTasksOnPage={app.rootTasksOnPage}
-          loading={app.loading}
-          refreshing={app.listRefreshing}
-          saving={app.saving}
-          hideBackgroundRefreshHint={app.sseLive}
-          listPage={app.taskListPage}
-          listPageSize={app.taskListPageSize}
-          onListPageChange={app.setTaskListPage}
-          onListFiltersChange={app.resetTaskListPage}
-          hasNextPage={app.hasNextTaskPage}
-          hasPrevPage={app.hasPrevTaskPage}
-          onEdit={app.openEdit}
-          onRequestDelete={app.requestDelete}
-        />
+        <TaskListSection {...listSectionProps} actions={listActions} />
       </div>
     </>
   );
