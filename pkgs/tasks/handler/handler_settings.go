@@ -24,6 +24,7 @@ import (
 // GET seeds defaults on first boot.
 type settingsResponse struct {
 	WorkerEnabled           bool   `json:"worker_enabled"`
+	AgentPaused             bool   `json:"agent_paused"`
 	Runner                  string `json:"runner"`
 	RepoRoot                string `json:"repo_root"`
 	CursorBin               string `json:"cursor_bin"`
@@ -41,6 +42,7 @@ type settingsResponse struct {
 // directly without any field-by-field adapter logic.
 type settingsPatchBody struct {
 	WorkerEnabled           *bool   `json:"worker_enabled,omitempty"`
+	AgentPaused             *bool   `json:"agent_paused,omitempty"`
 	Runner                  *string `json:"runner,omitempty"`
 	RepoRoot                *string `json:"repo_root,omitempty"`
 	CursorBin               *string `json:"cursor_bin,omitempty"`
@@ -135,6 +137,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	patch := store.SettingsPatch{
 		WorkerEnabled:           body.WorkerEnabled,
+		AgentPaused:             body.AgentPaused,
 		Runner:                  body.Runner,
 		RepoRoot:                body.RepoRoot,
 		CursorBin:               body.CursorBin,
@@ -301,6 +304,7 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsResponseFrom")
 	resp := settingsResponse{
 		WorkerEnabled:           cfg.WorkerEnabled,
+		AgentPaused:             cfg.AgentPaused,
 		Runner:                  cfg.Runner,
 		RepoRoot:                cfg.RepoRoot,
 		CursorBin:               cfg.CursorBin,

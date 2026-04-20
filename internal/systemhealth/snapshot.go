@@ -70,11 +70,20 @@ type DBPool struct {
 // Agent reflects the in-process worker queue + terminal-status
 // counters. RunsByTerminalStatus seeds {"succeeded","failed","aborted"}
 // to zero on first read so the heatmap-style UI is never blank.
+//
+// Paused is the operator-facing soft pause from app_settings.AgentPaused.
+// It is NOT sourced from a Prometheus metric — the supervisor goes
+// idle when paused, so a counter-based signal would lag the actual
+// state. The handler layers this field on after Read() returns,
+// reading the singleton settings row directly. Defaults to false on
+// snapshots produced without a settings reader (e.g. unit tests of
+// the aggregator) so old call sites stay correct.
 type Agent struct {
 	QueueDepth           int64             `json:"queue_depth"`
 	QueueCapacity        int64             `json:"queue_capacity"`
 	RunsTotal            uint64            `json:"runs_total"`
 	RunsByTerminalStatus map[string]uint64 `json:"runs_by_terminal_status"`
+	Paused               bool              `json:"paused"`
 }
 
 // Snapshot is the wire envelope returned by GET /system/health.

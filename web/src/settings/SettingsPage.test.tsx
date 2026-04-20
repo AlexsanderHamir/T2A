@@ -84,6 +84,56 @@ describe("SettingsPage", () => {
     expect(screen.getByLabelText(/Max run duration/)).toHaveValue(0);
   });
 
+  it("PATCHes agent_paused when the operator flips the pause toggle", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        stubListCursorModelsFetch(async (input: FetchInput, init?: RequestInit) => {
+          const url = requestUrl(input);
+          if (url.endsWith("/settings") && (init?.method ?? "GET") === "GET") {
+            return jsonResponse(defaultSettings({ agent_paused: false }));
+          }
+          if (url.endsWith("/settings") && init?.method === "PATCH") {
+            const body = JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>;
+            // Critical: only the changed field is sent. Sending the
+            // whole form would clobber any field the operator hasn't
+            // touched (e.g. cursor_bin) with the most recent GET
+            // value, racing concurrent edits from another tab.
+            expect(Object.keys(body)).toEqual(["agent_paused"]);
+            expect(body.agent_paused).toBe(true);
+            return jsonResponse(
+              defaultSettings({
+                agent_paused: true,
+                updated_at: "2026-04-18T12:34:00Z",
+              }),
+            );
+          }
+          return new Response("not found", { status: 404 });
+        }),
+      );
+
+    renderPage();
+    const pauseToggle = await screen.findByTestId("settings-agent-paused");
+    expect(pauseToggle).not.toBeChecked();
+    await userEvent.click(pauseToggle);
+    expect(pauseToggle).toBeChecked();
+
+    const saveButton = screen.getByRole("button", { name: /Save changes/i });
+    await userEvent.click(saveButton);
+
+    await waitFor(() => {
+      const patches = fetchMock.mock.calls.filter(([input, init]) => {
+        const u = requestUrl(input as FetchInput);
+        return u.endsWith("/settings") && (init as RequestInit | undefined)?.method === "PATCH";
+      });
+      expect(patches.length).toBe(1);
+    });
+    // After the PATCH settles the page re-renders from the server
+    // response, so the toggle must still reflect the new state (not
+    // bounce back to the form's pre-mutation default).
+    expect(screen.getByTestId("settings-agent-paused")).toBeChecked();
+  });
+
   it("shows the workspace warning banner when repo root is empty", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings({ repo_root: "" })),

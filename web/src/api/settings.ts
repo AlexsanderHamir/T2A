@@ -9,6 +9,16 @@ import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
  */
 export type AppSettings = {
   worker_enabled: boolean;
+  /**
+   * Operator-facing soft pause. Distinct from worker_enabled in intent:
+   * worker_enabled is the "configured to run at all" master switch
+   * (defaults true), agent_paused is the one-click "stop dequeuing for
+   * a few minutes" toggle exposed in the SPA header chip (defaults
+   * false). Both keep the supervisor idle, but they surface as
+   * different idle reasons in the supervisor logs and as different
+   * pane states on /observability.
+   */
+  agent_paused: boolean;
   runner: string;
   repo_root: string;
   cursor_bin: string;
@@ -28,6 +38,7 @@ export type AppSettings = {
  */
 export type AppSettingsPatch = Partial<{
   worker_enabled: boolean;
+  agent_paused: boolean;
   runner: string;
   repo_root: string;
   cursor_bin: string;
@@ -70,6 +81,12 @@ function assertSettings(raw: unknown): AppSettings {
   }
   const o = raw as Record<string, unknown>;
   const worker = o.worker_enabled;
+  // Default agent_paused to false when the server omits the field so
+  // older builds (pre-4a) stay decodable by a freshly-deployed SPA.
+  // We could throw instead, but a boolean default that matches the DB
+  // default is safer than blocking the whole settings page on a
+  // missing key.
+  const paused = typeof o.agent_paused === "boolean" ? o.agent_paused : false;
   const runner = o.runner;
   const repoRoot = o.repo_root;
   const cursorBin = o.cursor_bin;
@@ -89,6 +106,7 @@ function assertSettings(raw: unknown): AppSettings {
   }
   const out: AppSettings = {
     worker_enabled: worker,
+    agent_paused: paused,
     runner,
     repo_root: repoRoot,
     cursor_bin: cursorBin,

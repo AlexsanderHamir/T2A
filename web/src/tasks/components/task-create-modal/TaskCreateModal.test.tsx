@@ -11,6 +11,7 @@ import { TaskCreateModal } from "./TaskCreateModal";
 
 const testAppSettings: AppSettings = {
   worker_enabled: false,
+  agent_paused: false,
   repo_root: "",
   cursor_bin: "",
   ...TASK_TEST_DEFAULTS,

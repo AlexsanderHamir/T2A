@@ -107,6 +107,9 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 	if !resp.WorkerEnabled {
 		t.Error("expected WorkerEnabled=true on first read")
 	}
+	if resp.AgentPaused {
+		t.Error("expected AgentPaused=false on first read (operator opt-in)")
+	}
 	if resp.Runner != "cursor" {
 		t.Errorf("Runner=%q, want cursor", resp.Runner)
 	}
@@ -163,6 +166,42 @@ func TestHTTP_PatchSettings_persistsAndReloads(t *testing.T) {
 	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
 	want := []string{"settings_changed:"}
 	mustEqualEvents(t, "PATCH /settings", got, want)
+}
+
+// TestHTTP_PatchSettings_agentPausedRoundtrip pins the wire path for
+// the operator pause toggle: PATCH {"agent_paused":true} persists
+// the flag, fans out a settings_changed SSE so the header chip and
+// /settings page both refresh, and the GET response echoes the new
+// value. The chip can't reliably tell amber-vs-green without this.
+func TestHTTP_PatchSettings_agentPausedRoundtrip(t *testing.T) {
+	srv, _, hub, ctrl := settingsTestServer(t)
+	ch, cancel := hub.Subscribe()
+	defer cancel()
+
+	body := mustPatchSettingsJSON(t, srv.URL+"/settings",
+		`{"agent_paused":true}`, http.StatusOK)
+	var resp settingsResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, body)
+	}
+	if !resp.AgentPaused {
+		t.Errorf("PATCH agent_paused=true: response did not reflect patch: %+v", resp)
+	}
+	if got := ctrl.reloadCalls.Load(); got != 1 {
+		t.Errorf("reload calls = %d, want 1 (supervisor must Reload to drain the running worker)", got)
+	}
+
+	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	mustEqualEvents(t, "PATCH /settings agent_paused=true", got, []string{"settings_changed:"})
+
+	getBody := mustGetSettingsJSON(t, srv.URL+"/settings", http.StatusOK)
+	var afterGet settingsResponse
+	if err := json.Unmarshal(getBody, &afterGet); err != nil {
+		t.Fatalf("decode GET: %v body=%s", err, getBody)
+	}
+	if !afterGet.AgentPaused {
+		t.Errorf("subsequent GET should show AgentPaused=true; got %+v", afterGet)
+	}
 }
 
 // TestHTTP_PatchSettings_emptyBodyRejected stops the SPA from

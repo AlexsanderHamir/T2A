@@ -16,7 +16,8 @@ All fields live in [`pkgs/tasks/domain/app_settings.go`](../pkgs/tasks/domain/ap
 
 | Field | Type | Default (first boot) | Effect |
 |-------|------|----------------------|--------|
-| `worker_enabled` | bool | `true` | Master switch for the in-process agent worker. When `false` the supervisor stays idle (queue + reconcile loop still run). |
+| `worker_enabled` | bool | `true` | Master switch for the in-process agent worker. When `false` the supervisor stays idle (queue + reconcile loop still run). Idle reason: `disabled_by_settings`. |
+| `agent_paused` | bool | `false` | Operator-facing soft pause, distinct from `worker_enabled` in intent. Use it when you want to stop the worker dequeuing for a few minutes (e.g. before a deploy) without flipping the master switch. The SPA header chip exposes this as a one-click toggle. Idle reason: `paused_by_operator`. Surfaces under `agent.paused` in `GET /system/health`. |
 | `runner` | string | `"cursor"` | Identifier from [`pkgs/agents/runner/registry`](../pkgs/agents/runner/registry). Currently only `cursor` is registered; a future runner lands as one new file in that package. |
 | `repo_root` | string | `""` | Absolute (or process-relative) path to the workspace the worker and `/repo/*` operate against. **Empty means "not configured"**: the supervisor stays idle, repo endpoints respond `409 repo_root_not_configured`, and `@`-mention validation is skipped on `POST /tasks` / `PATCH /tasks/{id}`. |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty means "auto-detect from PATH" (`cursor`). Absolute paths pin a specific build; relative names go through `PATH` lookup. The supervisor and `POST /settings/probe-cursor` both invoke `cursor.Probe(<cursor_bin>, --version)` for the runner version recorded in the audit trail. |

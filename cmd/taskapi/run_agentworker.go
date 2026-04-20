@@ -125,6 +125,7 @@ type agentWorkerInstance struct {
 // the resolved values without having to hit GET /settings.
 type effectiveSettingsLog struct {
 	WorkerEnabled         bool
+	AgentPaused           bool
 	Runner                string
 	RepoRoot              string
 	CursorBin             string
@@ -271,7 +272,8 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		}
 		s.mu.Unlock()
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
+			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
+			Runner:   cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
@@ -295,7 +297,8 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 			"operation", "taskapi.agent_worker.probe_err", "phase", phase,
 			"runner", cfg.Runner, "binary", cfg.CursorBin, "err", probeErr)
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
+			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
+			Runner:   cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
@@ -307,7 +310,8 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 
 	if prev != nil && instanceMatchesSettings(prev, cfg, version) {
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
+			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
+			Runner:   cfg.Runner,
 			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
@@ -375,7 +379,8 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	stopWorkerInstance(prev, "reload")
 
 	s.logEffective(phase, effectiveSettingsLog{
-		WorkerEnabled: cfg.WorkerEnabled, Runner: cfg.Runner,
+		WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
+		Runner:   cfg.Runner,
 		RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
 		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
@@ -405,7 +410,7 @@ func (s *agentWorkerSupervisor) logEffective(phase string, eff effectiveSettings
 		"phase", phase)
 	slog.Info("agent worker effective config", "cmd", cmdName, "operation", "taskapi.agent_worker",
 		"phase", phase,
-		"enabled", eff.WorkerEnabled,
+		"enabled", eff.WorkerEnabled, "paused", eff.AgentPaused,
 		"idle", eff.Idle, "idle_reason", eff.IdleReason,
 		"runner", eff.Runner, "runner_version", eff.RunnerVersion,
 		"repo_root", eff.RepoRoot, "cursor_bin", eff.CursorBin,
@@ -431,9 +436,19 @@ func (s *agentWorkerSupervisor) publishSettingsChanged() {
 // on what counts as "configured enough to run".
 func decideIdle(cfg store.AppSettings) (bool, string) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideIdle",
-		"enabled", cfg.WorkerEnabled, "repo_root", cfg.RepoRoot)
+		"enabled", cfg.WorkerEnabled, "paused", cfg.AgentPaused,
+		"repo_root", cfg.RepoRoot)
 	if !cfg.WorkerEnabled {
 		return true, "disabled_by_settings"
+	}
+	// Operator-facing soft pause. Distinct reason from
+	// disabled_by_settings so the observability page can render
+	// "Paused" (amber) vs "Disabled" (red/grey) accurately. Pause is
+	// checked AFTER WorkerEnabled because a fully-disabled worker
+	// dominates a paused-but-otherwise-running worker; either keeps
+	// us idle, but disabled is the stronger signal.
+	if cfg.AgentPaused {
+		return true, "paused_by_operator"
 	}
 	if cfg.RepoRoot == "" {
 		return true, "repo_root_not_configured"
@@ -472,6 +487,12 @@ func instanceMatchesSettings(inst *agentWorkerInstance, cfg store.AppSettings, v
 		return false
 	}
 	if !inst.settings.WorkerEnabled {
+		return false
+	}
+	// A pause flip changes effective state (idle vs running) even
+	// though all other fields match — return false so applySettings
+	// reaches its idle branch and stops the running instance.
+	if inst.settings.AgentPaused != cfg.AgentPaused {
 		return false
 	}
 	if inst.runner != nil && inst.runner.Version() != version {

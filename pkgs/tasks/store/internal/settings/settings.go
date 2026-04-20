@@ -22,6 +22,7 @@ const logCmd = "taskapi"
 // limit"; nil means "leave unchanged").
 type Patch struct {
 	WorkerEnabled           *bool
+	AgentPaused             *bool
 	Runner                  *string
 	RepoRoot                *string
 	CursorBin               *string
@@ -37,6 +38,7 @@ type Patch struct {
 // handler already logs the no-op short-circuit decision.
 func (p Patch) IsEmpty() bool {
 	return p.WorkerEnabled == nil &&
+		p.AgentPaused == nil &&
 		p.Runner == nil &&
 		p.RepoRoot == nil &&
 		p.CursorBin == nil &&
@@ -74,7 +76,8 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 	}
 	slog.Info("app settings seeded with defaults",
 		"cmd", logCmd, "operation", "tasks.store.settings.seeded",
-		"worker_enabled", row.WorkerEnabled, "runner", row.Runner,
+		"worker_enabled", row.WorkerEnabled, "agent_paused", row.AgentPaused,
+		"runner", row.Runner,
 		"repo_root", row.RepoRoot, "cursor_bin", row.CursorBin,
 		"max_run_duration_seconds", row.MaxRunDurationSeconds)
 	return row, nil
@@ -162,6 +165,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.applyPatch")
 	if patch.WorkerEnabled != nil {
 		row.WorkerEnabled = *patch.WorkerEnabled
+	}
+	if patch.AgentPaused != nil {
+		row.AgentPaused = *patch.AgentPaused
 	}
 	if patch.Runner != nil {
 		row.Runner = strings.TrimSpace(*patch.Runner)

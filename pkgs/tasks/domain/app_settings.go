@@ -16,6 +16,15 @@ import (
 // Field semantics:
 //   - WorkerEnabled: master switch for the in-process agent worker.
 //     Default true.
+//   - AgentPaused: operator-facing soft pause. Distinct from
+//     WorkerEnabled in intent, even though both keep the worker idle:
+//     WorkerEnabled is the "configured to run at all" flag (defaults
+//     to true; flipping it off is a deliberate teardown), AgentPaused
+//     is the "stop dequeuing for now, I'll resume in a minute"
+//     flag (defaults to false; the SPA exposes a toggle in the
+//     header). The supervisor honors either by going idle with a
+//     distinct reason ("disabled_by_settings" vs "paused_by_operator")
+//     so the observability page can tell them apart.
 //   - Runner: id of the runner registered in pkgs/agents/runner/registry
 //     (today only "cursor"). Default "cursor".
 //   - RepoRoot: absolute or process-relative path used for both the
@@ -35,6 +44,7 @@ import (
 type AppSettings struct {
 	ID                      uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
 	WorkerEnabled           bool      `gorm:"not null;default:true"`
+	AgentPaused             bool      `gorm:"not null;default:false"`
 	Runner                  string    `gorm:"not null;default:'cursor'"`
 	RepoRoot                string    `gorm:"not null;default:''"`
 	CursorBin               string    `gorm:"not null;default:''"`
@@ -66,6 +76,7 @@ func DefaultAppSettings() AppSettings {
 	return AppSettings{
 		ID:                      AppSettingsRowID,
 		WorkerEnabled:           true,
+		AgentPaused:             false,
 		Runner:                  DefaultRunner,
 		RepoRoot:                "",
 		CursorBin:               "",

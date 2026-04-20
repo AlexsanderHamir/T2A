@@ -11,6 +11,7 @@ const RUNNERS = [{ id: "cursor", label: "Cursor (cursor-agent CLI)" }] as const;
 
 type FormState = {
   workerEnabled: boolean;
+  agentPaused: boolean;
   runner: string;
   repoRoot: string;
   cursorBin: string;
@@ -22,6 +23,7 @@ type FormState = {
 function toFormState(s: AppSettings): FormState {
   return {
     workerEnabled: s.worker_enabled,
+    agentPaused: s.agent_paused,
     runner: s.runner,
     repoRoot: s.repo_root,
     cursorBin: s.cursor_bin,
@@ -35,6 +37,9 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   const out: AppSettingsPatch = {};
   if (initial.worker_enabled !== form.workerEnabled) {
     out.worker_enabled = form.workerEnabled;
+  }
+  if (initial.agent_paused !== form.agentPaused) {
+    out.agent_paused = form.agentPaused;
   }
   if (initial.runner !== form.runner.trim()) {
     out.runner = form.runner.trim();
@@ -319,6 +324,22 @@ export function SettingsPage() {
           <p className="settings-field-help">
             When enabled, the worker pulls ready tasks and dispatches them to
             the configured runner.
+          </p>
+
+          <label className="settings-field settings-field--inline">
+            <input
+              type="checkbox"
+              checked={form.agentPaused}
+              onChange={(e) => handleField("agentPaused", e.target.checked)}
+              data-testid="settings-agent-paused"
+            />
+            <span className="settings-field-label">Pause agent</span>
+          </label>
+          <p className="settings-field-help">
+            Soft pause. The worker stops dequeuing new tasks but stays
+            configured — flip it back off to resume. Use this for short
+            maintenance windows; use <em>Enable agent worker</em> for a
+            longer-term shutdown. The header chip turns amber while paused.
           </p>
 
           <label className="settings-field">

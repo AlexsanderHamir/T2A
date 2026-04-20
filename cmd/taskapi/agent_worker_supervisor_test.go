@@ -105,6 +105,89 @@ func TestSupervisor_StaysIdleWhenWorkerDisabled(t *testing.T) {
 	}
 }
 
+// TestSupervisor_StaysIdleWhenAgentPaused mirrors the WorkerEnabled
+// idle path for the soft-pause flag. The pause flag is the
+// operator-facing "stop dequeuing for now" toggle exposed in the SPA
+// header chip; it must short-circuit before the probe so a paused
+// process doesn't burn its probe budget on every Reload.
+func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, nil)
+	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
+		AgentPaused: ptrBool(true),
+		RepoRoot:    ptrString(t.TempDir()),
+	}); err != nil {
+		t.Fatalf("seed settings: %v", err)
+	}
+	probeCalled := false
+	rig.sup.probe = func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		probeCalled = true
+		return "x", "", nil
+	}
+
+	if err := rig.sup.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	rig.sup.mu.Lock()
+	cur := rig.sup.current
+	rig.sup.mu.Unlock()
+	if cur != nil {
+		t.Errorf("supervisor spawned worker despite AgentPaused=true")
+	}
+	if probeCalled {
+		t.Error("probe called for paused worker (should short-circuit before probe)")
+	}
+}
+
+// TestSupervisor_ReloadStopsRunningWorkerOnPause covers the live-pause
+// path: a worker that was happily running must stop on the next
+// Reload after AgentPaused flips to true. instanceMatchesSettings has
+// to honor the flag for this to work — without that, Reload would
+// observe "all the runner-shaped fields match" and skip the restart,
+// leaving the worker dequeuing despite the operator's pause click.
+func TestSupervisor_ReloadStopsRunningWorkerOnPause(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		return "test-version-1.2.3", "", nil
+	})
+	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
+		RepoRoot: ptrString(t.TempDir()),
+	}); err != nil {
+		t.Fatalf("seed settings: %v", err)
+	}
+	if err := rig.sup.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	rig.sup.mu.Lock()
+	if rig.sup.current == nil {
+		rig.sup.mu.Unlock()
+		t.Fatal("precondition: supervisor failed to spawn worker for valid config")
+	}
+	rig.sup.mu.Unlock()
+
+	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
+		AgentPaused: ptrBool(true),
+	}); err != nil {
+		t.Fatalf("flip AgentPaused=true: %v", err)
+	}
+	if err := rig.sup.Reload(ctx); err != nil {
+		t.Fatalf("Reload after pause: %v", err)
+	}
+
+	rig.sup.mu.Lock()
+	cur := rig.sup.current
+	rig.sup.mu.Unlock()
+	if cur != nil {
+		t.Errorf("supervisor kept worker running despite AgentPaused=true after Reload")
+	}
+}
+
 // TestSupervisor_ProbeFailureKeepsIdle ensures a failing probe (e.g.
 // cursor not installed) does not crash boot — instead the supervisor
 // stays idle and Start returns nil. This is what makes the "configure

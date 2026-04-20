@@ -67,6 +67,7 @@ type systemHealthAgentRaw struct {
 	QueueCapacity        int64             `json:"queue_capacity"`
 	RunsTotal            uint64            `json:"runs_total"`
 	RunsByTerminalStatus map[string]uint64 `json:"runs_by_terminal_status"`
+	Paused               bool              `json:"paused"`
 }
 
 func newSystemHealthTestServer(t *testing.T, g systemhealth.Gather) *httptest.Server {
@@ -163,6 +164,44 @@ func TestHTTP_systemHealth_populated(t *testing.T) {
 	}
 	if got.HTTP.RequestsByClass["2xx"] != 42 || got.HTTP.RequestsByClass["4xx"] != 3 {
 		t.Errorf("HTTP.RequestsByClass: got %+v (raw=%s)", got.HTTP.RequestsByClass, raw)
+	}
+}
+
+// TestHTTP_systemHealth_agentPaused pins that the operator-facing
+// AgentPaused flag from app_settings surfaces verbatim under
+// `agent.paused` in GET /system/health. The flag is sourced from
+// the singleton settings row (not Prometheus) precisely because the
+// supervisor goes idle when paused, which means a counter-based
+// signal would lag the real state. This test fails if the handler
+// stops layering the field on top of the metric snapshot.
+func TestHTTP_systemHealth_agentPaused(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	s := store.NewStore(db)
+	h := NewHandler(s, NewSSEHub(), nil, WithSystemHealthGatherer(prometheus.NewPedanticRegistry()))
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	rawDefault, _ := mustGetJSON(t, srv.URL, "/system/health")
+	var beforeFlip systemHealthRaw
+	if err := json.Unmarshal(rawDefault, &beforeFlip); err != nil {
+		t.Fatalf("decode default: %v body=%s", err, rawDefault)
+	}
+	if beforeFlip.Agent.Paused {
+		t.Fatalf("default app_settings.agent_paused should be false; got envelope %s", rawDefault)
+	}
+
+	paused := true
+	if _, err := s.UpdateSettings(t.Context(), store.SettingsPatch{AgentPaused: &paused}); err != nil {
+		t.Fatalf("flip AgentPaused=true: %v", err)
+	}
+
+	rawPaused, _ := mustGetJSON(t, srv.URL, "/system/health")
+	var afterFlip systemHealthRaw
+	if err := json.Unmarshal(rawPaused, &afterFlip); err != nil {
+		t.Fatalf("decode paused: %v body=%s", err, rawPaused)
+	}
+	if !afterFlip.Agent.Paused {
+		t.Fatalf("after AgentPaused=true the envelope should report paused=true; got %s", rawPaused)
 	}
 }
 

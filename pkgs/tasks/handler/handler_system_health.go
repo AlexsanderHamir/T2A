@@ -38,6 +38,20 @@ func (h *Handler) systemHealth(w http.ResponseWriter, r *http.Request) {
 	r = calltrace.WithRequestRoot(r, op)
 	debugHTTPRequest(r, op)
 	snap := h.snapshotSystemHealth(time.Now())
+	// agent.paused is sourced from app_settings, not Prometheus —
+	// the supervisor goes idle on a flip and counters would lag the
+	// flag. We tolerate a transient store error by leaving the
+	// field at its zero value (false) so the operator UI does not
+	// 500 just because the singleton row is briefly unreadable.
+	if h.store != nil {
+		cfg, err := h.store.GetSettings(r.Context())
+		if err != nil {
+			slog.Warn("system health: read app_settings for paused flag failed",
+				"cmd", calltrace.LogCmd, "operation", op, "err", err)
+		} else {
+			snap.Agent.Paused = cfg.AgentPaused
+		}
+	}
 	writeJSON(w, r, op, http.StatusOK, snap)
 }
 
