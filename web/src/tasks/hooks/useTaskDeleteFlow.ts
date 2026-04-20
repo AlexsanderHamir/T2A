@@ -2,7 +2,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { deleteTask } from "../../api";
 import { errorMessage } from "@/lib/errorMessage";
+import {
+  rumMutationOptimisticApplied,
+  rumMutationRolledBack,
+  rumMutationSettled,
+  rumMutationStarted,
+} from "@/observability";
+import { useOptionalToast } from "@/shared/toast";
 import { taskQueryKeys } from "../task-query";
+import {
+  bumpOptimisticVersion,
+  clearOptimisticVersion,
+} from "./optimisticVersion";
+import type { Task, TaskListResponse } from "@/types";
 
 /** Subset of `Task` the confirm dialog needs; widened so callers can pass plain rows. */
 export type DeleteTargetInput = {
@@ -73,16 +85,103 @@ export type UseTaskDeleteFlowResult = {
  * already opened the confirm dialog for a *different* row, we leave that
  * second confirm dialog up instead of silently dismissing it.
  */
+interface DeleteSnapshot {
+  detail: Task | undefined;
+  /** Per-list-key snapshots so we can restore each cached page on rollback. */
+  lists: Array<{ key: readonly unknown[]; data: TaskListResponse }>;
+  startedAtMs: number;
+}
+
+/** Remove the task with id `removeId` from a cached TaskListResponse,
+ * walking nested children. Returns null when the id wasn't found so
+ * callers can skip the cache write. */
+function removeTaskFromList(
+  list: TaskListResponse,
+  removeId: string,
+): TaskListResponse | null {
+  let removed = false;
+  function visit(tasks: Task[]): Task[] {
+    const next: Task[] = [];
+    for (const t of tasks) {
+      if (t.id === removeId) {
+        removed = true;
+        continue;
+      }
+      if (t.children?.length) {
+        const childNext = visit(t.children);
+        if (childNext !== t.children) {
+          next.push({ ...t, children: childNext });
+          continue;
+        }
+      }
+      next.push(t);
+    }
+    return next;
+  }
+  const nextTasks = visit(list.tasks);
+  if (!removed) return null;
+  return { ...list, tasks: nextTasks };
+}
+
 export function useTaskDeleteFlow(opts: {
   onDeleted?: (id: string) => void;
 } = {}): UseTaskDeleteFlowResult {
   const queryClient = useQueryClient();
+  const toast = useOptionalToast();
   const { onDeleted } = opts;
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: (input: DeleteVariables) => deleteTask(input.id),
-    onSuccess: async (_, variables) => {
+  const mutation = useMutation<unknown, unknown, DeleteVariables, DeleteSnapshot>({
+    mutationFn: (input) => deleteTask(input.id),
+    onMutate: async (input) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("task_delete");
+      bumpOptimisticVersion(input.id);
+
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
+
+      const detailKey = taskQueryKeys.detail(input.id);
+      const detailPrev = queryClient.getQueryData<Task>(detailKey);
+      // Drop the detail entry so any open detail page sees the
+      // "task not found / deleted" empty state immediately. The
+      // server-truth refetch on rollback restores the full Task.
+      queryClient.removeQueries({ queryKey: detailKey });
+
+      const listSnapshots: DeleteSnapshot["lists"] = [];
+      const listEntries = queryClient.getQueriesData<TaskListResponse>({
+        queryKey: taskQueryKeys.listRoot(),
+      });
+      for (const [key, data] of listEntries) {
+        if (!data) continue;
+        listSnapshots.push({ key, data });
+        const next = removeTaskFromList(data, input.id);
+        if (next) {
+          queryClient.setQueryData<TaskListResponse>(key, next);
+        }
+      }
+
+      rumMutationOptimisticApplied("task_delete", performance.now() - startedAtMs);
+      return { detail: detailPrev, lists: listSnapshots, startedAtMs };
+    },
+    onError: (_err, input, context) => {
+      if (context) {
+        if (context.detail) {
+          queryClient.setQueryData(taskQueryKeys.detail(input.id), context.detail);
+        }
+        for (const snap of context.lists) {
+          queryClient.setQueryData(snap.key, snap.data);
+        }
+        rumMutationRolledBack("task_delete", performance.now() - context.startedAtMs);
+      }
+      toast.error("Couldn't delete - reverted.");
+      rumMutationSettled(
+        "task_delete",
+        context ? performance.now() - context.startedAtMs : 0,
+        0,
+      );
+    },
+    onSuccess: async (_, variables, context) => {
       const deletedId = variables.id;
       setDeleteTarget((prev) => (prev?.id === deletedId ? null : prev));
       await queryClient.invalidateQueries({
@@ -90,6 +189,16 @@ export function useTaskDeleteFlow(opts: {
       });
       await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       onDeleted?.(deletedId);
+      if (context) {
+        rumMutationSettled(
+          "task_delete",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
+    },
+    onSettled: (_data, _err, variables) => {
+      clearOptimisticVersion(variables.id);
     },
   });
 

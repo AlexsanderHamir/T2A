@@ -3,6 +3,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
+import { taskQueryKeys } from "../task-query";
+import { ToastProvider } from "@/shared/toast";
+import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import type { Task, TaskListResponse } from "@/types";
 
 vi.mock("../../api", () => ({
   deleteTask: vi.fn(),
@@ -23,18 +27,35 @@ function makeWrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
     );
   }
   return { Wrapper, queryClient, invalidateSpy };
 }
 
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: "t1",
+    title: "Some task",
+    initial_prompt: "<p>do it</p>",
+    status: "ready",
+    priority: "low",
+    task_type: "general",
+    runner: "cursor",
+    cursor_model: "",
+    checklist_inherit: false,
+    ...overrides,
+  };
+}
+
 describe("useTaskDeleteFlow", () => {
   beforeEach(() => {
     mockedDelete.mockReset();
+    __resetOptimisticVersionsForTests();
   });
   afterEach(() => {
+    __resetOptimisticVersionsForTests();
     vi.restoreAllMocks();
   });
 
@@ -318,5 +339,164 @@ describe("useTaskDeleteFlow", () => {
       title: "B",
       subtaskCount: 0,
     });
+  });
+
+  // Optimistic delete: between click and server confirmation the row
+  // is already gone from the list cache. This is the highest-impact
+  // mutation for perceived speed because the round-trip can be
+  // 100-300ms and "click delete -> wait -> row vanishes" feels
+  // jankier than any other mutation in the app.
+  it("optimistically removes the row from cached list data before the server resolves", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedDelete.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof deleteTask>,
+    );
+    const { Wrapper, queryClient } = makeWrapper();
+    const list: TaskListResponse = {
+      tasks: [makeTask({ id: "t1" }), makeTask({ id: "t2" })],
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    };
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "t1", title: "Some task" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(true);
+    });
+    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    expect(cached?.tasks.map((t) => t.id)).toEqual(["t2"]);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(false);
+    });
+  });
+
+  // Walk into nested children: deleting a subtask leaves the parent
+  // cached row intact but removes the subtask from its children
+  // array. Pinning prevents a regression where the visit() helper
+  // forgets to recurse and only deletes top-level rows.
+  it("optimistically removes a nested subtask from its parent's children array", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedDelete.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof deleteTask>,
+    );
+    const { Wrapper, queryClient } = makeWrapper();
+    const child = makeTask({ id: "child", parent_id: "parent" });
+    const parent = makeTask({ id: "parent" });
+    parent.children = [child];
+    const list: TaskListResponse = {
+      tasks: [parent],
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    };
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "child", title: "child", parent_id: "parent" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(true);
+    });
+    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    expect(cached?.tasks[0]?.id).toBe("parent");
+    expect(cached?.tasks[0]?.children).toEqual([]);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(false);
+    });
+  });
+
+  // Rollback on error: list cache restored to the pre-mutation
+  // snapshot. Without this the user sees "deleted -> undeleted ->
+  // deleted again on re-attempt" depending on cache state, which is
+  // even more confusing than a non-optimistic delete failure.
+  it("restores the list cache on server error", async () => {
+    mockedDelete.mockRejectedValueOnce(new Error("perm denied"));
+    const { Wrapper, queryClient } = makeWrapper();
+    const list: TaskListResponse = {
+      tasks: [makeTask({ id: "t1" }), makeTask({ id: "t2" })],
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    };
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "t1", title: "Some task" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+    await waitFor(() => {
+      expect(result.current.deleteError).toBe("perm denied");
+    });
+    const restored = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    expect(restored?.tasks.map((t) => t.id)).toEqual(["t1", "t2"]);
+  });
+
+  // SSE-suppression contract: while a delete is in flight, the
+  // optimistic-version counter for the deleted id is bumped so any
+  // SSE task_updated/task_deleted echo for that task is suppressed.
+  // Otherwise the echo would fire an invalidation that re-fetches
+  // the list and (briefly) un-removes the row before the server
+  // delete completes.
+  it("bumps the optimistic-version counter so SSE echoes are suppressed in flight", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedDelete.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof deleteTask>,
+    );
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskDeleteFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.requestDelete({ id: "t1", title: "Some task" });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(true);
+    });
+    expect(shouldSuppressSSEFor("t1")).toBe(true);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.deletePending).toBe(false);
+    });
+    expect(shouldSuppressSSEFor("t1")).toBe(false);
   });
 });
