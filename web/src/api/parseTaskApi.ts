@@ -185,6 +185,14 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     total: parseFiniteNumber(value.total, "total"),
     ready: parseFiniteNumber(value.ready, "ready"),
     critical: parseFiniteNumber(value.critical, "critical"),
+    // Backwards-compat: older backends predate the Stage 6 stats
+    // field; treat a missing key as `0` rather than NaN'ing the
+    // whole stats payload. Present-but-non-numeric is still a
+    // contract violation and surfaces via parseFiniteNumber.
+    scheduled:
+      value.scheduled === undefined
+        ? 0
+        : parseFiniteNumber(value.scheduled, "scheduled"),
     by_status,
     by_priority,
     by_scope,

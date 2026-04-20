@@ -133,6 +133,16 @@ export type TaskStatsResponse = {
   total: number;
   ready: number;
   critical: number;
+  /**
+   * Count of `status='ready'` tasks intentionally deferred via
+   * `pickup_not_before > now()`. Always present (`0` on a fresh
+   * database). The Observability page uses this to distinguish
+   * "0 ready, 12 scheduled" (intentionally deferred — agent worker is
+   * correctly idle) from "0 ready, 0 scheduled" (truly idle, nothing
+   * to do). Defaults to `0` when an older backend omits the key
+   * (parser sets it explicitly so callers can rely on a number).
+   */
+  scheduled: number;
   by_status: Partial<Record<Status, number>>;
   by_priority: Partial<Record<Priority, number>>;
   by_scope: {

@@ -69,6 +69,16 @@ export function ObservabilityOverview({ stats, loading }: Props) {
     loading,
     hasStats,
   );
+  // Stage 6 KPI: tasks intentionally deferred via
+  // `pickup_not_before > now()`. The label "Scheduled (deferred)"
+  // is exactly the plan's wording so the operator's mental model
+  // links to the same word that appears on the task list filter
+  // dropdown ("Scheduled (deferred)"). Distinguishing this from
+  // "Ready" is the whole point: "0 ready, 12 scheduled" is a
+  // perfectly healthy state ("operator told the agent to wait")
+  // whereas "0 ready, 0 scheduled" with a paused agent is the
+  // genuinely-stuck state.
+  const scheduledState = kpiState(stats?.scheduled, loading, hasStats);
   const criticalState = kpiState(
     stats?.by_priority.critical ?? stats?.critical,
     loading,
@@ -155,6 +165,13 @@ export function ObservabilityOverview({ stats, loading }: Props) {
           meta="ready for agent pickup"
           tone="info"
           testId="obs-kpi-ready"
+        />
+        <KpiCard
+          label="Scheduled (deferred)"
+          state={scheduledState}
+          meta="queued for a future time"
+          tone="info"
+          testId="obs-kpi-scheduled"
         />
         <KpiCard
           label="Critical"

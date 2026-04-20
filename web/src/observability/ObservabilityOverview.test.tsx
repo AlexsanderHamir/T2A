@@ -8,6 +8,7 @@ function statsFixture(overrides: Partial<TaskStatsResponse> = {}): TaskStatsResp
     total: 18,
     ready: 5,
     critical: 3,
+    scheduled: 4,
     by_status: {
       ready: 5,
       running: 2,
@@ -33,8 +34,8 @@ describe("ObservabilityOverview", () => {
 
     const counters = screen.getByLabelText("Headline counters");
     const cards = within(counters).getAllByRole("article");
-    // total + done + failed + running + blocked + review + ready + critical
-    expect(cards).toHaveLength(8);
+    // total + done + failed + running + blocked + review + ready + scheduled + critical
+    expect(cards).toHaveLength(9);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "true");
     });
@@ -47,11 +48,11 @@ describe("ObservabilityOverview", () => {
 
     const counters = screen.getByLabelText("Headline counters");
     const cards = within(counters).getAllByRole("article");
-    expect(cards).toHaveLength(8);
+    expect(cards).toHaveLength(9);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "false");
     });
-    expect(within(counters).getAllByText("—")).toHaveLength(8);
+    expect(within(counters).getAllByText("—")).toHaveLength(9);
     expect(within(counters).getByText("Breakdown unavailable")).toBeInTheDocument();
   });
 
@@ -68,6 +69,7 @@ describe("ObservabilityOverview", () => {
     expect(screen.getByTestId("obs-kpi-blocked")).toHaveTextContent("1");
     expect(screen.getByTestId("obs-kpi-review")).toHaveTextContent("1");
     expect(screen.getByTestId("obs-kpi-ready")).toHaveTextContent("5");
+    expect(screen.getByTestId("obs-kpi-scheduled")).toHaveTextContent("4");
     expect(screen.getByTestId("obs-kpi-critical")).toHaveTextContent("3");
     expect(
       screen.getByText("11 parent • 7 subtasks"),
@@ -118,6 +120,37 @@ describe("ObservabilityOverview", () => {
     expect(screen.getByTestId("obs-donut-arc-subtask")).toBeInTheDocument();
     const scope = screen.getByLabelText("Scope");
     expect(within(scope).getByLabelText(/Scope: Parent 11.*Subtask 7/)).toBeInTheDocument();
+  });
+
+  it("Scheduled (deferred) KPI: aria-busy while loading, then renders the count from stats.scheduled", () => {
+    // Pending state: no stats yet, query in flight. Operators should
+    // see the busy spinner on the new card just like every other KPI
+    // — never a stale "0" that would falsely advertise an idle agent.
+    const { rerender } = render(
+      <ObservabilityOverview stats={undefined} loading={true} />,
+    );
+    const pendingCard = screen.getByTestId("obs-kpi-scheduled");
+    expect(pendingCard).toHaveAttribute("aria-busy", "true");
+
+    // Settled state: parser projects scheduled onto the response.
+    // The card flips to aria-busy=false and surfaces the count.
+    rerender(<ObservabilityOverview stats={statsFixture()} loading={false} />);
+    const settledCard = screen.getByTestId("obs-kpi-scheduled");
+    expect(settledCard).toHaveAttribute("aria-busy", "false");
+    expect(settledCard).toHaveTextContent("4");
+    expect(settledCard).toHaveTextContent(/queued for a future time/i);
+  });
+
+  it("Scheduled (deferred) KPI: renders 0 when scheduled count is zero (no false 'awaiting' signal)", () => {
+    render(
+      <ObservabilityOverview
+        stats={statsFixture({ scheduled: 0 })}
+        loading={false}
+      />,
+    );
+    const card = screen.getByTestId("obs-kpi-scheduled");
+    expect(card).toHaveAttribute("aria-busy", "false");
+    expect(card).toHaveTextContent("0");
   });
 
   it("shows empty placeholders when stats are zeroed out", () => {

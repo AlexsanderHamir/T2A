@@ -23,6 +23,7 @@ function statsWithRunner(runner: TaskStatsResponse["runner"]): TaskStatsResponse
     total: 0,
     ready: 0,
     critical: 0,
+    scheduled: 0,
     by_status: {},
     by_priority: {},
     by_scope: { parent: 0, subtask: 0 },

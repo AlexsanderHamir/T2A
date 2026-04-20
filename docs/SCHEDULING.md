@@ -384,3 +384,36 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   silently to `""` so the effective-config log line never breaks
   because a transient DB blip happened to coincide with a
   Reload.
+
+- **2026-04-19 — [Stage 6] — `parseTaskStatsResponse` defaults
+  the new `scheduled` field to `0` when the server omits the key,
+  rather than throwing.**
+  Rationale: the wire-shape contract test on the Go side
+  guarantees the field is always present going forward, but the
+  defaulting branch covers the rollback path where an older
+  backend ships next to a newer SPA (deployment skew). Throwing
+  on an absent key would force the SPA to render the entire
+  Observability page as an error banner during such a window,
+  which is much worse than briefly under-counting deferred
+  tasks. The "0" default is exactly what an empty database
+  would emit, so the user-visible behaviour matches "no work
+  scheduled" — never a silent lie. The
+  `defaults scheduled to 0 when omitted` parser test pins this
+  behaviour so a future stricter validator can't quietly remove
+  it without also touching the deployment story.
+
+- **2026-04-19 — [Stage 6] — Scheduled (deferred) KPI placed
+  immediately after Ready, ahead of Critical, on the
+  Observability overview grid.**
+  Rationale: the plan's wording was "between Ready and In flight"
+  but the live grid orders the in-flight KPIs (Running / Blocked /
+  In review) BEFORE Ready (which sits next to Critical at the end
+  of the row, by the existing convention that "actionable now"
+  comes last). Inserting the new card directly after Ready keeps
+  it visually adjacent to the count it qualifies — the operator's
+  natural eye-flow is "Ready=5, Scheduled=12" → "the agent has 5
+  things to do now and 12 queued for later", which is exactly the
+  mental model the new card needs to teach. Going strictly
+  literal on "between Ready and In flight" would have meant
+  splitting the in-flight cluster (Running away from Blocked /
+  Review), an unrelated regression.

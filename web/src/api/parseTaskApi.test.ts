@@ -213,6 +213,7 @@ describe("parseTaskStatsResponse", () => {
         total: 22,
         ready: 7,
         critical: 2,
+        scheduled: 3,
         by_status: { ready: 7, running: 5 },
         by_priority: { critical: 2, high: 4 },
         by_scope: { parent: 10, subtask: 12 },
@@ -222,11 +223,41 @@ describe("parseTaskStatsResponse", () => {
       total: 22,
       ready: 7,
       critical: 2,
+      scheduled: 3,
       by_status: { ready: 7, running: 5 },
       by_priority: { critical: 2, high: 4 },
       by_scope: { parent: 10, subtask: 12 },
       ...emptyExtras,
     });
+  });
+
+  it("defaults scheduled to 0 when omitted (back-compat with pre-Stage-6 backends)", () => {
+    const got = parseTaskStatsResponse({
+      total: 1,
+      ready: 1,
+      critical: 0,
+      // scheduled key intentionally absent — older backend
+      by_status: { ready: 1 },
+      by_priority: {},
+      by_scope: { parent: 1, subtask: 0 },
+      ...emptyExtras,
+    });
+    expect(got.scheduled).toBe(0);
+  });
+
+  it("rejects scheduled when present-but-non-numeric", () => {
+    expect(() =>
+      parseTaskStatsResponse({
+        total: 1,
+        ready: 1,
+        critical: 0,
+        scheduled: "3",
+        by_status: { ready: 1 },
+        by_priority: {},
+        by_scope: { parent: 1, subtask: 0 },
+        ...emptyExtras,
+      }),
+    ).toThrow(/scheduled/);
   });
 
   it("rejects invalid stats payload", () => {

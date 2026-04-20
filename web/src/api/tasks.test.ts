@@ -189,6 +189,9 @@ describe("getTaskStats", () => {
       total: 10,
       ready: 3,
       critical: 1,
+      // Stage 6: parser projects scheduled=0 when the wire payload
+      // omits the key (covers the older-backend rollback path).
+      scheduled: 0,
       by_status: { ready: 3, running: 4, done: 3 },
       by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
       by_scope: { parent: 6, subtask: 4 },
