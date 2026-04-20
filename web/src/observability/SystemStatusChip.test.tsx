@@ -226,14 +226,13 @@ describe("SystemStatusChip", () => {
     expect(chip).toHaveTextContent(/Reconnecting/i);
   });
 
-  it("links to /observability so a click jumps to the explanation pane", () => {
+  it("is a status region, not a link (Observability lives in primary nav)", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       () => new Promise<Response>(() => {}),
     );
     renderChip(true);
-    expect(screen.getByTestId("system-status-chip")).toHaveAttribute(
-      "href",
-      "/observability",
-    );
+    const chip = screen.getByTestId("system-status-chip");
+    expect(chip).toHaveAttribute("role", "status");
+    expect(chip).not.toHaveAttribute("href");
   });
 });

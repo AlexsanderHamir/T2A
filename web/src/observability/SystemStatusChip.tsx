@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useSystemHealth } from "./useSystemHealth";
 import { summarize } from "./systemHealthViewModel";
 
@@ -34,8 +33,9 @@ type Props = {
  *     same chip keeps the operator's attention on a single surface.
  *
  * Precedence: paused > degraded > ok > unknown (centralised in
- * `summarize`). The chip is a Link to /observability so a click takes
- * the operator straight to the pane that explains the current label.
+ * `summarize`). The chip is **not** a link: it reads like live
+ * connection/health state, so navigating on click felt like a trap.
+ * Use the header **Observability** nav item for that page.
  */
 export function SystemStatusChip({ connected }: Props) {
   const { health, loading } = useSystemHealth();
@@ -48,8 +48,8 @@ export function SystemStatusChip({ connected }: Props) {
   const ariaLabel = `Status: ${label}. ${summary.caption}. Updates: ${live}.`;
 
   return (
-    <Link
-      to="/observability"
+    <div
+      role="status"
       className="system-status-chip"
       aria-label={ariaLabel}
       title={`${label} — ${summary.caption}`}
@@ -62,7 +62,7 @@ export function SystemStatusChip({ connected }: Props) {
         <span className="system-status-chip-text">{label}</span>
         <span className={`stream-pill ${pillClass}`}>{live}</span>
       </span>
-    </Link>
+    </div>
   );
 }
 

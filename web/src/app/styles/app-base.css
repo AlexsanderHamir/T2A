@@ -576,22 +576,12 @@ textarea::placeholder {
 
 /* Composed system-status chip used in the app header. Wraps the same
    stream-dot + stream-pill primitives as StreamStatusHint so the
-   visual language stays consistent, but adds a label that reflects
-   the system-health summary (paused / degraded / ok) and turns the
-   whole surface into a Link to /observability. */
+   visual language stays consistent, plus a label from system health.
+   Not a link — use the Observability nav item for that page. */
 .system-status-chip {
   margin-left: auto;
-  text-decoration: none;
   color: inherit;
   border-radius: var(--radius-full);
-  outline-offset: 2px;
-}
-.system-status-chip:focus-visible {
-  outline: 2px solid var(--brand);
-}
-.system-status-chip:hover .system-status-chip-text {
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 .system-status-chip-main {
   display: inline-flex;
