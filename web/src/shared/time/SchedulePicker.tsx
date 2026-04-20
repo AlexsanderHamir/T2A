@@ -47,8 +47,10 @@ type Props = {
 
 /**
  * SchedulePicker — operator-facing UI for the `pickup_not_before`
- * field. Composes a native `<input type="datetime-local">` with five
- * quick-pick chips so the common cases require zero typing:
+ * field. Composes a native `<input type="datetime-local">` wrapped in
+ * a Stripe-style composed field (calendar icon leading + inline clear
+ * trailing) with four quick-pick chips so the common cases require
+ * zero typing:
  *
  *  - **In 1 hour**: now + 60 minutes (timezone-agnostic).
  *  - **Tonight 9 PM**: today 21:00 in `appTimezone`. If 21:00 already
@@ -59,7 +61,12 @@ type Props = {
  *    at 09:00 in `appTimezone`. If today is Monday before 09:00 we
  *    still go to next week — operators typing "Next Monday" almost
  *    never mean "later today even though today is Monday".
- *  - **Clear**: emits `null`.
+ *
+ * A fifth "clear" affordance lives inside the field as a trailing
+ * icon button (no testid drift: still `schedule-picker-clear`) that
+ * only animates in when a value is set, so the field feels like a
+ * single cohesive control rather than a row of chips plus a separate
+ * destructive button.
  *
  * The native input shows naive local time (no zone suffix). The
  * caption beneath ("Agent will pick up at 2026-04-22 09:00 EDT") is
@@ -68,6 +75,14 @@ type Props = {
  * actually scheduled. This is the standard fix for the "I picked
  * 9 AM but it stored 9 AM UTC" trap that bites every native
  * datetime-local UI: we never let the browser guess a zone.
+ *
+ * Quick-pick chips also report an "active" state (highlighted in
+ * brand color) when the current value matches what the chip *would*
+ * produce now — within a 2-minute tolerance for the relative
+ * "In 1 hour" chip, exact-match for the wall-clock chips. Operators
+ * get immediate visual feedback ("yes, you just picked Tonight")
+ * without us having to track per-click state that wouldn't survive a
+ * modal remount.
  *
  * Wire contract: emits an RFC3339 UTC ISO string for any concrete
  * pick, or `null` for "no schedule". Parents serialize this
@@ -104,6 +119,36 @@ export function SchedulePicker({
 
   const now = nowMs ?? Date.now();
 
+  // Active-chip detection: re-run each quick-pick against `now` and
+  // compare to `value`. Wall-clock picks ("Tonight 9 PM", "Tomorrow
+  // 9 AM", "Next Monday 9 AM") produce stable target ISOs within the
+  // same calendar day, so they hit an exact-millisecond match after
+  // a click. The relative "In 1 hour" target drifts by the wall-clock
+  // render delta, so we allow a 2-minute tolerance — wide enough to
+  // cover any plausible re-render gap, narrow enough to never
+  // accidentally match an unrelated wall-clock pick sitting one hour
+  // away (wall-clock picks are always ≥ 8h from "in 1 hour" in a
+  // normal workflow).
+  const activeKind = useMemo<Exclude<QuickPickKind, "clear"> | null>(() => {
+    if (!value) return null;
+    const valueMs = Date.parse(value);
+    if (Number.isNaN(valueMs)) return null;
+    const kinds: Exclude<QuickPickKind, "clear">[] = [
+      "in_1h",
+      "tonight_9pm",
+      "tomorrow_9am",
+      "next_monday_9am",
+    ];
+    for (const k of kinds) {
+      const iso = computeQuickPickIso(k, now, appTimezone);
+      if (!iso) continue;
+      const targetMs = Date.parse(iso);
+      if (Number.isNaN(targetMs)) continue;
+      if (Math.abs(targetMs - valueMs) <= 120_000) return k;
+    }
+    return null;
+  }, [value, now, appTimezone]);
+
   const handleInputChange = (raw: string) => {
     if (!raw) {
       onChange(null);
@@ -124,6 +169,8 @@ export function SchedulePicker({
     onChange(iso);
   };
 
+  const hasValue = value !== null;
+
   return (
     <fieldset
       className="schedule-picker"
@@ -133,64 +180,141 @@ export function SchedulePicker({
       <legend id={legendId} className="schedule-picker-legend">
         Schedule for
       </legend>
-      <div className="schedule-picker-row">
-        <input
-          id={inputId}
-          type="datetime-local"
-          className="schedule-picker-input"
-          value={inputValue}
-          onChange={(e) => handleInputChange(e.target.value)}
-          aria-describedby={captionId}
-          data-testid="schedule-picker-input"
-        />
+      <div className="schedule-picker-well" data-scheduled={hasValue ? "true" : "false"}>
+        <div className="schedule-picker-field">
+          <span className="schedule-picker-field-icon" aria-hidden="true">
+            <CalendarGlyph />
+          </span>
+          <input
+            id={inputId}
+            type="datetime-local"
+            className="schedule-picker-input"
+            value={inputValue}
+            onChange={(e) => handleInputChange(e.target.value)}
+            aria-describedby={captionId}
+            data-testid="schedule-picker-input"
+          />
+          <button
+            type="button"
+            className="schedule-picker-clear-icon"
+            onClick={() => handleQuickPick("clear")}
+            data-testid="schedule-picker-clear"
+            aria-label="Clear schedule"
+            aria-disabled={!hasValue}
+            tabIndex={hasValue ? 0 : -1}
+          >
+            <ClearGlyph />
+          </button>
+        </div>
+        <div className="schedule-picker-quick">
+          <span className="schedule-picker-quick-label">Quick picks</span>
+          <div
+            className="schedule-picker-chips"
+            role="group"
+            aria-label="Schedule quick picks"
+          >
+            <QuickChip
+              testId="schedule-picker-in-1h"
+              active={activeKind === "in_1h"}
+              onClick={() => handleQuickPick("in_1h")}
+            >
+              In 1 hour
+            </QuickChip>
+            <QuickChip
+              testId="schedule-picker-tonight"
+              active={activeKind === "tonight_9pm"}
+              onClick={() => handleQuickPick("tonight_9pm")}
+            >
+              Tonight 9 PM
+            </QuickChip>
+            <QuickChip
+              testId="schedule-picker-tomorrow"
+              active={activeKind === "tomorrow_9am"}
+              onClick={() => handleQuickPick("tomorrow_9am")}
+            >
+              Tomorrow 9 AM
+            </QuickChip>
+            <QuickChip
+              testId="schedule-picker-next-monday"
+              active={activeKind === "next_monday_9am"}
+              onClick={() => handleQuickPick("next_monday_9am")}
+            >
+              Next Monday 9 AM
+            </QuickChip>
+          </div>
+        </div>
+        <p
+          id={captionId}
+          className="schedule-picker-caption"
+          data-scheduled={hasValue ? "true" : "false"}
+        >
+          <span className="schedule-picker-status-dot" aria-hidden="true" />
+          <span>{caption}</span>
+        </p>
       </div>
-      <div className="schedule-picker-chips" role="group" aria-label="Quick picks">
-        <button
-          type="button"
-          className="schedule-picker-chip"
-          onClick={() => handleQuickPick("in_1h")}
-          data-testid="schedule-picker-in-1h"
-        >
-          In 1 hour
-        </button>
-        <button
-          type="button"
-          className="schedule-picker-chip"
-          onClick={() => handleQuickPick("tonight_9pm")}
-          data-testid="schedule-picker-tonight"
-        >
-          Tonight 9 PM
-        </button>
-        <button
-          type="button"
-          className="schedule-picker-chip"
-          onClick={() => handleQuickPick("tomorrow_9am")}
-          data-testid="schedule-picker-tomorrow"
-        >
-          Tomorrow 9 AM
-        </button>
-        <button
-          type="button"
-          className="schedule-picker-chip"
-          onClick={() => handleQuickPick("next_monday_9am")}
-          data-testid="schedule-picker-next-monday"
-        >
-          Next Monday 9 AM
-        </button>
-        <button
-          type="button"
-          className="schedule-picker-chip schedule-picker-chip--clear"
-          onClick={() => handleQuickPick("clear")}
-          data-testid="schedule-picker-clear"
-          aria-disabled={value === null}
-        >
-          Clear
-        </button>
-      </div>
-      <p id={captionId} className="schedule-picker-caption muted">
-        {caption}
-      </p>
     </fieldset>
+  );
+}
+
+type QuickChipProps = {
+  testId: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+};
+
+function QuickChip({ testId, active, onClick, children }: QuickChipProps) {
+  return (
+    <button
+      type="button"
+      className="schedule-picker-chip"
+      data-testid={testId}
+      data-active={active ? "true" : "false"}
+      aria-pressed={active}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CalendarGlyph() {
+  // 16x16 calendar. Stroke-only, `currentColor` so the icon follows
+  // the field's text color and respects dark-mode inversion without a
+  // separate icon asset.
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2.25" y="3.5" width="11.5" height="10.25" rx="2" />
+      <path d="M2.25 6.5h11.5" />
+      <path d="M5.5 2v3" />
+      <path d="M10.5 2v3" />
+    </svg>
+  );
+}
+
+function ClearGlyph() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    >
+      <path d="M3 3l6 6" />
+      <path d="M9 3l-6 6" />
+    </svg>
   );
 }
 
