@@ -164,7 +164,7 @@ export function summarize(
   if (!health) {
     return {
       level: "unknown",
-      caption: loading ? "Loading system snapshot…" : "System snapshot unavailable.",
+      caption: loading ? "Loading status…" : "Status unavailable.",
     };
   }
   if (health.agent.paused) {

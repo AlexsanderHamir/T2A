@@ -118,14 +118,11 @@ describe("useTaskEventStream", () => {
     }
   });
 
-  it("invalidates the home-page KPI stats cache on task/cycle frames so Ready/Critical counts stay live", () => {
-    // Regression: the home-page KPI cards (Total / Ready / Critical) are
-    // backed by a separate ["task-stats"] query that lives outside the
-    // taskQueryKeys tree. SSE used to invalidate only listRoot + detail,
-    // so a worker-driven `running → done` transition refreshed the row
-    // in the table but left "Ready tasks: 1" frozen until a manual
-    // mutation or a hard refresh — exactly the staleness the user
-    // reported on the main page.
+  it("invalidates the task-stats query on task/cycle frames", () => {
+    // Regression: ["task-stats"] lives outside the taskQueryKeys tree.
+    // SSE used to invalidate only listRoot + detail, so list rows updated
+    // but aggregated stats stayed frozen until a manual mutation or hard
+    // refresh.
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");
 
@@ -392,7 +389,7 @@ describe("useTaskEventStream", () => {
     // cached query and refetch from REST — no debounce, no
     // coalescing, because we just demonstrated we can't trust the
     // delta stream. Pinning broad invalidation across all three
-    // cache slots (tasks tree, home-page KPI stats, settings)
+    // cache slots (tasks tree, task-stats, settings)
     // guards against a future "optimisation" that would handle
     // resync as a regular settings frame and silently leave the
     // task tree stale.

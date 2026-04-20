@@ -75,7 +75,7 @@ describe("SystemStatusChip", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows 'System unknown' while the health snapshot is still pending", () => {
+  it("shows 'Connected' while health is pending and SSE is live", () => {
     // Block fetch by never resolving so the query stays in pending.
     vi.spyOn(globalThis, "fetch").mockImplementation(
       () => new Promise<Response>(() => {}),
@@ -83,7 +83,54 @@ describe("SystemStatusChip", () => {
     renderChip(true);
     const chip = screen.getByTestId("system-status-chip");
     expect(chip).toHaveAttribute("data-level", "unknown");
-    expect(chip).toHaveTextContent(/System unknown/i);
+    expect(chip).toHaveTextContent(/Connected/i);
+  });
+
+  it("shows 'Connected' when health fetch failed but SSE is live", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const u = requestUrl(input as RequestInfo | URL);
+      if (u.endsWith("/system/health")) {
+        return new Response("boom", { status: 500 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    renderChip(true);
+    const chip = await screen.findByTestId("system-status-chip");
+    await waitFor(() => {
+      expect(chip).toHaveAttribute("data-level", "unknown");
+    });
+    expect(chip).toHaveAttribute("data-sse", "live");
+    const main = chip.querySelector(".system-status-chip-text");
+    expect(main).toHaveTextContent("Connected");
+  });
+
+  it("shows 'Status unavailable' when health fetch failed and SSE is down", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const u = requestUrl(input as RequestInfo | URL);
+      if (u.endsWith("/system/health")) {
+        return new Response("boom", { status: 500 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    renderChip(false);
+    const chip = await screen.findByTestId("system-status-chip");
+    await waitFor(() => {
+      expect(chip).toHaveAttribute("data-level", "unknown");
+    });
+    expect(chip).toHaveAttribute("data-sse", "down");
+    const main = chip.querySelector(".system-status-chip-text");
+    expect(main).toHaveTextContent("Status unavailable");
+  });
+
+  it("shows 'Connecting…' while health is pending and SSE is down", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () => new Promise<Response>(() => {}),
+    );
+    renderChip(false);
+    const chip = screen.getByTestId("system-status-chip");
+    expect(chip).toHaveAttribute("data-level", "unknown");
+    const main = chip.querySelector(".system-status-chip-text");
+    expect(main).toHaveTextContent("Connecting…");
   });
 
   it("renders OK with a live SSE dot when the snapshot is healthy and SSE is connected", async () => {
@@ -95,7 +142,7 @@ describe("SystemStatusChip", () => {
       expect(chip).toHaveAttribute("data-level", "ok");
     });
     expect(chip).toHaveAttribute("data-sse", "live");
-    expect(chip).toHaveTextContent(/System OK/i);
+    expect(chip).toHaveTextContent(/Healthy/i);
     expect(chip).toHaveTextContent(/Live updates/i);
   });
 

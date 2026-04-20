@@ -36,7 +36,7 @@ describe("ObservabilitySystem", () => {
     const { container } = render(
       <ObservabilitySystem health={undefined} loading={true} />,
     );
-    expect(screen.getByText("Loading system snapshot…")).toBeInTheDocument();
+    expect(screen.getByText("Loading status…")).toBeInTheDocument();
     // KPI grid renders with skeletons; the `aria-busy` attribute on the
     // KpiCard root is the documented signal for loading.
     const busyCards = container.querySelectorAll('[aria-busy="true"]');
@@ -45,7 +45,7 @@ describe("ObservabilitySystem", () => {
 
   it("renders the unavailable state when the snapshot fetch settled to null", () => {
     render(<ObservabilitySystem health={null} loading={false} />);
-    expect(screen.getByText("System snapshot unavailable.")).toBeInTheDocument();
+    expect(screen.getByText("Status unavailable.")).toBeInTheDocument();
     // Each KPI value collapses to "—" so the layout doesn't shift.
     const dashes = screen.getAllByText("—");
     expect(dashes.length).toBeGreaterThanOrEqual(6);

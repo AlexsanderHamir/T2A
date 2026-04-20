@@ -128,7 +128,7 @@ describe("ObservabilityPage", () => {
     });
     expect(screen.getByText("Breakdown unavailable")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("System snapshot unavailable.")).toBeInTheDocument();
+      expect(screen.getByText("Status unavailable.")).toBeInTheDocument();
     });
   });
 });

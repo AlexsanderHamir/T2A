@@ -1,10 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { useTasksApp } from "../hooks/useTasksApp";
-import type { TaskStatsResponse } from "@/types/task";
 import { TaskHome } from "./TaskHome";
 
 vi.mock("../components/task-list", () => ({
@@ -58,28 +57,7 @@ function makeApp(overrides: Partial<App> = {}): App {
   } as unknown as App;
 }
 
-function statsFixture(overrides: Partial<TaskStatsResponse> = {}): TaskStatsResponse {
-  return {
-    total: 12,
-    ready: 4,
-    critical: 2,
-    by_status: { ready: 4 },
-    by_priority: { critical: 2 },
-    by_scope: { parent: 7, subtask: 5 },
-    ...overrides,
-  } as TaskStatsResponse;
-}
-
 function renderHome(app: App) {
-  // TaskHome reads the operator's display timezone via
-  // `useAppTimezone()` (which goes through `useAppSettings` →
-  // `useQueryClient`) so the SchedulePicker inside the create modal
-  // can render its caption in the right zone. The KPI tests don't
-  // care about the value — they just need a QueryClient context to
-  // exist so the hook resolves to its "UTC" fallback. Wrapping with
-  // a fresh QueryClient per render keeps these tests isolated from
-  // each other and from real network IO (no `queryFn` ever runs
-  // here because we mock the create modal away in this file).
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -92,106 +70,12 @@ function renderHome(app: App) {
   );
 }
 
-describe("TaskHome KPI cards", () => {
-  it("shows skeleton placeholders while taskStats is loading on first fetch", () => {
-    renderHome(makeApp({ taskStats: undefined, taskStatsLoading: true }));
+describe("TaskHome", () => {
+  it("renders the task list without KPI stats cards", () => {
+    renderHome(makeApp());
 
-    const overview = screen.getByLabelText("Task overview");
-    const cards = within(overview).getAllByRole("article");
-    expect(cards).toHaveLength(3);
-    cards.forEach((card) => {
-      expect(card).toHaveAttribute("aria-busy", "true");
-    });
-
-    expect(within(overview).getByText("Loading Total tasks")).toBeInTheDocument();
-    expect(within(overview).getByText("Loading Ready tasks")).toBeInTheDocument();
-    expect(within(overview).getByText("Loading Critical tasks")).toBeInTheDocument();
-    expect(within(overview).getByText("Loading breakdown…")).toBeInTheDocument();
-
-    expect(within(overview).queryByText("12")).not.toBeInTheDocument();
-  });
-
-  it("shows real stats values once the query resolves", () => {
-    renderHome(
-      makeApp({
-        taskStats: statsFixture(),
-        taskStatsLoading: false,
-      }),
-    );
-
-    const overview = screen.getByLabelText("Task overview");
-    const cards = within(overview).getAllByRole("article");
-    cards.forEach((card) => {
-      expect(card).toHaveAttribute("aria-busy", "false");
-    });
-
-    expect(within(overview).getByText("12")).toBeInTheDocument();
-    expect(within(overview).getByText("4")).toBeInTheDocument();
-    expect(within(overview).getByText("2")).toBeInTheDocument();
-    expect(within(overview).getByText("7 parent • 5 subtasks")).toBeInTheDocument();
-    // The Critical card's meta copy must describe the *priority bucket*
-    // (how many tasks carry priority=critical), not a user-action
-    // signal. Pin "critical priority" so nobody quietly reverts it to
-    // "needs attention" — that phrasing conflated the count with the
-    // Needs-user rail and made operators open critical tasks
-    // expecting a ready-for-me action item. Also assert the old copy
-    // is gone so the regression is impossible to miss.
-    expect(within(overview).getByText("critical priority")).toBeInTheDocument();
-    expect(within(overview).queryByText("needs attention")).not.toBeInTheDocument();
-  });
-
-  it("uses singular subtask noun when by_scope.subtask is 1", () => {
-    renderHome(
-      makeApp({
-        taskStats: statsFixture({
-          by_scope: { parent: 3, subtask: 1 },
-        }),
-        taskStatsLoading: false,
-      }),
-    );
-
-    const overview = screen.getByLabelText("Task overview");
-    expect(within(overview).getByText("3 parent • 1 subtask")).toBeInTheDocument();
-  });
-
-  it("shows '—' with an unavailable hint when stats settled to null", () => {
-    renderHome(
-      makeApp({
-        taskStats: null as unknown as TaskStatsResponse,
-        taskStatsLoading: false,
-      }),
-    );
-
-    const overview = screen.getByLabelText("Task overview");
-    const cards = within(overview).getAllByRole("article");
-    cards.forEach((card) => {
-      expect(card).toHaveAttribute("aria-busy", "false");
-    });
-
-    const dashes = within(overview).getAllByText("—");
-    expect(dashes).toHaveLength(3);
-    expect(within(overview).getByLabelText("Total tasks unavailable")).toBeInTheDocument();
-    expect(within(overview).getByLabelText("Ready tasks unavailable")).toBeInTheDocument();
-    expect(within(overview).getByLabelText("Critical tasks unavailable")).toBeInTheDocument();
-    expect(within(overview).getByText("Breakdown unavailable")).toBeInTheDocument();
-  });
-
-  it("does NOT fall back to client-paged tasks for KPI numerals", () => {
-    renderHome(
-      makeApp({
-        taskStats: undefined,
-        taskStatsLoading: true,
-        tasks: [
-          { id: "a", title: "a", status: "ready", priority: "critical" },
-          { id: "b", title: "b", status: "ready", priority: "low" },
-          { id: "c", title: "c", status: "blocked", priority: "low" },
-        ] as unknown as App["tasks"],
-      }),
-    );
-
-    const overview = screen.getByLabelText("Task overview");
-    expect(within(overview).queryByText("3")).not.toBeInTheDocument();
-    expect(within(overview).queryByText("2")).not.toBeInTheDocument();
-    expect(within(overview).queryByText("1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("task-list-section")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Task overview")).not.toBeInTheDocument();
+    expect(screen.queryByText(/total tasks/i)).not.toBeInTheDocument();
   });
 });

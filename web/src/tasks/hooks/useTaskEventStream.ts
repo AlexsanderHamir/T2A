@@ -82,12 +82,10 @@ export function useTaskEventStream(): boolean {
     clearPending(pendingRef.current);
     if (taskIds.length === 0 && cycleEntries.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      // Home-page KPI cards (Total / Ready / Critical) read a separate
-      // ["task-stats"] query keyed outside taskQueryKeys.all, so the
-      // broad task fallback above does not touch them. Without this
-      // companion invalidation the cards stay frozen on their
-      // pre-event values until the next manual mutation or page
-      // refresh — exactly the staleness we just fixed for the list.
+      // `["task-stats"]` (shared with Observability) is keyed outside
+      // taskQueryKeys.all, so the broad task fallback above does not
+      // touch it. Without this companion invalidation, aggregated counts
+      // stay stale until the next manual mutation or page refresh.
       void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       return;
     }
