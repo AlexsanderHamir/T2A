@@ -11,6 +11,7 @@ import {
   TaskDetailChecklistSection,
   TaskDetailHeader,
   TaskDetailPromptSection,
+  TaskDetailSchedule,
   TaskDetailSubtasksHead,
   TaskDetailUpdatesSection,
 } from "../components/task-detail";
@@ -187,6 +188,8 @@ export function TaskDetailPage({ app }: Props) {
           )}
         </p>
       ) : null}
+
+      <TaskDetailSchedule task={task} />
 
       <div className="task-detail-section" id="task-detail-subtasks">
         <TaskDetailSubtasksHead
