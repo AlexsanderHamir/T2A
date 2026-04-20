@@ -3,6 +3,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { useTaskPatchFlow, type TaskPatchInput } from "./useTaskPatchFlow";
+import { taskQueryKeys } from "../task-query";
+import { ToastProvider } from "@/shared/toast";
+import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import type { Task, TaskListResponse } from "@/types";
 
 vi.mock("../../api", () => ({
   patchTask: vi.fn(),
@@ -23,11 +27,26 @@ function makeWrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
     );
   }
   return { Wrapper, queryClient, invalidateSpy };
+}
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: "t1",
+    title: "Original title",
+    initial_prompt: "<p>orig</p>",
+    status: "ready",
+    priority: "low",
+    task_type: "general",
+    runner: "cursor",
+    cursor_model: "",
+    checklist_inherit: false,
+    ...overrides,
+  };
 }
 
 const baseInput: TaskPatchInput = {
@@ -43,8 +62,10 @@ const baseInput: TaskPatchInput = {
 describe("useTaskPatchFlow", () => {
   beforeEach(() => {
     mockedPatch.mockReset();
+    __resetOptimisticVersionsForTests();
   });
   afterEach(() => {
+    __resetOptimisticVersionsForTests();
     vi.restoreAllMocks();
   });
 
@@ -224,5 +245,142 @@ describe("useTaskPatchFlow", () => {
       expect(onPatched).toHaveBeenCalledWith("beta");
     });
     expect(onPatched).toHaveBeenCalledTimes(2);
+  });
+
+  // Optimistic apply contract: between click and server confirmation
+  // the detail cache reflects the patched fields immediately. Without
+  // this the user clicks "Save", waits 200ms+, then sees the change.
+  // Pin: at the moment the mutation is in flight (server hasn't
+  // resolved yet) getQueryData(detail) MUST already show new values.
+  it("optimistically writes the patch into the detail cache before the server resolves", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedPatch.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof patchTask>,
+    );
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData<Task>(taskQueryKeys.detail("t1"), makeTask());
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask(baseInput);
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(true);
+    });
+    const cached = queryClient.getQueryData<Task>(taskQueryKeys.detail("t1"));
+    expect(cached?.title).toBe("New title");
+    expect(cached?.priority).toBe("medium");
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(false);
+    });
+  });
+
+  // Optimistic list write: list rows show the new values immediately.
+  // The walk must reach into nested children so a subtask edit
+  // updates the row inside its parent's children array; otherwise
+  // the optimistic effect is invisible on the home page tree view.
+  it("optimistically patches a nested subtask in cached list data", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedPatch.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof patchTask>,
+    );
+    const { Wrapper, queryClient } = makeWrapper();
+    const parent = makeTask({ id: "parent" });
+    const child = makeTask({ id: "t1", parent_id: "parent", title: "old child" });
+    parent.children = [child];
+    const list: TaskListResponse = {
+      tasks: [parent],
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    };
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask(baseInput);
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(true);
+    });
+    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    expect(cached?.tasks[0]?.children?.[0]?.title).toBe("New title");
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(false);
+    });
+  });
+
+  // Rollback contract: on server error the cache MUST snap back to
+  // the pre-mutation snapshot. Without this the user sees their
+  // failed edit linger as if it succeeded — exactly the false-success
+  // experience optimistic UI is supposed to avoid.
+  it("rolls the detail cache back to the snapshot on server error", async () => {
+    mockedPatch.mockRejectedValueOnce(new Error("save failed"));
+    const { Wrapper, queryClient } = makeWrapper();
+    const original = makeTask();
+    queryClient.setQueryData<Task>(taskQueryKeys.detail("t1"), original);
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask(baseInput);
+    });
+    await waitFor(() => {
+      expect(result.current.patchError).toBe("save failed");
+    });
+    const restored = queryClient.getQueryData<Task>(taskQueryKeys.detail("t1"));
+    expect(restored).toEqual(original);
+  });
+
+  // SSE-suppression contract: while a patch is in flight the
+  // optimistic-version counter is bumped so concurrent SSE echoes
+  // for the same task id are suppressed (otherwise the echo would
+  // race the optimistic apply and yank the row back to its
+  // server-truth value mid-edit).
+  it("bumps the optimistic-version counter so SSE echoes are suppressed in flight", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockedPatch.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }) as unknown as ReturnType<typeof patchTask>,
+    );
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask(baseInput);
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(true);
+    });
+    expect(shouldSuppressSSEFor("t1")).toBe(true);
+    expect(shouldSuppressSSEFor("other-task")).toBe(false);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.patchPending).toBe(false);
+    });
+    // After settled, the version is cleared so the *next* SSE echo
+    // is no longer suppressed (server truth re-converges via the
+    // mutation's onSuccess invalidation).
+    expect(shouldSuppressSSEFor("t1")).toBe(false);
   });
 });

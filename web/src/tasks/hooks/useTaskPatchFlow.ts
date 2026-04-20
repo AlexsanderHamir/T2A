@@ -3,7 +3,18 @@ import { useCallback } from "react";
 import { patchTask as patchTaskApi } from "../../api";
 import { errorMessage } from "@/lib/errorMessage";
 import { taskQueryKeys } from "../task-query";
-import type { Priority, Status, TaskType } from "@/types";
+import {
+  rumMutationOptimisticApplied,
+  rumMutationRolledBack,
+  rumMutationSettled,
+  rumMutationStarted,
+} from "@/observability";
+import { useOptionalToast } from "@/shared/toast";
+import type { Priority, Status, Task, TaskListResponse, TaskType } from "@/types";
+import {
+  bumpOptimisticVersion,
+  clearOptimisticVersion,
+} from "./optimisticVersion";
 
 export type TaskPatchInput = {
   id: string;
@@ -32,27 +43,77 @@ export type UseTaskPatchFlowResult = {
   resetError: () => void;
 };
 
+interface PatchSnapshot {
+  detail: Task | undefined;
+  /** Prior list query data keyed by the React Query key the snapshot
+   * was captured under. We restore each key on rollback so the cache
+   * comes back identically even if the user navigated pages. */
+  lists: Array<{ key: readonly unknown[]; data: TaskListResponse }>;
+  /** Click moment for RUM latency observations. */
+  startedAtMs: number;
+}
+
 /**
- * Owns the "save edits to a task" mutation that used to live inline in
- * `useTasksApp`. Pulled out for the same reasons as `useTaskDeleteFlow`:
- * the mutation, its query invalidations (list + per-task detail + stats),
- * and the `onPatched` cross-cut all belong together as one cohesive slice.
+ * Patch a task in the cached list tree, returning a new TaskListResponse
+ * if a matching task was found anywhere in the (possibly nested)
+ * children. Returns null when the task wasn't found so callers can
+ * skip writing back.
+ */
+function patchTaskInList(
+  list: TaskListResponse,
+  patch: TaskPatchInput,
+): TaskListResponse | null {
+  let changed = false;
+  function visit(tasks: Task[]): Task[] {
+    return tasks.map((t) => {
+      if (t.id === patch.id) {
+        changed = true;
+        return {
+          ...t,
+          title: patch.title,
+          initial_prompt: patch.initial_prompt,
+          status: patch.status,
+          priority: patch.priority,
+          task_type: patch.task_type,
+          checklist_inherit: patch.checklist_inherit,
+        };
+      }
+      if (t.children?.length) {
+        const next = visit(t.children);
+        if (next !== t.children) {
+          return { ...t, children: next };
+        }
+      }
+      return t;
+    });
+  }
+  const next = visit(list.tasks);
+  if (!changed) return null;
+  return { ...list, tasks: next };
+}
+
+/**
+ * Owns the "save edits to a task" mutation. Now applies optimistically:
+ * onMutate snapshots the detail + list cache, writes the merged patch
+ * into both, bumps the optimistic-version counter so concurrent SSE
+ * echoes can be suppressed, and records a RUM `mutation_started` +
+ * `mutation_optimistic_applied` event. onError restores the snapshots
+ * and surfaces a toast; onSettled invalidates so server truth
+ * re-converges and decrements the version counter.
  *
  * Cross-cutting concerns are wired through a single `onPatched(id)`
- * callback so the parent can clear its edit form *only when the resolving
- * patch matches the currently-edited task*. The previous inline version
- * cleared `editing` unconditionally, which would also drop a quickly-opened
- * second edit form if a stale first patch settled afterwards — the id
- * compare in the parent's `onPatched` handler closes that race.
+ * callback so the parent can clear its edit form *only when the
+ * resolving patch matches the currently-edited task*.
  */
 export function useTaskPatchFlow(opts: {
   onPatched?: (id: string) => void;
 } = {}): UseTaskPatchFlowResult {
   const queryClient = useQueryClient();
+  const toast = useOptionalToast();
   const { onPatched } = opts;
 
-  const mutation = useMutation({
-    mutationFn: (input: TaskPatchInput) =>
+  const mutation = useMutation<unknown, unknown, TaskPatchInput, PatchSnapshot>({
+    mutationFn: (input) =>
       patchTaskApi(input.id, {
         title: input.title,
         initial_prompt: input.initial_prompt,
@@ -61,11 +122,82 @@ export function useTaskPatchFlow(opts: {
         task_type: input.task_type,
         checklist_inherit: input.checklist_inherit,
       }),
-    onSuccess: async (_, variables) => {
+    onMutate: async (input) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("task_patch");
+      bumpOptimisticVersion(input.id);
+
+      // Cancel in-flight refetches so they can't overwrite our optimistic write.
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
+
+      const detailKey = taskQueryKeys.detail(input.id);
+      const detailPrev = queryClient.getQueryData<Task>(detailKey);
+      if (detailPrev) {
+        queryClient.setQueryData<Task>(detailKey, {
+          ...detailPrev,
+          title: input.title,
+          initial_prompt: input.initial_prompt,
+          status: input.status,
+          priority: input.priority,
+          task_type: input.task_type,
+          checklist_inherit: input.checklist_inherit,
+        });
+      }
+
+      const listSnapshots: PatchSnapshot["lists"] = [];
+      const listEntries = queryClient.getQueriesData<TaskListResponse>({
+        queryKey: taskQueryKeys.listRoot(),
+      });
+      for (const [key, data] of listEntries) {
+        if (!data) continue;
+        listSnapshots.push({ key, data });
+        const next = patchTaskInList(data, input);
+        if (next) {
+          queryClient.setQueryData<TaskListResponse>(key, next);
+        }
+      }
+
+      rumMutationOptimisticApplied("task_patch", performance.now() - startedAtMs);
+
+      return { detail: detailPrev, lists: listSnapshots, startedAtMs };
+    },
+    onError: (err, input, context) => {
+      if (context) {
+        if (context.detail) {
+          queryClient.setQueryData(taskQueryKeys.detail(input.id), context.detail);
+        }
+        for (const snap of context.lists) {
+          queryClient.setQueryData(snap.key, snap.data);
+        }
+        rumMutationRolledBack("task_patch", performance.now() - context.startedAtMs);
+      }
+      toast.error("Couldn't save - reverted.");
+      // Status code surfacing is best-effort; the patch flow funnels
+      // every non-network error through errorMessage(), so we treat
+      // it as 0 ("network/unknown") for the RUM bucket.
+      rumMutationSettled(
+        "task_patch",
+        context ? performance.now() - context.startedAtMs : 0,
+        0,
+      );
+      void err;
+    },
+    onSuccess: async (_, variables, context) => {
       const patchedId = variables.id;
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: ["task-stats"] });
       onPatched?.(patchedId);
+      if (context) {
+        rumMutationSettled(
+          "task_patch",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
+    },
+    onSettled: (_data, _err, variables) => {
+      clearOptimisticVersion(variables.id);
     },
   });
 

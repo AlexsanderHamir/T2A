@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseTaskChangeFrame, settingsQueryKeys, taskQueryKeys } from "../task-query";
+import { rumSSEReconnected, rumSSEResyncReceived } from "@/observability";
+import { shouldSuppressSSEFor } from "./optimisticVersion";
 
 /**
  * Coalesce window for trailing-debounced SSE invalidations. The agent
@@ -129,6 +131,15 @@ export function useTaskEventStream(): boolean {
       const frame = parseTaskChangeFrame(data);
       if (frame !== null) {
         if (frame.kind === "task") {
+          // Optimistic-mutation guard: if the SPA has an in-flight
+          // patch/delete on this task, the SSE echo would race the
+          // optimistic apply and yank the row back to its server-truth
+          // value mid-edit. Skip the echo; the mutation's onSettled
+          // will invalidate after the server confirms, so cache truth
+          // re-converges via the mutation path instead of the SSE path.
+          if (shouldSuppressSSEFor(frame.taskId)) {
+            return;
+          }
           pendingRef.current.tasks.add(frame.taskId);
         } else if (frame.kind === "cycle") {
           // The agent worker only emits cycle frames (it never calls
@@ -155,6 +166,7 @@ export function useTaskEventStream(): boolean {
           // docs/API-SSE.md (Phase 2 of the realtime smoothness
           // plan): better to over-refetch once than silently miss
           // an SSE frame and let the UI go stale.
+          rumSSEResyncReceived();
           if (sseDebounceRef.current !== undefined) {
             clearTimeout(sseDebounceRef.current);
             sseDebounceRef.current = undefined;
@@ -226,6 +238,15 @@ export function useTaskEventStream(): boolean {
   useEffect(() => {
     streamEffectActiveRef.current = true;
     const es = new EventSource("/events");
+    /** Click moment for the most recent disconnect; null when we are
+     * currently connected. The browser's EventSource auto-reconnect
+     * fires onopen again so we observe the reconnect gap by diffing
+     * onopen.now() against this ref. */
+    let disconnectedAt: number | null = null;
+    /** Tracks whether we have seen at least one onopen — the first
+     * open is the initial connect, not a reconnect, and shouldn't be
+     * counted in the RUM reconnect histogram. */
+    let hasOpenedOnce = false;
     const clearDisconnectUi = () => {
       if (disconnectUiRef.current !== undefined) {
         clearTimeout(disconnectUiRef.current);
@@ -237,12 +258,21 @@ export function useTaskEventStream(): boolean {
       if (!streamEffectActiveRef.current) {
         return;
       }
+      if (hasOpenedOnce && disconnectedAt !== null) {
+        const gapMs = Math.max(0, performance.now() - disconnectedAt);
+        rumSSEReconnected(gapMs);
+      }
+      hasOpenedOnce = true;
+      disconnectedAt = null;
       setSseLive(true);
     };
     es.onmessage = (ev) => {
       scheduleInvalidateFromStream(String(ev.data ?? ""));
     };
     es.onerror = () => {
+      if (disconnectedAt === null) {
+        disconnectedAt = performance.now();
+      }
       clearDisconnectUi();
       disconnectUiRef.current = setTimeout(() => {
         disconnectUiRef.current = undefined;
