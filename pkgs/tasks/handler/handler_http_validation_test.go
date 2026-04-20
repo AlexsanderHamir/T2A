@@ -22,6 +22,18 @@ func TestHTTP_create_rejects_unknown_field(t *testing.T) {
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d", res.StatusCode)
 	}
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out jsonErrorBody
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("decode: %v body=%s", err, b)
+	}
+	const want = `json: unknown field "nope"`
+	if out.Error != want {
+		t.Fatalf("error %q want %q (userFacingJSONError strips json decode: prefix)", out.Error, want)
+	}
 }
 
 func TestHTTP_list_bad_limit(t *testing.T) {
