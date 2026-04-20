@@ -13,6 +13,7 @@ import {
   type RUMMutationKind,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
+import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
 import type { TaskChecklistItemView, TaskChecklistResponse } from "@/types";
 
@@ -60,6 +61,7 @@ function recordRollback(
 
 export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient) {
   const toast = useOptionalToast();
+  const { optimisticMutationsEnabled } = useRolloutFlags();
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState("");
   const [editCriterionModalOpen, setEditCriterionModalOpen] = useState(false);
@@ -132,6 +134,14 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("checklist_add");
+      // Pessimistic path: skip the optimistic write entirely. The
+      // onSuccess invalidate-and-refetch path below is still in
+      // charge of surfacing the real new item once the server
+      // responds, so correctness is unchanged — just no "instant"
+      // render.
+      if (!optimisticMutationsEnabled) {
+        return { prev: undefined, startedAtMs };
+      }
       await queryClient.cancelQueries({
         queryKey: taskQueryKeys.checklist(taskId),
       });
@@ -155,8 +165,21 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     },
     onError: (_err, _vars, context) => {
       if (context) {
-        restoreChecklist(queryClient, taskId, context.prev);
-        recordRollback("checklist_add", context.startedAtMs);
+        // Only restore + count rollback when we actually wrote
+        // optimistic state. In the pessimistic branch `tempItemId`
+        // is undefined, which is our marker.
+        if (context.tempItemId !== undefined) {
+          restoreChecklist(queryClient, taskId, context.prev);
+          recordRollback("checklist_add", context.startedAtMs);
+        } else {
+          // Still emit a settled event so the RUM pipeline can
+          // close out the mutation_started that fired in onMutate.
+          rumMutationSettled(
+            "checklist_add",
+            performance.now() - context.startedAtMs,
+            0,
+          );
+        }
       }
       toast.error("Couldn't add criterion - reverted.");
     },
@@ -214,6 +237,9 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("checklist_edit");
+      if (!optimisticMutationsEnabled) {
+        return { prev: undefined, startedAtMs };
+      }
       await queryClient.cancelQueries({
         queryKey: taskQueryKeys.checklist(taskId),
       });
@@ -231,8 +257,16 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     },
     onError: (_err, _vars, context) => {
       if (context) {
-        restoreChecklist(queryClient, taskId, context.prev);
-        recordRollback("checklist_edit", context.startedAtMs);
+        if (context.prev !== undefined) {
+          restoreChecklist(queryClient, taskId, context.prev);
+          recordRollback("checklist_edit", context.startedAtMs);
+        } else {
+          rumMutationSettled(
+            "checklist_edit",
+            performance.now() - context.startedAtMs,
+            0,
+          );
+        }
       }
       toast.error("Couldn't update criterion - reverted.");
     },
@@ -288,6 +322,9 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     onMutate: async (itemId) => {
       const startedAtMs = performance.now();
       rumMutationStarted("checklist_delete");
+      if (!optimisticMutationsEnabled) {
+        return { prev: undefined, startedAtMs };
+      }
       await queryClient.cancelQueries({
         queryKey: taskQueryKeys.checklist(taskId),
       });
@@ -303,8 +340,16 @@ export function useTaskDetailChecklist(taskId: string, queryClient: QueryClient)
     },
     onError: (_err, _vars, context) => {
       if (context) {
-        restoreChecklist(queryClient, taskId, context.prev);
-        recordRollback("checklist_delete", context.startedAtMs);
+        if (context.prev !== undefined) {
+          restoreChecklist(queryClient, taskId, context.prev);
+          recordRollback("checklist_delete", context.startedAtMs);
+        } else {
+          rumMutationSettled(
+            "checklist_delete",
+            performance.now() - context.startedAtMs,
+            0,
+          );
+        }
       }
       toast.error("Couldn't delete criterion - reverted.");
     },

@@ -10,6 +10,7 @@ import {
   rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
+import { useRolloutFlags } from "@/settings";
 import type { Priority, Status, Task, TaskListResponse, TaskType } from "@/types";
 import {
   bumpOptimisticVersion,
@@ -110,6 +111,7 @@ export function useTaskPatchFlow(opts: {
 } = {}): UseTaskPatchFlowResult {
   const queryClient = useQueryClient();
   const toast = useOptionalToast();
+  const { optimisticMutationsEnabled } = useRolloutFlags();
   const { onPatched } = opts;
 
   const mutation = useMutation<unknown, unknown, TaskPatchInput, PatchSnapshot>({
@@ -125,6 +127,15 @@ export function useTaskPatchFlow(opts: {
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("task_patch");
+      // When the rollout flag is off, stay on the legacy pessimistic
+      // path: skip optimistic cache writes and version-bumping so an
+      // SSE echo from the server's own publish arrives through the
+      // normal invalidation path without any client-side suppression.
+      // Still return an empty snapshot so onError can no-op safely
+      // and RUM still records started/settled.
+      if (!optimisticMutationsEnabled) {
+        return { detail: undefined, lists: [], startedAtMs };
+      }
       bumpOptimisticVersion(input.id);
 
       // Cancel in-flight refetches so they can't overwrite our optimistic write.
@@ -163,6 +174,8 @@ export function useTaskPatchFlow(opts: {
       return { detail: detailPrev, lists: listSnapshots, startedAtMs };
     },
     onError: (err, input, context) => {
+      const rolledBackSomething =
+        !!context && (!!context.detail || context.lists.length > 0);
       if (context) {
         if (context.detail) {
           queryClient.setQueryData(taskQueryKeys.detail(input.id), context.detail);
@@ -170,8 +183,21 @@ export function useTaskPatchFlow(opts: {
         for (const snap of context.lists) {
           queryClient.setQueryData(snap.key, snap.data);
         }
-        rumMutationRolledBack("task_patch", performance.now() - context.startedAtMs);
+        // rolled_back is the numerator for slo_optimistic_rollback_rate;
+        // only increment it when we ACTUALLY rolled back client state.
+        // The pessimistic path returns an empty snapshot so nothing
+        // was ever applied and reporting a rollback here would
+        // inflate the SLI.
+        if (rolledBackSomething) {
+          rumMutationRolledBack(
+            "task_patch",
+            performance.now() - context.startedAtMs,
+          );
+        }
       }
+      // The user-facing copy stays "reverted" in both paths: even in
+      // the pessimistic branch nothing happened and "reverted" reads
+      // as "no change was saved," which is accurate.
       toast.error("Couldn't save - reverted.");
       // Status code surfacing is best-effort; the patch flow funnels
       // every non-network error through errorMessage(), so we treat

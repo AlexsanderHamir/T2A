@@ -33,6 +33,12 @@ type Patch struct {
 	// time.LoadLocation. Empty string is rejected; to "reset" the
 	// timezone, callers PATCH to "UTC" explicitly.
 	DisplayTimezone *string
+	// OptimisticMutationsEnabled / SSEReplayEnabled are the Phase 1 /
+	// Phase 2 rollout flags from
+	// .cursor/plans/production_realtime_smoothness_b17202b6.plan.md.
+	// See domain.AppSettings for the per-flag semantics.
+	OptimisticMutationsEnabled *bool
+	SSEReplayEnabled           *bool
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -49,7 +55,9 @@ func (p Patch) IsEmpty() bool {
 		p.CursorModel == nil &&
 		p.MaxRunDurationSeconds == nil &&
 		p.AgentPickupDelaySeconds == nil &&
-		p.DisplayTimezone == nil
+		p.DisplayTimezone == nil &&
+		p.OptimisticMutationsEnabled == nil &&
+		p.SSEReplayEnabled == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -208,5 +216,11 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 		// verbatim (LoadLocation is forgiving about case but the SPA selects
 		// from Intl.supportedValuesOf which is canonical).
 		row.DisplayTimezone = strings.TrimSpace(*patch.DisplayTimezone)
+	}
+	if patch.OptimisticMutationsEnabled != nil {
+		row.OptimisticMutationsEnabled = *patch.OptimisticMutationsEnabled
+	}
+	if patch.SSEReplayEnabled != nil {
+		row.SSEReplayEnabled = *patch.SSEReplayEnabled
 	}
 }

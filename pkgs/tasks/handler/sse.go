@@ -459,7 +459,17 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 
-	sinceID := parseLastEventIDHeader(r.Header.Get("Last-Event-ID"))
+	// Rollout gate: when sse_replay_enabled is false the /events stream
+	// behaves as a live-only fanout (reconnect == cold start) regardless
+	// of whether the client sent Last-Event-ID. The flag defaults to
+	// false until a full SLO window of green metrics in staging — see
+	// docs/SLOs.md and `AppSettings.SSEReplayEnabled`. The ring buffer
+	// and publish-side machinery keep running either way so turning the
+	// flag on is a zero-downtime flip.
+	sinceID := uint64(0)
+	if cfg, err := h.store.GetSettings(r.Context()); err == nil && cfg.SSEReplayEnabled {
+		sinceID = parseLastEventIDHeader(r.Header.Get("Last-Event-ID"))
+	}
 	sub, replay, hadGap, cancel := h.hub.subscribe(sinceID)
 	defer cancel()
 

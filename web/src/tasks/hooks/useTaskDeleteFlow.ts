@@ -9,6 +9,7 @@ import {
   rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
+import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
 import {
   bumpOptimisticVersion,
@@ -128,6 +129,7 @@ export function useTaskDeleteFlow(opts: {
 } = {}): UseTaskDeleteFlowResult {
   const queryClient = useQueryClient();
   const toast = useOptionalToast();
+  const { optimisticMutationsEnabled } = useRolloutFlags();
   const { onDeleted } = opts;
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
@@ -136,6 +138,13 @@ export function useTaskDeleteFlow(opts: {
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("task_delete");
+      // See useTaskPatchFlow: pessimistic path returns an empty
+      // snapshot, so onError can no-op and we don't pollute the
+      // rolled_back SLI. clearOptimisticVersion stays safe when
+      // nothing was bumped.
+      if (!optimisticMutationsEnabled) {
+        return { detail: undefined, lists: [], startedAtMs };
+      }
       bumpOptimisticVersion(input.id);
 
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
@@ -165,6 +174,8 @@ export function useTaskDeleteFlow(opts: {
       return { detail: detailPrev, lists: listSnapshots, startedAtMs };
     },
     onError: (_err, input, context) => {
+      const rolledBackSomething =
+        !!context && (!!context.detail || context.lists.length > 0);
       if (context) {
         if (context.detail) {
           queryClient.setQueryData(taskQueryKeys.detail(input.id), context.detail);
@@ -172,7 +183,12 @@ export function useTaskDeleteFlow(opts: {
         for (const snap of context.lists) {
           queryClient.setQueryData(snap.key, snap.data);
         }
-        rumMutationRolledBack("task_delete", performance.now() - context.startedAtMs);
+        if (rolledBackSomething) {
+          rumMutationRolledBack(
+            "task_delete",
+            performance.now() - context.startedAtMs,
+          );
+        }
       }
       toast.error("Couldn't delete - reverted.");
       rumMutationSettled(

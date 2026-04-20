@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { taskQueryKeys } from "../task-query";
 import { useTaskDetailChecklist } from "./useTaskDetailChecklist";
 import { ToastProvider } from "@/shared/toast";
+import { settingsQueryKeys } from "../task-query";
+import type { AppSettings } from "@/api";
 import type { TaskChecklistResponse } from "@/types";
 
 const { mockAdd, mockPatch, mockDelete } = vi.hoisted(() => ({
@@ -37,10 +39,29 @@ function createWrapper(qc: QueryClient) {
   };
 }
 
+function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return {
+    worker_enabled: true,
+    agent_paused: false,
+    runner: "cursor",
+    repo_root: "",
+    cursor_bin: "",
+    cursor_model: "",
+    max_run_duration_seconds: 0,
+    agent_pickup_delay_seconds: 5,
+    display_timezone: "UTC",
+    optimistic_mutations_enabled: true,
+    sse_replay_enabled: false,
+    ...overrides,
+  };
+}
+
 function newQueryClient() {
-  return new QueryClient({
+  const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  qc.setQueryData(settingsQueryKeys.app(), makeAppSettings());
+  return qc;
 }
 
 describe("useTaskDetailChecklist", () => {

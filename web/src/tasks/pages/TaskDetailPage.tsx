@@ -10,6 +10,7 @@ import {
   rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
+import { useRolloutFlags } from "@/settings";
 import {
   bumpOptimisticVersion,
   clearOptimisticVersion,
@@ -113,6 +114,7 @@ export function TaskDetailPage({ app }: Props) {
   });
 
   const toast = useOptionalToast();
+  const { optimisticMutationsEnabled } = useRolloutFlags();
   const requeueMutation = useMutation<
     unknown,
     unknown,
@@ -123,6 +125,9 @@ export function TaskDetailPage({ app }: Props) {
     onMutate: async () => {
       const startedAtMs = performance.now();
       rumMutationStarted("task_requeue");
+      if (!optimisticMutationsEnabled) {
+        return { prev: undefined, startedAtMs };
+      }
       bumpOptimisticVersion(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
@@ -138,7 +143,12 @@ export function TaskDetailPage({ app }: Props) {
         queryClient.setQueryData(taskQueryKeys.detail(taskId), context.prev);
       }
       if (context) {
-        rumMutationRolledBack("task_requeue", performance.now() - context.startedAtMs);
+        if (context.prev !== undefined) {
+          rumMutationRolledBack(
+            "task_requeue",
+            performance.now() - context.startedAtMs,
+          );
+        }
         rumMutationSettled(
           "task_requeue",
           performance.now() - context.startedAtMs,

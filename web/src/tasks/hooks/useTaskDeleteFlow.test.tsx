@@ -6,6 +6,8 @@ import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { taskQueryKeys } from "../task-query";
 import { ToastProvider } from "@/shared/toast";
 import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import { settingsQueryKeys } from "../task-query";
+import type { AppSettings } from "@/api/settings";
 import type { Task, TaskListResponse } from "@/types";
 
 vi.mock("../../api", () => ({
@@ -16,13 +18,31 @@ import { deleteTask } from "../../api";
 
 const mockedDelete = vi.mocked(deleteTask);
 
-function makeWrapper() {
+function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return {
+    worker_enabled: true,
+    agent_paused: false,
+    runner: "cursor",
+    repo_root: "",
+    cursor_bin: "",
+    cursor_model: "",
+    max_run_duration_seconds: 0,
+    agent_pickup_delay_seconds: 5,
+    display_timezone: "UTC",
+    optimistic_mutations_enabled: true,
+    sse_replay_enabled: false,
+    ...overrides,
+  };
+}
+
+function makeWrapper(settings: AppSettings = makeAppSettings()) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
+  queryClient.setQueryData(settingsQueryKeys.app(), settings);
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   function Wrapper({ children }: { children: ReactNode }) {
     return (

@@ -36,6 +36,25 @@ export type AppSettings = {
    * Intl.DateTimeFormat without further checking.
    */
   display_timezone: string;
+  /**
+   * Rollout flag for the Phase 1 optimistic-mutation code path introduced
+   * in `.cursor/plans/production_realtime_smoothness_b17202b6.plan.md`.
+   * When false, the SPA falls back to the legacy await-then-render path
+   * on every mutation hook (patch / delete / checklist / requeue /
+   * subtask create). When true, the hooks run their onMutate / onError
+   * rollback logic. Defaults to false until a full SLO window of green
+   * metrics in staging. See docs/SLOs.md and `useOptimisticFlag()` for
+   * the consumer side.
+   */
+  optimistic_mutations_enabled: boolean;
+  /**
+   * Rollout flag for the Phase 2 lossless-SSE path (ring buffer +
+   * `Last-Event-ID` replay + resync directive). When false, /events
+   * behaves as a live-only fanout and reconnect = cold start. Purely
+   * additive server-side; the SPA's `EventSource` resume header is a
+   * no-op when the server ignores it.
+   */
+  sse_replay_enabled: boolean;
   updated_at?: string;
 };
 
@@ -59,6 +78,8 @@ export type AppSettingsPatch = Partial<{
    * is rejected server-side; PATCH to "UTC" to reset to default.
    */
   display_timezone: string;
+  optimistic_mutations_enabled: boolean;
+  sse_replay_enabled: boolean;
 }>;
 
 export type ProbeCursorResult = {
@@ -115,6 +136,16 @@ function assertSettings(raw: unknown): AppSettings {
   const tz = typeof o.display_timezone === "string" && o.display_timezone.length > 0
     ? o.display_timezone
     : "UTC";
+  // New rollout flags default to false when the server omits them, so
+  // an old binary keeps decodable by a new SPA. Decode as `boolean` but
+  // never throw on missing — we WANT the pessimistic (legacy) path to
+  // be the fallback when the field is absent.
+  const optimistic = typeof o.optimistic_mutations_enabled === "boolean"
+    ? o.optimistic_mutations_enabled
+    : false;
+  const sseReplay = typeof o.sse_replay_enabled === "boolean"
+    ? o.sse_replay_enabled
+    : false;
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||
@@ -136,6 +167,8 @@ function assertSettings(raw: unknown): AppSettings {
     max_run_duration_seconds: maxDur,
     agent_pickup_delay_seconds: pickupDelay,
     display_timezone: tz,
+    optimistic_mutations_enabled: optimistic,
+    sse_replay_enabled: sseReplay,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

@@ -6,6 +6,8 @@ import { useTaskPatchFlow, type TaskPatchInput } from "./useTaskPatchFlow";
 import { taskQueryKeys } from "../task-query";
 import { ToastProvider } from "@/shared/toast";
 import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import { settingsQueryKeys } from "../task-query";
+import type { AppSettings } from "@/api/settings";
 import type { Task, TaskListResponse } from "@/types";
 
 vi.mock("../../api", () => ({
@@ -16,13 +18,38 @@ import { patchTask } from "../../api";
 
 const mockedPatch = vi.mocked(patchTask);
 
-function makeWrapper() {
+function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return {
+    worker_enabled: true,
+    agent_paused: false,
+    runner: "cursor",
+    repo_root: "",
+    cursor_bin: "",
+    cursor_model: "",
+    max_run_duration_seconds: 0,
+    agent_pickup_delay_seconds: 5,
+    display_timezone: "UTC",
+    // Default ON in these tests because the tests describe the
+    // optimistic code path; when testing pessimistic behavior pass
+    // `{ optimistic_mutations_enabled: false }` explicitly.
+    optimistic_mutations_enabled: true,
+    sse_replay_enabled: false,
+    ...overrides,
+  };
+}
+
+function makeWrapper(settings: AppSettings = makeAppSettings()) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
+  // Seed the settings query so useRolloutFlags reads it synchronously
+  // on first render. Without this seed the hook returns
+  // {optimisticMutationsEnabled:false} for the first few renders and
+  // the optimistic code path never runs in the test.
+  queryClient.setQueryData(settingsQueryKeys.app(), settings);
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   function Wrapper({ children }: { children: ReactNode }) {
     return (

@@ -18,6 +18,8 @@ const testAppSettings: AppSettings = {
   max_run_duration_seconds: 0,
   agent_pickup_delay_seconds: 5,
   display_timezone: "UTC",
+  optimistic_mutations_enabled: false,
+  sse_replay_enabled: false,
 };
 
 const testCursorModelsEmpty: ListCursorModelsResult = {

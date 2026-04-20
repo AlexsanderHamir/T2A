@@ -47,18 +47,37 @@ import (
 //     via time.LoadLocation on PATCH; stored as the canonical name returned
 //     by the lookup. Default "UTC". The wire format for every timestamp
 //     stays RFC3339 UTC — this column governs PRESENTATION only.
+//   - OptimisticMutationsEnabled: feature flag introduced in
+//     .cursor/plans/production_realtime_smoothness_b17202b6.plan.md
+//     Phase 1. When true, the SPA uses the onMutate/onError optimistic
+//     code path for PATCH, DELETE, checklist, requeue, and subtask
+//     create; when false it falls back to the legacy await-then-render
+//     path. Default false on first ship; flip to true after one full
+//     SLO window of green metrics in staging. Hook code branches on
+//     this flag without any server involvement — the flag is purely a
+//     kill-switch for a client behavior.
+//   - SSEReplayEnabled: feature flag introduced by the same plan for
+//     Phase 2 (lossless SSE). When true, the `/events` handler honors
+//     Last-Event-ID replay and emits resync directives from the ring
+//     buffer. When false, the handler behaves as it did before the
+//     ring-buffer work (live fanout only; reconnect = cold start).
+//     Default false on first ship. The client-side EventSource resume
+//     header is harmless when the server ignores it, so flipping the
+//     flag server-side is fully additive.
 type AppSettings struct {
-	ID                      uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled           bool      `gorm:"not null;default:true"`
-	AgentPaused             bool      `gorm:"not null;default:false"`
-	Runner                  string    `gorm:"not null;default:'cursor'"`
-	RepoRoot                string    `gorm:"not null;default:''"`
-	CursorBin               string    `gorm:"not null;default:''"`
-	CursorModel             string    `gorm:"not null;default:''"`
-	MaxRunDurationSeconds   int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
-	DisplayTimezone         string    `gorm:"not null;default:'UTC'"`
-	UpdatedAt               time.Time `gorm:"not null"`
+	ID                         uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
+	WorkerEnabled              bool      `gorm:"not null;default:true"`
+	AgentPaused                bool      `gorm:"not null;default:false"`
+	Runner                     string    `gorm:"not null;default:'cursor'"`
+	RepoRoot                   string    `gorm:"not null;default:''"`
+	CursorBin                  string    `gorm:"not null;default:''"`
+	CursorModel                string    `gorm:"not null;default:''"`
+	MaxRunDurationSeconds      int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	AgentPickupDelaySeconds    int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	DisplayTimezone            string    `gorm:"not null;default:'UTC'"`
+	OptimisticMutationsEnabled bool      `gorm:"not null;default:false"`
+	SSEReplayEnabled           bool      `gorm:"not null;default:false"`
+	UpdatedAt                  time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -88,15 +107,17 @@ const DefaultDisplayTimezone = "UTC"
 // store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		ID:                      AppSettingsRowID,
-		WorkerEnabled:           true,
-		AgentPaused:             false,
-		Runner:                  DefaultRunner,
-		RepoRoot:                "",
-		CursorBin:               "",
-		MaxRunDurationSeconds:   0,
-		AgentPickupDelaySeconds: DefaultAgentPickupDelaySeconds,
-		DisplayTimezone:         DefaultDisplayTimezone,
+		ID:                         AppSettingsRowID,
+		WorkerEnabled:              true,
+		AgentPaused:                false,
+		Runner:                     DefaultRunner,
+		RepoRoot:                   "",
+		CursorBin:                  "",
+		MaxRunDurationSeconds:      0,
+		AgentPickupDelaySeconds:    DefaultAgentPickupDelaySeconds,
+		DisplayTimezone:            DefaultDisplayTimezone,
+		OptimisticMutationsEnabled: false,
+		SSEReplayEnabled:           false,
 	}
 }
 

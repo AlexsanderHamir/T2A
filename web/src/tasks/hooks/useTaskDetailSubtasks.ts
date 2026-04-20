@@ -15,6 +15,7 @@ import {
   rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
+import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
 import { bumpOptimisticVersion, clearOptimisticVersion } from "./optimisticVersion";
 
@@ -31,6 +32,7 @@ type SubtaskOptimisticContext = {
 };
 
 export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) {
+  const { optimisticMutationsEnabled } = useRolloutFlags();
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [subtaskPrompt, setSubtaskPrompt] = useState("");
   const [subtaskPriority, setSubtaskPriority] = useState<PriorityChoice>("");
@@ -161,6 +163,9 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("subtask_create");
+      if (!optimisticMutationsEnabled) {
+        return { prevParent: undefined, optimisticId: "", startedAtMs };
+      }
       bumpOptimisticVersion(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
@@ -199,10 +204,16 @@ export function useTaskDetailSubtasks(taskId: string, queryClient: QueryClient) 
         );
       }
       if (context) {
-        rumMutationRolledBack(
-          "subtask_create",
-          performance.now() - context.startedAtMs,
-        );
+        // Only mark this as a rollback in RUM when we actually
+        // wrote optimistic state; in the pessimistic branch the
+        // UI was never updated so there's nothing to count. We
+        // still settle so mutation_started has a close-out.
+        if (context.optimisticId !== "") {
+          rumMutationRolledBack(
+            "subtask_create",
+            performance.now() - context.startedAtMs,
+          );
+        }
         rumMutationSettled(
           "subtask_create",
           performance.now() - context.startedAtMs,

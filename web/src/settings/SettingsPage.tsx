@@ -24,6 +24,8 @@ type FormState = {
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
   displayTimezone: string;
+  optimisticMutationsEnabled: boolean;
+  sseReplayEnabled: boolean;
 };
 
 function toFormState(s: AppSettings): FormState {
@@ -37,6 +39,8 @@ function toFormState(s: AppSettings): FormState {
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
     displayTimezone: s.display_timezone,
+    optimisticMutationsEnabled: s.optimistic_mutations_enabled,
+    sseReplayEnabled: s.sse_replay_enabled,
   };
 }
 
@@ -82,6 +86,12 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== "" && tzTrimmed !== initial.display_timezone) {
     out.display_timezone = tzTrimmed;
+  }
+  if (initial.optimistic_mutations_enabled !== form.optimisticMutationsEnabled) {
+    out.optimistic_mutations_enabled = form.optimisticMutationsEnabled;
+  }
+  if (initial.sse_replay_enabled !== form.sseReplayEnabled) {
+    out.sse_replay_enabled = form.sseReplayEnabled;
   }
   return out;
 }
@@ -235,6 +245,14 @@ export function SettingsPage() {
         }
         if (cur.displayTimezone === formAtSubmit.displayTimezone) {
           merged.displayTimezone = next.display_timezone;
+        }
+        if (
+          cur.optimisticMutationsEnabled === formAtSubmit.optimisticMutationsEnabled
+        ) {
+          merged.optimisticMutationsEnabled = next.optimistic_mutations_enabled;
+        }
+        if (cur.sseReplayEnabled === formAtSubmit.sseReplayEnabled) {
+          merged.sseReplayEnabled = next.sse_replay_enabled;
         }
         return merged;
       });
@@ -454,6 +472,51 @@ export function SettingsPage() {
             &quot;last updated&quot;, etc.) render in this timezone. The wire
             format every API uses stays RFC3339 UTC; this only affects
             display. Default <code>UTC</code>.
+          </p>
+        </fieldset>
+
+        <fieldset className="settings-fieldset">
+          <legend>Realtime rollout</legend>
+          <label className="settings-field settings-field--inline">
+            <input
+              type="checkbox"
+              data-testid="settings-optimistic-mutations-toggle"
+              checked={form.optimisticMutationsEnabled}
+              onChange={(e) =>
+                handleField("optimisticMutationsEnabled", e.target.checked)
+              }
+            />
+            <span className="settings-field-label">
+              Optimistic mutations enabled
+            </span>
+          </label>
+          <p className="settings-field-help">
+            When on, the SPA renders mutation results (status change,
+            delete, checklist, requeue, subtask create) immediately and
+            rolls back on server error. When off, every mutation waits
+            for the server round-trip before the UI updates (the legacy
+            pessimistic path). Leave off until a full SLO window of
+            green rollback-rate and error-rate metrics in staging. See{" "}
+            <code>docs/SLOs.md</code>.
+          </p>
+          <label className="settings-field settings-field--inline">
+            <input
+              type="checkbox"
+              data-testid="settings-sse-replay-toggle"
+              checked={form.sseReplayEnabled}
+              onChange={(e) => handleField("sseReplayEnabled", e.target.checked)}
+            />
+            <span className="settings-field-label">
+              SSE replay enabled (lossless events)
+            </span>
+          </label>
+          <p className="settings-field-help">
+            When on, the <code>/events</code> stream honors the
+            browser&apos;s <code>Last-Event-ID</code> header on reconnect
+            and replays buffered events so the SPA doesn&apos;t miss
+            mutations during a brief disconnect. Off = live-only fanout
+            (reconnect = cold start). Purely additive server-side; the
+            SPA&apos;s resume header is a no-op when this flag is off.
           </p>
         </fieldset>
 
