@@ -3,6 +3,9 @@ import {
   DEFAULT_APP_TIMEZONE,
   detectBrowserTimezone,
   formatInAppTimezone,
+  formatTimezoneMenuLabel,
+  getTimezoneOffsetMinutesAt,
+  getTimezoneSelectOptions,
   isoToZonedDatetimeLocal,
   supportedTimezones,
   zonedDatetimeLocalToIso,
@@ -82,6 +85,35 @@ describe("supportedTimezones", () => {
     const rest = list.slice(1);
     const restSorted = [...rest].sort((a, b) => a.localeCompare(b));
     expect(rest).toEqual(restSorted);
+  });
+});
+
+describe("formatTimezoneMenuLabel / getTimezoneSelectOptions", () => {
+  const summerUtc = new Date("2026-07-15T12:00:00Z");
+
+  it("formats Asia/Tokyo with GMT+09 and city name", () => {
+    const label = formatTimezoneMenuLabel("Asia/Tokyo", summerUtc);
+    expect(label).toMatch(/\(GMT\+09:00\)/);
+    expect(label).toMatch(/Tokyo/);
+  });
+
+  it("formats UTC as GMT+00:00", () => {
+    expect(formatTimezoneMenuLabel("UTC", summerUtc)).toMatch(
+      /\(GMT\+00:00\).*UTC/,
+    );
+  });
+
+  it("sorts getTimezoneSelectOptions by offset (NY before Tokyo in summer)", () => {
+    const opts = getTimezoneSelectOptions(summerUtc);
+    const idxNy = opts.findIndex((o) => o.value === "America/New_York");
+    const idxTokyo = opts.findIndex((o) => o.value === "Asia/Tokyo");
+    expect(idxNy).toBeGreaterThanOrEqual(0);
+    expect(idxTokyo).toBeGreaterThanOrEqual(0);
+    expect(idxNy).toBeLessThan(idxTokyo);
+  });
+
+  it("getTimezoneOffsetMinutesAt matches Tokyo +9 in July", () => {
+    expect(getTimezoneOffsetMinutesAt("Asia/Tokyo", summerUtc)).toBe(9 * 60);
   });
 });
 

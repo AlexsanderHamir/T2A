@@ -159,6 +159,92 @@ export function supportedTimezones(): string[] {
   return FALLBACK_TIMEZONES;
 }
 
+/** One row for Settings (and similar) timezone `<select>` menus. */
+export type TimezoneSelectOption = { value: string; label: string };
+
+/**
+ * Parses `GMT+9`, `GMT-05:30`, etc. from Intl `longOffset` to minutes
+ * east of UTC.
+ */
+function parseGmtLongOffsetToMinutes(s: string): number {
+  const m = /GMT([+-])(\d{1,2})(?::(\d{2}))?/i.exec(s);
+  if (!m) {
+    return 0;
+  }
+  const sign = m[1] === "-" ? -1 : 1;
+  const h = parseInt(m[2], 10);
+  const min = m[3] ? parseInt(m[3], 10) : 0;
+  return sign * (h * 60 + min);
+}
+
+/**
+ * GMT offset in minutes east of UTC at `date` (DST-aware), from Intl
+ * `longOffset`. Used for Meet-style labels and offset sorting.
+ */
+export function getTimezoneOffsetMinutesAt(timeZone: string, date: Date): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "longOffset",
+    }).formatToParts(date);
+    const raw =
+      parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT+0";
+    return parseGmtLongOffsetToMinutes(raw);
+  } catch {
+    return 0;
+  }
+}
+
+function formatGmtOffsetParen(minutes: number): string {
+  const sign = minutes >= 0 ? "+" : "-";
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const min = abs % 60;
+  return `(GMT${sign}${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")})`;
+}
+
+/**
+ * Last path segment of an IANA id, underscores → spaces (e.g.
+ * `America/Los_Angeles` → `Los Angeles`).
+ */
+function ianaToDisplayCity(iana: string): string {
+  if (iana === "UTC") return "UTC";
+  const seg = iana.split("/").pop() ?? iana;
+  return seg.replace(/_/g, " ");
+}
+
+/**
+ * User-facing menu label (Google Meet–style): `(GMT+09:00) Tokyo` for
+ * `Asia/Tokyo`. Wire value stays the IANA id everywhere else.
+ */
+export function formatTimezoneMenuLabel(iana: string, at: Date = new Date()): string {
+  const mins = getTimezoneOffsetMinutesAt(iana, at);
+  const paren = formatGmtOffsetParen(mins);
+  const city = ianaToDisplayCity(iana);
+  return `${paren} ${city}`;
+}
+
+/**
+ * Options for Settings timezone `<select>`: sorted by current UTC
+ * offset (earliest / west first), then by IANA id. Labels use
+ * {@link formatTimezoneMenuLabel}; values remain canonical IANA names
+ * for PATCH /settings and `time.LoadLocation` on the server.
+ */
+export function getTimezoneSelectOptions(at: Date = new Date()): TimezoneSelectOption[] {
+  const ids = supportedTimezones();
+  const rows = ids.map((value) => ({
+    value,
+    label: formatTimezoneMenuLabel(value, at),
+    offsetMin: getTimezoneOffsetMinutesAt(value, at),
+  }));
+  rows.sort((a, b) => {
+    const d = a.offsetMin - b.offsetMin;
+    if (d !== 0) return d;
+    return a.value.localeCompare(b.value);
+  });
+  return rows.map(({ value, label }) => ({ value, label }));
+}
+
 /**
  * isoToZonedDatetimeLocal converts an RFC3339 / ISO-8601 UTC instant
  * to the naive `YYYY-MM-DDTHH:mm` string that an

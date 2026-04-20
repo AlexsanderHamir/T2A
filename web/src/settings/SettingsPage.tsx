@@ -7,7 +7,8 @@ import { listCursorModels } from "@/api/settings";
 import {
   detectBrowserTimezone,
   formatInAppTimezone,
-  supportedTimezones,
+  formatTimezoneMenuLabel,
+  getTimezoneSelectOptions,
 } from "@/shared/time/appTimezone";
 import { useAppSettings } from "./useAppSettings";
 import "./settings.css";
@@ -171,6 +172,12 @@ export function SettingsPage() {
     return new Set(m.models.map((x) => x.id));
   }, [cursorModelsQuery.data]);
 
+  const tzSelectOptions = useMemo(() => getTimezoneSelectOptions(), []);
+  const tzValueSet = useMemo(
+    () => new Set(tzSelectOptions.map((o) => o.value)),
+    [tzSelectOptions],
+  );
+
   const maxParsed = form ? Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10) : 0;
   const maxInvalid = form ? !Number.isFinite(maxParsed) || maxParsed < 0 : false;
   const pickupParsed = form
@@ -328,14 +335,13 @@ export function SettingsPage() {
 
   const repoRootEmpty = form.repoRoot.trim() === "";
   const lastUpdated = settings.updated_at ?? "";
-  const tzOptions = supportedTimezones();
   // Tolerate operator-pasted custom zones that aren't in the
   // Intl.supportedValuesOf list — show them as a synthetic option so
   // the <select> can display the saved value rather than silently
   // falling back to the first list item.
   const showCustomTz =
     form.displayTimezone.trim() !== "" &&
-    !tzOptions.includes(form.displayTimezone.trim());
+    !tzValueSet.has(form.displayTimezone.trim());
   // Browser-detected zone surfaced in the "Auto-detect" option label so
   // operators can see WHICH zone auto-detect will resolve to before
   // committing. Recomputed per-render — detectBrowserTimezone is a
@@ -486,15 +492,18 @@ export function SettingsPage() {
               value={form.displayTimezone}
               onChange={(e) => handleField("displayTimezone", e.target.value)}
             >
-              <option value="">Auto-detect ({browserTz})</option>
-              {tzOptions.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
+              <option value="">
+                Auto-detect ({formatTimezoneMenuLabel(browserTz)})
+              </option>
+              {tzSelectOptions.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
                 </option>
               ))}
               {showCustomTz ? (
                 <option value={form.displayTimezone.trim()}>
-                  {form.displayTimezone.trim()} (saved — not in current list)
+                  {formatTimezoneMenuLabel(form.displayTimezone.trim())}{" "}
+                  (saved — not in list)
                 </option>
               ) : null}
             </select>
