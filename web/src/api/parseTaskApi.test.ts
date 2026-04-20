@@ -13,6 +13,7 @@ import {
   parseTaskListResponse,
   parseTaskStatsResponse,
 } from "./parseTaskApi";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TASK_EVENT_TYPES } from "@/types";
 
 const validTask = {
@@ -23,8 +24,7 @@ const validTask = {
   priority: "medium",
   task_type: "general",
   checklist_inherit: false,
-  runner: "cursor",
-  cursor_model: "",
+  ...TASK_TEST_DEFAULTS,
 };
 
 describe("parseTask", () => {
@@ -63,8 +63,7 @@ describe("parseTask", () => {
         priority: "medium",
         task_type: "general",
         checklist_inherit: false,
-        runner: "cursor",
-        cursor_model: "",
+        ...TASK_TEST_DEFAULTS,
       };
       if (n <= 0) {
         return base;
@@ -95,8 +94,7 @@ describe("parseTask", () => {
             task_type: "bug_fix",
             checklist_inherit: true,
             parent_id: "root",
-            runner: "cursor",
-            cursor_model: "",
+            ...TASK_TEST_DEFAULTS,
           },
         ],
       }),
@@ -108,8 +106,7 @@ describe("parseTask", () => {
       priority: "medium",
       task_type: "general",
       checklist_inherit: false,
-      runner: "cursor",
-      cursor_model: "",
+      ...TASK_TEST_DEFAULTS,
       children: [
         {
           id: "c1",
@@ -120,8 +117,7 @@ describe("parseTask", () => {
           task_type: "bug_fix",
           checklist_inherit: true,
           parent_id: "root",
-          runner: "cursor",
-          cursor_model: "",
+          ...TASK_TEST_DEFAULTS,
         },
       ],
     });
