@@ -98,4 +98,17 @@ describe("parseTaskChangeFrame", () => {
       kind: "agent_run_cancelled",
     });
   });
+
+  // Phase 2 of the realtime smoothness plan: the hub emits this
+  // directive when the client's reconnect cursor fell out of the
+  // ring buffer (or it was forcibly disconnected as a slow consumer).
+  // The frame deliberately carries no id/cycle_id; consumers MUST
+  // drop every cached query and refetch from REST. Pinning the
+  // parser separately from the consumer (useTaskEventStream) keeps
+  // the wire-shape contract explicit even if the hook moves.
+  it("returns a resync frame for the hub-emitted resync directive", () => {
+    expect(parseTaskChangeFrame('{"type":"resync"}')).toEqual({
+      kind: "resync",
+    });
+  });
 });

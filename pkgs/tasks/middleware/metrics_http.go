@@ -62,6 +62,43 @@ var (
 		Name:      "sse_dropped_frames_total",
 		Help:      "Total SSE fanout frames dropped because a subscriber channel was full (slow consumer indicator).",
 	})
+	// taskapiSSECoalescedTotal counts duplicate {type,id} frames the
+	// hub collapsed inside its coalesceWindow. Cycle frames carry a
+	// distinct cycle id and are intentionally never coalesced; settings
+	// and task_updated bursts are the primary contributors. A non-zero
+	// rate is healthy (the coalescer is doing its job); a runaway rate
+	// (>1 frame/s sustained) suggests an upstream caller is spamming
+	// Publish in a tight loop.
+	taskapiSSECoalescedTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "sse_coalesced_total",
+		Help:      "Duplicate SSE frames collapsed by the hub coalescer.",
+	})
+	// taskapiSSEResyncEmittedTotal counts `{"type":"resync"}` directives
+	// the hub sent to a client — either because the client's
+	// Last-Event-ID was older than the oldest retained ring entry, or
+	// because the subscriber was evicted as a slow consumer. The SLO
+	// `slo_sse_resync_rate ≤ 0.5%` is computed as
+	// `sse_resync_emitted_total / sse_publish_total`; a sustained
+	// non-trivial rate means the ring buffer is too small or
+	// downstream clients are too slow.
+	taskapiSSEResyncEmittedTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "sse_resync_emitted_total",
+		Help:      "Total resync directives emitted (Last-Event-ID gap or slow-consumer eviction).",
+	})
+	// taskapiSSESubscriberEvictionsTotal counts how many subscribers
+	// were forcibly disconnected because their bounded channel filled
+	// up. Each eviction also contributes one resync directive (above)
+	// and one dropped frame. Tracked separately so an operator can
+	// distinguish "one slow client got evicted once" (subscriber
+	// eviction = 1) from "one slow client kept dropping frames before
+	// finally being evicted" (dropped > eviction).
+	taskapiSSESubscriberEvictionsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "taskapi",
+		Name:      "sse_subscriber_evictions_total",
+		Help:      "Total slow-consumer SSE subscriber evictions (paired with a resync directive on the wire).",
+	})
 )
 
 // RecordSSESubscriberGauge sets the process-wide SSE subscriber gauge (one hub per taskapi).
@@ -94,6 +131,65 @@ func RecordSSEDroppedFrames(n int) {
 func SSEDroppedFramesCounter() prometheus.Counter {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSEDroppedFramesCounter")
 	return taskapiSSEDroppedFramesTotal
+}
+
+// RecordSSECoalesced bumps the coalesced-frames counter by n. Called by
+// the SSE hub Publish path each time a duplicate {type,id} frame is
+// dropped inside the coalesceWindow.
+func RecordSSECoalesced(n int) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSECoalesced", "n", n)
+	if n <= 0 {
+		return
+	}
+	taskapiSSECoalescedTotal.Add(float64(n))
+}
+
+// SSECoalescedCounter exposes the Prometheus counter updated by
+// RecordSSECoalesced. Tests use it to pin the hub's coalescing
+// behavior without hitting the /metrics endpoint.
+func SSECoalescedCounter() prometheus.Counter {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSECoalescedCounter")
+	return taskapiSSECoalescedTotal
+}
+
+// RecordSSEResyncEmitted bumps the resync-directive counter by n.
+// Called by the SSE handler when (a) a reconnecting client requested a
+// Last-Event-ID older than the oldest retained ring entry, or (b) a
+// slow-consumer subscriber was evicted and the writer goroutine sent
+// the resync directive on the way out.
+func RecordSSEResyncEmitted(n int) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSEResyncEmitted", "n", n)
+	if n <= 0 {
+		return
+	}
+	taskapiSSEResyncEmittedTotal.Add(float64(n))
+}
+
+// SSEResyncEmittedCounter exposes the Prometheus counter updated by
+// RecordSSEResyncEmitted. Tests use it to pin the hub's gap-handling
+// and slow-consumer eviction paths without hitting /metrics.
+func SSEResyncEmittedCounter() prometheus.Counter {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSEResyncEmittedCounter")
+	return taskapiSSEResyncEmittedTotal
+}
+
+// RecordSSESubscriberEvictions bumps the slow-consumer eviction counter
+// by n. Each eviction is also paired with a resync directive on the
+// wire (recorded via RecordSSEResyncEmitted).
+func RecordSSESubscriberEvictions(n int) {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.RecordSSESubscriberEvictions", "n", n)
+	if n <= 0 {
+		return
+	}
+	taskapiSSESubscriberEvictionsTotal.Add(float64(n))
+}
+
+// SSESubscriberEvictionsCounter exposes the Prometheus counter updated by
+// RecordSSESubscriberEvictions. Tests use it to assert that overflow
+// causes eviction (loss-free) instead of silent frame drops.
+func SSESubscriberEvictionsCounter() prometheus.Counter {
+	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.SSESubscriberEvictionsCounter")
+	return taskapiSSESubscriberEvictionsTotal
 }
 
 func omitHTTPMetrics(r *http.Request) bool {

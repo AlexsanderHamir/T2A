@@ -70,7 +70,13 @@ type taskAPIApp struct {
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.buildTaskAPIApp")
 	taskStore := store.NewStore(db)
-	hub := handler.NewSSEHub()
+	// Production hub picks the full default options (ring buffer for
+	// Last-Event-ID resume, per-subscriber backpressure with slow-
+	// consumer eviction, 15s heartbeats, AND 50ms {type,id} duplicate
+	// coalescing). Tests construct via NewSSEHub(), which keeps the
+	// loss-prevention machinery enabled but disables coalescing so
+	// back-to-back distinct ops never collide on the 50ms window.
+	hub := handler.NewSSEHubWith(handler.DefaultSSEHubOptions())
 	logHandlerMiddlewareConfig()
 	cancel, q, aw, err := startReadyTaskAgents(ctx, taskStore, hub)
 	if err != nil {

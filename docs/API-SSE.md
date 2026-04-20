@@ -12,7 +12,15 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 
 - `Content-Type: text/event-stream`
 - First frame: `retry: 3000` (reconnect hint, ms)
-- Each event: one `data:` line with JSON:
+- Each event: one `id: N` line followed by one `data:` line with JSON, separated by a blank line. Browser `EventSource` automatically captures the `id:` value as `Last-Event-ID` and replays it on reconnect (see [Lossless reconnects](#lossless-reconnects-last-event-id--ring-buffer) below):
+
+```text
+id: 42
+data: {"type":"task_updated","id":"<task-uuid>"}
+
+```
+
+The JSON shape itself is unchanged from earlier versions (still `{type,id[,cycle_id]}` only). Older clients that ignore the `id:` line keep working — they just lose the loss-free reconnect property.
 
 ```json
 {"type":"task_created|task_updated|task_deleted","id":"<task-uuid>"}
@@ -34,6 +42,24 @@ Failure modes: if the handler was constructed with a nil hub, the server returns
 ```
 
 Consumers refetch `GET /settings` (and clear any "cancelling…" UI state for `agent_run_cancelled`) on receipt; both are documented in [SETTINGS.md](./SETTINGS.md).
+
+`resync` is a hub-emitted directive (no `id`/`cycle_id`) that tells the client its reconnect cursor is outside the ring buffer or it was forcibly disconnected as a slow consumer. The frame deliberately has no `id:` line (`id:` is omitted on the wire) so browser `EventSource` does not advance its `Last-Event-ID` cursor — the next reconnect will then come back without a header and the server will admit the client at the live tail. Consumers MUST drop every cached query and refetch from REST:
+
+```json
+{"type":"resync"}
+```
+
+## Lossless reconnects (Last-Event-ID + ring buffer)
+
+Each `Publish` call allocates a strictly-increasing event id and stores the marshalled frame in an in-memory ring buffer (default 1024 entries, ~125 KB). On reconnect the browser's `EventSource` sends `Last-Event-ID: <last seen id>`; the handler replays every retained frame with id > that value before entering the live loop. If the requested id is older than the oldest retained ring entry, the handler emits one `resync` directive and the client is expected to drop caches and refetch from REST.
+
+The hub also evicts subscribers whose per-connection channel fills up (slow consumer / blocked HTTP write) instead of silently dropping frames: each eviction sends a `resync` directive and closes the stream so the client reconnects with its `Last-Event-ID` and either replays from the ring or falls through to the same resync escape hatch.
+
+A `: heartbeat` comment line is written every 15 s so reverse proxies and corporate VPN gateways do not idle-kill the TCP connection. Browsers ignore comment lines per the SSE spec; no client work is required.
+
+Identical `{type,id}` frames published inside a 50 ms window are coalesced (dropped before fanout) so a burst of supervisor reloads or duplicate `task_updated` events does not spam every connected client. `task_cycle_changed` carries a distinct `cycle_id` and is intentionally **never** coalesced (each phase transition is informationally distinct).
+
+Operators monitor the resync rate (`taskapi_sse_resync_emitted_total / taskapi_sse_publish_total`), the coalesced-drop rate (`taskapi_sse_coalesced_total`), and the slow-consumer eviction rate (`taskapi_sse_subscriber_evictions_total`). All three are documented in [`pkgs/tasks/middleware/metrics_http.go`](../pkgs/tasks/middleware/metrics_http.go).
 
 Each successful write may publish more than one event so SSE clients can refresh the affected row(s) without server-side joins:
 

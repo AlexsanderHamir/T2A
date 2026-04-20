@@ -384,6 +384,55 @@ describe("useTaskEventStream", () => {
     expect(calls).toContainEqual(["tasks", "detail"]);
   });
 
+  it("resync directive forces an immediate broad invalidation across tasks/stats/settings", () => {
+    // Phase 2 of the realtime smoothness plan: the hub emits a
+    // `{"type":"resync"}` directive whenever it cannot bridge a
+    // reconnect gap (Last-Event-ID outside the ring buffer) or it
+    // had to evict a slow consumer. The client must drop every
+    // cached query and refetch from REST — no debounce, no
+    // coalescing, because we just demonstrated we can't trust the
+    // delta stream. Pinning broad invalidation across all three
+    // cache slots (tasks tree, home-page KPI stats, settings)
+    // guards against a future "optimisation" that would handle
+    // resync as a regular settings frame and silently leave the
+    // task tree stale.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    // Queue a regular task frame first — the resync MUST cancel
+    // the pending debounce and refetch broadly instead of letting
+    // the per-task invalidation fire on its own delayed timer.
+    act(() => {
+      mockES!.onmessage?.({
+        data: '{"type":"task_updated","id":"task-pending"}',
+      });
+      mockES!.onmessage?.({ data: '{"type":"resync"}' });
+    });
+    // Resync handling is synchronous; no need to advance timers.
+    const calls = inv.mock.calls.map(
+      (c) => (c[0] as { queryKey: readonly unknown[] }).queryKey,
+    );
+    expect(calls).toContainEqual(["tasks"]);
+    expect(calls).toContainEqual(["task-stats"]);
+    expect(calls).toContainEqual(["settings", "app"]);
+
+    // Even after letting any pending debounce drain, the broad
+    // refetch should NOT fire a second time — the pending frame
+    // was cleared by the resync handler.
+    const beforeDrainCount = inv.mock.calls.length;
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(inv.mock.calls.length).toBe(beforeDrainCount);
+  });
+
   it("does not invalidate queries after unmount before debounce elapses", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");

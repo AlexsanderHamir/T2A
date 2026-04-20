@@ -186,17 +186,31 @@ func TestHTTP_SSE_receivesEventAfterCreate(t *testing.T) {
 			return
 		}
 		close(streamReady)
-		dataLine, err := br.ReadString('\n')
-		if err != nil {
-			t.Error(err)
-			return
+		// Each event is now framed as `id: N\ndata: …\n\n` so the
+		// browser EventSource captures the id for Last-Event-ID
+		// resume. Skip past `id:` lines until the `data:` line shows
+		// up; tolerate stray `:heartbeat` comments interleaved with
+		// real frames.
+		var payloadLine string
+		for {
+			line, err := br.ReadString('\n')
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			s := strings.TrimSpace(line)
+			if s == "" {
+				continue
+			}
+			if strings.HasPrefix(s, ":") || strings.HasPrefix(s, "id:") {
+				continue
+			}
+			if strings.HasPrefix(s, "data:") {
+				payloadLine = strings.TrimSpace(strings.TrimPrefix(s, "data:"))
+				break
+			}
 		}
-		s := strings.TrimSpace(dataLine)
-		if !strings.HasPrefix(s, "data:") {
-			t.Errorf("want data line, got %q", dataLine)
-			return
-		}
-		payload <- strings.TrimSpace(strings.TrimPrefix(s, "data:"))
+		payload <- payloadLine
 	}()
 
 	<-streamReady

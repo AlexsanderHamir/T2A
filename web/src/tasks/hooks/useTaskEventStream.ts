@@ -146,6 +146,27 @@ export function useTaskEventStream(): boolean {
             pendingRef.current.cycles.set(frame.taskId, bucket);
           }
           bucket.add(frame.cycleId);
+        } else if (frame.kind === "resync") {
+          // The server's ring buffer either evicted us as a slow
+          // consumer or we reconnected past the retained window.
+          // Cancel any pending debounced flush and do a *full*
+          // refetch so the cache catches up to whatever we missed.
+          // This is the loss-prevention escape hatch documented in
+          // docs/API-SSE.md (Phase 2 of the realtime smoothness
+          // plan): better to over-refetch once than silently miss
+          // an SSE frame and let the UI go stale.
+          if (sseDebounceRef.current !== undefined) {
+            clearTimeout(sseDebounceRef.current);
+            sseDebounceRef.current = undefined;
+          }
+          firstQueuedAtRef.current = null;
+          clearPending(pendingRef.current);
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+          void queryClient.invalidateQueries({ queryKey: ["task-stats"] });
+          void queryClient.invalidateQueries({
+            queryKey: settingsQueryKeys.app(),
+          });
+          return;
         } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {
           // Settings updates and operator-initiated cancels are rare
           // and don't touch task data; refetch the settings cache

@@ -16,7 +16,15 @@ export type TaskChangeFrame =
   | { kind: "task"; taskId: string }
   | { kind: "cycle"; taskId: string; cycleId: string }
   | { kind: "settings" }
-  | { kind: "agent_run_cancelled" };
+  | { kind: "agent_run_cancelled" }
+  /**
+   * Hub-emitted directive that tells the client its reconnect cursor
+   * fell out of the SSE ring buffer (or it was forcibly disconnected
+   * as a slow consumer). Consumers MUST drop every cached query and
+   * refetch from REST. Carries no id/cycle_id. Documented in
+   * docs/API-SSE.md (Phase 2 of the realtime smoothness plan).
+   */
+  | { kind: "resync" };
 
 function readStringId(o: Record<string, unknown>, key: string): string {
   const v = o[key];
@@ -52,6 +60,9 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
   }
   if (o.type === "agent_run_cancelled") {
     return { kind: "agent_run_cancelled" };
+  }
+  if (o.type === "resync") {
+    return { kind: "resync" };
   }
   const id = readStringId(o, "id");
   if (id === "") {
