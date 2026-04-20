@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import type { TaskWithDepth } from "../../../task-tree";
 import { filterTasksForListView } from "./taskListClientFilter";
 
@@ -11,8 +12,8 @@ function row(
     checklist_inherit: false,
     depth: 0,
     ...partial,
-    runner: partial.runner ?? "cursor",
-    cursor_model: partial.cursor_model ?? "",
+    runner: partial.runner ?? TASK_TEST_DEFAULTS.runner,
+    cursor_model: partial.cursor_model ?? TASK_TEST_DEFAULTS.cursor_model,
   };
 }
 
