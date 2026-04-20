@@ -7,6 +7,7 @@ import App from "./App";
 import { createAppQueryClient } from "../lib/queryClient";
 import { ROUTER_FUTURE_FLAGS } from "../lib/routerFutureFlags";
 import { AppErrorBoundary } from "../shared/AppErrorBoundary";
+import { ToastProvider } from "../shared/toast";
 import { installRUM } from "../observability";
 
 const queryClient = createAppQueryClient();
@@ -29,7 +30,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter future={ROUTER_FUTURE_FLAGS}>
       <QueryClientProvider client={queryClient}>
-        <AppWithRecoveryBoundary />
+        <ToastProvider>
+          <AppWithRecoveryBoundary />
+        </ToastProvider>
       </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>,

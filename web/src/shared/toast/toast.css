@@ -1,0 +1,93 @@
+/* Toast surface — ephemeral status messages that surface mutation
+   rollbacks and other "soft" outcomes the user shouldn't have to
+   read in a banner. Sits in the top-right corner so it doesn't
+   collide with the sticky app header on the left.
+
+   Animation honors prefers-reduced-motion via the global override
+   in app-a11y-motion.css plus a local @media block that disables
+   the slide-in keyframe entirely (so we don't push a transform
+   that some assistive tooling can still feel). */
+
+.toast-stack {
+  position: fixed;
+  top: calc(var(--space-3, 12px) + 56px);
+  right: var(--space-3, 12px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  width: min(380px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--surface-2, #ffffff);
+  color: var(--text-primary, #111827);
+  border: 1px solid var(--border-default, #e5e7eb);
+  border-left-width: 4px;
+  border-radius: var(--radius-md, 8px);
+  padding: 10px 14px;
+  box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.25), 0 4px 8px -2px rgba(15, 23, 42, 0.1);
+  font-size: 14px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  animation: toastSlideIn var(--duration-toast, 300ms) ease-out both;
+}
+
+.toast--error {
+  border-left-color: var(--accent-danger, #dc2626);
+}
+
+.toast--success {
+  border-left-color: var(--accent-success, #059669);
+}
+
+.toast--info {
+  border-left-color: var(--accent-primary, #2563eb);
+}
+
+.toast__message {
+  flex: 1;
+  word-break: break-word;
+}
+
+.toast__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #6b7280);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.toast__close:hover {
+  color: var(--text-primary, #111827);
+  background: var(--surface-3, #f3f4f6);
+}
+
+.toast__close:focus-visible {
+  outline: 2px solid var(--accent-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
