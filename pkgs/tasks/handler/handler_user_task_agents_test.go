@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,6 +20,15 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 	q := agents.NewMemoryQueue(8)
 	st := store.NewStore(db)
 	st.SetReadyTaskNotifier(q)
+	// Disable the global pickup delay; this test exercises the
+	// immediate-notify path, not the deferred path. Without this,
+	// the post-Stage-0 gate (shouldNotifyReadyNow) correctly defers
+	// the task by DefaultAgentPickupDelaySeconds and the Recv loop
+	// times out.
+	zero := 0
+	if _, err := st.UpdateSettings(context.Background(), store.SettingsPatch{AgentPickupDelaySeconds: &zero}); err != nil {
+		t.Fatalf("UpdateSettings: %v", err)
+	}
 	h := NewHandler(st, NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
@@ -52,6 +62,10 @@ func TestAgentActorCreateEnqueuesWhenReady(t *testing.T) {
 	q := agents.NewMemoryQueue(8)
 	st := store.NewStore(db)
 	st.SetReadyTaskNotifier(q)
+	zero := 0
+	if _, err := st.UpdateSettings(context.Background(), store.SettingsPatch{AgentPickupDelaySeconds: &zero}); err != nil {
+		t.Fatalf("UpdateSettings: %v", err)
+	}
 	h := NewHandler(st, NewSSEHub(), nil)
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)

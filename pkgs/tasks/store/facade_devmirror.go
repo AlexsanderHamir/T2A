@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/devmirror"
@@ -18,7 +19,8 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 	if err != nil {
 		return err
 	}
-	if nt.Status == domain.StatusReady && prev != domain.StatusReady {
+	if nt.Status == domain.StatusReady && prev != domain.StatusReady &&
+		shouldNotifyReadyNow(nt.PickupNotBefore, time.Now().UTC()) {
 		s.notifyReadyTask(ctx, *nt)
 	}
 	return nil

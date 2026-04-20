@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -931,6 +932,110 @@ func TestSetReadyTaskNotifier_UpdateTransitionToReady(t *testing.T) {
 		t.Fatalf("calls=%d last=%q", n.calls, n.last)
 	}
 }
+
+// TestStore_Create_doesNotNotifyWhenPickupInFuture pins the Stage 0
+// invariant from docs/SCHEDULING.md: a freshly-created ready task
+// whose pickup_not_before is in the future MUST NOT be pushed onto
+// the in-memory ready queue. The reconcile loop, which honours the
+// SQL filter, picks it up later when the time has passed. Without
+// this gate, the worker would race the reconcile sweep and pick up
+// a scheduled task immediately.
+func TestStore_Create_doesNotNotifyWhenPickupInFuture(t *testing.T) {
+	ctx := context.Background()
+	st := NewStore(tasktestdb.OpenSQLite(t))
+	var n spyReadyNotifier
+	st.SetReadyTaskNotifier(&n)
+	future := time.Now().UTC().Add(1 * time.Hour)
+	if _, err := st.Create(ctx, CreateTaskInput{
+		Title: "scheduled", Priority: domain.PriorityMedium,
+		PickupNotBefore: &future,
+	}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	if n.calls != 0 {
+		t.Fatalf("notifier calls=%d want 0 (future schedule must defer)", n.calls)
+	}
+}
+
+// TestStore_Create_notifiesWhenPickupAlreadyPassed pins the
+// other half of the invariant: a pickup time already in the past
+// is a no-op deferral and behaves exactly like the unscheduled path.
+// (Operator typo or backfill recovery.)
+func TestStore_Create_notifiesWhenPickupAlreadyPassed(t *testing.T) {
+	ctx := context.Background()
+	st := NewStore(tasktestdb.OpenSQLite(t))
+	var n spyReadyNotifier
+	st.SetReadyTaskNotifier(&n)
+	past := time.Now().UTC().Add(-1 * time.Minute)
+	if _, err := st.Create(ctx, CreateTaskInput{
+		Title: "already-due", Priority: domain.PriorityMedium,
+		PickupNotBefore: &past,
+	}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	if n.calls != 1 {
+		t.Fatalf("notifier calls=%d want 1 (past schedule should not defer)", n.calls)
+	}
+}
+
+// TestStore_Update_doesNotNotifyOnReadyTransitionWhenPickupInFuture
+// covers the symmetric Update path: a status transition into ready
+// for a task that already carries a future pickup_not_before MUST
+// also defer to the reconcile loop. Currently only Status is
+// patchable via UpdateInput; PickupNotBefore via PATCH is a Stage 2
+// concern. We exercise the gate by seeding pickup_not_before at
+// create time and then transitioning the status afterwards.
+func TestStore_Update_doesNotNotifyOnReadyTransitionWhenPickupInFuture(t *testing.T) {
+	ctx := context.Background()
+	st := NewStore(tasktestdb.OpenSQLite(t))
+	var n spyReadyNotifier
+	st.SetReadyTaskNotifier(&n)
+	future := time.Now().UTC().Add(1 * time.Hour)
+	tk, err := st.Create(ctx, CreateTaskInput{
+		Title: "scheduled-running", Priority: domain.PriorityMedium,
+		Status: domain.StatusRunning, PickupNotBefore: &future,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n.calls = 0
+	ready := domain.StatusReady
+	if _, err := st.Update(ctx, tk.ID, UpdateTaskInput{Status: &ready}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	if n.calls != 0 {
+		t.Fatalf("notifier calls=%d want 0 (future schedule must defer on Update)", n.calls)
+	}
+}
+
+// TestShouldNotifyReadyNow_unitTable pins the boundary cases of the
+// gate so a future refactor cannot quietly invert the comparison.
+// The "exactly equal" case mirrors ready.ListQueueCandidates'
+// `pickup_not_before <= now` filter.
+func TestShouldNotifyReadyNow_unitTable(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		name string
+		t    *time.Time
+		want bool
+	}{
+		{"nil/no-deferral", nil, true},
+		{"past", ptrTime(now.Add(-time.Hour)), true},
+		{"exactly-now", ptrTime(now), true},
+		{"one-second-future", ptrTime(now.Add(time.Second)), false},
+		{"hour-future", ptrTime(now.Add(time.Hour)), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := shouldNotifyReadyNow(c.t, now); got != c.want {
+				t.Fatalf("shouldNotifyReadyNow(%v, %v)=%v want %v",
+					c.t, now, got, c.want)
+			}
+		})
+	}
+}
+
+func ptrTime(t time.Time) *time.Time { return &t }
 
 // --- Operation-duration histogram ----------------------------------------
 

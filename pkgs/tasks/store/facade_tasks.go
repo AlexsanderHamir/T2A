@@ -3,10 +3,36 @@ package store
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
 )
+
+// shouldNotifyReadyNow returns true when a freshly-ready task should
+// be pushed to the in-memory ready queue immediately. The invariant
+// the in-memory queue MUST satisfy is that it never contains a task
+// the SQL filter (ready.ListQueueCandidates) would reject; the SQL
+// filter excludes any task whose pickup_not_before is still in the
+// future. Without this gate, a brand-new ready task with an explicit
+// future pickup time would race the reconcile loop and be picked up
+// immediately by the worker — see docs/SCHEDULING.md ("the two queues").
+//
+// `now` is injected so tests can pin the comparison; production callers
+// pass time.Now().UTC().
+//
+// `pickupNotBefore` is the task's pickup_not_before column value
+// (nil = no deferral; in the past = effectively no deferral).
+func shouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.shouldNotifyReadyNow",
+		"has_pickup", pickupNotBefore != nil)
+	if pickupNotBefore == nil {
+		return true
+	}
+	// strict After: a pickup time exactly equal to `now` is treated
+	// as "ready" — the SQL filter uses `<= now()` and we mirror it.
+	return !pickupNotBefore.After(now)
+}
 
 // CreateTaskInput is the public re-export of the task creation
 // payload. The alias keeps every existing call-site unchanged while
@@ -45,7 +71,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	if err != nil {
 		return nil, err
 	}
-	if t.Status == domain.StatusReady {
+	if t.Status == domain.StatusReady && shouldNotifyReadyNow(t.PickupNotBefore, time.Now().UTC()) {
 		s.notifyReadyTask(ctx, *t)
 	}
 	return t, nil
@@ -60,7 +86,8 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if err != nil {
 		return nil, err
 	}
-	if updated != nil && updated.Status == domain.StatusReady && prev != domain.StatusReady {
+	if updated != nil && updated.Status == domain.StatusReady && prev != domain.StatusReady &&
+		shouldNotifyReadyNow(updated.PickupNotBefore, time.Now().UTC()) {
 		s.notifyReadyTask(ctx, *updated)
 	}
 	return updated, nil
