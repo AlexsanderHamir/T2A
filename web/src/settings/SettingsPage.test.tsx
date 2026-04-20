@@ -84,11 +84,14 @@ describe("SettingsPage", () => {
     expect(screen.getByLabelText(/Max run duration/)).toHaveValue(0);
   });
 
-  it("renders agent_paused as a read-only badge and never PATCHes it from the form", async () => {
-    // The pause flag is owned by automation (agents/scripts hitting
+  it("never PATCHes agent_paused from the form and does not render a badge for it", async () => {
+    // `agent_paused` is owned by automation (agents/scripts hitting
     // PATCH /settings directly). The SettingsPage must:
-    //   1. Show the current value as a read-only "Running" / "Paused"
-    //      badge so operators can see system state.
+    //   1. Not surface a "status" row for it — the top-bar
+    //      SystemStatusChip is the single source of live agent
+    //      status, and duplicating it on a configuration form
+    //      confused operators (read-only row mixed into an editable
+    //      form) and didn't generalize to multi-agent anyway.
     //   2. Never include agent_paused in the diff sent on Save, even
     //      after the GET response changes — otherwise saving an
     //      unrelated field would race-clobber a concurrent script
@@ -124,16 +127,16 @@ describe("SettingsPage", () => {
 
     renderPage();
 
-    // The status row is rendered, reflects the server state, and is
-    // not an interactive control (no checkbox, no role=switch).
-    const statusRow = await screen.findByTestId(
-      "settings-agent-paused-status",
-    );
-    expect(statusRow).toHaveAttribute("data-paused", "true");
-    expect(statusRow).toHaveTextContent(/Paused/);
+    // Wait for the form to hydrate, then assert the (retired) status
+    // row is gone and no stray "Paused"/"Running" pill bled through.
+    await screen.findByLabelText(/Cursor CLI path/);
+    expect(
+      screen.queryByTestId("settings-agent-paused-status"),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("settings-agent-paused"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agent pause status/i)).not.toBeInTheDocument();
 
     // Editing an unrelated field and saving must still succeed
     // without the patch including agent_paused.

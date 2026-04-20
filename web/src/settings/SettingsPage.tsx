@@ -16,7 +16,6 @@ const RUNNERS = [{ id: "cursor", label: "Cursor (cursor-agent CLI)" }] as const;
 
 type FormState = {
   workerEnabled: boolean;
-  agentPaused: boolean;
   runner: string;
   repoRoot: string;
   cursorBin: string;
@@ -31,7 +30,6 @@ type FormState = {
 function toFormState(s: AppSettings): FormState {
   return {
     workerEnabled: s.worker_enabled,
-    agentPaused: s.agent_paused,
     runner: s.runner,
     repoRoot: s.repo_root,
     cursorBin: s.cursor_bin,
@@ -44,19 +42,19 @@ function toFormState(s: AppSettings): FormState {
   };
 }
 
+// diffPatch intentionally reads NOTHING about `agent_paused` from the
+// form (the field is not in FormState) so the settings form can never
+// round-trip the flag back to the server on Save. The pause flag is
+// owned by automation (agents and scripts that PATCH /settings
+// directly); if a human save accidentally included it, we'd silently
+// clobber a concurrent script's pause. Status lives on the top-bar
+// SystemStatusChip, which is the right home for a singleton global
+// status indicator — not a "Settings" form field.
 function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   const out: AppSettingsPatch = {};
   if (initial.worker_enabled !== form.workerEnabled) {
     out.worker_enabled = form.workerEnabled;
   }
-  // agent_paused is intentionally NOT part of the form-driven diff:
-  // the UI shows the flag as a read-only status badge (humans flip
-  // pause through automation: agents, scripts, or another tool that
-  // calls PATCH /settings directly). Including it here would round-trip
-  // the user's last fetched value back as a no-op write and, worse,
-  // would race a parallel agent flip — the SettingsPage would
-  // silently undo a script's pause just because the operator hit
-  // Save on an unrelated field.
   if (initial.runner !== form.runner.trim()) {
     out.runner = form.runner.trim();
   }
@@ -382,33 +380,9 @@ export function SettingsPage() {
           </label>
           <p className="settings-field-help">
             When enabled, the worker pulls ready tasks and dispatches them to
-            the configured runner.
-          </p>
-
-          <div
-            className="settings-field settings-field--inline"
-            data-testid="settings-agent-paused-status"
-            data-paused={form.agentPaused ? "true" : "false"}
-          >
-            <span className="settings-field-label">Agent pause status</span>
-            <span
-              className={`settings-pill ${
-                form.agentPaused
-                  ? "settings-pill--paused"
-                  : "settings-pill--running"
-              }`}
-              role="status"
-            >
-              {form.agentPaused ? "Paused" : "Running"}
-            </span>
-          </div>
-          <p className="settings-field-help">
-            Read-only. The pause flag is operated by automation (agents
-            and scripts that <code>PATCH /settings</code> with{" "}
-            <code>{`{"agent_paused": true}`}</code>) so a human cannot
-            silently undo a script's pause by saving an unrelated field.
-            Use <em>Enable agent worker</em> above for a long-term
-            shutdown. The header chip turns amber while paused.
+            the configured runner. Live agent status (running / paused /
+            degraded) is surfaced on the header chip, not here — the
+            settings page is for configuration, not live system state.
           </p>
 
           <label className="settings-field">
