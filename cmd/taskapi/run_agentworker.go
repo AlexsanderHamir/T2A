@@ -350,6 +350,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			RunnerVersion:         version,
+			IdleReason:            s.probeSchedulingHint(ctx),
 		})
 		s.publishSettingsChanged()
 		return nil
@@ -419,9 +420,45 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 		RunnerVersion:         version,
+		IdleReason:            s.probeSchedulingHint(ctx),
 	})
 	s.publishSettingsChanged()
 	return nil
+}
+
+// probeSchedulingHint runs the bounded queue+stats probes used by
+// decideSchedulingIdleHint. Both calls are best-effort: any error
+// (DB blip, context cancel, etc.) returns "" so the effective-config
+// log line stays useful even when the diagnostic can't be computed.
+// Bounded by a tiny budget — the probe must not delay supervisor
+// state transitions even when the DB is slow.
+func (s *agentWorkerSupervisor) probeSchedulingHint(ctx context.Context) string {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.probeSchedulingHint")
+	if s.store == nil {
+		return ""
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	candidates, err := s.store.ListReadyTaskQueueCandidates(probeCtx, 1, nil)
+	if err != nil {
+		slog.Debug("scheduling hint: queue probe failed",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.scheduling_hint_queue_err",
+			"err", err)
+		return ""
+	}
+	if len(candidates) > 0 {
+		// Queue is non-empty: by definition NOT awaiting a
+		// scheduled task. Skip the stats round-trip.
+		return ""
+	}
+	stats, err := s.store.TaskStats(probeCtx)
+	if err != nil {
+		slog.Debug("scheduling hint: stats probe failed",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.scheduling_hint_stats_err",
+			"err", err)
+		return ""
+	}
+	return decideSchedulingIdleHint(true, stats.Scheduled)
 }
 
 func (s *agentWorkerSupervisor) runStartupSweep(ctx context.Context) error {
@@ -464,10 +501,54 @@ func (s *agentWorkerSupervisor) publishSettingsChanged() {
 	s.hub.Publish(handler.TaskChangeEvent{Type: handler.SettingsChanged})
 }
 
+// SchedulingIdleHintReason is the diagnostic idle reason emitted when
+// the worker is fully configured and could run, but the ready queue
+// is empty *only because* every ready task is currently deferred via
+// `pickup_not_before > now`. This is intentionally not returned by
+// `decideIdle` (and therefore does NOT prevent the worker from
+// spawning) because the schedule horizon could expire on the next
+// reconcile tick and the worker must already be live to pick the
+// task up — see docs/SCHEDULING.md "the two queues" section. The
+// supervisor surfaces this as `IdleReason` on `effectiveSettingsLog`
+// alongside `Idle=false` so operators reading logs and the
+// observability page see the same explanation for "0 ready, 12
+// scheduled" without conflating it with the genuine
+// disabled/paused/probe-failed idle states.
+const SchedulingIdleHintReason = "awaiting_scheduled_task"
+
+// decideSchedulingIdleHint reports the diagnostic hint described
+// above. It is a *runtime* probe (not part of decideIdle) so the
+// supervisor can surface "intentionally deferred" without idling the
+// worker process. Both probe arguments are bounded: queue probe asks
+// for one row only, stats probe is the same single-COUNT pass that
+// /tasks/stats already pays for. Errors degrade silently to "" so a
+// transient DB hiccup does not poison the effective-config log line
+// (the rest of the log is best-effort observability anyway).
+//
+// queueEmpty must report whether ListReadyTaskQueueCandidates returns
+// zero rows (i.e. no row currently satisfies `status='ready' AND
+// (pickup_not_before IS NULL OR pickup_not_before <= now)`).
+//
+// scheduledCount must report stats.Scheduled — the number of
+// `status='ready' AND pickup_not_before > now` rows.
+func decideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideSchedulingIdleHint",
+		"queue_empty", queueEmpty, "scheduled_count", scheduledCount)
+	if queueEmpty && scheduledCount > 0 {
+		return SchedulingIdleHintReason
+	}
+	return ""
+}
+
 // decideIdle reports whether the worker should stay idle given the
 // effective settings. Returns (false, "") when the worker should run.
 // Centralised so the boot, reload, and (future) HTTP probe paths agree
 // on what counts as "configured enough to run".
+//
+// NOTE: this is intentionally a config-only check. The runtime
+// "awaiting_scheduled_task" hint lives in decideSchedulingIdleHint
+// because it must NOT prevent the worker from spawning — see that
+// function's doc.
 func decideIdle(cfg store.AppSettings) (bool, string) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideIdle",
 		"enabled", cfg.WorkerEnabled, "paused", cfg.AgentPaused,

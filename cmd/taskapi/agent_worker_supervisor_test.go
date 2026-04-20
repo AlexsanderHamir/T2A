@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -488,3 +489,122 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 
 func ptrBool(v bool) *bool       { return &v }
 func ptrString(v string) *string { return &v }
+func ptrTime(v time.Time) *time.Time { return &v }
+
+// TestDecideSchedulingIdleHint_unitTable pins the truth table for the
+// pure helper. The hint must fire ONLY when the queue is empty AND
+// there is at least one ready+future row — every other combination
+// (queue non-empty, no scheduled rows, both empty) returns "" so the
+// supervisor's effective-config log line stays uncluttered. This is
+// the operator-visible "0 ready, N scheduled" vs "0 ready, 0
+// scheduled" distinction promised in docs/SCHEDULING.md.
+func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name            string
+		queueEmpty      bool
+		scheduledCount  int64
+		want            string
+	}{
+		{"queue-non-empty/some-scheduled", false, 5, ""},
+		{"queue-non-empty/no-scheduled", false, 0, ""},
+		{"queue-empty/some-scheduled", true, 1, SchedulingIdleHintReason},
+		{"queue-empty/many-scheduled", true, 42, SchedulingIdleHintReason},
+		{"queue-empty/no-scheduled", true, 0, ""},
+		{"queue-empty/negative-defensive", true, -1, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := decideSchedulingIdleHint(c.queueEmpty, c.scheduledCount); got != c.want {
+				t.Fatalf("decideSchedulingIdleHint(%v, %d) = %q, want %q",
+					c.queueEmpty, c.scheduledCount, got, c.want)
+			}
+		})
+	}
+}
+
+// TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask is the
+// integration counterpart: drive the real supervisor against an
+// in-memory store seeded so the queue is empty (no ready+now rows)
+// but the scheduled count is positive (one ready+future row), then
+// assert probeSchedulingHint returns the documented reason. The
+// alternate seedings (queue non-empty / nothing scheduled) are
+// covered by the unit-table test above; this test pins the wire-up
+// (store -> probe -> hint).
+func TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, nil)
+	// One ready task scheduled an hour into the future.
+	// ListReadyTaskQueueCandidates excludes it (filter:
+	// pickup_not_before <= now). stats.Scheduled counts it
+	// (predicate: pickup_not_before > now).
+	future := time.Now().UTC().Add(time.Hour)
+	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
+		Title:           "deferred",
+		Priority:        domain.PriorityMedium,
+		Status:          domain.StatusReady,
+		PickupNotBefore: ptrTime(future),
+	}, domain.ActorUser); err != nil {
+		t.Fatalf("create deferred task: %v", err)
+	}
+
+	hint := rig.sup.probeSchedulingHint(ctx)
+	if hint != SchedulingIdleHintReason {
+		t.Fatalf("probeSchedulingHint = %q, want %q (ready+future task should fire the hint)",
+			hint, SchedulingIdleHintReason)
+	}
+}
+
+// TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow pins
+// the negative case: when at least one ready task is dequeue-eligible
+// right now, the supervisor must NOT surface "awaiting_scheduled_task"
+// even if other ready rows are scheduled for later. Otherwise the log
+// line would mislead operators into thinking the worker is idle when
+// it actually has work pending.
+func TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, nil)
+	// One ready+now (no schedule) task → queue non-empty.
+	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
+		Title:    "ready-now",
+		Priority: domain.PriorityMedium,
+		Status:   domain.StatusReady,
+	}, domain.ActorUser); err != nil {
+		t.Fatalf("create ready-now task: %v", err)
+	}
+	// Plus one ready+future task → stats.Scheduled = 1.
+	future := time.Now().UTC().Add(time.Hour)
+	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
+		Title:           "deferred",
+		Priority:        domain.PriorityMedium,
+		Status:          domain.StatusReady,
+		PickupNotBefore: ptrTime(future),
+	}, domain.ActorUser); err != nil {
+		t.Fatalf("create deferred task: %v", err)
+	}
+
+	if hint := rig.sup.probeSchedulingHint(ctx); hint != "" {
+		t.Fatalf("probeSchedulingHint = %q, want \"\" (queue non-empty must suppress the hint)", hint)
+	}
+}
+
+// TestSupervisor_probeSchedulingHint_silentWhenNothingScheduled pins
+// the truly-idle case: empty database (no ready, no scheduled). The
+// supervisor must not invent a reason — the absence of work is just
+// "0 ready, 0 scheduled", not "awaiting_scheduled_task".
+func TestSupervisor_probeSchedulingHint_silentWhenNothingScheduled(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, nil)
+	if hint := rig.sup.probeSchedulingHint(ctx); hint != "" {
+		t.Fatalf("probeSchedulingHint = %q, want \"\" (empty DB must not fire the hint)", hint)
+	}
+}

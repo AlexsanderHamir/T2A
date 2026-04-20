@@ -335,3 +335,52 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   selection bindings; everywhere else the table is unchanged.
   This is the "additive over destructive" principle from the
   execution-discipline section: zero risk to non-list call sites.
+
+- **2026-04-19 — [Stage 6] — `scheduled` counter ships as a
+  top-level key on `GET /tasks/stats`, not as a nested field
+  under `by_status`.**
+  Rationale: `by_status['ready']` already counts ALL ready rows
+  (including the deferred ones); shadowing it with a nested
+  "ready_now" / "ready_scheduled" split would force every existing
+  consumer to relearn what the longstanding `ready` count means.
+  A flat sibling counter `scheduled` is purely additive — old
+  clients keep their semantics, new ones opt in. The wire shape
+  contract test (`assertStatsEnvelopeKeys`) was updated from ten
+  to eleven mandatory keys to pin the new field.
+
+- **2026-04-19 — [Stage 6] — `awaiting_scheduled_task` ships as a
+  diagnostic *hint* surfaced in `effectiveSettingsLog.IdleReason`,
+  NOT as a real `decideIdle` return value that prevents the
+  worker from spawning.**
+  Rationale: the supervisor's `applySettings` is invoked only on
+  Start and Reload — there is no periodic re-evaluation. If
+  `decideIdle` returned `(true, "awaiting_scheduled_task")` for
+  every "queue empty + scheduled > 0" snapshot, the worker would
+  be torn down and never re-spawned when the schedule horizon
+  expired (the reconcile loop would push the row into the SQL
+  queue, but no worker would consume it). The conservative
+  reading of the plan's intent — "make the *absence* of work due
+  to scheduling visible" — is satisfied by surfacing the reason
+  in the log line that operators already read on every
+  Start/Reload, while keeping the worker live so it picks up the
+  task the moment its time arrives. The pure helper
+  `decideSchedulingIdleHint(queueEmpty, scheduledCount)` and the
+  bounded `probeSchedulingHint(ctx)` integration wrapper are
+  separate from `decideIdle` precisely so this divergence is
+  obvious in code review. If a future plan needs the strict
+  "idle the worker entirely when only scheduled" semantic,
+  `applySettings` would also need a periodic re-tick driven from
+  the existing reconcile loop — out of scope here.
+
+- **2026-04-19 — [Stage 6] — `probeSchedulingHint` short-circuits
+  the stats round-trip when the queue probe already returned at
+  least one row.**
+  Rationale: the predicate "queue empty AND scheduled > 0" is
+  false the moment any row is dequeue-eligible, regardless of
+  what `stats.Scheduled` says. Skipping the second
+  bounded-2-second `TaskStats` call on the hot path
+  (every Start/Reload) keeps supervisor state transitions snappy
+  even when the DB is under load. Errors on either probe degrade
+  silently to `""` so the effective-config log line never breaks
+  because a transient DB blip happened to coincide with a
+  Reload.
