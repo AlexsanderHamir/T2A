@@ -152,3 +152,54 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   insufficient once schedules are operator-mutable. The
   `shouldNotifyReadyNow` invariant is preserved: we only notify
   when the SQL filter would also accept the row.
+
+
+- **2026-04-19 — [Stage 3] — The create-modal SchedulePicker treats
+  the operator's chosen `display_timezone` as the only source of
+  truth for the rendered wall-clock literal — never the host
+  browser's zone.**
+  Rationale: a native `<input type=""datetime-local"">` shows naive
+  local time without a zone suffix. If we let the browser interpret
+  that literal in the user's host zone, an operator in Tokyo
+  configuring a fleet that displays in `America/New_York` would
+  type `09:00` expecting NY morning and get Tokyo morning instead.
+  Implementation: `isoToZonedDatetimeLocal`/`zonedDatetimeLocalToIso`
+  in `web/src/shared/time/appTimezone.ts` round-trip through
+  `Intl.DateTimeFormat` parts in the chosen zone. Caption
+  underneath the input always shows the formatted instant in the
+  app TZ so the operator sees what was actually scheduled.
+
+- **2026-04-19 — [Stage 3] — Quick-pick chips never produce a
+  no-op deferral into the past.**
+  Rationale: an operator clicking ""Tonight 9 PM"" at 22:00 means
+  ""the next 21:00"", not ""an hour ago"". `computeQuickPickIso` falls
+  forward to tomorrow's 21:00 when today's 21:00 has already passed
+  in the app TZ. Similarly, ""Next Monday 9 AM"" on a Monday goes
+  to next week (+7 days), not today, because typing ""Next Monday""
+  on a Monday almost never means ""today"". DST forward + backward
+  are covered by tests (spring-forward 2026-03-08 and fall-back
+  2026-11-01 in America/New_York).
+
+- **2026-04-19 — [Stage 3] — The `newSchedule` value is NOT
+  persisted to the autosave draft.**
+  Rationale: drafts capture the *content* of a future task; the
+  operator's notion ""I want this picked up 4 hours from now"" is
+  anchored to wall-clock time, which would silently drift if we
+  serialised the absolute UTC instant into the draft and the user
+  resumed days later (e.g. ""4 hours from now"" becoming ""4 hours
+  ago"" after a long weekend). A schedule chosen during a draft
+  edit session is reset on close + on draft resume. If draft-side
+  scheduling becomes a request, store the chip *kind* + a `now`
+  snapshot rather than the absolute instant so the resumed draft
+  re-anchors correctly.
+
+- **2026-04-19 — [Stage 3] — `SchedulePicker` takes `appTimezone`
+  as a prop instead of calling `useAppTimezone()` internally.**
+  Rationale: keeping the picker decoupled from the
+  `useAppSettings` hook (which depends on a `QueryClientProvider`
+  context) makes it trivially testable with any zone in isolation
+  and reusable in stages 4 & 5 where the same picker may render
+  inside detail / list contexts that already have the zone in
+  scope. Today the create modal looks up the zone once via
+  `useAppTimezone()` in `TaskHome.tsx` and forwards it; later
+  stages should follow the same pattern.

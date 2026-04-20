@@ -11,6 +11,7 @@ import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNeste
 import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
+import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
@@ -51,6 +52,24 @@ type Props = {
   taskCursorModel: string;
   onTaskRunnerChange: (runner: string) => void;
   onTaskCursorModelChange: (v: string) => void;
+  /**
+   * Future pickup time as an RFC3339 UTC ISO string, or `null` when
+   * the operator wants the task picked up immediately. Plumbed
+   * straight into the `SchedulePicker` rendered inside the modal.
+   * The modal owns no schedule state of its own — `useTasksApp`
+   * holds the canonical source so the same value survives a
+   * close+reopen of the same draft and resets cleanly on a fresh
+   * draft.
+   */
+  schedule: string | null;
+  onScheduleChange: (next: string | null) => void;
+  /**
+   * IANA timezone the picker should render its wall-clock literal
+   * + caption in. Forwarded as a prop (rather than read from a hook
+   * inside the picker) so the modal owns the "look up the operator
+   * timezone" decision once and the picker stays trivially testable.
+   */
+  appTimezone: string;
   onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
@@ -109,6 +128,9 @@ export function TaskCreateModal({
   taskCursorModel,
   onTaskRunnerChange,
   onTaskCursorModelChange,
+  schedule,
+  onScheduleChange,
+  appTimezone,
   onSaveDraft,
   onEvaluate,
   onSubmit,
@@ -222,6 +244,14 @@ export function TaskCreateModal({
                 onRemovePendingSubtask={onRemovePendingSubtask}
               />
             ) : null}
+
+            <SchedulePicker
+              value={schedule}
+              onChange={onScheduleChange}
+              appTimezone={appTimezone}
+              disabled={disabled}
+              idPrefix="task-create-modal"
+            />
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
 

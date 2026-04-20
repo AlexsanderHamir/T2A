@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_APP_TIMEZONE,
   formatInAppTimezone,
+  isoToZonedDatetimeLocal,
   supportedTimezones,
+  zonedDatetimeLocalToIso,
 } from "./appTimezone";
 
 describe("formatInAppTimezone", () => {
@@ -79,6 +81,64 @@ describe("supportedTimezones", () => {
     const rest = list.slice(1);
     const restSorted = [...rest].sort((a, b) => a.localeCompare(b));
     expect(rest).toEqual(restSorted);
+  });
+});
+
+describe("isoToZonedDatetimeLocal / zonedDatetimeLocalToIso", () => {
+  it("formats a UTC instant as the matching wall-clock literal in UTC", () => {
+    expect(isoToZonedDatetimeLocal("2026-04-19T12:34:00Z", "UTC")).toBe(
+      "2026-04-19T12:34",
+    );
+  });
+
+  it("formats a UTC instant as the matching wall-clock literal in America/New_York (EDT, UTC-4 in April)", () => {
+    expect(
+      isoToZonedDatetimeLocal("2026-04-19T12:00:00Z", "America/New_York"),
+    ).toBe("2026-04-19T08:00");
+  });
+
+  it("formats a UTC instant as the matching wall-clock literal in Asia/Tokyo (UTC+9, no DST)", () => {
+    expect(
+      isoToZonedDatetimeLocal("2026-04-19T00:00:00Z", "Asia/Tokyo"),
+    ).toBe("2026-04-19T09:00");
+  });
+
+  it("returns empty string for blank / unparseable iso", () => {
+    expect(isoToZonedDatetimeLocal("", "UTC")).toBe("");
+    expect(isoToZonedDatetimeLocal(null, "UTC")).toBe("");
+    expect(isoToZonedDatetimeLocal(undefined, "UTC")).toBe("");
+    expect(isoToZonedDatetimeLocal("not-a-date", "UTC")).toBe("");
+  });
+
+  it("round-trips through zonedDatetimeLocalToIso for UTC", () => {
+    const iso = "2026-04-19T12:34:00.000Z";
+    const local = isoToZonedDatetimeLocal(iso, "UTC");
+    expect(zonedDatetimeLocalToIso(local, "UTC")).toBe(iso);
+  });
+
+  it("round-trips through zonedDatetimeLocalToIso for America/New_York", () => {
+    const iso = "2026-04-19T12:00:00.000Z";
+    const local = isoToZonedDatetimeLocal(iso, "America/New_York");
+    expect(local).toBe("2026-04-19T08:00");
+    expect(zonedDatetimeLocalToIso(local, "America/New_York")).toBe(iso);
+  });
+
+  it("round-trips through zonedDatetimeLocalToIso for Asia/Tokyo", () => {
+    const iso = "2026-04-19T00:00:00.000Z";
+    const local = isoToZonedDatetimeLocal(iso, "Asia/Tokyo");
+    expect(local).toBe("2026-04-19T09:00");
+    expect(zonedDatetimeLocalToIso(local, "Asia/Tokyo")).toBe(iso);
+  });
+
+  it("zonedDatetimeLocalToIso returns empty for empty / malformed input", () => {
+    expect(zonedDatetimeLocalToIso("", "UTC")).toBe("");
+    expect(zonedDatetimeLocalToIso("not-a-datetime", "UTC")).toBe("");
+  });
+
+  it("zonedDatetimeLocalToIso accepts the optional :ss suffix some browsers emit", () => {
+    expect(zonedDatetimeLocalToIso("2026-04-19T12:34:56", "UTC")).toBe(
+      "2026-04-19T12:34:56.000Z",
+    );
   });
 });
 

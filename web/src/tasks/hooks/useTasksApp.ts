@@ -61,6 +61,27 @@ export function useTasksApp() {
   const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
+  /**
+   * Future pickup time for the new task as an RFC3339 UTC ISO
+   * string, or `null` to mean "no schedule — pick up immediately
+   * when the worker is free". Plumbed all the way down to the
+   * `SchedulePicker` inside `TaskCreateModal`. When non-null on
+   * submit, this **bypasses** the global `agent_pickup_delay_seconds`
+   * setting (operator's explicit choice wins, per Stage 2 of the
+   * task scheduling plan). Reset to `null` on every modal close /
+   * fresh draft / draft resume so a stale schedule from a previous
+   * draft cannot leak into a new one.
+   *
+   * Not persisted to the autosave draft today — drafts are about
+   * the *content* of the task, and the operator's notion of "I want
+   * to schedule this 4 hours from now" is anchored to wall-clock
+   * time, which would silently drift if we serialised the absolute
+   * instant into the draft and the user resumed days later. If
+   * draft-side scheduling becomes a request, store the chip kind +
+   * a `now` snapshot rather than the absolute instant so the
+   * resumed draft re-anchors correctly.
+   */
+  const [newSchedule, setNewSchedule] = useState<string | null>(null);
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
   const [newDraftID, setNewDraftIDState] = useState("");
   /**
@@ -217,6 +238,7 @@ export function useTasksApp() {
     const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
+    setNewSchedule(null);
     setNewChecklistItems([]);
     setPendingSubtasks([]);
     setLatestDraftEvaluation(null);
@@ -296,6 +318,19 @@ export function useTasksApp() {
       draft_id: string;
       runner: string;
       cursor_model: string;
+      /**
+       * RFC3339 UTC ISO string forwarded to `POST /tasks` as
+       * `pickup_not_before`. `null` (the operator left the
+       * `SchedulePicker` empty) means "no schedule"; the server then
+       * applies the global `agent_pickup_delay_seconds` if set, or
+       * picks the task up immediately. A non-null value bypasses
+       * that global delay (per Stage 2 of the task scheduling plan).
+       *
+       * Subtasks are intentionally **not** carried across — pending
+       * subtasks today have no schedule field of their own; if Stage 5
+       * adds one we'll plumb it through this same shape.
+       */
+      pickup_not_before: string | null;
     }) => {
       const addChecklistItems = async (taskId: string, items: string[]) => {
         const rows = items.map((raw) => raw.trim()).filter(Boolean);
@@ -310,6 +345,9 @@ export function useTasksApp() {
         draft_id: input.draft_id,
         runner: input.runner,
         cursor_model: input.cursor_model,
+        ...(input.pickup_not_before !== null
+          ? { pickup_not_before: input.pickup_not_before }
+          : {}),
       });
       await addChecklistItems(task.id, input.checklistItems);
       await Promise.all(
@@ -783,6 +821,7 @@ export function useTasksApp() {
       pendingSubtasks,
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
+      pickup_not_before: newSchedule,
     });
   }
 
@@ -837,6 +876,10 @@ export function useTasksApp() {
         : (settingsSnap?.cursor_model ?? "");
     setNewTaskRunner(resumedRunner);
     setNewTaskCursorModel(resumedModel);
+    // Resumed drafts never carry a schedule — see the doc on
+    // `newSchedule` above. Clear so a stale schedule from a previous
+    // open of a different draft does not leak into the resumed form.
+    setNewSchedule(null);
     setNewDraftID(draft.id);
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
@@ -1103,6 +1146,8 @@ export function useTasksApp() {
     setNewTaskRunner,
     newTaskCursorModel,
     setNewTaskCursorModel,
+    newSchedule,
+    setNewSchedule,
     newChecklistItems,
     latestDraftEvaluation,
     pendingSubtasks,

@@ -3,6 +3,7 @@ import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";
+import { useAppTimezone } from "@/shared/time/appTimezone";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
@@ -50,6 +51,7 @@ function KpiValue({ state, label }: { state: KpiState; label: string }) {
 
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
+  const appTimezone = useAppTimezone();
   const handleResumeDraft = (id: string) => {
     void app.resumeDraftByID(id).catch(() => {
       // Error state is exposed by the hook and rendered in the modal.
@@ -127,6 +129,9 @@ export function TaskHome({ app }: Props) {
           taskCursorModel={app.newTaskCursorModel}
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
+          schedule={app.newSchedule}
+          onScheduleChange={app.setNewSchedule}
+          appTimezone={appTimezone}
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}

@@ -587,3 +587,72 @@ select {
   padding-right: 2rem;
 }
 
+.schedule-picker {
+  margin-top: 0.5rem;
+  padding: 1rem 0 0.5rem;
+  border: none;
+  border-top: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.schedule-picker-legend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+  padding: 0;
+}
+
+.schedule-picker-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.schedule-picker-input {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-hairline);
+  background: var(--surface-input, transparent);
+  color: var(--text-primary);
+}
+
+.schedule-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.schedule-picker-chip {
+  font-size: var(--text-xs);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.schedule-picker-chip:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.schedule-picker-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.schedule-picker-chip--clear {
+  border-style: dashed;
+}
+
+.schedule-picker-caption {
+  font-size: var(--text-xs);
+  margin: 0;
+}
+

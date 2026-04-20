@@ -62,6 +62,9 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     taskCursorModel: TASK_TEST_DEFAULTS.cursor_model,
     onTaskRunnerChange: vi.fn(),
     onTaskCursorModelChange: vi.fn(),
+    schedule: null,
+    onScheduleChange: vi.fn(),
+    appTimezone: "UTC",
     onSaveDraft: vi.fn(),
     onEvaluate: vi.fn(),
     onSubmit: vi.fn(),
@@ -165,6 +168,35 @@ describe("TaskCreateModal", () => {
     expect(
       screen.getByRole("button", { name: /^create$/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders a SchedulePicker with the immediate-pickup caption when no schedule is set", () => {
+    renderModal();
+    expect(
+      screen.getByText(/picks up immediately when the worker is free/i),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("schedule-picker-input")).toBeInTheDocument();
+  });
+
+  it("forwards quick-pick selections to onScheduleChange", async () => {
+    const user = userEvent.setup();
+    const onScheduleChange = vi.fn();
+    renderModal({ onScheduleChange, appTimezone: "UTC" });
+    await user.click(screen.getByTestId("schedule-picker-in-1h"));
+    expect(onScheduleChange).toHaveBeenCalledTimes(1);
+    const v = onScheduleChange.mock.calls[0][0];
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  });
+
+  it("renders the picker caption in the chosen app timezone when a schedule is set", () => {
+    renderModal({
+      schedule: "2026-04-19T13:00:00Z",
+      appTimezone: "America/New_York",
+    });
+    // 13:00Z = 09:00 EDT in April.
+    expect(screen.getByText(/agent will pick up at/i)).toBeInTheDocument();
+    expect(screen.getByText(/09:00/)).toBeInTheDocument();
   });
 
   it("does not render mutation error callouts on the happy path", () => {

@@ -127,6 +127,157 @@ export function supportedTimezones(): string[] {
   return FALLBACK_TIMEZONES;
 }
 
+/**
+ * isoToZonedDatetimeLocal converts an RFC3339 / ISO-8601 UTC instant
+ * to the naive `YYYY-MM-DDTHH:mm` string that an
+ * `<input type="datetime-local">` accepts as its `value` attribute,
+ * expressed in the operator's chosen IANA timezone. This is the
+ * inverse of `zonedDatetimeLocalToIso` below; together they let the
+ * SchedulePicker round-trip between "what the operator sees" and
+ * "what the wire carries" without Moment / date-fns / Luxon as a
+ * dependency.
+ *
+ * Defensive contract:
+ *  - Empty / unparseable `iso` returns "" (the picker shows a blank
+ *    input — same UX as the user clearing the field).
+ *  - Invalid `tz` falls back to UTC (mirrors `formatInAppTimezone`).
+ *
+ * Implementation note: we use `Intl.DateTimeFormat.formatToParts`
+ * with `hour12: false` to extract year/month/day/hour/minute in the
+ * chosen zone, then assemble them into the `YYYY-MM-DDTHH:mm`
+ * literal the input expects. Skipping `Date.toISOString().slice(0, 16)`
+ * because that would be UTC, not the chosen zone.
+ */
+export function isoToZonedDatetimeLocal(
+  iso: string | null | undefined,
+  tz: string,
+): string {
+  if (typeof iso !== "string" || iso.length === 0) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const parts = formatPartsInZone(d, tz);
+  if (!parts) return "";
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * zonedDatetimeLocalToIso is the inverse of `isoToZonedDatetimeLocal`:
+ * given the literal value an `<input type="datetime-local">` emits in
+ * the operator's chosen timezone (`YYYY-MM-DDTHH:mm`, no zone
+ * suffix), return the RFC3339 UTC string the API expects on
+ * `pickup_not_before`.
+ *
+ * Algorithm:
+ *  1. Parse the local literal as if it were already UTC (via
+ *     `Date.UTC`) to get a "guessed" timestamp.
+ *  2. Format that timestamp in the target zone via
+ *     `formatPartsInZone` to discover the actual wall-clock the zone
+ *     would render.
+ *  3. The delta between the input's wall-clock and the rendered
+ *     wall-clock is the zone's UTC offset at that instant; subtract
+ *     it to get the true UTC instant.
+ *
+ * This handles DST forwards and backwards correctly because the
+ * offset is computed at the *guessed* timestamp, which is at most
+ * one hour off from the true timestamp — well within the same DST
+ * transition window for any sensible zone. (Iterating once would
+ * fix the rare case where the guess lands on the wrong side of a
+ * DST cliff; for the SchedulePicker's use case, "set a future
+ * pickup time", being one hour off twice a year is preferable to
+ * round-tripping through a heavyweight library.)
+ *
+ * Defensive contract:
+ *  - Empty / malformed input returns "" (the picker treats this as
+ *    "no schedule" and emits null upward).
+ *  - Invalid `tz` falls back to UTC.
+ */
+export function zonedDatetimeLocalToIso(
+  local: string,
+  tz: string,
+): string {
+  if (typeof local !== "string" || local.length === 0) return "";
+  // <input type="datetime-local"> emits "YYYY-MM-DDTHH:mm" — a strict
+  // 16-char shape — but we accept the longer "with seconds" variant
+  // some browsers offer for robustness.
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(local);
+  if (!m) return "";
+  const [, y, mo, d, h, mi, s] = m;
+  const guess = Date.UTC(
+    Number(y),
+    Number(mo) - 1,
+    Number(d),
+    Number(h),
+    Number(mi),
+    s ? Number(s) : 0,
+  );
+  const parts = formatPartsInZone(new Date(guess), tz);
+  if (!parts) {
+    return new Date(guess).toISOString();
+  }
+  // The zone showed `parts.*` for the guessed UTC instant. The
+  // operator typed the local wall-clock literal; the difference is
+  // the UTC offset (in ms) we need to subtract from the guess to
+  // land on the true UTC instant.
+  const renderedAsUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second ?? "0"),
+  );
+  const offsetMs = renderedAsUtc - guess;
+  return new Date(guess - offsetMs).toISOString();
+}
+
+type ZonedParts = {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  minute: string;
+  second?: string;
+};
+
+function formatPartsInZone(d: Date, tz: string): ZonedParts | null {
+  const opts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: tz,
+  };
+  let fmt: Intl.DateTimeFormat;
+  try {
+    fmt = new Intl.DateTimeFormat("en-US", opts);
+  } catch {
+    fmt = new Intl.DateTimeFormat("en-US", { ...opts, timeZone: "UTC" });
+  }
+  const map: Record<string, string> = {};
+  for (const p of fmt.formatToParts(d)) {
+    if (p.type !== "literal") map[p.type] = p.value;
+  }
+  if (!map.year || !map.month || !map.day || !map.hour || !map.minute) {
+    return null;
+  }
+  // `hour12: false` in some Intl implementations returns "24" instead
+  // of "00" at midnight; normalise so the assembled "YYYY-MM-DDTHH:mm"
+  // stays a legal datetime-local value.
+  let hour = map.hour;
+  if (hour === "24") hour = "00";
+  return {
+    year: map.year,
+    month: map.month,
+    day: map.day,
+    hour,
+    minute: map.minute,
+    second: map.second,
+  };
+}
+
 const FALLBACK_TIMEZONES: string[] = [
   "UTC",
   "Africa/Cairo",

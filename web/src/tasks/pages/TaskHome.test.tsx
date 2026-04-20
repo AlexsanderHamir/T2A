@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { useTasksApp } from "../hooks/useTasksApp";
@@ -70,10 +71,24 @@ function statsFixture(overrides: Partial<TaskStatsResponse> = {}): TaskStatsResp
 }
 
 function renderHome(app: App) {
+  // TaskHome reads the operator's display timezone via
+  // `useAppTimezone()` (which goes through `useAppSettings` →
+  // `useQueryClient`) so the SchedulePicker inside the create modal
+  // can render its caption in the right zone. The KPI tests don't
+  // care about the value — they just need a QueryClient context to
+  // exist so the hook resolves to its "UTC" fallback. Wrapping with
+  // a fresh QueryClient per render keeps these tests isolated from
+  // each other and from real network IO (no `queryFn` ever runs
+  // here because we mock the create modal away in this file).
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   return render(
-    <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
-      <TaskHome app={app} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <TaskHome app={app} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
