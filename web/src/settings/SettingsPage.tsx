@@ -526,30 +526,11 @@ export function SettingsPage() {
             />
             Realtime rollout
           </legend>
-          {/* The prior layout carried three paragraphs of copy per
-              toggle (fieldset subtitle + current-state line +
-              technical help), which added up to a wall of text
-              before the operator could even see the checkboxes.
-              Keep the at-a-glance surface tight: a one-line
-              subtitle (defaults stated once for the section), the
-              toggle, and a short current-state line. Anything
-              operational (rollout playbook, affected API surfaces,
-              header contract) moves behind a native `<details>`
-              disclosure so the information is still one click away
-              but doesn't dominate the page. */}
+          {/* At-a-glance: one-line subtitle, toggles, short state lines;
+              optional detail per toggle stays in nested Learn more. */}
           <p className="settings-fieldset-subtitle">
             Opt-in enhancements. Both default to <strong>off</strong>.
           </p>
-          <details className="settings-learn-more">
-            <summary>Rollout guidance</summary>
-            <p>
-              Enable one flag at a time after a full SLO window of
-              green rollback-rate and error-rate metrics in staging
-              (see <code>docs/SLOs.md</code>). The product is fully
-              usable with both off — these are layered on top of
-              stable defaults.
-            </p>
-          </details>
 
           <div className="settings-rollout-toggle">
             <label className="settings-field settings-field--inline">
