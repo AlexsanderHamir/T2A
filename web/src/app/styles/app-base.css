@@ -408,13 +408,6 @@ textarea::placeholder {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-@media (hover: hover) {
-  .app-brand:hover .app-title--logo {
-    color: var(--brand-hover);
-    -webkit-text-fill-color: var(--brand-hover);
-  }
-}
-
 .app-title {
   font-size: clamp(1.15rem, 1.5vw, 1.35rem);
   font-weight: 600;
@@ -425,15 +418,56 @@ textarea::placeholder {
   font-feature-settings: "kern" 1, "liga" 1;
 }
 
+/*
+ * Product wordmark — two-tone gradient that reads as "brand-of-T2A":
+ * the first ~34% of the wordmark stays in primary ink (near-black),
+ * then transitions through `--brand` into `--brand-deep` across the
+ * back half. On hover the whole wordmark collapses to a flat brand
+ * color so the mark "lights up" as a single unit, signaling the
+ * link is interactive without changing position or weight.
+ *
+ * `background-clip: text` is the modern path; the @supports
+ * fallback below paints a flat primary mark on engines that lack
+ * it (very old WebKit, some embedded browsers).
+ */
 .app-title--logo {
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: -0.045em;
   line-height: 1.1;
-  color: var(--brand);
-  background: none;
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  -webkit-text-fill-color: var(--brand);
+  background: linear-gradient(
+    108deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 34%,
+    var(--brand) 48%,
+    var(--brand-hover) 78%,
+    var(--brand-deep) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    -webkit-text-fill-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .app-title--logo {
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    color: var(--text-primary);
+  }
+}
+
+@media (hover: hover) {
+  .app-brand:hover .app-title--logo {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    -webkit-text-fill-color: var(--link);
+    color: var(--link);
+  }
 }
 
 /*
