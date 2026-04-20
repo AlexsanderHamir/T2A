@@ -31,8 +31,12 @@ export type AppSettings = {
    * IANA timezone identifier (e.g. "America/New_York"). Used for
    * EVERY operator-facing timestamp render in the SPA. The wire
    * format for every timestamp stays RFC3339 UTC; this field
-   * governs PRESENTATION only. Default "UTC". Validated server-side
-   * via time.LoadLocation; the SPA can trust the value parses in
+   * governs PRESENTATION only. Empty string ("") is the "auto-detect"
+   * sentinel — the backend seeds it on first boot so the SPA falls
+   * back to the operator's browser timezone via
+   * `Intl.DateTimeFormat().resolvedOptions().timeZone`. Any non-empty
+   * value is an explicit override validated server-side via
+   * time.LoadLocation; the SPA can trust it parses in
    * Intl.DateTimeFormat without further checking.
    */
   display_timezone: string;
@@ -75,7 +79,10 @@ export type AppSettingsPatch = Partial<{
   agent_pickup_delay_seconds: number;
   /**
    * IANA timezone identifier (e.g. "America/New_York"). Empty string
-   * is rejected server-side; PATCH to "UTC" to reset to default.
+   * clears the override so the SPA falls back to browser auto-detect
+   * (see AppSettings.display_timezone for the auto-detect sentinel
+   * contract). Non-empty values are validated server-side via
+   * time.LoadLocation.
    */
   display_timezone: string;
   optimistic_mutations_enabled: boolean;
@@ -128,14 +135,15 @@ function assertSettings(raw: unknown): AppSettings {
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
   const pickupDelay = o.agent_pickup_delay_seconds;
-  // Default display_timezone to "UTC" when the server omits the field
-  // so older builds (pre-Stage-1 of the scheduling plan) stay
-  // decodable by a freshly-deployed SPA. Intl.DateTimeFormat accepts
-  // "UTC" everywhere; falling back keeps the SPA from crashing on
-  // first paint just because a stale binary is still serving GETs.
-  const tz = typeof o.display_timezone === "string" && o.display_timezone.length > 0
-    ? o.display_timezone
-    : "UTC";
+  // display_timezone is preserved verbatim when the server sends a
+  // string. Empty string ("") is the documented auto-detect sentinel
+  // (the SPA reads it as "no operator override, use the browser zone"),
+  // so we MUST NOT coerce "" to "UTC" here — that would silently
+  // override the auto-detect path. When the server omits the field
+  // entirely (stale pre-Stage-1 binary still serving GETs) we fall
+  // back to "" too, which routes through the same auto-detect path —
+  // safer than hard-coding UTC for every operator on a new SPA build.
+  const tz = typeof o.display_timezone === "string" ? o.display_timezone : "";
   // New rollout flags default to false when the server omits them, so
   // an old binary keeps decodable by a new SPA. Decode as `boolean` but
   // never throw on missing — we WANT the pessimistic (legacy) path to

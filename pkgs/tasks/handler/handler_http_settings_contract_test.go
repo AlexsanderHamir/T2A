@@ -571,11 +571,13 @@ func assertSettingsBareError(t *testing.T, raw []byte, wantError string) {
 func ptrStr(s string) *string { return &s }
 
 // TestHTTP_GetSettings_includesDisplayTimezoneDefault pins the
-// scheduling-plan Stage 1 contract: GET /settings returns
-// "display_timezone":"UTC" by default so the SPA always has a valid
-// IANA zone to feed Intl.DateTimeFormat. An older SPA that ignores
-// the field still works (any unknown JSON keys are dropped); a newer
-// SPA that depends on it never has to special-case "missing".
+// auto-detect contract: GET /settings returns
+// "display_timezone":"" by default so the SPA knows "no explicit
+// operator override" and falls back to the browser's own IANA zone
+// via Intl.DateTimeFormat().resolvedOptions().timeZone. An older SPA
+// that ignores the field still works (any unknown JSON keys are
+// dropped); a newer SPA reads the empty string as the auto-detect
+// sentinel (see web/src/shared/time/appTimezone.ts::useAppTimezone).
 func TestHTTP_GetSettings_includesDisplayTimezoneDefault(t *testing.T) {
 	srv, _, _, _ := settingsTestServer(t)
 	body := mustGetSettingsJSON(t, srv.URL+"/settings", http.StatusOK)
@@ -583,11 +585,11 @@ func TestHTTP_GetSettings_includesDisplayTimezoneDefault(t *testing.T) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, body)
 	}
-	if resp.DisplayTimezone != "UTC" {
-		t.Errorf("DisplayTimezone=%q, want UTC (default seed)", resp.DisplayTimezone)
+	if resp.DisplayTimezone != "" {
+		t.Errorf("DisplayTimezone=%q, want empty string (auto-detect sentinel — see domain.DefaultDisplayTimezone)", resp.DisplayTimezone)
 	}
-	if !strings.Contains(string(body), `"display_timezone":"UTC"`) {
-		t.Fatalf("response body missing display_timezone key: %s", body)
+	if !strings.Contains(string(body), `"display_timezone":""`) {
+		t.Fatalf("response body missing display_timezone key (expected empty string sentinel): %s", body)
 	}
 }
 

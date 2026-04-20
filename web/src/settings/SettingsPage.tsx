@@ -5,7 +5,7 @@ import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
 import { listCursorModels } from "@/api/settings";
 import {
-  DEFAULT_APP_TIMEZONE,
+  detectBrowserTimezone,
   formatInAppTimezone,
   supportedTimezones,
 } from "@/shared/time/appTimezone";
@@ -83,8 +83,13 @@ function diffPatch(initial: AppSettings, form: FormState): AppSettingsPatch {
   ) {
     out.agent_pickup_delay_seconds = parsedPickup;
   }
+  // Empty string is a meaningful patch value here: it clears the
+  // explicit override and hands control back to the SPA's
+  // `detectBrowserTimezone()` fallback. Non-empty values are
+  // whitespace-trimmed so a stray space can't shadow an otherwise
+  // identical saved zone.
   const tzTrimmed = form.displayTimezone.trim();
-  if (tzTrimmed !== "" && tzTrimmed !== initial.display_timezone) {
+  if (tzTrimmed !== initial.display_timezone) {
     out.display_timezone = tzTrimmed;
   }
   if (initial.optimistic_mutations_enabled !== form.optimisticMutationsEnabled) {
@@ -333,8 +338,13 @@ export function SettingsPage() {
   const showCustomTz =
     form.displayTimezone.trim() !== "" &&
     !tzOptions.includes(form.displayTimezone.trim());
+  // Browser-detected zone surfaced in the "Auto-detect" option label so
+  // operators can see WHICH zone auto-detect will resolve to before
+  // committing. Recomputed per-render — detectBrowserTimezone is a
+  // single Intl.DateTimeFormat() call, negligible cost.
+  const browserTz = detectBrowserTimezone();
   const lastUpdatedFormatted = lastUpdated
-    ? formatInAppTimezone(lastUpdated, form.displayTimezone || DEFAULT_APP_TIMEZONE)
+    ? formatInAppTimezone(lastUpdated, form.displayTimezone || browserTz)
     : "";
 
   return (
@@ -455,6 +465,7 @@ export function SettingsPage() {
               value={form.displayTimezone}
               onChange={(e) => handleField("displayTimezone", e.target.value)}
             >
+              <option value="">Auto-detect ({browserTz})</option>
               {tzOptions.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
@@ -471,7 +482,10 @@ export function SettingsPage() {
             Operator-facing timestamps (scheduled task pickup time,
             &quot;last updated&quot;, etc.) render in this timezone. The wire
             format every API uses stays RFC3339 UTC; this only affects
-            display. Default <code>UTC</code>.
+            display. Default <em>Auto-detect</em> — the SPA picks up the
+            operator&apos;s browser timezone (currently <code>{browserTz}</code>).
+            Choose a specific IANA zone to pin every operator to the
+            same display regardless of where their browser is.
           </p>
         </fieldset>
 

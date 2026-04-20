@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_APP_TIMEZONE,
+  detectBrowserTimezone,
   formatInAppTimezone,
   isoToZonedDatetimeLocal,
   supportedTimezones,
@@ -143,7 +144,25 @@ describe("isoToZonedDatetimeLocal / zonedDatetimeLocalToIso", () => {
 });
 
 describe("DEFAULT_APP_TIMEZONE", () => {
-  it("is UTC, matching the backend domain.DefaultDisplayTimezone", () => {
+  it("is UTC — the client-side safety fallback when browser auto-detect fails", () => {
+    // The backend's domain.DefaultDisplayTimezone is now "" (the
+    // auto-detect sentinel). DEFAULT_APP_TIMEZONE keeps its "UTC"
+    // value as the final fallback zone formatInAppTimezone uses when
+    // Intl.DateTimeFormat refuses to produce a zone at all. See the
+    // doc comment on the constant for the full precedence chain.
     expect(DEFAULT_APP_TIMEZONE).toBe("UTC");
+  });
+});
+
+describe("detectBrowserTimezone", () => {
+  it("returns a non-empty IANA zone identifier from Intl.DateTimeFormat", () => {
+    const tz = detectBrowserTimezone();
+    expect(typeof tz).toBe("string");
+    expect(tz.length).toBeGreaterThan(0);
+    // Every zone Intl returns is either "UTC" or contains a "/"
+    // (continent/city, "Etc/...", etc.). Asserting the shape instead
+    // of a literal keeps the test independent of the CI runner's
+    // actual timezone.
+    expect(tz === "UTC" || tz.includes("/")).toBe(true);
   });
 });

@@ -30,8 +30,10 @@ type Patch struct {
 	MaxRunDurationSeconds   *int
 	AgentPickupDelaySeconds *int
 	// DisplayTimezone is an IANA timezone identifier validated via
-	// time.LoadLocation. Empty string is rejected; to "reset" the
-	// timezone, callers PATCH to "UTC" explicitly.
+	// time.LoadLocation. Empty string ("") is accepted and means
+	// "clear the override — let the SPA auto-detect the operator's
+	// browser timezone" (the domain.DefaultDisplayTimezone sentinel).
+	// Any non-empty value must parse via time.LoadLocation.
 	DisplayTimezone *string
 	// OptimisticMutationsEnabled / SSEReplayEnabled are the Phase 1 /
 	// Phase 2 rollout flags from
@@ -174,11 +176,15 @@ func validatePatch(patch Patch) error {
 	}
 	if patch.DisplayTimezone != nil {
 		trimmed := strings.TrimSpace(*patch.DisplayTimezone)
-		if trimmed == "" {
-			return fmt.Errorf("%w: display_timezone must be non-empty (use \"UTC\" to reset)", domain.ErrInvalidInput)
-		}
-		if _, err := time.LoadLocation(trimmed); err != nil {
-			return fmt.Errorf("%w: display_timezone %q is not a valid IANA timezone: %v", domain.ErrInvalidInput, trimmed, err)
+		// Empty string is allowed and clears the override so the SPA
+		// falls back to browser auto-detect (see
+		// domain.DefaultDisplayTimezone). Non-empty values must parse
+		// as an IANA zone so a stale SPA PATCH can never poison the row
+		// with garbage that would later crash Intl.DateTimeFormat.
+		if trimmed != "" {
+			if _, err := time.LoadLocation(trimmed); err != nil {
+				return fmt.Errorf("%w: display_timezone %q is not a valid IANA timezone: %v", domain.ErrInvalidInput, trimmed, err)
+			}
 		}
 	}
 	return nil

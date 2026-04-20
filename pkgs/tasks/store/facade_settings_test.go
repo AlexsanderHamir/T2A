@@ -52,8 +52,8 @@ func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 	if got.DisplayTimezone != want.DisplayTimezone {
 		t.Errorf("DisplayTimezone = %q, want %q", got.DisplayTimezone, want.DisplayTimezone)
 	}
-	if got.DisplayTimezone != "UTC" {
-		t.Errorf("DisplayTimezone default = %q, want UTC (the safest IANA zone every Go runtime knows)", got.DisplayTimezone)
+	if got.DisplayTimezone != "" {
+		t.Errorf("DisplayTimezone default = %q, want empty (the auto-detect sentinel — see domain.DefaultDisplayTimezone)", got.DisplayTimezone)
 	}
 	if got.UpdatedAt.IsZero() {
 		t.Error("UpdatedAt should be set after seed")
@@ -249,11 +249,23 @@ func TestStore_UpdateSettings_trimsAndClamps(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects_empty_timezone", func(t *testing.T) {
+	t.Run("accepts_empty_timezone_as_auto_detect_reset", func(t *testing.T) {
+		// Empty string is the documented "clear override, fall back to
+		// browser auto-detect" sentinel (see domain.DefaultDisplayTimezone).
+		// Whitespace-only is treated the same after TrimSpace. Both must
+		// round-trip through the store without an error so operators can
+		// reset an explicit zone back to auto-detect via PATCH /settings
+		// { "display_timezone": "" }.
 		s, ctx := newSettingsStore(t)
-		_, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("   ")})
-		if !errors.Is(err, domain.ErrInvalidInput) {
-			t.Fatalf("err = %v, want ErrInvalidInput (empty must be rejected; PATCH to UTC to reset)", err)
+		if _, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("Europe/London")}); err != nil {
+			t.Fatalf("seed explicit zone: %v", err)
+		}
+		updated, err := s.UpdateSettings(ctx, SettingsPatch{DisplayTimezone: ptrString("   ")})
+		if err != nil {
+			t.Fatalf("clear to empty: %v", err)
+		}
+		if updated.DisplayTimezone != "" {
+			t.Errorf("DisplayTimezone = %q, want \"\" (auto-detect sentinel)", updated.DisplayTimezone)
 		}
 	})
 

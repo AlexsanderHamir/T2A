@@ -1,36 +1,68 @@
 import { useAppSettings } from "@/settings/useAppSettings";
 
 /**
- * Default IANA timezone used by the SPA when settings haven't loaded
- * yet OR the server explicitly returned "UTC". Kept in a constant so
- * tests and callers can compare without hardcoding the literal in N
- * places.
+ * Safety fallback zone used when neither the server nor the browser
+ * can provide a usable IANA identifier (e.g. an exotic runtime where
+ * `Intl.DateTimeFormat().resolvedOptions().timeZone` throws or returns
+ * an empty string). "UTC" is the only zone every Intl implementation
+ * is guaranteed to accept, so callers can rely on `formatInAppTimezone`
+ * never throwing when this value is passed through.
  *
- * MUST stay in sync with pkgs/tasks/domain/app_settings.go's
- * `DefaultDisplayTimezone`.
+ * Historically this mirrored `pkgs/tasks/domain/app_settings.go`'s
+ * `DefaultDisplayTimezone`. That backend default is now the empty
+ * string (the "auto-detect" sentinel — see `useAppTimezone` below); we
+ * keep `DEFAULT_APP_TIMEZONE = "UTC"` as the SPA-side safety net so the
+ * UI still renders something sensible if auto-detect fails.
  */
 export const DEFAULT_APP_TIMEZONE = "UTC";
 
 /**
- * useAppTimezone returns the operator-chosen IANA timezone identifier
- * (e.g. "America/New_York", "Europe/London"). Falls back to "UTC"
- * while the settings query is loading or if the server omits the
- * field — the fallback is deliberately the same default the backend
- * seeds, so a freshly-installed SPA against an old backend renders
- * exactly the same as a freshly-installed SPA against a new backend
- * with default settings.
+ * detectBrowserTimezone reads the operator's browser timezone via
+ * `Intl.DateTimeFormat().resolvedOptions().timeZone`. Returns an IANA
+ * identifier like `"America/New_York"` on every modern browser.
  *
- * Stage 1 of the task scheduling plan introduces the field; later
- * stages (3–5) call this hook from every operator-facing timestamp
- * render so a single PATCH /settings { display_timezone } re-renders
- * the whole SPA in the chosen zone via React Query invalidation.
+ * Falls back to DEFAULT_APP_TIMEZONE ("UTC") if the Intl API throws or
+ * returns an empty string — extremely rare (only seen on locked-down
+ * embedded runtimes and ancient browsers) but cheaper to guard than to
+ * debug later.
+ */
+export function detectBrowserTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (typeof tz === "string" && tz.length > 0) return tz;
+  } catch {
+    // fall through to the safety net
+  }
+  return DEFAULT_APP_TIMEZONE;
+}
+
+/**
+ * useAppTimezone returns the IANA timezone the SPA should use to
+ * render every operator-facing timestamp.
+ *
+ * Precedence (highest to lowest):
+ *  1. `settings.display_timezone` — a non-empty explicit override
+ *     chosen in the SettingsPage selector and validated server-side
+ *     via `time.LoadLocation`. Always wins.
+ *  2. The operator's browser timezone (`detectBrowserTimezone()`).
+ *     Used whenever the server returns the empty-string
+ *     "auto-detect" sentinel (the default seed) OR when the settings
+ *     query is still loading, so the first paint already lands in
+ *     local time rather than flashing UTC for a frame.
+ *  3. DEFAULT_APP_TIMEZONE ("UTC") — only if the Intl API refuses to
+ *     produce a zone at all. See `detectBrowserTimezone`.
+ *
+ * Stage 1 of the task scheduling plan introduced the field; later
+ * stages (3–5) call this hook from every timestamp render so a single
+ * PATCH /settings { display_timezone } re-renders the whole SPA in
+ * the chosen zone via React Query invalidation.
  */
 export function useAppTimezone(): string {
   const { settings } = useAppSettings();
-  if (!settings) return DEFAULT_APP_TIMEZONE;
+  if (!settings) return detectBrowserTimezone();
   const tz = settings.display_timezone;
   if (typeof tz !== "string" || tz.length === 0) {
-    return DEFAULT_APP_TIMEZONE;
+    return detectBrowserTimezone();
   }
   return tz;
 }
