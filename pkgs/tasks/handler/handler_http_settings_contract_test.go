@@ -303,8 +303,8 @@ func TestHTTP_ProbeCursor_failureReturnsOKfalseNot500(t *testing.T) {
 	if resp.OK {
 		t.Error("expected OK=false on probe failure")
 	}
-	if !strings.Contains(resp.Error, "cursor not installed") {
-		t.Errorf("error not surfaced: %q", resp.Error)
+	if resp.Error != e.Error() {
+		t.Errorf("error = %q, want %q (handler_settings.go::probeCursor sets resp.Error to probe err.Error() verbatim)", resp.Error, e.Error())
 	}
 }
 
