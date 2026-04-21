@@ -642,31 +642,42 @@ func stopWorkerInstance(inst *agentWorkerInstance, reason string) {
 	}
 }
 
-// startReadyTaskAgents wires the bounded ready-task queue, the
-// reconcile loop, and the agent worker supervisor. The reconcile loop
-// is always on; the worker is gated on AppSettings.WorkerEnabled and
-// dependencies (repo root, runner probe). The returned cancel func
-// tears down the reconcile goroutine; the supervisor owns the worker
-// lifecycle and exposes Drain for shutdown.
+// startReadyTaskAgents wires the bounded ready-task queue, pickup wake
+// scheduler, reconcile loop, and the agent worker supervisor. The
+// reconcile loop is always on; the worker is gated on
+// AppSettings.WorkerEnabled and dependencies (repo root, runner probe).
+// The returned cancel func stops pickup wake and tears down the reconcile
+// goroutine; the supervisor owns the worker lifecycle and exposes Drain
+// for shutdown.
 func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) (context.CancelFunc, *agents.MemoryQueue, *agentWorkerSupervisor, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startReadyTaskAgents")
 	qcap := taskapiconfig.UserTaskAgentQueueCap()
 	agentQueue := agents.NewMemoryQueue(qcap)
 	taskStore.SetReadyTaskNotifier(agentQueue)
-	iv := taskapiconfig.UserTaskAgentReconcileInterval()
+	pickupWake := agents.NewPickupWakeScheduler(taskStore, agentQueue)
+	taskStore.SetPickupWake(pickupWake)
+	if err := pickupWake.Hydrate(ctx); err != nil {
+		return nil, nil, nil, err
+	}
+	iv := agents.ReconcileTickInterval
 	slog.Info("ready task agent queue", "cmd", cmdName, "operation", "taskapi.agent_queue", "cap", qcap)
 	slog.Info("ready task agent reconcile", "cmd", cmdName, "operation", "taskapi.agent_reconcile",
-		"tick_interval", iv.String(), "periodic", iv > 0)
+		"tick_interval", iv.String())
 
 	reconcileCtx, reconcileCancel := context.WithCancel(ctx)
 	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
 
 	sup := newAgentWorkerSupervisor(ctx, taskStore, agentQueue, hub)
 	if err := sup.Start(ctx); err != nil {
+		pickupWake.Stop()
 		reconcileCancel()
 		return nil, nil, nil, err
 	}
-	return reconcileCancel, agentQueue, sup, nil
+	stopAgents := func() {
+		pickupWake.Stop()
+		reconcileCancel()
+	}
+	return stopAgents, agentQueue, sup, nil
 }
 
 // assertWorkingDirExists is the fail-fast guard for AppSettings.RepoRoot.

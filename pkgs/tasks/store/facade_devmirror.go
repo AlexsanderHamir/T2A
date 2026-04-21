@@ -19,9 +19,13 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 	if err != nil {
 		return err
 	}
-	if nt.Status == domain.StatusReady && prev != domain.StatusReady &&
-		shouldNotifyReadyNow(nt.PickupNotBefore, time.Now().UTC()) {
-		s.notifyReadyTask(ctx, *nt)
+	if nt.Status == domain.StatusReady && prev != domain.StatusReady {
+		now := time.Now().UTC()
+		if nt.PickupNotBefore != nil && nt.PickupNotBefore.After(now) {
+			s.schedulePickupWake(ctx, nt.ID, *nt.PickupNotBefore)
+		} else if ShouldNotifyReadyNow(nt.PickupNotBefore, now) {
+			s.notifyReadyTask(ctx, *nt)
+		}
 	}
 	return nil
 }

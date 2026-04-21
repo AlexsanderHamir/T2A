@@ -9,7 +9,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
 )
 
-// shouldNotifyReadyNow returns true when a freshly-ready task should
+// ShouldNotifyReadyNow returns true when a freshly-ready task should
 // be pushed to the in-memory ready queue immediately. The invariant
 // the in-memory queue MUST satisfy is that it never contains a task
 // the SQL filter (ready.ListQueueCandidates) would reject; the SQL
@@ -23,8 +23,8 @@ import (
 //
 // `pickupNotBefore` is the task's pickup_not_before column value
 // (nil = no deferral; in the past = effectively no deferral).
-func shouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.shouldNotifyReadyNow",
+func ShouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ShouldNotifyReadyNow",
 		"has_pickup", pickupNotBefore != nil)
 	if pickupNotBefore == nil {
 		return true
@@ -76,7 +76,15 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	if err != nil {
 		return nil, err
 	}
-	if t.Status == domain.StatusReady && shouldNotifyReadyNow(t.PickupNotBefore, time.Now().UTC()) {
+	now := time.Now().UTC()
+	if t.Status != domain.StatusReady {
+		return t, nil
+	}
+	if t.PickupNotBefore != nil && t.PickupNotBefore.After(now) {
+		s.schedulePickupWake(ctx, t.ID, *t.PickupNotBefore)
+		return t, nil
+	}
+	if ShouldNotifyReadyNow(t.PickupNotBefore, now) {
 		s.notifyReadyTask(ctx, *t)
 	}
 	return t, nil
@@ -96,12 +104,17 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 		return nil, err
 	}
 	if updated == nil || updated.Status != domain.StatusReady {
+		if updated != nil {
+			s.cancelPickupWake(updated.ID)
+		}
 		return updated, nil
 	}
 	now := time.Now().UTC()
-	if !shouldNotifyReadyNow(updated.PickupNotBefore, now) {
+	if updated.PickupNotBefore != nil && updated.PickupNotBefore.After(now) {
+		s.schedulePickupWake(ctx, updated.ID, *updated.PickupNotBefore)
 		return updated, nil
 	}
+	s.cancelPickupWake(updated.ID)
 	transitionedToReady := prev != domain.StatusReady
 	pickupTouched := in.PickupNotBefore != nil
 	if transitionedToReady || pickupTouched {
@@ -118,7 +131,14 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 // surviving parent. See tasks.Delete for the full contract.
 func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]string, string, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
-	return tasks.Delete(ctx, s.db, id, by)
+	deletedIDs, parent, err := tasks.Delete(ctx, s.db, id, by)
+	if err != nil {
+		return nil, "", err
+	}
+	for _, tid := range deletedIDs {
+		s.cancelPickupWake(tid)
+	}
+	return deletedIDs, parent, nil
 }
 
 // ListFlat returns tasks ordered by id ASC with limit/offset over

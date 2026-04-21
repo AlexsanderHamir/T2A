@@ -10,6 +10,12 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+// ReconcileTickInterval is the fixed period between background
+// ReconcileReadyTasksNotQueued passes after startup. It is not
+// configurable; the pickup wake scheduler provides low-latency deferred
+// pickup while this tick remains a durable backstop.
+const ReconcileTickInterval = 2 * time.Minute
+
 // ReconcileResult summarizes one reconcile pass.
 type ReconcileResult struct {
 	Scanned int

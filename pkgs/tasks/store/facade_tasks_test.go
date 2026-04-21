@@ -1027,8 +1027,8 @@ func TestShouldNotifyReadyNow_unitTable(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := shouldNotifyReadyNow(c.t, now); got != c.want {
-				t.Fatalf("shouldNotifyReadyNow(%v, %v)=%v want %v",
+			if got := ShouldNotifyReadyNow(c.t, now); got != c.want {
+				t.Fatalf("ShouldNotifyReadyNow(%v, %v)=%v want %v",
 					c.t, now, got, c.want)
 			}
 		})

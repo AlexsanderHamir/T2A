@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/notify"
@@ -19,6 +21,9 @@ const storeLogCmd = "taskapi"
 type Store struct {
 	db     *gorm.DB
 	notify notify.Holder
+
+	pickupWakeMu sync.RWMutex
+	pickupWake   PickupWake
 }
 
 // NewStore returns a Store backed by db. The caller still configures
@@ -46,6 +51,38 @@ func (s *Store) SetReadyTaskNotifier(n ReadyTaskNotifier) {
 		return
 	}
 	s.notify.Set(n)
+}
+
+// SetPickupWake registers w for deferred-pickup scheduling (nil clears).
+// Typical wiring: once at taskapi startup after SetReadyTaskNotifier.
+func (s *Store) SetPickupWake(w PickupWake) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetPickupWake", "enabled", w != nil)
+	if s == nil {
+		return
+	}
+	s.pickupWakeMu.Lock()
+	defer s.pickupWakeMu.Unlock()
+	s.pickupWake = w
+}
+
+func (s *Store) schedulePickupWake(ctx context.Context, taskID string, notBefore time.Time) {
+	s.pickupWakeMu.RLock()
+	w := s.pickupWake
+	s.pickupWakeMu.RUnlock()
+	if w == nil || taskID == "" {
+		return
+	}
+	w.Schedule(ctx, taskID, notBefore)
+}
+
+func (s *Store) cancelPickupWake(taskID string) {
+	s.pickupWakeMu.RLock()
+	w := s.pickupWake
+	s.pickupWakeMu.RUnlock()
+	if w == nil || taskID == "" {
+		return
+	}
+	w.Cancel(taskID)
 }
 
 // notifyReadyTask is the package-internal entrypoint used by CRUD,

@@ -14,8 +14,6 @@ const (
 
 	// EnvUserTaskAgentQueueCap is T2A_USER_TASK_AGENT_QUEUE_CAP (bounded ready-task queue depth).
 	EnvUserTaskAgentQueueCap = "T2A_USER_TASK_AGENT_QUEUE_CAP"
-	// EnvUserTaskAgentReconcileInterval is T2A_USER_TASK_AGENT_RECONCILE_INTERVAL (reconcile tick; "0" = startup only).
-	EnvUserTaskAgentReconcileInterval = "T2A_USER_TASK_AGENT_RECONCILE_INTERVAL"
 	// EnvSSETestInterval is T2A_SSE_TEST_INTERVAL (dev synthetic SSE ticker).
 	EnvSSETestInterval = "T2A_SSE_TEST_INTERVAL"
 	// EnvDisableLogging is T2A_DISABLE_LOGGING (truthy values minimize logging).
@@ -23,17 +21,13 @@ const (
 	// EnvListenHost is T2A_LISTEN_HOST (HTTP bind address).
 	EnvListenHost = "T2A_LISTEN_HOST"
 	// EnvLogLevel is T2A_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
-	EnvLogLevel                           = "T2A_LOG_LEVEL"
-	defaultUserTaskAgentQueueCap          = 256
-	defaultUserTaskAgentReconcileInterval = 5 * time.Minute
-	defaultSSETestInterval                = 3 * time.Second
+	EnvLogLevel                  = "T2A_LOG_LEVEL"
+	defaultUserTaskAgentQueueCap = 256
+	defaultSSETestInterval       = 3 * time.Second
 )
 
 // DefaultUserTaskAgentQueueCap is used when T2A_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
 const DefaultUserTaskAgentQueueCap = defaultUserTaskAgentQueueCap
-
-// DefaultUserTaskAgentReconcileInterval is used when T2A_USER_TASK_AGENT_RECONCILE_INTERVAL is unset or invalid.
-const DefaultUserTaskAgentReconcileInterval = defaultUserTaskAgentReconcileInterval
 
 // DefaultSSETestTickerInterval is used when T2A_SSE_TEST_INTERVAL is unset or below 1s (dev only).
 const DefaultSSETestTickerInterval = defaultSSETestInterval
@@ -139,26 +133,4 @@ func UserTaskAgentQueueCap() int {
 		return defaultUserTaskAgentQueueCap
 	}
 	return n
-}
-
-// UserTaskAgentReconcileInterval returns the background reconcile tick interval.
-// When unset or invalid, defaults to 5m. Explicit "0" means startup reconcile only (no periodic ticker).
-func UserTaskAgentReconcileInterval() time.Duration {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.UserTaskAgentReconcileInterval")
-	raw := strings.TrimSpace(os.Getenv(EnvUserTaskAgentReconcileInterval))
-	if raw == "" {
-		return defaultUserTaskAgentReconcileInterval
-	}
-	d, err := time.ParseDuration(raw)
-	if err != nil {
-		slog.Warn("invalid env, using default reconcile interval", "cmd", cmdLog, "operation", "taskapiconfig.agent_reconcile_interval",
-			"var", EnvUserTaskAgentReconcileInterval, "value", raw, "err", err, "default", defaultUserTaskAgentReconcileInterval.String())
-		return defaultUserTaskAgentReconcileInterval
-	}
-	if d < 0 {
-		slog.Warn("invalid env, using default reconcile interval", "cmd", cmdLog, "operation", "taskapiconfig.agent_reconcile_interval",
-			"var", EnvUserTaskAgentReconcileInterval, "value", raw, "default", defaultUserTaskAgentReconcileInterval.String())
-		return defaultUserTaskAgentReconcileInterval
-	}
-	return d
 }

@@ -29,29 +29,6 @@ func TestUserTaskAgentQueueCap(t *testing.T) {
 	}
 }
 
-func TestUserTaskAgentReconcileInterval(t *testing.T) {
-	t.Setenv(EnvUserTaskAgentReconcileInterval, "")
-	if UserTaskAgentReconcileInterval() != defaultUserTaskAgentReconcileInterval {
-		t.Fatalf("unset got %v want %v", UserTaskAgentReconcileInterval(), defaultUserTaskAgentReconcileInterval)
-	}
-	t.Setenv(EnvUserTaskAgentReconcileInterval, "5m")
-	if UserTaskAgentReconcileInterval() != 5*time.Minute {
-		t.Fatalf("got %v", UserTaskAgentReconcileInterval())
-	}
-	t.Setenv(EnvUserTaskAgentReconcileInterval, "0")
-	if UserTaskAgentReconcileInterval() != 0 {
-		t.Fatal("zero should mean startup-only (no periodic ticker)")
-	}
-	t.Setenv(EnvUserTaskAgentReconcileInterval, "nope")
-	if UserTaskAgentReconcileInterval() != defaultUserTaskAgentReconcileInterval {
-		t.Fatalf("invalid should fall back to default, got %v", UserTaskAgentReconcileInterval())
-	}
-	t.Setenv(EnvUserTaskAgentReconcileInterval, "-1s")
-	if UserTaskAgentReconcileInterval() != defaultUserTaskAgentReconcileInterval {
-		t.Fatalf("negative duration should fall back to default, got %v", UserTaskAgentReconcileInterval())
-	}
-}
-
 func TestEnvTruthy(t *testing.T) {
 	t.Setenv("T2A_ENV_TRUTHY_TEST", "")
 	if EnvTruthy("T2A_ENV_TRUTHY_TEST") {

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/ready"
@@ -16,6 +17,16 @@ type ReadyTaskQueueCursor = ready.QueueCursor
 // ReadyTaskQueueCandidate is one ready task plus scheduling metadata for the
 // agent queue (see pkgs/agents/reconcile.go).
 type ReadyTaskQueueCandidate = ready.QueueCandidate
+
+// DeferredPickup is a ready task with pickup_not_before still in the future.
+type DeferredPickup = ready.DeferredPickup
+
+// ListDeferredReadyPickupTasks returns ready tasks deferred by pickup_not_before
+// after now, ordered by pickup time (for pickup wake hydration).
+func (s *Store) ListDeferredReadyPickupTasks(ctx context.Context, limit int) ([]DeferredPickup, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDeferredReadyPickupTasks")
+	return ready.ListDeferredReadyPickups(ctx, s.db, time.Now().UTC(), limit)
+}
 
 // ListReadyTaskQueueCandidates returns ready tasks ordered for fair scheduling
 // (see internal/ready). Pagination is keyset; pass the cursor from the last row.
