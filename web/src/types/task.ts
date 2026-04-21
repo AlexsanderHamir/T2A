@@ -70,9 +70,10 @@ export type TaskStatsRecentFailure = {
   attempt_seq: number;
   status: "failed" | "aborted";
   /**
-   * Human-readable failure text: enriched from the phase_failed audit
-   * event when present (e.g. usage-limit message), otherwise the
-   * cycle_failed mirror reason (often runner_non_zero_exit).
+   * Human-readable failure text: prefers `failure_summary` on the
+   * cycle_failed mirror (same source as execute phase_failed), then
+   * legacy enrichment from a matching phase_failed event, else the
+   * mirror reason code (e.g. runner_non_zero_exit).
    */
   reason: string;
 };

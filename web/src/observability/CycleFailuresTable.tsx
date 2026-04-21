@@ -1,8 +1,9 @@
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { TaskStatsRecentFailure } from "@/types/task";
 
-/** Table cell preview — full text on hover via `title` (no expand control). */
-const FAILURE_REASON_MAX_CHARS = 160;
+/** When layout metrics are unavailable (e.g. tests), assume overflow past this length. */
+const REASON_OVERFLOW_FALLBACK_CHARS = 160;
 
 type Props = {
   failures: TaskStatsRecentFailure[];
@@ -65,45 +66,75 @@ function FailureRow({ failure }: { failure: TaskStatsRecentFailure }) {
   );
 }
 
-function truncateFailureReasonPreview(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  const slice = text.slice(0, maxLen);
-  const lastSpace = slice.lastIndexOf(" ");
-  if (lastSpace > 0 && lastSpace >= maxLen * 0.45) {
-    return `${slice.slice(0, lastSpace)}…`;
-  }
-  return `${slice.trimEnd()}…`;
-}
-
 function FailureReasonCell({ reason }: { reason: string }) {
   const trimmed = reason.trim();
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [clampedOverflow, setClampedOverflow] = useState(false);
+  const textId = useId();
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      if (expanded) return;
+      const sh = el.scrollHeight;
+      const ch = el.clientHeight;
+      const overflow =
+        ch > 0 ? sh > ch + 1 : trimmed.length > REASON_OVERFLOW_FALLBACK_CHARS;
+      setClampedOverflow(overflow);
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expanded, trimmed]);
+
   if (!trimmed) {
     return <em className="obs-failures-muted">(no reason recorded)</em>;
   }
 
-  const display = truncateFailureReasonPreview(
-    trimmed,
-    FAILURE_REASON_MAX_CHARS,
-  );
-  const truncated = display !== trimmed;
+  const showToggle = clampedOverflow;
+  const showMore = showToggle && !expanded;
+  const showLess = showToggle && expanded;
 
   return (
-    <div
-      className={
-        truncated
-          ? "obs-failures-reason-cell obs-failures-reason-cell--truncated"
-          : "obs-failures-reason-cell"
-      }
-      title={truncated ? trimmed : undefined}
-    >
-      <span className="obs-failures-reason-text">{display}</span>
-      {truncated ? (
-        <p className="obs-failures-reason-truncated-hint">
-          <span className="obs-failures-reason-truncated-icon" aria-hidden>
-            ⋯
-          </span>
-          Hover for the full message
-        </p>
+    <div className="obs-failures-reason-cell">
+      <p
+        ref={textRef}
+        id={textId}
+        className={
+          expanded
+            ? "obs-failures-reason-text"
+            : "obs-failures-reason-text obs-failures-reason-text--clamped"
+        }
+      >
+        {trimmed}
+      </p>
+      {showMore ? (
+        <button
+          type="button"
+          className="obs-failures-reason-toggle"
+          aria-expanded={false}
+          aria-controls={textId}
+          onClick={() => setExpanded(true)}
+        >
+          Show more
+        </button>
+      ) : null}
+      {showLess ? (
+        <button
+          type="button"
+          className="obs-failures-reason-toggle"
+          aria-expanded={true}
+          aria-controls={textId}
+          onClick={() => setExpanded(false)}
+        >
+          Show less
+        </button>
       ) : null}
     </div>
   );

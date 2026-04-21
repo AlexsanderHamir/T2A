@@ -5,7 +5,9 @@ import { CopyableId } from "@/shared/CopyableId";
 import type { TaskEventType } from "@/types/task";
 import {
   normalizePhaseSummaryMarkdown,
+  parseCycleTerminalOverview,
   parsePhaseEventOverview,
+  type CycleTerminalOverviewModel,
   type PhaseEventOverviewModel,
 } from "../../task-events/parsePhaseEventOverview";
 import { GenericEventDataOverview } from "./GenericEventDataOverview";
@@ -32,6 +34,62 @@ function statusTone(
   if (s === "succeeded" || s === "skipped") return "success";
   if (s === "failed") return "failed";
   return "neutral";
+}
+
+function CycleTerminalOverviewBody({ model }: { model: CycleTerminalOverviewModel }) {
+  const tone = model.terminal === "failed" ? "failed" : "success";
+  return (
+    <div
+      className="task-event-cycle-overview task-event-phase-overview"
+      data-terminal={model.terminal}
+    >
+      <div className="task-event-phase-overview-header">
+        <span
+          className="task-event-status-pill"
+          data-tone={tone}
+          data-status={model.status.toLowerCase()}
+        >
+          {model.status}
+        </span>
+      </div>
+      <dl className="task-event-phase-meta">
+        <div>
+          <dt>Cycle</dt>
+          <dd>
+            <CopyableId value={model.cycleId} />
+          </dd>
+        </div>
+        <div>
+          <dt>Attempt</dt>
+          <dd>#{model.attemptSeq}</dd>
+        </div>
+      </dl>
+      {model.terminal === "failed" ? (
+        <div className="task-event-cycle-failure-block">
+          {model.failureSummary ? (
+            <div
+              className="task-event-phase-alert"
+              role="alert"
+              data-severity="error"
+            >
+              <p className="task-event-phase-alert-msg">{model.failureSummary}</p>
+              {model.reason ? (
+                <p className="task-event-cycle-reason-code">
+                  <span className="muted">Reason code</span>{" "}
+                  <code>{model.reason}</code>
+                </p>
+              ) : null}
+            </div>
+          ) : model.reason ? (
+            <p className="task-event-cycle-reason-only">
+              <span className="muted">Reason code</span>{" "}
+              <code>{model.reason}</code>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function PhaseEventOverviewBody({ model }: { model: PhaseEventOverviewModel }) {
@@ -201,7 +259,8 @@ export function TaskEventDataPanel({
   eventType: TaskEventType;
   data: Record<string, unknown>;
 }) {
-  const overview = parsePhaseEventOverview(eventType, data);
+  const phaseOverview = parsePhaseEventOverview(eventType, data);
+  const cycleOverview = parseCycleTerminalOverview(eventType, data);
   const dataJson = JSON.stringify(data, null, 2);
   const baseId = useId();
   const tabOverviewId = `${baseId}-tab-overview`;
@@ -217,8 +276,10 @@ export function TaskEventDataPanel({
     </pre>
   );
 
-  const overviewBody = overview ? (
-    <PhaseEventOverviewBody model={overview} />
+  const overviewBody = phaseOverview ? (
+    <PhaseEventOverviewBody model={phaseOverview} />
+  ) : cycleOverview ? (
+    <CycleTerminalOverviewBody model={cycleOverview} />
   ) : (
     <GenericEventDataOverview data={data} />
   );

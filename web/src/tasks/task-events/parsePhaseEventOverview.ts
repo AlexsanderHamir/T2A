@@ -82,6 +82,47 @@ const PHASE_OVERVIEW_TYPES = new Set<TaskEventType>([
   "phase_failed",
 ]);
 
+const CYCLE_TERMINAL_OVERVIEW_TYPES = new Set<TaskEventType>([
+  "cycle_failed",
+  "cycle_completed",
+]);
+
+/** Structured view for cycle terminal mirror events (cycle_failed / cycle_completed). */
+export type CycleTerminalOverviewModel = {
+  terminal: "failed" | "succeeded";
+  cycleId: string;
+  attemptSeq: number;
+  status: string;
+  reason?: string;
+  /** Denormalized from the failed execute phase when the server wrote it (newer rows). */
+  failureSummary?: string;
+};
+
+/**
+ * When non-null, the event detail Overview tab can show cycle outcome fields
+ * plus operator-facing failure text for cycle_failed (failure_summary).
+ */
+export function parseCycleTerminalOverview(
+  type: TaskEventType,
+  data: Record<string, unknown>,
+): CycleTerminalOverviewModel | null {
+  if (!CYCLE_TERMINAL_OVERVIEW_TYPES.has(type)) return null;
+  const cycleId = str(data.cycle_id);
+  const attemptSeq = num(data.attempt_seq);
+  const status = str(data.status);
+  if (!cycleId || attemptSeq === undefined || !status) return null;
+  const reason = str(data.reason);
+  const failureSummary = str(data.failure_summary);
+  return {
+    terminal: type === "cycle_failed" ? "failed" : "succeeded",
+    cycleId,
+    attemptSeq,
+    status,
+    reason,
+    failureSummary,
+  };
+}
+
 /**
  * Phase summaries are often markdown. Some payloads store newlines as the two
  * characters `\` + `n` instead of real line breaks; normalize so GFM tables

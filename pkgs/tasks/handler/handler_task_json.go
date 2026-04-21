@@ -163,10 +163,10 @@ type taskStatsRunnerBucketJSON struct {
 // fields are mandatory; reason / cycle_id / attempt_seq / status round
 // out the "what happened" summary card.
 //
-// Reason is the cycle_failed mirror reason after enrichment from the
-// matching phase_failed event when available (see stats.scan_failures),
-// so operators see the same substance as the task timeline (e.g.
-// usage-limit text) instead of only runner_non_zero_exit.
+// Reason prefers failure_summary on the cycle_failed mirror (written at
+// terminate time from the failed execute phase), then legacy enrichment
+// from a matching phase_failed event, else the mirror reason code (see
+// stats.scan_failures and cycles.Terminate).
 type taskStatsFailureJSON struct {
 	TaskID     string    `json:"task_id"`
 	EventSeq   int64     `json:"event_seq"`

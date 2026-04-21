@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -13,10 +14,11 @@ function renderTable(props: ComponentProps<typeof CycleFailuresTable>) {
 }
 
 describe("CycleFailuresTable", () => {
-  it("truncates long failure reasons and puts the full text in title", () => {
+  it("offers show more / show less for long failure reasons", async () => {
+    const user = userEvent.setup();
     const longReason =
       "Cursor account usage limit reached for the current model. Switch to another model in Settings, adjust Spend Limit in the Cursor app, or wait until your usage window resets.";
-    const { container } = renderTable({
+    renderTable({
       failures: [
         {
           task_id: "t1",
@@ -30,19 +32,24 @@ describe("CycleFailuresTable", () => {
       ],
     });
 
-    expect(screen.queryByRole("button", { name: /read more/i })).toBeNull();
-    const cell = container.querySelector(".obs-failures-reason-cell--truncated");
-    expect(cell).toBeTruthy();
-    expect(cell).toHaveAttribute("title", longReason);
-    const span = container.querySelector(".obs-failures-reason-text");
-    expect(span?.textContent).not.toBe(longReason);
-    expect(
-      screen.getByText("Hover for the full message", { exact: false }),
-    ).toBeInTheDocument();
+    const showMore = screen.getByRole("button", { name: /^show more$/i });
+    expect(showMore).toHaveAttribute("aria-expanded", "false");
+    const textEl = screen.getByText(longReason, { exact: false });
+    expect(textEl.tagName).toBe("P");
+
+    await user.click(showMore);
+    expect(screen.getByRole("button", { name: /^show less$/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByText(longReason)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^show less$/i }));
+    expect(screen.getByRole("button", { name: /^show more$/i })).toBeInTheDocument();
   });
 
-  it("shows short reasons in full without a title tooltip", () => {
-    const { container } = renderTable({
+  it("shows short reasons in full with no disclosure control", () => {
+    renderTable({
       failures: [
         {
           task_id: "t1",
@@ -55,13 +62,12 @@ describe("CycleFailuresTable", () => {
         },
       ],
     });
+    expect(screen.getByText("short")).toBeInTheDocument();
     expect(
-      container.querySelector(".obs-failures-reason-cell--truncated"),
-    ).toBeNull();
-    const span = container.querySelector(".obs-failures-reason-text");
-    expect(span).toHaveTextContent("short");
-    const cell = container.querySelector(".obs-failures-reason-cell");
-    expect(cell).not.toHaveAttribute("title");
-    expect(screen.queryByText(/Hover for the full message/)).toBeNull();
+      screen.queryByRole("button", { name: /show more/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /show less/i }),
+    ).not.toBeInTheDocument();
   });
 });

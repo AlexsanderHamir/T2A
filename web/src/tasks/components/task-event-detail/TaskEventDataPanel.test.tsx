@@ -3,6 +3,25 @@ import { describe, expect, it } from "vitest";
 import { TaskEventDataPanel } from "./TaskEventDataPanel";
 
 describe("TaskEventDataPanel", () => {
+  it("renders cycle_failed overview with failure summary and reason code", () => {
+    render(
+      <TaskEventDataPanel
+        eventType="cycle_failed"
+        data={{
+          cycle_id: "c1",
+          attempt_seq: 1,
+          status: "failed",
+          reason: "runner_non_zero_exit",
+          failure_summary: "Operator-visible failure text.",
+        }}
+      />,
+    );
+    expect(
+      screen.getByText("Operator-visible failure text."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("runner_non_zero_exit")).toBeInTheDocument();
+  });
+
   it("renders GFM markdown tables in phase summary", () => {
     render(
       <TaskEventDataPanel

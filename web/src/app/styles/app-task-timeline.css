@@ -935,6 +935,16 @@ button.btn-utility:focus-visible {
   font-family: var(--font-prose);
 }
 
+.task-event-cycle-reason-code {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+}
+
+.task-event-cycle-reason-only {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
 .task-event-phase-overview-header {
   display: flex;
   flex-wrap: wrap;

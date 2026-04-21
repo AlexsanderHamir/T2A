@@ -9,6 +9,49 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+func TestTerminatedPayload_includesFailureSummaryWhenSet(t *testing.T) {
+	t.Parallel()
+	c := &domain.TaskCycle{
+		ID:         "c1",
+		AttemptSeq: 1,
+		Status:     domain.CycleStatusFailed,
+	}
+	raw, err := terminatedPayload(c, "runner_non_zero_exit", "Operator-facing text")
+	if err != nil {
+		t.Fatalf("terminatedPayload: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got["reason"] != "runner_non_zero_exit" {
+		t.Fatalf("reason: got %#v", got["reason"])
+	}
+	if got["failure_summary"] != "Operator-facing text" {
+		t.Fatalf("failure_summary: got %#v", got["failure_summary"])
+	}
+}
+
+func TestTerminatedPayload_omitsEmptyFailureSummary(t *testing.T) {
+	t.Parallel()
+	c := &domain.TaskCycle{
+		ID:         "c1",
+		AttemptSeq: 1,
+		Status:     domain.CycleStatusFailed,
+	}
+	raw, err := terminatedPayload(c, "runner_timeout", "")
+	if err != nil {
+		t.Fatalf("terminatedPayload: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := got["failure_summary"]; ok {
+		t.Fatalf("expected failure_summary omitted, got %#v", got)
+	}
+}
+
 func TestPhaseTerminatedPayload_includesDetails(t *testing.T) {
 	t.Parallel()
 

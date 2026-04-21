@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizePhaseSummaryMarkdown,
+  parseCycleTerminalOverview,
   parsePhaseEventOverview,
 } from "./parsePhaseEventOverview";
 
@@ -15,6 +16,26 @@ describe("normalizePhaseSummaryMarkdown", () => {
   it("leaves real newlines unchanged", () => {
     const raw = "a\nb";
     expect(normalizePhaseSummaryMarkdown(raw)).toBe("a\nb");
+  });
+});
+
+describe("parseCycleTerminalOverview", () => {
+  it("parses cycle_failed with failure_summary and reason code", () => {
+    const m = parseCycleTerminalOverview("cycle_failed", {
+      cycle_id: "fa062a1f-6050-47f9-9373-615a32b8eb5b",
+      attempt_seq: 1,
+      status: "failed",
+      reason: "runner_non_zero_exit",
+      failure_summary: "Cursor account usage limit reached.",
+    });
+    expect(m).not.toBeNull();
+    expect(m?.terminal).toBe("failed");
+    expect(m?.failureSummary).toBe("Cursor account usage limit reached.");
+    expect(m?.reason).toBe("runner_non_zero_exit");
+  });
+
+  it("returns null when required cycle fields are missing", () => {
+    expect(parseCycleTerminalOverview("cycle_failed", { reason: "x" })).toBeNull();
   });
 });
 

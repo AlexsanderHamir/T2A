@@ -149,11 +149,30 @@ func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.C
 		}
 		cycle.Status = status
 		cycle.EndedAt = &now
+
+		failureSummary := ""
+		if mirrorEventTypeForCycleStatus(status) == domain.EventCycleFailed {
+			var lastFailedExecute domain.TaskCyclePhase
+			q := tx.Where("cycle_id = ? AND phase = ? AND status = ?", cycle.ID, domain.PhaseExecute, domain.PhaseStatusFailed).
+				Order("phase_seq DESC")
+			if err := q.First(&lastFailedExecute).Error; err == nil {
+				var details map[string]any
+				if len(lastFailedExecute.DetailsJSON) > 0 {
+					_ = json.Unmarshal(lastFailedExecute.DetailsJSON, &details)
+				}
+				sum := ""
+				if lastFailedExecute.Summary != nil {
+					sum = *lastFailedExecute.Summary
+				}
+				failureSummary = FailureSurfaceMessage(true, reason, sum, details)
+			}
+		}
+
 		seq, err := kernel.NextEventSeq(tx, cycle.TaskID)
 		if err != nil {
 			return err
 		}
-		payload, err := terminatedPayload(cycle, reason)
+		payload, err := terminatedPayload(cycle, reason, failureSummary)
 		if err != nil {
 			return err
 		}
@@ -291,7 +310,7 @@ func startedPayload(c *domain.TaskCycle) ([]byte, error) {
 
 // terminatedPayload builds the data_json payload for the
 // EventCycleCompleted / EventCycleFailed audit mirror.
-func terminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) {
+func terminatedPayload(c *domain.TaskCycle, reason, failureSummary string) ([]byte, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.terminatedPayload")
 	out := map[string]any{
 		"cycle_id":    c.ID,
@@ -300,6 +319,9 @@ func terminatedPayload(c *domain.TaskCycle, reason string) ([]byte, error) {
 	}
 	if reason != "" {
 		out["reason"] = reason
+	}
+	if strings.TrimSpace(failureSummary) != "" {
+		out["failure_summary"] = strings.TrimSpace(failureSummary)
 	}
 	b, err := json.Marshal(out)
 	if err != nil {

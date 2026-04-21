@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/cycles"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -27,11 +27,10 @@ const RecentFailureLimit = 25
 // human-readable reason when one was recorded. Keep this struct narrow:
 // every new column widens the wire envelope and the contract test.
 //
-// Reason starts as the cycle_failed mirror payload (often
-// runner_non_zero_exit) and is then replaced when a matching
-// phase_failed audit event carries a clearer summary or
-// details.standardized_message so Observability matches the task
-// timeline.
+// Reason prefers failure_summary on the cycle_failed mirror (denormalized
+// from the failed execute phase at terminate time), then falls back to
+// the mirror reason code, then — for older rows — enrichment from a
+// matching phase_failed audit event.
 type RecentFailure struct {
 	TaskID     string
 	EventSeq   int64
@@ -62,10 +61,11 @@ type cycleFailedRow struct {
 // kept in sync with that producer; the dual-write invariant test would
 // catch a divergence on the producer side.
 type cycleFailedPayload struct {
-	CycleID    string `json:"cycle_id"`
-	AttemptSeq int64  `json:"attempt_seq"`
-	Status     string `json:"status"`
-	Reason     string `json:"reason"`
+	CycleID         string `json:"cycle_id"`
+	AttemptSeq      int64  `json:"attempt_seq"`
+	Status          string `json:"status"`
+	Reason          string `json:"reason"`
+	FailureSummary  string `json:"failure_summary,omitempty"`
 }
 
 // scanRecentFailures returns the last `limit` cycle_failed mirror rows
@@ -114,10 +114,17 @@ func decodeCycleFailedRows(rows []cycleFailedRow) []RecentFailure {
 			CycleID:    p.CycleID,
 			AttemptSeq: p.AttemptSeq,
 			Status:     p.Status,
-			Reason:     p.Reason,
+			Reason:     resolveRecentFailureReason(p.FailureSummary, p.Reason),
 		})
 	}
 	return out
+}
+
+func resolveRecentFailureReason(failureSummary, cycleReason string) string {
+	if s := strings.TrimSpace(failureSummary); s != "" {
+		return s
+	}
+	return cycleReason
 }
 
 // phaseFailedMirrorPayload is the subset of phaseTerminatedPayload
@@ -128,8 +135,6 @@ type phaseFailedMirrorPayload struct {
 	Summary string         `json:"summary,omitempty"`
 	Details map[string]any `json:"details,omitempty"`
 }
-
-const maxObservabilityReasonRunes = 800
 
 // enrichRecentFailuresFromPhaseEvents overlays each row's Reason with
 // text from the matching phase_failed mirror (same task_id + cycle_id)
@@ -200,59 +205,5 @@ func observabilityReasonFromPhaseAndCycle(cycleReason string, phase *phaseFailed
 	if phase == nil {
 		return ""
 	}
-	if msg := standardizedMessageFromDetails(phase.Details); msg != "" {
-		return truncateReasonRunes(msg, maxObservabilityReasonRunes)
-	}
-	if s := strings.TrimSpace(phase.Summary); s != "" {
-		return truncateReasonRunes(s, maxObservabilityReasonRunes)
-	}
-	if fk := failureKindFromDetails(phase.Details); fk != "" {
-		if h := humanizeFailureKind(fk); h != "" {
-			return h
-		}
-		return fk
-	}
-	if strings.TrimSpace(cycleReason) == "" {
-		return ""
-	}
-	return cycleReason
-}
-
-func standardizedMessageFromDetails(d map[string]any) string {
-	if d == nil {
-		return ""
-	}
-	v, ok := d["standardized_message"].(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(v)
-}
-
-func failureKindFromDetails(d map[string]any) string {
-	if d == nil {
-		return ""
-	}
-	v, ok := d["failure_kind"].(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(v)
-}
-
-func humanizeFailureKind(kind string) string {
-	switch kind {
-	case "cursor_usage_limit":
-		return "Cursor usage limit reached"
-	default:
-		return ""
-	}
-}
-
-func truncateReasonRunes(s string, max int) string {
-	if max <= 0 || utf8.RuneCountInString(s) <= max {
-		return s
-	}
-	r := []rune(s)
-	return string(r[:max]) + "…"
+	return cycles.FailureSurfaceMessage(true, cycleReason, strings.TrimSpace(phase.Summary), phase.Details)
 }
