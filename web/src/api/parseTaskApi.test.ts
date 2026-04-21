@@ -12,6 +12,7 @@ import {
   parseTaskDraftDetail,
   parseTaskListResponse,
   parseTaskStatsResponse,
+  parseCycleFailuresListResponse,
 } from "./parseTaskApi";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TASK_EVENT_TYPES } from "@/types";
@@ -432,6 +433,32 @@ describe("parseTaskStatsResponse", () => {
         ],
       }),
     ).toThrow(/recent_failures\[0\]\.status/);
+  });
+
+  it("parses cycle failures list responses", () => {
+    const got = parseCycleFailuresListResponse({
+      total: 1,
+      limit: 50,
+      offset: 0,
+      sort: "at_desc",
+      reason_sort_truncated: false,
+      failures: [
+        {
+          task_id: "t-1",
+          event_seq: 7,
+          at: "2026-04-19T12:00:00Z",
+          cycle_id: "c-1",
+          attempt_seq: 2,
+          status: "failed",
+          reason: "execute blew up",
+        },
+      ],
+    });
+    expect(got.total).toBe(1);
+    expect(got.sort).toBe("at_desc");
+    expect(got.reason_sort_truncated).toBe(false);
+    expect(got.failures).toHaveLength(1);
+    expect(got.failures[0].task_id).toBe("t-1");
   });
 
   it("parses runner breakdown across by_runner, by_model, and by_runner_model", () => {

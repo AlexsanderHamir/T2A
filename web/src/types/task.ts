@@ -77,6 +77,16 @@ export type TaskStatsRecentFailure = {
   reason: string;
 };
 
+/** GET /tasks/cycle-failures — paginated cycle_failed list for the failures page. */
+export type CycleFailuresListResponse = {
+  total: number;
+  limit: number;
+  offset: number;
+  sort: string;
+  reason_sort_truncated: boolean;
+  failures: TaskStatsRecentFailure[];
+};
+
 /**
  * Cycle aggregates from `GET /tasks/stats`. Both maps are always
  * present (`{}` on empty database). Inner enums match

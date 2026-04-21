@@ -5,6 +5,7 @@ import {
   evaluateDraftTask,
   getTask,
   getTaskStats,
+  getCycleFailures,
   getTaskEvent,
   listTasks,
   maxTaskPathIDBytes,
@@ -204,6 +205,37 @@ describe("getTaskStats", () => {
     });
     expect(fetch).toHaveBeenCalledWith(
       "/tasks/stats",
+      expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
+  });
+});
+
+describe("getCycleFailures", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("GETs /tasks/cycle-failures with query params", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          total: 0,
+          limit: 50,
+          offset: 0,
+          sort: "at_desc",
+          reason_sort_truncated: false,
+          failures: [],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    await getCycleFailures({ offset: 10, sort: "reason_asc" });
+    expect(fetch).toHaveBeenCalledWith(
+      "/tasks/cycle-failures?limit=50&offset=10&sort=reason_asc",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
     );
   });

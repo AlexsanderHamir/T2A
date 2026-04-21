@@ -15,6 +15,7 @@ import {
   type TaskEventsResponse,
   type TaskListResponse,
   type TaskStatsResponse,
+  type CycleFailuresListResponse,
 } from "@/types";
 import {
   parseTask,
@@ -26,6 +27,7 @@ import {
   parseTaskEventsResponse,
   parseTaskListResponse,
   parseTaskStatsResponse,
+  parseCycleFailuresListResponse,
 } from "./parseTaskApi";
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
 import {
@@ -37,6 +39,21 @@ import {
   assertTaskPathId,
 } from "./taskRequestBounds";
 import { TASK_DRAFTS } from "@/constants/tasks";
+
+/** Matches `GET /tasks/cycle-failures` `sort` query (store cycle failure sorts). */
+const CYCLE_FAILURE_SORTS = [
+  "at_desc",
+  "at_asc",
+  "reason_asc",
+  "reason_desc",
+] as const;
+
+function assertCycleFailureSort(sort: string): (typeof CYCLE_FAILURE_SORTS)[number] {
+  if (!(CYCLE_FAILURE_SORTS as readonly string[]).includes(sort)) {
+    throw new Error(`sort must be one of: ${CYCLE_FAILURE_SORTS.join(", ")}`);
+  }
+  return sort as (typeof CYCLE_FAILURE_SORTS)[number];
+}
 
 export {
   maxListAfterIDParamBytes,
@@ -168,6 +185,42 @@ export async function getTaskStats(
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
   return parseTaskStatsResponse(raw);
+}
+
+/**
+ * Paginated `cycle_failed` events (`GET /tasks/cycle-failures`).
+ * Default server behaviour is newest-first (`at_desc`, limit 50).
+ */
+export async function getCycleFailures(options: {
+  signal?: AbortSignal;
+  limit?: number;
+  offset?: number;
+  sort?: string;
+}): Promise<CycleFailuresListResponse> {
+  const limitStr =
+    options.limit === undefined
+      ? "50"
+      : assertListIntQuery("limit", options.limit, 1, 200);
+  const offsetStr =
+    options.offset === undefined
+      ? "0"
+      : assertNonNegativeOffset("offset", options.offset);
+  const sort =
+    options.sort === undefined || options.sort === ""
+      ? "at_desc"
+      : assertCycleFailureSort(options.sort.trim());
+  const q = new URLSearchParams({
+    limit: limitStr,
+    offset: offsetStr,
+    sort,
+  });
+  const res = await fetchWithTimeout(`/tasks/cycle-failures?${q}`, {
+    headers: { Accept: "application/json" },
+    signal: options.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseCycleFailuresListResponse(raw);
 }
 
 export async function createTask(input: {

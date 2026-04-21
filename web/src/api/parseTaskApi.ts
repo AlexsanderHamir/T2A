@@ -36,6 +36,7 @@ import {
   type TaskStatsResponse,
   type TaskStatsRunner,
   type TaskStatsRunnerBucket,
+  type CycleFailuresListResponse,
 } from "@/types";
 import { errorMessage } from "@/lib/errorMessage";
 
@@ -200,6 +201,27 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     phases,
     runner,
     recent_failures,
+  };
+}
+
+export function parseCycleFailuresListResponse(
+  value: unknown,
+): CycleFailuresListResponse {
+  if (!isRecord(value)) {
+    throw new Error(
+      "Invalid API response: cycle failures list payload must be an object",
+    );
+  }
+  return {
+    total: parseFiniteNumber(value.total, "total"),
+    limit: parseFiniteNumber(value.limit, "limit"),
+    offset: parseFiniteNumber(value.offset, "offset"),
+    sort: parseString(value.sort, "sort"),
+    reason_sort_truncated: parseBooleanField(
+      value.reason_sort_truncated,
+      "reason_sort_truncated",
+    ),
+    failures: parseTaskStatsRecentFailures(value.failures),
   };
 }
 
