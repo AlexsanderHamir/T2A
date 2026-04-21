@@ -18,7 +18,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | Package | Role |
 |---------|------|
 | [`internal/envload`](../../internal/envload) | Resolve and load `.env`; require `DATABASE_URL`. |
-| [`internal/taskapiconfig`](../../internal/taskapiconfig) | Listen host, log level, minimized logging, agent queue cap, reconcile interval, dev SSE ticker interval. |
+| [`internal/taskapiconfig`](../../internal/taskapiconfig) | Listen host, log level, minimized logging, agent queue cap, dev SSE ticker interval. Reconcile tick: [`pkgs/agents`](../../pkgs/agents) `ReconcileTickInterval`. |
 | [`internal/taskapi`](../../internal/taskapi) | `NewHTTPHandler` → `middleware.Stack(handler.NewHandler(...), calltrace.Path)` (`pkgs/tasks/middleware/stack.go` defines the `With*` order). |
 | [`pkgs/tasks/postgres`](../../pkgs/tasks/postgres) | GORM open + `AutoMigrate`. |
 | [`pkgs/tasks/store`](../../pkgs/tasks/store) | Persistence; `SetReadyTaskNotifier` for the agent queue. |

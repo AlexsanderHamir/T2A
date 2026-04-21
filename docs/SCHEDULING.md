@@ -19,45 +19,39 @@ the contract, the runtime invariants, and the implementation decisions.
   `status=ready` AND the operator did not pass an explicit
   `pickup_not_before` on the create body.
 
-## The two queues
+## Three paths to the worker
 
-The agent worker is fed by two cooperating "queues" that MUST agree
-on which tasks are eligible for pickup at any given moment:
+The agent dequeue path MUST agree with the SQL eligibility filter
+(`status='ready'` AND `(pickup_not_before IS NULL OR pickup_not_before <= now())`.
+See `pkgs/tasks/store/internal/ready/ready.go:ListQueueCandidates`.)
 
-1. **The SQL queue (authoritative).**
-   `pkgs/tasks/store/internal/ready/ready.go:ListQueueCandidates`
-   returns rows where `status='ready'` AND
-   `(pickup_not_before IS NULL OR pickup_not_before <= now())`.
-   This filter is evaluated on every reconcile sweep
-   (default interval: `USER_TASK_AGENT_RECONCILE_INTERVAL`, 5 min) so
-   a deferred task is *eventually* picked up at most one interval
-   after its time arrives.
+1. **Immediate in-memory notify (fast path).**
+   When a task becomes ready and `ShouldNotifyReadyNow` is true, `Store.notifyReadyTask`
+   pushes a snapshot onto the bounded `MemoryQueue` (same process as `taskapi`).
+   Callers: `Store.Create`, `Store.Update`, `Store.ApplyDevTaskRowMirror` when the
+   schedule is already due.
 
-2. **The in-memory queue (fast path).**
-   `Store.notifyReadyTask` pushes a task ID onto an in-process channel
-   the worker drains continuously, so a task created via the API gets
-   picked up in milliseconds rather than waiting for the next
-   reconcile sweep. The notifier is fired by `Store.Create`,
-   `Store.Update` (on a `ready` transition), and
-   `Store.ApplyDevTaskRowMirror`.
+2. **Pickup wake (`pkgs/agents.PickupWakeScheduler`).**
+   When a ready task has `pickup_not_before` in the future, the store calls
+   `PickupWake.Schedule` instead of notifying. A min-heap and one timer enqueue
+   shortly after the deadline (after `Get` + `ShouldNotifyReadyNow`). At
+   `taskapi` startup, `Hydrate` replays deferred rows from
+   `ListDeferredReadyPickupTasks`.
 
-**Invariant:** the in-memory queue MUST NEVER contain a task that the
-SQL filter would currently reject. If it did, the worker would race
-the reconcile sweep and pick up a deferred task immediately — the
-exact regression Stage 0 of the scheduling plan closes.
+3. **Periodic reconcile (backstop).**
+   `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` at startup and
+   every `ReconcileTickInterval` (2 min, fixed). It catches restarts, missed
+   notifies, and full buffers.
 
-`facade_tasks.go:shouldNotifyReadyNow(pickup, now)` is the single
-gate enforcing this invariant; it returns `true` when `pickup` is
-`nil` or `<= now`, mirroring the SQL filter byte-for-byte. The unit
-test table `TestShouldNotifyReadyNow_unitTable` pins the boundary
-(an "exactly now" pickup time notifies; "now+1s" does not).
+**Invariant:** the in-memory queue MUST NEVER contain a task that the SQL filter
+would reject. `ShouldNotifyReadyNow` mirrors `pickup_not_before <= now()`
+byte-for-byte; see `TestShouldNotifyReadyNow_unitTable`.
 
-If a deferred task is created or transitions into `ready` while its
-pickup time is still in the future, the gate skips the in-memory push
-and the task waits for the reconcile sweep — within at most
-`USER_TASK_AGENT_RECONCILE_INTERVAL` of the time arriving. This is
-the documented worst-case latency between "schedule arrives" and
-"agent picks up".
+**Latency:** when a deferred task becomes due, pickup wake typically delivers
+within timer resolution; reconcile bounds worst-case delay to at most one
+`ReconcileTickInterval` if the wake path misses. See [AGENT-QUEUE.md](./AGENT-QUEUE.md)
+and [future considerations](./future-considerations/scheduling-and-agents.md) for
+multi-instance and clock-skew notes.
 
 ## Operator workflow (forward reference)
 
@@ -146,8 +140,8 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   `prev != ready` transitions.**
   Rationale: clearing a future schedule (operator hits "Clear") on
   an already-ready task must wake the worker immediately; otherwise
-  the task waits up to one reconcile interval (default 5 min) for
-  no good reason. The narrower "transition only" gate from Stage 0
+  the task waits up to one reconcile tick (`ReconcileTickInterval`, 2 min)
+  for no good reason. The narrower "transition only" gate from Stage 0
   was correct for `Create` and `Update`-into-`ready` but became
   insufficient once schedules are operator-mutable. The
   `shouldNotifyReadyNow` invariant is preserved: we only notify

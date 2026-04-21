@@ -242,7 +242,7 @@ All V1 worker knobs live in the singleton `app_settings` DB row and are surfaced
 Related queue/reconcile env vars (always read, even when the worker is idle):
 
 - `T2A_USER_TASK_AGENT_QUEUE_CAP` — buffer depth of the `MemoryQueue` the worker dequeues from. See [AGENT-QUEUE.md](./AGENT-QUEUE.md).
-- `T2A_USER_TASK_AGENT_RECONCILE_INTERVAL` — periodic reconcile tick that backfills ready tasks the notifier dropped.
+- Reconcile tick interval is fixed in code (`pkgs/agents.ReconcileTickInterval`, 2 minutes); it is not an env var. It backfills ready tasks the notifier dropped.
 
 The supervisor emits one structured line on every (re)load summarizing the live config:
 

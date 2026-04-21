@@ -16,7 +16,8 @@ Long-form design and contracts live here; the root [README.md](../README.md) sta
 | [API-HTTP.md](./API-HTTP.md) | **Contract:** REST (`/tasks`, `/repo`, health, metrics), rate limits, idempotency, documented `400` strings. |
 | [API-SSE.md](./API-SSE.md) | **Contract:** `GET /events`, SSE wire format, dev-only `T2A_SSE_TEST` vars. |
 | [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
-| [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, reconcile loop, fairness ordering. |
+| [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, pickup wake, reconcile loop, fairness ordering. |
+| [future-considerations/](./future-considerations/) | Optional scaling notes (multi-replica, clock skew, packaging); not runtime contracts. |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | **Long-term roadmap** (V2–V4) for evolving the in-process Cursor CLI worker into a reliable, multi-runner, multi-replica execution runtime. V0/V1 have shipped — see contract docs below. |
 | [AGENT-WORKER.md](./AGENT-WORKER.md) | **Contract:** V1 in-process Cursor CLI worker — lifecycle, runner abstraction, security model (env allowlist, secret redaction, prompt hashing), audit shape, orphan sweep, and explicit V2/V3/V4 deferrals. Configured live via the SPA Settings page; see [SETTINGS.md](./SETTINGS.md). |
 | [SETTINGS.md](./SETTINGS.md) | **Contract:** singleton `app_settings` row, SPA Settings page wiring, `GET/PATCH /settings` + `/settings/probe-cursor` + `/settings/cancel-current-run`, env-var migration table. |
@@ -40,13 +41,13 @@ Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkg
 | Change | Update |
 |--------|--------|
 | Product direction: who T2A is for, outcomes, horizons, explicit non-goals | `docs/PRODUCT.md`; keep `docs/DESIGN.md` (hub) Limitations / Out of scope in sync when strategy changes. |
-| Flags, env, `taskapi` startup/shutdown | `docs/RUNTIME-ENV.md` + `docs/DESIGN.md` (hub) if limitations change; `internal/taskapiconfig` for taskapi-only parsed env (listen host, log level, agent queue/reconcile, dev SSE interval); `cmd/taskapi/README.md` for binary file layout; relevant `doc.go`; root `README` only if command-line examples change. |
+| Flags, env, `taskapi` startup/shutdown | `docs/RUNTIME-ENV.md` + `docs/DESIGN.md` (hub) if limitations change; `internal/taskapiconfig` for taskapi-only parsed env (listen host, log level, agent queue cap, dev SSE interval); `pkgs/agents` for fixed reconcile tick; `cmd/taskapi/README.md` for binary file layout; relevant `doc.go`; root `README` only if command-line examples change. |
 | REST routes, bodies, query limits, `/repo` HTTP | `docs/API-HTTP.md` + `docs/DESIGN.md` (hub) if limitations change; contract changes also touch `web/src/api` / `parseTaskApi` per CONTRIBUTING. Handler layout: `pkgs/tasks/handler/README.md`; scaling/split conventions: `docs/HANDLER-SCALE.md`; `taskapi` middleware assembly: `internal/taskapi`. |
 | SSE (`GET /events`), synthetic dev SSE | `docs/API-SSE.md`. |
 | New tasks API behavior (domain / store / handler / web) | `docs/EXTENSIBILITY.md` + `.cursor/rules/13-tasks-stack-extensibility.mdc`; HTTP/SSE contract files above; client sync per CONTRIBUTING. |
 | Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |
 | Workspace repo (`app_settings.repo_root`), `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/SETTINGS.md` + `docs/API-HTTP.md` (Workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
-| Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (`T2A_USER_TASK_AGENT_*`). |
+| Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (queue cap env) + `pkgs/agents` (`ReconcileTickInterval`). |
 | Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/SETTINGS.md` (UI/HTTP knobs) + `docs/AGENTIC-LAYER-PLAN.md` (V2–V4 roadmap). |
 | Operator-run real-cursor smoke test for the V1 worker | `docs/AGENT-WORKER.md` "Smoke run" (operator runbook). |
 | Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table). |
