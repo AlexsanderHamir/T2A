@@ -75,7 +75,10 @@ export function ObservabilityCycles({ stats, loading }: Props) {
         />
         <PhaseHeatmap stats={stats} />
       </div>
-      <RecentFailuresTable failures={stats.recent_failures} />
+      <RecentFailuresTable
+        failures={stats.recent_failures}
+        titleHref="/observability/failures"
+      />
     </section>
   );
 }

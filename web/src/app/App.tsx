@@ -11,7 +11,11 @@ import {
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
-import { ObservabilityPage, SystemStatusChip } from "@/observability";
+import {
+  ObservabilityFailuresPage,
+  ObservabilityPage,
+  SystemStatusChip,
+} from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
@@ -171,6 +175,10 @@ export default function App() {
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route path="observability" element={<ObservabilityPage />} />
+        <Route
+          path="observability/failures"
+          element={<ObservabilityFailuresPage />}
+        />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"

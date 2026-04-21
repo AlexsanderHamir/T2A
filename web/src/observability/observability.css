@@ -675,6 +675,16 @@
   color: var(--text-primary);
 }
 
+a.obs-failures-title-link {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+a.obs-failures-title-link:hover,
+a.obs-failures-title-link:focus-visible {
+  text-decoration: underline;
+}
+
 .obs-failures-caption {
   margin: 0;
   color: var(--text-secondary);
@@ -751,6 +761,103 @@
 .obs-failures-muted {
   color: var(--text-tertiary, var(--text-secondary));
   font-style: italic;
+}
+
+/* Full failures list (/observability/failures) --------------------------- */
+.obs-failures-back {
+  margin-bottom: var(--space-2);
+}
+
+.obs-failures-back-link {
+  font-size: var(--text-sm);
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.obs-failures-back-link:hover,
+.obs-failures-back-link:focus-visible {
+  text-decoration: underline;
+}
+
+.obs-failures--full {
+  gap: var(--space-3);
+}
+
+.obs-failures-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.obs-failures-sort-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.obs-failures-sort {
+  font-size: var(--text-sm);
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border-hairline);
+  background: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.obs-failures-toolbar-meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.obs-failures-truncate-note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  max-width: 70ch;
+}
+
+.obs-failures-error {
+  margin: 0;
+  color: var(--pill-danger-fill-text, var(--text-primary));
+  font-size: var(--text-sm);
+}
+
+.obs-failures-retry {
+  font: inherit;
+  color: var(--brand);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.obs-failures-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.obs-failures-pager-link {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.obs-failures-pager-link:hover,
+.obs-failures-pager-link:focus-visible {
+  text-decoration: underline;
+}
+
+.obs-failures-pager-muted {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.obs-failures-pager-pos {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 
 /* System health pane ------------------------------------------------------ */
