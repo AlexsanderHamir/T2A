@@ -1,6 +1,7 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import {
   DeleteConfirmDialog,
+  TaskChangeModelModal,
   TaskEditForm,
   TaskDetailPage,
   TaskDraftsPage,
@@ -156,6 +157,19 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               onChecklistInheritChange={app.setEditChecklistInherit}
               onSubmit={(e) => void app.submitEdit(e)}
               onCancel={app.closeEdit}
+            />
+          ) : null}
+
+          {app.changeModelTask ? (
+            <TaskChangeModelModal
+              task={app.changeModelTask}
+              cursorModel={app.changeModelDraft}
+              onCursorModelChange={app.setChangeModelDraft}
+              saving={app.saving}
+              patchPending={app.patchPending}
+              error={app.patchError}
+              onSubmit={(e) => void app.submitChangeModel(e)}
+              onCancel={app.closeChangeModel}
             />
           ) : null}
         </main>

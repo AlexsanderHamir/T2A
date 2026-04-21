@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
@@ -113,6 +114,7 @@ const SETTINGS_SUCCESS_DISMISS_MS = 4_000;
 
 export function SettingsPage() {
   useDocumentTitle("Settings");
+  const location = useLocation();
   const { settings, isLoading, error, patch, probe, refetch } =
     useAppSettings();
   const [form, setForm] = useState<FormState | null>(null);
@@ -137,6 +139,30 @@ export function SettingsPage() {
     }, SETTINGS_SUCCESS_DISMISS_MS);
     return () => window.clearTimeout(id);
   }, [status]);
+
+  /**
+   * Client navigations to `/settings#cursor-agent` do not scroll the way a full
+   * page load would, and the `#cursor-agent` target is not in the DOM until
+   * settings finish loading — scroll after the form mounts.
+   */
+  useEffect(() => {
+    if (isLoading || !form || !settings) return;
+    if (location.hash !== "#cursor-agent") return;
+    const el = document.getElementById("cursor-agent");
+    if (!el) return;
+    const prefersReduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const run = () => {
+      el.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "start",
+      });
+    };
+    requestAnimationFrame(() => {
+      requestAnimationFrame(run);
+    });
+  }, [isLoading, form, settings, location.hash]);
 
   useEffect(() => {
     if (settings && form === null) {

@@ -43,6 +43,9 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
   const [editCursorModel, setEditCursorModel] = useState("");
+  /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
+  const [changeModelTask, setChangeModelTask] = useState<Task | null>(null);
+  const [changeModelDraft, setChangeModelDraft] = useState("");
 
   const {
     deleteTarget,
@@ -122,6 +125,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   } = useTaskPatchFlow({
     onPatched: (patchedId) => {
       setEditing((prev) => (prev?.id === patchedId ? null : prev));
+      setChangeModelTask((prev) => (prev?.id === patchedId ? null : prev));
     },
   });
 
@@ -130,8 +134,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   // interacted. Mirrors the `createMutation.reset()` / `evaluateDraftMutation.reset()`
   // lifecycle wired in session #33; pinned by the per-component error tests.
   useEffect(() => {
-    if (!editing) resetPatchError();
-  }, [editing, resetPatchError]);
+    if (!editing && !changeModelTask) resetPatchError();
+  }, [editing, changeModelTask, resetPatchError]);
 
   useEffect(() => {
     if (!deleteTarget) resetDeleteError();
@@ -165,6 +169,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   }, [editTitle, editTitleRequiredError]);
 
   function openEdit(t: Task) {
+    setChangeModelTask(null);
     setEditing(t);
     setEditTitle(t.title);
     setEditPrompt(t.initial_prompt);
@@ -179,6 +184,33 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   function closeEdit() {
     setEditing(null);
     setEditTitleRequiredError(null);
+  }
+
+  function openChangeModel(t: Task) {
+    setEditing(null);
+    setEditTitleRequiredError(null);
+    setChangeModelTask(t);
+    setChangeModelDraft(t.cursor_model ?? "");
+  }
+
+  function closeChangeModel() {
+    setChangeModelTask(null);
+  }
+
+  function submitChangeModel(e: FormEvent) {
+    e.preventDefault();
+    const t = changeModelTask;
+    if (!t) return;
+    runPatch({
+      id: t.id,
+      title: t.title.trim(),
+      initial_prompt: t.initial_prompt,
+      status: t.status,
+      priority: t.priority,
+      task_type: t.task_type ?? DEFAULT_NEW_TASK_TYPE,
+      checklist_inherit: t.checklist_inherit === true,
+      cursor_model: changeModelDraft.trim(),
+    });
   }
 
   function submitEdit(e: FormEvent) {
@@ -246,6 +278,12 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditChecklistInherit,
     editCursorModel,
     setEditCursorModel,
+    changeModelTask,
+    changeModelDraft,
+    setChangeModelDraft,
+    openChangeModel,
+    closeChangeModel,
+    submitChangeModel,
     openEdit,
     closeEdit,
     submitEdit,

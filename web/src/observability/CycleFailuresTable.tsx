@@ -1,9 +1,8 @@
-import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import type { TaskStatsRecentFailure } from "@/types/task";
 
-/** Collapsed preview length (long API reasons stay one compact block until expanded). */
-const FAILURE_REASON_PREVIEW_CHARS = 120;
+/** Table cell preview — full text on hover via `title` (no expand control). */
+const FAILURE_REASON_MAX_CHARS = 160;
 
 type Props = {
   failures: TaskStatsRecentFailure[];
@@ -77,38 +76,25 @@ function truncateFailureReasonPreview(text: string, maxLen: number): string {
 }
 
 function FailureReasonCell({ reason }: { reason: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const baseId = useId();
-  const textId = `${baseId}-text`;
-  const needsMore =
-    reason.trim().length > FAILURE_REASON_PREVIEW_CHARS;
-
-  if (!reason.trim()) {
+  const trimmed = reason.trim();
+  if (!trimmed) {
     return <em className="obs-failures-muted">(no reason recorded)</em>;
   }
 
-  const preview = truncateFailureReasonPreview(
-    reason,
-    FAILURE_REASON_PREVIEW_CHARS,
+  const display = truncateFailureReasonPreview(
+    trimmed,
+    FAILURE_REASON_MAX_CHARS,
   );
-  const showFull = !needsMore || expanded;
+  const truncated = display !== trimmed;
 
   return (
     <div className="obs-failures-reason-cell">
-      <span id={textId} className="obs-failures-reason-text">
-        {showFull ? reason : preview}
+      <span
+        className="obs-failures-reason-text"
+        title={truncated ? trimmed : undefined}
+      >
+        {display}
       </span>
-      {needsMore ? (
-        <button
-          type="button"
-          className="obs-failures-reason-toggle"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-controls={textId}
-        >
-          {expanded ? "Show less" : "Read more"}
-        </button>
-      ) : null}
     </div>
   );
 }

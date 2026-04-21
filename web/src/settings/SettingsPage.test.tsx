@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { requestUrl } from "../test/requestUrl";
 import { SettingsPage } from "./SettingsPage";
@@ -46,7 +48,8 @@ function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
-function renderPage() {
+function renderPage(options?: { initialEntry?: string }) {
+  const { initialEntry = "/settings" } = options ?? {};
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -55,7 +58,9 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <SettingsPage />
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={[initialEntry]}>
+        <SettingsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -64,6 +69,35 @@ describe("SettingsPage", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("scrolls to Cursor agent section after load when URL hash is #cursor-agent", async () => {
+    const scrollIntoView = vi.fn();
+    const prev = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      writable: true,
+      value: scrollIntoView,
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async (input: FetchInput) => {
+      if (requestUrl(input).endsWith("/settings")) {
+        return jsonResponse(defaultSettings());
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    try {
+      renderPage({ initialEntry: "/settings#cursor-agent" });
+      await screen.findByTestId("settings-cursor-model-select");
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      expect(document.getElementById("cursor-agent")).not.toBeNull();
+    } finally {
+      if (prev) {
+        Object.defineProperty(Element.prototype, "scrollIntoView", prev);
+      } else {
+        delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+      }
+    }
   });
 
   it("loads the settings row and pre-populates the form", async () => {

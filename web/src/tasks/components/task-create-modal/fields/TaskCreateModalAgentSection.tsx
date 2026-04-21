@@ -18,6 +18,11 @@ type Props = {
   disabled: boolean;
   /** When true, runner cannot be changed (e.g. edit-task: runner is fixed on the row). */
   lockRunner?: boolean;
+  /**
+   * "Change model" dialog only: skip the lock banner (the dialog already explains scope)
+   * and use shorter helper copy with roomier layout via `.task-create-agent--model-dialog`.
+   */
+  variant?: "default" | "modelDialog";
   runner: string;
   cursorModel: string;
   onRunnerChange: (runner: string) => void;
@@ -37,6 +42,10 @@ type Props = {
  * actually controls — the Stripe pattern for form density without
  * hand-holding.
  *
+ * Runner copy: on **create**, explains the choice is stored with the task;
+ * with **lockRunner** (edit / change-model dialog), explains it cannot change
+ * on an existing task—separate from workspace CLI in Settings.
+ *
  * The Model select retains an inline spinner during the `listCursorModels`
  * fetch so operators see the field is live (avoids the "stuck on Default"
  * confusion) and an inline polished error banner if discovery fails —
@@ -45,6 +54,7 @@ type Props = {
 export function TaskCreateModalAgentSection({
   disabled,
   lockRunner = false,
+  variant = "default",
   runner,
   cursorModel,
   onRunnerChange,
@@ -98,9 +108,15 @@ export function TaskCreateModalAgentSection({
       ? (modelsQuery.data.error ?? "Model list failed.")
       : null;
 
+  const isModelDialog = variant === "modelDialog";
+
   return (
     <section
-      className="task-create-agent"
+      className={
+        isModelDialog
+          ? "task-create-agent task-create-agent--model-dialog"
+          : "task-create-agent"
+      }
       aria-labelledby={AGENT_HEADING_ID}
     >
       <h3
@@ -110,17 +126,19 @@ export function TaskCreateModalAgentSection({
         <span>Agent</span>
       </h3>
       <div className="task-create-agent-panel">
-        {lockRunner ? (
+        {lockRunner && !isModelDialog ? (
           <p className="task-create-agent-lock-notice" role="note">
-            <strong>Per-task only.</strong> Global CLI and default model:{" "}
+            <strong>Runner</strong> is fixed—it was chosen when this task was
+            created and can&apos;t be changed here.{" "}
+            <strong>Model</strong> below can override the workspace default for
+            this task only. Workspace CLI path and default model:{" "}
             <Link
               to="/settings#cursor-agent"
               className="task-create-agent-lock-notice-link"
             >
               Settings → Cursor agent
             </Link>
-            . Use <strong>Model</strong> below to override the model for{" "}
-            <em>this task</em> only.
+            .
           </p>
         ) : null}
         <div className="task-create-agent-grid">
@@ -149,8 +167,8 @@ export function TaskCreateModalAgentSection({
             </div>
             <p className="task-create-agent-help">
               {lockRunner
-                ? "Locked on this task. Change the global CLI path under Settings → Cursor agent."
-                : "Where the task runs — the runtime that executes turns."}
+                ? "Set when this task was created; the runner can’t be changed for an existing task."
+                : "Pick the runtime for this task. It’s saved when the task is created and can’t be changed later."}
             </p>
           </div>
           <div className="field task-create-agent-field">
@@ -200,7 +218,9 @@ export function TaskCreateModalAgentSection({
                   {modelSelectBusy
                     ? "Loading available models…"
                     : lockRunner
-                      ? "Per-task: pick a model or Default. (Current) in the list reflects Cursor’s global default — this field still overrides the model for this task only."
+                      ? isModelDialog
+                        ? "Pick a model or Default. This overrides the workspace default for this task only."
+                        : "Per-task: pick a model or Default. (Current) in the list reflects Cursor’s global default — this field still overrides the model for this task only."
                       : "Auto uses Cursor's current default unless overridden."}
                 </p>
                 {modelFetchError ? (

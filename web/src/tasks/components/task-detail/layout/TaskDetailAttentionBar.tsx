@@ -11,6 +11,8 @@ type Props = {
   attention: TaskDetailAttention;
   saving: boolean;
   onEdit: () => void;
+  /** Opens the change-model-only modal (not full edit). Shown in model configuration row. */
+  onChangeModel?: () => void;
   onDelete: () => void;
   /** When set, shows "Run again" to requeue the task for the agent (PATCH status → ready). */
   onRequeue?: () => void;
@@ -23,6 +25,7 @@ export function TaskDetailAttentionBar({
   attention,
   saving,
   onEdit,
+  onChangeModel,
   onDelete,
   onRequeue,
   requeuePending,
@@ -79,15 +82,64 @@ export function TaskDetailAttentionBar({
       </div>
 
       {failedRunnerHint ? (
-        <p className="muted task-detail-runner-hint">
-          <strong className="task-detail-runner-hint-label">Global:</strong>{" "}
-          <Link to="/settings#cursor-agent">Cursor agent settings</Link> — CLI
-          path and workspace default model.{" "}
-          <strong className="task-detail-runner-hint-label">This task:</strong>{" "}
-          use <strong>Edit task</strong> → Agent → Model to override the model
-          for this task only. Headless runs use <code>--force</code> so tools
-          auto-approve.
-        </p>
+        <section
+          className="task-detail-model-config"
+          aria-labelledby="task-detail-model-config-title"
+        >
+          <div className="task-detail-model-config-inner">
+            <h3
+              className="task-detail-model-config-title"
+              id="task-detail-model-config-title"
+            >
+              Model configuration
+            </h3>
+            <div className="task-detail-model-config-body">
+              <div className="task-detail-model-config-row">
+                <div className="task-detail-model-config-copy">
+                  <span className="task-detail-model-config-row-title">
+                    Global model
+                  </span>
+                  <span className="task-detail-model-config-row-hint">
+                    All tasks in this workspace
+                  </span>
+                </div>
+                <div className="task-detail-model-config-actions">
+                  <Link
+                    to="/settings#cursor-agent"
+                    className="task-detail-agent-model-cta"
+                  >
+                    Global agent settings
+                  </Link>
+                </div>
+              </div>
+              <div
+                className="task-detail-model-config-divider"
+                role="presentation"
+              />
+              <div className="task-detail-model-config-row">
+                <div className="task-detail-model-config-copy">
+                  <span className="task-detail-model-config-row-title">
+                    Per-task model
+                  </span>
+                  <span className="task-detail-model-config-row-hint">
+                    This task only
+                  </span>
+                </div>
+                <div className="task-detail-model-config-actions">
+                  <button
+                    type="button"
+                    className="task-detail-agent-model-cta"
+                    onClick={onChangeModel ?? onEdit}
+                    disabled={saving}
+                    aria-label="Change per-task model"
+                  >
+                    Change model
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       ) : null}
     </>
   );

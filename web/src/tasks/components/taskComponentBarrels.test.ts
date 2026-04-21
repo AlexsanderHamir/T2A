@@ -5,7 +5,7 @@ import { DeleteConfirmDialog, StreamStatusHint } from "./dialogs";
 import { filePreviewLanguageFromPath } from "./file-preview";
 import { MentionRangePanel, RichPromptEditor } from "./rich-prompt";
 import { taskCreateModalBusyLabel, TaskCreateModal } from "./task-create-modal";
-import { TaskDetailHeader, TaskEditForm } from "./task-detail";
+import { TaskChangeModelModal, TaskDetailHeader, TaskEditForm } from "./task-detail";
 import { TaskComposeFields } from "./task-compose";
 import { filterTasksForListView, TaskListSection, TaskPager } from "./task-list";
 import {
@@ -25,6 +25,7 @@ describe("tasks component barrels", () => {
     expect(TaskDetailPageSkeleton).toBeTypeOf("function");
     expect(TaskDetailHeader).toBeTypeOf("function");
     expect(TaskEditForm).toBeTypeOf("function");
+    expect(TaskChangeModelModal).toBeTypeOf("function");
     expect(TaskComposeFields).toBeTypeOf("function");
     expect(DraftResumeModal).toBeTypeOf("function");
     expect(DeleteConfirmDialog).toBeTypeOf("function");

@@ -222,15 +222,13 @@ export function TaskDetailPage({ app }: Props) {
 
   return (
     <section className="panel task-detail-panel task-detail-content--enter">
-      <TaskDetailHeader
-        task={task}
-        onEditAgentSettings={() => app.openEdit(task)}
-      />
+      <TaskDetailHeader task={task} />
 
       <TaskDetailAttentionBar
         attention={attention}
         saving={app.saving}
         onEdit={() => app.openEdit(task)}
+        onChangeModel={() => app.openChangeModel(task)}
         onDelete={() =>
           app.requestDelete({
             ...task,

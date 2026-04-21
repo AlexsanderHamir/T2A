@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../../../lib/routerFutureFlags";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskDetailHeader } from "./TaskDetailHeader";
@@ -94,9 +93,7 @@ describe("TaskDetailHeader", () => {
     );
   });
 
-  it("renders per-task model control when onEditAgentSettings is provided", async () => {
-    const user = userEvent.setup();
-    const onEditAgentSettings = vi.fn();
+  it("does not render a header change-model control", () => {
     render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskDetailHeader
@@ -106,14 +103,12 @@ describe("TaskDetailHeader", () => {
             priority: "medium",
             ...TASK_TEST_DEFAULTS,
           }}
-          onEditAgentSettings={onEditAgentSettings}
         />
       </MemoryRouter>,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: /change model for this task/i }),
-    );
-    expect(onEditAgentSettings).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /change model/i }),
+    ).not.toBeInTheDocument();
   });
 });

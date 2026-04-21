@@ -559,6 +559,90 @@
   }
 }
 
+/* —— Change model dialog (wide modal): breathing room + less cramped grid —— */
+.task-change-model-modal.panel {
+  padding: 1.5rem 1.75rem 1.75rem;
+}
+
+.task-change-model-modal-lede {
+  margin: 0 0 1.25rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  max-width: 44rem;
+}
+
+.task-change-model-modal-lede-sub {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.task-change-model-modal .task-create-agent {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.task-change-model-modal .task-create-agent::before {
+  display: none;
+}
+
+.task-change-model-modal .task-create-agent--model-dialog .task-create-subtasks-heading {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+
+.task-change-model-modal .task-create-agent-panel {
+  padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.task-change-model-modal .task-create-agent-grid {
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: 1.25rem 2rem;
+  align-items: start;
+}
+
+.task-change-model-modal .task-create-agent-field {
+  gap: 0.45rem;
+}
+
+.task-change-model-modal .task-create-agent-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-change-model-modal .task-create-agent-help {
+  margin-top: 0.5rem;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
+.task-change-model-modal .task-create-agent-select,
+.task-change-model-modal .task-create-agent-input {
+  min-height: 2.5rem;
+  font-size: var(--text-sm);
+}
+
+.task-change-model-modal .stack-row-actions {
+  margin-top: 1.35rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border-hairline);
+  gap: 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .task-change-model-modal .task-create-agent-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
 .task-create-subtasks {
   margin-top: 0.5rem;
   padding-top: 1.25rem;

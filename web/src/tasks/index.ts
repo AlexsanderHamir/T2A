@@ -4,7 +4,7 @@
  * instead of deep paths under `tasks/…`.
  */
 export { DeleteConfirmDialog, StreamStatusHint } from "./components/dialogs";
-export { TaskEditForm } from "./components/task-detail";
+export { TaskChangeModelModal, TaskEditForm } from "./components/task-detail";
 export { useTasksApp } from "./hooks/useTasksApp";
 export { TaskDetailPage } from "./pages/TaskDetailPage";
 export { TaskDraftsPage } from "./pages/TaskDraftsPage";
