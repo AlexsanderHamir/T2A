@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../../../lib/routerFutureFlags";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskDetailHeader } from "./TaskDetailHeader";
@@ -91,5 +92,28 @@ describe("TaskDetailHeader", () => {
     expect(screen.getByTestId("task-detail-runtime")).toHaveTextContent(
       "Cursor CLI · default model",
     );
+  });
+
+  it("renders per-task model control when onEditAgentSettings is provided", async () => {
+    const user = userEvent.setup();
+    const onEditAgentSettings = vi.fn();
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <TaskDetailHeader
+          task={{
+            title: "T",
+            status: "ready",
+            priority: "medium",
+            ...TASK_TEST_DEFAULTS,
+          }}
+          onEditAgentSettings={onEditAgentSettings}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /change model for this task/i }),
+    );
+    expect(onEditAgentSettings).toHaveBeenCalledOnce();
   });
 });

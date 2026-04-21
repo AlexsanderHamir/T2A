@@ -14,6 +14,8 @@ type TaskDetailHeaderTask = Pick<
 
 type Props = {
   task: TaskDetailHeaderTask;
+  /** Opens edit (e.g. so the operator can change per-task model under Agent). */
+  onEditAgentSettings?: () => void;
 };
 
 // formatTaskRuntime renders the header chip copy. Unlike
@@ -35,7 +37,7 @@ function formatTaskRuntime(task: TaskDetailHeaderTask): string {
   return `${runner} · ${model}`;
 }
 
-export function TaskDetailHeader({ task }: Props) {
+export function TaskDetailHeader({ task, onEditAgentSettings }: Props) {
   const needsUser = statusNeedsUserInput(task.status);
   return (
     <>
@@ -66,13 +68,24 @@ export function TaskDetailHeader({ task }: Props) {
           <span className={priorityPillClass(task.priority)}>
             {task.priority}
           </span>
-          <span
-            className={`cell-pill ${cycleRunnerChipClass()}`}
-            data-testid="task-detail-runtime"
-            aria-label="Agent for this task"
-          >
-            {formatTaskRuntime(task)}
-          </span>
+          <div className="task-detail-meta-runtime">
+            <span
+              className={`cell-pill ${cycleRunnerChipClass()}`}
+              data-testid="task-detail-runtime"
+              aria-label="Agent for this task"
+            >
+              {formatTaskRuntime(task)}
+            </span>
+            {onEditAgentSettings ? (
+              <button
+                type="button"
+                className="task-detail-agent-model-cta"
+                onClick={onEditAgentSettings}
+              >
+                Change model for this task
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
     </>

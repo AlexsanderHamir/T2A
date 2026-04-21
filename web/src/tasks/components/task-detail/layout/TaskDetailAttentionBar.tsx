@@ -80,9 +80,13 @@ export function TaskDetailAttentionBar({
 
       {failedRunnerHint ? (
         <p className="muted task-detail-runner-hint">
-          <Link to="/settings#cursor-agent">Cursor agent settings</Link> — set an
-          optional CLI model (or leave empty for Cursor&apos;s default). Headless
-          runs always use <code>--force</code> so tools auto-approve.
+          <strong className="task-detail-runner-hint-label">Global:</strong>{" "}
+          <Link to="/settings#cursor-agent">Cursor agent settings</Link> — CLI
+          path and workspace default model.{" "}
+          <strong className="task-detail-runner-hint-label">This task:</strong>{" "}
+          use <strong>Edit task</strong> → Agent → Model to override the model
+          for this task only. Headless runs use <code>--force</code> so tools
+          auto-approve.
         </p>
       ) : null}
     </>

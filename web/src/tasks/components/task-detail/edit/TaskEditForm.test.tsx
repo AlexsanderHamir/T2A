@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
@@ -62,9 +63,11 @@ function renderForm(props?: Partial<ComponentProps<typeof TaskEditForm>>) {
     testCursorModelsEmpty,
   );
   return render(
-    <QueryClientProvider client={client}>
-      <TaskEditForm {...base} {...props} />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <TaskEditForm {...base} {...props} />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

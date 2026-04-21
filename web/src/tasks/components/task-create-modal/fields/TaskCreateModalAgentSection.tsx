@@ -1,4 +1,5 @@
 import { useId, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { AppSettings } from "@/api/settings";
 import { fetchAppSettings, listCursorModels } from "@/api/settings";
@@ -109,6 +110,19 @@ export function TaskCreateModalAgentSection({
         <span>Agent</span>
       </h3>
       <div className="task-create-agent-panel">
+        {lockRunner ? (
+          <p className="task-create-agent-lock-notice" role="note">
+            <strong>Per-task only.</strong> Global CLI and default model:{" "}
+            <Link
+              to="/settings#cursor-agent"
+              className="task-create-agent-lock-notice-link"
+            >
+              Settings → Cursor agent
+            </Link>
+            . Use <strong>Model</strong> below to override the model for{" "}
+            <em>this task</em> only.
+          </p>
+        ) : null}
         <div className="task-create-agent-grid">
           <div className="field task-create-agent-field">
             <label htmlFor={runnerId}>Runner</label>
@@ -134,7 +148,9 @@ export function TaskCreateModalAgentSection({
               </select>
             </div>
             <p className="task-create-agent-help">
-              Where the task runs — the runtime that executes turns.
+              {lockRunner
+                ? "Locked on this task. Change the global CLI path under Settings → Cursor agent."
+                : "Where the task runs — the runtime that executes turns."}
             </p>
           </div>
           <div className="field task-create-agent-field">
@@ -183,7 +199,9 @@ export function TaskCreateModalAgentSection({
                 <p className="task-create-agent-help">
                   {modelSelectBusy
                     ? "Loading available models…"
-                    : "Auto uses Cursor's current default unless overridden."}
+                    : lockRunner
+                      ? "Per-task: pick a model or Default. (Current) in the list reflects Cursor’s global default — this field still overrides the model for this task only."
+                      : "Auto uses Cursor's current default unless overridden."}
                 </p>
                 {modelFetchError ? (
                   <div
