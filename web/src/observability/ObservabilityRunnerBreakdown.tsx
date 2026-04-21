@@ -12,39 +12,18 @@ type Props = {
 };
 
 /**
- * Flattened row for the breakdown table. One per (runner, model) pair
- * plus one "runner totals" row per runner so the operator can compare
- * a single model to the runner it lives under.
- */
-/**
- * Three flavors of rows live in the same flat list the table renders
- * so the sort order ("busiest runner first, then its busiest model,
- * then resolved-model sub-rows") falls out of a single
- * [].push()-then-render pipeline:
- *
- *   - `isRunnerTotal`  → one per runner, aggregates every model under
- *                        that runner (sourced from `by_runner`).
- *   - neither flag     → one per (runner, effective model) pair
- *                        (sourced from `by_runner_model`).
- *   - `isResolved`     → one per (runner, effective model, resolved
- *                        model) triple (sourced from
- *                        `by_runner_model_resolved`). Only emitted
- *                        when the resolved model is observed and
- *                        differs meaningfully from the effective
- *                        selection (e.g. operator picked "auto" →
- *                        cursor-agent routed to "Claude 4 Sonnet").
- *                        Rendered indented under its parent model
- *                        row so the operator can read it as a
- *                        breakdown, not a peer.
+ * Flattened row for the breakdown table: one "runner totals" row per
+ * runner (`by_runner`) plus one row per (runner, effective model) pair
+ * (`by_runner_model`). We do not render `by_runner_model_resolved`
+ * sub-rows — concrete routing under `auto` is not reliably available
+ * yet, and degenerate rows (e.g. "↳ Auto → Auto") added noise.
  */
 type RunnerModelRow = {
   runner: string;
   model: string;
-  resolved?: string;
   label: string;
   bucket: TaskStatsRunnerBucket;
   isRunnerTotal: boolean;
-  isResolved?: boolean;
 };
 
 const TABLE_COLUMNS = [
@@ -65,19 +44,9 @@ const TABLE_COLUMNS = [
  * decision D5) so the operator's drill-down order reads:
  *   top-level KPIs → runner/model attribution → per-phase failure map.
  *
- * Reads `stats.runner` verbatim from `GET /tasks/stats`. Four
- * aggregations are available on the wire; this panel uses:
- *   - `by_runner` for the "all models" summary row per runner,
- *   - `by_runner_model` for the inner (runner, effective model) rows,
- *   - `by_runner_model_resolved` for the optional "↳ Auto → Claude 4
- *     Sonnet" sub-row that appears under a (runner, model) row when
- *     the adapter observed what concrete model the CLI actually
- *     routed to (today: cursor-agent's `system.init.model` event).
- *     The sub-row is suppressed when the resolved model equals the
- *     effective model, since that row would just duplicate its
- *     parent; it's only shown when there's a real delta worth
- *     surfacing to the operator (the `auto` case is the canonical
- *     one).
+ * Reads `stats.runner` from `GET /tasks/stats`. This panel uses
+ * `by_runner` and `by_runner_model` only (`by_runner_model_resolved` is
+ * ignored until we have trustworthy resolved-model attribution).
  *
  * Percentile columns only observe succeeded cycles (plan decision D3);
  * the column headers make that explicit so operators don't wonder why
@@ -216,24 +185,17 @@ function rowKey(row: RunnerModelRow): string {
   if (row.isRunnerTotal) {
     return `runner|${row.runner}|__total__`;
   }
-  if (row.isResolved) {
-    return `runner|${row.runner}|${row.model}|${row.resolved ?? ""}`;
-  }
   return `runner|${row.runner}|${row.model}`;
 }
 
 function rowClassName(row: RunnerModelRow): string {
   if (row.isRunnerTotal) return "obs-runner-row obs-runner-row--total";
-  if (row.isResolved) return "obs-runner-row obs-runner-row--resolved";
   return "obs-runner-row";
 }
 
 function pillClassName(row: RunnerModelRow): string {
   if (row.isRunnerTotal) {
     return "cell-pill cell-pill--runtime obs-runner-pill--total";
-  }
-  if (row.isResolved) {
-    return "cell-pill cell-pill--runtime obs-runner-pill--resolved";
   }
   return "cell-pill cell-pill--runtime";
 }
@@ -280,7 +242,7 @@ function successRateClass(rate: number | null): string {
  * cycles.by_status on the Overview.
  */
 function buildRows(stats: TaskStatsResponse): RunnerModelRow[] {
-  const { by_runner, by_runner_model, by_runner_model_resolved } = stats.runner;
+  const { by_runner, by_runner_model } = stats.runner;
   const runnerNames = Object.keys(by_runner).sort((a, b) => {
     const ta = bucketTotal(by_runner[a]);
     const tb = bucketTotal(by_runner[b]);
@@ -321,62 +283,9 @@ function buildRows(stats: TaskStatsResponse): RunnerModelRow[] {
 
     for (const modelRow of modelRows) {
       out.push(modelRow);
-      // Interleave resolved sub-rows directly under their parent
-      // (runner, effective model) row so the table reads like a
-      // drill-down: runner → model → "… → actually routed to X".
-      const resolvedRows = collectResolvedRows(
-        runner,
-        modelRow.model,
-        by_runner_model_resolved,
-      );
-      out.push(...resolvedRows);
     }
   }
   return out;
-}
-
-/**
- * Collect resolved-model sub-rows for a given (runner, effective
- * model) pair. The resolved aggregation's keys are
- * `runner|effective|resolved`, so we match by the prefix
- * `runner|effective|`. We intentionally do NOT emit a sub-row when
- * the resolved model equals the effective model: that's the boring
- * case (operator picked a concrete model and got that same model
- * back) and the extra row would just be visual noise. The interesting
- * case — and the whole reason the resolved aggregation exists — is
- * when the operator picked `auto` (empty effective) and the adapter
- * reports a concrete resolved model like "Claude 4 Sonnet".
- */
-function collectResolvedRows(
-  runner: string,
-  model: string,
-  byResolved: Record<string, TaskStatsRunnerBucket>,
-): RunnerModelRow[] {
-  const prefix = `${runner}|${model}|`;
-  const rows: RunnerModelRow[] = [];
-  for (const key of Object.keys(byResolved)) {
-    if (!key.startsWith(prefix)) continue;
-    const resolved = key.slice(prefix.length);
-    const resolvedTrim = resolved.trim();
-    if (!resolvedTrim) continue;
-    if (resolvedTrim === model.trim()) continue;
-    rows.push({
-      runner,
-      model,
-      resolved,
-      label: formatResolvedRowLabel(runner, model, resolved),
-      bucket: byResolved[key],
-      isRunnerTotal: false,
-      isResolved: true,
-    });
-  }
-  rows.sort((a, b) => {
-    const ta = bucketTotal(a.bucket);
-    const tb = bucketTotal(b.bucket);
-    if (ta !== tb) return tb - ta;
-    return (a.resolved ?? "").localeCompare(b.resolved ?? "");
-  });
-  return rows;
 }
 
 function formatRunnerModelRowLabel(runner: string, model: string): string {
@@ -384,24 +293,4 @@ function formatRunnerModelRowLabel(runner: string, model: string): string {
   const m = model.trim();
   if (!m) return `${r} · default model`;
   return `${r} · ${m}`;
-}
-
-/**
- * Label for a resolved-model sub-row. Reads as "↳ Auto → Claude 4
- * Sonnet" when the operator picked auto (empty effective model), and
- * as "↳ opus-4 → claude-4-sonnet" when the CLI re-routed a concrete
- * selection (rare today, but the schema supports it so the UI stays
- * honest if a future adapter exposes it). The arrow prefix is the
- * visual cue that this row is a child of the row above it; indentation
- * styling lives in CSS.
- */
-function formatResolvedRowLabel(
-  _runner: string,
-  model: string,
-  resolved: string,
-): string {
-  const m = model.trim();
-  const r = resolved.trim();
-  const intent = m ? m : "Auto";
-  return `↳ ${intent} → ${r}`;
 }

@@ -88,13 +88,23 @@ function FailureReasonCell({ reason }: { reason: string }) {
   const truncated = display !== trimmed;
 
   return (
-    <div className="obs-failures-reason-cell">
-      <span
-        className="obs-failures-reason-text"
-        title={truncated ? trimmed : undefined}
-      >
-        {display}
-      </span>
+    <div
+      className={
+        truncated
+          ? "obs-failures-reason-cell obs-failures-reason-cell--truncated"
+          : "obs-failures-reason-cell"
+      }
+      title={truncated ? trimmed : undefined}
+    >
+      <span className="obs-failures-reason-text">{display}</span>
+      {truncated ? (
+        <p className="obs-failures-reason-truncated-hint">
+          <span className="obs-failures-reason-truncated-icon" aria-hidden>
+            ⋯
+          </span>
+          Hover for the full message
+        </p>
+      ) : null}
     </div>
   );
 }

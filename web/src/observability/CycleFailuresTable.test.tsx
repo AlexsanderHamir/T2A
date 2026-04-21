@@ -31,10 +31,14 @@ describe("CycleFailuresTable", () => {
     });
 
     expect(screen.queryByRole("button", { name: /read more/i })).toBeNull();
+    const cell = container.querySelector(".obs-failures-reason-cell--truncated");
+    expect(cell).toBeTruthy();
+    expect(cell).toHaveAttribute("title", longReason);
     const span = container.querySelector(".obs-failures-reason-text");
-    expect(span).toBeTruthy();
-    expect(span).toHaveAttribute("title", longReason);
     expect(span?.textContent).not.toBe(longReason);
+    expect(
+      screen.getByText("Hover for the full message", { exact: false }),
+    ).toBeInTheDocument();
   });
 
   it("shows short reasons in full without a title tooltip", () => {
@@ -51,8 +55,13 @@ describe("CycleFailuresTable", () => {
         },
       ],
     });
+    expect(
+      container.querySelector(".obs-failures-reason-cell--truncated"),
+    ).toBeNull();
     const span = container.querySelector(".obs-failures-reason-text");
     expect(span).toHaveTextContent("short");
-    expect(span).not.toHaveAttribute("title");
+    const cell = container.querySelector(".obs-failures-reason-cell");
+    expect(cell).not.toHaveAttribute("title");
+    expect(screen.queryByText(/Hover for the full message/)).toBeNull();
   });
 });
