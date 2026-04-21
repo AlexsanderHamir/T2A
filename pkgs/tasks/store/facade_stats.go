@@ -22,6 +22,20 @@ type (
 	RecentFailure = stats.RecentFailure
 )
 
+// ListCycleFailuresInput / ListCycleFailuresResult re-export GET /tasks/cycle-failures payloads.
+type (
+	ListCycleFailuresInput  = stats.ListCycleFailuresInput
+	ListCycleFailuresResult = stats.ListCycleFailuresResult
+)
+
+// Cycle failure list sort constants (wire / UI).
+const (
+	CycleFailureSortAtDesc     = stats.CycleFailureSortAtDesc
+	CycleFailureSortAtAsc      = stats.CycleFailureSortAtAsc
+	CycleFailureSortReasonAsc  = stats.CycleFailureSortReasonAsc
+	CycleFailureSortReasonDesc = stats.CycleFailureSortReasonDesc
+)
+
 // RunnerUnknownKey is the bucket key used for cycles whose meta
 // predates the V2 attribution keys. Re-exported so handler tests can
 // reference it without reaching into internal/.
@@ -37,6 +51,13 @@ type PreFeatureCycleCounts = stats.PreFeatureCycleCounts
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskStats")
 	return stats.Get(ctx, s.db)
+}
+
+// ListCycleFailures returns paginated cycle_failed mirror rows for the
+// observability failures page. See stats.ListCycleFailures.
+func (s *Store) ListCycleFailures(ctx context.Context, in ListCycleFailuresInput) (ListCycleFailuresResult, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCycleFailures")
+	return stats.ListCycleFailures(ctx, s.db, in)
 }
 
 // CountPreFeatureCycles returns the count of terminal task_cycles whose

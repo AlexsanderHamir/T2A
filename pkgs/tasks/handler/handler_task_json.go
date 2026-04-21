@@ -177,15 +177,24 @@ type taskStatsFailureJSON struct {
 	Reason     string    `json:"reason"`
 }
 
+// cycleFailuresResponse is GET /tasks/cycle-failures (paginated list).
+type cycleFailuresResponse struct {
+	Total               int64                  `json:"total"`
+	Limit               int                    `json:"limit"`
+	Offset              int                    `json:"offset"`
+	Sort                string                 `json:"sort"`
+	ReasonSortTruncated bool                   `json:"reason_sort_truncated"`
+	Failures            []taskStatsFailureJSON `json:"failures"`
+}
+
 // taskStatsResponseFromStore projects the store-level TaskStats onto
 // the wire envelope. The store guarantees every map is non-nil and
 // RecentFailures is a non-nil slice; this projector preserves both
 // invariants so JSON encoding never emits `null` for those fields.
-func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskStatsResponseFromStore")
-	failures := make([]taskStatsFailureJSON, 0, len(s.RecentFailures))
-	for _, f := range s.RecentFailures {
-		failures = append(failures, taskStatsFailureJSON{
+func recentFailuresToJSON(failures []store.RecentFailure) []taskStatsFailureJSON {
+	out := make([]taskStatsFailureJSON, 0, len(failures))
+	for _, f := range failures {
+		out = append(out, taskStatsFailureJSON{
 			TaskID:     f.TaskID,
 			EventSeq:   f.EventSeq,
 			At:         f.At,
@@ -195,6 +204,12 @@ func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
 			Reason:     f.Reason,
 		})
 	}
+	return out
+}
+
+func taskStatsResponseFromStore(s store.TaskStats) taskStatsResponse {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskStatsResponseFromStore")
+	failures := recentFailuresToJSON(s.RecentFailures)
 	return taskStatsResponse{
 		Total:      s.Total,
 		Ready:      s.Ready,

@@ -88,13 +88,22 @@ func scanRecentFailures(ctx context.Context, db *gorm.DB, limit int) ([]RecentFa
 		Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("recent failures: %w", err)
 	}
+	out := decodeCycleFailedRows(rows)
+	enrichRecentFailuresFromPhaseEvents(ctx, db, out)
+	return out, nil
+}
+
+// decodeCycleFailedRows maps raw cycle_failed mirror rows to RecentFailure
+// values. Malformed data_json rows are skipped (Debug log) so callers
+// stay lossy-but-resilient.
+func decodeCycleFailedRows(rows []cycleFailedRow) []RecentFailure {
 	out := make([]RecentFailure, 0, len(rows))
 	for _, r := range rows {
 		var p cycleFailedPayload
 		if err := json.Unmarshal(r.Data, &p); err != nil {
 			slog.Debug("recent failure decode skipped",
 				"cmd", logCmd,
-				"operation", "tasks.store.stats.scanRecentFailures.decode_skip",
+				"operation", "tasks.store.stats.decodeCycleFailedRows",
 				"task_id", r.TaskID, "seq", r.Seq, "err", err)
 			continue
 		}
@@ -108,8 +117,7 @@ func scanRecentFailures(ctx context.Context, db *gorm.DB, limit int) ([]RecentFa
 			Reason:     p.Reason,
 		})
 	}
-	enrichRecentFailuresFromPhaseEvents(ctx, db, out)
-	return out, nil
+	return out
 }
 
 // phaseFailedMirrorPayload is the subset of phaseTerminatedPayload
