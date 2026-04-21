@@ -47,6 +47,14 @@ export const taskQueryKeys = {
    * (lives outside `taskQueryKeys.all` prefix).
    */
   stats: () => ["task-stats"] as const,
+  /**
+   * GET /tasks/cycle-failures — prefix for all paginated failure-list queries.
+   * Invalidated alongside task-stats when SSE reports task/cycle changes.
+   */
+  cycleFailuresRoot: () => [...taskQueryKeys.all, "cycle-failures"] as const,
+  /** One page of the failures list (sort + offset identify the slice). */
+  cycleFailures: (sort: string, offset: number) =>
+    [...taskQueryKeys.cycleFailuresRoot(), sort, offset] as const,
   /** GET /task-drafts list and draft mutations invalidation. */
   drafts: () => ["task-drafts"] as const,
 };

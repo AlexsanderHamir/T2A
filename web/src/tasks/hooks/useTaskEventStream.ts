@@ -87,6 +87,9 @@ export function useTaskEventStream(): boolean {
       // touch it. Without this companion invalidation, aggregated counts
       // stay stale until the next manual mutation or page refresh.
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+      void queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.cycleFailuresRoot(),
+      });
       return;
     }
     if (taskIds.length > 0) {
@@ -122,6 +125,9 @@ export function useTaskEventStream(): boolean {
     // edits — agent-driven worker transitions reach the SPA solely
     // through this SSE path.
     void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+    void queryClient.invalidateQueries({
+      queryKey: taskQueryKeys.cycleFailuresRoot(),
+    });
   }, [queryClient]);
 
   const scheduleInvalidateFromStream = useCallback(
@@ -173,6 +179,9 @@ export function useTaskEventStream(): boolean {
           clearPending(pendingRef.current);
           void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
           void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+          void queryClient.invalidateQueries({
+            queryKey: taskQueryKeys.cycleFailuresRoot(),
+          });
           void queryClient.invalidateQueries({
             queryKey: settingsQueryKeys.app(),
           });

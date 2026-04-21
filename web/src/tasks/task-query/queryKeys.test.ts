@@ -71,4 +71,17 @@ describe("taskQueryKeys", () => {
     expect(taskQueryKeys.stats()).toEqual(["task-stats"]);
     expect(taskQueryKeys.drafts()).toEqual(["task-drafts"]);
   });
+
+  it("scopes cycle failures list queries for pagination and sort", () => {
+    expect(taskQueryKeys.cycleFailuresRoot()).toEqual([
+      "tasks",
+      "cycle-failures",
+    ]);
+    expect(taskQueryKeys.cycleFailures("at_desc", 0)).toEqual([
+      "tasks",
+      "cycle-failures",
+      "at_desc",
+      0,
+    ]);
+  });
 });

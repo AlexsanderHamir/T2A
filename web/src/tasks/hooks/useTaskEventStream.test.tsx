@@ -145,6 +145,9 @@ describe("useTaskEventStream", () => {
 
     const calls = inv.mock.calls.map((c) => c[0]);
     expect(calls).toContainEqual({ queryKey: taskQueryKeys.stats() });
+    expect(calls).toContainEqual({
+      queryKey: taskQueryKeys.cycleFailuresRoot(),
+    });
   });
 
   it("falls back to broad invalidation when no recognised frame arrives", () => {
@@ -419,6 +422,7 @@ describe("useTaskEventStream", () => {
     );
     expect(calls).toContainEqual(["tasks"]);
     expect(calls).toContainEqual(taskQueryKeys.stats());
+    expect(calls).toContainEqual(taskQueryKeys.cycleFailuresRoot());
     expect(calls).toContainEqual(["settings", "app"]);
 
     // Even after letting any pending debounce drain, the broad
