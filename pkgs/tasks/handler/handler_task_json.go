@@ -162,6 +162,11 @@ type taskStatsRunnerBucketJSON struct {
 // frontend deep-links to `/tasks/{task_id}/events/{event_seq}` so both
 // fields are mandatory; reason / cycle_id / attempt_seq / status round
 // out the "what happened" summary card.
+//
+// Reason is the cycle_failed mirror reason after enrichment from the
+// matching phase_failed event when available (see stats.scan_failures),
+// so operators see the same substance as the task timeline (e.g.
+// usage-limit text) instead of only runner_non_zero_exit.
 type taskStatsFailureJSON struct {
 	TaskID     string    `json:"task_id"`
 	EventSeq   int64     `json:"event_seq"`

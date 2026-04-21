@@ -75,7 +75,10 @@ function FailureRow({ failure }: { failure: TaskStatsRecentFailure }) {
           {failure.status}
         </span>
       </td>
-      <td className="obs-failures-reason">
+      <td
+        className="obs-failures-reason"
+        title={failure.reason ? failure.reason : undefined}
+      >
         {failure.reason ? failure.reason : <em className="obs-failures-muted">(no reason recorded)</em>}
       </td>
     </tr>

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
@@ -456,5 +457,65 @@ func TestStore_TaskStats_populatesCyclesPhasesAndFailures(t *testing.T) {
 	}
 	if rf.EventSeq <= 0 {
 		t.Errorf("RecentFailures[0].EventSeq=%d want >0", rf.EventSeq)
+	}
+}
+
+// TestStore_TaskStats_recentFailures_prefersPhaseStandardizedMessage pins
+// the Observability "Reason" column to phase_failed details (e.g.
+// cursor_usage_limit standardized_message) instead of only the
+// cycle_failed mirror reason (runner_non_zero_exit).
+func TestStore_TaskStats_recentFailures_prefersPhaseStandardizedMessage(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk := mustCreateTask(t, s, ctx)
+
+	cyc, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("StartCycle: %v", err)
+	}
+	dx, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("StartPhase diagnose: %v", err)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: cyc.ID, PhaseSeq: dx.PhaseSeq,
+		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("CompletePhase diagnose: %v", err)
+	}
+	ex, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("StartPhase execute: %v", err)
+	}
+	details, err := json.Marshal(map[string]any{
+		"failure_kind":         "cursor_usage_limit",
+		"standardized_message": "Observability should show this message.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: cyc.ID, PhaseSeq: ex.PhaseSeq,
+		Status:  domain.PhaseStatusFailed,
+		Details: details,
+		By:      domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("CompletePhase execute: %v", err)
+	}
+	if _, err := s.TerminateCycle(ctx, cyc.ID,
+		domain.CycleStatusFailed, "runner_non_zero_exit", domain.ActorAgent); err != nil {
+		t.Fatalf("TerminateCycle: %v", err)
+	}
+
+	got, err := s.TaskStats(ctx)
+	if err != nil {
+		t.Fatalf("TaskStats: %v", err)
+	}
+	if len(got.RecentFailures) != 1 {
+		t.Fatalf("len(RecentFailures)=%d want 1", len(got.RecentFailures))
+	}
+	if got.RecentFailures[0].Reason != "Observability should show this message." {
+		t.Fatalf("Reason=%q want standardized message from phase failure",
+			got.RecentFailures[0].Reason)
 	}
 }

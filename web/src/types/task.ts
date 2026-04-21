@@ -69,7 +69,11 @@ export type TaskStatsRecentFailure = {
   cycle_id: string;
   attempt_seq: number;
   status: "failed" | "aborted";
-  /** Free-form short note recorded at terminate time; "" when none. */
+  /**
+   * Human-readable failure text: enriched from the phase_failed audit
+   * event when present (e.g. usage-limit message), otherwise the
+   * cycle_failed mirror reason (often runner_non_zero_exit).
+   */
   reason: string;
 };
 
