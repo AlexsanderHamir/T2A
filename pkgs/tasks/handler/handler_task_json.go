@@ -58,6 +58,10 @@ type taskPatchJSON struct {
 	ParentID         patchParentField          `json:"parent_id"`
 	ChecklistInherit *bool                     `json:"checklist_inherit"`
 	PickupNotBefore  patchPickupNotBeforeField `json:"pickup_not_before"`
+	// CursorModel sets tasks.cursor_model when the key is present (including
+	// the empty string, which clears per-task override). JSON null is decoded
+	// as nil and means "no change", same as omitting the key.
+	CursorModel *string `json:"cursor_model"`
 }
 
 type listResponse struct {

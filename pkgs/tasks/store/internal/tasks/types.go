@@ -60,6 +60,9 @@ type UpdateInput struct {
 	// agent_pickup_delay_seconds elapses). When non-nil the value MUST
 	// be UTC; the handler enforces this on the wire.
 	PickupNotBefore *PickupNotBeforePatch
+	// CursorModel updates tasks.cursor_model when non-nil. Empty string
+	// after trim clears the column (runner uses app default / omits --model).
+	CursorModel *string
 }
 
 // Node is a task row plus nested children for API tree responses.

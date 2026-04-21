@@ -5,6 +5,7 @@ import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { PrioritySelect, TaskTypeSelect } from "../../task-compose";
 import { RichPromptEditor } from "../../rich-prompt";
+import { TaskCreateModalAgentSection } from "../../task-create-modal/fields/TaskCreateModalAgentSection";
 
 type Props = {
   taskId: string;
@@ -14,6 +15,10 @@ type Props = {
   taskType: TaskType;
   status: Status;
   checklistInherit: boolean;
+  /** Runner id stored on the task (model list is loaded for this runner). */
+  taskRunner: string;
+  cursorModel: string;
+  onCursorModelChange: (v: string) => void;
   /** When false, the inherit checkbox is disabled (task has no parent). */
   canInheritChecklist: boolean;
   saving: boolean;
@@ -49,6 +54,9 @@ export function TaskEditForm({
   taskType,
   status,
   checklistInherit,
+  taskRunner,
+  cursorModel,
+  onCursorModelChange,
   canInheritChecklist,
   saving,
   patchPending,
@@ -153,6 +161,14 @@ export function TaskEditForm({
               </p>
             ) : null}
           </div>
+          <TaskCreateModalAgentSection
+            disabled={saving}
+            lockRunner
+            runner={taskRunner}
+            cursorModel={cursorModel}
+            onRunnerChange={() => {}}
+            onCursorModelChange={onCursorModelChange}
+          />
           <div className="field grow stack-tight prompt-field-full">
             <FieldLabel
               id="task-edit-prompt-label"

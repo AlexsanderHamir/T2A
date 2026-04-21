@@ -84,6 +84,7 @@ const baseInput: TaskPatchInput = {
   priority: "medium",
   task_type: "general",
   checklist_inherit: false,
+  cursor_model: "",
 };
 
 describe("useTaskPatchFlow", () => {
@@ -124,6 +125,7 @@ describe("useTaskPatchFlow", () => {
       priority: "medium",
       task_type: "general",
       checklist_inherit: false,
+      cursor_model: "",
     });
   });
 

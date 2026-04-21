@@ -1,8 +1,31 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
+import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskEditForm } from "./TaskEditForm";
+
+const testAppSettings: AppSettings = {
+  worker_enabled: false,
+  agent_paused: false,
+  repo_root: "",
+  cursor_bin: "",
+  ...TASK_TEST_DEFAULTS,
+  max_run_duration_seconds: 0,
+  agent_pickup_delay_seconds: 5,
+  display_timezone: "UTC",
+  optimistic_mutations_enabled: false,
+  sse_replay_enabled: false,
+};
+
+const testCursorModelsEmpty: ListCursorModelsResult = {
+  ok: true,
+  runner: TASK_TEST_DEFAULTS.runner,
+  models: [],
+};
 
 function renderForm(props?: Partial<ComponentProps<typeof TaskEditForm>>) {
   const base: ComponentProps<typeof TaskEditForm> = {
@@ -13,6 +36,9 @@ function renderForm(props?: Partial<ComponentProps<typeof TaskEditForm>>) {
     taskType: "general",
     status: "ready",
     checklistInherit: false,
+    taskRunner: "cursor",
+    cursorModel: "",
+    onCursorModelChange: vi.fn(),
     canInheritChecklist: true,
     saving: false,
     patchPending: false,
@@ -25,7 +51,21 @@ function renderForm(props?: Partial<ComponentProps<typeof TaskEditForm>>) {
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
   };
-  return render(<TaskEditForm {...base} {...props} />);
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+    },
+  });
+  client.setQueryData(settingsQueryKeys.app(), testAppSettings);
+  client.setQueryData(
+    [...settingsQueryKeys.all, "create-modal-cursor-models", "cursor", ""],
+    testCursorModelsEmpty,
+  );
+  return render(
+    <QueryClientProvider client={client}>
+      <TaskEditForm {...base} {...props} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("TaskEditForm", () => {

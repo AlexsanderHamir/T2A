@@ -42,6 +42,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editTaskType, setEditTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
+  const [editCursorModel, setEditCursorModel] = useState("");
 
   const {
     deleteTarget,
@@ -171,6 +172,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditTaskType(t.task_type ?? DEFAULT_NEW_TASK_TYPE);
     setEditStatus(t.status);
     setEditChecklistInherit(t.checklist_inherit === true);
+    setEditCursorModel(t.cursor_model ?? "");
     setEditTitleRequiredError(null);
   }
 
@@ -195,6 +197,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       priority: editPriority,
       task_type: editTaskType,
       checklist_inherit: editChecklistInherit,
+      cursor_model: editCursorModel.trim(),
     });
   }
 
@@ -240,6 +243,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditStatus,
     editChecklistInherit,
     setEditChecklistInherit,
+    editCursorModel,
+    setEditCursorModel,
     openEdit,
     closeEdit,
     submitEdit,

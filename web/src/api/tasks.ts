@@ -349,6 +349,8 @@ export async function patchTask(
      *    strings with a 400.
      */
     pickup_not_before?: string | null;
+    /** Per-task Cursor CLI model; empty string clears stored override. */
+    cursor_model?: string;
   },
 ): Promise<Task> {
   const tid = assertTaskPathId(id);
@@ -369,6 +371,9 @@ export async function patchTask(
   }
   if (patch.pickup_not_before !== undefined) {
     body.pickup_not_before = patch.pickup_not_before;
+  }
+  if (patch.cursor_model !== undefined) {
+    body.cursor_model = patch.cursor_model;
   }
   const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "PATCH",

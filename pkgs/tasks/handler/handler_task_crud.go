@@ -175,6 +175,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		TaskType:         body.TaskType,
 		ChecklistInherit: body.ChecklistInherit,
 		PickupNotBefore:  pickupNotBeforePatchToStore(body.PickupNotBefore),
+		CursorModel:      body.CursorModel,
 	}
 	if body.ParentID.Defined {
 		if body.ParentID.Clear {

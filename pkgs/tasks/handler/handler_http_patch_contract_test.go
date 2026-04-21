@@ -13,6 +13,60 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+func TestHTTP_patchTask_cursorModel(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL,
+		`{"title":"m","priority":"medium","cursor_model":"old-model"}`)
+	res, raw := patchTask(t, srv.URL, id, `{"cursor_model":"new-model"}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	var got domain.Task
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.CursorModel != "new-model" {
+		t.Fatalf("cursor_model=%q want new-model", got.CursorModel)
+	}
+
+	res2, raw2 := patchTask(t, srv.URL, id, `{"cursor_model":""}`)
+	if res2.StatusCode != http.StatusOK {
+		t.Fatalf("clear status %d body=%s", res2.StatusCode, raw2)
+	}
+	var got2 domain.Task
+	if err := json.Unmarshal(raw2, &got2); err != nil {
+		t.Fatal(err)
+	}
+	if got2.CursorModel != "" {
+		t.Fatalf("cursor_model=%q want empty", got2.CursorModel)
+	}
+}
+
+func TestHTTP_patchTask_cursorModelTooLong(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	id := mustCreateTask(t, srv.URL, `{"title":"m","priority":"medium"}`)
+	long := strings.Repeat("x", 257)
+	bodyBytes, err := json.Marshal(map[string]string{"cursor_model": long})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, raw := patchTask(t, srv.URL, id, string(bodyBytes))
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
+	}
+	var errBody jsonErrorBody
+	if err := json.Unmarshal(raw, &errBody); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(errBody.Error, "cursor_model") {
+		t.Fatalf("error=%q want substring cursor_model", errBody.Error)
+	}
+}
+
 // patchTaskHelper centralizes the documented PATCH /tasks/{id} round-trip so
 // the table-driven 400 string subtests stay focused on the assertion side.
 func patchTask(t *testing.T, baseURL, id, body string) (*http.Response, []byte) {

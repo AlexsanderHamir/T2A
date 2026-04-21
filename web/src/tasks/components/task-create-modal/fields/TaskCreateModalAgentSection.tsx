@@ -15,6 +15,8 @@ function runnerDisplayLabel(runnerId: string): string {
 
 type Props = {
   disabled: boolean;
+  /** When true, runner cannot be changed (e.g. edit-task: runner is fixed on the row). */
+  lockRunner?: boolean;
   runner: string;
   cursorModel: string;
   onRunnerChange: (runner: string) => void;
@@ -41,6 +43,7 @@ type Props = {
  */
 export function TaskCreateModalAgentSection({
   disabled,
+  lockRunner = false,
   runner,
   cursorModel,
   onRunnerChange,
@@ -120,7 +123,7 @@ export function TaskCreateModalAgentSection({
                 id={runnerId}
                 className="task-create-agent-select"
                 value={runner}
-                disabled={disabled}
+                disabled={disabled || lockRunner}
                 onChange={(e) => onRunnerChange(e.target.value)}
               >
                 {RUNNERS.map((r) => (

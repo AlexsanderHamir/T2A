@@ -73,6 +73,9 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyPickupNotBeforePatch(cur, in.PickupNotBefore); err != nil {
 		return err
 	}
+	if err := applyCursorModelPatch(cur, in.CursorModel); err != nil {
+		return err
+	}
 	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
 		return fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
@@ -88,6 +91,21 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 // Implementation decisions). The handler is responsible for
 // rejecting empty/invalid values on the way in; this layer trusts
 // that the time has already been validated and is UTC.
+const maxTaskCursorModelLen = 256
+
+func applyCursorModelPatch(cur *domain.Task, p *string) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyCursorModelPatch")
+	if p == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*p)
+	if len(v) > maxTaskCursorModelLen {
+		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
+	}
+	cur.CursorModel = v
+	return nil
+}
+
 func applyPickupNotBeforePatch(cur *domain.Task, p *PickupNotBeforePatch) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPickupNotBeforePatch")
 	if p == nil {

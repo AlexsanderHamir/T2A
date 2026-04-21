@@ -162,5 +162,8 @@ func taskPatchInputFields(body *taskPatchJSON) []any {
 			out = append(out, "patch_pickup_not_before", body.PickupNotBefore.Set.UTC().Format(time.RFC3339))
 		}
 	}
+	if body.CursorModel != nil {
+		out = append(out, "patch_cursor_model", true, "patch_cursor_model_len", len(strings.TrimSpace(*body.CursorModel)))
+	}
 	return out
 }

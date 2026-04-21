@@ -137,6 +137,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               taskType={app.editTaskType}
               status={app.editStatus}
               checklistInherit={app.editChecklistInherit}
+              taskRunner={app.editing.runner}
+              cursorModel={app.editCursorModel}
+              onCursorModelChange={app.setEditCursorModel}
               canInheritChecklist={Boolean(app.editing.parent_id)}
               saving={app.saving}
               patchPending={app.patchPending}
