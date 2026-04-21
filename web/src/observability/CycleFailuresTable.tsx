@@ -1,5 +1,9 @@
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import type { TaskStatsRecentFailure } from "@/types/task";
+
+/** Collapsed preview length (long API reasons stay one compact block until expanded). */
+const FAILURE_REASON_PREVIEW_CHARS = 120;
 
 type Props = {
   failures: TaskStatsRecentFailure[];
@@ -55,17 +59,57 @@ function FailureRow({ failure }: { failure: TaskStatsRecentFailure }) {
           {failure.status}
         </span>
       </td>
-      <td
-        className="obs-failures-reason"
-        title={failure.reason ? failure.reason : undefined}
-      >
-        {failure.reason ? (
-          failure.reason
-        ) : (
-          <em className="obs-failures-muted">(no reason recorded)</em>
-        )}
+      <td className="obs-failures-reason">
+        <FailureReasonCell reason={failure.reason} />
       </td>
     </tr>
+  );
+}
+
+function truncateFailureReasonPreview(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const slice = text.slice(0, maxLen);
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace > 0 && lastSpace >= maxLen * 0.45) {
+    return `${slice.slice(0, lastSpace)}…`;
+  }
+  return `${slice.trimEnd()}…`;
+}
+
+function FailureReasonCell({ reason }: { reason: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const baseId = useId();
+  const textId = `${baseId}-text`;
+  const needsMore =
+    reason.trim().length > FAILURE_REASON_PREVIEW_CHARS;
+
+  if (!reason.trim()) {
+    return <em className="obs-failures-muted">(no reason recorded)</em>;
+  }
+
+  const preview = truncateFailureReasonPreview(
+    reason,
+    FAILURE_REASON_PREVIEW_CHARS,
+  );
+  const showFull = !needsMore || expanded;
+
+  return (
+    <div className="obs-failures-reason-cell">
+      <span id={textId} className="obs-failures-reason-text">
+        {showFull ? reason : preview}
+      </span>
+      {needsMore ? (
+        <button
+          type="button"
+          className="obs-failures-reason-toggle"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls={textId}
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
