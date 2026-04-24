@@ -65,6 +65,7 @@ type taskAPIApp struct {
 	hub         *handler.SSEHub
 	agentQueue  *agents.MemoryQueue
 	agentWorker *agentWorkerSupervisor
+	logDir      string
 }
 
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
@@ -110,6 +111,11 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.startup_app", "err", err)
 		closeSQLDBOrLog(db)
 		return 1
+	}
+	if logDirResolved, err := resolveTaskAPILogDir(logDir); err == nil {
+		app.logDir = logDirResolved
+	} else {
+		slog.Warn("log browser disabled", "cmd", cmdName, "operation", "taskapi.logs", "err", err)
 	}
 
 	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(appCtx, port, host, app)

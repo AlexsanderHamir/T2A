@@ -93,6 +93,63 @@ The handler logs a single **`trace`** line per request (`operation` **`handler.s
 
 Pinned by `pkgs/tasks/handler/handler_http_system_health_contract_test.go` (envelope keys, populated wiring, method-not-allowed, no-SSE-publish).
 
+## Local log browser (`GET /logs`, `GET /logs/{name}`)
+
+The SPA Observability page can browse local `taskapi` JSONL files without opening `logs/*.jsonl` in the editor. These routes are read-only and intentionally narrow: they only serve basenames matching `taskapi-*.jsonl` from the configured taskapi log directory (`-logdir`, `T2A_LOG_DIR`, or `./logs`). Path traversal and arbitrary file reads are rejected.
+
+Security posture matches other operator-facing observability routes: these endpoints are **not** health-probe or metrics exemptions, so the standard middleware stack still applies (auth, rate limit, request timeout, access logging). In production, expose them only behind the same trusted operator access as `/system/health`; for centralized or multi-process retention, ship the same JSONL stream to Loki, OpenObserve, or OpenSearch rather than expanding this API into a log database.
+
+`GET /logs` returns newest-first file summaries:
+
+```json
+{
+  "logs": [
+    {
+      "name": "taskapi-2026-04-24-160601-963091100.jsonl",
+      "size_bytes": 12345,
+      "modified_at": "2026-04-24T23:06:01Z"
+    }
+  ]
+}
+```
+
+`GET /logs/{name}` returns parsed entries with query params:
+
+| Query | Notes |
+| ----- | ----- |
+| `offset` | Non-negative line offset; default `0`. Lines are returned after this offset. |
+| `limit` | `1..500`; default `100`. |
+| `level` | Optional exact level match (`DEBUG`, `INFO`, `WARN`, `ERROR`). |
+| `operation` | Optional exact `operation` field match. |
+| `request_id` | Optional exact request id match. |
+| `q` | Optional case-insensitive substring search across the JSON record or raw malformed line. |
+| `from`, `to` | Optional RFC3339 timestamps matched against the record `time` field. |
+
+Response:
+
+```json
+{
+  "name": "taskapi-2026-04-24-160601-963091100.jsonl",
+  "offset": 0,
+  "limit": 100,
+  "next_offset": 100,
+  "has_more": true,
+  "entries": [
+    {
+      "line": 1,
+      "record": {
+        "time": "2026-04-24T16:06:01.9652028-07:00",
+        "level": "DEBUG",
+        "msg": "trace",
+        "operation": "taskapi.openTaskAPILogFile"
+      }
+    }
+  ]
+}
+```
+
+Malformed lines are included as `{ "line", "raw", "parse_error" }` so the viewer can show file corruption without hiding adjacent valid records. Reads are bounded by a maximum log-line size of 2 MiB.
+
 ## Task resource (`/tasks`)
 
 | Capability     | Method / path            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

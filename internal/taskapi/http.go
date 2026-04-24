@@ -25,7 +25,7 @@ const cmdLog = "taskapi"
 // Pass a nil agent control to opt out of the supervisor-aware
 // /settings sub-routes (PATCH /settings, POST /settings/probe-cursor,
 // POST /settings/cancel-current-run); GET /settings still works.
-func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl) http.Handler {
+func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl, logDir string) http.Handler {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "internal.taskapi.NewHTTPHandler")
 	opts := []handler.HandlerOption{}
 	if agent != nil {
@@ -33,6 +33,9 @@ func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent h
 	}
 	if rep == nil {
 		opts = append(opts, handler.WithRepoProvider(handler.NewSettingsRepoProvider(s)))
+	}
+	if logDir != "" {
+		opts = append(opts, handler.WithLogDirectory(logDir))
 	}
 	return middleware.Stack(handler.NewHandler(s, hub, rep, opts...), calltrace.Path)
 }

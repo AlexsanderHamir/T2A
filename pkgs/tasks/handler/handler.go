@@ -42,6 +42,7 @@ type Handler struct {
 	repoProv       RepoProvider
 	agent          AgentWorkerControl
 	systemHealthFn systemHealthSnapshotter
+	logDir         string
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
@@ -66,6 +67,8 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /health/live", http.HandlerFunc(healthLive))
 	m.Handle("GET /health/ready", http.HandlerFunc(h.healthReady))
 	m.Handle("GET /system/health", http.HandlerFunc(h.systemHealth))
+	m.Handle("GET /logs", http.HandlerFunc(h.listLogs))
+	m.Handle("GET /logs/{name}", http.HandlerFunc(h.getLogEntries))
 	m.Handle("GET /events", http.HandlerFunc(h.streamEvents))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("POST /tasks/evaluate", http.HandlerFunc(h.evaluateDraft))
@@ -138,5 +141,14 @@ func WithRepoProvider(p RepoProvider) HandlerOption {
 		if p != nil {
 			h.repoProv = p
 		}
+	}
+}
+
+// WithLogDirectory enables the local log browser routes. The handler
+// only serves taskapi JSONL files by basename from this directory.
+func WithLogDirectory(dir string) HandlerOption {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.WithLogDirectory")
+	return func(h *Handler) {
+		h.logDir = dir
 	}
 }
