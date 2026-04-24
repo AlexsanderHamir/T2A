@@ -4,7 +4,7 @@ Canonical description of the optional Vite + React + TypeScript SPA. Server cont
 
 ## Scope
 
-Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/task-query/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)); Observability panels for `/tasks/stats`, `/system/health`, and local JSONL logs via `/logs` (see [API-HTTP.md](./API-HTTP.md#local-log-browser-get-logs-get-logsname)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
+Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/task-query/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
 
 Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — [DESIGN.md](./DESIGN.md) limitations).
 
@@ -49,7 +49,7 @@ SSE carries `type` + `id` only; rows come from `GET /tasks`.
 
 ## Dev vs production
 
-Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo`, `/logs`, and observability endpoints → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
+Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo`, `/settings`, `/system`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
 
 Prod: `npm run build` → `web/dist/`; serve so `/tasks`, `/events`, `/repo` match the API origin (or gateway).
 
@@ -61,7 +61,7 @@ flowchart LR
   V[Vite]
   T[taskapi]
   B -->|assets| V
-  V -->|/tasks /events /repo| T
+  V -->|/tasks /events /repo /settings /system /health| T
 ```
 
 ## React Query + SSE

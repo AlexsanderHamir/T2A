@@ -226,7 +226,7 @@ describe("SystemStatusChip", () => {
     expect(chip).toHaveTextContent(/Reconnecting/i);
   });
 
-  it("is a status region, not a link (Observability lives in primary nav)", () => {
+  it("is a status region, not a link", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       () => new Promise<Response>(() => {}),
     );

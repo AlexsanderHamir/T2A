@@ -1,7 +1,5 @@
 /**
- * Display helpers for the Cycles & Phases observability section. Like
- * statsViewModel.ts, this file owns the display order, labels, and
- * CSS-class generators so the React components stay focused on layout.
+ * Display helpers for cycle and phase status labels shared by task detail.
  */
 
 import type {
@@ -95,15 +93,9 @@ export function cycleStatusFillClass(s: CycleStatus): string {
     case "failed":
       return "cell-pill--status-failed";
     case "aborted":
-      // Aborted intentionally maps to a *dedicated* class rather than
-      // aliasing onto status-blocked. Reason: the chart palette
-      // overhaul moved blocked to amber to disambiguate the status
-      // bar; if aborted kept the alias it would render amber too,
-      // making "aborted" visually indistinguishable from a hot
-      // blocked task even though semantically it is a quiet,
-      // deliberate stop. A dedicated class lets us bind aborted to
-      // a neutral stone hue (--obs-fill-cycle-aborted) for both the
-      // chart segment and the text pill (see app-task-list-and-mentions.css).
+      // Aborted intentionally maps to a dedicated class instead of
+      // aliasing onto status-blocked; a deliberate stop should not read
+      // like a blocked task in per-task cycle history.
       return "cell-pill--cycle-aborted";
   }
 }

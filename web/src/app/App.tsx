@@ -13,8 +13,6 @@ import {
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
 import {
-  ObservabilityFailuresPage,
-  ObservabilityPage,
   SystemStatusChip,
 } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
@@ -28,7 +26,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
-  const observabilityIsCurrent = location.pathname.startsWith("/observability");
 
   return (
     <ModalStackProvider>
@@ -69,15 +66,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                   : {})}
               >
                 Drafts
-              </Link>
-              <Link
-                to="/observability"
-                className="app-nav__link"
-                {...(observabilityIsCurrent
-                  ? { "aria-current": "page" as const }
-                  : {})}
-              >
-                Observability
               </Link>
             </nav>
             <div className="app-header-actions">
@@ -188,11 +176,6 @@ export default function App() {
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
-        <Route path="observability" element={<ObservabilityPage />} />
-        <Route
-          path="observability/failures"
-          element={<ObservabilityFailuresPage />}
-        />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"

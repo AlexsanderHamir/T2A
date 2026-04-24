@@ -3,9 +3,6 @@
  * (.cursor/rules/CODE_STANDARDS.mdc). The app shell imports `@/observability`
  * instead of deep paths.
  */
-export { ObservabilityPage } from "./ObservabilityPage";
-export { ObservabilityFailuresPage } from "./ObservabilityFailuresPage";
-export { ObservabilityRunnerBreakdown } from "./ObservabilityRunnerBreakdown";
 export { SystemStatusChip } from "./SystemStatusChip";
 
 // Cycle/phase display helpers — re-exported so feature areas

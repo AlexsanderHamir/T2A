@@ -35,7 +35,6 @@ type Props = {
  * Precedence: paused > degraded > ok > unknown (centralised in
  * `summarize`). The chip is **not** a link: it reads like live
  * connection/health state, so navigating on click felt like a trap.
- * Use the header **Observability** nav item for that page.
  */
 export function SystemStatusChip({ connected }: Props) {
   const { health, loading } = useSystemHealth();

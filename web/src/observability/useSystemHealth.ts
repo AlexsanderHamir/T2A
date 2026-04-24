@@ -22,11 +22,8 @@ export type SystemHealthState = {
 };
 
 /**
- * Read-side hook for `GET /system/health`. Mirrors the contract shape
- * of `useObservabilityStats`: pending → `undefined`, error → `null`,
- * success → response. The Observability page composes both hooks so
- * the SystemHealth pane and the task stats pane render without
- * coupling.
+ * Read-side hook for `GET /system/health`: pending → `undefined`,
+ * error → `null`, success → response.
  */
 export function useSystemHealth(): SystemHealthState {
   const query = useQuery({

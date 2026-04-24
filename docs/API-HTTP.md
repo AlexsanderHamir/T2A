@@ -95,7 +95,7 @@ Pinned by `pkgs/tasks/handler/handler_http_system_health_contract_test.go` (enve
 
 ## Local log browser (`GET /logs`, `GET /logs/{name}`)
 
-The SPA Observability page can browse local `taskapi` JSONL files without opening `logs/*.jsonl` in the editor. These routes are read-only and intentionally narrow: they only serve basenames matching `taskapi-*.jsonl` from the configured taskapi log directory (`-logdir`, `T2A_LOG_DIR`, or `./logs`). Path traversal and arbitrary file reads are rejected.
+These routes expose local `taskapi` JSONL files without opening `logs/*.jsonl` in the editor. They are read-only and intentionally narrow: they only serve basenames matching `taskapi-*.jsonl` from the configured taskapi log directory (`-logdir`, `T2A_LOG_DIR`, or `./logs`). Path traversal and arbitrary file reads are rejected.
 
 Security posture matches other operator-facing observability routes: these endpoints are **not** health-probe or metrics exemptions, so the standard middleware stack still applies (auth, rate limit, request timeout, access logging). In production, expose them only behind the same trusted operator access as `/system/health`; for centralized or multi-process retention, ship the same JSONL stream to Loki, OpenObserve, or OpenSearch rather than expanding this API into a log database.
 

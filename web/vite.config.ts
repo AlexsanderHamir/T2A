@@ -51,7 +51,6 @@ export default defineConfig({
       "/task-drafts": { target: api, changeOrigin: true },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
-      "/logs": { target: api, changeOrigin: true },
       // GET/PATCH /settings + POST /settings/probe-cursor + POST /settings/cancel-current-run.
       // Without this proxy the SettingsPage's GET /settings hits Vite directly and renders "Error: Not Found".
       "/settings": { target: api, changeOrigin: true },

@@ -390,8 +390,8 @@ textarea::placeholder {
  * Product wordmark: a quiet, monospace, brand-tinted mark that links
  * home. It is intentionally NOT inside <nav>; treating it as a nav
  * peer (as we used to) made it look interchangeable with destinations
- * like "Drafts" and "Observability" and the user could not tell what
- * the brand was vs where they could go.
+ * like "Drafts" and the user could not tell what the brand was vs where
+ * they could go.
  */
 .app-brand {
   display: inline-flex;
@@ -478,8 +478,8 @@ textarea::placeholder {
  * item visibly wins.
  *
  * The nav sits next to the brand with a thin vertical rule in front
- * (::before) so the eye reads:  [T2A]  |  Tasks  Drafts  Observability
- * brand on the left, destinations on the right of the rule.
+ * (::before) so the eye reads: [T2A] | Tasks Drafts, with the brand on
+ * the left and destinations on the right of the rule.
  */
 .app-nav {
   position: relative;
@@ -576,8 +576,7 @@ textarea::placeholder {
 
 /* Composed system-status chip used in the app header. Wraps the same
    stream-dot + stream-pill primitives as StreamStatusHint so the
-   visual language stays consistent, plus a label from system health.
-   Not a link — use the Observability nav item for that page. */
+   visual language stays consistent, plus a label from system health. */
 .system-status-chip {
   margin-left: auto;
   color: inherit;
