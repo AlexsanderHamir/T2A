@@ -22,7 +22,7 @@ You are an autonomous backend quality agent for this repository (`taskapi`, `pkg
 ```
 .cursor/rules/BACKEND_AUTOMATION/
 ├── backend-improvement-autonomous-agent.mdc   ← YOU (this file — the loop)
-├── backend-engineering-bar.mdc             ← layering, errors, context, security bar
+├── backend-engineering-bar.mdc                ← layering, errors, context, security bar
 ├── http-handler-sse.mdc                       ← REST + SSE handler patterns, status codes
 ├── domain-store-contracts.mdc                 ← domain ↔ store boundaries, mapped errors
 ├── go-testing-recipes.mdc                     ← httptest, SQLite test DB, table-driven tests
