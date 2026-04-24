@@ -103,10 +103,10 @@ describe("ObservabilityPage", () => {
     ).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByTestId("obs-kpi-total")).toHaveTextContent("4");
+      expect(screen.getByTestId("obs-command-failed")).toHaveTextContent("1");
     });
-    expect(screen.getByTestId("obs-kpi-done")).toHaveTextContent("2");
-    expect(screen.getByTestId("obs-kpi-failed")).toHaveTextContent("1");
+    expect(screen.getByTestId("obs-command-ready")).toHaveTextContent("1");
+    expect(screen.getByTestId("obs-inventory-total")).toHaveTextContent("4");
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "System health" })).toBeInTheDocument();
     });
@@ -131,7 +131,7 @@ describe("ObservabilityPage", () => {
     });
     expect(screen.getByText("Breakdown unavailable")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Status unavailable.")).toBeInTheDocument();
+      expect(screen.getAllByText("Status unavailable.").length).toBeGreaterThan(0);
     });
   });
 });

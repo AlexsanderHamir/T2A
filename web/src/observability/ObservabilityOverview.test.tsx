@@ -32,45 +32,36 @@ describe("ObservabilityOverview", () => {
   it("renders skeletons while loading and no stats are available yet", () => {
     render(<ObservabilityOverview stats={undefined} loading={true} />);
 
-    const counters = screen.getByLabelText("Headline counters");
-    const cards = within(counters).getAllByRole("article");
-    // total + done + failed + running + blocked + review + ready + scheduled + critical
-    expect(cards).toHaveLength(9);
+    const inventory = screen.getByLabelText("Task inventory");
+    const cards = within(inventory).getAllByRole("article");
+    expect(cards).toHaveLength(4);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "true");
     });
-    // Loading caption from totalMeta.
-    expect(within(counters).getByText("Loading breakdown…")).toBeInTheDocument();
+    expect(screen.getByText("Loading the task table shape…")).toBeInTheDocument();
+    expect(within(inventory).getByText("Loading breakdown…")).toBeInTheDocument();
   });
 
   it("renders unavailable state when stats settled to null", () => {
     render(<ObservabilityOverview stats={null} loading={false} />);
 
-    const counters = screen.getByLabelText("Headline counters");
-    const cards = within(counters).getAllByRole("article");
-    expect(cards).toHaveLength(9);
+    const inventory = screen.getByLabelText("Task inventory");
+    const cards = within(inventory).getAllByRole("article");
+    expect(cards).toHaveLength(4);
     cards.forEach((card) => {
       expect(card).toHaveAttribute("aria-busy", "false");
     });
-    expect(within(counters).getAllByText("—")).toHaveLength(9);
-    expect(within(counters).getByText("Breakdown unavailable")).toBeInTheDocument();
+    expect(within(inventory).getAllByText("—")).toHaveLength(4);
+    expect(within(inventory).getByText("Breakdown unavailable")).toBeInTheDocument();
   });
 
-  it("renders all headline KPI values from settled stats, splitting in-flight into running / blocked / review", () => {
+  it("renders supporting inventory values from settled stats", () => {
     render(<ObservabilityOverview stats={statsFixture()} loading={false} />);
 
-    expect(screen.getByTestId("obs-kpi-total")).toHaveTextContent("18");
-    expect(screen.getByTestId("obs-kpi-done")).toHaveTextContent("6");
-    expect(screen.getByTestId("obs-kpi-failed")).toHaveTextContent("3");
-    // The three in-flight states are intentionally NOT summed: an operator
-    // needs to know whether the system is working (running), stuck
-    // (blocked), or waiting on a person (review).
-    expect(screen.getByTestId("obs-kpi-running")).toHaveTextContent("2");
-    expect(screen.getByTestId("obs-kpi-blocked")).toHaveTextContent("1");
-    expect(screen.getByTestId("obs-kpi-review")).toHaveTextContent("1");
-    expect(screen.getByTestId("obs-kpi-ready")).toHaveTextContent("5");
-    expect(screen.getByTestId("obs-kpi-scheduled")).toHaveTextContent("4");
-    expect(screen.getByTestId("obs-kpi-critical")).toHaveTextContent("3");
+    expect(screen.getByTestId("obs-inventory-total")).toHaveTextContent("18");
+    expect(screen.getByTestId("obs-inventory-done")).toHaveTextContent("6");
+    expect(screen.getByTestId("obs-inventory-scheduled")).toHaveTextContent("4");
+    expect(screen.getByTestId("obs-inventory-critical")).toHaveTextContent("3");
     expect(
       screen.getByText("11 parent • 7 subtasks"),
     ).toBeInTheDocument();
@@ -122,33 +113,33 @@ describe("ObservabilityOverview", () => {
     expect(within(scope).getByLabelText(/Scope: Parent 11.*Subtask 7/)).toBeInTheDocument();
   });
 
-  it("Scheduled (deferred) KPI: aria-busy while loading, then renders the count from stats.scheduled", () => {
+  it("Scheduled inventory: aria-busy while loading, then renders the count from stats.scheduled", () => {
     // Pending state: no stats yet, query in flight. Operators should
     // see the busy spinner on the new card just like every other KPI
     // — never a stale "0" that would falsely advertise an idle agent.
     const { rerender } = render(
       <ObservabilityOverview stats={undefined} loading={true} />,
     );
-    const pendingCard = screen.getByTestId("obs-kpi-scheduled");
+    const pendingCard = screen.getByTestId("obs-inventory-scheduled");
     expect(pendingCard).toHaveAttribute("aria-busy", "true");
 
     // Settled state: parser projects scheduled onto the response.
     // The card flips to aria-busy=false and surfaces the count.
     rerender(<ObservabilityOverview stats={statsFixture()} loading={false} />);
-    const settledCard = screen.getByTestId("obs-kpi-scheduled");
+    const settledCard = screen.getByTestId("obs-inventory-scheduled");
     expect(settledCard).toHaveAttribute("aria-busy", "false");
     expect(settledCard).toHaveTextContent("4");
-    expect(settledCard).toHaveTextContent(/queued for a future time/i);
+    expect(settledCard).toHaveTextContent(/deferred pickup/i);
   });
 
-  it("Scheduled (deferred) KPI: renders 0 when scheduled count is zero (no false 'awaiting' signal)", () => {
+  it("Scheduled inventory: renders 0 when scheduled count is zero (no false 'awaiting' signal)", () => {
     render(
       <ObservabilityOverview
         stats={statsFixture({ scheduled: 0 })}
         loading={false}
       />,
     );
-    const card = screen.getByTestId("obs-kpi-scheduled");
+    const card = screen.getByTestId("obs-inventory-scheduled");
     expect(card).toHaveAttribute("aria-busy", "false");
     expect(card).toHaveTextContent("0");
   });
@@ -164,8 +155,8 @@ describe("ObservabilityOverview", () => {
     });
     render(<ObservabilityOverview stats={empty} loading={false} />);
 
-    expect(screen.getByTestId("obs-kpi-total")).toHaveTextContent("0");
-    expect(screen.getByTestId("obs-kpi-failed")).toHaveTextContent("0");
+    expect(screen.getByTestId("obs-inventory-total")).toHaveTextContent("0");
+    expect(screen.getByTestId("obs-inventory-done")).toHaveTextContent("0");
     // Distribution captions surface the empty case.
     expect(
       screen.getAllByText("No tasks recorded yet").length,

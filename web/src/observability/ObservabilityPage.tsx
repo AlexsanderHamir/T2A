@@ -1,5 +1,7 @@
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { ObservabilityCommandCenter } from "./ObservabilityCommandCenter";
 import { ObservabilityCycles } from "./ObservabilityCycles";
+import { ObservabilityLogs } from "./ObservabilityLogs";
 import { ObservabilityOverview } from "./ObservabilityOverview";
 import { ObservabilityRunnerBreakdown } from "./ObservabilityRunnerBreakdown";
 import { ObservabilitySystem } from "./ObservabilitySystem";
@@ -7,16 +9,9 @@ import { useObservabilityStats } from "./useObservabilityStats";
 import { useSystemHealth } from "./useSystemHealth";
 
 /**
- * Top-level observability route. Composes three scrollable sections,
- * each backed by its own data source so they refresh independently
- * without cross-talk:
- *
- *   1. Overview — KPI counters and distribution charts, fed by
- *      `["task-stats"]` and live-updated through `useTaskEventStream`.
- *   2. Cycles & phases — heatmap and recent failures, same source.
- *   3. System health — operator-facing snapshot of the running
- *      process, fed by `GET /system/health`. Polls on a fixed interval
- *      because no SSE event corresponds to "system metrics changed."
+ * Top-level observability route. The page leads with a small command
+ * summary, then moves from execution diagnostics into supporting
+ * distributions and runtime details.
  */
 export function ObservabilityPage() {
   useDocumentTitle("Observability");
@@ -27,14 +22,25 @@ export function ObservabilityPage() {
       <header className="obs-page-header">
         <h2 className="obs-page-title">Observability</h2>
         <p className="obs-page-subtitle">
-          Live snapshot of the task table and the running process —
-          refreshes automatically as the agent worker progresses.
+          Operator view of task execution, agent health, and runtime pressure.
+          The page keeps the signal first and the raw detail close behind.
         </p>
       </header>
-      <ObservabilityOverview stats={stats} loading={loading} />
-      <ObservabilityRunnerBreakdown stats={stats} loading={loading} />
-      <ObservabilityCycles stats={stats} loading={loading} />
-      <ObservabilitySystem health={health} loading={healthLoading} />
+      <ObservabilityCommandCenter
+        stats={stats}
+        statsLoading={loading}
+        health={health}
+        healthLoading={healthLoading}
+      />
+      <div className="obs-page-diagnostics">
+        <ObservabilityRunnerBreakdown stats={stats} loading={loading} />
+        <ObservabilityCycles stats={stats} loading={loading} />
+      </div>
+      <div className="obs-page-supporting">
+        <ObservabilityOverview stats={stats} loading={loading} />
+        <ObservabilitySystem health={health} loading={healthLoading} />
+      </div>
+      <ObservabilityLogs />
     </div>
   );
 }

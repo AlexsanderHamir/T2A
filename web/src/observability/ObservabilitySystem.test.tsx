@@ -37,8 +37,7 @@ describe("ObservabilitySystem", () => {
       <ObservabilitySystem health={undefined} loading={true} />,
     );
     expect(screen.getByText("Loading status…")).toBeInTheDocument();
-    // KPI grid renders with skeletons; the `aria-busy` attribute on the
-    // KpiCard root is the documented signal for loading.
+    // Runtime detail renders with stable loading cards.
     const busyCards = container.querySelectorAll('[aria-busy="true"]');
     expect(busyCards.length).toBeGreaterThanOrEqual(6);
   });
@@ -54,14 +53,14 @@ describe("ObservabilitySystem", () => {
   it("renders KPIs, distributions, and the build footer when populated", () => {
     render(<ObservabilitySystem health={baseHealth} loading={false} />);
 
-    expect(screen.getByTestId("obs-system-kpi-in-flight")).toHaveTextContent("2");
-    expect(screen.getByTestId("obs-system-kpi-requests")).toHaveTextContent(
+    expect(screen.getByTestId("obs-system-runtime-latency")).toHaveTextContent("12 ms p50");
+    expect(screen.getByTestId("obs-system-runtime-traffic")).toHaveTextContent(
       /1,000|1000/,
     );
-    expect(screen.getByTestId("obs-system-kpi-sse-subs")).toHaveTextContent("3");
-    expect(screen.getByTestId("obs-system-kpi-sse-dropped")).toHaveTextContent("0");
-    expect(screen.getByTestId("obs-system-kpi-db-in-use")).toHaveTextContent("1");
-    expect(screen.getByTestId("obs-system-kpi-agent-queue")).toHaveTextContent("0");
+    expect(screen.getByTestId("obs-system-runtime-sse")).toHaveTextContent("3");
+    expect(screen.getByTestId("obs-system-runtime-db")).toHaveTextContent("1 / 20");
+    expect(screen.getByTestId("obs-system-runtime-agent")).toHaveTextContent("12");
+    expect(screen.getByTestId("obs-system-runtime-queue")).toHaveTextContent("0 / 64");
 
     expect(
       screen.getByRole("img", { name: /HTTP responses by class/ }),

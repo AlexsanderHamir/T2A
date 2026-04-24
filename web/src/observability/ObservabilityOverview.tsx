@@ -1,18 +1,12 @@
 import type { TaskStatsResponse } from "@/types/task";
 import { Donut } from "./Donut";
-import { KpiCard } from "./KpiCard";
-import { kpiState } from "./kpiState";
 import { StackedBar } from "./StackedBar";
 import {
   PRIORITY_DISPLAY_ORDER,
   STATUS_DISPLAY_ORDER,
-  blockedCount,
   doneCount,
-  failedCount,
   priorityFillClass,
   priorityLabel,
-  reviewCount,
-  runningCount,
   statusFillClass,
   statusLabel,
 } from "./statsViewModel";
@@ -23,67 +17,12 @@ type Props = {
 };
 
 /**
- * Stage-1 observability overview built entirely from the existing
- * `GET /tasks/stats` payload — no backend change. The page exposes the
- * five things an operator most often asks the dashboard:
- *   1. How many tasks total, and what's the parent/subtask split?
- *   2. How many are done vs failed vs in-flight right now?
- *   3. What does the status distribution look like across the table?
- *   4. What does the priority distribution look like?
- *   5. (Implicit via #3) where are tasks getting stuck?
- *
- * Live updates ride the existing `["task-stats"]` invalidation in
- * `useTaskEventStream` so cycle frames refresh this view automatically.
+ * Supporting task inventory and distribution charts. Headline operational
+ * counters live in ObservabilityCommandCenter; this pane keeps the broader
+ * shape of the task table available without competing for first glance.
  */
 export function ObservabilityOverview({ stats, loading }: Props) {
   const hasStats = stats != null;
-
-  const totalState = kpiState(stats?.total, loading, hasStats);
-  const doneState = kpiState(
-    stats ? doneCount(stats) : undefined,
-    loading,
-    hasStats,
-  );
-  const failedState = kpiState(
-    stats ? failedCount(stats) : undefined,
-    loading,
-    hasStats,
-  );
-  const runningState = kpiState(
-    stats ? runningCount(stats) : undefined,
-    loading,
-    hasStats,
-  );
-  const blockedState = kpiState(
-    stats ? blockedCount(stats) : undefined,
-    loading,
-    hasStats,
-  );
-  const reviewState = kpiState(
-    stats ? reviewCount(stats) : undefined,
-    loading,
-    hasStats,
-  );
-  const readyState = kpiState(
-    stats?.by_status.ready ?? stats?.ready,
-    loading,
-    hasStats,
-  );
-  // Stage 6 KPI: tasks intentionally deferred via
-  // `pickup_not_before > now()`. The label "Scheduled (deferred)"
-  // is exactly the plan's wording so the operator's mental model
-  // links to the same word that appears on the task list filter
-  // dropdown ("Scheduled (deferred)"). Distinguishing this from
-  // "Ready" is the whole point: "0 ready, 12 scheduled" is a
-  // perfectly healthy state ("operator told the agent to wait")
-  // whereas "0 ready, 0 scheduled" with a paused agent is the
-  // genuinely-stuck state.
-  const scheduledState = kpiState(stats?.scheduled, loading, hasStats);
-  const criticalState = kpiState(
-    stats?.by_priority.critical ?? stats?.critical,
-    loading,
-    hasStats,
-  );
 
   const statusSegments = STATUS_DISPLAY_ORDER.map((s) => ({
     id: s,
@@ -115,70 +54,47 @@ export function ObservabilityOverview({ stats, loading }: Props) {
   ];
 
   return (
-    <div className="obs-overview">
-      <section className="obs-kpi-grid" aria-label="Headline counters">
-        <KpiCard
-          label="Total tasks"
-          state={totalState}
+    <section className="obs-overview" aria-label="Task inventory and distributions">
+      <header className="obs-section-head">
+        <div>
+          <p className="obs-section-kicker">Task telemetry</p>
+          <h3 className="obs-section-title">Work distribution</h3>
+        </div>
+        <p className="obs-section-caption">{inventoryCaption(stats, loading)}</p>
+      </header>
+
+      <section className="obs-inventory-grid" aria-label="Task inventory">
+        <InventoryMetric
+          label="Total"
+          value={stats?.total}
+          loading={loading}
+          available={hasStats}
           meta={totalMeta(stats, loading)}
-          tone="info"
-          testId="obs-kpi-total"
+          testId="obs-inventory-total"
         />
-        <KpiCard
-          label="Done"
-          state={doneState}
-          meta="completed tasks"
-          tone="positive"
-          testId="obs-kpi-done"
+        <InventoryMetric
+          label="Completed"
+          value={stats ? doneCount(stats) : undefined}
+          loading={loading}
+          available={hasStats}
+          meta="done tasks"
+          testId="obs-inventory-done"
         />
-        <KpiCard
-          label="Failed"
-          state={failedState}
-          meta="needs investigation"
-          tone="danger"
-          testId="obs-kpi-failed"
+        <InventoryMetric
+          label="Scheduled"
+          value={stats?.scheduled}
+          loading={loading}
+          available={hasStats}
+          meta="deferred pickup"
+          testId="obs-inventory-scheduled"
         />
-        <KpiCard
-          label="Running"
-          state={runningState}
-          meta="agent actively executing"
-          tone="info"
-          testId="obs-kpi-running"
-        />
-        <KpiCard
-          label="Blocked"
-          state={blockedState}
-          meta="waiting on a dependency"
-          tone="warning"
-          testId="obs-kpi-blocked"
-        />
-        <KpiCard
-          label="In review"
-          state={reviewState}
-          meta="awaiting human approval"
-          tone="warning"
-          testId="obs-kpi-review"
-        />
-        <KpiCard
-          label="Ready"
-          state={readyState}
-          meta="ready for agent pickup"
-          tone="info"
-          testId="obs-kpi-ready"
-        />
-        <KpiCard
-          label="Scheduled (deferred)"
-          state={scheduledState}
-          meta="queued for a future time"
-          tone="info"
-          testId="obs-kpi-scheduled"
-        />
-        <KpiCard
+        <InventoryMetric
           label="Critical"
-          state={criticalState}
+          value={stats?.by_priority.critical ?? stats?.critical}
+          loading={loading}
+          available={hasStats}
           meta="critical priority"
-          tone="danger"
-          testId="obs-kpi-critical"
+          testId="obs-inventory-critical"
         />
       </section>
 
@@ -199,7 +115,36 @@ export function ObservabilityOverview({ stats, loading }: Props) {
           caption={scopeCaption(stats, loading)}
         />
       </section>
-    </div>
+    </section>
+  );
+}
+
+function InventoryMetric({
+  label,
+  value,
+  loading,
+  available,
+  meta,
+  testId,
+}: {
+  label: string;
+  value: number | undefined;
+  loading: boolean;
+  available: boolean;
+  meta: string;
+  testId: string;
+}) {
+  const content = loading && !available ? "Loading" : available ? String(value ?? 0) : "—";
+  return (
+    <article
+      className="obs-inventory-card"
+      aria-busy={loading && !available}
+      data-testid={testId}
+    >
+      <p className="obs-inventory-label">{label}</p>
+      <p className="obs-inventory-value">{content}</p>
+      <p className="obs-inventory-meta">{meta}</p>
+    </article>
   );
 }
 
@@ -213,6 +158,15 @@ function totalMeta(
   const p = stats.by_scope.parent;
   const s = stats.by_scope.subtask;
   return `${p} parent • ${s} subtask${s === 1 ? "" : "s"}`;
+}
+
+function inventoryCaption(
+  stats: TaskStatsResponse | null | undefined,
+  loading: boolean,
+): string {
+  if (!stats) return loading ? "Loading the task table shape…" : "Task inventory unavailable.";
+  if (stats.total === 0) return "No tasks recorded yet.";
+  return `${stats.total} task${stats.total === 1 ? "" : "s"} across status, priority, and scope.`;
 }
 
 function distributionCaption(

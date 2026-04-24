@@ -1,6 +1,4 @@
 import type { SystemHealthResponse } from "@/types";
-import { KpiCard } from "./KpiCard";
-import { kpiState } from "./kpiState";
 import { StackedBar } from "./StackedBar";
 import {
   REQUEST_CLASS_DISPLAY_ORDER,
@@ -23,11 +21,9 @@ type Props = {
 
 /**
  * System health pane (Stage 3). Renders the operator-facing snapshot
- * surfaced by `GET /system/health`. The pane intentionally mirrors the
- * `ObservabilityCycles` layout — a header with a one-line summary, a
- * KPI grid for headline numbers, two stacked bars for distributions,
- * and a build-info footer — so a user scrolling the page does not
- * have to relearn navigation between sections.
+ * surfaced by `GET /system/health`. The command center owns the most
+ * actionable runtime counters; this pane keeps lower-level capacity,
+ * traffic, distribution, and build detail in one supporting section.
  *
  * The pane handles three states (matching the rest of the page):
  *
@@ -53,7 +49,7 @@ export function ObservabilitySystem({ health, loading }: Props) {
           <h3 className="obs-system-title">System health</h3>
           <p className="obs-system-subtitle">{summary.caption}</p>
         </header>
-        <SystemHealthKpiGrid health={undefined} loading={loading} />
+      <SystemRuntimeGrid health={undefined} loading={loading} />
       </section>
     );
   }
@@ -86,7 +82,7 @@ export function ObservabilitySystem({ health, loading }: Props) {
         <h3 className="obs-system-title">System health</h3>
         <p className="obs-system-subtitle">{summary.caption}</p>
       </header>
-      <SystemHealthKpiGrid health={health} loading={loading} />
+      <SystemRuntimeGrid health={health} loading={loading} />
       <div className="obs-system-grid">
         <StackedBar
           title="HTTP responses by class"
@@ -112,75 +108,55 @@ export function ObservabilitySystem({ health, loading }: Props) {
   );
 }
 
-function SystemHealthKpiGrid({
+function SystemRuntimeGrid({
   health,
   loading,
 }: {
   health: SystemHealthResponse | undefined;
   loading: boolean;
 }) {
-  const has = health != null;
-  // KpiCard renders numbers; we pre-format and pass via meta where the
-  // unit matters more than the digit (latencies, ratios). The headline
-  // stays a raw integer so the eye lands on the count.
-  const inFlight = kpiState(health?.http.in_flight, loading, has);
-  const totalReq = kpiState(health?.http.requests_total, loading, has);
-  const subs = kpiState(health?.sse.subscribers, loading, has);
-  const dropped = kpiState(health?.sse.dropped_frames_total, loading, has);
-  const dbInUse = kpiState(health?.db_pool.in_use_connections, loading, has);
-  const queueDepth = kpiState(health?.agent.queue_depth, loading, has);
-
   return (
-    <section className="obs-kpi-grid" aria-label="System headline counters">
-      <KpiCard
-        label="HTTP in-flight"
-        state={inFlight}
+    <section className="obs-system-metrics" aria-label="Runtime detail">
+      <RuntimeMetric
+        label="HTTP latency"
+        value={
+          health
+            ? `${formatLatencySeconds(health.http.duration_seconds.p50)} p50`
+            : undefined
+        }
         meta={
           health
-            ? `${formatLatencySeconds(health.http.duration_seconds.p50)} p50 · ${formatLatencySeconds(
-                health.http.duration_seconds.p95,
-              )} p95`
+            ? `${formatLatencySeconds(health.http.duration_seconds.p95)} p95 · ${formatNumber(
+                health.http.in_flight,
+              )} in flight`
             : "request latency"
         }
-        tone="info"
-        testId="obs-system-kpi-in-flight"
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-latency"
       />
-      <KpiCard
-        label="HTTP requests"
-        state={totalReq}
+      <RuntimeMetric
+        label="HTTP traffic"
+        value={health ? formatNumber(health.http.requests_total) : undefined}
         meta={
           health
-            ? `${formatNumber(health.http.duration_seconds.count)} timed`
+            ? `${formatNumber(health.http.duration_seconds.count)} timed requests`
             : "since process start"
         }
-        tone="neutral"
-        testId="obs-system-kpi-requests"
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-traffic"
       />
-      <KpiCard
-        label="SSE subscribers"
-        state={subs}
-        meta={
+      <RuntimeMetric
+        label="DB pool"
+        value={
           health
-            ? `${formatNumber(health.sse.dropped_frames_total)} dropped frame${
-                health.sse.dropped_frames_total === 1 ? "" : "s"
-              }`
-            : "live event listeners"
+            ? formatRatio(
+                health.db_pool.in_use_connections,
+                health.db_pool.max_open_connections,
+              )
+            : undefined
         }
-        tone={
-          (health?.sse.dropped_frames_total ?? 0) > 0 ? "warning" : "info"
-        }
-        testId="obs-system-kpi-sse-subs"
-      />
-      <KpiCard
-        label="Dropped SSE frames"
-        state={dropped}
-        meta="slow-client backpressure"
-        tone={(health?.sse.dropped_frames_total ?? 0) > 0 ? "danger" : "positive"}
-        testId="obs-system-kpi-sse-dropped"
-      />
-      <KpiCard
-        label="DB connections"
-        state={dbInUse}
         meta={
           health
             ? `${formatRatio(
@@ -189,39 +165,79 @@ function SystemHealthKpiGrid({
               )} open · ${formatNumber(health.db_pool.idle_connections)} idle`
             : "pool utilization"
         }
-        tone={
-          health &&
-          health.db_pool.max_open_connections > 0 &&
-          health.db_pool.in_use_connections >=
-            health.db_pool.max_open_connections
-            ? "danger"
-            : "info"
-        }
-        testId="obs-system-kpi-db-in-use"
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-db"
       />
-      <KpiCard
-        label="Agent queue"
-        state={queueDepth}
+      <RuntimeMetric
+        label="SSE stream"
+        value={health ? formatNumber(health.sse.subscribers) : undefined}
         meta={
           health
-            ? `${formatRatio(
-                health.agent.queue_depth,
-                health.agent.queue_capacity,
-              )} pending · ${formatNumber(health.agent.runs_total)} run${
-                health.agent.runs_total === 1 ? "" : "s"
+            ? `${formatNumber(health.sse.dropped_frames_total)} dropped frame${
+                health.sse.dropped_frames_total === 1 ? "" : "s"
               }`
-            : "agent worker depth"
+            : "live event listeners"
         }
-        tone={
-          health &&
-          health.agent.queue_capacity > 0 &&
-          health.agent.queue_depth >= health.agent.queue_capacity
-            ? "warning"
-            : "info"
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-sse"
+      />
+      <RuntimeMetric
+        label="Agent runs"
+        value={health ? formatNumber(health.agent.runs_total) : undefined}
+        meta={
+          health
+            ? `${formatNumber(health.agent.runs_by_terminal_status.failed ?? 0)} failed · ${formatNumber(
+                health.agent.runs_by_terminal_status.aborted ?? 0,
+              )} aborted`
+            : "terminal outcomes"
         }
-        testId="obs-system-kpi-agent-queue"
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-agent"
+      />
+      <RuntimeMetric
+        label="Queue capacity"
+        value={
+          health ? formatRatio(health.agent.queue_depth, health.agent.queue_capacity) : undefined
+        }
+        meta={health?.agent.paused ? "agent paused" : "pending worker jobs"}
+        loading={loading}
+        available={health != null}
+        testId="obs-system-runtime-queue"
       />
     </section>
+  );
+}
+
+function RuntimeMetric({
+  label,
+  value,
+  meta,
+  loading,
+  available,
+  testId,
+}: {
+  label: string;
+  value: string | undefined;
+  meta: string;
+  loading: boolean;
+  available: boolean;
+  testId: string;
+}) {
+  return (
+    <article
+      className="obs-system-metric"
+      aria-busy={loading && !available}
+      data-testid={testId}
+    >
+      <p className="obs-system-metric-label">{label}</p>
+      <p className="obs-system-metric-value">
+        {loading && !available ? "Loading" : available ? value : "—"}
+      </p>
+      <p className="obs-system-metric-meta">{meta}</p>
+    </article>
   );
 }
 
