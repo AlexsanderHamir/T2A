@@ -9,10 +9,10 @@
  * actually evaluate against.
  *
  * Transport choice: `navigator.sendBeacon` for visibility-change
- * flushes (it survives tab close, unlike fetch), `fetch` for the
- * regular 10s flush so we keep nice error semantics during dev. Both
- * paths post to the same `/v1/rum` endpoint with the same JSON shape
- * documented in pkgs/tasks/handler/handler_rum.go.
+ * flushes (it survives tab close), and the API transport wrapper for
+ * the regular 10s flush so we keep nice error semantics during dev.
+ * Both paths post to the same `/v1/rum` endpoint with the same JSON
+ * shape documented in pkgs/tasks/handler/handler_rum.go.
  *
  * Backpressure: the in-memory queue is capped at `MAX_QUEUE_LENGTH`.
  * If the SPA enqueues faster than we can flush (e.g. user spamming
@@ -22,8 +22,10 @@
  *
  * Test isolation: `__resetRUMForTests` is exported (vitest only —
  * production callers never reach for it) so the unit tests can run
- * deterministically without a global fetch leak between cases.
+ * deterministically without a transport leak between cases.
  */
+
+import { sendRUMPayload } from "@/api/rum";
 
 export type RUMMutationKind =
   | "task_create"
@@ -117,14 +119,9 @@ export function flushNow(useBeacon = false): boolean {
       const ok = navigator.sendBeacon(RUM_ENDPOINT, blob);
       if (!ok) {
         // sendBeacon refused (queue full or payload too large); fall
-        // back to fire-and-forget fetch with keepalive so we still
-        // try to deliver during a tab-close race.
-        void fetch(RUM_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {
+        // back to fire-and-forget keepalive transport so we still try
+        // to deliver during a tab-close race.
+        void sendRUMPayload(payload, { keepalive: true }).catch(() => {
           /* swallow: best effort */
         });
       }
@@ -134,11 +131,7 @@ export function flushNow(useBeacon = false): boolean {
     return true;
   }
 
-  void fetch(RUM_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: payload,
-  }).catch(() => {
+  void sendRUMPayload(payload).catch(() => {
     /* swallow: RUM is best-effort, never break user flow */
   });
   return true;

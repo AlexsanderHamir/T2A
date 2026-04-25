@@ -59,6 +59,7 @@ type Props = {
  */
 export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
   const cyclesQuery = useTaskCycles(taskId, { enabled });
+  const retryCycles = cyclesQuery.refetch;
 
   const { runningCycle, historyCycles } = useMemo(
     () => splitRunningAndHistory(cyclesQuery.data),
@@ -92,7 +93,7 @@ export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
               type="button"
               className="secondary"
               onClick={() => {
-                void cyclesQuery.refetch();
+                void retryCycles();
               }}
             >
               Try again
@@ -378,7 +379,7 @@ function CycleRow({
 
 /**
  * Phase list shown when a cycle row is expanded. Mounting this
- * component triggers the cycle-detail fetch (useTaskCycle), so the
+ * component triggers the cycle-detail query (useTaskCycle), so the
  * network cost is paid only when the operator opens the row.
  */
 function CycleRowPhases({
