@@ -113,30 +113,30 @@ type taskStatsPhasesJSON struct {
 // per the store-layer invariant in stats.Get. Bucket keys are:
 //
 //   - by_runner:        Runner.Name() (verbatim from cycle_meta.runner).
-//                       The literal "unknown" key (RunnerUnknownKey)
-//                       holds pre-feature cycles whose meta_json never
-//                       carried the runner key.
+//     The literal "unknown" key (RunnerUnknownKey)
+//     holds pre-feature cycles whose meta_json never
+//     carried the runner key.
 //   - by_model:         Runner.EffectiveModel resolution (verbatim
-//                       from cycle_meta.cursor_model_effective). The
-//                       empty-string "" key is the explicit "default
-//                       model" bucket — the SPA renders it as such.
+//     from cycle_meta.cursor_model_effective). The
+//     empty-string "" key is the explicit "default
+//     model" bucket — the SPA renders it as such.
 //   - by_runner_model:  pipe-delimited "<runner>|<model>" composite
-//                       key. The frontend splits on "|" to render
-//                       the two-level table.
+//     key. The frontend splits on "|" to render
+//     the two-level table.
 //   - by_runner_model_resolved:
-//                       pipe-delimited "<runner>|<effective>|<resolved>"
-//                       triple-composite key. Only populated for
-//                       cycles whose execute-phase details_json
-//                       surfaced a non-empty resolved_model — the
-//                       cursor adapter lifts that value from
-//                       cursor-agent's stream-json `system.init.model`
-//                       event, which is the only surface that reveals
-//                       what model `auto` actually routed to. The
-//                       SPA uses this map to render "Cursor CLI ·
-//                       Auto → Claude 4 Sonnet" style sub-rows only
-//                       when there is a real observation, so
-//                       pre-feature / non-cursor cycles don't get
-//                       phantom entries.
+//     pipe-delimited "<runner>|<effective>|<resolved>"
+//     triple-composite key. Only populated for
+//     cycles whose execute-phase details_json
+//     surfaced a non-empty resolved_model — the
+//     cursor adapter lifts that value from
+//     cursor-agent's stream-json `system.init.model`
+//     event, which is the only surface that reveals
+//     what model `auto` actually routed to. The
+//     SPA uses this map to render "Cursor CLI ·
+//     Auto → Claude 4 Sonnet" style sub-rows only
+//     when there is a real observation, so
+//     pre-feature / non-cursor cycles don't get
+//     phantom entries.
 //
 // Each bucket carries the by-status counter (mirrors the global
 // cycles.by_status shape) plus succeeded-only p50/p95 durations

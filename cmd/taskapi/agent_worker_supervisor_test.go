@@ -487,8 +487,8 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	}
 }
 
-func ptrBool(v bool) *bool       { return &v }
-func ptrString(v string) *string { return &v }
+func ptrBool(v bool) *bool           { return &v }
+func ptrString(v string) *string     { return &v }
 func ptrTime(v time.Time) *time.Time { return &v }
 
 // TestDecideSchedulingIdleHint_unitTable pins the truth table for the
@@ -501,10 +501,10 @@ func ptrTime(v time.Time) *time.Time { return &v }
 func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name            string
-		queueEmpty      bool
-		scheduledCount  int64
-		want            string
+		name           string
+		queueEmpty     bool
+		scheduledCount int64
+		want           string
 	}{
 		{"queue-non-empty/some-scheduled", false, 5, ""},
 		{"queue-non-empty/no-scheduled", false, 0, ""},

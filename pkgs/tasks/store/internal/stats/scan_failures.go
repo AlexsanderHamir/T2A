@@ -61,11 +61,11 @@ type cycleFailedRow struct {
 // kept in sync with that producer; the dual-write invariant test would
 // catch a divergence on the producer side.
 type cycleFailedPayload struct {
-	CycleID         string `json:"cycle_id"`
-	AttemptSeq      int64  `json:"attempt_seq"`
-	Status          string `json:"status"`
-	Reason          string `json:"reason"`
-	FailureSummary  string `json:"failure_summary,omitempty"`
+	CycleID        string `json:"cycle_id"`
+	AttemptSeq     int64  `json:"attempt_seq"`
+	Status         string `json:"status"`
+	Reason         string `json:"reason"`
+	FailureSummary string `json:"failure_summary,omitempty"`
 }
 
 // scanRecentFailures returns the last `limit` cycle_failed mirror rows

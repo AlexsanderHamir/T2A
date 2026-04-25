@@ -26,20 +26,20 @@ import (
 //   - runner_version       adapter Version() at the time of the cycle
 //   - prompt_hash          sha256 of task.InitialPrompt (correlation only)
 //   - cursor_model         OPERATOR INTENT: the model string the task
-//                          was queued with (Task.CursorModel). Empty
-//                          string means "use the global default", and
-//                          MUST be persisted as "" not omitted, so the
-//                          UI/observability code can render the explicit
-//                          "default" choice.
+//     was queued with (Task.CursorModel). Empty
+//     string means "use the global default", and
+//     MUST be persisted as "" not omitted, so the
+//     UI/observability code can render the explicit
+//     "default" choice.
 //   - cursor_model_effective EFFECTIVE: the concrete model identifier
-//                          the runner resolved for this cycle (calls
-//                          Runner.EffectiveModel). Empty string is
-//                          truthful: it means no model was configured
-//                          anywhere (operator picked the global default
-//                          AND no DefaultCursorModel is set in
-//                          app_settings). The Observability runner
-//                          breakdown panel renders that bucket as
-//                          "default model".
+//     the runner resolved for this cycle (calls
+//     Runner.EffectiveModel). Empty string is
+//     truthful: it means no model was configured
+//     anywhere (operator picked the global default
+//     AND no DefaultCursorModel is set in
+//     app_settings). The Observability runner
+//     breakdown panel renders that bucket as
+//     "default model".
 //
 // Keeping both intent and effective lets us answer "the operator
 // asked for X but the adapter actually ran Y" without a separate

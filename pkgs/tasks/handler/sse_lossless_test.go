@@ -490,4 +490,3 @@ func TestSSEHub_Publish_concurrentSafetyUnderLoad(t *testing.T) {
 		t.Fatalf("LastEventID should advance under concurrent publish")
 	}
 }
-

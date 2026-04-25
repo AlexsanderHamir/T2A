@@ -13,10 +13,10 @@ import (
 
 // Cycle failure list sort modes for GET /tasks/cycle-failures.
 const (
-	CycleFailureSortAtDesc      = "at_desc"
-	CycleFailureSortAtAsc       = "at_asc"
-	CycleFailureSortReasonAsc   = "reason_asc"
-	CycleFailureSortReasonDesc  = "reason_desc"
+	CycleFailureSortAtDesc       = "at_desc"
+	CycleFailureSortAtAsc        = "at_asc"
+	CycleFailureSortReasonAsc    = "reason_asc"
+	CycleFailureSortReasonDesc   = "reason_desc"
 	defaultCycleFailureListLimit = 50
 	maxCycleFailureListLimit     = 200
 	// reasonSortFetchCap bounds how many newest cycle_failed rows we load

@@ -151,10 +151,10 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	var rows []runnerStatsRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
 		Select(
-			"task_cycles.status AS status, " +
-				"task_cycles.started_at AS started_at, " +
-				"task_cycles.ended_at AS ended_at, " +
-				"task_cycles.meta_json AS meta_json, " +
+			"task_cycles.status AS status, "+
+				"task_cycles.started_at AS started_at, "+
+				"task_cycles.ended_at AS ended_at, "+
+				"task_cycles.meta_json AS meta_json, "+
 				"p.details_json AS exec_details_json").
 		Joins("LEFT JOIN task_cycle_phases p ON p.cycle_id = task_cycles.id AND p.phase = ?",
 			domain.PhaseExecute).

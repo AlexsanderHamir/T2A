@@ -88,11 +88,11 @@ var validRUMTypes = map[string]struct{}{
 // events. Mirrors the web-vitals npm package output (LCP, INP, CLS,
 // plus the older FID we keep accepting for transition reasons).
 var validWebVitalNames = map[string]struct{}{
-	"LCP": {},
-	"INP": {},
-	"CLS": {},
-	"FID": {},
-	"FCP": {},
+	"LCP":  {},
+	"INP":  {},
+	"CLS":  {},
+	"FID":  {},
+	"FCP":  {},
 	"TTFB": {},
 }
 

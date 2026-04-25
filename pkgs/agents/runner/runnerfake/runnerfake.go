@@ -29,9 +29,9 @@ const runnerfakeLogCmd = "taskapi"
 // matching script return runner.ErrInvalidOutput so missing scripts surface
 // as test failures rather than silently passing.
 type Runner struct {
-	name           string
-	version        string
-	defaultModel   string
+	name         string
+	version      string
+	defaultModel string
 
 	mu      sync.Mutex
 	scripts map[scriptKey]scripted

@@ -30,12 +30,12 @@ type TaskStats struct {
 	// "intentionally deferred" state on the Observability page so
 	// "0 ready, 12 scheduled" reads differently from "0 ready, 0
 	// scheduled" — see docs/SCHEDULING.md "the two queues" section.
-	Scheduled      int64
-	ByStatus       map[domain.Status]int64
-	ByPriority     map[domain.Priority]int64
-	ByScope        map[string]int64
-	Cycles         CycleStats
-	Phases         PhaseStats
+	Scheduled  int64
+	ByStatus   map[domain.Status]int64
+	ByPriority map[domain.Priority]int64
+	ByScope    map[string]int64
+	Cycles     CycleStats
+	Phases     PhaseStats
 	// Runner is the (runner, model, runner|model) breakdown of
 	// terminal cycles introduced in Phase 2 of the per-task
 	// runner/model attribution plan. Always populated (empty maps
