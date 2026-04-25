@@ -15,7 +15,7 @@ Error budget for any SLO with target `T` is `1 − T`. A 99.5 % SLO has a 0.5 % 
 
 | Name | Target | Window | Source (numerator / denominator) | Why this number |
 | --- | --- | --- | --- | --- |
-| `slo_click_to_confirmed_p95_ms` | ≤ 100 ms | 30 d | `taskapi_rum_click_to_confirmed_seconds_bucket` (p95). "Confirmed" = optimistic render OR server 2xx, whichever fires first. | 100 ms is the perceptual "instant" threshold cited by Doherty / Nielsen; below it the user feels no lag. |
+| `slo_click_to_confirmed_p95_ms` | ≤ 100 ms | 30 d | `taskapi_rum_mutation_optimistic_applied_seconds` and `taskapi_rum_mutation_settled_seconds` histograms. "Confirmed" = optimistic render when present, otherwise server settlement. | 100 ms is the perceptual "instant" threshold cited by Doherty / Nielsen; below it the user feels no lag. |
 | `slo_sse_resync_rate` | ≤ 0.5 % | 30 d | `taskapi_sse_resync_emitted_total / taskapi_sse_publish_total` | Resyncs are correct (loss-free) but expensive (full cache drop + REST refetch). >0.5% means the ring buffer is too small or downstream clients are too slow. |
 | `slo_sse_subscriber_lag_p99_seconds` | ≤ 2 s | 30 d | `taskapi_sse_subscriber_lag_seconds` (p99). Lag = `now − oldest pending frame timestamp` for any active subscriber. | The cross-tab "feels live" budget. Above 2 s users notice that their other tab is stale. |
 | `slo_optimistic_rollback_rate` | ≤ 1 % | 30 d | RUM: `mutation_rolled_back / mutation_started`. | A high rollback rate means the optimistic apply is drifting from server validation — we predicted wrong too often. ≤1% lets the optimistic UX feel reliable. |
@@ -24,7 +24,7 @@ Error budget for any SLO with target `T` is `1 − T`. A 99.5 % SLO has a 0.5 % 
 ## Computation notes
 
 - **Rates** are computed at evaluation time, NOT pre-aggregated, so a sudden burst of 100 % bad over 5 minutes is visible as a 5-minute spike before the 30-day window dilutes it. Use `rate(...[5m])` for short-window burn alerts, `rate(...[30d])` for the SLO compliance gauge.
-- **p95 / p99 latency** SLIs read from histogram buckets (`histogram_quantile(0.95, ...)`). The buckets are tuned for `slo_click_to_confirmed_p95_ms` to give resolution between 25 ms and 1 s — see [`web/src/observability/rum.ts`](../web/src/observability/rum.ts) for the bucket constant.
+- **p95 / p99 latency** SLIs read from histogram buckets (`histogram_quantile(0.95, ...)`). The click-to-confirmed SLO derives from `taskapi_rum_mutation_optimistic_applied_seconds_bucket` for optimistic paths and `taskapi_rum_mutation_settled_seconds_bucket` for non-optimistic or server-confirmed paths; combine by mutation kind in dashboards so each flow uses the earliest confirmation signal it actually emits.
 - **`mutation_started` denominator** counts every mutation initiated by the SPA, including optimistic-applied mutations that later succeed. It does NOT count cache-only operations like `setQueryData` outside of a mutation hook.
 
 ## Burn-rate alerts (Phase 4d)
@@ -45,4 +45,4 @@ The frontend ships RUM events via the new `POST /v1/rum` endpoint (see [`pkgs/ta
 - **No nested labels for high-cardinality fields**. Mutation kind (`patch`, `delete`, `checklist_add`, …) is a label; `task_id` is NOT — that would explode cardinality in a long-running deployment. Per-task drill-down is left to the access log.
 - **`mutation_optimistic_applied` is informational, not an SLI denominator**. It tells operators "X% of mutations actually felt instant," but it sits orthogonal to the rollback / error rate SLIs. Operators looking at the SLO panel see "mutation success" first; the optimistic-applied gauge sits next to it as a secondary KPI.
 - **30-day rolling window, not calendar month**. The Grafana dashboard uses `last_over_time(...[30d])` so the SLO compliance display moves smoothly instead of resetting on the 1st of each month and lying about a freshly-burned budget.
-- **Per-IP rate limiting on the RUM endpoint** (1 req/s burst 10) prevents a misbehaving SPA from amplifying a load incident into a metrics-storage bill.
+- **RUM uses the global per-IP API rate limiter**. `POST /v1/rum` is not exempt from `T2A_RATE_LIMIT_PER_MIN`; the token bucket rate is `per_min / 60` with burst size `per_min`, matching other non-health API routes.

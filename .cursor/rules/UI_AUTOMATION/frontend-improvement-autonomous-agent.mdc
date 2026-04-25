@@ -282,7 +282,7 @@ All checks must pass. If any fail, fix before proceeding. Do not leave broken st
 
 1. `git status` — confirm only intended paths are modified; do not stage secrets, local env files, or unrelated edits.
 2. `git add` the paths you changed (prefer explicit paths over blind `git add -A` if the working tree is noisy).
-3. `git commit -m "..."` — one logical concern per commit; conventional message style per `AGENTS.md` / `.cursor/rules/08-atomic-commits.mdc` (e.g. `fix(web): …`, `test(web): …`, `chore(web): …`).
+3. `git commit -m "..."` — one logical concern per commit; conventional message style per `AGENTS.md` (e.g. `fix(web): …`, `test(web): …`, `chore(web): …`).
 4. `git push` — push the current branch to its upstream (use `git push -u origin HEAD` when no upstream is set yet).
 
 **If `git push` fails** (no network, missing `origin`, auth, branch protection): the commit **must still exist locally**; append the failure reason to the session log under a **`Git`** line and report it in the session output. Do not skip commit because push failed.

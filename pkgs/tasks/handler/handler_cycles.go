@@ -284,9 +284,6 @@ func (h *Handler) patchTaskCyclePhase(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, taskCyclePhaseResponseFromDomain(ph))
 }
 
-// parseCyclePathPair extracts both the {id} (task) and {cycleId} path
-// segments with the same length and trim guards used elsewhere. Returns
-// the first error so the handler can respond with one well-formed 400.
 func parseCyclePathPair(r *http.Request) (string, string, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseCyclePathPair")
 	taskID, err := parseTaskPathID(r.PathValue("id"))

@@ -304,7 +304,7 @@ Run from repo root:
 
 1. `git status` — confirm only intended paths are modified; do not stage secrets, local env files, or unrelated edits.
 2. `git add` the paths you changed (prefer explicit paths over blind `git add -A` if the working tree is noisy).
-3. `git commit -m "..."` — one logical concern per commit; conventional message style per `AGENTS.md` / `.cursor/rules/08-atomic-commits.mdc`. **Prefix with `fix(...)`** when shipping a defect fix; include the regression test in the same commit. Examples:
+3. `git commit -m "..."` — one logical concern per commit; conventional message style per `AGENTS.md`. **Prefix with `fix(...)`** when shipping a defect fix; include the regression test in the same commit. Examples:
    - `fix(tasks): map ErrInvalidInput to 400 in cycles handler`
    - `fix(web): abort in-flight task fetch on unmount`
    - `fix(store): wrap dual-write of cycle phase + task_event in single tx`

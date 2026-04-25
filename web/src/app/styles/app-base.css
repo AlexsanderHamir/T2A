@@ -1,9 +1,6 @@
 /* Base layout and globals — tokens live in app-design-tokens.css */
 
 /*
- * =============================================================
- * Terminal motif primitives (2026-04 redesign)
- * =============================================================
  * The SPA adopts a console / terminal aesthetic: monospace
  * everywhere, page titles prefixed with `>`, section headings
  * prefixed with `$`, and small uppercase pill badges that read

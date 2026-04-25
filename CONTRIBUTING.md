@@ -22,16 +22,14 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 
 ## Before opening a PR
 
-From the repo root, run the full bar (covers what CI enforces across the **backend** and **web** jobs in `.github/workflows/ci.yml`):
+From the repo root, run the full bar from [AGENTS.md](AGENTS.md#commands-to-run-before-you-finish) (covers what CI enforces across the **backend** and **web** jobs in `.github/workflows/ci.yml`):
 
 ```bash
 (cd web && npm ci)   # first time or after lockfile changes
 ./scripts/check.sh
 ```
 
-Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when needed).
-
-Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
+Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when needed). Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
 **Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see **`docs/HANDLER-SCALE.md`**.
 

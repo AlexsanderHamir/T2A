@@ -21,7 +21,12 @@ All fields live in [`pkgs/tasks/domain/app_settings.go`](../pkgs/tasks/domain/ap
 | `runner` | string | `"cursor"` | Identifier from [`pkgs/agents/runner/registry`](../pkgs/agents/runner/registry). Currently only `cursor` is registered; a future runner lands as one new file in that package. |
 | `repo_root` | string | `""` | Absolute (or process-relative) path to the workspace the worker and `/repo/*` operate against. **Empty means "not configured"**: the supervisor stays idle, repo endpoints respond `409 repo_root_not_configured`, and `@`-mention validation is skipped on `POST /tasks` / `PATCH /tasks/{id}`. |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty means "auto-detect from PATH" (`cursor`). Absolute paths pin a specific build; relative names go through `PATH` lookup. The supervisor and `POST /settings/probe-cursor` both invoke `cursor.Probe(<cursor_bin>, --version)` for the runner version recorded in the audit trail. |
+| `cursor_model` | string | `""` | Optional Cursor model forwarded to the runner. Empty means omit the model flag so Cursor uses the account/default model. |
 | `max_run_duration_seconds` | int (≥ 0) | `0` (no limit) | Per-run wall-clock cap forwarded to `runner.Request.Timeout`. `0` means "no limit" — `runner.Run` is not wrapped with a timeout and only ends on completion, operator cancel, or process shutdown. Positive values are honoured exactly; negatives are rejected by the DB CHECK. |
+| `agent_pickup_delay_seconds` | int (≥ 0) | `5` | Delay applied to newly-created ready tasks before the worker can dequeue them. `0` disables the delay. |
+| `display_timezone` | string | `""` | IANA timezone used by the SPA to render operator-facing timestamps. Empty means auto-detect from the browser. Non-empty values are validated with `time.LoadLocation`. |
+| `optimistic_mutations_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Optimistic mutations are always enabled for new rows and no longer configurable in Settings. |
+| `sse_replay_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Lossless SSE replay is always active in `/events`; older rows are migrated to true on read. |
 | `updated_at` | RFC3339 string (response only) | server clock | Stamp of the last successful upsert. The SPA renders "last changed N ago" off this field; not accepted on `PATCH`. |
 
 ## HTTP surface

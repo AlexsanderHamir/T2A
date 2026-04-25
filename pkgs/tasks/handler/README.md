@@ -34,14 +34,16 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 
 | Area | Files |
 |------|--------|
-| Health | `handler_health.go` |
-| Tasks CRUD + list + stats | `handler_task_crud.go` |
+| Health | `handler_health.go`, `handler_system_health.go` |
+| Tasks CRUD + list + stats/failures | `handler_task_crud.go`, `handler_cycle_failures.go` |
 | Checklist | `handler_checklist.go` |
 | Task audit / events | `handler_task_events.go` |
 | Execution cycles + phases | `handler_cycles.go` (DTOs in `handler_cycles_json.go`); see [`docs/EXECUTION-CYCLES.md`](../../docs/EXECUTION-CYCLES.md) |
 | Draft evaluation (`POST /tasks/evaluate`) | `handler_task_evaluation.go` |
 | Saved task drafts (`/task-drafts`) | `handler_task_drafts.go` |
 | Workspace `/repo/*` | `repo_handlers.go` |
+| App settings | `handler_settings.go` |
+| SPA RUM (`POST /v1/rum`) | `handler_rum.go` |
 
 ## Request/response helpers
 

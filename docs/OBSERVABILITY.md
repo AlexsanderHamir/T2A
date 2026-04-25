@@ -1,6 +1,6 @@
 # Observability standard (T2A)
 
-This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub, plus `.cursor/rules/04-structured-logging.mdc` (log shape and safety). **Phased observability improvements** (Prometheus, SLOs, tracing): [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md). **Starter SLIs / SLOs** (30d window, error budget framing): § **SLIs and SLOs** below.
+This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub. **Phased observability improvements** (Prometheus, SLOs, tracing): [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md). **Starter SLIs / SLOs** (30d window, error budget framing): § **SLIs and SLOs** below.
 
 ## Goals
 
@@ -199,5 +199,5 @@ When we introduce either, update this doc and `docs/API-HTTP.md` (`GET /metrics`
 - [API-HTTP.md](./API-HTTP.md) — logging, `X-Request-ID`, access line, GORM SQL (handler section).
 - [RUNTIME-ENV.md](./RUNTIME-ENV.md) — log env vars and startup.
 - [AGENTS.md](../AGENTS.md) — commands including measurement script.
-- `.cursor/rules/04-structured-logging.mdc` — field names, levels, secrets.
-- `.cursor/rules/09-security-baseline.mdc` — no credentials in logs.
+- `.cursor/rules/BACKEND_AUTOMATION/backend-engineering-bar.mdc` — structured logging and error-handling expectations.
+- `.cursor/rules/CODE_STANDARDS.mdc` — repo structure and documentation update expectations.

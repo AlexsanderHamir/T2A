@@ -441,11 +441,6 @@ function CycleRowPhases({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Pure helpers (no React) — kept module-local because they encode panel-     */
-/* specific display rules that don't belong in cyclesViewModel.               */
-/* -------------------------------------------------------------------------- */
-
 /**
  * Splits the cycle list into the (at most one) running cycle and the
  * full history. The history *includes* the running cycle so the list
@@ -465,8 +460,6 @@ function splitRunningAndHistory(
 function pickRunningPhase(
   phases: ReadonlyArray<TaskCyclePhase>,
 ): TaskCyclePhase | null {
-  // There can only be one running phase per cycle (server enforces
-  // the FSM transitions); use Array.find for clarity.
   return phases.find((p) => p.status === "running") ?? null;
 }
 
