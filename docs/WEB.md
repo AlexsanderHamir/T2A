@@ -110,7 +110,7 @@ Responses are `unknown` until `parseTaskApi` runs; bad shapes fail with tests in
 
 ## Testing
 
-`npm test` / `npm run lint` / `npm run build` from `web/` after meaningful UI or `src/api/` changes (see `.cursor/rules/10-web-ui.mdc`). No real network in default tests.
+`npm test` / `npm run lint` / `npm run check:standards` / `npm run build` from `web/` after meaningful UI or `src/api/` changes (see `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` and `.cursor/rules/CODE_STANDARDS.mdc`). No real network in default tests.
 
 ## Client limitations
 

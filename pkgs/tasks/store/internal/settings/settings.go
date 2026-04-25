@@ -35,9 +35,7 @@ type Patch struct {
 	// browser timezone" (the domain.DefaultDisplayTimezone sentinel).
 	// Any non-empty value must parse via time.LoadLocation.
 	DisplayTimezone *string
-	// OptimisticMutationsEnabled / SSEReplayEnabled are the Phase 1 /
-	// Phase 2 rollout flags from
-	// .cursor/plans/production_realtime_smoothness_b17202b6.plan.md.
+	// OptimisticMutationsEnabled / SSEReplayEnabled are realtime rollout flags.
 	// See domain.AppSettings for the per-flag semantics.
 	OptimisticMutationsEnabled *bool
 	SSEReplayEnabled           *bool

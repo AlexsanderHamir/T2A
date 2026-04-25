@@ -3,7 +3,7 @@
  * The app shell and other cross-cutting entrypoints should import from `@/tasks`
  * instead of deep paths under `tasks/…`.
  */
-export { DeleteConfirmDialog, StreamStatusHint } from "./components/dialogs";
+export { DeleteConfirmDialog } from "./components/dialogs";
 export { TaskChangeModelModal, TaskEditForm } from "./components/task-detail";
 export { useTasksApp } from "./hooks/useTasksApp";
 export { TaskDetailPage } from "./pages/TaskDetailPage";

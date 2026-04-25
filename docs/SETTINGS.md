@@ -5,7 +5,7 @@ Authoritative reference for the singleton **`app_settings`** row that drives the
 ## Where to change settings
 
 - **SPA Settings page** — gear icon in the header → `/settings`. Renders [`web/src/settings/SettingsPage.tsx`](../web/src/settings/SettingsPage.tsx) on top of [`useAppSettings`](../web/src/settings/useAppSettings.ts).
-- **HTTP API** — `GET /settings`, `PATCH /settings`, `POST /settings/probe-cursor`, `POST /settings/cancel-current-run` (see [API-HTTP.md](./API-HTTP.md#app-settings) and [API-SSE.md](./API-SSE.md) for the `settings_changed` / `agent_run_cancelled` SSE events).
+- **HTTP API** — `GET /settings`, `PATCH /settings`, `POST /settings/probe-cursor`, `POST /settings/list-cursor-models`, `POST /settings/cancel-current-run` (see [API-HTTP.md](./API-HTTP.md#app-settings) and [API-SSE.md](./API-SSE.md) for the `settings_changed` / `agent_run_cancelled` SSE events).
 - **DB row** — table `app_settings`, primary key `id = 1` (CHECK enforces singleton). Authored by `pkgs/tasks/store` via `GetSettings` / `UpdateSettings`. AutoMigrate creates the table; first read seeds it with `domain.DefaultAppSettings`.
 
 There is no env-var fallback. If you want to bake a default into a fresh deployment, do it through `PATCH /settings` (e.g. as part of provisioning) rather than environment variables.
@@ -31,6 +31,7 @@ See [API-HTTP.md](./API-HTTP.md#app-settings) for the canonical JSON shapes. Qui
 - **`GET /settings`** → `200` with the full row (defaults seeded on first call). Always available — does not require the agent worker to be running.
 - **`PATCH /settings`** → `200` with the updated row. Body is partial; pointer fields distinguish "not provided" from explicit zeros (e.g. `max_run_duration_seconds: 0` ⇒ "no limit" vs. omitted ⇒ leave the previous value untouched). Empty body returns `400 patch body must include at least one field`. On success, the supervisor `Reload`s in-process and the hub publishes `settings_changed` (no id) so the SPA refetches without polling. Returns `503` when the supervisor is not wired (tests, dry-runs).
 - **`POST /settings/probe-cursor`** → `200` with `{ ok, runner, version, error }`. Empty `runner` / `binary_path` fall back to the stored `app_settings.runner` / `cursor_bin`. Probe failures return `200 OK` with `ok: false` and the error in `error` so the SPA can render the message inline; only wiring/storage failures return non-2xx.
+- **`POST /settings/list-cursor-models`** → `200` with `{ ok, runner, binary_path, models, error }`. Empty `runner` / `binary_path` fall back to the stored `app_settings.runner` / `cursor_bin`. Cursor CLI list failures return `200 OK` with `ok: false` and the error in `error`; unsupported runners return `400`.
 - **`POST /settings/cancel-current-run`** → `200` with `{ cancelled }`. When `true`, the hub publishes `agent_run_cancelled` (no id) so the SPA flips its "Cancel current run" button back to idle without polling. The cancelled cycle is terminated with reason `cancelled_by_operator` (see [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md)).
 
 ## Lifecycle

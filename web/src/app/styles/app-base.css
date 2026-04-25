@@ -569,14 +569,7 @@ textarea::placeholder {
   }
 }
 
-/* Live connection strip */
-.stream-status {
-  margin-left: auto;
-}
-
-/* Composed system-status chip used in the app header. Wraps the same
-   stream-dot + stream-pill primitives as StreamStatusHint so the
-   visual language stays consistent, plus a label from system health. */
+/* Composed system-status chip used in the app header. */
 .system-status-chip {
   margin-left: auto;
   color: inherit;
@@ -602,19 +595,6 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
-.stream-status-main {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.36rem 0.6rem 0.36rem 0.72rem;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-full);
-  background: var(--surface-glass-toolbar);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
 .stream-dot {
   width: 8px;
   height: 8px;
@@ -629,14 +609,6 @@ textarea::placeholder {
 .stream-dot--live {
   background: var(--success-bright);
   box-shadow: 0 0 0 3px var(--success-soft);
-}
-
-.stream-status-text {
-  font-size: var(--text-help);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--text-secondary);
-  white-space: nowrap;
 }
 
 .stream-pill {

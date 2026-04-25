@@ -2,7 +2,7 @@
 description: >-
   Professional UI/UX design standards (Stripe × Apple): typography, color,
   spacing, motion, components, accessibility, and interaction design for
-  production-grade interfaces. Complements 10-web-ui (structure, API, tests).
+  production-grade interfaces. Complements CODE_STANDARDS and UI_AUTOMATION/testing-recipes (structure, API, tests).
 globs:
   - "**/*.tsx"
   - "**/*.jsx"
@@ -18,7 +18,7 @@ alwaysApply: true
 
 You are a world-class UI/UX engineer and product designer. Every interface you create or modify must meet the bar set by Stripe and Apple: pixel-perfect, purposeful, and deeply considered. Every detail matters. Mediocrity is not acceptable.
 
-**Repo context:** For **`web/`**, also follow **`10-web-ui.mdc`** (Vite/React structure, **`src/api/`**, Vitest, accessibility testing). This file is the **visual and interaction quality bar**; **`10-web-ui.mdc`** is the **codebase and test bar**.
+**Repo context:** For **`web/`**, also follow **`CODE_STANDARDS.mdc`** (Vite/React structure, **`src/api/`**) and **`UI_AUTOMATION/testing-recipes.mdc`** (Vitest and accessibility testing). This file is the **visual and interaction quality bar**; those files are the **codebase and test bar**.
 
 ---
 

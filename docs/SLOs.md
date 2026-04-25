@@ -1,6 +1,6 @@
 # Service Level Objectives — T2A Realtime UX
 
-Tracks the named SLOs introduced in `.cursor/plans/production_realtime_smoothness_b17202b6.plan.md` Phase 4. Each SLO has a numeric target, a 30-day rolling window, and a documented data source so an operator can compute "are we burning budget?" without reverse-engineering the code.
+Tracks the named realtime UX SLOs. Each SLO has a numeric target, a 30-day rolling window, and a documented data source so an operator can compute "are we burning budget?" without reverse-engineering the code.
 
 Error budget for any SLO with target `T` is `1 − T`. A 99.5 % SLO has a 0.5 % budget; a 30-day window means roughly 3.6 hours of allowable "bad time" before the budget is exhausted.
 

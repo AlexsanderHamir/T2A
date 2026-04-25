@@ -14,7 +14,7 @@ go build ./...
 go test ./...
 ```
 
-Full local verification (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`, `web/` test + build): `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). To run only Go steps, set `CHECK_SKIP_WEB=1`; to skip the slog audit, set `CHECK_SKIP_FUNCLOG=1` (see [AGENTS.md](AGENTS.md)).
+Full local verification (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`, `web/` test, lint, standards check, and build): `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). To run only Go steps, set `CHECK_SKIP_WEB=1`; to skip the slog audit, set `CHECK_SKIP_FUNCLOG=1` (see [AGENTS.md](AGENTS.md)).
 
 ## Run
 
@@ -76,9 +76,9 @@ Production: build static assets; serve `dist` same-origin as the API or behind a
 
 - [AGENTS.md](AGENTS.md) — repo map, checks, pitfalls  
 - [CONTRIBUTING.md](CONTRIBUTING.md) — PRs, API / `parseTaskApi` sync  
-- Extend the tasks stack: [docs/EXTENSIBILITY.md](docs/EXTENSIBILITY.md) and `.cursor/rules/13-tasks-stack-extensibility.mdc`  
-- Workspace repo (`app_settings.repo_root`, `/repo`): [docs/SETTINGS.md](docs/SETTINGS.md), [docs/API-HTTP.md](docs/API-HTTP.md#workspace-repo), `.cursor/rules/14-repo-workspace-extensibility.mdc`  
-- Large Cursor-assisted edits: `.cursor/rules/00-full-rules-pass.mdc` (see CONTRIBUTING)
+- Extend the tasks stack: [docs/EXTENSIBILITY.md](docs/EXTENSIBILITY.md)  
+- Workspace repo (`app_settings.repo_root`, `/repo`): [docs/SETTINGS.md](docs/SETTINGS.md), [docs/API-HTTP.md](docs/API-HTTP.md#workspace-repo)  
+- Cursor-assisted edits: `.cursor/rules/CODE_STANDARDS.mdc`, `.cursor/rules/BACKEND_AUTOMATION/`, `.cursor/rules/UI_AUTOMATION/`, and `.cursor/rules/BUG_HUNTING/` (see CONTRIBUTING)
 
 ```bash
 go doc -all ./pkgs/tasks/...

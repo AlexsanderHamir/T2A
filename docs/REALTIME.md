@@ -1,6 +1,6 @@
 # Realtime smoothness — design notes
 
-Tracks decisions made while executing `.cursor/plans/production_realtime_smoothness_b17202b6.plan.md`. Living document; each phase appends here as it ships.
+Tracks realtime smoothness decisions as they ship. This is a living document for the SSE resume, resync, and RUM/SLO work.
 
 ## Phase 2 — Lossless SSE (server)
 

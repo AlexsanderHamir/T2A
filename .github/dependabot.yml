@@ -1,4 +1,4 @@
-# Dependency update PRs (weekly). CI runs scripts/check.sh on each PR.
+# Dependency update PRs (weekly). CI runs the same Go and web checks as scripts/check.*.
 version: 2
 updates:
   - package-ecosystem: gomod

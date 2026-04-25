@@ -38,8 +38,7 @@
 // named use-case methods (small input structs, one transaction,
 // explicit audit events) in the appropriate facade_*.go file and
 // keep the heavy logic inside internal/<domain>/. The handler should
-// stay thin; see docs/EXTENSIBILITY.md and
-// .cursor/rules/13-tasks-stack-extensibility.mdc.
+// stay thin; see docs/EXTENSIBILITY.md.
 //
 // [DefaultReadyTimeout] is the recommended context deadline for
 // (*Store).Ready from GET /health/ready.

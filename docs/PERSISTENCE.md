@@ -15,5 +15,5 @@ Schema: `postgres.Migrate` runs GORM `AutoMigrate` for `domain.Task`, `domain.Ta
 ## Related
 
 - `pkgs/tasks/store/README.md` — which `store_*.go` file owns which concern.
-- `.cursor/rules/15-database-schema.mdc` — GORM models / SQLite test helpers.
+- `.cursor/rules/BACKEND_AUTOMATION/persistence-gorm.mdc` — GORM models / SQLite test helpers.
 - `pkgs/tasks/store/doc.go` — `go doc` next to code.

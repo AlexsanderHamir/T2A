@@ -11,11 +11,8 @@ globs:
   - "**/*.tsx"
   - "**/*.css"
   - "**/*.scss"
-  - "**/*.sql"
   - "**/go.mod"
   - "**/package.json"
-  - "**/Makefile"
-  - "**/Dockerfile"
 alwaysApply: true
 ---
 
@@ -65,7 +62,7 @@ Line count limits in this document are upper bounds for alarm, not targets. The 
 │
 ├── internal/                   # Private application packages (non-importable externally)
 │   ├── taskapi/                # HTTP server assembly for taskapi binary
-│   ├── tasktestdb/             # Test DB helpers (SQLite, migrations)
+│   ├── tasktestdb/             # Test DB helpers (SQLite)
 │   ├── envload/                # .env loading and resolution
 │   ├── httpsecurity/           # Security header middleware and tests
 │   └── handlertest/            # Shared HTTP test helpers
@@ -86,18 +83,12 @@ Line count limits in this document are upper bounds for alarm, not targets. The 
 │   ├── OBSERVABILITY.md
 │   └── adr/                    # Architecture Decision Records (ADR-NNNN.md)
 │
-├── migrations/                 # SQL migration files (numbered, up/down)
-│   ├── 001_create_tasks.up.sql
-│   └── 001_create_tasks.down.sql
-│
 ├── scripts/                    # Build, check, and dev scripts
 │   ├── check.sh
 │   └── check.ps1
 │
 ├── .agent/                     # Autonomous agent logs and snapshots (gitignored)
 ├── .cursor/                    # Cursor IDE rules
-├── Makefile
-├── Dockerfile
 ├── go.mod
 ├── go.sum
 └── README.md
@@ -613,7 +604,7 @@ Shared React hooks                → web/src/hooks/
 Feature-local React hooks         → web/src/features/<name>/hooks/
 Global UI state                   → web/src/stores/
 Design tokens                     → web/src/styles/tokens.css
-SQL migrations                    → migrations/ (numbered, up/down)
+Schema migration path             → pkgs/tasks/postgres/ (GORM AutoMigrate)
 Go test helpers                   → internal/tasktestdb/ or *_test.go
 TS test factories                 → web/src/test/factories/
 TS MSW handlers                   → web/src/test/handlers/

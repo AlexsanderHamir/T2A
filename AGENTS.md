@@ -22,13 +22,13 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 8 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common dev failures (Vite proxy, SSE, missing workspace repo). |
 | 9 | [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | Logs, correlation, per-function `slog` target (`funclogmeasure`), and test coverage scripts. |
 
-Cursor: `99-repo-primer.mdc` (always-on), `01`–`08`, `docs/API-HTTP.md` / `docs/API-SSE.md` (HTTP/SSE contracts), `13-tasks-stack-extensibility` (tasks API layering), `14-repo-workspace-extensibility` (workspace repo / `/repo` / `pkgs/repo`), `15-database-schema` (GORM models / migrate path), `12-documentation-style` (README/docs prose), `09-local-verification` + `09-security-baseline`, `10-web-ui` for `web/`. **`00-full-rules-pass.mdc`** defines scope (default **full repo** unless paths or user intent narrow it; **docs-and-rules-only** skips Go/npm checks), phases, and the completion report—**@-mention that file in Cursor** for large or cross-cutting agent work so the structured pass runs. `06-testing.mdc` defines `go test` expectations; `10-web-ui.mdc` defines `npm test` for `web/`. Test failure triage: `docs/TROUBLESHOOTING.md` (**Local checks and agent test failures**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` from the repo root combine both in one local command.
+Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and comments (`CODE_STANDARDS.mdc`, `codebase_comments.mdc`), backend automation (`BACKEND_AUTOMATION/`), UI automation (`UI_AUTOMATION/`), bug hunting (`BUG_HUNTING/`), and feature/product guidance (`FEATURE_IMPLEMENTATION/`). API contracts remain authoritative in `docs/API-HTTP.md` / `docs/API-SSE.md`; web structure and testing expectations live in `docs/WEB.md` plus `UI_AUTOMATION/testing-recipes.mdc`. Test failure triage: `docs/TROUBLESHOOTING.md` (**Local checks and agent test failures**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run check:standards`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` from the repo root combine both in one local command.
 
 ## Repository map
 
 | Area | Path | Notes |
 |------|------|--------|
-| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `GET /health`, `/health/live`, `/health/ready`; `GET /settings`, `PATCH /settings`, `POST /settings/probe-cursor`, `POST /settings/cancel-current-run`; `GET /metrics` (Prometheus). File map: `pkgs/tasks/handler/README.md`. Scaling and split conventions: `docs/HANDLER-SCALE.md`. |
+| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `GET /health`, `/health/live`, `/health/ready`; `GET /settings`, `PATCH /settings`, `POST /settings/probe-cursor`, `POST /settings/list-cursor-models`, `POST /settings/cancel-current-run`; `GET /metrics` (Prometheus). File map: `pkgs/tasks/handler/README.md`. Scaling and split conventions: `docs/HANDLER-SCALE.md`. |
 | Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs; used by `handler`, `middleware` (injected path), `internal/taskapi`. README: `pkgs/tasks/calltrace/README.md`. |
 | Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; imported by `handler` and `cmd/taskapi` (stdlib-only, no cycle with `handler`). |
 | JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. `handler` delegates `writeJSONError` here (passes `calltrace.Path` for debug). |
@@ -66,17 +66,17 @@ API contracts (paths, query params, JSON shapes) are authoritative in `docs/API-
 | **Agent session produced git changes** | Before ending the turn: `git status` → `git add` (scoped) → `git commit` (conventional message, one logical concern) → `git push origin` on the current branch (often `main`). Skip only if the user opted out or push is not possible (no remote, no auth). |
 | Full bar (recommended) | From repo root: `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). Go-only fast path: set `CHECK_SKIP_WEB=1` (bash) or `$env:CHECK_SKIP_WEB='1'` (PowerShell) to skip `web/` steps. After `go test`, the check scripts run `go run ./cmd/funclogmeasure -enforce` (see `docs/OBSERVABILITY.md`); set `CHECK_SKIP_FUNCLOG=1` to skip that audit locally if needed. |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1` (from repo root); format touched `*.go` with `gofmt` or `go fmt`. |
-| Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run build` |
-| Coverage / quality (Go libs) | See `.cursor/rules/06-testing.mdc` (`coverprofile` on `pkgs/...` `internal/...`) |
+| Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
+| Coverage / quality (Go libs) | See `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` and the coverage scripts in `docs/OBSERVABILITY.md`. |
 | Observability measurement | Per-function `slog`: `./scripts/measure-func-slog.sh` or `.\scripts\measure-func-slog.ps1`; test coverage profile: `./scripts/measure-observability.sh` or `.\scripts\measure-observability.ps1` ([docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)) |
 
-Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see `06-testing.mdc` and `10-web-ui.mdc`).
+Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc`).
 
-**TDD default for agents:** For bugs and features, add or adjust a **failing** test first, then implement until green (`06-testing.mdc` for Go, `10-web-ui.mdc` for `web/`). See `00-full-rules-pass.mdc` phase **2** when running a full pass.
+**TDD default for agents:** For bugs and features, add or adjust a **failing** test first, then implement until green (`BACKEND_AUTOMATION/go-testing-recipes.mdc` for Go, `UI_AUTOMATION/testing-recipes.mdc` for `web/`).
 
 ## Conventions worth remembering
 
-- New tasks API features: follow `docs/EXTENSIBILITY.md` (domain → store → handler → optional `web/`). Rule `.cursor/rules/13-tasks-stack-extensibility.mdc` expands the same slice for agents.
+- New tasks API features: follow `docs/EXTENSIBILITY.md` (domain → store → handler → optional `web/`) and the backend rules under `.cursor/rules/BACKEND_AUTOMATION/`.
 - JSON at the boundary: Web treats responses as `unknown` until `parseTaskApi` validates; keep that pipeline when adding fields.
 - Same-origin in prod: `taskapi` does not add CORS; dev uses Vite proxy (`web/vite.config.ts`).
 - Atomic commits: `.cursor/rules/08-atomic-commits.mdc` (when present) — one logical concern per commit, conventional message style; **push after commit** unless the user opts out or push is not possible.

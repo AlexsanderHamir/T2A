@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -258,7 +257,3 @@ func rumStatusBucket(code int) string {
 		return "unknown"
 	}
 }
-
-// errRUMHandlerNotWired is returned by tests that construct a handler
-// without registering postRUM. Production wiring always registers it.
-var errRUMHandlerNotWired = errors.New("rum handler not wired")

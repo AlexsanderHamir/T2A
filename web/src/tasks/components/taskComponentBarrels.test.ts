@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CustomSelect, isCustomSelectHeader } from "./custom-select";
 import { DraftResumeModal } from "./draft-resume";
-import { DeleteConfirmDialog, StreamStatusHint } from "./dialogs";
+import { DeleteConfirmDialog } from "./dialogs";
 import { filePreviewLanguageFromPath } from "./file-preview";
 import { MentionRangePanel, RichPromptEditor } from "./rich-prompt";
 import { taskCreateModalBusyLabel, TaskCreateModal } from "./task-create-modal";
@@ -29,7 +29,6 @@ describe("tasks component barrels", () => {
     expect(TaskComposeFields).toBeTypeOf("function");
     expect(DraftResumeModal).toBeTypeOf("function");
     expect(DeleteConfirmDialog).toBeTypeOf("function");
-    expect(StreamStatusHint).toBeTypeOf("function");
   });
 
   it("re-exports non-UI helpers through the same barrels", () => {

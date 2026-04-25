@@ -374,6 +374,15 @@ Body (all fields optional): `{ "runner": "cursor", "binary_path": "C:\\path\\to\
 - **200 JSON** — `{ "ok": bool, "runner": string, "version": string?, "error": string? }`. Probe failures (`cursor-agent` missing / non-executable / non-zero exit) return **200 OK** with `ok: false` and the error message in `error` so the SPA can render the message inline. Only wiring/storage failures return non-2xx.
 - **503 JSON** — `agent worker control unavailable`.
 
+### `POST /settings/list-cursor-models`
+
+List Cursor CLI model ids available to the SPA for the "Model" picker. This route uses the same runner and binary fallback semantics as `POST /settings/probe-cursor`.
+
+Body (all fields optional): `{ "runner": "cursor", "binary_path": "C:\\path\\to\\cursor-agent.cmd" }`. Empty `runner` falls back to the stored `app_settings.runner`; empty `binary_path` falls back to the stored `app_settings.cursor_bin` (and ultimately to `cursor` resolved through `PATH`).
+
+- **200 JSON** — `{ "ok": bool, "runner": string, "binary_path": string?, "models": [{ "id": string, "label": string }]?, "error": string? }`. CLI listing failures return **200 OK** with `ok: false` and the error message in `error` so the SPA can keep the picker usable and show the operator what failed. `binary_path` is the resolved executable path when the runner adapter can determine it.
+- **400 JSON** — unknown runner, or a runner other than `cursor` (`only the cursor runner supports model listing`).
+
 ### `POST /settings/cancel-current-run`
 
 Operator-initiated cancel of any in-flight `runner.Run`. The cycle is terminated with reason `cancelled_by_operator` (see [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md)).
@@ -387,7 +396,7 @@ When `app_settings.repo_root` is set (via the SPA Settings page or `PATCH /setti
 
 When `repo_root` is empty, every `/repo/*` route returns **`409 Conflict`** with body `{ "error": "repo root is not configured", "reason": "repo_root_not_configured" }`. When `repo_root` is set but `pkgs/repo.OpenRoot` rejects it (missing directory, not a directory, symlink loop), the same routes return **`500 Internal Server Error`** with `reason: repo_root_open_failed` and the underlying error message.
 
-Agent-oriented layering for this slice: `.cursor/rules/14-repo-workspace-extensibility.mdc`.
+Agent-oriented layering for this slice follows the same domain → store → handler pattern described in [EXTENSIBILITY.md](./EXTENSIBILITY.md), with `pkgs/repo` owning workspace filesystem traversal.
 
 ### `GET /repo/search`
 

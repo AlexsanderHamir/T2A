@@ -176,7 +176,7 @@ The script runs **`go test ./... -coverprofile=coverage-observability.out`** so 
 
 The script prints the **full** `go tool cover -func` report and the trailing **`total:`** line. That **`total:`** is **not** “every function has a log”; use **`funclogmeasure`** for that.
 
-For **library-only** coverage without `cmd/*` (e.g. matching `.cursor/rules/06-testing.mdc` examples), run `go test` yourself with `./pkgs/... ./internal/...` and a separate coverprofile.
+For **library-only** coverage without `cmd/*`, run `go test` yourself with `./pkgs/... ./internal/...` and a separate coverprofile.
 
 The profile file `coverage-observability.out` is gitignored (`coverage*.out`). Remove it after review if you like.
 

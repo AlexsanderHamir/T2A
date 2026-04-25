@@ -33,7 +33,7 @@ Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when
 
 Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
-**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details in `.cursor/rules/06-testing.mdc` (Go) and `.cursor/rules/10-web-ui.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see **`docs/HANDLER-SCALE.md`**.
+**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see **`docs/HANDLER-SCALE.md`**.
 
 **Observability:** When you change HTTP middleware, correlation, or logging shape, follow [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md). Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
 
@@ -50,17 +50,17 @@ See `docs/API-HTTP.md` / `docs/API-SSE.md` and `docs/README.md` (“Where to put
 
 ## Adding features (layering)
 
-Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Full checklist: `.cursor/rules/13-tasks-stack-extensibility.mdc`. Human summary: `docs/EXTENSIBILITY.md`.
+Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Human summary and checklist: `docs/EXTENSIBILITY.md`.
 
 For **task UI** under `web/src/tasks/`, keep new pieces in the right family folder and import through its `index.ts` barrel where one exists; conventions are summarized under **`tasks/components/` layout** in [docs/WEB.md](docs/WEB.md).
 
 ## Cursor / AI rules
 
-Numbered rules under `.cursor/rules/` cover style, tests, security, web UI, documentation prose (`12-documentation-style.mdc`), tasks stack extensibility (`13-tasks-stack-extensibility.mdc`), workspace repo extensibility (`14-repo-workspace-extensibility.mdc`), and database schema / AutoMigrate (`15-database-schema.mdc`).
+Rules under `.cursor/rules/` cover shared structure (`CODE_STANDARDS.mdc`, `codebase_comments.mdc`), backend automation, UI automation, bug hunting, and feature/product guidance.
 
-**Deterministic full pass:** In Cursor chat, **@-mention** [`.cursor/rules/00-full-rules-pass.mdc`](.cursor/rules/00-full-rules-pass.mdc) (or ask explicitly to “run the full rules pass”) for cross-cutting or high-risk changes. That playbook defines default scope (**full repo** unless narrowed), when **docs-and-rules-only** skips `go test` / `npm`, and the completion checklist.
+**Full pass:** For cross-cutting or high-risk changes, run the same local bar as CI with `.\scripts\check.ps1` or `./scripts/check.sh`. Narrow only when all touched files fit Go-only, `web/`-only, or docs-only scope.
 
-**Default agent behavior:** If scope is unspecified, assume **full repo**; narrow only when all touched files fit Go-only, `web/`-only, or docs-and-rules-only (see `00-full-rules-pass.mdc` and `99-repo-primer.mdc`).
+**Default agent behavior:** If scope is unspecified, assume **full repo**; narrow only when the touched files and user request clearly fit a smaller scope.
 
 ## Stuck?
 

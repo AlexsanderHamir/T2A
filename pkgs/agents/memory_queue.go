@@ -113,17 +113,9 @@ func (q *MemoryQueue) tryEnqueue(task domain.Task) error {
 	}
 }
 
-// NotifyUserTaskCreated implements UserTaskCreatedNotifier. It never blocks: if the buffer is
-// full it returns ErrQueueFull. If the task id is already pending it returns ErrAlreadyQueued.
-func (q *MemoryQueue) NotifyUserTaskCreated(ctx context.Context, task domain.Task) error {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyUserTaskCreated", "task_id", task.ID)
-	if err := notifyContextErr(ctx); err != nil {
-		return err
-	}
-	return q.tryEnqueue(task)
-}
-
-// NotifyReadyTask is the hook used by pkgs/tasks/store.ReadyTaskNotifier wiring. Same enqueue semantics as NotifyUserTaskCreated.
+// NotifyReadyTask is the hook used by pkgs/tasks/store.ReadyTaskNotifier wiring.
+// It never blocks: if the buffer is full it returns ErrQueueFull. If the task id
+// is already pending it returns ErrAlreadyQueued.
 func (q *MemoryQueue) NotifyReadyTask(ctx context.Context, task domain.Task) error {
 	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyReadyTask", "task_id", task.ID)
 	if err := notifyContextErr(ctx); err != nil {

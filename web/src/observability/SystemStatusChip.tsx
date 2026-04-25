@@ -4,9 +4,8 @@ import { summarize } from "./systemHealthViewModel";
 type Props = {
   /**
    * Whether the SSE event stream is currently connected. Owned by
-   * `useTasksApp` (the same value previously fed to StreamStatusHint),
-   * so the chip stays a pure presentational composer — it does not
-   * reach into the SSE machinery itself.
+   * `useTasksApp`, so the chip stays a pure presentational composer
+   * and does not reach into the SSE machinery itself.
    */
   connected: boolean;
 };
