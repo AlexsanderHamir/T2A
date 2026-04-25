@@ -79,7 +79,7 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 | **Agent run success rate by model** | `sum by (runner, model) (rate(t2a_agent_runs_by_model_total{terminal_status="succeeded"}[5m])) / sum by (runner, model) (rate(t2a_agent_runs_by_model_total[5m]))` — see [AGENT-WORKER.md § Metrics](./AGENT-WORKER.md#metrics) for the parallel series contract. |
 | **Agent run p95 duration by model** | `histogram_quantile(0.95, sum by (runner, model, le) (rate(t2a_agent_run_duration_by_model_seconds_bucket[5m])))` — observes all terminal cycles (same population as the non-`_by_model_` histogram); `GET /tasks/stats` also exposes succeeded-only p50/p95 buckets for clients that need that narrower view. |
 
-**Grafana:** add a Prometheus datasource pointing at your scraper, then panels with the expressions above (e.g. time series for p95, stat for 5xx ratio). Prefer the **recording rules** in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml) for heavy dashboards ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase B2).
+For an MVP, start with the PromQL expressions above directly in your metrics tool. Add recording rules outside the repo only when dashboards become too expensive to query live.
 
 ### SLIs and SLOs (roadmap B1)
 
@@ -99,13 +99,13 @@ The three SLIs below are **defaults for `taskapi`** — adjust targets and queri
 
 ### Prometheus alerting (roadmap B2)
 
-Shipped **recording rules** and **warning**-level **alerts** for `taskapi` HTTP metrics in **[`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml)** (see **[`deploy/prometheus/README.md`](../deploy/prometheus/README.md)** for `rule_files` wiring). Includes:
+If you wire Prometheus alerts around `taskapi`, start from these runtime signals:
 
 - **`taskapi:http:5xx_ratio5m`**, **`taskapi:http:mutating_p99_seconds`**, **`taskapi:http:p95_seconds`** (recording).
 - **`taskapi:agent_runs_by_model:success_rate5m`** and **`taskapi:agent_run_duration_by_model:p95_seconds`** (recording, keyed by `(runner, model)`) — pre-computed counterparts of the **Agent run success rate by model** / **p95 duration by model** queries above. The success-rate rule deliberately includes the failed/aborted denominator so it answers "is this model healthy?" rather than "what fraction of attempts succeed?"; the p95 rule observes all terminal cycles (matching the histogram), which is intentionally distinct from the SPA panel's succeeded-only scope. Drop these rules first if `(runner, model)` cardinality grows past a few hundred — see [TROUBLESHOOTING.md § Prometheus `t2a_agent_runs_by_model_total` has a high-cardinality label](./TROUBLESHOOTING.md#prometheus-t2a_agent_runs_by_model_total-has-a-high-cardinality-label).
-- **Alerts:** high **`5xx`** ratio, high mutating **p99** latency, sustained **`http_in_flight`**, elevated **DB pool wait** rate; **readiness** left as a commented example for **blackbox** / platform probes.
+- **Alerts:** high **`5xx`** ratio, high mutating **p99** latency, sustained **`http_in_flight`**, elevated **DB pool wait** rate, and **readiness** via **blackbox** / platform probes.
 
-Each alert sets **`runbook_url`** to this repo’s **[`docs/runbooks/`](./runbooks/)** (minimal pages—expand in roadmap **B3**).
+Keep runbook links in **[`docs/runbooks/`](./runbooks/)** if your alert manager supports them.
 
 ### 5xx and `request failed` logging (roadmap A5)
 

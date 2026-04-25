@@ -6,7 +6,7 @@
 
 ## Example alert (Prometheus)
 
-Uncomment and adapt **`TaskAPIReadinessProbeFailing`** in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../../deploy/prometheus/t2a-taskapi-rules.yaml) once you have a metric such as **`probe_success{job="blackbox-taskapi-ready"}`** from blackbox scraping **`GET /health/ready`**.
+Create a `TaskAPIReadinessProbeFailing` alert once you have a metric such as **`probe_success{job="blackbox-taskapi-ready"}`** from blackbox scraping **`GET /health/ready`**.
 
 ## Severity and escalation
 

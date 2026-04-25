@@ -1,6 +1,6 @@
 # Runbooks (T2A)
 
-Operator playbooks for alerts shipped or referenced in [`deploy/prometheus/t2a-taskapi-rules.yaml`](../../deploy/prometheus/t2a-taskapi-rules.yaml). Each runbook includes **PromQL**, **log** correlation ideas (`rg` on JSONL; adapt paths and **`jq`** if you ship logs to Loki/Elastic), and **escalation** hints.
+Operator playbooks for teams that wire alerts around `taskapi` runtime signals. Each runbook includes **PromQL**, **log** correlation ideas (`rg` on JSONL; adapt paths and **`jq`** if you ship logs to Loki/Elastic), and **escalation** hints.
 
 **Prerequisites:** scrape **`GET /metrics`** securely ([API-HTTP.md](../API-HTTP.md)); know your log path and JSON field names ([OBSERVABILITY.md](../OBSERVABILITY.md)). Use **`taskapi_build_info`** to confirm which **version / revision** is running during rollouts.
 

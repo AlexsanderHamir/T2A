@@ -4,7 +4,7 @@ Industry-aligned plan for **logs + Prometheus + (later) tracing**: RED-style HTT
 
 ## Open todos
 
-Use this list in order unless a later item unblocks an incident. Earlier items (A1–C3 — runtime / DB-pool / histogram-bucket / log-audit metrics, SLIs+SLOs, alerting, runbooks, domain + store-latency + build-info metrics) have shipped; their contracts live in [OBSERVABILITY.md](./OBSERVABILITY.md), [API-HTTP.md](./API-HTTP.md), [`deploy/prometheus/t2a-taskapi-rules.yaml`](../deploy/prometheus/t2a-taskapi-rules.yaml), and [`docs/runbooks/`](./runbooks/).
+Use this list in order unless a later item unblocks an incident. Earlier items (A1–C3 — runtime / DB-pool / histogram-bucket / log-audit metrics, SLIs+SLOs, alerting, runbooks, domain + store-latency + build-info metrics) have shipped; their contracts live in [OBSERVABILITY.md](./OBSERVABILITY.md), [API-HTTP.md](./API-HTTP.md), and [`docs/runbooks/`](./runbooks/).
 
 - [ ] **D1 — OpenTelemetry:** Traces for `taskapi` + OTLP export when multi-service or deep latency debugging is required.
 - [ ] **D2 — Exemplars / log correlation:** Trace IDs on spans and in `slog`; histogram exemplars where backend supports it.
