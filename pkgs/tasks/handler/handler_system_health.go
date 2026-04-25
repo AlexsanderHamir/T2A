@@ -27,7 +27,7 @@ func defaultSystemHealthSnapshotter() systemHealthSnapshotter {
 // summarising build info, uptime, HTTP/SSE/DB/agent counters for the
 // operator UI. Distinct from /health/live and /health/ready (those
 // stay tiny for orchestrator probes); this endpoint is meant for the
-// /observability page and short-lived operator scripts.
+// SPA header status and short-lived operator scripts.
 //
 // The response is always 200 with a fully-shaped envelope. Even when
 // the underlying gather fails the snapshot is zero-valued but

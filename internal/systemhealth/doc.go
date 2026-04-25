@@ -2,8 +2,7 @@
 // taskapi process state for the operator-facing GET /system/health
 // endpoint. It is *not* the kubelet liveness/readiness probe (those
 // stay in pkgs/tasks/handler/handler_health.go); think of it as the
-// "what's going on inside the box" view rendered on the
-// /observability page.
+// "what's going on inside the box" view consumed by operator-facing UI.
 //
 // The aggregator is a pure read over prometheus.DefaultGatherer, so
 // every number it returns is the same number that GET /metrics would

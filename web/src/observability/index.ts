@@ -1,24 +1,17 @@
 /**
- * Public import surface for the observability feature
- * (.cursor/rules/CODE_STANDARDS.mdc). The app shell imports `@/observability`
- * instead of deep paths.
+ * Public import surface for runtime status, RUM, and cycle display helpers.
  */
 export { SystemStatusChip } from "./SystemStatusChip";
 
 // Cycle/phase display helpers — re-exported so feature areas
 // (e.g. tasks/components/task-detail/cycles) consume the same
-// labels and pill classes as the observability page itself.
-// Single source of truth for label strings, display order, and
-// CSS-class mapping; otherwise a status rename in one place would
-// silently desync the two views.
+// labels and pill classes.
 export {
   cycleStatusLabel,
   phaseLabel,
   phaseStatusLabel,
   cycleStatusFillClass,
   phaseStatusFillClass,
-  PHASE_DISPLAY_ORDER,
-  RUNNER_LABELS,
   runnerLabel,
   formatRunnerModel,
   cycleRunnerChipClass,

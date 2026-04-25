@@ -15,8 +15,7 @@ export type AppSettings = {
    * (defaults true), agent_paused is the one-click "stop dequeuing for
    * a few minutes" toggle exposed in the SPA header chip (defaults
    * false). Both keep the supervisor idle, but they surface as
-   * different idle reasons in the supervisor logs and as different
-   * pane states on /observability.
+   * different idle reasons in the supervisor logs and header status.
    */
   agent_paused: boolean;
   runner: string;

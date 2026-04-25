@@ -8,42 +8,6 @@ import type {
   Phase,
   PhaseStatus,
 } from "@/types/cycle";
-import type { TaskStatsResponse } from "@/types/task";
-
-/**
- * Display order for cycle outcomes — matches the Status bar's
- * "running → terminal-good → terminal-bad" pattern so the colour story
- * stays consistent across the page.
- */
-export const CYCLE_STATUS_DISPLAY_ORDER: CycleStatus[] = [
-  "running",
-  "succeeded",
-  "failed",
-  "aborted",
-];
-
-/**
- * Display order for the heatmap rows — matches the runtime sequence
- * (diagnose → execute → verify → persist) from `domain.Phase`.
- */
-export const PHASE_DISPLAY_ORDER: Phase[] = [
-  "diagnose",
-  "execute",
-  "verify",
-  "persist",
-];
-
-/**
- * Display order for the heatmap columns — matches the lifecycle order
- * defined by `domain.PhaseStatus` (no `aborted`; phases skip rather
- * than abort). `running` first so the eye lands on in-flight cells.
- */
-export const PHASE_STATUS_DISPLAY_ORDER: PhaseStatus[] = [
-  "running",
-  "succeeded",
-  "failed",
-  "skipped",
-];
 
 const CYCLE_STATUS_LABELS: Record<CycleStatus, string> = {
   running: "Running",
@@ -117,54 +81,16 @@ export function phaseStatusFillClass(s: PhaseStatus): string {
   }
 }
 
-/** Total cycles recorded across all statuses. */
-export function totalCycleCount(stats: TaskStatsResponse): number {
-  return Object.values(stats.cycles.by_status).reduce(
-    (acc, n) => acc + (n ?? 0),
-    0,
-  );
-}
-
-/**
- * Total phase rows across the heatmap — used to size cell intensity.
- * Returning 0 makes every cell render the empty/neutral style.
- */
-export function totalPhaseCount(stats: TaskStatsResponse): number {
-  let acc = 0;
-  for (const phase of PHASE_DISPLAY_ORDER) {
-    const inner = stats.phases.by_phase_status[phase];
-    for (const status of PHASE_STATUS_DISPLAY_ORDER) {
-      acc += inner[status] ?? 0;
-    }
-  }
-  return acc;
-}
-
-export function phaseCellCount(
-  stats: TaskStatsResponse,
-  phase: Phase,
-  status: PhaseStatus,
-): number {
-  return stats.phases.by_phase_status[phase][status] ?? 0;
-}
-
-/**
- * Returns a 0..1 intensity for a heatmap cell — the cell's count
- * normalised against the **largest** non-zero cell so the brightest
- * cell renders at full strength. Returns 0 when the heatmap is empty
- * (every cell renders neutral).
- */
 /**
  * Operator-friendly label for a runner adapter name. Single source of
  * truth for the per-task UI (TaskDetailHeader, TaskCyclesPanel) and
- * the Observability breakdown panel — otherwise a rename in one place
- * would silently desync the chip copy across views.
+ * related runtime chips.
  *
  * Unknown names fall through to their verbatim adapter identifier so
  * a new runner added by Phase 3 of the plan is labelled correctly
  * even before we update this table.
  */
-export const RUNNER_LABELS: Record<string, string> = {
+const RUNNER_LABELS: Record<string, string> = {
   cursor: "Cursor CLI",
   "cursor-cli": "Cursor CLI",
   fake: "Fake runner",
@@ -212,23 +138,4 @@ export function formatRunnerModel(meta: CycleMeta): string {
  */
 export function cycleRunnerChipClass(): string {
   return "cell-pill--runtime";
-}
-
-export function phaseCellIntensity(
-  stats: TaskStatsResponse,
-  phase: Phase,
-  status: PhaseStatus,
-): number {
-  const value = phaseCellCount(stats, phase, status);
-  if (value <= 0) return 0;
-  let maxCell = 0;
-  for (const p of PHASE_DISPLAY_ORDER) {
-    const inner = stats.phases.by_phase_status[p];
-    for (const st of PHASE_STATUS_DISPLAY_ORDER) {
-      const v = inner[st] ?? 0;
-      if (v > maxCell) maxCell = v;
-    }
-  }
-  if (maxCell <= 0) return 0;
-  return value / maxCell;
 }

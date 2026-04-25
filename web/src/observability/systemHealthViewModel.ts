@@ -19,8 +19,8 @@ export const REQUEST_CLASS_DISPLAY_ORDER: readonly SystemHealthRequestClass[] = 
 
 /**
  * Display order for terminal agent run statuses. Aligns with the
- * status pill ordering on the task list so the Observability page
- * keeps the same color story.
+ * status pill ordering on the task list so runtime status keeps the
+ * same color story.
  */
 export const TERMINAL_STATUS_DISPLAY_ORDER: readonly SystemHealthAgentTerminalStatus[] = [
   "succeeded",

@@ -5,7 +5,7 @@ import { defineConfig } from "vitest/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Dev: browser talks to Vite; API/observability routes proxy to taskapi (avoids CORS).
+// Dev: browser talks to Vite; API routes proxy to taskapi (avoids CORS).
 const api = process.env.VITE_TASKAPI_ORIGIN ?? "http://127.0.0.1:8080";
 
 export default defineConfig({

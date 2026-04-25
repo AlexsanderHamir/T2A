@@ -176,8 +176,7 @@ func (s *agentWorkerSupervisor) Start(ctx context.Context) error {
 
 // logPreFeatureCycleCount emits ONE Info line at supervisor boot
 // reporting how many terminal cycles predate the V2 runner/model
-// attribution keys (see plan rollout_backfill / docs/TROUBLESHOOTING.md
-// "Observability 'Runner & model' panel shows an empty model row").
+// attribution keys.
 //
 // Best-effort: a transient store error degrades to a single Warn line
 // and does NOT block startup — the count is operator information, not
