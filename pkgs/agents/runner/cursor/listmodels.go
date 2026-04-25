@@ -7,15 +7,9 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
 )
-
-// ListModelsTimeout is the wall-clock cap for cursor-agent --list-models.
-// Listing can be slower than --version because it may query Cursor services.
-const ListModelsTimeout = 30 * time.Second
-
-// DefaultListModelsBinary is used when the operator leaves the binary path
-// empty, matching registry.CursorDefaultBinaryHint.
-const DefaultListModelsBinary = "cursor-agent"
 
 // ModelInfo is one entry from `cursor-agent --list-models` stdout.
 type ModelInfo struct {
@@ -42,12 +36,10 @@ func ListModels(ctx context.Context, binaryPath string, timeout time.Duration, r
 	if run == nil {
 		run = DefaultProbeFn
 	}
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 
-	stdout, stderr, exitCode, err := run(runCtx, resolved, "--list-models")
+	stdout, stderr, exitCode, err := adapterkit.RunProbe(ctx, timeout, run, resolved, cursorFlagListModels)
 	if err != nil {
-		if runCtx.Err() != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, resolved, fmt.Errorf("cursor list-models %q: timed out after %s: %w", resolved, timeout, err)
 		}
 		return nil, resolved, fmt.Errorf("cursor list-models %q: exec failed: %w", resolved, err)

@@ -1,27 +1,20 @@
 package cursor
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
-	"os/exec"
 	"strings"
 	"time"
-)
 
-// DefaultProbeTimeout is the wall-clock cap for one Probe call.
-// 5 seconds matches the Stage 4 plan's "fail loudly at startup" budget:
-// long enough for a cold cursor binary to print its version on
-// resource-constrained CI hosts, short enough that an unresponsive
-// binary does not stall taskapi startup.
-const DefaultProbeTimeout = 5 * time.Second
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+)
 
 // ProbeFn matches the bits of os/exec the Probe needs. Tests inject a
 // fake to avoid spawning a real binary; production wiring uses
 // DefaultProbeFn.
-type ProbeFn func(ctx context.Context, name string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
+type ProbeFn = adapterkit.ProbeFunc
 
 // Probe runs `<binaryPath> --version` with a bounded deadline and
 // returns the trimmed first line of stdout (or stderr, whichever is
@@ -52,12 +45,9 @@ func Probe(ctx context.Context, binaryPath string, timeout time.Duration, probe 
 		probe = DefaultProbeFn
 	}
 
-	probeCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	stdout, stderr, exitCode, err := probe(probeCtx, binaryPath, "--version")
+	stdout, stderr, exitCode, err := adapterkit.RunProbe(ctx, timeout, probe, binaryPath, cursorFlagVersion)
 	if err != nil {
-		if probeCtx.Err() != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return "", fmt.Errorf("cursor probe %q: timed out after %s: %w", binaryPath, timeout, err)
 		}
 		return "", fmt.Errorf("cursor probe %q: exec failed: %w", binaryPath, err)
@@ -82,20 +72,7 @@ func Probe(ctx context.Context, binaryPath string, timeout time.Duration, probe 
 func DefaultProbeFn(ctx context.Context, name string, args ...string) ([]byte, []byte, int, error) {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.DefaultProbeFn",
 		"name", name, "argc", len(args))
-	cmd := exec.CommandContext(ctx, name, args...)
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-	err := cmd.Run()
-	exitCode := 0
-	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			exitCode = exitErr.ExitCode()
-			err = nil
-		}
-	}
-	return stdoutBuf.Bytes(), stderrBuf.Bytes(), exitCode, err
+	return adapterkit.DefaultProbeFunc(ctx, name, args...)
 }
 
 // ResolveBinaryPath returns the absolute path that exec.Command would use
@@ -113,14 +90,7 @@ func DefaultProbeFn(ctx context.Context, name string, args ...string) ([]byte, [
 func ResolveBinaryPath(binaryPath string) string {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.ResolveBinaryPath",
 		"binary", binaryPath)
-	p := strings.TrimSpace(binaryPath)
-	if p == "" {
-		return ""
-	}
-	if abs, err := exec.LookPath(p); err == nil {
-		return abs
-	}
-	return p
+	return adapterkit.ResolveBinaryPath(binaryPath)
 }
 
 // firstNonEmptyLine returns the first non-empty trimmed line of b, or
@@ -128,12 +98,7 @@ func ResolveBinaryPath(binaryPath string) string {
 func firstNonEmptyLine(b []byte) string {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.firstNonEmptyLine",
 		"bytes", len(b))
-	for _, line := range strings.Split(string(b), "\n") {
-		if v := strings.TrimSpace(line); v != "" {
-			return v
-		}
-	}
-	return ""
+	return adapterkit.FirstNonEmptyLine(b)
 }
 
 // trimForLog truncates b for inclusion in error messages so a chatty
@@ -141,10 +106,5 @@ func firstNonEmptyLine(b []byte) string {
 func trimForLog(b []byte) string {
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.trimForLog",
 		"bytes", len(b))
-	const max = 256
-	s := strings.TrimSpace(string(b))
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "…"
+	return adapterkit.TrimForLog(b, limits.ProbeLogBytes)
 }

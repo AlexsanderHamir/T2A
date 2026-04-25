@@ -1,6 +1,10 @@
 package cursor
 
-import "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+import (
+	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+)
 
 const cursorLogCmd = "taskapi"
 
@@ -17,19 +21,37 @@ type Limits struct {
 	DiagnosticTailBytes    int
 	StderrSummaryHintRunes int
 	ProgressSummaryRunes   int
+	ProbeLogBytes          int
 }
+
+const (
+	defaultNameValue       = "cursor-cli"
+	defaultVersionValue    = "0.0.0-unknown"
+	defaultBinaryPathValue = "cursor-agent"
+)
+
+const (
+	// DefaultProbeTimeout is the wall-clock cap for one Probe call.
+	DefaultProbeTimeout = 5 * time.Second
+	// ListModelsTimeout is the wall-clock cap for cursor-agent --list-models.
+	ListModelsTimeout = 30 * time.Second
+	// DefaultListModelsBinary is used when the operator leaves the binary path
+	// empty, matching the adapter's default binary path.
+	DefaultListModelsBinary = defaultBinaryPathValue
+)
 
 var (
 	defaults = Defaults{
-		Name:       "cursor-cli",
-		Version:    "0.0.0-unknown",
-		BinaryPath: "cursor-agent",
+		Name:       defaultNameValue,
+		Version:    defaultVersionValue,
+		BinaryPath: defaultBinaryPathValue,
 	}
 	limits = Limits{
 		StderrTailBytes:        8 * 1024,
 		DiagnosticTailBytes:    4 * 1024,
 		StderrSummaryHintRunes: 280,
 		ProgressSummaryRunes:   240,
+		ProbeLogBytes:          adapterkit.DefaultProbeLogBytes,
 	}
 )
 
@@ -38,6 +60,8 @@ const (
 	cursorFlagOutputFormat = "--output-format"
 	cursorFlagModel        = "--model"
 	cursorFlagForce        = "--force"
+	cursorFlagVersion      = "--version"
+	cursorFlagListModels   = "--list-models"
 
 	cursorOutputFormatStreamJSON = "stream-json"
 
