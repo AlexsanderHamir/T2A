@@ -122,6 +122,9 @@ describe("TaskCycleDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
+    vi.spyOn(Date, "now").mockReturnValue(
+      Date.parse("2026-04-25T12:00:30.000Z"),
+    );
     act(() => {
       pushAgentRunProgress({
         taskId: "t1",
@@ -137,6 +140,7 @@ describe("TaskCycleDetailPage", () => {
       screen.getByText(/live updates for this running phase/i),
     ).toBeInTheDocument();
     expect(screen.getByText("Still working live")).toBeInTheDocument();
+    expect(screen.getByLabelText(/received at/i)).toBeInTheDocument();
 
     const streamSection = screen.getByRole("heading", {
       name: /cursor events/i,

@@ -27,6 +27,8 @@ import { shouldSuppressSSEFor } from "./optimisticVersion";
  */
 const SSE_INVALIDATE_WINDOW_MS = 900;
 const SSE_INVALIDATE_MAX_WAIT_MS = 2500;
+const PROGRESS_STREAM_INVALIDATE_WINDOW_MS = 5000;
+const PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS = 10000;
 
 /** Wait this long after an error before showing disconnected (browser may reconnect). */
 const SSE_DISCONNECT_UI_MS = 900;
@@ -51,6 +53,8 @@ type PendingInvalidations = {
   cycles: Map<string, Set<string>>;
 };
 
+type PendingProgressStreams = Map<string, { taskId: string; cycleId: string }>;
+
 function emptyPending(): PendingInvalidations {
   return { tasks: new Set(), cycles: new Map() };
 }
@@ -63,8 +67,10 @@ function clearPending(p: PendingInvalidations): void {
 export function useTaskEventStream(): boolean {
   const queryClient = useQueryClient();
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const progressStreamDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const disconnectUiRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const pendingRef = useRef<PendingInvalidations>(emptyPending());
+  const pendingProgressStreamsRef = useRef<PendingProgressStreams>(new Map());
   /**
    * Wall-clock timestamp when the *current* pending flush window opened.
    * Reset to null after each flush. Used to enforce
@@ -72,6 +78,7 @@ export function useTaskEventStream(): boolean {
    * reset the trailing debounce indefinitely.
    */
   const firstQueuedAtRef = useRef<number | null>(null);
+  const firstProgressStreamQueuedAtRef = useRef<number | null>(null);
   /** Cleared on effect cleanup so queued timer callbacks cannot run after unmount. */
   const streamEffectActiveRef = useRef(false);
   const [sseLive, setSseLive] = useState(false);
@@ -130,6 +137,45 @@ export function useTaskEventStream(): boolean {
       queryKey: taskQueryKeys.cycleFailuresRoot(),
     });
   }, [queryClient]);
+
+  const flushProgressStreamInvalidation = useCallback(() => {
+    firstProgressStreamQueuedAtRef.current = null;
+    const streams = [...pendingProgressStreamsRef.current.values()];
+    pendingProgressStreamsRef.current.clear();
+    for (const stream of streams) {
+      void queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.cycleStream(stream.taskId, stream.cycleId),
+      });
+    }
+  }, [queryClient]);
+
+  const scheduleProgressStreamInvalidation = useCallback(
+    (taskId: string, cycleId: string) => {
+      const streamKey = `${taskId}\u0000${cycleId}`;
+      pendingProgressStreamsRef.current.set(streamKey, { taskId, cycleId });
+      const now = Date.now();
+      if (firstProgressStreamQueuedAtRef.current === null) {
+        firstProgressStreamQueuedAtRef.current = now;
+      }
+      const elapsedSinceFirst = now - firstProgressStreamQueuedAtRef.current;
+      const remainingBudget = PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS - elapsedSinceFirst;
+      const delay = Math.max(
+        0,
+        Math.min(PROGRESS_STREAM_INVALIDATE_WINDOW_MS, remainingBudget),
+      );
+      if (progressStreamDebounceRef.current !== undefined) {
+        clearTimeout(progressStreamDebounceRef.current);
+      }
+      progressStreamDebounceRef.current = setTimeout(() => {
+        progressStreamDebounceRef.current = undefined;
+        if (!streamEffectActiveRef.current) {
+          return;
+        }
+        flushProgressStreamInvalidation();
+      }, delay);
+    },
+    [flushProgressStreamInvalidation],
+  );
 
   const scheduleInvalidateFromStream = useCallback(
     (data: string) => {
@@ -194,9 +240,7 @@ export function useTaskEventStream(): boolean {
             phaseSeq: frame.phaseSeq,
             progress: frame.progress,
           });
-          void queryClient.invalidateQueries({
-            queryKey: taskQueryKeys.cycleStream(frame.taskId, frame.cycleId),
-          });
+          scheduleProgressStreamInvalidation(frame.taskId, frame.cycleId);
           return;
         } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {
           // Settings updates and operator-initiated cancels are rare
@@ -251,7 +295,7 @@ export function useTaskEventStream(): boolean {
         flushStreamInvalidation();
       }, delay);
     },
-    [flushStreamInvalidation, queryClient],
+    [flushStreamInvalidation, queryClient, scheduleProgressStreamInvalidation],
   );
 
   useEffect(() => {
@@ -304,6 +348,7 @@ export function useTaskEventStream(): boolean {
       }, SSE_DISCONNECT_UI_MS);
     };
     const pending = pendingRef.current;
+    const pendingProgressStreams = pendingProgressStreamsRef.current;
     return () => {
       streamEffectActiveRef.current = false;
       clearDisconnectUi();
@@ -311,8 +356,14 @@ export function useTaskEventStream(): boolean {
         clearTimeout(sseDebounceRef.current);
         sseDebounceRef.current = undefined;
       }
+      if (progressStreamDebounceRef.current !== undefined) {
+        clearTimeout(progressStreamDebounceRef.current);
+        progressStreamDebounceRef.current = undefined;
+      }
       firstQueuedAtRef.current = null;
+      firstProgressStreamQueuedAtRef.current = null;
       clearPending(pending);
+      pendingProgressStreams.clear();
       es.close();
       setSseLive(false);
     };

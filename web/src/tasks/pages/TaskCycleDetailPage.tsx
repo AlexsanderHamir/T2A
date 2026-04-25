@@ -288,6 +288,13 @@ function LivePhaseTail({
             <span className="task-cycle-progress-message">
               {streamMessage(item)}
             </span>
+            <time
+              className="task-cycle-progress-time"
+              dateTime={new Date(item.receivedAt).toISOString()}
+              aria-label={`Received at ${formatLiveProgressTime(item.receivedAt)}`}
+            >
+              {formatLiveProgressTime(item.receivedAt)}
+            </time>
           </li>
         ))}
       </ul>
@@ -415,4 +422,8 @@ function streamKindLabel(kind: string, subtype?: string): string {
 
 function streamMessage(item: AgentRunProgressItem): string {
   return item.progress.message || item.progress.tool || "Working…";
+}
+
+function formatLiveProgressTime(receivedAt: number): string {
+  return new Date(receivedAt).toLocaleTimeString();
 }

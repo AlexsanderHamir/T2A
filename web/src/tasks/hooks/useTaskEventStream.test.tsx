@@ -150,7 +150,7 @@ describe("useTaskEventStream", () => {
     });
   });
 
-  it("refreshes the persisted cycle stream on agent progress without broad task invalidation", () => {
+  it("refreshes the persisted cycle stream on a slower cadence than live progress", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");
 
@@ -169,6 +169,11 @@ describe("useTaskEventStream", () => {
     act(() => {
       vi.advanceTimersByTime(3000);
     });
+    expect(inv).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
 
     const calls = inv.mock.calls.map((c) => c[0]);
     expect(calls).toContainEqual({
@@ -179,6 +184,42 @@ describe("useTaskEventStream", () => {
       expect(key).not.toEqual(["tasks"]);
       expect(key).not.toEqual(["tasks", "detail"]);
     }
+  });
+
+  it("coalesces many progress frames into one persisted stream refresh", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+
+    for (let i = 0; i < 4; i++) {
+      act(() => {
+        mockES!.onmessage?.({
+          data: '{"type":"agent_run_progress","id":"task-1","cycle_id":"cyc-1","phase_seq":2,"progress":{"kind":"tool_call","subtype":"started","tool":"ReadFile","message":"Started ReadFile"}}',
+        });
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+    }
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    const streamCalls = inv.mock.calls
+      .map((c) => (c[0] as { queryKey: readonly unknown[] }).queryKey)
+      .filter(
+        (key) =>
+          JSON.stringify(key) ===
+          JSON.stringify(taskQueryKeys.cycleStream("task-1", "cyc-1")),
+      );
+    expect(streamCalls).toHaveLength(1);
   });
 
   it("falls back to broad invalidation when no recognised frame arrives", () => {
