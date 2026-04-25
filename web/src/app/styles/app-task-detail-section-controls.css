@@ -1,0 +1,240 @@
+.task-detail-subtasks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-detail-subtasks-head .task-detail-section-heading {
+  margin-bottom: 0;
+}
+
+.task-detail-subtasks-title-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-detail-subtasks-title-row .task-detail-section-heading {
+  margin: 0;
+}
+
+.task-detail-subtasks-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.task-detail-checklist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-detail-checklist-head .task-detail-section-heading {
+  margin-bottom: 0;
+}
+
+.task-detail-checklist-title-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-detail-checklist-title-row .task-detail-section-heading {
+  margin: 0;
+}
+
+button.task-detail-add-subtask-btn,
+button.task-detail-add-checklist-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.45rem 0.95rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  cursor: pointer;
+  transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+a.task-detail-open-graph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.45rem 0.95rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+a.task-detail-open-graph-btn:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+a.task-detail-open-graph-btn:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+button.task-detail-add-subtask-btn:not(:disabled):hover,
+button.task-detail-add-checklist-btn:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  transform: none;
+  filter: none;
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+button.task-detail-add-subtask-btn:focus-visible,
+button.task-detail-add-checklist-btn:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+button.task-detail-add-subtask-btn:disabled,
+button.task-detail-add-checklist-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.task-detail-add-subtask-btn--primary {
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border-color: var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+}
+
+button.task-detail-add-subtask-btn--primary:not(:disabled):hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-border-cta);
+  box-shadow: var(--shadow-md);
+}
+
+button.task-detail-add-subtask-btn--primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+}
+
+button.task-home-new-task-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.5rem 1.15rem;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: var(--text-button-tracking);
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: 1px solid var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-home-new-task-btn:not(:disabled):hover {
+  background: var(--brand-hover);
+  filter: none;
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+button.task-home-new-task-btn:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+button.task-home-new-task-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+}
+
+button.task-home-new-task-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.task-subtask-modal-sheet h2,
+.task-create-modal-sheet h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  margin-bottom: 0.4rem;
+}
+
+.task-subtask-modal-form.task-create-form,
+.task-create-modal-form.task-create-form {
+  max-width: none;
+  gap: 1.15rem;
+}
+
+.task-subtask-modal-sheet button.custom-select-trigger,
+.task-create-modal-sheet button.custom-select-trigger {
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-inset-field), var(--shadow-inset-lip);
+}
+
+.task-subtask-modal-actions,
+.task-create-modal-actions {
+  margin-top: 0.35rem;
+  justify-content: flex-end;
+}
+
+/*
+ * Cancel is the quietest action in this footer — Escape and the
+ * backdrop both close the modal too, so the explicit button only
+ * needs to be discoverable, not loud. Pushing it to the far left
+ * (margin-right: auto) also separates "leave" from the Save / Eval
+ * / Create cluster so the eye doesn't have to disambiguate intent
+ * across four equally-weighted buttons.
+ */
+.task-create-modal-actions .task-create-cancel-btn {
+  margin-right: auto;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.task-create-modal-actions .task-create-cancel-btn:not(:disabled):hover {
+  background: var(--neutral-fill-subtle);
+  border-color: transparent;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.task-create-modal-actions .task-create-cancel-btn:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--brand-muted);
+}
+

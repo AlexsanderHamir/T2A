@@ -1,0 +1,3 @@
+/* Task event data styles split by overview cards and markdown rendering. */
+@import "./app-task-event-data-overview.css";
+@import "./app-task-event-markdown.css";

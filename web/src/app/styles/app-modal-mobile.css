@@ -1,0 +1,98 @@
+/* Mobile: bottom sheet (DS §12 — top-only radius, safe area, drag affordance) */
+@keyframes modal-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-3));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: var(--bp-md-max)) {
+  .modal-root {
+    align-items: flex-end;
+    justify-content: center;
+    padding-top: var(--space-8);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .modal-shell {
+    width: 100%;
+    max-width: none;
+    max-height: min(92dvh, 100%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-modal-sheet);
+    animation: modal-sheet-enter var(--duration-moderate) var(--ease-out) both;
+  }
+
+  .modal-shell--wide {
+    width: 100%;
+  }
+
+  /* Drag handle (visual affordance; dismissal remains backdrop / Escape) */
+  .modal-shell::before {
+    content: "";
+    flex-shrink: 0;
+    width: var(--modal-control-size);
+    height: var(--space-1);
+    margin: 0.625rem auto var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--border-soft);
+  }
+
+  .modal-shell > .panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0;
+    margin-bottom: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border-hairline);
+  }
+
+  .modal-shell,
+  .modal-shell > .panel {
+    scrollbar-color: color-mix(in srgb, var(--border-strong) 82%, var(--text-tertiary))
+      transparent;
+  }
+
+  .modal-busy-overlay {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .modal-sheet--edit .rich-prompt-wrap .tiptap {
+    max-height: min(38dvh, 20rem);
+  }
+
+  .modal-sheet--draft-resume {
+    --draft-resume-min-height: min(62dvh, 32rem);
+    --draft-resume-max-height: min(92dvh, 100%);
+    min-height: var(--draft-resume-min-height);
+    max-height: var(--draft-resume-max-height);
+  }
+
+  .draft-resume-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .draft-resume-pager-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: var(--bp-md-max)) and (prefers-reduced-motion: reduce) {
+  .modal-shell {
+    animation: none;
+  }
+}
+

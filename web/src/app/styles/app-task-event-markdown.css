@@ -1,0 +1,139 @@
+.task-event-phase-alert {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.task-event-phase-alert-msg {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.task-event-phase-alert-msg:last-child {
+  margin-bottom: 0;
+}
+
+.task-event-phase-alert-kind {
+  margin: 0;
+  font-size: var(--text-help);
+}
+
+.task-event-phase-stderr {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.75rem;
+  max-height: 10rem;
+  overflow: auto;
+  font-size: var(--text-help);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-surface, var(--bg-elevated));
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+}
+
+.task-event-summary-block {
+  max-width: min(100%, 65ch);
+}
+
+.task-event-summary-heading {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-primary);
+}
+
+.task-event-markdown {
+  font-family: var(--font-prose);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.task-event-markdown p {
+  margin: 0 0 0.75rem;
+}
+
+.task-event-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.task-event-markdown ul,
+.task-event-markdown ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.task-event-markdown li {
+  margin: 0.25rem 0;
+}
+
+.task-event-markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+}
+
+.task-event-markdown pre {
+  margin: 0.5rem 0;
+  padding: 0.65rem 0.75rem;
+  overflow: auto;
+  font-size: var(--text-help);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+}
+
+.task-event-markdown pre code {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.task-event-markdown strong {
+  font-weight: 600;
+}
+
+.task-event-markdown-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0.75rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.task-event-markdown .task-event-markdown-table-scroll:first-child {
+  margin-top: 0;
+}
+
+.task-event-markdown table {
+  width: 100%;
+  min-width: min(100%, 32rem);
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.task-event-markdown thead th {
+  font-weight: 600;
+  background: var(--bg-elevated);
+}
+
+.task-event-markdown th,
+.task-event-markdown td {
+  border: 1px solid var(--border-hairline);
+  padding: 0.35rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.task-event-markdown tbody tr:nth-child(even) {
+  background: rgb(0 0 0 / 2%);
+}

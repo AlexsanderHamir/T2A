@@ -1,0 +1,307 @@
+.task-checklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.task-detail-panel .task-detail-section-empty.empty-state--compact {
+  margin-top: 0.15rem;
+  max-width: min(40rem, 100%);
+}
+
+.task-checklist-intro {
+  margin: 0 0 0.85rem;
+  max-width: 40rem;
+}
+
+.task-checklist-intro-lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.task-checklist-intro-lead strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.task-checklist-progress {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.task-checklist-progress-strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-checklist-surface {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
+  box-shadow: var(--shadow-chrome-xs);
+  overflow: hidden;
+}
+
+.task-checklist-surface-pad {
+  margin: 0;
+  padding: 0.85rem 1rem;
+}
+
+.task-checklist-fetch-err {
+  margin-bottom: 0;
+}
+
+.task-checklist-list--grouped {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-elevated);
+}
+
+.task-checklist-list--grouped .task-checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border-hairline);
+  margin: 0;
+}
+
+.task-checklist-list--grouped .task-checklist-row:last-child {
+  border-bottom: none;
+}
+
+.task-checklist-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: var(--text-base);
+  line-height: 1.4;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.task-checklist-status {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.18rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  box-sizing: border-box;
+  border: 2px solid var(--border-chrome-checklist);
+  color: transparent;
+  user-select: none;
+}
+
+.task-checklist-status--pending {
+  background: var(--bg-elevated);
+}
+
+.task-checklist-status--done {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--text-on-brand);
+}
+
+.task-checklist-text {
+  color: var(--text-primary);
+}
+
+/* Plain text label in create/compose checklist rows (not the detail read-only row). */
+.task-checklist-label {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.task-checklist-criterion-modal-sheet h2 {
+  margin-bottom: 0.35rem;
+}
+
+.task-checklist-criterion-modal-lead {
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  max-width: 28rem;
+}
+
+.task-checklist-criterion-modal-actions {
+  margin-top: 0.35rem;
+  justify-content: flex-end;
+}
+
+.task-subtask-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-width: 28rem;
+}
+
+/* Checklist lists outside the task detail grouped surface (create flow, compose). */
+.task-checklist-list:not(.task-checklist-list--grouped) {
+  margin-bottom: 0.75rem;
+}
+
+.task-checklist-list:not(.task-checklist-list--grouped) .task-checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.btn-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  font-size: var(--text-xs);
+  padding: 0.2rem 0.5rem;
+}
+
+.modal-sheet .checkbox-field {
+  margin-bottom: 0.5rem;
+}
+
+.panel-inset {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--neutral-fill-faint);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  margin-top: 0.2rem;
+}
+
+.task-detail-subheading {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-help);
+  font-weight: 600;
+  text-transform: var(--section-caps-text-transform);
+  letter-spacing: var(--section-caps-letter-spacing);
+  color: var(--text-tertiary);
+}
+
+.task-event-response-heading-row.field-heading-with-req {
+  margin: 0 0 0.5rem;
+}
+
+.task-event-response-heading-row .task-detail-subheading {
+  margin: 0;
+}
+
+.task-detail-prompt-empty {
+  margin: 0;
+}
+
+.task-detail-prompt-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--link);
+  user-select: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    text-decoration-color var(--duration-fast) var(--ease-out);
+}
+
+.task-detail-prompt-summary:hover {
+  color: var(--brand-hover);
+  background: var(--brand-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--brand-border-focus);
+  text-underline-offset: 0.2em;
+}
+
+.task-detail-prompt-summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.task-detail-prompt-summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-detail-prompt-summary::marker {
+  content: "";
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary {
+  border-bottom: 1px solid var(--border-hairline);
+  /* Keep link color when open so “Hide” matches “Show”; hover still applies. */
+  color: var(--link);
+}
+
+.task-detail-prompt-details:not([open]) .task-detail-prompt-summary-close-label {
+  display: none;
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary-open-label {
+  display: none;
+}
+
+.task-detail-prompt-summary-chevron {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--brand-text-strong);
+  transition:
+    transform var(--duration-normal) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.task-detail-prompt-summary:hover .task-detail-prompt-summary-chevron {
+  color: var(--brand-hover);
+}
+
+.task-detail-prompt-details[open] .task-detail-prompt-summary-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-detail-prompt-summary-chevron {
+    transition: none;
+  }
+}
+
+.task-detail-prompt-body {
+  padding: 0.85rem 0.85rem 1rem;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 52rem;
+}
+
+.task-detail-prompt-body p {
+  margin: 0;
+}
+

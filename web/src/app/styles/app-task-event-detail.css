@@ -1,0 +1,3 @@
+/* Task event detail styles split by conversation and metadata surfaces. */
+@import "./app-task-event-conversation.css";
+@import "./app-task-event-meta.css";

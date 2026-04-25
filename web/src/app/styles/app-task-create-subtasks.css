@@ -1,0 +1,125 @@
+.task-create-subtasks {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: none;
+  position: relative;
+}
+
+.task-create-dmap {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: none;
+  position: relative;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.task-create-dmap-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+}
+
+.task-create-subtasks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-create-subtasks-heading-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-create-subtasks-heading {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-create-pending-subtask-row {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.task-create-pending-subtask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--field-label-to-control-gap);
+  min-width: 140px;
+}
+
+.field.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.prompt-field-full {
+  width: 100%;
+  flex-basis: 100%;
+  align-self: stretch;
+  min-width: min(100%, 42rem);
+}
+
+label {
+  font-size: var(--field-label-font-size);
+  font-weight: var(--field-label-font-weight);
+  letter-spacing: var(--field-label-letter-spacing);
+  color: var(--field-label-color);
+  text-transform: none;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: var(--field-control-padding-y) var(--field-control-padding-x);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--field-control-radius);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  transition:
+    border-color var(--duration-short) var(--ease-out),
+    background var(--duration-short) var(--ease-out),
+    box-shadow var(--duration-short) var(--ease-out);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--border-interactive-hover);
+}
+
+select {
+  cursor: pointer;
+  text-transform: capitalize;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  padding-right: 2rem;
+}
+

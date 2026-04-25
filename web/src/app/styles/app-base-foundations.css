@@ -1,0 +1,260 @@
+/* Base layout and globals — tokens live in app-design-tokens.css */
+
+/*
+ * The SPA adopts a console / terminal aesthetic: monospace
+ * everywhere, page titles prefixed with `>`, section headings
+ * prefixed with `$`, and small uppercase pill badges that read
+ * like build / deploy tags. Everything below is opt-in: pages
+ * apply these classes to their existing nodes; nothing changes
+ * automatically so we don't double-prefix headings inside
+ * markdown bodies / event payloads / JSON code wells.
+ *
+ * The prompt glyphs are rendered as ::before pseudo-elements so
+ * screen readers don't announce a literal "$" / ">" before
+ * every heading; sighted users see the prompt, AT users hear the
+ * heading text directly.
+ */
+.term-prompt,
+.term-arrow {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5ch;
+  font-family: var(--font-mono);
+  font-feature-settings: "kern" 1, "calt" 1;
+}
+
+/* When applied to a block-level heading we still want it to
+   participate in the surrounding column flow as a block but
+   keep its glyph + label tightly grouped — flex on a heading
+   keeps the inline alignment without collapsing the row. */
+h1.term-prompt, h2.term-prompt, h3.term-prompt, h4.term-prompt,
+h5.term-prompt, h6.term-prompt,
+h1.term-arrow, h2.term-arrow, h3.term-arrow, h4.term-arrow,
+h5.term-arrow, h6.term-arrow {
+  display: flex;
+}
+
+.term-prompt::before,
+.term-arrow::before {
+  flex-shrink: 0;
+  font-weight: 600;
+  opacity: 0.55;
+  user-select: none;
+  -webkit-user-select: none;
+  speak: none;
+}
+
+.term-prompt::before {
+  content: "$";
+  color: var(--brand-text-strong);
+}
+
+.term-arrow::before {
+  content: ">";
+  color: var(--brand);
+  opacity: 0.85;
+}
+
+/*
+ * Block-level header bar that wraps a heading + optional actions
+ * and renders the prompt + a thin trailing rule. Used to give
+ * "Subtasks", "Done criteria", "Updates" etc. a consistent
+ * console-section feel on the task detail page.
+ */
+.term-section-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 var(--space-3);
+}
+
+.term-section-bar > h2,
+.term-section-bar > h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.term-section-bar__actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/*
+ * Small uppercase pills used as build / status tags
+ * (NEW · LIVE · BETA · DRAFT). Background is a tinted swatch on
+ * the brand or semantic palette; text is monospace small caps.
+ */
+.term-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--neutral-fill-muted);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.term-pill--new {
+  background: rgb(255 247 237);
+  color: rgb(154 52 18);
+  border-color: rgb(254 215 170);
+}
+
+.term-pill--live {
+  background: rgb(236 253 245);
+  color: rgb(4 120 87);
+  border-color: rgb(167 243 208);
+}
+
+.term-pill--live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success-bright);
+  box-shadow: 0 0 0 3px rgb(0 169 110 / 18%);
+  animation: term-pill-live-pulse 2s var(--ease-in-out) infinite;
+}
+
+@keyframes term-pill-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.term-pill--beta,
+.term-pill--brand {
+  background: var(--brand-surface-subtle);
+  color: var(--brand-deep);
+  border-color: var(--brand-border-subtle);
+}
+
+.term-pill--draft {
+  background: rgb(248 250 252);
+  color: rgb(71 85 105);
+  border-color: rgb(226 232 240);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-pill--live::before {
+    animation: none;
+  }
+}
+
+/*
+ * Subtle blinking caret used after the page title or in empty
+ * states to reinforce the console feel without being noisy.
+ */
+.term-caret {
+  display: inline-block;
+  width: 0.55ch;
+  height: 1em;
+  margin-left: 0.35ch;
+  vertical-align: text-bottom;
+  background: var(--brand);
+  opacity: 0.75;
+  animation: term-caret-blink 1.05s steps(1) infinite;
+}
+
+@keyframes term-caret-blink {
+  0%, 49% { opacity: 0.75; }
+  50%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-caret {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  background-attachment: fixed;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-image: radial-gradient(
+        ellipse 100% 55% at 50% -14%,
+        var(--surface-glass-spot),
+        transparent 52%
+      ),
+      radial-gradient(ellipse 48% 42% at 100% 0%, var(--brand-mesh), transparent 48%),
+      radial-gradient(ellipse 42% 38% at 0% 100%, var(--success-mesh), transparent 50%),
+      linear-gradient(168deg, var(--bg-linear-wash-start) 0%, var(--bg-page) 42%, var(--bg-linear-wash-end) 100%);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-image: radial-gradient(ellipse 80% 50% at 50% 0%, var(--bg-mesh-dark-brand-glow), transparent 55%),
+      radial-gradient(ellipse 40% 35% at 100% 100%, var(--bg-mesh-dark-success-glow), transparent 50%);
+  }
+}
+
+/* Keyboard focus — visible ring */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.rich-prompt-editor .ProseMirror:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: var(--text-disabled);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Text links (buttons covered above; modals portal outside #root) */
+#root a:focus-visible,
+.modal-shell a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+

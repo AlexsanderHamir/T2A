@@ -1,0 +1,149 @@
+.task-create-checklist {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: none;
+  position: relative;
+}
+
+.task-create-checklist::before,
+.task-create-subtasks::before,
+.task-create-dmap::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-hairline);
+  opacity: 0.7;
+}
+
+.task-create-checklist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/*
+ * Inside the create modal these "add row" affordances should sit a
+ * full hierarchy step below the primary CTA (Create). On the task
+ * detail page the same buttons are the page's primary affordance, so
+ * we override scoped to .task-create-modal-sheet only.
+ *
+ * `min-width` is what makes the pair read as symmetric: the natural
+ * widths differ ("New criterion" = 13 chars, "New subtask" = 11
+ * chars) which produced visibly mismatched buttons stacked across
+ * the two adjacent section heads. Snapping both to the longer
+ * label's width (~7.5rem covers it at the current var(--text-xs))
+ * keeps the visual rhythm without hard-coding a pixel value that
+ * would drift if the labels are translated. The text inside is still
+ * left-padded by the existing 0.7rem horizontal padding, so the
+ * label hugs the start edge instead of centering inside an
+ * over-wide button.
+ */
+.task-create-modal-sheet button.task-detail-add-checklist-btn,
+.task-create-modal-sheet button.task-detail-add-subtask-btn {
+  min-height: 2rem;
+  /*
+   * 8.5rem (~119px) instead of the previous 7.5rem (~105px). The
+   * longer label "New criterion" (13 monospace chars) was sitting
+   * essentially flush against the interior padding at 7.5rem while
+   * "New subtask" (11 chars) had ~10px of visible whitespace on
+   * either side. Two buttons at the same font-size *look* like they
+   * have different text sizes when one is cramped against its
+   * border and the other is comfortably centered — the eye reads
+   * "denser" as "smaller". The extra rem gives both labels matching
+   * breathing room, which is the only thing that makes them read as
+   * uniform; the explicit `font-size` / `font-weight` /
+   * `letter-spacing` / `line-height` below already pin the actual
+   * type metrics, this rule fixes the *perceived* size mismatch the
+   * user reported.
+   */
+  min-width: 8.5rem;
+  padding: 0.3rem 0.85rem;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  /* Pin line-height explicitly so neither button can drift if a
+   * future ancestor rule touches the inherited line-height — the
+   * inline-flex container would otherwise let inherited values
+   * shift the vertical centering and that, too, reads as a size
+   * difference between two buttons stacked one above the other. */
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--brand-deep);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.task-create-modal-sheet button.task-detail-add-checklist-btn:not(:disabled):hover,
+.task-create-modal-sheet button.task-detail-add-subtask-btn:not(:disabled):hover {
+  background: var(--brand-muted);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.task-create-modal-sheet button.task-detail-add-checklist-btn:focus-visible,
+.task-create-modal-sheet button.task-detail-add-subtask-btn:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--brand-muted);
+}
+
+.task-create-checklist-title-row.field-heading-with-req {
+  margin: 0;
+}
+
+.task-create-checklist-heading {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-create-checklist .task-checklist-surface {
+  margin-top: 0.15rem;
+}
+
+.task-create-checklist-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  padding: 0.28rem 0.55rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--danger-deep);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.task-create-checklist-remove:not(:disabled):hover {
+  background: var(--danger-soft);
+  border-color: var(--danger-control-hover-border);
+  transform: none;
+  filter: none;
+}
+
+.task-create-checklist-remove:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.task-create-checklist-remove:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-danger);
+}
+

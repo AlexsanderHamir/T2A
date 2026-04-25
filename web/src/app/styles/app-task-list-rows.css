@@ -1,0 +1,260 @@
+/* Task list: ink title + arrow, soft hover; Edit/Delete stay secondary + danger */
+.task-list-table tbody tr.task-list-row {
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+/* New-row enter animation (Phase 3b). Applied only to rows whose
+   id wasn't in the component's seenIdsRef on the render in which
+   they first appeared; existing rows get no animation during
+   background refetch / SSE invalidation. `both` fill holds the
+   start frame so there's never a one-frame flicker before the
+   animation kicks in. Tokens come from app-design-tokens.css. */
+.task-list-row--enter {
+  animation: ui-phase-fade-in var(--duration-ui-phase) var(--ease-ui) both;
+}
+
+/* Row exit animation (Phase 3c). RowExitGate holds the outgoing row
+   mounted for --duration-normal so a delete / filter-out fades out
+   instead of snapping. `both` fill keeps the final (invisible)
+   frame painted until unmount. */
+.task-list-row--exit {
+  animation: task-list-row-fade-out var(--duration-normal) var(--ease-in) both;
+  pointer-events: none;
+}
+
+@keyframes task-list-row-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-row--enter,
+  .task-list-row--exit {
+    animation: none;
+  }
+}
+
+@media (hover: hover) {
+  .task-list-table tbody tr.task-list-row:hover {
+    background: var(--chrome-fill-task-row-hover);
+  }
+}
+
+@media (hover: hover) and (prefers-color-scheme: dark) {
+  .task-list-table tbody tr.task-list-row:hover {
+    background: var(--neutral-fill-muted);
+  }
+}
+
+.task-list-table .cell-title-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem 0.2rem 0.4rem;
+  margin: -0.2rem -0.45rem -0.2rem -0.4rem;
+  color: var(--link);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-short) var(--ease-ui), color var(--duration-short) var(--ease-out),
+    transform var(--duration-short) var(--ease-ui);
+}
+
+.task-list-table .cell-title-link.cell-title-link--tree {
+  padding-left: calc(
+    var(--task-list-tree-indent-base) + var(--task-list-tree-depth) * var(--task-list-tree-indent-step)
+  );
+}
+
+.task-list-table .cell-title-link:active {
+  transform: scale(0.99);
+}
+
+@media (hover: hover) {
+  .task-list-table .cell-title-link:hover {
+    background: var(--surface-hover);
+    color: var(--link-hover);
+  }
+}
+
+.task-list-table .cell-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.task-list-table .cell-title-open-hint {
+  flex-shrink: 0;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--brand-text-muted);
+  line-height: 1;
+}
+
+@media (hover: hover) {
+  .task-list-table .cell-title-link:hover .cell-title-open-hint {
+    color: var(--brand-text-on-surface-hover);
+  }
+}
+
+.task-list-table .cell-title-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.cell-pill {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+  border: 1px solid transparent;
+  /* When optimistic mutations or SSE patch a task's status/priority
+     the class list changes in place; without a transition the pill
+     snaps between hues, which reads as a jank frame. Reduced-motion
+     already globally overrides all `transition` properties to `none`
+     in app-base.css, so this respects user preference. */
+  transition:
+    background-color var(--duration-moderate) var(--ease-default),
+    color var(--duration-moderate) var(--ease-default),
+    border-color var(--duration-moderate) var(--ease-default);
+}
+
+/* Status — distinct semantic hues */
+.cell-pill--status-ready {
+  background: var(--pill-ready-bg);
+  color: var(--pill-ready-text);
+  border-color: var(--pill-ready-border);
+}
+
+.cell-pill--status-running {
+  background: var(--brand-muted);
+  color: var(--brand-deep);
+  border-color: var(--brand-border-soft);
+}
+
+.cell-pill--status-blocked {
+  background: var(--warning-surface);
+  color: var(--warning-ink);
+  border-color: var(--warning-border);
+}
+
+.cell-pill--status-review {
+  background: var(--pill-review-bg);
+  color: var(--pill-review-text);
+  border-color: var(--pill-review-border);
+}
+
+.cell-pill--status-done {
+  background: var(--pill-success-fill-bg);
+  color: var(--pill-success-fill-text);
+  border-color: var(--pill-success-fill-border);
+}
+
+.cell-pill--status-failed {
+  background: var(--pill-danger-fill-bg);
+  color: var(--pill-danger-fill-text);
+  border-color: var(--pill-danger-fill-border);
+}
+
+/* Cycle outcome (cycleStatusFillClass) — `aborted` no longer aliases
+   onto status-blocked because the chart palette overhaul re-tinted
+   blocked to amber, which would otherwise make a quiet cancellation
+   look identical to a hot blocked task. The text-pill version uses
+   the neutral stone hue from the chart palette so pills, legend
+   swatches, and bar segments all read as the same "quiet stop". */
+.cell-pill--cycle-aborted {
+  background: rgb(120 113 108 / 12%);
+  color: rgb(87 83 78);
+  border-color: rgb(120 113 108 / 26%);
+}
+@media (prefers-color-scheme: dark) {
+  .cell-pill--cycle-aborted {
+    background: rgb(168 162 158 / 14%);
+    color: rgb(214 211 209);
+    border-color: rgb(168 162 158 / 30%);
+  }
+}
+
+/* Priority — escalation (low → critical) */
+.cell-pill--priority-low {
+  background: var(--pill-priority-low-bg);
+  color: var(--pill-priority-low-text);
+  border-color: var(--pill-priority-low-border);
+}
+
+.cell-pill--priority-medium {
+  background: var(--pill-priority-medium-bg);
+  color: var(--pill-priority-medium-text);
+  border-color: var(--pill-priority-medium-border);
+}
+
+.cell-pill--priority-high {
+  background: var(--pill-priority-high-bg);
+  color: var(--pill-priority-high-text);
+  border-color: var(--pill-priority-high-border);
+}
+
+.cell-pill--priority-critical {
+  background: var(--pill-danger-fill-bg);
+  color: var(--pill-danger-fill-text);
+  border-color: var(--pill-danger-fill-border);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.btn-table {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: 0.35rem 0.75rem;
+  font-size: var(--text-help);
+  border-radius: var(--radius-full);
+}
+
+.task-list-table .actions .btn-table.secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+.task-list-table .actions .btn-table.secondary:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-interactive-hover);
+  transform: none;
+  box-shadow: var(--shadow-neutral-micro);
+}
+
+.task-list-table .actions .btn-table.danger:not(:disabled):hover {
+  transform: none;
+  box-shadow: var(--shadow-danger-destructive-hover);
+}
+
+.muted {
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+  letter-spacing: -0.01em;
+}
+
+/* Table empty only — do not target global .empty-state (breaks compact / task-detail empties). */
+.task-list-empty-cell .empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  font-size: var(--text-base);
+}
+

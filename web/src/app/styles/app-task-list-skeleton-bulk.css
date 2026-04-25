@@ -1,0 +1,223 @@
+.mention-repo-hint {
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0.85rem;
+  font-size: var(--text-help);
+  color: var(--warning-ink);
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.mention-repo-hint--pending {
+  color: var(--text-secondary);
+  background: var(--neutral-fill-subtle);
+  border-color: var(--border-soft);
+}
+
+/* Task list loading — skeleton (DS §11) */
+@keyframes task-list-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.task-list-skeleton {
+  margin: 0 0 var(--space-4);
+}
+
+.task-list-table--skeleton tbody tr {
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .task-list-table--skeleton tbody tr:hover {
+    background: transparent;
+  }
+}
+
+.skeleton-block {
+  display: block;
+  height: 0.875rem;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    105deg,
+    var(--bg-subtle) 0%,
+    color-mix(in srgb, var(--bg-elevated) 55%, var(--border-soft)) 45%,
+    var(--bg-subtle) 90%
+  );
+  background-size: 220% 100%;
+  animation: task-list-skeleton-shimmer var(--duration-skeleton) var(--ease-in-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
+.skeleton-block--title {
+  width: min(72%, 14rem);
+  height: 1rem;
+}
+
+.skeleton-block--pill {
+  width: 4.25rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-block--pill-narrow {
+  width: 3.25rem;
+}
+
+.skeleton-block--prompt {
+  width: min(90%, 10rem);
+}
+
+.skeleton-block--btn {
+  display: inline-block;
+  vertical-align: middle;
+  width: 3rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+}
+
+.task-list-skeleton-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+    background: var(--bg-subtle);
+  }
+}
+
+
+
+/* ─────────── Bulk selection (Stage 5) ─────────── */
+/* Sticky leftmost checkbox column on the task list. The column is
+   narrow (just enough for a checkbox + a touch target) so the title
+   column keeps its real estate. */
+.task-list-table .task-list-select-col {
+  width: 2.5rem;
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 0;
+  text-align: center;
+}
+
+.task-list-table .task-list-select-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--brand-fill);
+}
+
+.task-list-table tr.task-list-row[data-selected="true"] {
+  background: var(--surface-selected, var(--bg-subtle));
+}
+
+@media (hover: hover) {
+  .task-list-table tr.task-list-row[data-selected="true"]:hover {
+    background: var(--surface-selected-hover, var(--chrome-fill-task-row-hover));
+  }
+}
+
+/* Sticky bottom action bar shown only when at least one row is
+   selected. Slides in from the bottom; respects reduced-motion.
+   Uses a brand-tinted gradient + lift so it doesn’t disappear against
+   the same `--bg-elevated` as `.panel`. */
+.task-list-bulk-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.85rem;
+  padding: 0.65rem 1.1rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 11%, var(--bg-elevated)) 0%,
+    color-mix(in srgb, var(--brand) 5%, var(--bg-subtle)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border-hairline));
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg);
+  z-index: 2;
+  animation: task-list-bulk-bar-slide-in var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+.task-list-bulk-bar-summary {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-list-bulk-bar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/*
+ * Global `button.secondary` is transparent (ghost). On the brand-tinted
+ * bulk bar that hides Clear / Cancel until hover. Solid elevated surface
+ * by default; hover shifts to `--bg-subtle` (same intent as global hover).
+ */
+.task-list-bulk-bar-actions button.secondary {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (hover: hover) {
+  .task-list-bulk-bar-actions button.secondary:not(:disabled):hover {
+    background: var(--bg-subtle);
+    border-color: var(--border-interactive-hover);
+    box-shadow: var(--shadow-sm);
+    transform: none;
+  }
+}
+
+.task-list-bulk-error {
+  margin-top: 0.5rem;
+}
+
+@keyframes task-list-bulk-bar-slide-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-bulk-bar {
+    animation: none;
+  }
+}
+
+/* Bulk reschedule modal sheet shares the schedule picker layout
+   from the task-detail edit modal; only the spacing differs
+   slightly because the bulk modal carries a longer descriptive
+   paragraph. */
+.task-bulk-reschedule-modal-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-bulk-reschedule-modal-err {
+  margin-top: 0.25rem;
+}

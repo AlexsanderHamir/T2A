@@ -1,0 +1,191 @@
+/*
+ * Full-page render-error fallback (DS §11 — friendly illustration, clear
+ * message, primary recovery action). Renders inside `<AppErrorBoundary />`
+ * both at the SPA root (no chrome) and inside a routed page (under nav),
+ * so it centers within whatever space it gets.
+ */
+.app-error-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: min(70vh, 36rem);
+  padding: var(--space-8) var(--space-4);
+  box-sizing: border-box;
+}
+
+.app-error-fallback__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 26rem;
+  padding: var(--space-8) var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  animation: app-error-fallback-enter var(--duration-slow) var(--ease-out) both;
+}
+
+.app-error-fallback__icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-full);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.app-error-fallback__glyph {
+  display: block;
+}
+
+.app-error-fallback__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.app-error-fallback__description {
+  margin: 0;
+  max-width: 22rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.app-error-fallback__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.app-error-fallback__card button.app-error-fallback__cta,
+.app-error-fallback__card button.app-error-fallback__secondary {
+  min-height: var(--touch-target-min);
+  min-width: 6rem;
+  padding: 0.5rem 1.15rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: var(--text-button-tracking);
+  cursor: pointer;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.app-error-fallback__card button.app-error-fallback__cta {
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: 1px solid var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-error-fallback__card button.app-error-fallback__cta:not(:disabled):hover {
+  background: var(--brand-hover);
+  box-shadow: var(--shadow-md);
+  transform: none;
+  filter: none;
+}
+
+.app-error-fallback__card button.app-error-fallback__cta:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-error-fallback__card button.app-error-fallback__cta:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+}
+
+.app-error-fallback__card button.app-error-fallback__secondary {
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+.app-error-fallback__card button.app-error-fallback__secondary:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-interactive-hover);
+  box-shadow: none;
+  transform: none;
+  filter: none;
+}
+
+.app-error-fallback__card button.app-error-fallback__secondary:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.app-error-fallback__card button.app-error-fallback__secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+@keyframes app-error-fallback-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-error-fallback__card {
+    animation: none;
+  }
+
+  .app-error-fallback__card button.app-error-fallback__cta:not(:disabled):active,
+  .app-error-fallback__card button.app-error-fallback__secondary:not(:disabled):active {
+    transform: none;
+  }
+}
+
+.panel {
+  position: relative;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--layout-panel-padding-y) var(--layout-gutter-x);
+  margin-bottom: var(--layout-gutter-x);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+@media (hover: hover) and (prefers-color-scheme: light) {
+  .panel:hover {
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.panel.panel--busy {
+  position: relative;
+}
+
+.panel h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-4);
+  color: var(--text-primary);
+}
+

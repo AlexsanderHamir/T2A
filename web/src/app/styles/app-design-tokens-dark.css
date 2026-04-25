@@ -1,0 +1,141 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #f5f5f5;
+    --text-secondary: rgb(160 160 160 / 92%);
+    --text-tertiary: rgb(96 96 96 / 95%);
+    --text-disabled: rgb(82 82 82 / 88%);
+    --bg-page: #0a0a0a;
+    --bg-elevated: #141414;
+    --bg-subtle: #1a1a1a;
+    --stream-dot-idle: rgb(255 255 255 / 22%);
+    --success-thread-surface: rgb(16 185 129 / 16%);
+    --success-thread-surface-soft: rgb(16 185 129 / 12%);
+    --success-rich-focus-border: rgb(52 211 153 / 45%);
+    --surface-repo-file-chip-gradient: linear-gradient(180deg, rgb(40 40 42) 0%, rgb(32 32 34) 100%);
+    --surface-create-editor-gradient: linear-gradient(180deg, rgb(28 28 28) 0%, rgb(22 22 22 / 94%) 100%);
+
+    --border-hairline: rgb(255 255 255 / 8%);
+    --border-soft: rgb(255 255 255 / 12%);
+    --border-strong: rgb(255 255 255 / 14%);
+    --border-interactive-hover: rgb(255 255 255 / 16%);
+    /* Lift + wells on dark surfaces (DS §14) */
+    --neutral-fill-faint: rgb(255 255 255 / 4%);
+    --neutral-fill-ghost: rgb(255 255 255 / 5%);
+    --neutral-fill-muted: rgb(255 255 255 / 6%);
+    --neutral-fill-subtle: rgb(255 255 255 / 8%);
+    --neutral-border-soft: rgb(255 255 255 / 14%);
+    --neutral-lip-shadow: 0 1px 0 rgb(255 255 255 / 6%);
+    --shadow-neutral-micro: 0 1px 2px rgb(0 0 0 / 48%);
+
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 40%);
+    --shadow-sm: 0 1px 3px rgb(0 0 0 / 45%), 0 1px 2px rgb(0 0 0 / 35%);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 45%);
+    --shadow-lg: 0 12px 24px rgb(0 0 0 / 50%);
+    --shadow-xl: 0 20px 40px rgb(0 0 0 / 55%);
+    --shadow-2xl: 0 24px 48px rgb(0 0 0 / 60%);
+    --shadow-modal-sheet: 0 -8px 36px rgb(0 0 0 / 45%);
+    --shadow-card: var(--shadow-sm);
+    --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
+    --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);
+    --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 8%) inset;
+    /* Slate chrome tokens: white hairlines + black cast shadows on dark UI (DS §14) */
+    --shadow-chrome-xs: 0 1px 2px rgb(0 0 0 / 52%);
+    --shadow-chrome-xs-soft: 0 1px 2px rgb(0 0 0 / 44%);
+    --shadow-chrome-sm: 0 1px 3px rgb(0 0 0 / 58%);
+    --shadow-chrome-raised: 0 2px 12px rgb(0 0 0 / 55%);
+    --shadow-chrome-float: 0 4px 20px rgb(0 0 0 / 60%);
+    --border-chrome-muted: rgb(255 255 255 / 14%);
+    --border-chrome-soft: rgb(255 255 255 / 18%);
+    --border-chrome-hairline: rgb(255 255 255 / 10%);
+    --border-chrome-tint: rgb(255 255 255 / 12%);
+    --border-chrome-surface: rgb(255 255 255 / 13%);
+    --border-chrome-spinner: rgb(255 255 255 / 18%);
+    --chrome-fill-wash: rgb(255 255 255 / 8%);
+    --chrome-fill-muted: rgb(255 255 255 / 5%);
+    --surface-glass-pill: linear-gradient(180deg, rgb(42 42 42) 0%, rgb(30 30 30) 100%);
+    --surface-glass-pill-sync: linear-gradient(180deg, rgb(40 40 40) 0%, rgb(34 34 34) 100%);
+    --chrome-glass-lip-inset: 0 1px 0 rgb(255 255 255 / 6%) inset;
+    --surface-glass-frost: rgb(255 255 255 / 6%);
+    --surface-glass-toolbar: rgb(255 255 255 / 8%);
+    --surface-dropdown-panel: linear-gradient(180deg, rgb(30 30 30) 0%, rgb(24 24 24) 100%);
+    --surface-thread-msg-glass: rgb(255 255 255 / 5%);
+    --border-chrome-checklist: rgb(255 255 255 / 22%);
+    --chrome-icon-muted: rgb(200 200 200 / 48%);
+
+    --brand-muted: rgb(var(--brand-rgb) / 18%);
+    --brand-mesh: rgb(var(--brand-rgb) / 10%);
+    --brand-focus: rgb(var(--brand-rgb) / 45%);
+    --focus-ring: var(--brand-focus);
+    /* Dark: same RGB, higher alpha so hairlines + tints read on near-black (DS §14) */
+    --brand-border-faint: rgb(var(--brand-rgb) / 22%);
+    --brand-border-subtle: rgb(var(--brand-rgb) / 26%);
+    --brand-border-soft: rgb(var(--brand-rgb) / 30%);
+    --brand-border-cta: rgb(var(--brand-rgb) / 36%);
+    --brand-border-focus: rgb(var(--brand-rgb) / 45%);
+    --brand-border-emphasis: rgb(var(--brand-rgb) / 50%);
+    --brand-text-muted: rgb(var(--brand-rgb) / 55%);
+    --brand-text-strong: rgb(var(--brand-rgb) / 72%);
+    --brand-text-on-surface-hover: rgb(var(--brand-rgb) / 82%);
+    --brand-surface-faint: rgb(var(--brand-rgb) / 10%);
+    --brand-surface-subtle: rgb(var(--brand-rgb) / 14%);
+
+    --success-soft: rgb(0 169 110 / 18%);
+    --success-border: rgb(0 169 110 / 35%);
+    --success-mesh: rgb(0 169 110 / 8%);
+
+    --danger-soft: rgb(239 68 68 / 16%);
+    --danger-border: rgb(248 113 113 / 28%);
+    --danger-border-strong: rgb(248 113 113 / 40%);
+    --danger-muted-hover-fill: rgb(248 113 113 / 12%);
+    --danger-muted-hover-border: rgb(248 113 113 / 55%);
+    --danger-control-hover-border: rgb(248 113 113 / 22%);
+    --shadow-focus-danger: 0 0 0 3px rgb(248 113 113 / 18%);
+    --danger-on-subtle-text: #fecaca;
+    --danger-badge-border: rgb(248 113 113 / 26%);
+    --color-error-subtle: rgb(127 29 29 / 35%);
+    --color-warning-subtle: rgb(120 53 15 / 35%);
+    --warning-soft: rgb(245 158 11 / 20%);
+    --warning-ink: rgb(252 211 77);
+    --warning-surface: rgb(251 191 36 / 12%);
+    --warning-border: rgb(251 191 36 / 42%);
+    --warning-border-soft: rgb(251 191 36 / 28%);
+    --warning-chip-bg: rgb(251 191 36 / 14%);
+    --warning-chip-border: rgb(251 191 36 / 30%);
+    --warning-attention-border: rgb(251 191 36 / 32%);
+    --warning-attention-gradient-start: rgb(251 191 36 / 12%);
+    --warning-attention-gradient-end: rgb(251 191 36 / 8%);
+    --info-soft: rgb(59 130 246 / 22%);
+    --color-info-subtle: rgb(30 58 138 / 38%);
+    --pill-ready-bg: rgb(148 163 184 / 14%);
+    --pill-ready-text: rgb(226 232 240);
+    --pill-ready-border: rgb(148 163 184 / 26%);
+    --pill-review-bg: rgb(139 92 246 / 14%);
+    --pill-review-text: rgb(196 181 253);
+    --pill-review-border: rgb(139 92 246 / 30%);
+    --pill-success-fill-bg: rgb(16 185 129 / 14%);
+    --pill-success-fill-text: rgb(110 231 183);
+    --pill-success-fill-border: rgb(52 211 153 / 35%);
+    --pill-danger-fill-bg: rgb(244 63 94 / 14%);
+    --pill-danger-fill-text: rgb(253 164 175);
+    --pill-danger-fill-border: rgb(251 113 133 / 38%);
+    --pill-priority-low-bg: rgb(148 163 184 / 10%);
+    --pill-priority-low-text: rgb(203 213 225);
+    --pill-priority-low-border: rgb(148 163 184 / 22%);
+    --pill-priority-medium-bg: rgb(56 189 248 / 12%);
+    --pill-priority-medium-text: rgb(125 211 252);
+    --pill-priority-medium-border: rgb(56 189 248 / 32%);
+    --pill-priority-high-bg: rgb(251 146 60 / 12%);
+    --pill-priority-high-text: rgb(253 186 116);
+    --pill-priority-high-border: rgb(251 146 60 / 32%);
+
+    --mention-syntax-keyword: #b19cff;
+    --mention-syntax-string: #69d3a8;
+    --mention-syntax-number: #7fb1ff;
+    --mention-syntax-function: #ffbe7a;
+    --mention-code-bg-mix: #0f1624;
+
+    --overlay-backdrop: rgb(0 0 0 / 58%);
+
+    color-scheme: dark;
+  }
+}

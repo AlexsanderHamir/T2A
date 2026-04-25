@@ -1,0 +1,135 @@
+.mention-wrap {
+  position: relative;
+}
+
+/* Tippy default theme uses #333 + padding — neutralize so inner panel matches app chrome */
+.tippy-box[data-theme~="repo-files-popover"] {
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.tippy-box[data-theme~="repo-files-popover"] .tippy-content {
+  padding: 0;
+}
+
+.tippy-box[data-theme~="repo-files-popover"] .tippy-arrow {
+  display: none;
+}
+
+.mention-dropdown {
+  position: absolute;
+  z-index: var(--z-mention-popover);
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(50vh, 20rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.tiptap-suggestion-list__head {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-subtle);
+}
+
+.mention-dropdown ul[role="listbox"] {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  overflow-y: auto;
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.tiptap-suggestion-list__empty {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.tiptap-suggestion-list__path {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-help);
+  font-weight: 450;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.mention-option {
+  margin: 0;
+  padding: 0;
+}
+
+.mention-option button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transform: none;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Replace OS / browser blue focus with brand (matches primary actions elsewhere) */
+.mention-option button:focus {
+  outline: none;
+}
+
+.mention-option button:focus-visible {
+  background: var(--brand-muted);
+  box-shadow: var(--shadow-focus);
+}
+
+.mention-option button:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+}
+
+@media (hover: hover) {
+  .mention-option button:hover:not(:focus-visible) {
+    background: var(--chrome-fill-table-row-hover);
+  }
+}
+
+.mention-option.highlight button {
+  background: var(--brand-muted);
+  color: var(--text-primary);
+}
+
+.mention-option.highlight button:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+

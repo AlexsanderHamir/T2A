@@ -1,0 +1,190 @@
+/* Extra scroll room below the table so short lists still allow page scroll (e.g. long filter dropdowns). */
+.task-list-content {
+  padding-bottom: min(14rem, 42vh);
+}
+
+.task-list-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: var(--space-4);
+}
+
+.task-list-section-head h2 {
+  margin: 0;
+}
+
+.task-list-section-actions {
+  flex-shrink: 0;
+}
+
+.task-list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-subtle) 62%, var(--bg-elevated));
+}
+
+.task-list-filter-field {
+  min-width: 8rem;
+}
+
+.task-list-filter-field .field--custom-select--compact {
+  min-width: 10rem;
+}
+
+.task-list-search-field {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+
+.task-list-search-field input[type="search"] {
+  width: 100%;
+}
+
+.task-list-table-wrap {
+  position: relative;
+  transition: opacity var(--duration-short) var(--ease-out);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-xs);
+}
+
+/*
+ * Shared `.table-wrap` (app-custom-select.css) adds horizontal padding +
+ * negative margin so generic tables align with surrounding copy. That
+ * inset exposes this container's background beside the `<table>`, so
+ * selected-row `<tr>` backgrounds (which only cover the table grid) show
+ * thin white strips left/right. Flush the scroll box for the task list.
+ */
+.task-list-table-wrap.table-wrap {
+  margin: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-table-wrap {
+    transition: none;
+  }
+
+  .task-list-phase-msg,
+  .task-list-content--enter,
+  .stream-pill--sync-enter {
+    animation: none;
+  }
+
+  .draft-list-row {
+    transition: none;
+  }
+}
+
+.task-list-empty-row td {
+  border-bottom: none;
+}
+
+.task-list-empty-cell {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  vertical-align: middle;
+}
+
+.prompt-preview {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.stack-tight {
+  margin-top: 0.85rem;
+}
+
+.stack-tight-zero {
+  margin-top: 0;
+}
+
+.stack-row-actions {
+  margin-top: 1rem;
+}
+
+.draft-list-row {
+  opacity: 1;
+  max-height: 5rem;
+  overflow: hidden;
+  transform: translateY(0);
+  transition:
+    opacity var(--duration-moderate) var(--ease-out),
+    transform var(--duration-moderate) var(--ease-out),
+    max-height var(--duration-moderate) var(--ease-out),
+    margin var(--duration-moderate) var(--ease-out);
+}
+
+.draft-list-row--exit {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  transform: translateY(calc(var(--space-2) * -1));
+  pointer-events: none;
+}
+
+.confirm-dialog {
+  border: 1px solid var(--danger-destructive-border);
+  box-shadow: var(--shadow-md);
+}
+
+.confirm-dialog h2 {
+  margin-top: 0;
+}
+
+/* Primary "what will happen" statement — strong but not screaming.
+   The task title inside is bolded so the eye lands on the noun being
+   deleted, not on decorative chrome. Body weight, normal text colour. */
+.confirm-dialog__statement {
+  margin: var(--space-2) 0 0;
+  color: var(--text-primary);
+}
+
+/* Cascade-impact callout. Only rendered when the delete fans out to
+   descendants; uses the shared --warning-* token family so it matches
+   the rest of the app's "heads up" surfaces. The triangle icon is an
+   inline SVG so we avoid pulling an icon dep just for one screen. */
+.confirm-dialog__cascade {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+  font-size: var(--text-help);
+  line-height: 1.4;
+}
+
+.confirm-dialog__cascade-icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  color: var(--warning-ink);
+}
+
+/* Bottom caption — the "this is permanent" reminder lives here so it
+   does not compete with the primary statement for attention. */
+.confirm-dialog__footnote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-help);
+  color: var(--text-secondary);
+}
+

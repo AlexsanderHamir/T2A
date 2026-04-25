@@ -1,0 +1,119 @@
+
+/* —— Viewport modals (edit / delete) —— */
+.modal-root {
+  --modal-control-size: 2.25rem;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(var(--layout-modal-safe-padding), env(safe-area-inset-top))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-right))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-bottom))
+    max(var(--layout-modal-safe-padding), env(safe-area-inset-left));
+}
+
+.modal-root--nested {
+  z-index: var(--z-modal-nested);
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  background: var(--overlay-backdrop);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+.modal-shell {
+  position: relative;
+  z-index: var(--z-modal-content);
+  width: min(100%, 26rem);
+  max-height: min(90vh, 880px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-shell--wide {
+  width: min(100%, 52rem);
+}
+
+/* Modal scrollbars: match app chrome instead of OS-default contrast spikes. */
+.modal-shell,
+.modal-shell > .panel {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border-strong) 78%, transparent)
+    transparent;
+}
+
+.modal-shell::-webkit-scrollbar,
+.modal-shell > .panel::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.modal-shell::-webkit-scrollbar-track,
+.modal-shell > .panel::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: var(--radius-full);
+}
+
+.modal-shell::-webkit-scrollbar-thumb,
+.modal-shell > .panel::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  background: color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+@media (hover: hover) {
+  .modal-shell:hover::-webkit-scrollbar-thumb,
+  .modal-shell > .panel:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-strong) 90%, var(--text-tertiary));
+  }
+}
+
+.modal-shell:focus-within::-webkit-scrollbar-thumb,
+.modal-shell > .panel:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand) 46%, var(--border-strong));
+}
+
+/* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
+@media (min-width: var(--bp-md)) {
+  .modal-shell {
+    border-radius: var(--radius-xl);
+    /* Keep desktop scrolling on shell, but hard-clip paint to avoid corner jitter. */
+    clip-path: inset(0 round var(--radius-xl));
+  }
+
+  .modal-shell > .panel {
+    margin-bottom: 0;
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+  }
+
+  @media (hover: hover) and (prefers-color-scheme: light) {
+    .modal-shell > .panel:hover {
+      border-color: transparent;
+      box-shadow: var(--shadow-2xl);
+    }
+  }
+}
+

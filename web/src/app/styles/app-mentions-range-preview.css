@@ -1,0 +1,277 @@
+.mention-range-panel {
+  margin-top: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  max-width: min(100%, 44rem);
+}
+
+.mention-range-modal {
+  width: min(100%, 56rem);
+}
+
+.mention-range-modal h2 {
+  margin: 0;
+}
+
+.mention-range-modal-desc {
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.mention-range-modal .mention-range-panel {
+  margin-top: 0;
+  max-width: none;
+}
+
+.mention-range-header {
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.mention-range-path {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.mention-range-path code {
+  display: inline-block;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-primary);
+  background: var(--neutral-fill-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  word-break: break-all;
+}
+
+.mention-range-hint {
+  margin: var(--space-2) 0 0;
+  line-height: 1.45;
+}
+
+.mention-range-status {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.mention-range-loading {
+  pointer-events: none;
+}
+
+.mention-range-loading-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.mention-range-loading-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  min-height: 14rem;
+  max-height: min(50vh, 26rem);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--neutral-fill-subtle));
+  overflow: hidden;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n + 1) {
+  width: 72%;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n + 2) {
+  width: 88%;
+}
+
+.mention-range-loading-shell .skeleton-block:nth-child(3n) {
+  width: 64%;
+}
+
+.mention-range-loading-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.mention-range-loading-inputs .skeleton-block {
+  width: 6.5rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+}
+
+.mention-range-banner {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-help);
+  line-height: 1.45;
+  color: var(--warning-ink);
+  background: var(--warning-surface);
+  border: 1px solid var(--warning-border-soft);
+  border-radius: var(--radius-md);
+}
+
+.mention-range-banner--soft {
+  color: var(--text-secondary);
+  background: var(--neutral-fill-subtle);
+  border-color: var(--border-soft);
+}
+
+.mention-range-preview-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-help);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+}
+
+.mention-range-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--neutral-fill-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full);
+}
+
+.mention-range-content {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+}
+
+.mention-file-preview-shell {
+  position: relative;
+  display: grid;
+  margin: 0 0 var(--space-3);
+  min-height: 0;
+  max-height: min(50vh, 26rem);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--neutral-fill-subtle));
+  overflow: hidden;
+}
+
+.mention-file-preview-code {
+  grid-area: 1 / 1;
+  margin: 0;
+  padding: var(--space-3);
+  min-height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-help);
+  line-height: 1.55;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  pointer-events: none;
+}
+
+.mention-file-preview-code code {
+  display: block;
+  min-width: max-content;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre;
+  transform: translate(0, 0);
+  will-change: transform;
+}
+
+.mention-file-preview {
+  grid-area: 1 / 1;
+  display: block;
+  width: 100%;
+  height: calc((var(--mention-preview-lines, 10) * 1.55em) + (var(--space-6) * 1.5));
+  min-height: 11rem;
+  max-height: min(50vh, 26rem);
+  padding: var(--space-3);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-help);
+  line-height: 1.55;
+  color: transparent;
+  caret-color: transparent;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  resize: none;
+  box-shadow: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  white-space: pre;
+  z-index: 1;
+}
+
+.mention-file-preview::selection {
+  background: color-mix(in srgb, var(--brand) 30%, transparent);
+}
+
+.mention-file-preview::-webkit-scrollbar {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.mention-file-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mention-file-preview::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-strong) 78%, transparent);
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: padding-box;
+}
+
+@media (hover: hover) {
+  .mention-file-preview:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--text-tertiary) 72%, transparent);
+    background-clip: padding-box;
+  }
+}
+
+.mention-file-preview:focus-visible::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand) 52%, var(--border-strong));
+  background-clip: padding-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mention-file-preview {
+    scrollbar-color: color-mix(in srgb, var(--border-strong) 82%, var(--text-tertiary)) transparent;
+  }
+
+  .mention-file-preview::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-strong) 88%, var(--text-tertiary));
+    background-clip: padding-box;
+  }
+
+  @media (hover: hover) {
+    .mention-file-preview:hover::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--text-secondary) 72%, var(--brand));
+      background-clip: padding-box;
+    }
+  }
+}

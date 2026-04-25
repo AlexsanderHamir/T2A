@@ -1,0 +1,131 @@
+.mention-file-preview-code .token.comment,
+.mention-file-preview-code .token.prolog,
+.mention-file-preview-code .token.doctype,
+.mention-file-preview-code .token.cdata {
+  color: var(--text-tertiary);
+}
+
+.mention-file-preview-code .token.keyword,
+.mention-file-preview-code .token.operator,
+.mention-file-preview-code .token.atrule,
+.mention-file-preview-code .token.tag {
+  color: var(--mention-syntax-keyword);
+}
+
+.mention-file-preview-code .token.string,
+.mention-file-preview-code .token.attr-value,
+.mention-file-preview-code .token.char,
+.mention-file-preview-code .token.inserted {
+  color: var(--mention-syntax-string);
+}
+
+.mention-file-preview-code .token.number,
+.mention-file-preview-code .token.boolean,
+.mention-file-preview-code .token.constant {
+  color: var(--mention-syntax-number);
+}
+
+.mention-file-preview-code .token.function,
+.mention-file-preview-code .token.class-name {
+  color: var(--mention-syntax-function);
+}
+
+.mention-file-preview-code .token.punctuation {
+  color: color-mix(in srgb, var(--text-primary) 72%, var(--text-secondary));
+}
+
+@media (prefers-color-scheme: dark) {
+  .mention-file-preview-code {
+    background: color-mix(
+      in srgb,
+      var(--bg-elevated) 88%,
+      var(--mention-code-bg-mix)
+    );
+  }
+
+  .mention-file-preview-code .token.keyword,
+  .mention-file-preview-code .token.operator,
+  .mention-file-preview-code .token.atrule,
+  .mention-file-preview-code .token.tag {
+    color: var(--mention-syntax-keyword);
+  }
+
+  .mention-file-preview-code .token.string,
+  .mention-file-preview-code .token.attr-value,
+  .mention-file-preview-code .token.char,
+  .mention-file-preview-code .token.inserted {
+    color: var(--mention-syntax-string);
+  }
+
+  .mention-file-preview-code .token.number,
+  .mention-file-preview-code .token.boolean,
+  .mention-file-preview-code .token.constant {
+    color: var(--mention-syntax-number);
+  }
+
+  .mention-file-preview-code .token.function,
+  .mention-file-preview-code .token.class-name {
+    color: var(--mention-syntax-function);
+  }
+}
+
+.mention-range-inputs {
+  margin: 0 0 var(--space-3);
+}
+
+.mention-range-inputs .field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mention-range-inputs .field span {
+  font-size: var(--text-help);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mention-range-inputs .field input {
+  min-height: var(--touch-target-min);
+}
+
+.mention-range-selection {
+  margin: 0;
+  font-size: var(--text-help);
+  color: var(--text-secondary);
+}
+
+.mention-range-selection strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mention-range-binary-copy {
+  margin: 0 0 var(--space-3);
+}
+
+.mention-range-actions {
+  margin-top: 0;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.mention-range-row {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mention-range-row .field input {
+  width: 5rem;
+}
+
+.mention-range-action-primary {
+  order: 2;
+}
+
+@media (max-width: var(--bp-md-max)) {
+  .mention-range-modal .mention-range-panel {
+    padding: var(--space-4);
+  }
+}
+

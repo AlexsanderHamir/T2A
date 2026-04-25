@@ -1,0 +1,137 @@
+/* Primary: requeue failed task for another agent run (PATCH → ready). */
+button.task-detail-btn-requeue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.5rem 1.15rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: var(--text-button-tracking);
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: 1px solid var(--brand-border-cta);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-requeue:not(:disabled):hover {
+  background: var(--brand-hover);
+  filter: none;
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+button.task-detail-btn-requeue:not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+button.task-detail-btn-requeue:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+}
+
+button.task-detail-btn-requeue:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Secondary actions: flat surface + soft outer shadow (no inset “bevel” that reads as a bottom edge). */
+button.task-detail-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-edit:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  transform: none;
+  filter: none;
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+button.task-detail-btn-edit:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+button.task-detail-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-on-brand);
+  background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
+  border: 1px solid var(--danger-delete-border);
+  box-shadow: var(--shadow-danger-delete-xs);
+  transition: filter var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-delete:not(:disabled):hover {
+  /* Reassert gradient: global `button:not(.custom-select-trigger):hover` sets brand background. */
+  background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
+  filter: brightness(1.04);
+  transform: none;
+  box-shadow: var(--shadow-danger-delete-sm);
+}
+
+button.task-detail-btn-delete:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-danger);
+}
+
+.task-detail-section {
+  padding: 1.2rem 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-detail-section-heading {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-help);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-detail-section-hint {
+  margin: -0.15rem 0 0.75rem;
+  font-size: var(--text-help);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  max-width: 40rem;
+}
+
+.task-detail-panel input[type="text"],
+.task-detail-panel input:not([type]) {
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-inset-field);
+}
+
+.task-detail-panel input[type="text"]:hover,
+.task-detail-panel input:not([type]):hover {
+  border-color: var(--border-chrome-soft);
+}
+

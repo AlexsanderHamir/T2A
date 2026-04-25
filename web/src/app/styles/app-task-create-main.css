@@ -1,0 +1,3 @@
+/* Task create main styles split by form shell and checklist composition. */
+@import "./app-task-create-form.css";
+@import "./app-task-create-checklist.css";
