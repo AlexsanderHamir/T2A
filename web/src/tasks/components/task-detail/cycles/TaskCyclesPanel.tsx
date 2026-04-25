@@ -4,6 +4,7 @@ import {
   EmptyState,
   EmptyStateTimelineGlyph,
 } from "@/shared/EmptyState";
+import { useNow } from "@/shared/useNow";
 import {
   cycleStatusLabel,
   cycleStatusFillClass,
@@ -160,15 +161,12 @@ function CurrentPhaseTicker({
   cycle: TaskCycle;
 }) {
   const detailQuery = useTaskCycle(taskId, cycle.id);
+  const now = useNow({ enabled: cycle.status === "running" });
 
   return (
     <div
       className="task-cycle-ticker"
       data-testid="task-cycle-ticker"
-      // Polite live region: the agent updates this frequently and
-      // we don't want to interrupt screen readers, just announce
-      // the new phase when it changes.
-      aria-live="polite"
     >
       <div className="task-cycle-ticker-row">
         <span className="task-cycle-ticker-eyebrow">Live</span>
@@ -191,13 +189,14 @@ function CurrentPhaseTicker({
           className="task-cycle-ticker-elapsed"
           data-testid="task-cycle-ticker-elapsed"
         >
-          Started {formatDurationSeconds(elapsedSeconds(cycle.started_at))} ago
+          Started {formatDurationSeconds(elapsedSeconds(cycle.started_at, now))} ago
         </span>
       </div>
       <CurrentPhaseLine
         taskId={taskId}
         cycleId={cycle.id}
         detailQuery={detailQuery}
+        now={now}
       />
     </div>
   );
@@ -213,10 +212,12 @@ function CurrentPhaseLine({
   taskId,
   cycleId,
   detailQuery,
+  now,
 }: {
   taskId: string;
   cycleId: string;
   detailQuery: ReturnType<typeof useTaskCycle>;
+  now: number;
 }) {
   if (detailQuery.isPending) {
     return (
@@ -274,12 +275,14 @@ function CurrentPhaseLine({
         className="task-cycle-ticker-phase task-cycle-ticker-phase--running"
         data-testid="task-cycle-ticker-phase"
       >
-        Now running:{" "}
-        <span className={`cell-pill ${phaseStatusFillClass(runningPhase.status)}`}>
-          {phaseLabel(runningPhase.phase)}
+        <span aria-live="polite">
+          Now running:{" "}
+          <span className={`cell-pill ${phaseStatusFillClass(runningPhase.status)}`}>
+            {phaseLabel(runningPhase.phase)}
+          </span>
         </span>{" "}
-        <span className="task-cycle-ticker-phase-elapsed">
-          for {formatDurationSeconds(elapsedSeconds(runningPhase.started_at))}
+        <span className="task-cycle-ticker-phase-elapsed" aria-hidden="true">
+          for {formatDurationSeconds(elapsedSeconds(runningPhase.started_at, now))}
         </span>
       </p>
       <PhaseProgress
@@ -456,6 +459,9 @@ function CycleRowPhases({
   cycleId: string;
 }) {
   const detailQuery = useTaskCycle(taskId, cycleId);
+  const phases = detailQuery.data?.phases ?? [];
+  const hasRunningPhase = phases.some((phase) => phase.status === "running");
+  const now = useNow({ enabled: hasRunningPhase });
 
   if (detailQuery.isPending) {
     return (
@@ -471,7 +477,6 @@ function CycleRowPhases({
       </p>
     );
   }
-  const phases = detailQuery.data.phases;
   if (phases.length === 0) {
     return (
       <p className="task-cycle-row-phases muted">
@@ -496,7 +501,7 @@ function CycleRowPhases({
             {phaseStatusLabel(phase.status)}
           </span>
           <span className="task-cycle-phase-duration muted">
-            {formatPhaseDuration(phase)}
+            {formatPhaseDuration(phase, now)}
           </span>
           {phase.summary ? (
             <span className="task-cycle-phase-summary">{phase.summary}</span>
@@ -542,10 +547,10 @@ function pickLatestPhase(
   return best;
 }
 
-function elapsedSeconds(isoStart: string): number {
+function elapsedSeconds(isoStart: string, now: number): number {
   const start = Date.parse(isoStart);
   if (!Number.isFinite(start)) return 0;
-  return Math.max(0, (Date.now() - start) / 1000);
+  return Math.max(0, (now - start) / 1000);
 }
 
 function formatStartedToEnded(cycle: TaskCycle): string {
@@ -571,10 +576,10 @@ function formatLocalTime(iso: string): string {
   });
 }
 
-function formatPhaseDuration(phase: TaskCyclePhase): string {
+function formatPhaseDuration(phase: TaskCyclePhase, now: number): string {
   const start = Date.parse(phase.started_at);
   if (!Number.isFinite(start)) return "—";
-  const end = phase.ended_at ? Date.parse(phase.ended_at) : Date.now();
+  const end = phase.ended_at ? Date.parse(phase.ended_at) : now;
   if (!Number.isFinite(end) || end < start) return "—";
   return formatDurationSeconds((end - start) / 1000);
 }

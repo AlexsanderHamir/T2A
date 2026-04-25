@@ -14,6 +14,7 @@ import {
 } from "@/observability";
 import { CopyableId } from "@/shared/CopyableId";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { useNow } from "@/shared/useNow";
 import type { TaskCyclePhase, TaskCycleStreamEvent, TaskEvent } from "@/types";
 import { eventTypeLabel } from "../task-events";
 import { taskQueryKeys } from "../task-query";
@@ -61,6 +62,9 @@ export function TaskCycleDetailPage() {
         ? "Attempt"
         : "Invalid attempt",
   );
+  const now = useNow({
+    enabled: cycleQuery.data?.status === "running" && !cycleQuery.data?.ended_at,
+  });
 
   if (!paramsValid) {
     return (
@@ -160,7 +164,7 @@ export function TaskCycleDetailPage() {
         </div>
         <div>
           <dt>Duration</dt>
-          <dd>{attemptDurationLabel(cycle.started_at, cycle.ended_at)}</dd>
+          <dd>{attemptDurationLabel(cycle.started_at, cycle.ended_at, now)}</dd>
         </div>
       </dl>
 
@@ -393,9 +397,9 @@ function AuditEventRow({ taskId, ev }: { taskId: string; ev: TaskEvent }) {
   );
 }
 
-function attemptDurationLabel(startedAt: string, endedAt?: string): string {
+function attemptDurationLabel(startedAt: string, endedAt: string | undefined, now: number): string {
   const start = Date.parse(startedAt);
-  const end = endedAt ? Date.parse(endedAt) : Date.now();
+  const end = endedAt ? Date.parse(endedAt) : now;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
     return "Unknown";
   }

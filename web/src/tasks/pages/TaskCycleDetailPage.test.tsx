@@ -88,6 +88,7 @@ function auditEvent(n: number) {
 describe("TaskCycleDetailPage", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("bounds stream and audit timelines behind load-more controls", async () => {
@@ -158,5 +159,49 @@ describe("TaskCycleDetailPage", () => {
     expect(within(auditSection).queryByText("Event #1")).toBeNull();
     await user.click(within(auditSection).getByRole("button", { name: /load more/i }));
     expect(within(auditSection).getByText("Event #1")).toBeInTheDocument();
+  });
+
+  it("updates running attempt duration on a steady timer", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-25T12:00:30.000Z"));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t1/cycles/cyc-1") {
+        return Response.json(cycleDetail);
+      }
+      if (url === "/tasks/t1/cycles/cyc-1/stream?limit=500") {
+        return Response.json({
+          task_id: "t1",
+          cycle_id: "cyc-1",
+          events: [],
+          limit: 500,
+          has_more: false,
+        });
+      }
+      if (url === "/tasks/t1/events?limit=200") {
+        return Response.json({
+          task_id: "t1",
+          events: [],
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderAttemptPage();
+    await act(async () => {});
+
+    expect(
+      await screen.findByRole("heading", { name: /attempt #3/i }),
+    ).toBeInTheDocument();
+    const durationRow = screen.getByText("Duration").parentElement;
+    if (!durationRow) throw new Error("missing duration row");
+    expect(durationRow).toHaveTextContent(/30\.0 s/);
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(durationRow).toHaveTextContent(/35\.0 s/);
   });
 });

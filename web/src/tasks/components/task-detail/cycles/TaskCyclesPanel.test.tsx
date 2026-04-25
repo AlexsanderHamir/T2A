@@ -60,6 +60,7 @@ function renderPanel(taskId = "task-1") {
 describe("TaskCyclesPanel", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("renders a loading skeleton while the cycles list query is pending", async () => {
@@ -231,9 +232,8 @@ describe("TaskCyclesPanel", () => {
   });
 
   it("renders the live ticker for the running cycle with the currently running phase", async () => {
-    // Freeze Date.now so the elapsed-time string is stable.
-    const fakeNow = Date.parse("2026-04-18T11:00:30.000Z");
-    vi.spyOn(Date, "now").mockReturnValue(fakeNow);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-18T11:00:30.000Z"));
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = reqUrl(input);
@@ -291,10 +291,10 @@ describe("TaskCyclesPanel", () => {
     });
 
     renderPanel();
+    await act(async () => {});
 
     const ticker = await screen.findByTestId("task-cycle-ticker");
-    // Cycle is running and live region is polite.
-    expect(ticker.getAttribute("aria-live")).toBe("polite");
+    expect(ticker).not.toHaveAttribute("aria-live");
     expect(within(ticker).getByTestId("task-cycle-ticker-status")).toHaveTextContent(
       /Running/,
     );
@@ -312,6 +312,18 @@ describe("TaskCyclesPanel", () => {
     expect(phaseLine).toHaveTextContent(/Execute/);
     // Phase started 19 s ago (11:00:30 - 11:00:11 = 19 s).
     expect(phaseLine).toHaveTextContent(/for 19\.0 s/);
+    expect(within(phaseLine).getByText(/for 19\.0 s/)).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(
+      within(ticker).getByTestId("task-cycle-ticker-elapsed"),
+    ).toHaveTextContent(/Started 35\.0 s ago/);
+    expect(phaseLine).toHaveTextContent(/for 24\.0 s/);
 
     // The running cycle ALSO appears in the history list, with a
     // small "↑ live" hint pointing the user up to the ticker.
