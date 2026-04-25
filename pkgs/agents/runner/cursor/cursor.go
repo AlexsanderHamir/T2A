@@ -1,11 +1,13 @@
 package cursor
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -45,6 +47,12 @@ const stderrSummaryHintRunes = 280
 // killed by ctx, etc).
 type ExecFn func(ctx context.Context, dir string, env []string, stdin []byte, name string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
 
+// StreamExecFn is the production execution path for live cursor-agent
+// progress. It invokes onStdoutLine once per complete stdout line while
+// the child is still running, then returns the full captured streams so
+// Run can build the durable terminal Result exactly as before.
+type StreamExecFn func(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
+
 // Options configures an Adapter at construction time.
 type Options struct {
 	// BinaryPath is the cursor-agent executable. Defaults to "cursor-agent"
@@ -66,6 +74,11 @@ type Options struct {
 	Version string
 	// ExecFn replaces os/exec for tests. nil means use the real exec path.
 	ExecFn ExecFn
+	// StreamExecFn replaces the live os/exec path for tests that need
+	// incremental stdout delivery. When both ExecFn and StreamExecFn are
+	// nil, the adapter uses the real streaming exec path. ExecFn takes
+	// precedence to keep existing batch tests stable.
+	StreamExecFn StreamExecFn
 	// ExtraAllowedEnvKeys widens the parent-env passthrough beyond the
 	// default {PATH, HOME, USERPROFILE}. Entries are still subject to the
 	// hardcoded deny-list (DATABASE_URL, T2A_*).
@@ -84,6 +97,7 @@ type Adapter struct {
 	name               string
 	version            string
 	exec               ExecFn
+	streamExec         StreamExecFn
 	extraKeys          []string
 	homePaths          []string
 }
@@ -98,6 +112,7 @@ func New(opts Options) *Adapter {
 		name:               opts.Name,
 		version:            opts.Version,
 		exec:               opts.ExecFn,
+		streamExec:         opts.StreamExecFn,
 		extraKeys:          append([]string(nil), opts.ExtraAllowedEnvKeys...),
 		homePaths:          append([]string(nil), opts.HomePathReplacements...),
 	}
@@ -113,8 +128,8 @@ func New(opts Options) *Adapter {
 	if a.version == "" {
 		a.version = defaultVersion
 	}
-	if a.exec == nil {
-		a.exec = defaultExecFn
+	if a.exec == nil && a.streamExec == nil {
+		a.streamExec = defaultStreamExecFn
 	}
 	if len(a.homePaths) == 0 {
 		a.homePaths = liveHomePaths()
@@ -197,14 +212,31 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	env := buildEnv(req.Env, a.extraKeys)
 	argv := a.argvFor(req)
-	stdout, stderr, exitCode, execErr := a.exec(
-		runCtx,
-		req.WorkingDir,
-		env,
-		[]byte(req.Prompt),
-		a.binaryPath,
-		argv...,
-	)
+	var stdout, stderr []byte
+	var exitCode int
+	var execErr error
+	if a.streamExec != nil {
+		stdout, stderr, exitCode, execErr = a.streamExec(
+			runCtx,
+			req.WorkingDir,
+			env,
+			[]byte(req.Prompt),
+			a.binaryPath,
+			func(line []byte) {
+				emitProgressFromLine(req.OnProgress, line, a.homePaths)
+			},
+			argv...,
+		)
+	} else {
+		stdout, stderr, exitCode, execErr = a.exec(
+			runCtx,
+			req.WorkingDir,
+			env,
+			[]byte(req.Prompt),
+			a.binaryPath,
+			argv...,
+		)
+	}
 
 	rawOutput := redact(combineStreams(stdout, stderr), a.homePaths)
 
@@ -477,6 +509,121 @@ func buildDetails(p cursorOutput) json.RawMessage {
 		return nil
 	}
 	return b
+}
+
+type progressMessage struct {
+	Role    string            `json:"role,omitempty"`
+	Content []progressContent `json:"content,omitempty"`
+}
+
+type progressContent struct {
+	Type string `json:"type,omitempty"`
+	Text string `json:"text,omitempty"`
+}
+
+type progressEventLine struct {
+	Type    string          `json:"type,omitempty"`
+	Subtype string          `json:"subtype,omitempty"`
+	Model   string          `json:"model,omitempty"`
+	Name    string          `json:"name,omitempty"`
+	Tool    string          `json:"tool,omitempty"`
+	Message progressMessage `json:"message,omitempty"`
+	Input   json.RawMessage `json:"input,omitempty"`
+}
+
+func emitProgressFromLine(onProgress func(runner.ProgressEvent), raw []byte, homePaths []string) {
+	if onProgress == nil {
+		return
+	}
+	ev, ok := progressFromLine(raw, homePaths)
+	if !ok {
+		return
+	}
+	defer func() {
+		_ = recover()
+	}()
+	onProgress(ev)
+}
+
+func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, bool) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 {
+		return runner.ProgressEvent{}, false
+	}
+	var line progressEventLine
+	if err := json.Unmarshal(raw, &line); err != nil {
+		return runner.ProgressEvent{}, false
+	}
+	switch line.Type {
+	case "system":
+		if line.Subtype == "init" && strings.TrimSpace(line.Model) != "" {
+			return runner.ProgressEvent{
+				Kind:    "system",
+				Subtype: "init",
+				Message: "Using " + strings.TrimSpace(line.Model),
+			}, true
+		}
+	case "assistant":
+		msg := clipSummaryRunes(redact(strings.TrimSpace(textContent(line.Message.Content)), homePaths), 240)
+		if msg != "" {
+			return runner.ProgressEvent{Kind: "assistant", Message: msg}, true
+		}
+	case "tool_call":
+		tool := firstNonEmpty(line.Name, line.Tool)
+		subtype := strings.TrimSpace(line.Subtype)
+		msg := toolProgressMessage(tool, subtype)
+		return runner.ProgressEvent{
+			Kind:    "tool_call",
+			Subtype: subtype,
+			Tool:    tool,
+			Message: msg,
+		}, true
+	}
+	return runner.ProgressEvent{}, false
+}
+
+func textContent(parts []progressContent) string {
+	var b strings.Builder
+	for _, part := range parts {
+		if part.Type != "text" {
+			continue
+		}
+		text := strings.TrimSpace(part.Text)
+		if text == "" {
+			continue
+		}
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(text)
+	}
+	return b.String()
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func toolProgressMessage(tool, subtype string) string {
+	label := strings.TrimSpace(tool)
+	if label == "" {
+		label = "tool"
+	}
+	switch subtype {
+	case "started", "start":
+		return "Started " + label
+	case "completed", "success", "done":
+		return "Finished " + label
+	case "failed", "error":
+		return "Failed " + label
+	default:
+		return label
+	}
 }
 
 func combineStreams(stdout, stderr []byte) string {
@@ -811,6 +958,74 @@ func defaultExecFn(ctx context.Context, dir string, env []string, stdin []byte, 
 		}
 	}
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), exitCode, err
+}
+
+func defaultStreamExecFn(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) ([]byte, []byte, int, error) {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.defaultStreamExecFn",
+		"dir", dir, "env_count", len(env), "stdin_bytes", len(stdin), "name", name, "argc", len(args))
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	cmd.Env = env
+	if len(stdin) > 0 {
+		cmd.Stdin = bytes.NewReader(stdin)
+	}
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, nil, 0, err
+	}
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	stdoutDone := make(chan error, 1)
+	stderrDone := make(chan error, 1)
+	go func() {
+		stdoutDone <- scanStdoutLines(stdoutPipe, &stdoutBuf, onStdoutLine)
+	}()
+	go func() {
+		_, err := io.Copy(&stderrBuf, stderrPipe)
+		stderrDone <- err
+	}()
+
+	waitErr := cmd.Wait()
+	stdoutErr := <-stdoutDone
+	stderrErr := <-stderrDone
+	if waitErr == nil {
+		if stdoutErr != nil {
+			return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, stdoutErr
+		}
+		if stderrErr != nil {
+			return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, stderrErr
+		}
+		return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, nil
+	}
+	if ctx.Err() != nil {
+		return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, ctx.Err()
+	}
+	var exitErr *exec.ExitError
+	if errors.As(waitErr, &exitErr) {
+		return stdoutBuf.Bytes(), stderrBuf.Bytes(), exitErr.ExitCode(), nil
+	}
+	return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, waitErr
+}
+
+func scanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := append([]byte(nil), scanner.Bytes()...)
+		dst.Write(line)
+		dst.WriteByte('\n')
+		if onLine != nil {
+			onLine(line)
+		}
+	}
+	return scanner.Err()
 }
 
 // Compile-time assertion that *Adapter implements runner.Runner.

@@ -20,7 +20,7 @@ data: {"type":"task_updated","id":"<task-uuid>"}
 
 ```
 
-The JSON shape itself is unchanged from earlier versions (still `{type,id[,cycle_id]}` only). Older clients that ignore the `id:` line keep working — they just lose the loss-free reconnect property.
+Most frames use `{type,id[,cycle_id]}`. Older clients that ignore the `id:` line keep working — they just lose the loss-free reconnect property.
 
 ```json
 {"type":"task_created|task_updated|task_deleted","id":"<task-uuid>"}
@@ -32,7 +32,26 @@ The JSON shape itself is unchanged from earlier versions (still `{type,id[,cycle
 {"type":"task_cycle_changed","id":"<task-uuid>","cycle_id":"<cycle-uuid>"}
 ```
 
-`cycle_id` is **only** present on `task_cycle_changed` lines; the field is omitted from every other event type so the byte shape of pre-cycles payloads is unchanged. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive.
+`cycle_id` is present on `task_cycle_changed` and `agent_run_progress` lines. It is omitted from task CRUD, settings, cancel, and resync frames. See [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) for the underlying primitive.
+
+`agent_run_progress` payloads are live progress hints from the in-process agent worker while a phase is still running. They are not persisted in `task_events`; REST remains authoritative for cycles, phases, and terminal outcomes. Durable per-attempt stream history is exposed through `GET /tasks/{id}/cycles/{cycleId}/stream`.
+
+```json
+{
+  "type": "agent_run_progress",
+  "id": "<task-uuid>",
+  "cycle_id": "<cycle-uuid>",
+  "phase_seq": 2,
+  "progress": {
+    "kind": "tool_call|assistant|system",
+    "subtype": "started|completed|...",
+    "message": "Started ReadFile",
+    "tool": "ReadFile"
+  }
+}
+```
+
+The server normalizes Cursor CLI `stream-json` events before publishing them. It sends short human-readable messages only; raw Cursor JSON, stderr, and secrets are not streamed to browsers. The worker throttles progress fanout to at most one frame per running phase every 750 ms.
 
 `settings_changed` and `agent_run_cancelled` are id-less notifications fired by the [App settings](./API-HTTP.md#app-settings) routes — there is no `id` (or `cycle_id`) field, only `type`:
 
@@ -57,7 +76,7 @@ The hub also evicts subscribers whose per-connection channel fills up (slow cons
 
 A `: heartbeat` comment line is written every 15 s so reverse proxies and corporate VPN gateways do not idle-kill the TCP connection. Browsers ignore comment lines per the SSE spec; no client work is required.
 
-Identical `{type,id}` frames published inside a 50 ms window are coalesced (dropped before fanout) so a burst of supervisor reloads or duplicate `task_updated` events does not spam every connected client. `task_cycle_changed` carries a distinct `cycle_id` and is intentionally **never** coalesced (each phase transition is informationally distinct).
+Identical `{type,id}` frames published inside a 50 ms window are coalesced (dropped before fanout) so a burst of supervisor reloads or duplicate `task_updated` events does not spam every connected client. `task_cycle_changed` and `agent_run_progress` are intentionally **never** coalesced by the hub; progress is rate-limited before publish and cycle transitions are informationally distinct.
 
 Operators monitor the resync rate (`taskapi_sse_resync_emitted_total / taskapi_sse_publish_total`), the coalesced-drop rate (`taskapi_sse_coalesced_total`), and the slow-consumer eviction rate (`taskapi_sse_subscriber_evictions_total`). All three are documented in [`pkgs/tasks/middleware/metrics_http.go`](../pkgs/tasks/middleware/metrics_http.go).
 
@@ -76,6 +95,7 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `PATCH /tasks/{id}/cycles/{cycleId}`                   | `task_cycle_changed` for the terminated cycle                              |
 | `POST /tasks/{id}/cycles/{cycleId}/phases`             | `task_cycle_changed` for the cycle whose phase started                     |
 | `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | `task_cycle_changed` for the cycle whose phase transitioned                |
+| In-process agent runner progress                       | `agent_run_progress` for the running cycle/phase (live hint; durable history via `GET /tasks/{id}/cycles/{cycleId}/stream`) |
 | `PATCH /settings`                                      | `settings_changed` (no id) after the supervisor finishes its in-process reload |
 | `POST /settings/cancel-current-run`                    | `agent_run_cancelled` (no id) when a run was actually cancelled (`{"cancelled": true}`); no event when nothing was running |
 
@@ -108,6 +128,7 @@ Clients typically use `EventSource` in the browser (or any SSE-capable client), 
 
 - `task_created` / `task_updated` / `task_deleted` invalidate the cached **list** queries plus the affected **detail** subtree (`["tasks","detail",id,…]`).
 - `task_cycle_changed` invalidates the **list** plus the affected task's full **detail** subtree (`["tasks","detail",id,…]`). The agent worker is the primary emitter of this frame and never publishes `task_updated`, so worker-driven status flips (running → done), audit-event appends, and checklist toggles must be reflected via the cycle frame or the open task detail page would silently go stale until the user manually refreshed. The cycle id is still bucketed for analytics, but a standalone `["tasks","detail",id,"cycles"]` invalidation is suppressed because the broader `detail` invalidation already covers it.
+- `agent_run_progress` updates bounded in-memory live progress keyed by `{task_id, cycle_id, phase_seq}` and does **not** invalidate REST queries. The next `task_cycle_changed` or terminal phase row remains the authoritative cache refresh for persisted stream rows.
 - `settings_changed` and `agent_run_cancelled` invalidate **only** the settings cache slot (`["settings","app"]`) so the SPA Settings page reflects new values instantly without disturbing task caches; they bypass the debounce batch.
 - A frame with no recognisable `id` (and no recognised id-less type above) falls back to invalidating all task queries so nothing goes stale.
 

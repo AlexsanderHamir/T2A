@@ -57,6 +57,16 @@ type Runner interface {
 	EffectiveModel(req Request) string
 }
 
+// ProgressEvent is an ephemeral, best-effort update emitted while a runner is
+// still executing. It is intended for live UI feedback only; terminal phase
+// rows and task_events remain the durable audit trail.
+type ProgressEvent struct {
+	Kind    string `json:"kind"`
+	Subtype string `json:"subtype,omitempty"`
+	Message string `json:"message,omitempty"`
+	Tool    string `json:"tool,omitempty"`
+}
+
 // Request is the per-attempt input passed to Runner.Run. The JSON shape is
 // pinned by runner_test.go; see package doc for the wire-format contract.
 //
@@ -77,6 +87,9 @@ type Request struct {
 	// adapter. Empty means use the adapter default (from app settings at
 	// worker construction).
 	CursorModel string `json:"cursor_model,omitempty"`
+	// OnProgress is an optional live-update callback. It is excluded from
+	// JSON so the persisted/tested request wire shape stays stable.
+	OnProgress func(ProgressEvent) `json:"-"`
 }
 
 // Result is what Runner.Run returns. On wrapped error returns

@@ -21,6 +21,10 @@ import type {
   TaskCyclePhase,
   TaskCyclesListResponse,
 } from "@/types/cycle";
+import {
+  useAgentRunProgress,
+  type AgentRunProgress,
+} from "../../../hooks/useAgentRunProgress";
 import { useTaskCycle, useTaskCycles } from "../../../hooks/useTaskCycles";
 
 type Props = {
@@ -190,7 +194,11 @@ function CurrentPhaseTicker({
           Started {formatDurationSeconds(elapsedSeconds(cycle.started_at))} ago
         </span>
       </div>
-      <CurrentPhaseLine detailQuery={detailQuery} />
+      <CurrentPhaseLine
+        taskId={taskId}
+        cycleId={cycle.id}
+        detailQuery={detailQuery}
+      />
     </div>
   );
 }
@@ -202,8 +210,12 @@ function CurrentPhaseTicker({
  * the parent ticker layout shift.
  */
 function CurrentPhaseLine({
+  taskId,
+  cycleId,
   detailQuery,
 }: {
+  taskId: string;
+  cycleId: string;
   detailQuery: ReturnType<typeof useTaskCycle>;
 }) {
   if (detailQuery.isPending) {
@@ -257,18 +269,65 @@ function CurrentPhaseLine({
     );
   }
   return (
-    <p
-      className="task-cycle-ticker-phase task-cycle-ticker-phase--running"
-      data-testid="task-cycle-ticker-phase"
+    <>
+      <p
+        className="task-cycle-ticker-phase task-cycle-ticker-phase--running"
+        data-testid="task-cycle-ticker-phase"
+      >
+        Now running:{" "}
+        <span className={`cell-pill ${phaseStatusFillClass(runningPhase.status)}`}>
+          {phaseLabel(runningPhase.phase)}
+        </span>{" "}
+        <span className="task-cycle-ticker-phase-elapsed">
+          for {formatDurationSeconds(elapsedSeconds(runningPhase.started_at))}
+        </span>
+      </p>
+      <PhaseProgress
+        taskId={taskId}
+        cycleId={cycleId}
+        phaseSeq={runningPhase.phase_seq}
+      />
+    </>
+  );
+}
+
+function PhaseProgress({
+  taskId,
+  cycleId,
+  phaseSeq,
+}: {
+  taskId: string;
+  cycleId: string;
+  phaseSeq: number;
+}) {
+  const items = useAgentRunProgress(taskId, cycleId, phaseSeq);
+  if (items.length === 0) {
+    return (
+      <p className="task-cycle-progress-empty" data-testid="task-cycle-progress-empty">
+        Waiting for the next agent update…
+      </p>
+    );
+  }
+  return (
+    <ol
+      className="task-cycle-progress-list"
+      aria-label="Recent agent progress"
+      data-testid="task-cycle-progress-list"
     >
-      Now running:{" "}
-      <span className={`cell-pill ${phaseStatusFillClass(runningPhase.status)}`}>
-        {phaseLabel(runningPhase.phase)}
-      </span>{" "}
-      <span className="task-cycle-ticker-phase-elapsed">
-        for {formatDurationSeconds(elapsedSeconds(runningPhase.started_at))}
-      </span>
-    </p>
+      {items.map((item, idx) => (
+        <li
+          key={`${item.receivedAt}:${idx}:${item.progress.kind}:${item.progress.subtype ?? ""}`}
+          className="task-cycle-progress-item"
+        >
+          <span className="task-cycle-progress-kind">
+            {progressKindLabel(item.progress.kind, item.progress.subtype)}
+          </span>
+          <span className="task-cycle-progress-message">
+            {progressMessage(item.progress)}
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -370,6 +429,13 @@ function CycleRow({
               ↑ live
             </span>
           ) : null}
+          <a
+            className="task-cycle-row-attempt-link"
+            href={`/tasks/${encodeURIComponent(taskId)}/cycles/${encodeURIComponent(cycle.id)}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            Open attempt
+          </a>
         </summary>
         {open ? <CycleRowPhases taskId={taskId} cycleId={cycle.id} /> : null}
       </details>
@@ -511,6 +577,35 @@ function formatPhaseDuration(phase: TaskCyclePhase): string {
   const end = phase.ended_at ? Date.parse(phase.ended_at) : Date.now();
   if (!Number.isFinite(end) || end < start) return "—";
   return formatDurationSeconds((end - start) / 1000);
+}
+
+function progressKindLabel(kind: string, subtype: string | undefined): string {
+  if (kind === "tool_call") {
+    if (subtype === "completed" || subtype === "success" || subtype === "done") {
+      return "Tool finished";
+    }
+    if (subtype === "failed" || subtype === "error") {
+      return "Tool failed";
+    }
+    return "Tool";
+  }
+  if (kind === "assistant") {
+    return "Agent";
+  }
+  if (kind === "system") {
+    return "Session";
+  }
+  return "Update";
+}
+
+function progressMessage(progress: AgentRunProgress): string {
+  if (progress.message) {
+    return progress.message;
+  }
+  if (progress.tool) {
+    return progress.tool;
+  }
+  return "Working…";
 }
 
 // Re-exported for tests so they can construct fixtures without

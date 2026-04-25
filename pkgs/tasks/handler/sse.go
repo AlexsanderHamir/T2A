@@ -23,6 +23,7 @@ const (
 	TaskUpdated      TaskChangeType = "task_updated"
 	TaskDeleted      TaskChangeType = "task_deleted"
 	TaskCycleChanged TaskChangeType = "task_cycle_changed"
+	AgentRunProgress TaskChangeType = "agent_run_progress"
 	// SettingsChanged fires after PATCH /settings persists or the
 	// agent worker supervisor restarts as a result of a settings change.
 	// The event has no ID/CycleID; consumers refetch GET /settings to
@@ -48,9 +49,21 @@ const (
 // It is omitted from the wire for every other type to keep existing
 // payloads byte-identical to the pre-Stage-5 contract.
 type TaskChangeEvent struct {
-	Type    TaskChangeType `json:"type"`
-	ID      string         `json:"id"`
-	CycleID string         `json:"cycle_id,omitempty"`
+	Type     TaskChangeType           `json:"type"`
+	ID       string                   `json:"id"`
+	CycleID  string                   `json:"cycle_id,omitempty"`
+	PhaseSeq int64                    `json:"phase_seq,omitempty"`
+	Progress *AgentRunProgressPayload `json:"progress,omitempty"`
+}
+
+// AgentRunProgressPayload is a normalized live runner update carried by
+// agent_run_progress SSE frames. The payload is intentionally small and
+// human-readable; raw CLI JSON stays out of the browser event stream.
+type AgentRunProgressPayload struct {
+	Kind    string `json:"kind"`
+	Subtype string `json:"subtype,omitempty"`
+	Message string `json:"message,omitempty"`
+	Tool    string `json:"tool,omitempty"`
 }
 
 // bufferedEvent is one slot in the SSEHub ring buffer used to replay
@@ -214,9 +227,7 @@ func (h *SSEHub) subscribe(sinceID uint64) (sub *subscriber, replay []bufferedEv
 	middleware.RecordSSESubscriberGauge(n)
 	cancel = func() {
 		h.mu.Lock()
-		if _, ok := h.subs[sub]; ok {
-			delete(h.subs, sub)
-		}
+		delete(h.subs, sub)
 		n := len(h.subs)
 		h.mu.Unlock()
 		middleware.RecordSSESubscriberGauge(n)
@@ -273,7 +284,7 @@ func (h *SSEHub) appendRingLocked(ev bufferedEvent) {
 // distinct cycle id so they are *intentionally* not coalesced — each
 // phase transition is informationally distinct.
 func coalesceKey(ev TaskChangeEvent) string {
-	if ev.Type == TaskCycleChanged {
+	if ev.Type == TaskCycleChanged || ev.Type == AgentRunProgress {
 		return ""
 	}
 	return string(ev.Type) + ":" + ev.ID

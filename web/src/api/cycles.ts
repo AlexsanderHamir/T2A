@@ -5,6 +5,7 @@ import type {
   TaskCycle,
   TaskCycleDetail,
   TaskCyclePhase,
+  TaskCycleStreamResponse,
   TaskCyclesListResponse,
   TerminateTaskCycleInput,
 } from "@/types";
@@ -12,6 +13,7 @@ import {
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,
+  parseTaskCycleStreamResponse,
   parseTaskCyclesListResponse,
 } from "./parseTaskApi";
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
@@ -26,6 +28,7 @@ import {
  * Mirrors the `400` validation contract documented in `docs/API-HTTP.md`.
  */
 export const maxTaskCyclesListLimit = 200;
+export const maxTaskCycleStreamLimit = 500;
 
 function actorHeader(actor?: "user" | "agent"): Record<string, string> {
   if (actor === "agent") return { "X-Actor": "agent" };
@@ -75,6 +78,37 @@ export async function getTaskCycle(
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
   return parseTaskCycleDetail(raw);
+}
+
+export async function listTaskCycleStreamEvents(
+  taskId: string,
+  cycleId: string,
+  options?: { signal?: AbortSignal; limit?: number; afterSeq?: number },
+): Promise<TaskCycleStreamResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const cid = assertTaskPathId(cycleId, "cycle id");
+  const q = new URLSearchParams();
+  if (options?.limit !== undefined) {
+    q.set(
+      "limit",
+      assertListIntQuery("limit", options.limit, 0, maxTaskCycleStreamLimit),
+    );
+  }
+  if (options?.afterSeq !== undefined) {
+    q.set("after_seq", assertPositiveSeq("after_seq", options.afterSeq));
+  }
+  const qs = q.toString();
+  const path =
+    qs === ""
+      ? `/tasks/${encodeURIComponent(tid)}/cycles/${encodeURIComponent(cid)}/stream`
+      : `/tasks/${encodeURIComponent(tid)}/cycles/${encodeURIComponent(cid)}/stream?${qs}`;
+  const res = await fetchWithTimeout(path, {
+    headers: { Accept: "application/json" },
+    signal: options?.signal,
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTaskCycleStreamResponse(raw);
 }
 
 export async function startTaskCycle(

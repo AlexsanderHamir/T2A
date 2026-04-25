@@ -38,6 +38,7 @@ erDiagram
   TASKS ||--o{ TASK_CYCLES : "has attempts"
   TASKS ||--o{ TASK_EVENTS : "audit witness"
   TASK_CYCLES ||--o{ TASK_CYCLE_PHASES : "has phases"
+  TASK_CYCLES ||--o{ TASK_CYCLE_STREAM_EVENTS : "has stream"
   TASK_CYCLES ||--o| TASK_CYCLES : "parent_cycle_id"
   TASK_CYCLE_PHASES }o--|| TASK_EVENTS : "event_seq backlink"
 
@@ -73,6 +74,16 @@ erDiagram
     string type    "...|cycle_started|cycle_completed|cycle_failed|phase_started|phase_completed|phase_failed|phase_skipped"
     json   data_json
   }
+  TASK_CYCLE_STREAM_EVENTS {
+    string id PK
+    string task_id FK
+    string cycle_id FK
+    int64  phase_seq
+    int64  stream_seq "unique per cycle"
+    string source     "cursor|t2a"
+    string kind
+    json   payload_json
+  }
 ```
 
 **Key invariants enforced by the store** (see `pkgs/tasks/store/store_cycles.go` / `store_cycle_phases.go`):
@@ -81,6 +92,7 @@ erDiagram
 - `(cycle_id, phase_seq)` is unique on `task_cycle_phases`; same `max + 1` rule per cycle.
 - `status` columns are CHECK-constrained to the documented enum values and indexed.
 - `task_cycles.task_id` and `task_cycle_phases.cycle_id` are FK with `ON DELETE CASCADE`, so deleting a task removes its cycles and phases atomically.
+- `task_cycle_stream_events` is append-only per cycle. `(cycle_id, stream_seq)` is unique, `stream_seq` is assigned by the store, and task/cycle FKs cascade with their parent rows.
 - `parent_cycle_id` is optional. When set, the store rejects cross-task lineage (`ErrInvalidInput: parent_cycle_id does not belong to this task`).
 - `meta_json` and `details_json` are stored as Postgres `jsonb` (`text` on SQLite) and default to `{}`; the store normalizes nil/empty input to that canonical zero value so the column never carries SQL `NULL` or an empty string.
 - `task_cycle_phases.event_seq` is a soft pointer to the **most recent** mirror row in `task_events` for that phase. It is filled by the store, not by the caller. See **Dual-write invariant**.
@@ -171,6 +183,7 @@ The API layer exposes the same keys under a typed projection (`cycle_meta`) on `
 | List all attempts for this task. | `GET /tasks/{id}/cycles` → `ListCyclesForTask` (ordered `attempt_seq DESC`). | Same reason: the cycle row is the typed, indexed record. |
 | What phase is the current cycle in? | `GET /tasks/{id}/cycles/{cycleId}` (`phases[]` ordered `phase_seq ASC`). | `task_events` does not encode "currently running phase" except by absence of a terminating mirror row; the cycle row is the source of truth. |
 | Audit history (everything that happened, in order). | `GET /tasks/{id}/events`. | Cycles and phases each only carry the **most recent** transition state in their own row; reconstructing the full history requires the audit log. |
+| Cursor live-update history for one attempt. | `GET /tasks/{id}/cycles/{cycleId}/stream`. | Cursor stream events can be high-volume and tool-shaped, so they live outside the human-scale `task_events` timeline. |
 | Which audit row recorded a phase's most recent transition? | `task_cycle_phases.event_seq` (foreign-key style pointer to `task_events.seq`). | One-shot pointer beats `data_json->>'phase_id'` scans. |
 | Did anything change for this cycle (live UI hint)? | `GET /events` SSE → `task_cycle_changed` (carries `id`=task, `cycle_id`=cycle). | SSE is a fan-out hint; clients still call REST for full bodies. See [API-SSE.md](./API-SSE.md). |
 

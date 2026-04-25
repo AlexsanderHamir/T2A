@@ -52,8 +52,10 @@ const maxCycleListLimitParamBytes = 32
 // GET /tasks/{id}/cycles ?limit=. They follow the same 50/200 conventions
 // used by GET /tasks and GET /tasks/{id}/events.
 const (
-	defaultCycleListLimit = 50
-	maxCycleListLimit     = 200
+	defaultCycleListLimit   = 50
+	maxCycleListLimit       = 200
+	defaultCycleStreamLimit = 100
+	maxCycleStreamLimit     = 500
 )
 
 // postTaskCycle handles POST /tasks/{id}/cycles.
@@ -170,6 +172,58 @@ func (h *Handler) getTaskCycle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, r, op, http.StatusOK, taskCycleDetailFromDomain(cycle, phases))
+}
+
+// getTaskCycleStream handles GET /tasks/{id}/cycles/{cycleId}/stream.
+func (h *Handler) getTaskCycleStream(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.getTaskCycleStream")
+	const op = "tasks.cycle.stream.list"
+	r = calltrace.WithRequestRoot(r, op)
+	taskID, cycleID, err := parseCyclePathPair(r)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	limit, err := parseCycleStreamLimit(r.Context(), r.URL.Query())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	afterSeq, err := parseCycleStreamAfterSeq(r.Context(), r.URL.Query())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	if err := assertCycleBelongsToTask(r.Context(), h.store, taskID, cycleID); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	rows, err := h.store.ListCycleStreamEvents(r.Context(), cycleID, afterSeq, limit+1)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	hasMore := false
+	if len(rows) > limit {
+		hasMore = true
+		rows = rows[:limit]
+	}
+	out := make([]taskCycleStreamEventResponse, 0, len(rows))
+	for i := range rows {
+		out = append(out, taskCycleStreamEventResponseFromDomain(&rows[i]))
+	}
+	resp := taskCycleStreamListResponse{
+		TaskID:  taskID,
+		CycleID: cycleID,
+		Events:  out,
+		Limit:   limit,
+		HasMore: hasMore,
+	}
+	if hasMore && len(out) > 0 {
+		next := out[len(out)-1].StreamSeq
+		resp.NextAfterSeq = &next
+	}
+	writeJSON(w, r, op, http.StatusOK, resp)
 }
 
 // patchTaskCycle handles PATCH /tasks/{id}/cycles/{cycleId}.
@@ -370,6 +424,54 @@ func parseCycleListLimit(ctx context.Context, q url.Values) (int, error) {
 	return limit, nil
 }
 
+func parseCycleStreamAfterSeq(ctx context.Context, q url.Values) (after int64, err error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseCycleStreamAfterSeq")
+	ctx = calltrace.Push(ctx, "parseCycleStreamAfterSeq")
+	calltrace.HelperIOIn(ctx, "parseCycleStreamAfterSeq", "after_q", q.Get("after_seq"))
+	defer func() { calltrace.HelperIOOut(ctx, "parseCycleStreamAfterSeq", "after_seq", after, "err", err) }()
+	v := strings.TrimSpace(q.Get("after_seq"))
+	if v == "" {
+		return 0, nil
+	}
+	if len(v) > maxCycleListLimitParamBytes {
+		return 0, fmt.Errorf("%w: after_seq too long", domain.ErrInvalidInput)
+	}
+	n, e := strconv.ParseInt(v, 10, 64)
+	if e != nil || n < 1 {
+		return 0, fmt.Errorf("%w: after_seq must be a positive integer", domain.ErrInvalidInput)
+	}
+	return n, nil
+}
+
+func parseCycleStreamLimit(ctx context.Context, q url.Values) (int, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseCycleStreamLimit")
+	ctx = calltrace.Push(ctx, "parseCycleStreamLimit")
+	calltrace.HelperIOIn(ctx, "parseCycleStreamLimit", "limit_q", q.Get("limit"))
+	var (
+		limit = defaultCycleStreamLimit
+		err   error
+	)
+	defer func() { calltrace.HelperIOOut(ctx, "parseCycleStreamLimit", "limit", limit, "err", err) }()
+	v := strings.TrimSpace(q.Get("limit"))
+	if v == "" {
+		return limit, nil
+	}
+	if len(v) > maxCycleListLimitParamBytes {
+		err = fmt.Errorf("%w: limit too long", domain.ErrInvalidInput)
+		return 0, err
+	}
+	n, e := strconv.Atoi(v)
+	if e != nil || n < 0 || n > maxCycleStreamLimit {
+		err = fmt.Errorf("%w: limit must be integer 0..500", domain.ErrInvalidInput)
+		return 0, err
+	}
+	if n == 0 {
+		return defaultCycleStreamLimit, nil
+	}
+	limit = n
+	return limit, nil
+}
+
 // taskCycleResponseFromDomain copies a TaskCycle GORM row into the JSON
 // response shape. Meta is normalized to "{}" if the column came back as
 // nil / empty / whitespace / null / a scalar / an array / malformed JSON,
@@ -457,4 +559,22 @@ func taskCycleDetailFromDomain(c *domain.TaskCycle, phases []domain.TaskCyclePha
 		out.Phases = append(out.Phases, taskCyclePhaseResponseFromDomain(&phases[i]))
 	}
 	return out
+}
+
+func taskCycleStreamEventResponseFromDomain(ev *domain.TaskCycleStreamEvent) taskCycleStreamEventResponse {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskCycleStreamEventResponseFromDomain")
+	return taskCycleStreamEventResponse{
+		ID:        ev.ID,
+		TaskID:    ev.TaskID,
+		CycleID:   ev.CycleID,
+		PhaseSeq:  ev.PhaseSeq,
+		StreamSeq: ev.StreamSeq,
+		At:        ev.At,
+		Source:    ev.Source,
+		Kind:      ev.Kind,
+		Subtype:   ev.Subtype,
+		Message:   ev.Message,
+		Tool:      ev.Tool,
+		Payload:   normalizeJSONObjectForResponse(ev.PayloadJSON),
+	}
 }

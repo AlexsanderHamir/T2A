@@ -42,6 +42,8 @@ export const taskQueryKeys = {
     [...taskQueryKeys.all, "detail", id, "cycles"] as const,
   cycle: (id: string, cycleId: string) =>
     [...taskQueryKeys.all, "detail", id, "cycles", cycleId] as const,
+  cycleStream: (id: string, cycleId: string) =>
+    [...taskQueryKeys.all, "detail", id, "cycles", cycleId, "stream"] as const,
   /**
    * GET /tasks/stats — shared by Home KPIs, Observability, and SSE invalidation
    * (lives outside `taskQueryKeys.all` prefix).

@@ -295,6 +295,93 @@ func TestStore_ListCyclesForTaskBefore_keysetCursor(t *testing.T) {
 	})
 }
 
+func TestStore_AppendAndListCycleStreamEvents_ordersAndPages(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	cycle, phase := mustCreateCycleWithExecutePhase(t, s, ctx, tsk.ID)
+
+	for i := 0; i < 3; i++ {
+		ev, err := s.AppendCycleStreamEvent(ctx, AppendCycleStreamEventInput{
+			TaskID:   tsk.ID,
+			CycleID:  cycle.ID,
+			PhaseSeq: phase.PhaseSeq,
+			Source:   "cursor",
+			Kind:     "message",
+			Message:  fmt.Sprintf("event %d", i+1),
+			Payload:  []byte(`{"kind":"message"}`),
+		})
+		if err != nil {
+			t.Fatalf("append stream event %d: %v", i+1, err)
+		}
+		if ev.StreamSeq != int64(i+1) {
+			t.Fatalf("stream_seq=%d want %d", ev.StreamSeq, i+1)
+		}
+	}
+
+	got, err := s.ListCycleStreamEvents(ctx, cycle.ID, 1, 2)
+	if err != nil {
+		t.Fatalf("list stream events: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len=%d want 2", len(got))
+	}
+	if got[0].StreamSeq != 2 || got[1].StreamSeq != 3 {
+		t.Fatalf("stream order = [%d,%d] want [2,3]", got[0].StreamSeq, got[1].StreamSeq)
+	}
+	if got[0].Message != "event 2" {
+		t.Fatalf("message=%q want event 2", got[0].Message)
+	}
+}
+
+func TestStore_CycleStreamEventsCascadeWhenTaskDeleted(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	cycle, phase := mustCreateCycleWithExecutePhase(t, s, ctx, tsk.ID)
+	if _, err := s.AppendCycleStreamEvent(ctx, AppendCycleStreamEventInput{
+		TaskID:   tsk.ID,
+		CycleID:  cycle.ID,
+		PhaseSeq: phase.PhaseSeq,
+		Source:   "cursor",
+		Kind:     "message",
+		Payload:  []byte(`{}`),
+	}); err != nil {
+		t.Fatalf("append stream event: %v", err)
+	}
+	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+		t.Fatalf("delete task: %v", err)
+	}
+	if _, err := s.ListCycleStreamEvents(ctx, cycle.ID, 0, 10); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("list after delete err=%v want ErrNotFound", err)
+	}
+}
+
+func mustCreateCycleWithExecutePhase(t *testing.T, s *Store, ctx context.Context, taskID string) (*domain.TaskCycle, *domain.TaskCyclePhase) {
+	t.Helper()
+	cycle, err := s.StartCycle(ctx, StartCycleInput{TaskID: taskID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("start cycle: %v", err)
+	}
+	diag, err := s.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start diagnose: %v", err)
+	}
+	summary := "skip"
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID:  cycle.ID,
+		PhaseSeq: diag.PhaseSeq,
+		Status:   domain.PhaseStatusSkipped,
+		Summary:  &summary,
+		By:       domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("complete diagnose: %v", err)
+	}
+	phase, err := s.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+	return cycle, phase
+}
+
 // --- StartPhase / CompletePhase / ListPhasesForCycle ---------------------
 
 func TestStore_StartPhase_enforces_state_machine(t *testing.T) {

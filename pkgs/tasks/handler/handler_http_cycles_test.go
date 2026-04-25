@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // mustCreateTaskForCycles is the cycles-suite POST /tasks helper. It is
@@ -150,6 +152,85 @@ func TestHTTP_getTaskCycles_lists_in_attempt_desc(t *testing.T) {
 	if got.Cycles[0].AttemptSeq != 3 || got.Cycles[1].AttemptSeq != 2 || got.Cycles[2].AttemptSeq != 1 {
 		t.Fatalf("attempt order = [%d,%d,%d] want [3,2,1]", got.Cycles[0].AttemptSeq, got.Cycles[1].AttemptSeq, got.Cycles[2].AttemptSeq)
 	}
+}
+
+func TestHTTP_getTaskCycleStream_listsPersistedEvents(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	taskID := mustCreateTaskForCycles(t, srv.URL)
+	cycle, phase := mustCreateCycleWithExecutePhase(t, st, context.Background(), taskID)
+
+	for i := 0; i < 2; i++ {
+		if _, err := st.AppendCycleStreamEvent(context.Background(), store.AppendCycleStreamEventInput{
+			TaskID:   taskID,
+			CycleID:  cycle.ID,
+			PhaseSeq: phase.PhaseSeq,
+			Source:   "cursor",
+			Kind:     "message",
+			Message:  "stream event " + strconv.Itoa(i+1),
+			Payload:  []byte(`{"kind":"message"}`),
+		}); err != nil {
+			t.Fatalf("append stream event: %v", err)
+		}
+	}
+
+	res, raw := doCyclesRequest(t, http.MethodGet, srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/stream?limit=1", "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	var got taskCycleStreamListResponse
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode: %v body=%s", err, raw)
+	}
+	if got.TaskID != taskID || got.CycleID != cycle.ID {
+		t.Fatalf("identity got=%#v", got)
+	}
+	if !got.HasMore || got.NextAfterSeq == nil || *got.NextAfterSeq != 1 {
+		t.Fatalf("paging got has_more=%v next=%v", got.HasMore, got.NextAfterSeq)
+	}
+	if len(got.Events) != 1 || got.Events[0].StreamSeq != 1 || got.Events[0].Message != "stream event 1" {
+		t.Fatalf("events=%#v", got.Events)
+	}
+}
+
+func TestHTTP_getTaskCycleStream_crossTaskCycleIsNotFound(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	taskA := mustCreateTaskForCycles(t, srv.URL)
+	taskB := mustCreateTaskForCycles(t, srv.URL)
+	cycle, _ := mustCreateCycleWithExecutePhase(t, st, context.Background(), taskA)
+
+	res, raw := doCyclesRequest(t, http.MethodGet, srv.URL+"/tasks/"+taskB+"/cycles/"+cycle.ID+"/stream", "")
+	if res.StatusCode != http.StatusNotFound {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+}
+
+func mustCreateCycleWithExecutePhase(t *testing.T, st *store.Store, ctx context.Context, taskID string) (*domain.TaskCycle, *domain.TaskCyclePhase) {
+	t.Helper()
+	cycle, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: taskID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("start cycle: %v", err)
+	}
+	diag, err := st.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start diagnose: %v", err)
+	}
+	summary := "skip"
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID:  cycle.ID,
+		PhaseSeq: diag.PhaseSeq,
+		Status:   domain.PhaseStatusSkipped,
+		Summary:  &summary,
+		By:       domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("complete diagnose: %v", err)
+	}
+	phase, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+	return cycle, phase
 }
 
 func TestHTTP_getTaskCycles_has_more_when_overflow(t *testing.T) {

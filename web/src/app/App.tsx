@@ -2,6 +2,7 @@ import { Link, Route, Routes, useLocation } from "react-router-dom";
 import {
   DeleteConfirmDialog,
   TaskChangeModelModal,
+  TaskCycleDetailPage,
   TaskEditForm,
   TaskDetailPage,
   TaskDraftsPage,
@@ -180,6 +181,10 @@ export default function App() {
         <Route
           path="tasks/:taskId/events/:eventSeq"
           element={<TaskEventDetailPage />}
+        />
+        <Route
+          path="tasks/:taskId/cycles/:cycleId"
+          element={<TaskCycleDetailPage />}
         />
         <Route path="tasks/:taskId/graph" element={<TaskGraphPage />} />
         <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />

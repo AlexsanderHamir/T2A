@@ -4,7 +4,7 @@ Canonical description of the optional Vite + React + TypeScript SPA. Server cont
 
 ## Scope
 
-Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 400ms debounced cache invalidation: list queries plus per-id detail prefixes parsed from SSE `data` (see `tasks/task-query/sseInvalidate.ts`); `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
+Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 900ms debounced cache invalidation for task/cycle frames plus live `agent_run_progress` rendering in the current execution phase; attempt debug pages at `/tasks/:taskId/cycles/:cycleId` compose cycle detail, persisted stream history from `/stream`, live tail updates, and filtered T2A audit events; `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
 
 Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — [DESIGN.md](./DESIGN.md) limitations).
 
@@ -66,10 +66,10 @@ flowchart LR
 
 ## React Query + SSE
 
-- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` over **root** tasks (`tasks/task-paging/paging.ts` page sizes); responses include `has_more`, and `listTasks` can pass `afterId` for keyset `after_id` (see DESIGN). The home table shows those roots only (`flattenTaskTreeRoots` from `tasks/task-tree/`), while `flattenTaskTree` still drives the create-modal parent dropdown. `taskQueryKeys.checklist(taskId)` → `GET /tasks/{id}/checklist`. `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`.
+- Query keys: `taskQueryKeys.list(page)` → `GET /tasks` with `limit` / `offset` over **root** tasks (`tasks/task-paging/paging.ts` page sizes); responses include `has_more`, and `listTasks` can pass `afterId` for keyset `after_id` (see DESIGN). The home table shows those roots only (`flattenTaskTreeRoots` from `tasks/task-tree/`), while `flattenTaskTree` still drives the create-modal parent dropdown. `taskQueryKeys.checklist(taskId)` → `GET /tasks/{id}/checklist`. `taskQueryKeys.events(taskId, cursor)` → keyset-paged `GET /tasks/{id}/events` (`before_seq` / `after_seq`, newest first) with `total`, `range_*`, `has_more_*`, and `approval_pending`. `taskQueryKeys.cycleStream(taskId, cycleId)` → `GET /tasks/{id}/cycles/{cycleId}/stream` for persisted Cursor progress.
 - Drafts: `task-drafts` query drives resume picker before opening create modal. The create form keeps a local `draft_id`; autosave calls `POST /task-drafts` after a short debounce when content exists, and **Save draft** triggers the same endpoint immediately (manual save cancels a pending autosave timer first).
 - Loading: `loading` = no cached list yet; `listRefreshing` = background refetch (mutations, invalidation, focus, SSE); `saving` = mutation in flight (not background list fetch). The header shows **Connected** while `EventSource` is open and does not toggle a second “syncing” pill for background refetch; if the stream is down, **Syncing…** can appear while the list refetches. The “Syncing with server…” line under **All tasks** is hidden while SSE is live (same reason). `createPending` / modal `busy` show spinners during mutations.
-- SSE: each `data:` line contributes task ids to a debounced batch → invalidate list page(s) and only detail/checklist/events caches for those ids (not every open task). `parseTaskApi` runs on REST responses. Server dev mode `T2A_SSE_TEST` emits synthetic events about every 3s by default, so refetches can still be frequent for the home list when many tasks change.
+- SSE: task/cycle `data:` lines contribute task ids to a 900 ms debounced batch → invalidate list page(s) and detail/checklist/events/cycles caches for affected tasks. `agent_run_progress` frames bypass invalidation and update bounded in-memory live progress shown under the current running phase in `TaskCyclesPanel`. `parseTaskApi` runs on REST responses. Server dev mode `T2A_SSE_TEST` emits synthetic events about every 3s by default, so refetches can still be frequent for the home list when many tasks change.
 
 ```mermaid
 sequenceDiagram
@@ -80,22 +80,25 @@ sequenceDiagram
 
   H->>ES: SSE data line
   ES->>Hook: onmessage
-  Hook->>Hook: debounce 400ms
+  Hook->>Hook: debounce 900ms
   Hook->>QC: invalidateQueries tasks (list + open task detail)
   QC->>H: GET /tasks
+  H->>ES: agent_run_progress
+  ES->>Hook: onmessage
+  Hook->>Hook: update live progress store
 ```
 
 ## Module map (`web/src/`)
 
 | Path | Role |
 |------|------|
-| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`), `App.css`, `App.test.tsx`. |
+| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`, `/tasks/:taskId/cycles/:cycleId`), `App.css`, `App.test.tsx`. |
 | `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
 | `lib/useDelayedTrue.ts` | Delays showing the task list loading line; `smoothTransitions={false}` on `TaskListSection` in tests. |
 | `lib/useHysteresisBoolean.ts` | Hides flicker from brief React Query refetches: `useTasksApp` drives “syncing” for the list + header after sustained `isFetching`. |
-| `tasks/task-query/sseInvalidate.ts` | Collects task ids from SSE `data` lines for targeted `invalidateQueries` (list root + per-id detail prefix). |
+| `tasks/task-query/sseInvalidate.ts` | Parses SSE `data` lines into task/cycle invalidation frames, id-less settings/resync frames, and live `agent_run_progress` frames. |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
-| `tasks/` | Task feature: `hooks/`, `components/`, `pages/`, `extensions/`, plus small modules grouped under `task-query/` (keys + SSE invalidation), `task-tree/` (flatten + pending subtask draft type), `task-prompt/` (HTML prompt helpers), `task-display/` (pills, status “needs user”, attention copy), `task-events/` (audit labels + needs-user + thread helpers), `task-graph/` (layout px for `TaskGraphPage`), `task-paging/` (page sizes). `TaskHome`, `TaskDetailPage`, `TaskEventDetailPage`, `TaskUpdatesTimeline`, drafts/create-modal pipeline as before. |
+| `tasks/` | Task feature: `hooks/`, `components/`, `pages/`, `extensions/`, plus small modules grouped under `task-query/` (keys + SSE invalidation), `task-tree/` (flatten + pending subtask draft type), `task-prompt/` (HTML prompt helpers), `task-display/` (pills, status “needs user”, attention copy), `task-events/` (audit labels + needs-user + thread helpers), `task-graph/` (layout px for `TaskGraphPage`), `task-paging/` (page sizes). `TaskHome`, `TaskDetailPage`, `TaskEventDetailPage`, `TaskCycleDetailPage`, `TaskUpdatesTimeline`, drafts/create-modal pipeline as before. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
 | `api/` | HTTP + JSON parsing: `index.ts` re-exports `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
 | `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |

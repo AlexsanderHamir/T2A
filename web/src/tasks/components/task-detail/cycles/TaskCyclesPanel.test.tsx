@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TaskCyclesPanel } from "./TaskCyclesPanel";
+import { pushAgentRunProgress } from "../../../hooks/useAgentRunProgress";
 
 /**
  * The panel composes useTaskCycles + useTaskCycle and renders five
@@ -473,5 +474,78 @@ describe("TaskCyclesPanel", () => {
     expect(phaseLine).toHaveTextContent(/Between phases/);
     expect(phaseLine).toHaveTextContent(/Execute/);
     expect(phaseLine).toHaveTextContent(/succeeded/);
+  });
+
+  it("renders bounded live progress under the running phase", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = reqUrl(input);
+      if (url.endsWith("/tasks/task-1/cycles")) {
+        return okJSON({
+          task_id: "task-1",
+          cycles: [
+            {
+              id: "cyc-live-progress",
+              task_id: "task-1",
+              attempt_seq: 1,
+              status: "running",
+              started_at: "2026-04-18T11:00:00.000Z",
+              triggered_by: "agent",
+              meta: {},
+            },
+          ],
+          limit: 50,
+          has_more: false,
+        });
+      }
+      if (url === "/tasks/task-1/cycles/cyc-live-progress") {
+        return okJSON({
+          id: "cyc-live-progress",
+          task_id: "task-1",
+          attempt_seq: 1,
+          status: "running",
+          started_at: "2026-04-18T11:00:00.000Z",
+          triggered_by: "agent",
+          meta: {},
+          phases: [
+            {
+              id: "p-e",
+              cycle_id: "cyc-live-progress",
+              phase: "execute",
+              phase_seq: 2,
+              status: "running",
+              started_at: "2026-04-18T11:00:05.000Z",
+              details: {},
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPanel();
+
+    const ticker = await screen.findByTestId("task-cycle-ticker");
+    expect(await within(ticker).findByTestId("task-cycle-progress-empty")).toHaveTextContent(
+      /Waiting for the next agent update/,
+    );
+
+    act(() => {
+      pushAgentRunProgress({
+        taskId: "task-1",
+        cycleId: "cyc-live-progress",
+        phaseSeq: 2,
+        progress: {
+          kind: "tool_call",
+          subtype: "started",
+          tool: "ReadFile",
+          message: "Started ReadFile",
+        },
+      });
+    });
+
+    const progressList = await within(ticker).findByTestId("task-cycle-progress-list");
+    expect(progressList).toHaveAttribute("aria-label", "Recent agent progress");
+    expect(progressList).toHaveTextContent(/Tool/);
+    expect(progressList).toHaveTextContent(/Started ReadFile/);
   });
 });

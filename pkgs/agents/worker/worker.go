@@ -79,6 +79,15 @@ type CycleChangeNotifier interface {
 	PublishCycleChange(taskID, cycleID string)
 }
 
+// ProgressNotifier is the optional live-progress SSE seam. Progress is
+// best-effort and ephemeral; cycle/phase rows remain the durable audit trail.
+//
+// Implementations MUST NOT block: the worker invokes PublishRunProgress from
+// the runner callback while the child process is still executing.
+type ProgressNotifier interface {
+	PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent)
+}
+
 // Options bundles the per-Worker tunables. Zero values pick documented
 // defaults so cmd/taskapi can construct a Worker without filling in
 // every field.
@@ -103,6 +112,10 @@ type Options struct {
 	// each successful StartCycle / StartPhase / CompletePhase /
 	// TerminateCycle. Nil disables fan-out (used in unit tests).
 	Notifier CycleChangeNotifier
+	// ProgressNotifier, when non-nil, receives throttled live runner
+	// progress for the currently running execute phase. Nil disables
+	// progress fan-out (used in unit tests).
+	ProgressNotifier ProgressNotifier
 	// Metrics, when non-nil, receives one RecordRun call after every
 	// TerminateCycle write (happy path, panic, shutdown abort, and
 	// best-effort intermediate failures). Nil disables observation
@@ -250,4 +263,14 @@ func (w *Worker) publish(taskID, cycleID string) {
 		return
 	}
 	w.options.Notifier.PublishCycleChange(taskID, cycleID)
+}
+
+func (w *Worker) publishProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.publishProgress",
+		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
+		"kind", ev.Kind, "subtype", ev.Subtype)
+	if w.options.ProgressNotifier == nil || ev.Kind == "" {
+		return
+	}
+	w.options.ProgressNotifier.PublishRunProgress(taskID, cycleID, phaseSeq, ev)
 }

@@ -267,6 +267,7 @@ Cycles promote the **diagnose → execute → verify → persist** loop into a t
 | Start cycle | `POST /tasks/{id}/cycles` | Body `{ "parent_cycle_id"?, "meta"? }`. `parent_cycle_id` is optional same-task lineage (`null`/omitted/missing produces a top-level cycle); a non-empty value must reference an existing cycle whose `task_id` matches `{id}` (cross-task lineage is rejected with `400 parent_cycle_id does not belong to this task`). `meta` is opaque JSON object (`{}` default). The store assigns `attempt_seq = max + 1` per task, sets `status` `running`, `triggered_by` from `X-Actor`, and inserts a mirror `cycle_started` row in `task_events` in the same SQL transaction (rolls back the cycle on mirror failure). At-most-one running cycle per task: a second `POST` while one is still `running` returns **400** `task already has a running cycle` (recovery: `Idempotency-Key` to replay the original 201, or `PATCH …/cycles/{cycleId}` to terminate the running one first). **201 Created** returns `taskCycleResponse` (see below). Publishes `task_cycle_changed` on SSE for the new cycle. |
 | List cycles | `GET /tasks/{id}/cycles` | `?limit=` (1–200, default 50; non-positive coerced to 50). Optional `?before_attempt_seq=N` (positive int64, ≤32 bytes) keyset cursor restricts the page to cycles whose `attempt_seq < N` (next page of older cycles past a cursor the caller already saw); strict `<` keeps the cursor row from being repeated across pages. Cycles ordered `attempt_seq DESC` (newest attempt first). **200** envelope `{ "task_id", "cycles": [ taskCycleResponse, ... ], "limit", "has_more", "next_before_attempt_seq"? }`. `cycles` is **always a JSON array** (`[]` when none, never `null` or omitted). `has_more` is detected by fetching `limit+1` rows from the store and dropping the surplus. `next_before_attempt_seq` carries the `attempt_seq` of the last (lowest) row this response holds when `has_more=true` so clients can pass it back as the next `?before_attempt_seq=`; it is **omitted** (not `null`) when `has_more=false` so absence is the end-of-stream signal. 404 if the task does not exist. |
 | Get cycle | `GET /tasks/{id}/cycles/{cycleId}` | Returns the cycle row plus `phases[]` ordered `phase_seq ASC`. **200** envelope `{ "id", "task_id", "attempt_seq", "status", "started_at", "ended_at"?, "triggered_by", "parent_cycle_id"?, "meta", "cycle_meta", "phases": [ taskCyclePhaseResponse, ... ] }`. `cycle_meta` is the typed projection of `meta` — same shape as on `taskCycleResponse`; see the `cycle_meta` note below. `phases` is always a JSON array (`[]` when none). **404** when the cycle does not exist **or** when `cycleId` belongs to a different task than `{id}` (cross-task ID smuggling is silently masked as 404 to avoid leaking cycle existence). |
+| List cycle stream | `GET /tasks/{id}/cycles/{cycleId}/stream` | Returns durable normalized live-run updates for one attempt, ordered `stream_seq ASC`. Query: `?limit=` (1–500, default 100; non-positive coerced to 100) and optional `?after_seq=N` (positive int64, ≤32 bytes). **200** envelope `{ "task_id", "cycle_id", "events": [ taskCycleStreamEventResponse, ... ], "limit", "has_more", "next_after_seq"? }`. `events` is always a JSON array. **404** when the cycle is missing or belongs to a different task than `{id}`. This endpoint is the durable history for Cursor live updates; `agent_run_progress` SSE remains a live hint only. |
 | Terminate cycle | `PATCH /tasks/{id}/cycles/{cycleId}` | Body `{ "status", "reason"? }`. `status` must be a terminal cycle status (`succeeded`, `failed`, `aborted`); `running` and unknown enums are rejected with **400** `status must be a terminal cycle status`. Rejected with **400** `cycle already terminal` if the cycle is already in a terminal status. Mirror row in `task_events` is `cycle_completed` for `succeeded` and `cycle_failed` for `failed`/`aborted` (the original status is preserved in the mirror payload's `status` field). **200** returns `taskCycleResponse`. Publishes `task_cycle_changed`. Same cross-task 404 guard as the GET above. |
 | Start phase | `POST /tasks/{id}/cycles/{cycleId}/phases` | Body `{ "phase" }`. `phase` must be one of `diagnose`, `execute`, `verify`, `persist`. Transitions follow `domain.ValidPhaseTransition` (the previous phase is the highest-`phase_seq` row already on this cycle): the first phase must be `diagnose`; from there the legal forward edges are `diagnose → execute → verify → persist`, plus the corrective edge `verify → execute` for retries. Invalid transitions are rejected with **400** `phase transition "<prev>" -> "<next>" not allowed`. The cycle must be in status `running` (terminal cycles reject phase writes with **400** `cycle is terminal`); at most one running phase per cycle. The store assigns `phase_seq = max + 1` per cycle and inserts a mirror `phase_started` row in `task_events`, then writes the assigned `task_events.seq` back into the new phase row's `event_seq` column in the same SQL transaction. **201 Created** returns `taskCyclePhaseResponse` with `event_seq` populated. Publishes `task_cycle_changed`. Same cross-task 404 guard. |
 | Complete / fail / skip phase | `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | Body `{ "status", "summary"?, "details"? }`. `status` must be a terminal phase status (`succeeded`, `failed`, `skipped`); `running` and unknown enums are rejected with **400** `status must be a terminal phase status`. `summary` is optional (omit to leave the column unchanged); `details` is opaque JSON object (defaults to `{}`). Rejected with **400** `phase already terminal` for re-termination. Mirror row in `task_events` is `phase_completed` / `phase_failed` / `phase_skipped` matching the request status; `event_seq` is overwritten on the phase row to point at the terminal mirror seq (replacing the `phase_started` pointer set at creation). **200** returns `taskCyclePhaseResponse`. Publishes `task_cycle_changed`. **Note:** completing a phase does **not** terminate the parent cycle — call `PATCH /tasks/{id}/cycles/{cycleId}` explicitly when the attempt is over. |
@@ -314,6 +315,27 @@ Cycles promote the **diagnose → execute → verify → persist** loop into a t
 ```
 
 `ended_at`, `summary`, and `event_seq` are `omitempty`. `details` is always present (defaulted to `{}`).
+
+`taskCycleStreamEventResponse` shape:
+
+```json
+{
+  "id": "<stream-event-uuid>",
+  "task_id": "<task-uuid>",
+  "cycle_id": "<cycle-uuid>",
+  "phase_seq": 2,
+  "stream_seq": 1,
+  "at": "2026-01-01T00:00:00Z",
+  "source": "cursor",
+  "kind": "tool_call",
+  "subtype": "started",
+  "message": "Read file",
+  "tool": "ReadFile",
+  "payload": {}
+}
+```
+
+`subtype`, `message`, and `tool` are `omitempty`. `payload` is always present (defaulted to `{}`). `source` is currently `cursor` for normalized Cursor CLI stream events; future T2A lifecycle markers may use `t2a`.
 
 ### Documented `400` JSON `error` strings
 

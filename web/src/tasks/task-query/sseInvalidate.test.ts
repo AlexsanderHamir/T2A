@@ -81,6 +81,25 @@ describe("parseTaskChangeFrame", () => {
     ).toBeNull();
   });
 
+  it("returns a progress frame without treating it as an invalidation fallback", () => {
+    expect(
+      parseTaskChangeFrame(
+        '{"type":"agent_run_progress","id":"task-1","cycle_id":"cyc-1","phase_seq":2,"progress":{"kind":"tool_call","subtype":"started","tool":"ReadFile","message":"Started ReadFile"}}',
+      ),
+    ).toEqual({
+      kind: "progress",
+      taskId: "task-1",
+      cycleId: "cyc-1",
+      phaseSeq: 2,
+      progress: {
+        kind: "tool_call",
+        subtype: "started",
+        tool: "ReadFile",
+        message: "Started ReadFile",
+      },
+    });
+  });
+
   it("returns null for blank, malformed, missing-id, unknown-type, or array payloads", () => {
     expect(parseTaskChangeFrame("")).toBeNull();
     expect(parseTaskChangeFrame("   \n")).toBeNull();

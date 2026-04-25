@@ -109,6 +109,30 @@ export type TaskCycleDetail = TaskCycle & {
   phases: TaskCyclePhase[];
 };
 
+export type TaskCycleStreamEvent = {
+  id: string;
+  task_id: string;
+  cycle_id: string;
+  phase_seq: number;
+  stream_seq: number;
+  at: string;
+  source: "cursor" | "t2a" | string;
+  kind: string;
+  subtype?: string;
+  message?: string;
+  tool?: string;
+  payload: Record<string, unknown>;
+};
+
+export type TaskCycleStreamResponse = {
+  task_id: string;
+  cycle_id: string;
+  events: TaskCycleStreamEvent[];
+  limit: number;
+  has_more: boolean;
+  next_after_seq?: number;
+};
+
 /** Body for `POST /tasks/{id}/cycles`. Both fields are optional. */
 export type StartTaskCycleInput = {
   /** Same-task lineage; omit (or pass `null`) for a top-level attempt. */

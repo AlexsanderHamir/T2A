@@ -165,6 +165,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskChecklistCompletion.TableName": {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycle.TableName":               {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCyclePhase.TableName":          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleStreamEvent.TableName":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tAppSettings.TableName":             {},
 	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
 	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)
@@ -280,6 +281,12 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents\t*PickupWakeScheduler.fire":                                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents\t*PickupWakeScheduler.tryNotify":                           {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tsplitNDJSON":                                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\temitProgressFromLine":                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tprogressFromLine":                           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\ttextContent":                                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tfirstNonEmpty":                              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\ttoolProgressMessage":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tscanStdoutLines":                            {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\tRUMEventsAcceptedCounter":                       {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\tRUMEventsDroppedCounter":                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware\tRecordRUMAccepted":                              {},
@@ -307,6 +314,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\twriteBufferedEvent":                                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\twriteResyncFrame":                                  {},
 	"github.com/AlexsanderHamir/T2A/cmd/taskapi\tresolveTaskAPILogDir":                                     {},
+	"github.com/AlexsanderHamir/T2A/cmd/taskapi\t*runProgressSSEAdapter.shouldDrop":                        {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

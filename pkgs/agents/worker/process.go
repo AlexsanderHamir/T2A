@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"strings"
@@ -335,7 +336,43 @@ func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycl
 		WorkingDir:  w.options.WorkingDir,
 		Timeout:     w.options.RunTimeout,
 		CursorModel: task.CursorModel,
+		OnProgress: func(ev runner.ProgressEvent) {
+			w.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
+			w.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
+		},
 	})
+}
+
+func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress",
+		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
+		"kind", ev.Kind, "subtype", ev.Subtype)
+	if ev.Kind == "" {
+		return
+	}
+	payload, err := json.Marshal(ev)
+	if err != nil {
+		slog.Warn("agent worker progress payload marshal failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.marshal_err",
+			"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq, "err", err)
+		payload = []byte("{}")
+	}
+	if _, err := w.store.AppendCycleStreamEvent(ctx, store.AppendCycleStreamEventInput{
+		TaskID:   taskID,
+		CycleID:  cycleID,
+		PhaseSeq: phaseSeq,
+		Source:   "cursor",
+		Kind:     ev.Kind,
+		Subtype:  ev.Subtype,
+		Message:  ev.Message,
+		Tool:     ev.Tool,
+		Payload:  payload,
+	}); err != nil {
+		slog.Warn("agent worker progress persistence failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.err",
+			"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
+			"kind", ev.Kind, "err", err)
+	}
 }
 
 // withOptionalRunTimeout returns a derived context that either inherits

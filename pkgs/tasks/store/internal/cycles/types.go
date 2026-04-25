@@ -1,6 +1,10 @@
 package cycles
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import (
+	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+)
 
 // StartCycleInput captures everything needed to begin a new execution
 // attempt for a task. The store decides AttemptSeq; callers cannot
@@ -35,4 +39,19 @@ type CompletePhaseInput struct {
 	// By identifies who recorded the terminal transition; mirrored as
 	// the Actor on the audit row in task_events.
 	By domain.Actor
+}
+
+// AppendStreamEventInput captures one durable normalized progress event for
+// a cycle attempt. The store assigns StreamSeq per cycle.
+type AppendStreamEventInput struct {
+	TaskID   string
+	CycleID  string
+	PhaseSeq int64
+	At       time.Time
+	Source   string
+	Kind     string
+	Subtype  string
+	Message  string
+	Tool     string
+	Payload  []byte
 }

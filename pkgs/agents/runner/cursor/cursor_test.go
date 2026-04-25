@@ -44,6 +44,23 @@ func fakeExec(c *captured, stdout, stderr []byte, exitCode int, runErr error, ca
 	}
 }
 
+func fakeStreamExec(c *captured, stdout, stderr []byte, exitCode int, runErr error) cursor.StreamExecFn {
+	return func(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) ([]byte, []byte, int, error) {
+		c.dir = dir
+		c.env = append([]string(nil), env...)
+		c.stdin = append([]byte(nil), stdin...)
+		c.name = name
+		c.args = append([]string(nil), args...)
+		for _, line := range bytes.Split(bytes.TrimSpace(stdout), []byte("\n")) {
+			if len(bytes.TrimSpace(line)) == 0 {
+				continue
+			}
+			onStdoutLine(line)
+		}
+		return stdout, stderr, exitCode, runErr
+	}
+}
+
 func newAdapter(execFn cursor.ExecFn, extraOpts ...func(*cursor.Options)) *cursor.Adapter {
 	opts := cursor.Options{
 		BinaryPath:           "fake-cursor-agent",
@@ -183,6 +200,46 @@ func TestRun_streamJSONCapturesResolvedModel(t *testing.T) {
 	}
 	if details.SessionID != "sess-abc" {
 		t.Errorf("Details.session_id should come from the terminal result event: got %q", details.SessionID)
+	}
+}
+
+func TestRun_streamJSONEmitsLiveProgress(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"system","subtype":"init","model":"Claude 4 Sonnet"}` + "\n" +
+			`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reading the task files."}]}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","name":"ReadFile"}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"sess-live"}` + "\n",
+	)
+	var c captured
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&c, stdout, nil, 0, nil)
+	})
+	var progress []runner.ProgressEvent
+	req := defaultRequest()
+	req.OnProgress = func(ev runner.ProgressEvent) {
+		progress = append(progress, ev)
+	}
+
+	res, err := a.Run(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Summary != "done" {
+		t.Fatalf("Summary: got %q want done", res.Summary)
+	}
+	if len(progress) != 3 {
+		t.Fatalf("progress count: got %d want 3 (%+v)", len(progress), progress)
+	}
+	if progress[0].Kind != "system" || progress[0].Message != "Using Claude 4 Sonnet" {
+		t.Errorf("system progress: %+v", progress[0])
+	}
+	if progress[1].Kind != "assistant" || progress[1].Message != "Reading the task files." {
+		t.Errorf("assistant progress: %+v", progress[1])
+	}
+	if progress[2].Kind != "tool_call" || progress[2].Subtype != "started" || progress[2].Tool != "ReadFile" {
+		t.Errorf("tool progress: %+v", progress[2])
 	}
 }
 

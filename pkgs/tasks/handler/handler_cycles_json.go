@@ -133,3 +133,31 @@ type taskCycleDetailResponse struct {
 	CycleMeta     cycleMetaProjection      `json:"cycle_meta"`
 	Phases        []taskCyclePhaseResponse `json:"phases"`
 }
+
+// taskCycleStreamEventResponse is the JSON shape for one persisted runner
+// stream event. payload is always present and normalized to a JSON object.
+type taskCycleStreamEventResponse struct {
+	ID        string          `json:"id"`
+	TaskID    string          `json:"task_id"`
+	CycleID   string          `json:"cycle_id"`
+	PhaseSeq  int64           `json:"phase_seq"`
+	StreamSeq int64           `json:"stream_seq"`
+	At        time.Time       `json:"at"`
+	Source    string          `json:"source"`
+	Kind      string          `json:"kind"`
+	Subtype   string          `json:"subtype,omitempty"`
+	Message   string          `json:"message,omitempty"`
+	Tool      string          `json:"tool,omitempty"`
+	Payload   json.RawMessage `json:"payload"`
+}
+
+// taskCycleStreamListResponse is the JSON envelope for
+// GET /tasks/{id}/cycles/{cycleId}/stream.
+type taskCycleStreamListResponse struct {
+	TaskID       string                         `json:"task_id"`
+	CycleID      string                         `json:"cycle_id"`
+	Events       []taskCycleStreamEventResponse `json:"events"`
+	Limit        int                            `json:"limit"`
+	HasMore      bool                           `json:"has_more"`
+	NextAfterSeq *int64                         `json:"next_after_seq,omitempty"`
+}

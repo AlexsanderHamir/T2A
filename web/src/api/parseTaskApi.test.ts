@@ -5,6 +5,7 @@ import {
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,
+  parseTaskCycleStreamResponse,
   parseTaskCyclesListResponse,
   parseTaskEventDetail,
   parseTaskEventsResponse,
@@ -1046,6 +1047,58 @@ describe("parseTaskCycleDetail", () => {
     expect(() => parseTaskCycleDetail(validCycle)).toThrow(
       /phases must be an array/,
     );
+  });
+});
+
+describe("parseTaskCycleStreamResponse", () => {
+  it("parses persisted stream events", () => {
+    expect(
+      parseTaskCycleStreamResponse({
+        task_id: "task-1",
+        cycle_id: "cyc-1",
+        events: [
+          {
+            id: "stream-1",
+            task_id: "task-1",
+            cycle_id: "cyc-1",
+            phase_seq: 2,
+            stream_seq: 1,
+            at: "2026-01-01T00:00:00Z",
+            source: "cursor",
+            kind: "tool_call",
+            subtype: "started",
+            message: "Read file",
+            tool: "ReadFile",
+            payload: { kind: "tool_call" },
+          },
+        ],
+        limit: 100,
+        has_more: true,
+        next_after_seq: 1,
+      }),
+    ).toEqual({
+      task_id: "task-1",
+      cycle_id: "cyc-1",
+      events: [
+        {
+          id: "stream-1",
+          task_id: "task-1",
+          cycle_id: "cyc-1",
+          phase_seq: 2,
+          stream_seq: 1,
+          at: "2026-01-01T00:00:00Z",
+          source: "cursor",
+          kind: "tool_call",
+          subtype: "started",
+          message: "Read file",
+          tool: "ReadFile",
+          payload: { kind: "tool_call" },
+        },
+      ],
+      limit: 100,
+      has_more: true,
+      next_after_seq: 1,
+    });
   });
 });
 

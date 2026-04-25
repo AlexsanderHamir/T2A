@@ -1,6 +1,10 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getTaskCycle, listTaskCycles } from "@/api";
-import type { TaskCycleDetail, TaskCyclesListResponse } from "@/types";
+import { getTaskCycle, listTaskCycleStreamEvents, listTaskCycles } from "@/api";
+import type {
+  TaskCycleDetail,
+  TaskCycleStreamResponse,
+  TaskCyclesListResponse,
+} from "@/types";
 import { taskQueryKeys } from "../task-query";
 
 /**
@@ -35,6 +39,23 @@ export function useTaskCycle(
   return useQuery({
     queryKey: taskQueryKeys.cycle(taskId, cycleId),
     queryFn: ({ signal }) => getTaskCycle(taskId, cycleId, { signal }),
+    enabled,
+  });
+}
+
+export function useTaskCycleStream(
+  taskId: string,
+  cycleId: string,
+  options?: { enabled?: boolean; limit?: number },
+): UseQueryResult<TaskCycleStreamResponse, Error> {
+  const enabled = (options?.enabled ?? true) && Boolean(taskId) && Boolean(cycleId);
+  return useQuery({
+    queryKey: taskQueryKeys.cycleStream(taskId, cycleId),
+    queryFn: ({ signal }) => {
+      const opts: { signal?: AbortSignal; limit?: number } = { signal };
+      if (options?.limit !== undefined) opts.limit = options.limit;
+      return listTaskCycleStreamEvents(taskId, cycleId, opts);
+    },
     enabled,
   });
 }

@@ -8,6 +8,7 @@ export { TaskChangeModelModal, TaskEditForm } from "./components/task-detail";
 export { useTasksApp } from "./hooks/useTasksApp";
 export { TaskDetailPage } from "./pages/TaskDetailPage";
 export { TaskDraftsPage } from "./pages/TaskDraftsPage";
+export { TaskCycleDetailPage } from "./pages/TaskCycleDetailPage";
 export { TaskEventDetailPage } from "./pages/TaskEventDetailPage";
 export { TaskGraphPage } from "./pages/TaskGraphPage";
 export { TaskHome } from "./pages/TaskHome";

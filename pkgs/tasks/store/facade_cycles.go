@@ -18,6 +18,10 @@ type StartCycleInput = cycles.StartCycleInput
 // while the implementation lives in internal/cycles.
 type CompletePhaseInput = cycles.CompletePhaseInput
 
+// AppendCycleStreamEventInput is the public re-export of the durable
+// per-attempt stream event input.
+type AppendCycleStreamEventInput = cycles.AppendStreamEventInput
+
 // StartCycle creates a new TaskCycle row with status=running for the
 // given task. See cycles.Start for the full contract.
 func (s *Store) StartCycle(ctx context.Context, in StartCycleInput) (*domain.TaskCycle, error) {
@@ -79,6 +83,18 @@ func (s *Store) CompletePhase(ctx context.Context, in CompletePhaseInput) (*doma
 func (s *Store) ListPhasesForCycle(ctx context.Context, cycleID string) ([]domain.TaskCyclePhase, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListPhasesForCycle")
 	return cycles.ListPhasesForCycle(ctx, s.db, cycleID)
+}
+
+// AppendCycleStreamEvent persists one normalized runner progress event for a cycle.
+func (s *Store) AppendCycleStreamEvent(ctx context.Context, in AppendCycleStreamEventInput) (*domain.TaskCycleStreamEvent, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendCycleStreamEvent")
+	return cycles.AppendStreamEvent(ctx, s.db, in)
+}
+
+// ListCycleStreamEvents returns persisted stream events for cycleID ordered by stream_seq ASC.
+func (s *Store) ListCycleStreamEvents(ctx context.Context, cycleID string, afterSeq int64, limit int) ([]domain.TaskCycleStreamEvent, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCycleStreamEvents")
+	return cycles.ListStreamEvents(ctx, s.db, cycleID, afterSeq, limit)
 }
 
 // ListRunningCycles returns every cycle currently in CycleStatusRunning

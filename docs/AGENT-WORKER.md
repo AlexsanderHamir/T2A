@@ -40,7 +40,7 @@ flowchart LR
   end
 
   subgraph adapter["pkgs/agents/runner/cursor"]
-    CUR[Adapter ⇒ exec cursor --print --output-format json]
+    CUR[Adapter ⇒ exec cursor --print --output-format stream-json]
     PROBE[Probe ⇒ cursor --version<br/>at startup]
   end
 
@@ -62,7 +62,7 @@ Component map:
 | Package | Role |
 |---------|------|
 | [`pkgs/agents/runner`](../pkgs/agents/runner) | `Runner`, `Request`, `Result` interface; typed sentinel errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`). |
-| [`pkgs/agents/runner/cursor`](../pkgs/agents/runner/cursor) | Cursor CLI adapter: `--print --output-format json`, env allowlist, secret redaction, `Probe(cursor --version)` for startup checks. |
+| [`pkgs/agents/runner/cursor`](../pkgs/agents/runner/cursor) | Cursor CLI adapter: `--print --output-format stream-json`, env allowlist, secret redaction, live progress normalization, `Probe(cursor --version)` for startup checks. |
 | [`pkgs/agents/runner/runnerfake`](../pkgs/agents/runner/runnerfake) | Programmable in-memory `Runner` for unit + integration tests. |
 | [`pkgs/agents/worker`](../pkgs/agents/worker) | `Worker`, `Options`, `CycleChangeNotifier` interface, `SweepOrphanRunningCycles`. |
 | [`cmd/taskapi/run_helpers.go`](../cmd/taskapi/run_helpers.go) | Wires the four pieces above into `taskapi`'s lifecycle (probe → sweep → adapter → SSE notifier → `Worker.Run`). |
@@ -167,7 +167,7 @@ V1 ships exactly one adapter; V2 multi-runner selection is intentionally deferre
 
 **Invocation contract:**
 
-- `cursor --print --output-format json` (overridable via `cursor.Options.Args`).
+- `cursor --print --output-format stream-json` (overridable via `cursor.Options.Args`).
 - The task's `initial_prompt` is fed on stdin.
 - Working directory is `runner.Request.WorkingDir`, which the worker fills from `app_settings.repo_root` (see [Configuration](#configuration) and [SETTINGS.md](./SETTINGS.md)).
 - Timeout is `runner.Request.Timeout`, which the worker fills from `app_settings.max_run_duration_seconds` (default `0` = no limit). When non-zero, the adapter applies `context.WithTimeout` on top of the worker's ctx; either firing maps to `runner.ErrTimeout`.
@@ -181,6 +181,12 @@ V1 ships exactly one adapter; V2 multi-runner selection is intentionally deferre
 
 - `RawOutput` is the combined stdout + stderr of the child, post-redaction, capped before being persisted into `task_cycle_phases.details_json`.
 - The redactor (`cursor.Redact`) replaces `Authorization: …` lines with `Authorization: [REDACTED]`, replaces any `T2A_…=value` assignment with `T2A_…=[REDACTED]`, and rewrites absolute home paths (`$HOME`, `$USERPROFILE`) to `~` so log scrapers do not learn the operator's local layout.
+
+**Live progress:**
+
+- The adapter reads Cursor `stream-json` stdout line-by-line while the child process is still running. The terminal `result` event is still parsed into `runner.Result` for the durable phase row.
+- Intermediate `system.init`, `assistant`, and `tool_call` events are normalized into small `runner.ProgressEvent` values and forwarded through `runner.Request.OnProgress`. Raw Cursor JSON and stderr are not sent to the browser.
+- The worker publishes those updates as ephemeral `agent_run_progress` SSE frames keyed by task id, cycle id, and phase sequence. They are throttled before fanout and are not written to `task_events`; the next `task_cycle_changed` frame and REST refetch remain authoritative for audit/history.
 
 **Startup probe:**
 
@@ -209,7 +215,7 @@ For one successful task the worker produces:
 
 Plus the regular `status_changed` events that `(*store.Store).Update` writes when the task transitions `ready → running` and then `running → done`, exactly as for any other actor that flips a task through the REST API.
 
-The worker also publishes one `task_cycle_changed` SSE event per cycle/phase mutation (six per happy-path attempt) via the `CycleChangeNotifier` adapter wired in `cmd/taskapi/run_helpers.go`. The SPA routes that event to its dedicated cycles cache slot (see [API-SSE.md](./API-SSE.md)), so cycle activity appears in any open browser without a page refresh and without the SPA refetching the entire task tree.
+The worker also publishes one `task_cycle_changed` SSE event per cycle/phase mutation (six per happy-path attempt) via the `CycleChangeNotifier` adapter wired in `cmd/taskapi/run_helpers.go`. The SPA routes that event to its dedicated cycles cache slot (see [API-SSE.md](./API-SSE.md)), so cycle activity appears in any open browser without a page refresh and without the SPA refetching the entire task tree. While the execute phase is running, normalized Cursor stream events may also publish `agent_run_progress` frames so the UI can show recent agent activity between `phase_started` and `phase_completed`.
 
 Failure mirrors are symmetrical: a failed runner produces `phase_failed` (instead of `phase_completed`) and `cycle_failed` (instead of `cycle_completed`), with the `reason` field in the `cycle_failed` payload set to one of the strings in the [Runner abstraction table](#runner-abstraction). A panic produces the same shape with `reason="panic"`. Shutdown produces `cycle_failed` with `status=aborted` and `reason="shutdown"`.
 

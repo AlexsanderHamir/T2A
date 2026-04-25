@@ -15,6 +15,18 @@
 export type TaskChangeFrame =
   | { kind: "task"; taskId: string }
   | { kind: "cycle"; taskId: string; cycleId: string }
+  | {
+      kind: "progress";
+      taskId: string;
+      cycleId: string;
+      phaseSeq: number;
+      progress: {
+        kind: string;
+        subtype?: string;
+        message?: string;
+        tool?: string;
+      };
+    }
   | { kind: "settings" }
   | { kind: "agent_run_cancelled" }
   /**
@@ -32,6 +44,15 @@ function readStringId(o: Record<string, unknown>, key: string): string {
     return "";
   }
   return v.trim();
+}
+
+function readOptionalString(o: Record<string, unknown>, key: string): string | undefined {
+  const v = o[key];
+  if (typeof v !== "string") {
+    return undefined;
+  }
+  const trimmed = v.trim();
+  return trimmed === "" ? undefined : trimmed;
 }
 
 /**
@@ -67,6 +88,39 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
   const id = readStringId(o, "id");
   if (id === "") {
     return null;
+  }
+  if (o.type === "agent_run_progress") {
+    const cycleId = readStringId(o, "cycle_id");
+    const phaseSeq = o.phase_seq;
+    const rawProgress = o.progress;
+    if (
+      cycleId === "" ||
+      typeof phaseSeq !== "number" ||
+      !Number.isFinite(phaseSeq) ||
+      phaseSeq <= 0 ||
+      typeof rawProgress !== "object" ||
+      rawProgress === null ||
+      Array.isArray(rawProgress)
+    ) {
+      return null;
+    }
+    const progressObject = rawProgress as Record<string, unknown>;
+    const progressKind = readStringId(progressObject, "kind");
+    if (progressKind === "") {
+      return null;
+    }
+    return {
+      kind: "progress",
+      taskId: id,
+      cycleId,
+      phaseSeq,
+      progress: {
+        kind: progressKind,
+        subtype: readOptionalString(progressObject, "subtype"),
+        message: readOptionalString(progressObject, "message"),
+        tool: readOptionalString(progressObject, "tool"),
+      },
+    };
   }
   if (o.type === "task_cycle_changed") {
     const cycleId = readStringId(o, "cycle_id");

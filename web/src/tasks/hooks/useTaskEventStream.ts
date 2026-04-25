@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseTaskChangeFrame, settingsQueryKeys, taskQueryKeys } from "../task-query";
 import { rumSSEReconnected, rumSSEResyncReceived } from "@/observability";
+import { pushAgentRunProgress } from "./useAgentRunProgress";
 import { shouldSuppressSSEFor } from "./optimisticVersion";
 
 /**
@@ -184,6 +185,14 @@ export function useTaskEventStream(): boolean {
           });
           void queryClient.invalidateQueries({
             queryKey: settingsQueryKeys.app(),
+          });
+          return;
+        } else if (frame.kind === "progress") {
+          pushAgentRunProgress({
+            taskId: frame.taskId,
+            cycleId: frame.cycleId,
+            phaseSeq: frame.phaseSeq,
+            progress: frame.progress,
           });
           return;
         } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {

@@ -15,6 +15,8 @@ import {
   type TaskCycle,
   type TaskCycleDetail,
   type TaskCyclePhase,
+  type TaskCycleStreamEvent,
+  type TaskCycleStreamResponse,
   type TaskCyclesListResponse,
   type TaskDraftDetail,
   type TaskDraftSummary,
@@ -1042,4 +1044,61 @@ export function parseTaskCycleDetail(value: unknown): TaskCycleDetail {
     }
   });
   return { ...cycle, phases };
+}
+
+export function parseTaskCycleStreamEvent(value: unknown): TaskCycleStreamEvent {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: stream event must be an object");
+  }
+  const out: TaskCycleStreamEvent = {
+    id: parseNonEmptyString(value.id, "id"),
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    phase_seq: parseFiniteNumber(value.phase_seq, "phase_seq"),
+    stream_seq: parseFiniteNumber(value.stream_seq, "stream_seq"),
+    at: parseISO8601Required(value.at, "at"),
+    source: parseNonEmptyString(value.source, "source"),
+    kind: parseNonEmptyString(value.kind, "kind"),
+    payload: parseObjectField(value.payload, "payload"),
+  };
+  if (value.subtype !== undefined && value.subtype !== null) {
+    out.subtype = parseString(value.subtype, "subtype");
+  }
+  if (value.message !== undefined && value.message !== null) {
+    out.message = parseString(value.message, "message");
+  }
+  if (value.tool !== undefined && value.tool !== null) {
+    out.tool = parseString(value.tool, "tool");
+  }
+  return out;
+}
+
+export function parseTaskCycleStreamResponse(
+  value: unknown,
+): TaskCycleStreamResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: cycle stream payload must be an object");
+  }
+  const raw = value.events;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: events must be an array");
+  }
+  const events = raw.map((item, i) => {
+    try {
+      return parseTaskCycleStreamEvent(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: events[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  const out: TaskCycleStreamResponse = {
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    events,
+    limit: parseFiniteNumber(value.limit, "limit"),
+    has_more: parseBooleanField(value.has_more, "has_more"),
+  };
+  if (value.next_after_seq !== undefined && value.next_after_seq !== null) {
+    out.next_after_seq = parseFiniteNumber(value.next_after_seq, "next_after_seq");
+  }
+  return out;
 }

@@ -51,6 +51,9 @@ const drainNoLimitTimeout = 5 * time.Minute
 // log and continue so a slow DB doesn't block startup indefinitely.
 const agentWorkerStartupSweepTimeout = 30 * time.Second
 
+const agentRunProgressMinInterval = 750 * time.Millisecond
+const agentRunProgressThrottleEntries = 512
+
 // agentWorkerSupervisor owns the lifecycle of the in-process agent
 // worker. Construct via newAgentWorkerSupervisor; drive with Start,
 // Reload, CancelCurrentRun, Drain. Methods are safe for concurrent
@@ -378,11 +381,13 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 
 	runTimeout := time.Duration(cfg.MaxRunDurationSeconds) * time.Second
 	notifier := newCycleChangeSSEAdapter(s.hub)
+	progressNotifier := newRunProgressSSEAdapter(s.hub, agentRunProgressMinInterval)
 	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
-		RunTimeout: runTimeout,
-		WorkingDir: cfg.RepoRoot,
-		Notifier:   notifier,
-		Metrics:    s.metrics,
+		RunTimeout:       runTimeout,
+		WorkingDir:       cfg.RepoRoot,
+		Notifier:         notifier,
+		ProgressNotifier: progressNotifier,
+		Metrics:          s.metrics,
 	})
 
 	workerCtx, cancelWorker := context.WithCancel(s.parentCtx)
@@ -725,4 +730,69 @@ func (a *cycleChangeSSEAdapter) PublishCycleChange(taskID, cycleID string) {
 		ID:      taskID,
 		CycleID: cycleID,
 	})
+}
+
+type runProgressSSEAdapter struct {
+	hub         *handler.SSEHub
+	minInterval time.Duration
+
+	mu       sync.Mutex
+	lastSent map[string]time.Time
+}
+
+func newRunProgressSSEAdapter(hub *handler.SSEHub, minInterval time.Duration) *runProgressSSEAdapter {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.newRunProgressSSEAdapter")
+	return &runProgressSSEAdapter{
+		hub:         hub,
+		minInterval: minInterval,
+		lastSent:    make(map[string]time.Time),
+	}
+}
+
+func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.runProgressSSEAdapter.PublishRunProgress",
+		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
+		"kind", ev.Kind, "subtype", ev.Subtype)
+	if a == nil || a.hub == nil || taskID == "" || cycleID == "" || phaseSeq <= 0 || ev.Kind == "" {
+		return
+	}
+	if a.shouldDrop(taskID, cycleID, phaseSeq) {
+		return
+	}
+	a.hub.Publish(handler.TaskChangeEvent{
+		Type:     handler.AgentRunProgress,
+		ID:       taskID,
+		CycleID:  cycleID,
+		PhaseSeq: phaseSeq,
+		Progress: &handler.AgentRunProgressPayload{
+			Kind:    ev.Kind,
+			Subtype: ev.Subtype,
+			Message: ev.Message,
+			Tool:    ev.Tool,
+		},
+	})
+}
+
+func (a *runProgressSSEAdapter) shouldDrop(taskID, cycleID string, phaseSeq int64) bool {
+	if a.minInterval <= 0 {
+		return false
+	}
+	key := fmt.Sprintf("%s:%s:%d", taskID, cycleID, phaseSeq)
+	now := time.Now()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	last, ok := a.lastSent[key]
+	if ok && now.Sub(last) < a.minInterval {
+		return true
+	}
+	a.lastSent[key] = now
+	if len(a.lastSent) > agentRunProgressThrottleEntries {
+		for old := range a.lastSent {
+			if old != key {
+				delete(a.lastSent, old)
+				break
+			}
+		}
+	}
+	return false
 }

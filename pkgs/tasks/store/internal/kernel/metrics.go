@@ -53,6 +53,8 @@ const (
 	OpStartCyclePhase         = "start_cycle_phase"
 	OpCompleteCyclePhase      = "complete_cycle_phase"
 	OpListCyclePhases         = "list_cycle_phases"
+	OpAppendCycleStreamEvent  = "append_cycle_stream_event"
+	OpListCycleStreamEvents   = "list_cycle_stream_events"
 	OpGetAppSettings          = "get_app_settings"
 	OpUpdateAppSettings       = "update_app_settings"
 )
