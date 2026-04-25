@@ -150,6 +150,37 @@ describe("useTaskEventStream", () => {
     });
   });
 
+  it("refreshes the persisted cycle stream on agent progress without broad task invalidation", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inv = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useTaskEventStream(), {
+      wrapper: createWrapper(qc),
+    });
+    const mockES = getCurrentMockES();
+    act(() => {
+      mockES!.onopen?.();
+    });
+    act(() => {
+      mockES!.onmessage?.({
+        data: '{"type":"agent_run_progress","id":"task-1","cycle_id":"cyc-1","phase_seq":2,"progress":{"kind":"tool_call","subtype":"started","tool":"ReadFile","message":"Started ReadFile"}}',
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    const calls = inv.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual({
+      queryKey: taskQueryKeys.cycleStream("task-1", "cyc-1"),
+    });
+    for (const arg of calls) {
+      const key = (arg as { queryKey: readonly unknown[] }).queryKey;
+      expect(key).not.toEqual(["tasks"]);
+      expect(key).not.toEqual(["tasks", "detail"]);
+    }
+  });
+
   it("falls back to broad invalidation when no recognised frame arrives", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");

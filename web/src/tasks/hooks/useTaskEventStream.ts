@@ -194,6 +194,9 @@ export function useTaskEventStream(): boolean {
             phaseSeq: frame.phaseSeq,
             progress: frame.progress,
           });
+          void queryClient.invalidateQueries({
+            queryKey: taskQueryKeys.cycleStream(frame.taskId, frame.cycleId),
+          });
           return;
         } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {
           // Settings updates and operator-initiated cancels are rare
