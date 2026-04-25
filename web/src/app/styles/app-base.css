@@ -1,6 +1,6 @@
 /* Base styles split by global foundations, shell chrome, feedback, and panel surfaces. */
-@import "./app-base-foundations.css";
-@import "./app-shell.css";
-@import "./app-status-and-form-chrome.css";
-@import "./app-feedback.css";
-@import "./app-panel.css";
+@import "./base/app-base-foundations.css";
+@import "./base/app-shell.css";
+@import "./base/app-status-and-form-chrome.css";
+@import "./base/app-feedback.css";
+@import "./base/app-panel.css";

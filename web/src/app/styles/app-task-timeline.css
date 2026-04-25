@@ -1,5 +1,5 @@
 /* Task timeline styles are split by timeline, event detail, and data surfaces. */
-@import "./app-task-timeline-list.css";
-@import "./app-task-event-detail.css";
-@import "./app-task-timeline-chrome.css";
-@import "./app-task-event-data.css";
+@import "./timeline/app-task-timeline-list.css";
+@import "./timeline/app-task-event-detail.css";
+@import "./timeline/app-task-timeline-chrome.css";
+@import "./timeline/app-task-event-data.css";

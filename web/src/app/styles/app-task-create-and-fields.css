@@ -1,5 +1,5 @@
 /* Task creation styles are split by form area; preserve the former cascade order. */
-@import "./app-task-create-main.css";
-@import "./app-task-create-agent.css";
-@import "./app-task-create-subtasks.css";
-@import "./app-schedule-picker.css";
+@import "./task-create/app-task-create-main.css";
+@import "./task-create/app-task-create-agent.css";
+@import "./task-create/app-task-create-subtasks.css";
+@import "./task-create/app-schedule-picker.css";

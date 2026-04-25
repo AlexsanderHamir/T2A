@@ -1,4 +1,4 @@
 /* Task list and mention styles are split by surface; preserve the former cascade order. */
-@import "./app-task-list.css";
-@import "./app-mentions.css";
-@import "./app-task-list-skeleton-bulk.css";
+@import "./task-list/app-task-list.css";
+@import "./mentions/app-mentions.css";
+@import "./task-list/app-task-list-skeleton-bulk.css";

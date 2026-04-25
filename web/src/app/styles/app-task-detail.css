@@ -1,8 +1,8 @@
 /* Task detail styles are split by surface; keep import order aligned with the former monolithic cascade. */
-@import "./app-task-detail-shell.css";
-@import "./app-task-detail-subtasks.css";
-@import "./app-task-graph.css";
-@import "./app-task-detail-checklist-prompt.css";
-@import "./app-task-detail-skeletons.css";
-@import "./app-task-cycles.css";
-@import "./app-task-detail-schedule.css";
+@import "./task-detail/app-task-detail-shell.css";
+@import "./task-detail/app-task-detail-subtasks.css";
+@import "./task-detail/app-task-graph.css";
+@import "./task-detail/app-task-detail-checklist-prompt.css";
+@import "./task-detail/app-task-detail-skeletons.css";
+@import "./task-detail/app-task-cycles.css";
+@import "./task-detail/app-task-detail-schedule.css";

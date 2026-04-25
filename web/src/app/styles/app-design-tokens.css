@@ -1,4 +1,4 @@
 /* Design tokens split by foundations, light theme, and dark theme overrides. */
-@import "./app-design-tokens-foundation.css";
-@import "./app-design-tokens-light.css";
-@import "./app-design-tokens-dark.css";
+@import "./tokens/app-design-tokens-foundation.css";
+@import "./tokens/app-design-tokens-light.css";
+@import "./tokens/app-design-tokens-dark.css";

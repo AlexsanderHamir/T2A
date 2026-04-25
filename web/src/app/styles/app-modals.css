@@ -1,4 +1,4 @@
 /* Modal styles split by viewport shell, draft resume/busy states, and mobile sheet behavior. */
-@import "./app-modal-shell.css";
-@import "./app-modal-draft-resume.css";
-@import "./app-modal-mobile.css";
+@import "./modals/app-modal-shell.css";
+@import "./modals/app-modal-draft-resume.css";
+@import "./modals/app-modal-mobile.css";
