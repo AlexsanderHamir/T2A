@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { listTaskEvents } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
@@ -22,12 +23,21 @@ import {
 } from "../hooks/useAgentRunProgress";
 import { useTaskCycle, useTaskCycleStream } from "../hooks/useTaskCycles";
 
+const STREAM_VISIBLE_INITIAL = 6;
+const AUDIT_VISIBLE_INITIAL = 6;
+const LOAD_MORE_STEP = 6;
+
 export function TaskCycleDetailPage() {
   const { taskId = "", cycleId = "" } = useParams<{
     taskId: string;
     cycleId: string;
   }>();
   const paramsValid = Boolean(taskId) && Boolean(cycleId);
+  const [visibleStreamCount, setVisibleStreamCount] = useState(
+    STREAM_VISIBLE_INITIAL,
+  );
+  const [visibleAuditCount, setVisibleAuditCount] =
+    useState(AUDIT_VISIBLE_INITIAL);
   const cycleQuery = useTaskCycle(taskId, cycleId, { enabled: paramsValid });
   const streamQuery = useTaskCycleStream(taskId, cycleId, {
     enabled: paramsValid,
@@ -38,6 +48,11 @@ export function TaskCycleDetailPage() {
     queryFn: ({ signal }) => listTaskEvents(taskId, { signal, limit: 200 }),
     enabled: Boolean(taskId),
   });
+
+  useEffect(() => {
+    setVisibleStreamCount(STREAM_VISIBLE_INITIAL);
+    setVisibleAuditCount(AUDIT_VISIBLE_INITIAL);
+  }, [cycleId]);
 
   useDocumentTitle(
     cycleQuery.data
@@ -89,9 +104,14 @@ export function TaskCycleDetailPage() {
   }
 
   const cycle = cycleQuery.data;
-  const streamEvents = streamQuery.data?.events ?? [];
-  const auditEvents =
-    auditQuery.data?.events.filter((ev) => ev.data.cycle_id === cycleId) ?? [];
+  const streamEvents = [...(streamQuery.data?.events ?? [])].sort(
+    (a, b) => b.stream_seq - a.stream_seq,
+  );
+  const visibleStreamEvents = streamEvents.slice(0, visibleStreamCount);
+  const auditEvents = (
+    auditQuery.data?.events.filter((ev) => ev.data.cycle_id === cycleId) ?? []
+  ).sort((a, b) => b.seq - a.seq);
+  const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
 
   return (
     <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
@@ -173,7 +193,7 @@ export function TaskCycleDetailPage() {
       <section className="task-attempt-section" aria-labelledby="attempt-stream">
         <div className="task-attempt-section-heading-row">
           <h3 className="task-detail-subheading term-prompt" id="attempt-stream">
-            <span>Cursor stream</span>
+            <span>Cursor events</span>
           </h3>
           {streamQuery.isFetching ? <span className="muted">Refreshing…</span> : null}
         </div>
@@ -184,11 +204,21 @@ export function TaskCycleDetailPage() {
         ) : streamEvents.length === 0 ? (
           <p className="muted">No persisted Cursor updates for this attempt yet.</p>
         ) : (
-          <ol className="task-attempt-timeline">
-            {streamEvents.map((ev) => (
-              <StreamEventRow key={ev.id} ev={ev} />
-            ))}
-          </ol>
+          <>
+            <ol className="task-attempt-timeline">
+              {visibleStreamEvents.map((ev) => (
+                <StreamEventRow key={ev.id} ev={ev} />
+              ))}
+            </ol>
+            <LoadMoreRows
+              shown={visibleStreamEvents.length}
+              total={streamEvents.length}
+              itemLabel="Cursor updates"
+              onLoadMore={() =>
+                setVisibleStreamCount((n) => n + LOAD_MORE_STEP)
+              }
+            />
+          </>
         )}
       </section>
 
@@ -207,11 +237,19 @@ export function TaskCycleDetailPage() {
         ) : auditEvents.length === 0 ? (
           <p className="muted">No task audit events reference this attempt.</p>
         ) : (
-          <ol className="task-attempt-timeline">
-            {auditEvents.map((ev) => (
-              <AuditEventRow key={ev.seq} taskId={taskId} ev={ev} />
-            ))}
-          </ol>
+          <>
+            <ol className="task-attempt-timeline">
+              {visibleAuditEvents.map((ev) => (
+                <AuditEventRow key={ev.seq} taskId={taskId} ev={ev} />
+              ))}
+            </ol>
+            <LoadMoreRows
+              shown={visibleAuditEvents.length}
+              total={auditEvents.length}
+              itemLabel="audit events"
+              onLoadMore={() => setVisibleAuditCount((n) => n + LOAD_MORE_STEP)}
+            />
+          </>
         )}
       </section>
     </section>
@@ -230,37 +268,111 @@ function LivePhaseTail({
   const live = useAgentRunProgress(taskId, cycleId, phase.phase_seq);
   if (phase.status !== "running" || live.length === 0) return null;
   return (
-    <ul className="task-cycle-progress-list" aria-live="polite">
-      {live.map((item, i) => (
-        <li
-          key={`${item.receivedAt}:${i}:${item.progress.kind}`}
-          className="task-cycle-progress-item"
-        >
-          <span className="task-cycle-progress-kind">
-            {streamKindLabel(item.progress.kind, item.progress.subtype)}
-          </span>
-          <span className="task-cycle-progress-message">
-            {streamMessage(item)}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div className="task-attempt-live-tail" aria-live="polite">
+      <div className="task-attempt-live-tail-heading">
+        <span className="task-attempt-live-dot" aria-hidden="true" />
+        <span>Live updates for this running phase</span>
+      </div>
+      <ul className="task-cycle-progress-list">
+        {live.map((item, i) => (
+          <li
+            key={`${item.receivedAt}:${i}:${item.progress.kind}`}
+            className="task-cycle-progress-item"
+          >
+            <span className="task-cycle-progress-kind">
+              {streamKindLabel(item.progress.kind, item.progress.subtype)}
+            </span>
+            <span className="task-cycle-progress-message">
+              {streamMessage(item)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LoadMoreRows({
+  shown,
+  total,
+  itemLabel,
+  onLoadMore,
+}: {
+  shown: number;
+  total: number;
+  itemLabel: string;
+  onLoadMore: () => void;
+}) {
+  if (shown >= total) {
+    return (
+      <p className="task-attempt-count muted">
+        Showing all {total} {itemLabel}.
+      </p>
+    );
+  }
+  return (
+    <div className="task-attempt-load-more">
+      <p className="task-attempt-count muted">
+        Showing {shown} of {total} {itemLabel}.
+      </p>
+      <button type="button" className="secondary" onClick={onLoadMore}>
+        Load more
+      </button>
+    </div>
   );
 }
 
 function StreamEventRow({ ev }: { ev: TaskCycleStreamEvent }) {
   return (
     <li className="task-attempt-timeline-item">
-      <article>
-        <header className="task-attempt-timeline-header">
-          <span className="task-cycle-progress-kind">
-            {streamKindLabel(ev.kind, ev.subtype)}
-          </span>
-          <time dateTime={ev.at}>{new Date(ev.at).toLocaleTimeString()}</time>
-        </header>
-        <p>{ev.message || ev.tool || "Cursor reported progress."}</p>
-        <p className="muted">Phase #{ev.phase_seq}</p>
-      </article>
+      <details className="task-attempt-stream-details">
+        <summary>
+          <article>
+            <header className="task-attempt-timeline-header">
+              <span className="task-cycle-progress-kind">
+                {streamKindLabel(ev.kind, ev.subtype)}
+              </span>
+              <time dateTime={ev.at}>{new Date(ev.at).toLocaleTimeString()}</time>
+            </header>
+            <p className="task-attempt-stream-preview">
+              {ev.message || ev.tool || "Cursor reported progress."}
+            </p>
+            <p className="muted">Phase #{ev.phase_seq}</p>
+          </article>
+        </summary>
+        <div className="task-attempt-stream-detail-panel">
+          <dl className="task-attempt-stream-detail-list">
+            <div>
+              <dt>Source</dt>
+              <dd>{ev.source}</dd>
+            </div>
+            <div>
+              <dt>Kind</dt>
+              <dd>{ev.kind}</dd>
+            </div>
+            {ev.subtype ? (
+              <div>
+                <dt>Subtype</dt>
+                <dd>{ev.subtype}</dd>
+              </div>
+            ) : null}
+            {ev.tool ? (
+              <div>
+                <dt>Tool</dt>
+                <dd>{ev.tool}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Stream seq</dt>
+              <dd>{ev.stream_seq}</dd>
+            </div>
+          </dl>
+          <div className="task-attempt-stream-detail-block">
+            <h4>Raw JSON</h4>
+            <pre>{JSON.stringify(ev.payload, null, 2)}</pre>
+          </div>
+        </div>
+      </details>
     </li>
   );
 }

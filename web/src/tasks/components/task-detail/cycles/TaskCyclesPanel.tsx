@@ -434,7 +434,7 @@ function CycleRow({
             href={`/tasks/${encodeURIComponent(taskId)}/cycles/${encodeURIComponent(cycle.id)}`}
             onClick={(e) => e.stopPropagation()}
           >
-            Open attempt
+            View run details
           </a>
         </summary>
         {open ? <CycleRowPhases taskId={taskId} cycleId={cycle.id} /> : null}

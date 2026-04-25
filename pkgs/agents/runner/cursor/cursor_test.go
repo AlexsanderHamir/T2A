@@ -241,6 +241,13 @@ func TestRun_streamJSONEmitsLiveProgress(t *testing.T) {
 	if progress[2].Kind != "tool_call" || progress[2].Subtype != "started" || progress[2].Tool != "ReadFile" {
 		t.Errorf("tool progress: %+v", progress[2])
 	}
+	var payload map[string]any
+	if err := json.Unmarshal(progress[2].Payload, &payload); err != nil {
+		t.Fatalf("tool progress payload: %v raw=%s", err, progress[2].Payload)
+	}
+	if payload["type"] != "tool_call" || payload["name"] != "ReadFile" {
+		t.Fatalf("tool progress payload=%v", payload)
+	}
 }
 
 // TestRun_streamJSONMissingSystemEventLeavesResolvedModelEmpty covers
@@ -366,6 +373,45 @@ func TestRun_nonZeroExit(t *testing.T) {
 	}
 }
 
+func TestRun_execErrorIncludesDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	execErr := errors.New("fork/exec /home/runner/bin/cursor-agent: no such file or directory")
+	a := newAdapter(fakeExec(&captured{}, []byte("stdout before failure"), []byte("stderr before failure"), 0, execErr, false))
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if !errors.Is(err, runner.ErrInvalidOutput) {
+		t.Fatalf("err: got %v want errors.Is(_, ErrInvalidOutput)", err)
+	}
+	if !strings.Contains(res.Summary, "no such file or directory") {
+		t.Fatalf("Summary = %q, want exec error hint", res.Summary)
+	}
+	var details struct {
+		FailureStage string   `json:"failure_stage"`
+		Error        string   `json:"error"`
+		StdoutTail   string   `json:"stdout_tail"`
+		StderrTail   string   `json:"stderr_tail"`
+		Binary       string   `json:"binary"`
+		Argv         []string `json:"argv"`
+		WorkingDir   string   `json:"working_dir"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v raw=%s", err, res.Details)
+	}
+	if details.FailureStage != "exec" || !strings.Contains(details.Error, "no such file") {
+		t.Fatalf("details missing exec error context: %+v", details)
+	}
+	if strings.Contains(details.Error, "/home/runner") {
+		t.Fatalf("details error leaked home path: %+v", details)
+	}
+	if details.StdoutTail != "stdout before failure" || details.StderrTail != "stderr before failure" {
+		t.Fatalf("details tails = stdout %q stderr %q", details.StdoutTail, details.StderrTail)
+	}
+	if details.Binary == "" || len(details.Argv) == 0 || details.WorkingDir == "" {
+		t.Fatalf("details missing invocation context: %+v", details)
+	}
+}
+
 // TestRun_invalidJSON exercises the parse-failure branch.
 func TestRun_invalidJSON(t *testing.T) {
 	t.Parallel()
@@ -377,6 +423,20 @@ func TestRun_invalidJSON(t *testing.T) {
 	}
 	if res.Status != domain.PhaseStatusFailed {
 		t.Errorf("Status: got %q", res.Status)
+	}
+	if !strings.Contains(res.Summary, "invalid output") {
+		t.Fatalf("Summary = %q, want invalid output", res.Summary)
+	}
+	var details struct {
+		FailureStage string `json:"failure_stage"`
+		Error        string `json:"error"`
+		StdoutTail   string `json:"stdout_tail"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v raw=%s", err, res.Details)
+	}
+	if details.FailureStage != "parse_stdout" || details.Error == "" || details.StdoutTail != "not json at all" {
+		t.Fatalf("parse failure details = %+v", details)
 	}
 }
 
@@ -408,6 +468,17 @@ func TestRun_timeout(t *testing.T) {
 	}
 	if res.Status != domain.PhaseStatusFailed {
 		t.Errorf("Status on timeout: got %q want %q", res.Status, domain.PhaseStatusFailed)
+	}
+	var details struct {
+		FailureStage      string `json:"failure_stage"`
+		TimeoutConfigured bool   `json:"timeout_configured"`
+		TimeoutNS         int64  `json:"timeout_ns"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v raw=%s", err, res.Details)
+	}
+	if details.FailureStage != "timeout" || !details.TimeoutConfigured || details.TimeoutNS <= 0 {
+		t.Fatalf("timeout details = %+v", details)
 	}
 }
 

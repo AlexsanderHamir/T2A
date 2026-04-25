@@ -152,6 +152,7 @@ func TestWorker_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 				Subtype: "started",
 				Tool:    "ReadFile",
 				Message: "Started ReadFile",
+				Payload: json.RawMessage(`{"type":"tool_call","name":"ReadFile","input":{"path":"README.md"}}`),
 			})
 		}
 		close(r.release)
@@ -190,5 +191,12 @@ func TestWorker_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 	}
 	if stream[0].TaskID != tsk.ID || stream[0].PhaseSeq != got.PhaseSeq || stream[0].Kind != "tool_call" {
 		t.Fatalf("persisted stream event = %+v", stream[0])
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(stream[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("persisted stream payload: %v raw=%s", err, stream[0].PayloadJSON)
+	}
+	if payload["type"] != "tool_call" || payload["name"] != "ReadFile" {
+		t.Fatalf("persisted stream payload = %v", payload)
 	}
 }

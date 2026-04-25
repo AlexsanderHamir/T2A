@@ -34,6 +34,8 @@ const (
 // final Details payload comfortably fits even after JSON wrapping.
 const stderrTailBytes = 8 * 1024
 
+const diagnosticTailBytes = 4 * 1024
+
 // stderrSummaryHintRunes caps the first-line stderr excerpt appended to the
 // phase summary on non-zero exit so operators see why the CLI failed
 // without opening raw logs, while staying within runner.MaxSummaryRunes.
@@ -242,10 +244,19 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	if execErr != nil {
 		if isCtxErr(runCtx) {
-			return runner.NewResult(domain.PhaseStatusFailed, "cursor: timeout", nil, rawOutput),
+			return runner.NewResult(domain.PhaseStatusFailed, timeoutSummary(req.Timeout),
+					failureDetails("timeout", execErr, stdout, stderr, a.homePaths, map[string]any{
+						"timeout_ns":         int64(req.Timeout),
+						"timeout_configured": req.Timeout > 0,
+					}), rawOutput),
 				fmt.Errorf("cursor: %w: %v", runner.ErrTimeout, execErr)
 		}
-		return runner.NewResult(domain.PhaseStatusFailed, "cursor: exec failed", nil, rawOutput),
+		return runner.NewResult(domain.PhaseStatusFailed, execFailedSummary(execErr, a.homePaths),
+				failureDetails("exec", execErr, stdout, stderr, a.homePaths, map[string]any{
+					"binary":      redact(a.binaryPath, a.homePaths),
+					"argv":        argv,
+					"working_dir": redact(req.WorkingDir, a.homePaths),
+				}), rawOutput),
 			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, execErr)
 	}
 
@@ -274,8 +285,8 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	parsed, parseErr := parseStdout(stdout)
 	if parseErr != nil {
-		return runner.NewResult(domain.PhaseStatusFailed,
-				"cursor: invalid JSON output", nil, rawOutput),
+		return runner.NewResult(domain.PhaseStatusFailed, invalidOutputSummary(parseErr, a.homePaths),
+				failureDetails("parse_stdout", parseErr, stdout, stderr, a.homePaths, nil), rawOutput),
 			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, parseErr)
 	}
 
@@ -561,12 +572,13 @@ func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, boo
 				Kind:    "system",
 				Subtype: "init",
 				Message: "Using " + strings.TrimSpace(line.Model),
+				Payload: progressPayload(raw, homePaths),
 			}, true
 		}
 	case "assistant":
 		msg := clipSummaryRunes(redact(strings.TrimSpace(textContent(line.Message.Content)), homePaths), 240)
 		if msg != "" {
-			return runner.ProgressEvent{Kind: "assistant", Message: msg}, true
+			return runner.ProgressEvent{Kind: "assistant", Message: msg, Payload: progressPayload(raw, homePaths)}, true
 		}
 	case "tool_call":
 		tool := firstNonEmpty(line.Name, line.Tool)
@@ -577,9 +589,19 @@ func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, boo
 			Subtype: subtype,
 			Tool:    tool,
 			Message: msg,
+			Payload: progressPayload(raw, homePaths),
 		}, true
 	}
 	return runner.ProgressEvent{}, false
+}
+
+func progressPayload(raw []byte, homePaths []string) json.RawMessage {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.progressPayload", "bytes", len(raw))
+	redacted := []byte(redact(string(raw), homePaths))
+	if !json.Valid(redacted) {
+		return nil
+	}
+	return json.RawMessage(redacted)
 }
 
 func textContent(parts []progressContent) string {
@@ -664,6 +686,38 @@ func stderrFirstLineHint(stderr []byte, homePaths []string) string {
 	return ""
 }
 
+func timeoutSummary(timeout time.Duration) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.timeoutSummary", "timeout_ns", int64(timeout))
+	if timeout > 0 {
+		return "cursor: timeout after " + timeout.String()
+	}
+	return "cursor: cancelled"
+}
+
+func execFailedSummary(err error, homePaths []string) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.execFailedSummary")
+	if err == nil {
+		return "cursor: exec failed"
+	}
+	msg := clipSummaryRunes(redact(strings.TrimSpace(err.Error()), homePaths), stderrSummaryHintRunes)
+	if msg == "" {
+		return "cursor: exec failed"
+	}
+	return "cursor: exec failed: " + msg
+}
+
+func invalidOutputSummary(err error, homePaths []string) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.invalidOutputSummary")
+	if err == nil {
+		return "cursor: invalid output"
+	}
+	msg := clipSummaryRunes(redact(strings.TrimSpace(err.Error()), homePaths), stderrSummaryHintRunes)
+	if msg == "" {
+		return "cursor: invalid output"
+	}
+	return "cursor: invalid output: " + msg
+}
+
 func clipSummaryRunes(s string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
@@ -682,6 +736,44 @@ func clipSummaryRunes(s string, maxRunes int) string {
 		n++
 	}
 	return b.String()
+}
+
+func failureDetails(stage string, err error, stdout, stderr []byte, homePaths []string, extra map[string]any) json.RawMessage {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.failureDetails",
+		"stage", stage, "stdout_bytes", len(stdout), "stderr_bytes", len(stderr))
+	out := map[string]any{
+		"failure_stage": stage,
+	}
+	if err != nil {
+		out["error"] = redact(err.Error(), homePaths)
+	}
+	if tail := redactedTail(stdout, homePaths, diagnosticTailBytes); tail != "" {
+		out["stdout_tail"] = tail
+	}
+	if tail := redactedTail(stderr, homePaths, diagnosticTailBytes); tail != "" {
+		out["stderr_tail"] = tail
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	payload, marshalErr := json.Marshal(out)
+	if marshalErr != nil {
+		return json.RawMessage(`{"failure_stage":"details_marshal_failed"}`)
+	}
+	return payload
+}
+
+func redactedTail(b []byte, homePaths []string, maxBytes int) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.redactedTail",
+		"bytes", len(b), "max_bytes", maxBytes)
+	if len(b) == 0 || maxBytes <= 0 {
+		return ""
+	}
+	tail := b
+	if len(tail) > maxBytes {
+		tail = trimLeadingPartialRune(tail[len(tail)-maxBytes:])
+	}
+	return redact(string(tail), homePaths)
 }
 
 func stderrTailDetails(stderr []byte, homePaths []string) json.RawMessage {

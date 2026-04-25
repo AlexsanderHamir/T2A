@@ -61,10 +61,11 @@ type Runner interface {
 // still executing. It is intended for live UI feedback only; terminal phase
 // rows and task_events remain the durable audit trail.
 type ProgressEvent struct {
-	Kind    string `json:"kind"`
-	Subtype string `json:"subtype,omitempty"`
-	Message string `json:"message,omitempty"`
-	Tool    string `json:"tool,omitempty"`
+	Kind    string          `json:"kind"`
+	Subtype string          `json:"subtype,omitempty"`
+	Message string          `json:"message,omitempty"`
+	Tool    string          `json:"tool,omitempty"`
+	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
 // Request is the per-attempt input passed to Runner.Run. The JSON shape is

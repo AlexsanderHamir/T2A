@@ -350,12 +350,16 @@ func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, ph
 	if ev.Kind == "" {
 		return
 	}
-	payload, err := json.Marshal(ev)
-	if err != nil {
-		slog.Warn("agent worker progress payload marshal failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.marshal_err",
-			"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq, "err", err)
-		payload = []byte("{}")
+	payload := ev.Payload
+	if len(payload) == 0 {
+		var err error
+		payload, err = json.Marshal(ev)
+		if err != nil {
+			slog.Warn("agent worker progress payload marshal failed",
+				"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.marshal_err",
+				"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq, "err", err)
+			payload = []byte("{}")
+		}
 	}
 	if _, err := w.store.AppendCycleStreamEvent(ctx, store.AppendCycleStreamEventInput{
 		TaskID:   taskID,
