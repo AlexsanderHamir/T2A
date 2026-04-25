@@ -2,6 +2,22 @@
 
 Authoritative design for the **diagnose → execute → verify → persist** loop as a first-class store primitive (`task_cycles`, `task_cycle_phases`) and how it stays consistent with the flat `task_events` audit log. Architecture hub: [DESIGN.md](./DESIGN.md). REST surface: [API-HTTP.md](./API-HTTP.md). SSE: [API-SSE.md](./API-SSE.md). Forward-looking design proposals (e.g. promoting `verify` to a substantive phase): [`proposals/`](./proposals/).
 
+## Cycles vs phases in one minute
+
+Think of the data model as:
+
+```text
+Task -> many cycles (attempts) -> many phases (steps inside an attempt)
+```
+
+A **cycle** is one execution attempt for a task. It answers: "is this task being attempted right now?", "which attempt number is this?", and "did the attempt succeed, fail, or abort?" Cycles live in `task_cycles` and are ordered per task by `attempt_seq`.
+
+A **phase** is one step inside a cycle. It answers: "what part of the attempt is running or completed?" Phases live in `task_cycle_phases` and are ordered per cycle by `phase_seq`.
+
+The intended phase path is `diagnose -> execute -> verify -> persist`, with `verify -> execute` allowed for corrective work. A cycle may therefore contain repeated phase kinds, such as `diagnose -> execute -> verify -> execute -> verify -> persist`; each visit is a separate row with a higher `phase_seq`.
+
+Use cycles/phases for structured execution state. Use `task_events` for the full audit timeline. Every cycle/phase mutation mirrors into `task_events` in the same SQL transaction, so the two views stay consistent.
+
 ## Why this primitive exists
 
 [`moat.md`](../moat.md) describes the work T2A is best at as a tight, observable execution loop: diagnose what the agent should attempt, execute the change, verify the result, then persist it. Until Stage 1 the only place that loop existed was the prose in `moat.md` and ad-hoc rows in `task_events`. The new tables move it into the data model so:

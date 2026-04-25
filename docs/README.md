@@ -1,61 +1,80 @@
-# Documentation index
+# Documentation
 
-Long-form design and contracts live here; the root [README.md](../README.md) stays commands and copy-paste.
+This folder holds product context, architecture notes, and stable contracts. The root [README.md](../README.md) stays focused on install, build, and run commands.
 
-## What to read
+## Start Here
+
+Read these first for the current MVP shape:
+
+1. [PRODUCT.md](./PRODUCT.md) — what T2A is for and how scope is chosen.
+2. [DESIGN.md](./DESIGN.md) — architecture hub, data flow, technical choices, limitations.
+3. [API-HTTP.md](./API-HTTP.md) and [API-SSE.md](./API-SSE.md) — server contracts.
+4. [WEB.md](./WEB.md) — SPA structure and client data flow.
+5. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — common local and CI failures.
+
+Use [AGENTS.md](../AGENTS.md) for the short repo map and verification checklist.
+
+## Stable Contracts
+
+These describe behavior that code and tests should keep in sync.
+
+| Area | Docs |
+| --- | --- |
+| HTTP API | [API-HTTP.md](./API-HTTP.md) |
+| SSE events | [API-SSE.md](./API-SSE.md) |
+| Runtime config | [RUNTIME-ENV.md](./RUNTIME-ENV.md) |
+| Persistence | [PERSISTENCE.md](./PERSISTENCE.md) |
+| Settings | [SETTINGS.md](./SETTINGS.md) |
+| Execution attempts | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) |
+| Agent queue | [AGENT-QUEUE.md](./AGENT-QUEUE.md) |
+| Agent worker | [AGENT-WORKER.md](./AGENT-WORKER.md) |
+| Web SPA | [WEB.md](./WEB.md) |
+
+## Build and Extend
+
+Use these when changing the shape of the system.
 
 | Doc | Use it for |
-|-----|------------|
-| [../AGENTS.md](../AGENTS.md) | Short map for humans and coding agents: where code lives, what to run before finishing, link-out to rules. |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md) | PR checklist, `.env.example`, API/client sync with `parseTaskApi`. |
-| [../SECURITY.md](../SECURITY.md) | How to report vulnerabilities privately; notes on TLS and secrets. |
-| [../LICENSE](../LICENSE) | MIT license for the repository. |
-| [../README.md](../README.md) | Prerequisites, build/test, run `dbcheck` / `taskapi`, dev scripts, npm commands for `web/`. |
-| [PRODUCT.md](./PRODUCT.md) | Product context: control-plane positioning (agent workflows vs IDE), what T2A provides, horizons, and how we choose scope (complements `DESIGN.md` hub). |
-| [DESIGN.md](./DESIGN.md) | `taskapi` **hub**: goals, architecture Mermaid, limitations, out of scope; links to contract docs below. |
-| [API-HTTP.md](./API-HTTP.md) | **Contract:** REST (`/tasks`, `/repo`, health, metrics), rate limits, idempotency, documented `400` strings. |
-| [API-SSE.md](./API-SSE.md) | **Contract:** `GET /events`, SSE wire format, dev-only `T2A_SSE_TEST` vars. |
-| [RUNTIME-ENV.md](./RUNTIME-ENV.md) | **Contract:** env var table, `dbcheck`, startup/shutdown, HTTP timeout constants. |
-| [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, `MemoryQueue`, pickup wake, reconcile loop, fairness ordering. |
-| [future-considerations/](./future-considerations/) | Optional scaling notes (multi-replica, clock skew, packaging); not runtime contracts. |
-| [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | **Long-term roadmap** (V2–V4) for evolving the in-process Cursor CLI worker into a reliable, multi-runner, multi-replica execution runtime. V0/V1 have shipped — see contract docs below. |
-| [AGENT-WORKER.md](./AGENT-WORKER.md) | **Contract:** V1 in-process Cursor CLI worker — lifecycle, runner abstraction, security model (env allowlist, secret redaction, prompt hashing), audit shape, orphan sweep, and explicit V2/V3/V4 deferrals. Configured live via the SPA Settings page; see [SETTINGS.md](./SETTINGS.md). |
-| [SETTINGS.md](./SETTINGS.md) | **Contract:** singleton `app_settings` row, SPA Settings page wiring, `GET/PATCH /settings` + `/settings/probe-cursor` + `/settings/cancel-current-run`, env-var migration table. |
-| [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | **Contract:** `task_cycles` / `task_cycle_phases` substrate, dual-write invariant to `task_events`, phase state machine, "where reads go" table, what's intentionally out. |
-| [proposals/](./proposals/) | **Forward-looking design docs** for features that have not yet shipped. Read `proposals/README.md` for what goes here. |
-| [PERSISTENCE.md](./PERSISTENCE.md) | GORM store, `task_events`, concurrency, AutoMigrate scope. |
-| [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
-| [WEB.md](./WEB.md) | `web/` SPA: React Query, SSE invalidation, `parseTaskApi`, `web/src` layout, tests. |
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Dev-only: Vite `/tasks` refresh, SSE dev mode, missing workspace repo, CI/local check failures. |
-| [OBSERVABILITY.md](./OBSERVABILITY.md) | How we standardize, measure, and extend logging and correlation for `taskapi` (checklists, coverage script, **PromQL**, **SLIs / SLOs** starter table for `taskapi`). |
-| [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | **Todos:** Prometheus/runtime/DB pool metrics, SLOs, alerts, OTel — execution order and principles. |
-| [runbooks/](./runbooks/) | **Operator:** short notes for Prometheus alerts (`TaskAPIHighHTTP5xxRate`, latency, in-flight, DB pool, readiness); expand in roadmap B3. |
-| [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | **Principles** for keeping the codebase + docs layout consistent (dependency rules, non-goals, "what not to do"). The original phased reorg has shipped. |
-| [HANDLER-SCALE.md](./HANDLER-SCALE.md) | **Maintainability:** why `handler` is large, what already moved out (`middleware`, `calltrace`, `middlewaretest`, `handlertest`, `httpsecurityexpect`), conventions for new tests, ordered next extractions. |
+| --- | --- |
+| [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Add a new feature slice end-to-end. |
+| [HANDLER-SCALE.md](./HANDLER-SCALE.md) | Understand handler package split rules and test placement. |
+| [REORGANIZATION-PLAN.md](./REORGANIZATION-PLAN.md) | Historical layout principles; keep only as a structural reference. |
 
-Go: route lists and behavior next to code — `go doc` on `pkgs/tasks/...`, `pkgs/repo`, `internal/envload`, `cmd/taskapi`, `cmd/dbcheck`.
+## Operations
 
-## Where to put updates
+Keep this section lightweight for MVP. Runtime metrics exist, but checked-in deploy dashboards and alert rules are intentionally out of the repo.
+
+| Doc | Use it for |
+| --- | --- |
+| [OBSERVABILITY.md](./OBSERVABILITY.md) | Logging, metrics, correlation, and measurement scripts. |
+| [SLOs.md](./SLOs.md) | Realtime UX SLO definitions and RUM sources. |
+| [REALTIME.md](./REALTIME.md) | Shipped realtime/SSE smoothness decisions. |
+| [runbooks/](./runbooks/) | Optional operator playbooks if you wire alerts. |
+
+## Future Work
+
+These are not current runtime contracts.
+
+| Doc | Use it for |
+| --- | --- |
+| [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term V2–V4 worker roadmap. |
+| [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | Future observability work such as OTel. |
+| [proposals/](./proposals/) | Designs that have not shipped. |
+| [future-considerations/](./future-considerations/) | Scaling notes and deferred ideas. |
+
+## Where To Update
 
 | Change | Update |
-|--------|--------|
-| Product direction: who T2A is for, outcomes, horizons, explicit non-goals | `docs/PRODUCT.md`; keep `docs/DESIGN.md` (hub) Limitations / Out of scope in sync when strategy changes. |
-| Flags, env, `taskapi` startup/shutdown | `docs/RUNTIME-ENV.md` + `docs/DESIGN.md` (hub) if limitations change; `internal/taskapiconfig` for taskapi-only parsed env (listen host, log level, agent queue cap, dev SSE interval); `pkgs/agents` for fixed reconcile tick; `cmd/taskapi/README.md` for binary file layout; relevant `doc.go`; root `README` only if command-line examples change. |
-| REST routes, bodies, query limits, `/repo` HTTP | `docs/API-HTTP.md` + `docs/DESIGN.md` (hub) if limitations change; contract changes also touch `web/src/api` / `parseTaskApi` per CONTRIBUTING. Handler layout: `pkgs/tasks/handler/README.md`; scaling/split conventions: `docs/HANDLER-SCALE.md`; `taskapi` middleware assembly: `internal/taskapi`. |
-| SSE (`GET /events`), synthetic dev SSE | `docs/API-SSE.md`. |
-| New tasks API behavior (domain / store / handler / web) | `docs/EXTENSIBILITY.md` + `.cursor/rules/13-tasks-stack-extensibility.mdc`; HTTP/SSE contract files above; client sync per CONTRIBUTING. |
-| Task DB schema (GORM models, `postgres` migrate, SQLite test helpers, `dbcheck -migrate`) | `docs/PERSISTENCE.md` + `docs/DESIGN.md` (hub limitations as needed) + `.cursor/rules/15-database-schema.mdc`. |
-| Workspace repo (`app_settings.repo_root`), `/repo/*`, `pkgs/repo`, @-mention file UI | `docs/SETTINGS.md` + `docs/API-HTTP.md` (Workspace repo) + `.cursor/rules/14-repo-workspace-extensibility.mdc`; client sync if response shapes change. |
-| Ready-task queue / reconcile | `docs/AGENT-QUEUE.md` + `docs/RUNTIME-ENV.md` (queue cap env) + `pkgs/agents` (`ReconcileTickInterval`). |
-| Agent worker behavior (Cursor CLI runner, lifecycle, security, audit) | `docs/AGENT-WORKER.md` (contract) + `docs/SETTINGS.md` (UI/HTTP knobs) + `docs/AGENTIC-LAYER-PLAN.md` (V2–V4 roadmap). |
-| Operator-run real-cursor smoke test for the V1 worker | `docs/AGENT-WORKER.md` "Smoke run" (operator runbook). |
-| Execution cycles substrate (cycle/phase domain types, store entrypoints, `/tasks/{id}/cycles…` HTTP, `task_cycle_changed` SSE) | `docs/EXECUTION-CYCLES.md` (design + dual-write contract) + `docs/API-HTTP.md` (routes + 400 strings) + `docs/API-SSE.md` (event payload + trigger table). |
-| Agentic worker lifecycle / future versions | `docs/AGENTIC-LAYER-PLAN.md` (versioned roadmap V2–V4) + `docs/AGENT-QUEUE.md` (when queue semantics change) + `docs/RUNTIME-ENV.md` (new worker env vars). New version-scoped execution playbooks land as `docs/<FEATURE>-PLAN.md` next to their contract doc once a `proposals/` design is accepted; delete the playbook after the version ships. |
-| New feature proposals (designs not yet shipped) | `docs/proposals/<FEATURE>.md`. Once accepted and execution starts, promote the contract to `docs/<FEATURE>.md` and (optionally) add `docs/<FEATURE>-PLAN.md` for the per-stage execution. |
-| `web/` only (components, hooks, no API contract change) | `docs/WEB.md`; root `README` only if npm scripts or env vars for Vite change. |
-| Comment style / godoc / JSDoc audits (not API shape changes) | `.cursor/rules/codebase_comments.mdc`. |
-| Observability standard, measurement scripts, or `taskapi` log/checklist behavior | `docs/OBSERVABILITY.md`; touch `scripts/measure-func-slog.*` / `cmd/funclogmeasure` for the per-function `slog` audit, or `scripts/measure-observability.*` for test coverage scope. |
-| New alert or runbook guidance for `taskapi` | `docs/runbooks/` for operator notes; cross-link from `docs/OBSERVABILITY.md` when runtime signals or documented queries change. |
-| `dbcheck` | Root `README` + `cmd/dbcheck` doc if flags change. |
+| --- | --- |
+| Product scope or non-goals | [PRODUCT.md](./PRODUCT.md), then [DESIGN.md](./DESIGN.md) if limitations change. |
+| Flags, env, startup, shutdown | [RUNTIME-ENV.md](./RUNTIME-ENV.md), root [README.md](../README.md) if commands change. |
+| REST routes or JSON shapes | [API-HTTP.md](./API-HTTP.md), and matching `web/src/api` parsers if the SPA consumes it. |
+| SSE wire format or triggers | [API-SSE.md](./API-SSE.md). |
+| Database model or migration behavior | [PERSISTENCE.md](./PERSISTENCE.md), plus [DESIGN.md](./DESIGN.md) if limitations change. |
+| Settings UI or settings API | [SETTINGS.md](./SETTINGS.md), [API-HTTP.md](./API-HTTP.md), and [WEB.md](./WEB.md) if the SPA changes. |
+| Agent queue or worker lifecycle | [AGENT-QUEUE.md](./AGENT-QUEUE.md), [AGENT-WORKER.md](./AGENT-WORKER.md), and [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) when cycle semantics change. |
+| Web-only UI behavior | [WEB.md](./WEB.md). |
+| Observability behavior or scripts | [OBSERVABILITY.md](./OBSERVABILITY.md); use [runbooks/](./runbooks/) only for operator procedures. |
+| Future designs | [proposals/](./proposals/) first; promote to a focused contract doc only when implementation starts. |
 
-Cursor rules (`.cursor/rules/`) are for tooling, not operators.
+Cursor rules (`.cursor/rules/`) are for tooling guidance, not operator docs.

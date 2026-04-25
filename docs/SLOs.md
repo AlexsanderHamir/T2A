@@ -34,7 +34,7 @@ Multi-window multi-burn-rate per the Google SRE workbook:
 - **Page**: 1 h burn rate of error budget > 14.4× (i.e. would exhaust 30-day budget in 50 minutes if sustained).
 - **Ticket**: 6 h burn rate > 6× (would exhaust in 5 days if sustained).
 
-Both expressed as `(rate(slo_violations[1h]) / (1 - SLO)) > 14.4`. The Prometheus rule files live under `ops/alerts/` once Phase 4d ships.
+Both expressed as `(rate(slo_violations[1h]) / (1 - SLO)) > 14.4`. Keep alert rules in your deployment system; this repo documents the signals and thresholds but no longer carries deploy-specific rule files.
 
 ## RUM transport
 
