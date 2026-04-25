@@ -1,0 +1,188 @@
+/* Custom selects (portal + fixed layer; avoids modal clipping) */
+.field--custom-select {
+  min-width: 11rem;
+}
+
+.field--custom-select--compact {
+  min-width: 9.5rem;
+  flex: 0 1 auto;
+  max-width: 15rem;
+}
+
+button.custom-select-trigger {
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.65rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-chrome-surface);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm);
+  transition: border-color var(--duration-short) var(--ease-out), box-shadow var(--duration-short) var(--ease-out);
+}
+
+button.custom-select-trigger:hover:not(:disabled) {
+  transform: none;
+  filter: none;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm), var(--shadow-chrome-float);
+}
+
+button.custom-select-trigger:active:not(:disabled) {
+  transform: none;
+  box-shadow: var(--shadow-inset-lip), var(--shadow-sm);
+}
+
+button.custom-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-emphasis);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+/* Match input::placeholder (see app-base.css) when no real value is selected */
+.custom-select-value-neutral--placeholder {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.custom-select-option-row,
+.custom-select-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Fixed tag column so titles align (parent task picker — Stripe / Apple list rhythm) */
+.custom-select-option-row.custom-select-row--tagged,
+.custom-select-value-row.custom-select-row--tagged {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+}
+
+.custom-select-value-row {
+  flex: 1;
+}
+
+.custom-select-option-tag,
+.custom-select-value-tag {
+  flex-shrink: 0;
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text-tertiary);
+  line-height: 1.35;
+}
+
+.custom-select-value-row .custom-select-value-neutral,
+.custom-select-value-row .custom-select-value-neutral--placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-option-row .custom-select-option-neutral,
+.custom-select-option-row .custom-select-option-neutral--nested {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-value-row .custom-select-value-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-value-pill.cell-pill,
+.custom-select-option-pill.cell-pill {
+  font-size: var(--text-help);
+  padding: 0.12rem 0.45rem;
+}
+
+.custom-select-chevron {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--chrome-icon-muted);
+}
+
+.custom-select-dropdown {
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-chrome-surface);
+  background: var(--surface-dropdown-panel);
+  box-shadow: var(--shadow-lg);
+  max-height: min(50vh, 22rem);
+  overflow-y: auto;
+}
+
+.custom-select-option-header {
+  padding: 0.35rem 0.35rem 0.15rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--data-caps-letter-spacing);
+  text-transform: var(--data-caps-text-transform);
+  color: var(--text-tertiary);
+  cursor: default;
+  pointer-events: none;
+}
+
+.custom-select-option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+.custom-select-option-neutral {
+  color: var(--text-primary);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+
+.custom-select-option-neutral--nested {
+  color: var(--text-secondary);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+
+.custom-select-option--highlight {
+  background: var(--brand-muted);
+}
+
+.custom-select-option--highlight:hover {
+  background: var(--brand-muted);
+}
+
+@media (hover: hover) {
+  .custom-select-option:hover:not(.custom-select-option--highlight) {
+    background: var(--chrome-fill-table-row-hover);
+  }
+}
+

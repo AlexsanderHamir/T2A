@@ -1,0 +1,82 @@
+textarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+/* Primary CTA defaults for unclassified buttons. :where() keeps specificity at 0 so
+   scoped rules like button.task-detail-btn-edit / button.secondary stay authoritative.
+   .btn-utility / .task-event-data-tab are excluded (see app-task-timeline.css).
+   .task-detail-agent-model-cta is a compact secondary control (model config panel; app-task-detail.css). */
+:where(
+  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
+      .task-detail-agent-model-cta
+    )
+) {
+  font: inherit;
+  font-weight: 500;
+  letter-spacing: var(--text-button-tracking);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-md);
+  min-height: var(--touch-target-min);
+  padding: 0.625rem 1.25rem;
+  color: var(--text-on-brand);
+  background: var(--brand);
+  transition: background var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+  box-shadow: var(--shadow-sm);
+}
+
+:where(
+  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
+    .task-detail-agent-model-cta
+  )
+):not(:disabled):hover {
+  background: var(--brand-hover);
+  box-shadow: var(--shadow-md);
+  transform: none;
+  filter: none;
+}
+
+:where(
+  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
+    .task-detail-agent-model-cta
+  )
+):not(:disabled):active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--text-primary);
+  box-shadow: none;
+  border: 1px solid var(--border-strong);
+}
+
+button.secondary:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-interactive-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+button.danger {
+  background: var(--danger-bright);
+  box-shadow: var(--shadow-sm);
+}
+
+button.danger:not(:disabled):hover {
+  background: var(--danger);
+  filter: none;
+  box-shadow: var(--shadow-md);
+  transform: none;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
