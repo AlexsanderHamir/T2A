@@ -62,6 +62,7 @@ Component map:
 | Package | Role |
 |---------|------|
 | [`pkgs/agents/runner`](../pkgs/agents/runner) | `Runner`, `Request`, `Result` interface; typed sentinel errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`). |
+| [`pkgs/agents/runner/adapterkit`](../pkgs/agents/runner/adapterkit) | Shared CLI-adapter primitives: exec/stream execution, env policy, redaction, diagnostics, and bounded probes. |
 | [`pkgs/agents/runner/cursor`](../pkgs/agents/runner/cursor) | Cursor CLI adapter: `--print --output-format stream-json`, env allowlist, secret redaction, live progress normalization, `Probe(cursor --version)` for startup checks. |
 | [`pkgs/agents/runner/runnerfake`](../pkgs/agents/runner/runnerfake) | Programmable in-memory `Runner` for unit + integration tests. |
 | [`pkgs/agents/worker`](../pkgs/agents/worker) | `Worker`, `Options`, `CycleChangeNotifier` interface, `SweepOrphanRunningCycles`. |
@@ -174,13 +175,13 @@ V1 ships exactly one adapter; V2 multi-runner selection is intentionally deferre
 
 **Env allowlist (defense in depth):**
 
-- The child process inherits **only** `PATH`, `HOME`, `USERPROFILE` from the parent env, plus any keys passed in `runner.Request.Env`.
-- A hardcoded deny-list scrubs `DATABASE_URL` and any `T2A_*` key even if the caller adds it via `Options.ExtraAllowedEnvKeys`. Cursor never sees the store credentials or the worker's own configuration.
+- The child process inherits only the curated safe parent env list in `cursor.defaultPassthroughEnvKeys` (universal `PATH` / home keys plus required non-secret Windows process keys), plus any keys passed in `runner.Request.Env`.
+- `adapterkit.EnvPolicy` scrubs `DATABASE_URL` and any `T2A_*` key even if the caller adds it via `Options.ExtraAllowedEnvKeys`. Cursor never sees the store credentials or the worker's own configuration.
 
 **Output redaction:**
 
 - `RawOutput` is the combined stdout + stderr of the child, post-redaction, capped before being persisted into `task_cycle_phases.details_json`.
-- The redactor (`cursor.Redact`) replaces `Authorization: …` lines with `Authorization: [REDACTED]`, replaces any `T2A_…=value` assignment with `T2A_…=[REDACTED]`, and rewrites absolute home paths (`$HOME`, `$USERPROFILE`) to `~` so log scrapers do not learn the operator's local layout.
+- The redactor (`cursor.Redact`, backed by `adapterkit.Redact`) replaces `Authorization: …` and cookie headers with `[REDACTED]`, replaces any `T2A_…=value` assignment with `T2A_…=[REDACTED]`, and rewrites absolute home paths (`$HOME`, `$USERPROFILE`) to `~` so log scrapers do not learn the operator's local layout.
 
 **Live progress:**
 
@@ -268,8 +269,8 @@ When the supervisor stays idle the same line is emitted with `enabled=false` (or
 
 The worker runs Cursor CLI as a child process inside the same user account as `taskapi`. The defenses listed below are the V1 floor; V2 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) adds a second layer (sandboxing, prompt-injection guards, output validation).
 
-- **Env allowlist:** the child sees only `PATH`, `HOME`, `USERPROFILE`, plus keys explicitly allowed via `cursor.Options.ExtraAllowedEnvKeys`. `DATABASE_URL` and any `T2A_*` key are scrubbed unconditionally — Cursor cannot read the store credentials or the worker's own configuration even if a future code path tries to forward them.
-- **Secret redaction in `RawOutput`:** the redactor (`cursor.Redact`) is applied before the combined stdout + stderr is written to `task_cycle_phases.details_json`. It blanks `Authorization: …` headers, `T2A_…=value` assignments, and rewrites absolute home paths to `~`.
+- **Env allowlist:** the child sees the curated safe parent environment defined by `cursor.defaultPassthroughEnvKeys` (universal `PATH` / home keys plus required non-secret Windows process keys), plus keys explicitly allowed via `cursor.Options.ExtraAllowedEnvKeys`. `DATABASE_URL` and any `T2A_*` key are scrubbed unconditionally through `adapterkit.EnvPolicy` — Cursor cannot read the store credentials or the worker's own configuration even if a future code path tries to forward them.
+- **Secret redaction in `RawOutput`:** the redactor (`cursor.Redact`, backed by `adapterkit.Redact`) is applied before the combined stdout + stderr is written to `task_cycle_phases.details_json`. It blanks `Authorization: …` and cookie headers, `T2A_…=value` assignments, and rewrites absolute home paths to `~`.
 - **Prompt hashing in audit:** `task_cycles.meta_json.prompt_hash` records `sha256(initial_prompt)`, never the prompt body. The body lives only on `tasks.initial_prompt` (where it was already authored) and is forwarded to the child on stdin; it never enters the audit log or worker `slog` lines.
 - **Per-run wall-clock cap:** when `app_settings.max_run_duration_seconds > 0`, every `runner.Run` is wrapped in `context.WithTimeout(parentCtx, max_run_duration)`. The default (`0`) is "no limit" — runs only end on completion, operator cancel, or process shutdown. Operators raise/lower the cap from the SPA Settings page; see [SETTINGS.md](./SETTINGS.md).
 - **Working-dir hygiene is the operator's job (V1).** V1 has one worker, one working directory, sequential tasks. Cursor's whole job is to modify files; task A leaves edits, task B sees them. V2 will need per-cycle workspace isolation (git worktrees, ephemeral clones, branch-per-cycle) — see V2 in [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md).

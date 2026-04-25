@@ -27,7 +27,7 @@ moat.md
 # block missing SYSTEMDRIVE, got the literal "%SystemDrive%\..." string
 # back, and CreateFile resolved it as a relative path under the child's
 # cwd (the repo root). The root cause is fixed in
-# pkgs/agents/runner/cursor/cursor.go::defaultPassthroughEnvKeys, but
+# pkgs/agents/runner/cursor/config.go::defaultPassthroughEnvKeys, but
 # this pattern keeps `git status` clean even if a future Windows
 # subsystem caches via an env var we forgot to forward.
 %*%/

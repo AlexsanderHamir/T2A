@@ -7,7 +7,7 @@
 //
 // V1 invokes the binary as:
 //
-//	cursor-agent --print --output-format json --force
+//	cursor-agent --print --output-format stream-json --force
 //
 // with the prompt sent on stdin. The binary path is configurable via
 // Options.BinaryPath; the argv tail is configurable via Options.Args.
@@ -17,8 +17,8 @@
 // until Request.Timeout. Pin a comment here when the default flag set
 // changes so callers know the wire format.
 //
-// The CLI emits a single JSON object on stdout with cursor-agent's
-// own envelope:
+// The CLI emits newline-delimited JSON on stdout. The final result event uses
+// cursor-agent's own envelope:
 //
 //	{
 //	  "type": "result",
@@ -43,7 +43,7 @@
 //
 // The child process inherits NOTHING from the parent process by default.
 // The adapter passes through only the curated default-passthrough list
-// declared as defaultPassthroughEnvKeys in cursor.go, plus any keys the
+// declared as defaultPassthroughEnvKeys in config.go, plus any keys the
 // caller adds via Options.ExtraAllowedEnvKeys or runner.Request.Env.
 // The default list covers:
 //
@@ -79,7 +79,7 @@
 // # Redaction
 //
 // Before runner.NewResult is called, the captured stdout+stderr is run
-// through Redact, which replaces:
+// through the shared adapterkit redactor via Redact, which replaces:
 //
 //   - "Authorization: <anything>" header values with "Authorization: [REDACTED]"
 //   - any "T2A_FOO=value" assignment with "T2A_FOO=[REDACTED]"
@@ -107,7 +107,7 @@
 //
 // All exec calls go through Options.ExecFn so cursor_test.go can drive
 // every code path (success, non-zero, parse-fail, timeout, redaction)
-// without invoking a real Cursor binary. Default ExecFn is
-// defaultExecFn, which uses os/exec and is exercised only by integration
-// tests gated under the "integration" build tag (none in V1).
+// without invoking a real Cursor binary. Default ExecFn delegates to
+// adapterkit.DefaultExec and is exercised only by integration tests gated
+// under an explicit real-Cursor build tag.
 package cursor
