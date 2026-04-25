@@ -1,0 +1,11 @@
+/* Imported last from App.css — wins cascade over mid-chain :active rules (e.g. app-custom-select).
+   DS §8 / WCAG — drop scale-on-press when the user prefers reduced motion. */
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-table .cell-title-link:active,
+  button.task-home-new-task-btn:not(:disabled):active,
+  .task-create-submit:not(:disabled):active,
+  button:not(.custom-select-trigger):not(:disabled):active {
+    transform: none;
+  }
+}
