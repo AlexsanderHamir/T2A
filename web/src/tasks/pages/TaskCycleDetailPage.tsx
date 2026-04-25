@@ -195,7 +195,6 @@ export function TaskCycleDetailPage() {
           <h3 className="task-detail-subheading term-prompt" id="attempt-stream">
             <span>Cursor events</span>
           </h3>
-          {streamQuery.isFetching ? <span className="muted">Refreshing…</span> : null}
         </div>
         {streamQuery.isError ? (
           <div className="err" role="alert">

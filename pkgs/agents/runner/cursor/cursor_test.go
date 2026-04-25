@@ -250,6 +250,94 @@ func TestRun_streamJSONEmitsLiveProgress(t *testing.T) {
 	}
 }
 
+func TestRun_streamJSONIgnoresClosedPipeAfterResult(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"result":"all done","session_id":"sess-closed-pipe"}` + "\n",
+	)
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&captured{}, stdout, nil, 0, os.ErrClosed)
+	})
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if err != nil {
+		t.Fatalf("Run: got err %v, want success", err)
+	}
+	if res.Status != domain.PhaseStatusSucceeded || res.Summary != "all done" {
+		t.Fatalf("Result = %+v, want succeeded/all done", res)
+	}
+}
+
+func TestRun_streamJSONClosedPipeWithoutResultUsesAssistantFallback(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"finished but no result"}]}}` + "\n")
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&captured{}, stdout, nil, 0, os.ErrClosed)
+	})
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Status != domain.PhaseStatusSucceeded || res.Summary != "finished but no result" {
+		t.Fatalf("Result = %+v, want degraded success from assistant text", res)
+	}
+	var details struct {
+		MissingTerminalResult bool `json:"missing_terminal_result"`
+	}
+	if err := json.Unmarshal(res.Details, &details); err != nil {
+		t.Fatalf("Details unmarshal: %v raw=%s", err, res.Details)
+	}
+	if !details.MissingTerminalResult {
+		t.Fatalf("Details = %+v", details)
+	}
+}
+
+func TestRun_streamJSONMissingResultWithOpenToolCallStaysInvalid(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"starting"}]}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","call_id":"tool-1"}` + "\n",
+	)
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&captured{}, stdout, nil, 0, os.ErrClosed)
+	})
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if !errors.Is(err, runner.ErrInvalidOutput) {
+		t.Fatalf("err: got %v want errors.Is(_, ErrInvalidOutput)", err)
+	}
+	if !strings.Contains(res.Summary, "open tool call") {
+		t.Fatalf("Summary = %q, want open tool call hint", res.Summary)
+	}
+}
+
+func TestRun_streamJSONMissingResultAfterCompletedToolUsesLastAssistant(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"starting"}]}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","call_id":"tool-1"}` + "\n" +
+			`{"type":"tool_call","subtype":"completed","call_id":"tool-1"}` + "\n" +
+			`{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"done after tool"}]}}` + "\n",
+	)
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&captured{}, stdout, nil, 0, os.ErrClosed)
+	})
+
+	res, err := a.Run(context.Background(), defaultRequest())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Summary != "done after tool" {
+		t.Fatalf("Summary = %q, want last assistant message", res.Summary)
+	}
+}
+
 // TestRun_streamJSONMissingSystemEventLeavesResolvedModelEmpty covers
 // the forward-compat gap: an older cursor-agent build might emit a
 // stream without a `system.init` event (e.g. if a future version

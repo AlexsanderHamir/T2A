@@ -242,6 +242,13 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	rawOutput := redact(combineStreams(stdout, stderr), a.homePaths)
 
+	if execErr != nil && !isCtxErr(runCtx) && isClosedPipeReadError(execErr) && len(bytes.TrimSpace(stdout)) > 0 {
+		slog.Debug("ignoring closed stdout pipe after cursor output",
+			"cmd", cursorLogCmd, "operation", "cursor.Adapter.Run.closed_pipe_with_stdout",
+			"stdout_bytes", len(stdout), "stderr_bytes", len(stderr), "err", execErr)
+		execErr = nil
+	}
+
 	if execErr != nil {
 		if isCtxErr(runCtx) {
 			return runner.NewResult(domain.PhaseStatusFailed, timeoutSummary(req.Timeout),
@@ -354,6 +361,11 @@ type cursorOutput struct {
 	// version, or the adapter is being fed legacy single-object
 	// output via test fixtures that predate stream-json).
 	ResolvedModel string `json:"-"`
+	// MissingTerminalResult is true when cursor-agent exited cleanly
+	// but omitted the documented terminal result event. The adapter
+	// degrades to the last complete assistant message only when the
+	// stream has no unmatched tool calls.
+	MissingTerminalResult bool `json:"-"`
 }
 
 // streamEventHead is the narrow view parseStdout uses to classify each
@@ -361,9 +373,12 @@ type cursorOutput struct {
 // `model` field is only meaningful on the `system.init` event; other
 // event types leave it zero-valued.
 type streamEventHead struct {
-	Type    string `json:"type,omitempty"`
-	Subtype string `json:"subtype,omitempty"`
-	Model   string `json:"model,omitempty"`
+	Type      string          `json:"type,omitempty"`
+	Subtype   string          `json:"subtype,omitempty"`
+	Model     string          `json:"model,omitempty"`
+	CallID    string          `json:"call_id,omitempty"`
+	SessionID string          `json:"session_id,omitempty"`
+	Message   progressMessage `json:"message,omitempty"`
 }
 
 // parseStdout decodes the cursor-agent print-mode output. It accepts
@@ -403,9 +418,13 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 	}
 
 	var (
-		out        cursorOutput
-		gotResult  bool
-		lastDecErr error
+		out                cursorOutput
+		gotResult          bool
+		lastDecErr         error
+		lastAssistantText  string
+		lastSessionID      string
+		openToolCalls      = map[string]struct{}{}
+		openAnonymousTools int
 	)
 	for _, raw := range splitNDJSON(stdout) {
 		if len(raw) == 0 {
@@ -420,6 +439,21 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 		case "system":
 			if head.Subtype == "init" && out.ResolvedModel == "" {
 				out.ResolvedModel = strings.TrimSpace(head.Model)
+			}
+			if lastSessionID == "" {
+				lastSessionID = strings.TrimSpace(head.SessionID)
+			}
+		case "assistant":
+			if msg := strings.TrimSpace(textContent(head.Message.Content)); msg != "" {
+				lastAssistantText = msg
+			}
+			if lastSessionID == "" {
+				lastSessionID = strings.TrimSpace(head.SessionID)
+			}
+		case "tool_call":
+			updateOpenToolCalls(openToolCalls, &openAnonymousTools, head)
+			if lastSessionID == "" {
+				lastSessionID = strings.TrimSpace(head.SessionID)
 			}
 		case "result":
 			var evt cursorOutput
@@ -442,9 +476,50 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 		if lastDecErr != nil {
 			return cursorOutput{}, fmt.Errorf("decode stdout: %w", lastDecErr)
 		}
+		if open := openToolCallCount(openToolCalls, openAnonymousTools); open > 0 {
+			return cursorOutput{}, fmt.Errorf("stream-json: no terminal result event; %d open tool call(s)", open)
+		}
+		if lastAssistantText != "" {
+			return cursorOutput{
+				Type:                  "result",
+				Subtype:               "success",
+				Result:                lastAssistantText,
+				SessionID:             lastSessionID,
+				ResolvedModel:         out.ResolvedModel,
+				MissingTerminalResult: true,
+			}, nil
+		}
 		return cursorOutput{}, errors.New("stream-json: no terminal result event")
 	}
 	return out, nil
+}
+
+func updateOpenToolCalls(open map[string]struct{}, openAnonymous *int, head streamEventHead) {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.updateOpenToolCalls",
+		"subtype", head.Subtype, "call_id", head.CallID)
+	callID := strings.TrimSpace(head.CallID)
+	switch head.Subtype {
+	case "started", "start":
+		if callID == "" {
+			*openAnonymous = *openAnonymous + 1
+			return
+		}
+		open[callID] = struct{}{}
+	case "completed", "success", "done", "failed", "error":
+		if callID == "" {
+			if *openAnonymous > 0 {
+				*openAnonymous = *openAnonymous - 1
+			}
+			return
+		}
+		delete(open, callID)
+	}
+}
+
+func openToolCallCount(open map[string]struct{}, anonymous int) int {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.openToolCallCount",
+		"open", len(open), "anonymous", anonymous)
+	return len(open) + anonymous
 }
 
 // splitNDJSON splits NDJSON on literal newlines, tolerating CRLF,
@@ -501,6 +576,7 @@ func buildDetails(p cursorOutput) json.RawMessage {
 		RequestID     string          `json:"request_id,omitempty"`
 		Usage         json.RawMessage `json:"usage,omitempty"`
 		ResolvedModel string          `json:"resolved_model,omitempty"`
+		MissingResult bool            `json:"missing_terminal_result,omitempty"`
 	}{
 		Type:          p.Type,
 		Subtype:       p.Subtype,
@@ -511,6 +587,7 @@ func buildDetails(p cursorOutput) json.RawMessage {
 		RequestID:     p.RequestID,
 		Usage:         p.Usage,
 		ResolvedModel: p.ResolvedModel,
+		MissingResult: p.MissingTerminalResult,
 	}
 	b, err := json.Marshal(d)
 	if err != nil {
@@ -1088,6 +1165,8 @@ func defaultStreamExecFn(ctx context.Context, dir string, env []string, stdin []
 	stdoutErr := <-stdoutDone
 	stderrErr := <-stderrDone
 	if waitErr == nil {
+		stdoutErr = normalizePipeReadError(stdoutErr)
+		stderrErr = normalizePipeReadError(stderrErr)
 		if stdoutErr != nil {
 			return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, stdoutErr
 		}
@@ -1118,6 +1197,27 @@ func scanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error 
 		}
 	}
 	return scanner.Err()
+}
+
+func normalizePipeReadError(err error) error {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.normalizePipeReadError",
+		"err", err)
+	if isClosedPipeReadError(err) {
+		return nil
+	}
+	return err
+}
+
+func isClosedPipeReadError(err error) bool {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.isClosedPipeReadError",
+		"err", err)
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, os.ErrClosed) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "file already closed")
 }
 
 // Compile-time assertion that *Adapter implements runner.Runner.
