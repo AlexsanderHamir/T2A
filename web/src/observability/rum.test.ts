@@ -10,7 +10,6 @@ import {
   mutationStarted,
   sseReconnected,
   sseResyncReceived,
-  webVital,
 } from "./rum";
 
 describe("rum module", () => {
@@ -144,13 +143,4 @@ describe("rum module", () => {
     expect(__peekRUMQueueForTests()).toHaveLength(200);
   });
 
-  // Web vitals: skipping non-finite values is the documented
-  // contract (the web-vitals lib can fire NaN during page lifecycle
-  // edge cases like a freeze→resume).
-  it("webVital skips non-finite values", () => {
-    webVital("LCP", Number.NaN);
-    webVital("LCP", 1234);
-    expect(__peekRUMQueueForTests()).toHaveLength(1);
-    expect(__peekRUMQueueForTests()[0]).toMatchObject({ type: "web_vitals", value: 1234 });
-  });
 });

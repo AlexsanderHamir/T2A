@@ -102,7 +102,7 @@ type taskStatsCyclesJSON struct {
 // taskStatsPhasesJSON is the always-present `phases` block. The outer
 // map carries every domain.Phase enum value (4 keys); inner maps are
 // non-nil but only carry enum keys with nonzero count. The (phase x
-// status) shape is the source of the Observability heatmap.
+// status) shape is pinned so clients can render every phase/status cell.
 type taskStatsPhasesJSON struct {
 	ByPhaseStatus map[domain.Phase]map[domain.PhaseStatus]int64 `json:"by_phase_status"`
 }

@@ -16,15 +16,15 @@ import (
 
 // RecentFailureLimit caps the recent_failures slice on the wire so the
 // /tasks/stats payload stays bounded under load. Picked to render in a
-// single scrollable card on the Observability page; raise carefully —
-// the frontend table assumes a small N (no virtualization).
+// single scrollable card; raise carefully because frontend consumers
+// assume a small N (no virtualization).
 const RecentFailureLimit = 25
 
 // RecentFailure is one row in the recent_failures slice on /tasks/stats.
-// Fields are the projection the Observability page renders directly:
-// task id (deep link), event seq (deep link), wall-clock instant, the
-// cycle's attempt_seq, terminal status (failed|aborted), and a short
-// human-readable reason when one was recorded. Keep this struct narrow:
+// Fields are the operator-facing projection: task id (deep link), event
+// seq (deep link), wall-clock instant, the cycle's attempt_seq,
+// terminal status (failed|aborted), and a short human-readable reason
+// when one was recorded. Keep this struct narrow:
 // every new column widens the wire envelope and the contract test.
 //
 // Reason prefers failure_summary on the cycle_failed mirror (denormalized
@@ -129,7 +129,7 @@ func resolveRecentFailureReason(failureSummary, cycleReason string) string {
 
 // phaseFailedMirrorPayload is the subset of phaseTerminatedPayload
 // (pkgs/tasks/store/internal/cycles) needed to surface operator-facing
-// failure text on the Observability page.
+// failure text.
 type phaseFailedMirrorPayload struct {
 	CycleID string         `json:"cycle_id"`
 	Summary string         `json:"summary,omitempty"`

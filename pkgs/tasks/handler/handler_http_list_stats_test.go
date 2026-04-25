@@ -123,8 +123,8 @@ func TestHTTP_tasks_stats_global_counts(t *testing.T) {
 // counter must reflect tasks where `status='ready' AND
 // pickup_not_before > now` — i.e. the same predicate
 // `ready.ListQueueCandidates` uses to *exclude* a row from the SQL
-// queue. This lets the Observability page distinguish "0 ready, 12
-// scheduled" (intentionally deferred) from "0 ready, 0 scheduled"
+// queue. This lets stats consumers distinguish "0 ready, 12 scheduled"
+// (intentionally deferred) from "0 ready, 0 scheduled"
 // (truly idle), the central UX goal of the scheduling feature.
 //
 // Drives four tasks:

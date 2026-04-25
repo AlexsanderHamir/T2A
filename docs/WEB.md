@@ -49,7 +49,7 @@ SSE carries `type` + `id` only; rows come from `GET /tasks`.
 
 ## Dev vs production
 
-Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo`, `/settings`, `/system`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
+Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo`, `/settings`, `/system`, `/v1/rum`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
 
 Prod: `npm run build` → `web/dist/`; serve so `/tasks`, `/events`, `/repo` match the API origin (or gateway).
 
@@ -61,7 +61,7 @@ flowchart LR
   V[Vite]
   T[taskapi]
   B -->|assets| V
-  V -->|/tasks /events /repo /settings /system /health| T
+  V -->|/tasks /events /repo /settings /system /v1/rum /health| T
 ```
 
 ## React Query + SSE

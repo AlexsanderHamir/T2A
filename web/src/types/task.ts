@@ -92,7 +92,7 @@ export type CycleFailuresListResponse = {
  * Cycle aggregates from `GET /tasks/stats`. Both maps are always
  * present (`{}` on empty database). Inner enums match
  * `pkgs/tasks/domain` exactly so a future enum change trips the
- * parser, the contract test, and the heatmap in the same PR.
+ * parser, contract tests, and any phase/status view in the same PR.
  */
 export type TaskStatsCycles = {
   by_status: Partial<Record<import("./cycle").CycleStatus, number>>;
@@ -103,7 +103,7 @@ export type TaskStatsCycles = {
  * Phase aggregates from `GET /tasks/stats`. The outer map is the four
  * `domain.Phase` values; every key is always present (the inner map is
  * `{}` for phases that have never run). The `(phase x status)` shape
- * is the source of the Observability heatmap.
+ * is pinned so clients can render every phase/status cell.
  */
 export type TaskStatsPhases = {
   by_phase_status: Record<
@@ -159,7 +159,7 @@ export type TaskStatsResponse = {
   /**
    * Count of `status='ready'` tasks intentionally deferred via
    * `pickup_not_before > now()`. Always present (`0` on a fresh
-   * database). The Observability page uses this to distinguish
+   * database). Stats consumers use this to distinguish
    * "0 ready, 12 scheduled" (intentionally deferred — agent worker is
    * correctly idle) from "0 ready, 0 scheduled" (truly idle, nothing
    * to do). Defaults to `0` when an older backend omits the key

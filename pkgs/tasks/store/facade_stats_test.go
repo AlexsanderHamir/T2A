@@ -379,7 +379,7 @@ func mapKeys(m map[string]RunnerBucket) []string {
 // through diagnose/execute and terminates it as failed, then asserts
 // every aggregation in the cycles/phases/recent_failures blocks
 // reflects the data. This is the integration check that lets us trust
-// the Observability page numbers.
+// the stats numbers.
 func TestStore_TaskStats_populatesCyclesPhasesAndFailures(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()

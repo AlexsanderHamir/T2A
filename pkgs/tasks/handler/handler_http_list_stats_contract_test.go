@@ -447,9 +447,9 @@ func assertCyclesEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
 
 // assertPhasesAllZeroEnumKeys pins the documented invariant that
 // `phases.by_phase_status` always carries every domain.Phase enum value
-// as a key, with an empty inner map on a fresh database. The
-// Observability heatmap relies on the four-key shape so it can render
-// every cell (rather than guess which phases are missing).
+// as a key, with an empty inner map on a fresh database. Clients rely on
+// the four-key shape so they can render every cell (rather than guess
+// which phases are missing).
 func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw) {
 	t.Helper()
 	if got.Phases.ByPhaseStatus == nil {

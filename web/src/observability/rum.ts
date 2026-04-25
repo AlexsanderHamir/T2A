@@ -38,8 +38,6 @@ export type RUMMutationKind =
   | "subtask_create"
   | "settings_save";
 
-export type RUMWebVitalName = "LCP" | "INP" | "CLS" | "FID" | "FCP" | "TTFB";
-
 type RUMEvent =
   | { type: "mutation_started"; mutation_kind: RUMMutationKind }
   | {
@@ -59,8 +57,7 @@ type RUMEvent =
       duration_seconds: number;
     }
   | { type: "sse_reconnected"; duration_seconds: number }
-  | { type: "sse_resync_received" }
-  | { type: "web_vitals"; name: RUMWebVitalName; value: number };
+  | { type: "sse_resync_received" };
 
 const FLUSH_INTERVAL_MS = 10_000;
 const MAX_QUEUE_LENGTH = 200;
@@ -103,8 +100,8 @@ function buildPayload(events: RUMEvent[]): string {
  * flushNow flushes the in-memory queue to /v1/rum. Returns true if a
  * network request was attempted (queue had entries), false if there
  * was nothing to send. `useBeacon` is set by the visibilitychange
- * handler to use sendBeacon (survives tab close); the timer flush
- * uses fetch so we get a clean rejection during development.
+ * handler to use sendBeacon (survives tab close); the timer flush uses
+ * the API transport wrapper so we get a clean rejection during development.
  */
 export function flushNow(useBeacon = false): boolean {
   if (state.queue.length === 0) {
@@ -232,14 +229,6 @@ export function sseReconnected(gapMs: number): void {
  * directive from the hub. */
 export function sseResyncReceived(): void {
   enqueue({ type: "sse_resync_received" });
-}
-
-/** webVital records a single web-vitals measurement. The web-vitals
- * package fires a callback per metric so call this once per metric
- * the app subscribes to. */
-export function webVital(name: RUMWebVitalName, value: number): void {
-  if (!Number.isFinite(value)) return;
-  enqueue({ type: "web_vitals", name, value });
 }
 
 function clampDurationMs(ms: number): number {

@@ -28,14 +28,11 @@ export { formatDurationSeconds } from "./systemHealthViewModel";
 // pkgs/tasks/middleware/metrics_http.go consume what we ship.
 export {
   installRUM,
-  flushNow as flushRUM,
   mutationStarted as rumMutationStarted,
   mutationOptimisticApplied as rumMutationOptimisticApplied,
   mutationSettled as rumMutationSettled,
   mutationRolledBack as rumMutationRolledBack,
   sseReconnected as rumSSEReconnected,
   sseResyncReceived as rumSSEResyncReceived,
-  webVital as rumWebVital,
   type RUMMutationKind,
-  type RUMWebVitalName,
 } from "./rum";

@@ -27,7 +27,7 @@ type TaskStats struct {
 	Critical int64
 	// Scheduled is the count of ready tasks deferred into the
 	// future via `pickup_not_before > now`. Surfaces the
-	// "intentionally deferred" state on the Observability page so
+	// "intentionally deferred" state in stats consumers so
 	// "0 ready, 12 scheduled" reads differently from "0 ready, 0
 	// scheduled" — see docs/SCHEDULING.md "the two queues" section.
 	Scheduled  int64
@@ -46,17 +46,16 @@ type TaskStats struct {
 	RecentFailures []RecentFailure
 }
 
-// CycleStats aggregates task_cycles for the Observability page. Both
-// maps are always non-nil; absent enum keys mean zero.
+// CycleStats aggregates task_cycles for stats consumers. Both maps are
+// always non-nil; absent enum keys mean zero.
 type CycleStats struct {
 	ByStatus      map[domain.CycleStatus]int64
 	ByTriggeredBy map[domain.Actor]int64
 }
 
-// PhaseStats aggregates task_cycle_phases by (phase, status) — the
-// "failed in failed stage" matrix the Observability page renders as a
-// heatmap. ByPhaseStatus[phase] is always present for every domain
-// Phase value; the inner map is non-nil but only carries enum keys with
+// PhaseStats aggregates task_cycle_phases by (phase, status). Each
+// ByPhaseStatus[phase] key is always present for every domain Phase
+// value; the inner map is non-nil but only carries enum keys with
 // nonzero count.
 type PhaseStats struct {
 	ByPhaseStatus map[domain.Phase]map[domain.PhaseStatus]int64

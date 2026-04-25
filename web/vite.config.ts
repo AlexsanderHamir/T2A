@@ -55,6 +55,7 @@ export default defineConfig({
       // Without this proxy the SettingsPage's GET /settings hits Vite directly and renders "Error: Not Found".
       "/settings": { target: api, changeOrigin: true },
       "/system": { target: api, changeOrigin: true },
+      "/v1/rum": { target: api, changeOrigin: true },
       // So the SPA can probe taskapi readiness (workspace repo from app_settings.repo_root) without a full /repo/search walk.
       "/health": { target: api, changeOrigin: true },
     },

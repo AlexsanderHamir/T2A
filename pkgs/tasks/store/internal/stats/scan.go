@@ -20,8 +20,8 @@ type totalsRow struct {
 	// future via `pickup_not_before > now`. It is the SQL-side
 	// projection of the same predicate the agent's
 	// `ready.ListQueueCandidates` uses to *exclude* a row from the
-	// queue, surfaced as a stats counter so the Observability page
-	// can answer "0 ready, 12 scheduled" (intentionally deferred)
+	// queue, surfaced as a stats counter so clients can answer
+	// "0 ready, 12 scheduled" (intentionally deferred)
 	// vs "0 ready, 0 scheduled" (truly idle). Driven by the
 	// existing index on `tasks.pickup_not_before` — no new schema.
 	Scheduled int64

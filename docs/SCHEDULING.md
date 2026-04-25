@@ -387,7 +387,7 @@ Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
   defaulting branch covers the rollback path where an older
   backend ships next to a newer SPA (deployment skew). Throwing
   on an absent key would force the SPA to render the entire
-  Observability page as an error banner during such a window,
+  stats UI as an error banner during such a window,
   which is much worse than briefly under-counting deferred
   tasks. The "0" default is exactly what an empty database
   would emit, so the user-visible behaviour matches "no work
