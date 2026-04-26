@@ -48,6 +48,17 @@ const (
 	ProjectContextKindHandoff    ProjectContextKind = "handoff"
 )
 
+// ProjectContextRelation identifies how one project context node relates to another.
+type ProjectContextRelation string
+
+const (
+	ProjectContextRelationSupports  ProjectContextRelation = "supports"
+	ProjectContextRelationBlocks    ProjectContextRelation = "blocks"
+	ProjectContextRelationRefines   ProjectContextRelation = "refines"
+	ProjectContextRelationDependsOn ProjectContextRelation = "depends_on"
+	ProjectContextRelationRelated   ProjectContextRelation = "related"
+)
+
 type EventType string
 
 const (
