@@ -2,7 +2,6 @@ import { Link, useParams } from "react-router-dom";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useProject } from "./hooks";
-import { ProjectContextPanel } from "./ProjectContextPanel";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
 
@@ -52,8 +51,22 @@ export function ProjectDetailPage() {
           </div>
 
           <ProjectSettingsPanel project={project.data} />
+          <section className="task-attempt-section project-context-page-card">
+            <div>
+              <h3>Project context</h3>
+              <p className="muted">
+                Manage project-owned memory nodes and inspect their connections as
+                a list or graph.
+              </p>
+            </div>
+            <Link
+              to={`/projects/${encodeURIComponent(projectId)}/context`}
+              className="button-link"
+            >
+              Open context
+            </Link>
+          </section>
           <ProjectTasksPanel projectId={projectId} />
-          <ProjectContextPanel projectId={projectId} />
         </>
       ) : null}
     </section>

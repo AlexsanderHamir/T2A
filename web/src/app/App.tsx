@@ -15,6 +15,7 @@ import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
 import {
   ProjectDetailPage,
+  ProjectContextPage,
   ProjectContextPicker,
   ProjectListPage,
   ProjectSelect,
@@ -216,6 +217,10 @@ export default function App() {
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route path="projects" element={<ProjectListPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        <Route
+          path="projects/:projectId/context"
+          element={<ProjectContextPage />}
+        />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"

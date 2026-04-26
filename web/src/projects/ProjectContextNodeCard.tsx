@@ -34,9 +34,6 @@ export function ProjectContextNodeCard({
           <h5>{item.title}</h5>
           <div className="project-context-node-card__badges">
             <span className="project-context-node-card__kind">{item.kind}</span>
-            {item.pinned ? (
-              <span className="project-context-node-card__pin">Pinned</span>
-            ) : null}
           </div>
         </div>
         <p title={preview}>{preview}</p>

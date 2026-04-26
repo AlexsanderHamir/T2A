@@ -22,7 +22,6 @@ import {
 import { assertListIntQuery, assertTaskPathId } from "./taskRequestBounds";
 
 const PROJECT_STATUSES = ["active", "archived"] as const;
-const PROJECT_CONTEXT_KINDS = ["note", "decision", "constraint", "handoff"] as const;
 const PROJECT_CONTEXT_RELATIONS = [
   "supports",
   "blocks",
@@ -42,13 +41,10 @@ function parseProjectStatus(value: unknown): ProjectStatus {
 }
 
 function parseProjectContextKind(value: unknown): ProjectContextKind {
-  if (
-    typeof value !== "string" ||
-    !(PROJECT_CONTEXT_KINDS as readonly string[]).includes(value)
-  ) {
-    throw new Error("Invalid API response: context kind is unknown");
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error("Invalid API response: context kind must be a string");
   }
-  return value as ProjectContextKind;
+  return value;
 }
 
 function parseProjectContextRelation(value: unknown): ProjectContextRelation {

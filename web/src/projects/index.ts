@@ -1,4 +1,5 @@
 export { ProjectDetailPage } from "./ProjectDetailPage";
+export { ProjectContextPage } from "./ProjectContextPage";
 export { ProjectListPage } from "./ProjectListPage";
 export { ProjectSelect } from "./ProjectSelect";
 export { ProjectContextPicker } from "./ProjectContextPicker";

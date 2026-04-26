@@ -37,7 +37,7 @@ func TestHTTP_projectsCRUDAndContext(t *testing.T) {
 		t.Fatalf("project = %#v", project)
 	}
 
-	itemRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/context", "application/json", strings.NewReader(`{"kind":"decision","title":"Use relational context","body":"No vector store in v1","pinned":true}`))
+	itemRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/context", "application/json", strings.NewReader(`{"kind":"requirement","title":"Use relational context","body":"No vector store in v1","pinned":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestHTTP_projectsCRUDAndContext(t *testing.T) {
 	if err := json.Unmarshal(itemBytes, &item); err != nil {
 		t.Fatal(err)
 	}
-	if item.ProjectID != project.ID || item.Kind != domain.ProjectContextKindDecision || !item.Pinned {
+	if item.ProjectID != project.ID || item.Kind != domain.ProjectContextKind("requirement") || !item.Pinned {
 		t.Fatalf("context item = %#v", item)
 	}
 	secondItemRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/context", "application/json", strings.NewReader(`{"kind":"constraint","title":"Explicit selection","body":"Tasks choose context nodes."}`))

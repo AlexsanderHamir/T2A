@@ -36,9 +36,9 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-elevated);
-  border: none;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
 }
 
 .tiptap-suggestion-list__head {
@@ -49,8 +49,8 @@
   letter-spacing: 0.01em;
   text-transform: none;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-hairline);
-  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--neutral-fill-subtle);
 }
 
 .mention-dropdown ul[role="listbox"] {
@@ -91,7 +91,7 @@
   padding: var(--space-2) var(--space-3);
   margin: 0;
   border: none;
-  background: transparent;
+  background: var(--bg-elevated);
   font: inherit;
   cursor: pointer;
   color: var(--text-primary);
@@ -120,7 +120,7 @@
 
 @media (hover: hover) {
   .mention-option button:hover:not(:focus-visible) {
-    background: var(--chrome-fill-table-row-hover);
+    background: var(--neutral-fill-subtle);
   }
 }
 

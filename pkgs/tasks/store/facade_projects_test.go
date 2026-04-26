@@ -89,6 +89,18 @@ func TestStore_DefaultProject_seededAndProtected(t *testing.T) {
 	if project.Name == "" || project.Status != domain.ProjectStatusActive {
 		t.Fatalf("default project = %#v", project)
 	}
+	renamed := "Renamed default"
+	if _, err := s.UpdateProject(ctx, domain.DefaultProjectID, UpdateProjectInput{
+		Name: &renamed,
+	}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("rename default err = %v, want ErrConflict", err)
+	}
+	archived := domain.ProjectStatusArchived
+	if _, err := s.UpdateProject(ctx, domain.DefaultProjectID, UpdateProjectInput{
+		Status: &archived,
+	}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("archive default err = %v, want ErrConflict", err)
+	}
 	if err := s.DeleteProject(ctx, domain.DefaultProjectID); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("delete default err = %v, want ErrConflict", err)
 	}
@@ -302,14 +314,20 @@ func TestStore_Project_validation_errors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create project: %v", err)
 	}
-	badKind := domain.ProjectContextKind("memory")
-	if _, err := s.CreateProjectContext(ctx, project.ID, CreateProjectContextInput{
-		Kind:      badKind,
-		Title:     "Bad",
-		Body:      "Bad",
+	custom, err := s.CreateProjectContext(ctx, project.ID, CreateProjectContextInput{
+		Kind:      domain.ProjectContextKind("memory"),
+		Title:     "Custom",
+		Body:      "Custom kind",
 		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create custom kind: %v", err)
+	}
+	blankKind := domain.ProjectContextKind(" ")
+	if _, err := s.UpdateProjectContext(ctx, project.ID, custom.ID, UpdateProjectContextInput{
+		Kind: &blankKind,
 	}); !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("create bad kind err = %v, want ErrInvalidInput", err)
+		t.Fatalf("patch empty kind err = %v, want ErrInvalidInput", err)
 	}
 
 	_, err = s.GetProject(ctx, "missing")

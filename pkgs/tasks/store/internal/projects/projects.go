@@ -149,6 +149,9 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ?", id).Error; err != nil {
 			return mapNotFound(err)
 		}
+		if err := validateDefaultProjectPatch(row, input); err != nil {
+			return err
+		}
 		applyProjectPatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&row).Error; err != nil {
@@ -203,7 +206,7 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 	if id == "" {
 		id = uuid.NewString()
 	}
-	kind := input.Kind
+	kind := domain.ProjectContextKind(strings.TrimSpace(string(input.Kind)))
 	if kind == "" {
 		kind = domain.ProjectContextKindNote
 	}
@@ -418,6 +421,19 @@ func validateProjectPatch(input UpdateProjectInput) error {
 	return nil
 }
 
+func validateDefaultProjectPatch(row domain.Project, input UpdateProjectInput) error {
+	if row.ID != domain.DefaultProjectID {
+		return nil
+	}
+	if input.Name != nil && strings.TrimSpace(*input.Name) != domain.DefaultProject(time.Now()).Name {
+		return fmt.Errorf("%w: default project name cannot be changed", domain.ErrConflict)
+	}
+	if input.Status != nil && *input.Status != domain.ProjectStatusActive {
+		return fmt.Errorf("%w: default project cannot be archived", domain.ErrConflict)
+	}
+	return nil
+}
+
 func applyProjectPatch(row *domain.Project, input UpdateProjectInput) {
 	if input.Name != nil {
 		row.Name = strings.TrimSpace(*input.Name)
@@ -450,7 +466,7 @@ func validateContextPatch(input UpdateContextInput) error {
 
 func applyContextPatch(row *domain.ProjectContextItem, input UpdateContextInput) {
 	if input.Kind != nil {
-		row.Kind = *input.Kind
+		row.Kind = domain.ProjectContextKind(strings.TrimSpace(string(*input.Kind)))
 	}
 	if input.Title != nil {
 		row.Title = strings.TrimSpace(*input.Title)
@@ -464,12 +480,14 @@ func applyContextPatch(row *domain.ProjectContextItem, input UpdateContextInput)
 }
 
 func validateContextKind(kind domain.ProjectContextKind) error {
-	switch kind {
-	case domain.ProjectContextKindNote, domain.ProjectContextKindDecision, domain.ProjectContextKindConstraint, domain.ProjectContextKindHandoff:
-		return nil
-	default:
-		return fmt.Errorf("%w: invalid context kind %q", domain.ErrInvalidInput, kind)
+	trimmed := strings.TrimSpace(string(kind))
+	if trimmed == "" {
+		return fmt.Errorf("%w: context kind required", domain.ErrInvalidInput)
 	}
+	if len(trimmed) > 64 {
+		return fmt.Errorf("%w: context kind must be 64 characters or fewer", domain.ErrInvalidInput)
+	}
+	return nil
 }
 
 func trimOptional(value *string) *string {

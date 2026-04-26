@@ -86,7 +86,7 @@ describe("project API parsers", () => {
         {
           id: "ctx-1",
           project_id: projectWire.id,
-          kind: "decision",
+          kind: "risk",
           title: "Use relational context",
           body: "Defer embeddings.",
           created_by: "user",
@@ -111,7 +111,7 @@ describe("project API parsers", () => {
       limit: 50,
     });
 
-    expect(out.items[0].kind).toBe("decision");
+    expect(out.items[0].kind).toBe("risk");
     expect(out.edges[0].relation).toBe("supports");
   });
 
@@ -141,7 +141,7 @@ describe("project API parsers", () => {
     const itemWire = {
       id: "22222222-2222-4222-8222-222222222222",
       project_id: projectWire.id,
-      kind: "note",
+      kind: "requirement",
       title: "Remember",
       body: "Keep context explicit.",
       created_by: "user",
@@ -166,7 +166,7 @@ describe("project API parsers", () => {
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await createProjectContext(projectWire.id, {
-      kind: "note",
+      kind: "requirement",
       title: "Remember",
       body: "Keep context explicit.",
       pinned: false,

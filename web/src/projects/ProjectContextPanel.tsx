@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   createProjectContext,
   createProjectContextEdge,
@@ -10,10 +10,10 @@ import {
 } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
 import { FieldLabel } from "@/shared/FieldLabel";
+import { Modal } from "@/shared/Modal";
 import { RichPromptEditor } from "@/tasks/components/rich-prompt";
 import { promptHasVisibleContent } from "@/tasks/task-prompt";
 import {
-  PROJECT_CONTEXT_KINDS,
   PROJECT_CONTEXT_RELATIONS,
   type ProjectContextEdge,
   type ProjectContextKind,
@@ -21,8 +21,9 @@ import {
   type ProjectContextRelation,
 } from "@/types";
 import { useProjectContext } from "./hooks";
-import { ProjectContextEdgeEditor } from "./ProjectContextEdgeEditor";
-import { ProjectContextNodeCard } from "./ProjectContextNodeCard";
+import { ProjectContextGraphView } from "./ProjectContextGraphView";
+import { ProjectContextKindPicker } from "./ProjectContextKindPicker";
+import { ProjectContextListView } from "./ProjectContextListView";
 import { projectQueryKeys } from "./queryKeys";
 
 type Props = {
@@ -31,12 +32,13 @@ type Props = {
 
 const EMPTY_CONTEXT_ITEMS: ProjectContextItem[] = [];
 const EMPTY_CONTEXT_EDGES: ProjectContextEdge[] = [];
+type ContextView = "list" | "graph";
 
 export function ProjectContextPanel({ projectId }: Props) {
   const queryClient = useQueryClient();
   const context = useProjectContext(projectId, { enabled: Boolean(projectId) });
-  const [nodeQuery, setNodeQuery] = useState("");
-  const [connectionQuery, setConnectionQuery] = useState("");
+  const [contextView, setContextView] = useState<ContextView>("list");
+  const [addNodeOpen, setAddNodeOpen] = useState(false);
   const [newNodeBody, setNewNodeBody] = useState("");
   const [newNodeEditorKey, setNewNodeEditorKey] = useState(0);
   const [newEdgeNote, setNewEdgeNote] = useState("");
@@ -130,13 +132,14 @@ export function ProjectContextPanel({ projectId }: Props) {
         kind: String(form.get("kind") ?? "note") as ProjectContextKind,
         title,
         body,
-        pinned: form.get("pinned") === "on",
+        pinned: false,
       },
       {
         onSuccess: () => {
           formEl.reset();
           setNewNodeBody("");
           setNewNodeEditorKey((value) => value + 1);
+          setAddNodeOpen(false);
         },
       },
     );
@@ -180,88 +183,84 @@ export function ProjectContextPanel({ projectId }: Props) {
     deleteEdgeMutation.error;
   const items = context.data?.items ?? EMPTY_CONTEXT_ITEMS;
   const edges = context.data?.edges ?? EMPTY_CONTEXT_EDGES;
-  const itemTitleByID = useMemo(() => {
-    return new Map(items.map((item) => [item.id, item.title]));
-  }, [items]);
-  const filteredItems = useMemo(() => {
-    const query = nodeQuery.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter((item) =>
-      [item.title, item.body, item.kind]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [items, nodeQuery]);
-  const filteredEdges = useMemo(() => {
-    const query = connectionQuery.trim().toLowerCase();
-    if (!query) return edges;
-    return edges.filter((edge) =>
-      [
-        itemTitleByID.get(edge.source_context_id) ?? "",
-        itemTitleByID.get(edge.target_context_id) ?? "",
-        edge.relation,
-        edge.note,
-        String(edge.strength),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [connectionQuery, edges, itemTitleByID]);
 
   return (
     <section className="task-attempt-section">
-      <h3>Project context</h3>
-      <form className="project-context-form" onSubmit={submitContext}>
-        <div className="project-context-form__heading">
-          <div>
-            <strong>Add memory node</strong>
-            <p className="muted">
-              Nodes are project-owned facts, decisions, constraints, or handoff
-              notes. Add them anytime as the project evolves.
-            </p>
-          </div>
+      <div className="project-context-panel-header">
+        <div>
+          <h3>Project context</h3>
+          <p className="muted">
+            Add project-owned memory, then inspect it as a list or graph.
+          </p>
         </div>
-        <div className="row">
-          <div className="field grow">
-            <label htmlFor="project-context-kind">Kind</label>
-            <select id="project-context-kind" name="kind" defaultValue="note">
-              {PROJECT_CONTEXT_KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {kind}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="checkbox-label project-context-pin">
-            <input type="checkbox" name="pinned" />
-            <span>Pinned</span>
-          </label>
-        </div>
-        <div className="field grow">
-          <label htmlFor="project-context-title">Title</label>
-          <input id="project-context-title" name="title" required />
-        </div>
-        <div className="field grow">
-          <FieldLabel id="project-context-body-label" htmlFor="project-context-body">
-            Body
-          </FieldLabel>
-          <div className="project-context-editor-shell">
-            <RichPromptEditor
-              key={newNodeEditorKey}
-              id="project-context-body"
-              value={newNodeBody}
-              onChange={setNewNodeBody}
-              disabled={createContextMutation.isPending}
-              placeholder="Write markdown-style context. Type @ to reference a repo file."
-            />
-          </div>
-        </div>
-        <button type="submit" disabled={createContextMutation.isPending}>
-          {createContextMutation.isPending ? "Adding..." : "Add node"}
+        <button type="button" onClick={() => setAddNodeOpen(true)}>
+          Add node
         </button>
-      </form>
+      </div>
+      {addNodeOpen ? (
+        <Modal
+          onClose={() => setAddNodeOpen(false)}
+          labelledBy="project-context-add-node-title"
+          describedBy="project-context-add-node-desc"
+          size="wide"
+          busy={createContextMutation.isPending}
+          busyLabel="Adding node..."
+        >
+          <form
+            className="panel modal-sheet modal-sheet--edit project-context-form project-context-node-modal"
+            onSubmit={submitContext}
+          >
+            <div className="project-context-form__heading">
+              <div>
+                <h2 id="project-context-add-node-title">Add memory node</h2>
+                <p id="project-context-add-node-desc" className="muted">
+                  Nodes are project-owned facts, decisions, constraints, or
+                  handoff notes. Add them anytime as the project evolves.
+                </p>
+              </div>
+            </div>
+            <ProjectContextKindPicker
+              idPrefix="project-context-kind"
+              disabled={createContextMutation.isPending}
+            />
+            <div className="field grow">
+              <label htmlFor="project-context-title">Title</label>
+              <input id="project-context-title" name="title" required />
+            </div>
+            <div className="field grow">
+              <FieldLabel
+                id="project-context-body-label"
+                htmlFor="project-context-body"
+              >
+                Body
+              </FieldLabel>
+              <div className="project-context-editor-shell">
+                <RichPromptEditor
+                  key={newNodeEditorKey}
+                  id="project-context-body"
+                  value={newNodeBody}
+                  onChange={setNewNodeBody}
+                  disabled={createContextMutation.isPending}
+                  placeholder="Write markdown-style context. Type @ to reference a repo file."
+                />
+              </div>
+            </div>
+            <div className="row stack-row-actions">
+              <button type="submit" disabled={createContextMutation.isPending}>
+                {createContextMutation.isPending ? "Adding..." : "Add node"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={createContextMutation.isPending}
+                onClick={() => setAddNodeOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
       {items.length < 2 ? (
         <div className="project-context-ready-card">
           <span className="project-context-ready-card__step">Next</span>
@@ -387,96 +386,42 @@ export function ProjectContextPanel({ projectId }: Props) {
           hideIcon
         />
       ) : (
-        <div className="project-context-graph">
-          <section className="project-context-graph__section">
-            <div className="project-context-graph__section-heading">
-              <div>
-                <h4>Memory nodes</h4>
-                <p>
-                  Durable facts, decisions, constraints, and handoff notes owned
-                  by this project.
-                </p>
-              </div>
-              <span>{items.length}</span>
-            </div>
-            <label className="project-context-search">
-              <span>Search nodes</span>
-              <input
-                value={nodeQuery}
-                onChange={(event) => setNodeQuery(event.target.value)}
-                placeholder="Filter by title, body, or kind"
-              />
-            </label>
-            {filteredItems.length === 0 ? (
-              <div className="project-context-empty-card">
-                <strong>No matching nodes</strong>
-                <p>Try a different search term or clear the filter.</p>
-              </div>
-            ) : (
-              <div className="project-context-node-grid">
-                {filteredItems.map((item) => (
-                  <ProjectContextNodeCard
-                    key={item.id}
-                    item={item}
-                    saving={patchContextMutation.isPending}
-                    deleting={deleteContextMutation.isPending}
-                    onSave={(id, patch) =>
-                      patchContextMutation.mutate({ id, ...patch })
-                    }
-                    onDelete={(id) => deleteContextMutation.mutate(id)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-          <section className="project-context-graph__section">
-            <div className="project-context-graph__section-heading">
-              <div>
-                <h4>Connections</h4>
-                <p>Relationships that explain how selected nodes influence each other.</p>
-              </div>
-              <span>{edges.length}</span>
-            </div>
-            <label className="project-context-search">
-              <span>Search connections</span>
-              <input
-                value={connectionQuery}
-                onChange={(event) => setConnectionQuery(event.target.value)}
-                placeholder="Filter by node, relation, note, or strength"
-              />
-            </label>
-            {edges.length === 0 ? (
-              <div className="project-context-empty-card">
-                <strong>No connections yet</strong>
-                <p>
-                  Add a connection when two nodes support, block, refine, or
-                  depend on each other.
-                </p>
-              </div>
-            ) : filteredEdges.length === 0 ? (
-              <div className="project-context-empty-card">
-                <strong>No matching connections</strong>
-                <p>Try a different search term or clear the filter.</p>
-              </div>
-            ) : (
-              <div className="project-context-edge-list">
-                {filteredEdges.map((edge) => (
-                  <ProjectContextEdgeEditor
-                    key={edge.id}
-                    edge={edge}
-                    items={items}
-                    saving={patchEdgeMutation.isPending}
-                    deleting={deleteEdgeMutation.isPending}
-                    onSave={(id, patch) =>
-                      patchEdgeMutation.mutate({ id, ...patch })
-                    }
-                    onDelete={(id) => deleteEdgeMutation.mutate(id)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+        <>
+          <div className="project-context-view-toggle" role="tablist" aria-label="Context view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={contextView === "list"}
+              onClick={() => setContextView("list")}
+            >
+              List
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={contextView === "graph"}
+              onClick={() => setContextView("graph")}
+            >
+              Graph
+            </button>
+          </div>
+          {contextView === "list" ? (
+            <ProjectContextListView
+              items={items}
+              edges={edges}
+              nodeSaving={patchContextMutation.isPending}
+              nodeDeleting={deleteContextMutation.isPending}
+              edgeSaving={patchEdgeMutation.isPending}
+              edgeDeleting={deleteEdgeMutation.isPending}
+              onSaveNode={(id, patch) => patchContextMutation.mutate({ id, ...patch })}
+              onDeleteNode={(id) => deleteContextMutation.mutate(id)}
+              onSaveEdge={(id, patch) => patchEdgeMutation.mutate({ id, ...patch })}
+              onDeleteEdge={(id) => deleteEdgeMutation.mutate(id)}
+            />
+          ) : (
+            <ProjectContextGraphView items={items} edges={edges} />
+          )}
+        </>
       )}
     </section>
   );

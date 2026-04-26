@@ -65,6 +65,11 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 // Migrate runs AutoMigrate for domain.Task and domain.TaskEvent (works with any GORM dialector, e.g. tests on SQLite).
 func Migrate(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.Migrate")
+	if db.Dialector != nil && db.Dialector.Name() == "postgres" {
+		if err := db.WithContext(ctx).Exec(`ALTER TABLE project_context_items DROP CONSTRAINT IF EXISTS chk_project_context_kind`).Error; err != nil {
+			return fmt.Errorf("drop project context kind constraint: %w", err)
+		}
+	}
 	if err := db.WithContext(ctx).AutoMigrate(
 		&domain.Project{},
 		&domain.Task{},

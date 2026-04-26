@@ -48,7 +48,7 @@ type Project struct {
 type ProjectContextItem struct {
 	ID            string             `json:"id" gorm:"primaryKey"`
 	ProjectID     string             `json:"project_id" gorm:"not null;index"`
-	Kind          ProjectContextKind `json:"kind" gorm:"not null;index;default:note;check:chk_project_context_kind,kind IN ('note','decision','constraint','handoff')"`
+	Kind          ProjectContextKind `json:"kind" gorm:"not null;index;default:note"`
 	Title         string             `json:"title" gorm:"not null"`
 	Body          string             `json:"body" gorm:"type:text;not null"`
 	SourceTaskID  *string            `json:"source_task_id,omitempty" gorm:"index"`

@@ -2,7 +2,7 @@ export type ProjectStatus = "active" | "archived";
 
 export const DEFAULT_PROJECT_ID = "00000000-0000-4000-8000-000000000001";
 
-export type ProjectContextKind = "note" | "decision" | "constraint" | "handoff";
+export type ProjectContextKind = string;
 export type ProjectContextRelation =
   | "supports"
   | "blocks"
@@ -59,7 +59,7 @@ export type ProjectContextListResponse = {
 
 export const PROJECT_STATUSES: ProjectStatus[] = ["active", "archived"];
 
-export const PROJECT_CONTEXT_KINDS: ProjectContextKind[] = [
+export const PROJECT_CONTEXT_KIND_SUGGESTIONS: ProjectContextKind[] = [
   "note",
   "decision",
   "constraint",
