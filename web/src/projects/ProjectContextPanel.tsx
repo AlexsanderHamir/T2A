@@ -196,96 +196,102 @@ export function ProjectContextPanel({ projectId }: Props) {
           {createContextMutation.isPending ? "Adding..." : "Add node"}
         </button>
       </form>
-      <form className="project-context-form" onSubmit={submitEdge}>
-        <div className="project-context-form__heading">
+      {items.length < 2 ? (
+        <div className="project-context-ready-card">
+          <span className="project-context-ready-card__step">Next</span>
           <div>
-            <strong>Add connection</strong>
-            <p className="muted">
-              Connect two project nodes with an explicit relationship. Tasks only
-              receive connections between nodes the user selected.
+            <strong>Add two nodes to unlock connections</strong>
+            <p>
+              Connections describe how project memory relates. Once this project
+              has at least two nodes, you can connect them with a relation and
+              strength.
             </p>
           </div>
         </div>
-        <div className="project-context-edge-grid">
-          <div className="field grow">
-            <label htmlFor="project-context-edge-source">From node</label>
-            <select
-              id="project-context-edge-source"
-              name="source_context_id"
-              disabled={items.length < 2}
-              required
-            >
-              <option value="">Select source</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
+      ) : (
+        <form className="project-context-form" onSubmit={submitEdge}>
+          <div className="project-context-form__heading">
+            <div>
+              <strong>Add connection</strong>
+              <p className="muted">
+                Connect two project nodes with an explicit relationship. Tasks only
+                receive connections between nodes the user selected.
+              </p>
+            </div>
           </div>
-          <div className="field grow">
-            <label htmlFor="project-context-edge-target">To node</label>
-            <select
-              id="project-context-edge-target"
-              name="target_context_id"
-              disabled={items.length < 2}
-              required
-            >
-              <option value="">Select target</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
+          <div className="project-context-edge-grid">
+            <div className="field grow">
+              <label htmlFor="project-context-edge-source">From node</label>
+              <select
+                id="project-context-edge-source"
+                name="source_context_id"
+                required
+              >
+                <option value="">Select source</option>
+                {items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field grow">
+              <label htmlFor="project-context-edge-target">To node</label>
+              <select
+                id="project-context-edge-target"
+                name="target_context_id"
+                required
+              >
+                <option value="">Select target</option>
+                {items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="project-context-edge-relation">Relation</label>
+              <select
+                id="project-context-edge-relation"
+                name="relation"
+                defaultValue="related"
+              >
+                {PROJECT_CONTEXT_RELATIONS.map((relation) => (
+                  <option key={relation} value={relation}>
+                    {relation.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="project-context-edge-strength">Strength</label>
+              <select
+                id="project-context-edge-strength"
+                name="strength"
+                defaultValue="3"
+              >
+                {[1, 2, 3, 4, 5].map((strength) => (
+                  <option key={strength} value={strength}>
+                    {strength}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field grow project-context-edge-note">
+              <label htmlFor="project-context-edge-note">Note</label>
+              <input
+                id="project-context-edge-note"
+                name="note"
+                placeholder="Why does this connection matter?"
+              />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="project-context-edge-relation">Relation</label>
-            <select
-              id="project-context-edge-relation"
-              name="relation"
-              defaultValue="related"
-              disabled={items.length < 2}
-            >
-              {PROJECT_CONTEXT_RELATIONS.map((relation) => (
-                <option key={relation} value={relation}>
-                  {relation.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="project-context-edge-strength">Strength</label>
-            <select
-              id="project-context-edge-strength"
-              name="strength"
-              defaultValue="3"
-              disabled={items.length < 2}
-            >
-              {[1, 2, 3, 4, 5].map((strength) => (
-                <option key={strength} value={strength}>
-                  {strength}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field grow project-context-edge-note">
-            <label htmlFor="project-context-edge-note">Note</label>
-            <input
-              id="project-context-edge-note"
-              name="note"
-              disabled={items.length < 2}
-              placeholder="Why does this connection matter?"
-            />
-          </div>
-        </div>
-        <button
-          type="submit"
-          disabled={createEdgeMutation.isPending || items.length < 2}
-        >
-          {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
-        </button>
-      </form>
+          <button type="submit" disabled={createEdgeMutation.isPending}>
+            {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
+          </button>
+        </form>
+      )}
       {mutationError ? (
         <div className="err" role="alert">
           {mutationError.message}
