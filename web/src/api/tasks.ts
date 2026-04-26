@@ -231,6 +231,7 @@ export async function createTask(input: {
   task_type?: TaskType;
   id?: string;
   draft_id?: string;
+  project_id?: string;
   parent_id?: string;
   checklist_inherit?: boolean;
   runner?: string;
@@ -264,6 +265,10 @@ export async function createTask(input: {
   const draftId = assertOptionalTaskPathId(input.draft_id, "draft_id");
   if (draftId !== undefined) {
     body.draft_id = draftId;
+  }
+  const projectId = assertOptionalTaskPathId(input.project_id, "project_id");
+  if (projectId !== undefined) {
+    body.project_id = projectId;
   }
   const parentId = assertOptionalTaskPathId(input.parent_id, "parent_id");
   if (parentId !== undefined) {
@@ -390,6 +395,7 @@ export async function patchTask(
     status?: Status;
     priority?: Priority;
     task_type?: TaskType;
+    project_id?: string | null;
     parent_id?: string | null;
     checklist_inherit?: boolean;
     /**
@@ -413,6 +419,12 @@ export async function patchTask(
   if (patch.status !== undefined) body.status = patch.status;
   if (patch.priority !== undefined) body.priority = patch.priority;
   if (patch.task_type !== undefined) body.task_type = patch.task_type;
+  if (patch.project_id !== undefined) {
+    body.project_id =
+      patch.project_id === null
+        ? null
+        : assertTaskPathId(patch.project_id, "project_id");
+  }
   if (patch.parent_id !== undefined) {
     body.parent_id =
       patch.parent_id === null

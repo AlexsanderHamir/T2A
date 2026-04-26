@@ -13,9 +13,8 @@ import {
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
-import {
-  SystemStatusChip,
-} from "@/observability";
+import { ProjectDetailPage, ProjectListPage } from "@/projects";
+import { SystemStatusChip } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
@@ -27,6 +26,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
+  const projectsIsCurrent = location.pathname.startsWith("/projects");
 
   return (
     <ModalStackProvider>
@@ -67,6 +67,15 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                   : {})}
               >
                 Drafts
+              </Link>
+              <Link
+                to="/projects"
+                className="app-nav__link"
+                {...(projectsIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Projects
               </Link>
             </nav>
             <div className="app-header-actions">
@@ -177,6 +186,8 @@ export default function App() {
       <Route path="/" element={<AppShell app={app} />}>
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
+        <Route path="projects" element={<ProjectListPage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"

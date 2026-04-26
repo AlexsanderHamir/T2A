@@ -37,6 +37,8 @@ export type Task = {
    * until this instant. Omitted when eligible immediately.
    */
   pickup_not_before?: string;
+  /** Present when this task belongs to a long-lived project context. */
+  project_id?: string;
   /** Present when this task is nested under another (GET /tasks tree). */
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
@@ -183,7 +185,11 @@ export type TaskChangeType =
   | "task_created"
   | "task_updated"
   | "task_deleted"
-  | "task_cycle_changed";
+  | "task_cycle_changed"
+  | "project_created"
+  | "project_updated"
+  | "project_deleted"
+  | "project_context_changed";
 
 /**
  * Wire shape of a single SSE frame on `GET /events`.

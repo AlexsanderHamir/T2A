@@ -3,6 +3,7 @@ export * from "./parseTaskApi";
 export * from "./repo";
 export * from "./tasks";
 export * from "./cycles";
+export * from "./projects";
 export * from "./settings";
 export * from "./rum";
 export * from "./taskGraphMock";

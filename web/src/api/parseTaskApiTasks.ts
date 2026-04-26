@@ -381,6 +381,10 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   } else {
     base.task_type = "general";
   }
+  const projectID = parseOptionalParentId(value.project_id, "project_id");
+  if (projectID !== undefined) {
+    base.project_id = projectID;
+  }
   const pid = parseOptionalParentId(value.parent_id, "parent_id");
   if (pid !== undefined) {
     base.parent_id = pid;

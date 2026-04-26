@@ -1,10 +1,10 @@
 # Browser client (`web/`)
 
-Canonical description of the optional Vite + React + TypeScript SPA. Server contracts (`/tasks`, `/events`, `/repo`) are in [docs/API-HTTP.md](./API-HTTP.md), [docs/API-SSE.md](./API-SSE.md), and the [docs/DESIGN.md](./DESIGN.md) hub. Where this doc sits in the tree: [docs/README.md](./README.md).
+Canonical description of the optional Vite + React + TypeScript SPA. Server contracts (`/projects`, `/tasks`, `/events`, `/repo`) are in [docs/API-HTTP.md](./API-HTTP.md), [docs/API-SSE.md](./API-SSE.md), and the [docs/DESIGN.md](./DESIGN.md) hub. Where this doc sits in the tree: [docs/README.md](./README.md).
 
 ## Scope
 
-Does: CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 900ms debounced cache invalidation for task/cycle frames plus live `agent_run_progress` rendering in the current execution phase; attempt debug pages at `/tasks/:taskId/cycles/:cycleId` compose cycle detail, persisted stream history from `/stream`, live tail updates, and filtered T2A audit events; `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
+Does: foundational project pages at `/projects` and `/projects/:projectId` backed by strict project API parsers; CRUD UI for `/tasks` (home list shows root tasks only; subtasks on task detail and in the create-modal parent picker); TanStack Query for list + mutations; checklist `GET` / add (`POST`) / remove (`DELETE`) under `/tasks/{id}/checklist` in the UI, with done-state shown read-only and a progress summary; marking items done uses `PATCH` with `X-Actor: agent` only (see [API-HTTP.md](./API-HTTP.md)); `EventSource('/events')` with 900ms debounced cache invalidation for task/cycle frames plus live `agent_run_progress` rendering in the current execution phase; attempt debug pages at `/tasks/:taskId/cycles/:cycleId` compose cycle detail, persisted stream history from `/stream`, live tail updates, and filtered T2A audit events; `parseTaskApi` on JSON before use (tasks are recursive trees with `children`, optional `project_id`, `parent_id`, `checklist_inherit`, optional `task_type`); task creation drafts via `/task-drafts` (resume picker, autosave debounce, explicit **Save draft** action, and delete-on-create via `draft_id`); TipTap rich prompt (bold, headings, lists, code) with `initial_prompt` stored as HTML; `@` file mentions via `/repo` when `app_settings.repo_root` is set (see [API-HTTP.md](./API-HTTP.md#workspace-repo)). If the workspace repo is unset, typing `@` shows a hint that no repo is configured and links to the SPA Settings page (gear icon → `/settings`); see [SETTINGS.md](./SETTINGS.md).
 
 Does not: Auth; serving `dist` from `taskapi`; CORS in Go (use same origin or a gateway — [DESIGN.md](./DESIGN.md) limitations).
 
@@ -49,7 +49,7 @@ flowchart TB
 
   PG[(PostgreSQL)]
 
-  API -->|REST /tasks /repo| H
+  API -->|REST /projects /tasks /repo| H
   H --> PG
   Hub -.->|SSE| ES
 ```
@@ -58,7 +58,7 @@ SSE carries `type` + `id` only; rows come from `GET /tasks`.
 
 ## Dev vs production
 
-Dev: browser → Vite → proxies `/tasks`, `/events`, `/repo`, `/settings`, `/system`, `/v1/rum`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a task detail URL does not return raw JSON from `GET /tasks/{id}`).
+Dev: browser → Vite → proxies `/projects`, `/tasks`, `/events`, `/repo`, `/settings`, `/system`, `/v1/rum`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` or `/projects/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a detail URL does not return raw JSON from the API route).
 
 Prod: `npm run build` → `web/dist/`; serve so `/tasks`, `/events`, `/repo` match the API origin (or gateway).
 
@@ -70,7 +70,7 @@ flowchart LR
   V[Vite]
   T[taskapi]
   B -->|assets| V
-  V -->|/tasks /events /repo /settings /system /v1/rum /health| T
+  V -->|/projects /tasks /events /repo /settings /system /v1/rum /health| T
 ```
 
 ## React Query + SSE
@@ -101,15 +101,16 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`, `/tasks/:taskId/cycles/:cycleId`), `App.css`, `App.test.tsx`. |
+| `app/` | `main.tsx` (entry, `BrowserRouter`, `QueryClientProvider`), `App.tsx` (routes: `/`, `/projects`, `/projects/:projectId`, `/tasks/:taskId`, `/tasks/:taskId/events/:eventSeq`, `/tasks/:taskId/cycles/:cycleId`), `App.css`, `App.test.tsx`. |
 | `lib/queryClient.ts` | Defaults: stale time, `gcTime`, retries, `refetchOnWindowFocus`, dev cache `onError`. |
 | `lib/useDelayedTrue.ts` | Delays showing the task list loading line; `smoothTransitions={false}` on `TaskListSection` in tests. |
 | `lib/useHysteresisBoolean.ts` | Hides flicker from brief React Query refetches: `useTasksApp` drives “syncing” for the list + header after sustained `isFetching`. |
 | `tasks/task-query/sseInvalidate.ts` | Parses SSE `data` lines into task/cycle invalidation frames, id-less settings/resync frames, and live `agent_run_progress` frames. |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
 | `tasks/` | Task feature: `hooks/`, `components/`, `pages/`, `extensions/`, plus small modules grouped under `task-query/` (keys + SSE invalidation), `task-tree/` (flatten + pending subtask draft type), `task-prompt/` (HTML prompt helpers), `task-display/` (pills, status “needs user”, attention copy), `task-events/` (audit labels + needs-user + thread helpers), `task-graph/` (layout px for `TaskGraphPage`), `task-paging/` (page sizes). `TaskHome`, `TaskDetailPage`, `TaskEventDetailPage`, `TaskCycleDetailPage`, `TaskUpdatesTimeline`, drafts/create-modal pipeline as before. |
+| `projects/` | Project feature: query keys/hooks plus list/detail route shells for project context. Full context CRUD and task assignment UI land in the next project-context stage. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
-| `api/` | HTTP + JSON parsing: `index.ts` re-exports `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
+| `api/` | HTTP + JSON parsing: `index.ts` re-exports `projects.ts`, `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
 | `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |
 
 ### `tasks/components/` layout
