@@ -340,17 +340,13 @@ describe("TaskListSection", () => {
     expect(screen.getByText("Moat task")).toBeInTheDocument();
     expect(screen.getByText("Unassigned task")).toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /^project$/i }),
-      "project-1",
-    );
+    await user.click(screen.getByRole("combobox", { name: /^project$/i }));
+    await user.click(screen.getByRole("option", { name: /^context moat$/i }));
     expect(screen.getByText("Moat task")).toBeInTheDocument();
     expect(screen.queryByText("Unassigned task")).not.toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /^project$/i }),
-      "none",
-    );
+    await user.click(screen.getByRole("combobox", { name: /^project$/i }));
+    await user.click(screen.getByRole("option", { name: /^no project$/i }));
     expect(screen.queryByText("Moat task")).not.toBeInTheDocument();
     expect(screen.getByText("Unassigned task")).toBeInTheDocument();
   });

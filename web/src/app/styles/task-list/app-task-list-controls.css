@@ -33,16 +33,18 @@
 }
 
 .task-list-filter-field {
-  min-width: 8rem;
+  flex: 0 1 10.5rem;
+  min-width: 9.5rem;
 }
 
 .task-list-filter-field .field--custom-select--compact {
-  min-width: 10rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .task-list-search-field {
-  flex: 1 1 12rem;
-  min-width: min(100%, 12rem);
+  flex: 1 1 18rem;
+  min-width: min(100%, 16rem);
 }
 
 .task-list-search-field input[type="search"] {

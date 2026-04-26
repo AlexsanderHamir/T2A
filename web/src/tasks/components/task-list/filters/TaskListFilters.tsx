@@ -27,6 +27,15 @@ export function TaskListFilters({
   titleSearch,
   onTitleSearchChange,
 }: Props) {
+  const projectFilterOptions = [
+    { value: "all", label: "All projects" },
+    { value: "none", label: "No project" },
+    ...projectOptions.map((project) => ({
+      value: project.id,
+      label: project.name,
+    })),
+  ];
+
   return (
     <div
       className="task-list-filters"
@@ -57,20 +66,15 @@ export function TaskListFilters({
       </div>
       {onProjectFilterChange ? (
         <div className="task-list-filter-field">
-          <label htmlFor="task-list-filter-project">Project</label>
-          <select
+          <CustomSelect
             id="task-list-filter-project"
+            label="Project"
+            compact
+            listboxName="Filter by project"
             value={projectFilter}
-            onChange={(e) => onProjectFilterChange(e.target.value)}
-          >
-            <option value="all">All projects</option>
-            <option value="none">No project</option>
-            {projectOptions.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+            options={projectFilterOptions}
+            onChange={onProjectFilterChange}
+          />
         </div>
       ) : null}
       <div className="field grow task-list-search-field">
