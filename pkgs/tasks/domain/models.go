@@ -66,6 +66,27 @@ type ProjectContextItem struct {
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.
 func (ProjectContextItem) TableName() string { return "project_context_items" }
 
+// ProjectContextEdge is a user-curated relationship between two context nodes
+// owned by the same project.
+type ProjectContextEdge struct {
+	ID              string                 `json:"id" gorm:"primaryKey"`
+	ProjectID       string                 `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:1"`
+	SourceContextID string                 `json:"source_context_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:2"`
+	TargetContextID string                 `json:"target_context_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:3"`
+	Relation        ProjectContextRelation `json:"relation" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:4;check:chk_project_context_relation,relation IN ('supports','blocks','refines','depends_on','related')"`
+	Strength        int                    `json:"strength" gorm:"not null;default:3;check:chk_project_context_strength,strength >= 1 AND strength <= 5"`
+	Note            string                 `json:"note" gorm:"type:text;not null;default:''"`
+	CreatedAt       time.Time              `json:"created_at" gorm:"not null;index"`
+	UpdatedAt       time.Time              `json:"updated_at" gorm:"not null;index"`
+
+	Project *Project            `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	Source  *ProjectContextItem `json:"-" gorm:"foreignKey:SourceContextID;references:ID;constraint:OnDelete:CASCADE"`
+	Target  *ProjectContextItem `json:"-" gorm:"foreignKey:TargetContextID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (ProjectContextEdge) TableName() string { return "project_context_edges" }
+
 // TaskContextSnapshot records the exact project context bundle handed to one
 // task execution attempt. It is immutable audit data, not canonical project memory.
 type TaskContextSnapshot struct {

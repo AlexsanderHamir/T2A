@@ -77,6 +77,7 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.TaskCyclePhase{},
 		&domain.TaskCycleStreamEvent{},
 		&domain.ProjectContextItem{},
+		&domain.ProjectContextEdge{},
 		&domain.TaskContextSnapshot{},
 		&domain.AppSettings{},
 	); err != nil {
