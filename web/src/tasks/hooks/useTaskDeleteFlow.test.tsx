@@ -272,7 +272,8 @@ describe("useTaskDeleteFlow", () => {
     // where `deleteTarget` is null (the steady-state for most of the
     // session); resetError must skip the underlying mutation.reset()
     // call when already idle so we don't churn the react-query state
-    // tree on every render.
+    // tree on every render. Success is also preserved because detail-page
+    // navigation reads the settled delete variables after the dialog closes.
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,

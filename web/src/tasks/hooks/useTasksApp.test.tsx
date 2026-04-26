@@ -29,6 +29,7 @@ import {
   saveTaskDraft,
   getTaskDraft,
   createTask,
+  deleteTask,
 } from "../../api";
 
 const mockedListTasks = vi.mocked(listTasks);
@@ -38,6 +39,7 @@ const mockedEvaluate = vi.mocked(evaluateDraftTask);
 const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
 const mockedCreateTask = vi.mocked(createTask);
+const mockedDeleteTask = vi.mocked(deleteTask);
 
 function makeWrapper() {
   const queryClient = new QueryClient({
@@ -69,6 +71,52 @@ function makeEvaluation(overrides: Partial<DraftTaskEvaluation> = {}): DraftTask
     ...overrides,
   } as DraftTaskEvaluation;
 }
+
+describe("useTasksApp delete lifecycle", () => {
+  beforeEach(() => {
+    stubEventSource();
+    mockedListTasks.mockResolvedValue({
+      tasks: [],
+      limit: 200,
+      offset: 0,
+      has_more: false,
+    });
+    mockedGetStats.mockResolvedValue(null as unknown as never);
+    mockedListDrafts.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    mockedDeleteTask.mockReset();
+  });
+
+  it("keeps successful delete variables available after the confirm dialog closes", async () => {
+    mockedDeleteTask.mockResolvedValueOnce(undefined as unknown as void);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTasksApp({ sseLive: false }), {
+      wrapper: Wrapper,
+    });
+
+    act(() => {
+      result.current.requestDelete({
+        id: "root-task",
+        title: "Root task",
+      });
+    });
+    act(() => {
+      result.current.confirmDelete();
+    });
+
+    await waitFor(() => {
+      expect(result.current.deleteTarget).toBeNull();
+    });
+    await waitFor(() => {
+      expect(result.current.deleteSuccess).toBe(true);
+      expect(result.current.deleteVariables).toEqual({ id: "root-task" });
+    });
+  });
+});
 
 describe("useTasksApp evaluateDraftMutation race", () => {
   beforeEach(() => {
