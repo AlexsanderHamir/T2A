@@ -116,55 +116,79 @@ export function TaskCycleDetailPage() {
     auditQuery.data?.events.filter((ev) => ev.data.cycle_id === cycleId) ?? []
   ).sort((a, b) => b.seq - a.seq);
   const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
+  const startedParts = formatAttemptStartedParts(cycle.started_at);
 
   return (
     <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
-      <nav className="task-detail-nav" aria-label="Attempt navigation">
-        <Link to="/" className="task-detail-back">
-          ← All tasks
+      <nav
+        className="task-detail-nav task-attempt-nav"
+        aria-label="Attempt navigation"
+      >
+        <Link to="/" className="task-detail-back task-attempt-nav-link">
+          All tasks
         </Link>
+        <span className="task-attempt-nav-separator" aria-hidden="true">
+          /
+        </span>
         <Link
           to={`/tasks/${encodeURIComponent(taskId)}`}
-          className="task-event-detail-back-task"
+          className="task-event-detail-back-task task-attempt-nav-link"
         >
-          ← Task
+          Task detail
         </Link>
       </nav>
 
       <header className="task-attempt-header">
-        <div>
+        <div className="task-attempt-title-group">
           <p className="task-cycle-ticker-eyebrow">Execution attempt</p>
           <h2 className="task-detail-title term-arrow">
             <span>Attempt #{cycle.attempt_seq}</span>
           </h2>
+          <p className="task-attempt-header-copy">
+            Cursor run timeline, phase state, and persisted audit trail.
+          </p>
         </div>
         <span className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}>
           {cycleStatusLabel(cycle.status)}
         </span>
       </header>
 
-      <dl className="task-event-detail-dl task-attempt-meta">
-        <div>
+      <dl
+        className="task-event-detail-dl task-attempt-meta"
+        aria-label="Attempt metadata"
+      >
+        <div className="task-attempt-meta-card task-attempt-meta-card--task">
           <dt>Task</dt>
           <dd>
             <CopyableId value={cycle.task_id} />
           </dd>
         </div>
-        <div>
+        <div className="task-attempt-meta-card">
           <dt>Runner</dt>
-          <dd>{formatRunnerModel(cycle.cycle_meta)}</dd>
+          <dd>
+            <span className="task-attempt-meta-value task-attempt-meta-value--runner">
+              {formatRunnerModel(cycle.cycle_meta)}
+            </span>
+          </dd>
         </div>
-        <div>
+        <div className="task-attempt-meta-card">
           <dt>Started</dt>
           <dd>
-            <time dateTime={cycle.started_at}>
-              {new Date(cycle.started_at).toLocaleString()}
+            <time className="task-attempt-meta-time" dateTime={cycle.started_at}>
+              <span className="task-attempt-meta-value">
+                {startedParts.time}
+              </span>
+              <span className="task-attempt-meta-subvalue">{startedParts.date}</span>
             </time>
           </dd>
         </div>
-        <div>
+        <div className="task-attempt-meta-card task-attempt-meta-card--duration">
           <dt>Duration</dt>
-          <dd>{attemptDurationLabel(cycle.started_at, cycle.ended_at, now)}</dd>
+          <dd>
+            <span className="task-attempt-meta-value task-attempt-meta-value--duration">
+              {attemptDurationLabel(cycle.started_at, cycle.ended_at, now)}
+            </span>
+          </dd>
         </div>
       </dl>
 
@@ -426,13 +450,35 @@ function AuditEventRow({ taskId, ev }: { taskId: string; ev: TaskEvent }) {
   );
 }
 
-function attemptDurationLabel(startedAt: string, endedAt: string | undefined, now: number): string {
+function attemptDurationLabel(
+  startedAt: string,
+  endedAt: string | undefined,
+  now: number,
+): string {
   const start = Date.parse(startedAt);
   const end = endedAt ? Date.parse(endedAt) : now;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
     return "Unknown";
   }
   return formatDurationSeconds(Math.round((end - start) / 1000));
+}
+
+function formatAttemptStartedParts(startedAt: string): {
+  date: string;
+  time: string;
+} {
+  const started = new Date(startedAt);
+  return {
+    date: started.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    time: started.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+  };
 }
 
 function streamKindLabel(kind: string, subtype?: string): string {
