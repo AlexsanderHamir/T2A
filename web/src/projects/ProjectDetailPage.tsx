@@ -45,21 +45,11 @@ export function ProjectDetailPage() {
             <div>
               <p className="eyebrow">Project</p>
               <h2>{project.data.name}</h2>
-              {project.data.description ? (
-                <p className="muted">{project.data.description}</p>
-              ) : null}
             </div>
             <span className="cell-pill cell-pill--runtime">
               {project.data.status}
             </span>
           </div>
-
-          {project.data.context_summary ? (
-            <section className="task-attempt-section">
-              <h3>Context summary</h3>
-              <p>{project.data.context_summary}</p>
-            </section>
-          ) : null}
 
           <ProjectSettingsPanel project={project.data} />
           <ProjectTasksPanel projectId={projectId} />
