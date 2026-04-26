@@ -57,6 +57,17 @@ const (
 	OpListCycleStreamEvents   = "list_cycle_stream_events"
 	OpGetAppSettings          = "get_app_settings"
 	OpUpdateAppSettings       = "update_app_settings"
+	OpCreateProject           = "create_project"
+	OpListProjects            = "list_projects"
+	OpGetProject              = "get_project"
+	OpUpdateProject           = "update_project"
+	OpDeleteProject           = "delete_project"
+	OpCreateProjectContext    = "create_project_context"
+	OpListProjectContext      = "list_project_context"
+	OpUpdateProjectContext    = "update_project_context"
+	OpDeleteProjectContext    = "delete_project_context"
+	OpCreateContextSnapshot   = "create_context_snapshot"
+	OpGetContextSnapshot      = "get_context_snapshot"
 )
 
 // opDurationBuckets favor sub-100ms resolution for SQL point reads and short tx.

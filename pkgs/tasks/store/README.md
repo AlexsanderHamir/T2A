@@ -15,6 +15,7 @@ Ready-task notifications (`(*Store).notifyReadyTask`) are intentionally only fir
 | Concern | Facade file | Tests | Internal package | Notes |
 |---|---|---|---|---|
 | Wiring | `store.go` | (in `facade_tasks_test.go`) | `internal/notify` | `Store`, `NewStore`, `ReadyTaskNotifier`, `SetReadyTaskNotifier`, `notifyReadyTask`. |
+| Projects & project context | `facade_projects.go` | `facade_projects_test.go` | `internal/projects` | Project CRUD, context item CRUD, and immutable task context snapshots used by agent runs. |
 | Tasks — CRUD, lists & trees | `facade_tasks.go` | `facade_tasks_test.go` | `internal/tasks` | `Get`, `Create`, `Update`, `Delete`, `List` / `ListFlat`, `ListRootForest{,After}`, `GetTaskTree`. `CreateTaskInput`, `UpdateTaskInput`, `ParentFieldPatch`, `TaskNode`, `MaxTaskTreeDepth` aliased here. Tests also cover the ready-task notifier wiring and the operation-duration histogram. |
 | Stats | `facade_stats.go` | — | `internal/stats` | `GlobalTaskStats`. |
 | Checklist | `facade_checklist.go` | `facade_checklist_test.go` | `internal/checklist` | List / add / update / delete / set-done. Exports `ValidateCanMarkDoneInTx` and `DeleteOwnedItemsInTx` for sibling subpackages. |

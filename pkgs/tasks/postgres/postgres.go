@@ -65,6 +65,7 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 func Migrate(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.Migrate")
 	if err := db.WithContext(ctx).AutoMigrate(
+		&domain.Project{},
 		&domain.Task{},
 		&domain.TaskEvent{},
 		&domain.TaskChecklistItem{},
@@ -74,6 +75,8 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.TaskCycle{},
 		&domain.TaskCyclePhase{},
 		&domain.TaskCycleStreamEvent{},
+		&domain.ProjectContextItem{},
+		&domain.TaskContextSnapshot{},
 		&domain.AppSettings{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)

@@ -13,6 +13,7 @@ type Task struct {
 	Status           Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
 	Priority         Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType         TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
+	ProjectID        *string  `json:"project_id,omitempty" gorm:"index"`
 	ParentID         *string  `json:"parent_id,omitempty" gorm:"index"`
 	ChecklistInherit bool     `json:"checklist_inherit" gorm:"not null;default:false"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
@@ -25,7 +26,63 @@ type Task struct {
 	// PickupNotBefore defers agent dequeue until this instant (UTC). NULL means
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
 	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
+
+	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
+
+// Project is shared context memory for a long-running body of work. Tasks can
+// reference a project while still owning their own subtask tree via ParentID.
+type Project struct {
+	ID             string        `json:"id" gorm:"primaryKey"`
+	Name           string        `json:"name" gorm:"not null;index"`
+	Description    string        `json:"description" gorm:"type:text;not null;default:''"`
+	Status         ProjectStatus `json:"status" gorm:"not null;index;default:active;check:chk_projects_status,status IN ('active','archived')"`
+	ContextSummary string        `json:"context_summary" gorm:"type:text;not null;default:''"`
+	CreatedAt      time.Time     `json:"created_at" gorm:"not null;index"`
+	UpdatedAt      time.Time     `json:"updated_at" gorm:"not null;index"`
+}
+
+// ProjectContextItem is a human-inspectable memory item attached to a project.
+type ProjectContextItem struct {
+	ID            string             `json:"id" gorm:"primaryKey"`
+	ProjectID     string             `json:"project_id" gorm:"not null;index"`
+	Kind          ProjectContextKind `json:"kind" gorm:"not null;index;default:note;check:chk_project_context_kind,kind IN ('note','decision','constraint','handoff')"`
+	Title         string             `json:"title" gorm:"not null"`
+	Body          string             `json:"body" gorm:"type:text;not null"`
+	SourceTaskID  *string            `json:"source_task_id,omitempty" gorm:"index"`
+	SourceCycleID *string            `json:"source_cycle_id,omitempty" gorm:"index"`
+	CreatedBy     Actor              `json:"created_by" gorm:"column:created_by;not null"`
+	Pinned        bool               `json:"pinned" gorm:"not null;default:false;index"`
+	CreatedAt     time.Time          `json:"created_at" gorm:"not null;index"`
+	UpdatedAt     time.Time          `json:"updated_at" gorm:"not null;index"`
+
+	Project     *Project   `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	SourceTask  *Task      `json:"-" gorm:"foreignKey:SourceTaskID;references:ID;constraint:OnDelete:SET NULL"`
+	SourceCycle *TaskCycle `json:"-" gorm:"foreignKey:SourceCycleID;references:ID;constraint:OnDelete:SET NULL"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (ProjectContextItem) TableName() string { return "project_context_items" }
+
+// TaskContextSnapshot records the exact project context bundle handed to one
+// task execution attempt. It is immutable audit data, not canonical project memory.
+type TaskContextSnapshot struct {
+	ID              string         `json:"id" gorm:"primaryKey"`
+	TaskID          string         `json:"task_id" gorm:"not null;index"`
+	CycleID         string         `json:"cycle_id" gorm:"not null;index;unique"`
+	ProjectID       string         `json:"project_id" gorm:"not null;index"`
+	ContextJSON     datatypes.JSON `json:"context_json" gorm:"column:context_json;type:jsonb;not null;default:'{}'"`
+	RenderedContext string         `json:"rendered_context" gorm:"type:text;not null;default:''"`
+	TokenEstimate   int            `json:"token_estimate" gorm:"not null;default:0"`
+	CreatedAt       time.Time      `json:"created_at" gorm:"not null;index"`
+
+	Task    *Task      `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	Cycle   *TaskCycle `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Project *Project   `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskContextSnapshot) TableName() string { return "task_context_snapshots" }
 
 // TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.
 type TaskChecklistItem struct {
