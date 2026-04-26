@@ -379,6 +379,15 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	if err != nil {
 		t.Fatalf("create selected context: %v", err)
 	}
+	selectedConstraint, err := h.store.CreateProjectContext(ctx, project.ID, store.CreateProjectContextInput{
+		Kind:      domain.ProjectContextKindConstraint,
+		Title:     "Constraint",
+		Body:      "The user chose this related node.",
+		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create selected constraint: %v", err)
+	}
 	unselected, err := h.store.CreateProjectContext(ctx, project.ID, store.CreateProjectContextInput{
 		Kind:      domain.ProjectContextKindNote,
 		Title:     "Unselected",
@@ -388,13 +397,33 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	if err != nil {
 		t.Fatalf("create unselected context: %v", err)
 	}
+	includedEdge, err := h.store.CreateProjectContextEdge(ctx, project.ID, store.CreateProjectContextEdgeInput{
+		SourceContextID: selected.ID,
+		TargetContextID: selectedConstraint.ID,
+		Relation:        domain.ProjectContextRelationSupports,
+		Strength:        4,
+		Note:            "Selected relationship",
+	})
+	if err != nil {
+		t.Fatalf("create included edge: %v", err)
+	}
+	excludedEdge, err := h.store.CreateProjectContextEdge(ctx, project.ID, store.CreateProjectContextEdgeInput{
+		SourceContextID: selected.ID,
+		TargetContextID: unselected.ID,
+		Relation:        domain.ProjectContextRelationRelated,
+		Strength:        2,
+		Note:            "Unselected relationship",
+	})
+	if err != nil {
+		t.Fatalf("create excluded edge: %v", err)
+	}
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
 		Title:                 "with selected context",
 		InitialPrompt:         "do the selected thing",
 		Status:                domain.StatusReady,
 		Priority:              domain.PriorityMedium,
 		ProjectID:             &project.ID,
-		ProjectContextItemIDs: []string{selected.ID},
+		ProjectContextItemIDs: []string{selected.ID, selectedConstraint.ID},
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create task: %v", err)
@@ -420,8 +449,14 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	if !strings.Contains(calls[0].Prompt, "The user chose this item.") {
 		t.Fatalf("runner prompt missing selected context:\n%s", calls[0].Prompt)
 	}
+	if !strings.Contains(calls[0].Prompt, includedEdge.Note) {
+		t.Fatalf("runner prompt missing selected edge:\n%s", calls[0].Prompt)
+	}
 	if strings.Contains(calls[0].Prompt, unselected.Body) {
 		t.Fatalf("runner prompt included unselected context:\n%s", calls[0].Prompt)
+	}
+	if strings.Contains(calls[0].Prompt, excludedEdge.Note) {
+		t.Fatalf("runner prompt included edge to unselected context:\n%s", calls[0].Prompt)
 	}
 	cycle := assertCycleStatus(t, h.store, tsk.ID, 1, domain.CycleStatusSucceeded)
 	snapshot, err := h.store.GetTaskContextSnapshotForCycle(context.Background(), cycle.ID)
@@ -430,6 +465,9 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	}
 	if snapshot.ProjectID != project.ID || !strings.Contains(snapshot.RenderedContext, selected.Body) {
 		t.Fatalf("snapshot = %#v", snapshot)
+	}
+	if !strings.Contains(string(snapshot.ContextJSON), includedEdge.ID) || strings.Contains(string(snapshot.ContextJSON), excludedEdge.ID) {
+		t.Fatalf("snapshot context_json = %s", snapshot.ContextJSON)
 	}
 }
 

@@ -162,6 +162,95 @@ func TestStore_ProjectContextCRUD_roundtrip(t *testing.T) {
 	}
 }
 
+func TestStore_ProjectContextEdges_roundtripAndValidation(t *testing.T) {
+	s, ctx := newProjectStore(t)
+	project, err := s.CreateProject(ctx, CreateProjectInput{Name: "Graph project"})
+	if err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	first, err := s.CreateProjectContext(ctx, project.ID, CreateProjectContextInput{
+		Kind:      domain.ProjectContextKindDecision,
+		Title:     "Use explicit graph memory",
+		Body:      "Nodes are project owned.",
+		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create first context: %v", err)
+	}
+	second, err := s.CreateProjectContext(ctx, project.ID, CreateProjectContextInput{
+		Kind:      domain.ProjectContextKindConstraint,
+		Title:     "No hidden retrieval",
+		Body:      "Tasks opt into selected nodes.",
+		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create second context: %v", err)
+	}
+
+	edge, err := s.CreateProjectContextEdge(ctx, project.ID, CreateProjectContextEdgeInput{
+		SourceContextID: first.ID,
+		TargetContextID: second.ID,
+		Relation:        domain.ProjectContextRelationSupports,
+		Strength:        4,
+		Note:            "Decision reinforces constraint",
+	})
+	if err != nil {
+		t.Fatalf("create edge: %v", err)
+	}
+	if edge.ProjectID != project.ID || edge.SourceContextID != first.ID || edge.TargetContextID != second.ID {
+		t.Fatalf("edge = %#v", edge)
+	}
+
+	edges, err := s.ListProjectContextEdges(ctx, project.ID, []string{first.ID, second.ID})
+	if err != nil {
+		t.Fatalf("list edges: %v", err)
+	}
+	if len(edges) != 1 || edges[0].ID != edge.ID {
+		t.Fatalf("edges = %#v", edges)
+	}
+
+	strength := 5
+	relation := domain.ProjectContextRelationRefines
+	updated, err := s.UpdateProjectContextEdge(ctx, project.ID, edge.ID, UpdateProjectContextEdgeInput{
+		Relation: &relation,
+		Strength: &strength,
+	})
+	if err != nil {
+		t.Fatalf("update edge: %v", err)
+	}
+	if updated.Relation != relation || updated.Strength != strength {
+		t.Fatalf("updated edge = %#v", updated)
+	}
+
+	if _, err := s.CreateProjectContextEdge(ctx, project.ID, CreateProjectContextEdgeInput{
+		SourceContextID: first.ID,
+		TargetContextID: first.ID,
+		Relation:        domain.ProjectContextRelationRelated,
+		Strength:        3,
+	}); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("self edge err = %v, want ErrInvalidInput", err)
+	}
+	if _, err := s.CreateProjectContextEdge(ctx, project.ID, CreateProjectContextEdgeInput{
+		SourceContextID: first.ID,
+		TargetContextID: second.ID,
+		Relation:        domain.ProjectContextRelationRelated,
+		Strength:        6,
+	}); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("bad strength err = %v, want ErrInvalidInput", err)
+	}
+
+	if err := s.DeleteProjectContext(ctx, project.ID, first.ID); err != nil {
+		t.Fatalf("delete context: %v", err)
+	}
+	edges, err = s.ListProjectContextEdges(ctx, project.ID, []string{first.ID, second.ID})
+	if err != nil {
+		t.Fatalf("list edges after context delete: %v", err)
+	}
+	if len(edges) != 0 {
+		t.Fatalf("edges after context delete = %#v, want none", edges)
+	}
+}
+
 func TestStore_TaskContextSnapshot_roundtrip(t *testing.T) {
 	s, ctx := newProjectStore(t)
 	project, err := s.CreateProject(ctx, CreateProjectInput{Name: "Snapshot project"})

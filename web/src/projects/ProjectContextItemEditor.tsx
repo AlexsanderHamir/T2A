@@ -41,7 +41,7 @@ export function ProjectContextItemEditor({
 
   return (
     <details>
-      <summary>Edit context item</summary>
+      <summary>Edit node</summary>
       <form className="project-context-item-form" onSubmit={submit}>
         <div className="field grow">
           <label htmlFor={`context-kind-${item.id}`}>Kind</label>

@@ -38,14 +38,14 @@ export function ProjectContextPicker({
     <fieldset className="project-context-picker" disabled={disabled}>
       <legend>Context for this task</legend>
       <p>
-        Choose the exact project context items the agent may use. Nothing is
+        Choose the exact project context nodes the agent may use. Nothing is
         selected automatically.
       </p>
       {contextQuery.isPending ? (
         <span className="project-context-picker__status">Loading context…</span>
       ) : items.length === 0 ? (
         <span className="project-context-picker__status">
-          This project has no context items yet.
+          This project has no context nodes yet.
         </span>
       ) : (
         <div className="project-context-picker__items">

@@ -58,6 +58,46 @@ func TestHTTP_projectsCRUDAndContext(t *testing.T) {
 	if item.ProjectID != project.ID || item.Kind != domain.ProjectContextKindDecision || !item.Pinned {
 		t.Fatalf("context item = %#v", item)
 	}
+	secondItemRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/context", "application/json", strings.NewReader(`{"kind":"constraint","title":"Explicit selection","body":"Tasks choose context nodes."}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondItemBytes, err := io.ReadAll(secondItemRes.Body)
+	if cerr := secondItemRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secondItemRes.StatusCode != http.StatusCreated {
+		t.Fatalf("create second context status %d body %s", secondItemRes.StatusCode, secondItemBytes)
+	}
+	var secondItem domain.ProjectContextItem
+	if err := json.Unmarshal(secondItemBytes, &secondItem); err != nil {
+		t.Fatal(err)
+	}
+
+	edgeRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/context/edges", "application/json", strings.NewReader(`{"source_context_id":"`+item.ID+`","target_context_id":"`+secondItem.ID+`","relation":"supports","strength":4,"note":"Decision supports constraint"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	edgeBytes, err := io.ReadAll(edgeRes.Body)
+	if cerr := edgeRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if edgeRes.StatusCode != http.StatusCreated {
+		t.Fatalf("create edge status %d body %s", edgeRes.StatusCode, edgeBytes)
+	}
+	var edge domain.ProjectContextEdge
+	if err := json.Unmarshal(edgeBytes, &edge); err != nil {
+		t.Fatal(err)
+	}
+	if edge.ProjectID != project.ID || edge.Relation != domain.ProjectContextRelationSupports || edge.Strength != 4 {
+		t.Fatalf("edge = %#v", edge)
+	}
 
 	listRes, err := http.Get(srv.URL + "/projects/" + project.ID + "/context")
 	if err != nil {
@@ -69,12 +109,16 @@ func TestHTTP_projectsCRUDAndContext(t *testing.T) {
 	}
 	var list struct {
 		Items []domain.ProjectContextItem `json:"items"`
+		Edges []domain.ProjectContextEdge `json:"edges"`
 	}
 	if err := json.NewDecoder(listRes.Body).Decode(&list); err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Items) != 1 || list.Items[0].ID != item.ID {
+	if len(list.Items) != 2 || list.Items[0].ID != item.ID {
 		t.Fatalf("items = %#v", list.Items)
+	}
+	if len(list.Edges) != 1 || list.Edges[0].ID != edge.ID {
+		t.Fatalf("edges = %#v", list.Edges)
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, srv.URL+"/projects/"+project.ID, strings.NewReader(`{"status":"archived"}`))

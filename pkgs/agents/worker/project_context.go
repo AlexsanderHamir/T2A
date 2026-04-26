@@ -28,7 +28,11 @@ func (w *Worker) selectedProjectContext(ctx context.Context, task *domain.Task, 
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("list selected context: %w", err)
 	}
-	rendered := renderProjectContext(project, items)
+	edges, err := w.store.ListProjectContextEdges(ctx, project.ID, task.ProjectContextItemIDs)
+	if err != nil {
+		return renderedProjectContext{}, fmt.Errorf("list selected context edges: %w", err)
+	}
+	rendered := renderProjectContext(project, items, edges)
 	raw, err := json.Marshal(map[string]any{
 		"project_id": project.ID,
 		"project": map[string]string{
@@ -38,6 +42,7 @@ func (w *Worker) selectedProjectContext(ctx context.Context, task *domain.Task, 
 		},
 		"selected_item_ids": task.ProjectContextItemIDs,
 		"items":             items,
+		"edges":             edges,
 	})
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("marshal context snapshot: %w", err)
@@ -60,7 +65,7 @@ func (w *Worker) selectedProjectContext(ctx context.Context, task *domain.Task, 
 	}, nil
 }
 
-func renderProjectContext(project domain.Project, items []domain.ProjectContextItem) string {
+func renderProjectContext(project domain.Project, items []domain.ProjectContextItem, edges []domain.ProjectContextEdge) string {
 	var b strings.Builder
 	b.WriteString("<project_context>\n")
 	b.WriteString("Project: ")
@@ -79,6 +84,29 @@ func renderProjectContext(project domain.Project, items []domain.ProjectContextI
 		b.WriteString("\n")
 		b.WriteString(item.Body)
 		b.WriteString("\n")
+	}
+	if len(edges) > 0 {
+		itemTitles := make(map[string]string, len(items))
+		for _, item := range items {
+			itemTitles[item.ID] = item.Title
+		}
+		b.WriteString("\nRelationships:\n")
+		for _, edge := range edges {
+			b.WriteString("- ")
+			b.WriteString(itemTitles[edge.SourceContextID])
+			b.WriteString(" ")
+			b.WriteString(string(edge.Relation))
+			b.WriteString(" ")
+			b.WriteString(itemTitles[edge.TargetContextID])
+			b.WriteString(" (strength ")
+			b.WriteString(fmt.Sprintf("%d", edge.Strength))
+			b.WriteString("/5)")
+			if strings.TrimSpace(edge.Note) != "" {
+				b.WriteString(": ")
+				b.WriteString(strings.TrimSpace(edge.Note))
+			}
+			b.WriteString("\n")
+		}
 	}
 	b.WriteString("</project_context>")
 	return b.String()
