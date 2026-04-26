@@ -1,0 +1,68 @@
+.project-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.project-create-form,
+.project-edit-form,
+.project-context-form,
+.project-context-item-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.project-create-form {
+  grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1.5fr) auto;
+  align-items: end;
+  padding: var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-subtle) 68%, var(--bg-elevated));
+}
+
+.project-context-form {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.project-context-item {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.project-context-item details {
+  margin-top: var(--space-2);
+}
+
+.project-context-item summary {
+  cursor: pointer;
+  color: var(--accent, var(--brand));
+  font-weight: 600;
+}
+
+.project-context-pin {
+  align-self: end;
+  min-height: 2.75rem;
+}
+
+.project-task-list {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: 1.25rem;
+}
+
+.project-task-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+@media (max-width: 760px) {
+  .project-create-form {
+    grid-template-columns: 1fr;
+  }
+}

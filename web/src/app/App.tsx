@@ -13,7 +13,12 @@ import {
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
-import { ProjectDetailPage, ProjectListPage } from "@/projects";
+import {
+  ProjectDetailPage,
+  ProjectListPage,
+  ProjectSelect,
+  useProjects,
+} from "@/projects";
 import { SystemStatusChip } from "@/observability";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
@@ -24,6 +29,7 @@ import "./App.css";
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
+  const projects = useProjects({ includeArchived: false, limit: 100 });
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
@@ -143,6 +149,16 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               taskRunner={app.editing.runner}
               cursorModel={app.editCursorModel}
               onCursorModelChange={app.setEditCursorModel}
+              projectAssignment={
+                <ProjectSelect
+                  id="task-edit-project"
+                  value={app.editProjectID}
+                  projects={projects.data?.projects ?? []}
+                  loading={projects.isLoading}
+                  disabled={app.saving}
+                  onChange={app.setEditProjectID}
+                />
+              }
               canInheritChecklist={Boolean(app.editing.parent_id)}
               saving={app.saving}
               patchPending={app.patchPending}

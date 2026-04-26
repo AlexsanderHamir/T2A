@@ -51,6 +51,7 @@ export function useTaskCreateFlow() {
   const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
+  const [newProjectID, setNewProjectID] = useState("");
   /**
    * Future pickup time for the new task as an RFC3339 UTC ISO
    * string, or `null` to mean "no schedule — pick up immediately
@@ -162,6 +163,7 @@ export function useTaskCreateFlow() {
     const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
+    setNewProjectID("");
     setNewSchedule(null);
     setNewChecklistItems([]);
     setPendingSubtasks([]);
@@ -246,6 +248,7 @@ export function useTaskCreateFlow() {
        * adds one we'll plumb it through this same shape.
        */
       pickup_not_before: string | null;
+      project_id: string;
     }) => {
       const addChecklistItems = async (taskId: string, items: string[]) => {
         const rows = items.map((raw) => raw.trim()).filter(Boolean);
@@ -260,6 +263,7 @@ export function useTaskCreateFlow() {
         draft_id: input.draft_id,
         runner: input.runner,
         cursor_model: input.cursor_model,
+        ...(input.project_id ? { project_id: input.project_id } : {}),
         ...(input.pickup_not_before !== null
           ? { pickup_not_before: input.pickup_not_before }
           : {}),
@@ -277,6 +281,7 @@ export function useTaskCreateFlow() {
               priority: st.priority,
               task_type: st.task_type,
               parent_id: task.id,
+              ...(input.project_id ? { project_id: input.project_id } : {}),
               runner: input.runner,
               cursor_model: input.cursor_model,
               ...(childInherit ? { checklist_inherit: true } : {}),
@@ -694,6 +699,7 @@ export function useTaskCreateFlow() {
       pendingSubtasks,
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
+      project_id: newProjectID.trim(),
       pickup_not_before: newSchedule,
     });
   }
@@ -935,6 +941,8 @@ export function useTaskCreateFlow() {
     setNewTaskRunner,
     newTaskCursorModel,
     setNewTaskCursorModel,
+    newProjectID,
+    setNewProjectID,
     newSchedule,
     setNewSchedule,
     newChecklistItems,

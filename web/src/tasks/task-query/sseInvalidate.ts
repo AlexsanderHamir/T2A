@@ -14,6 +14,8 @@
  */
 export type TaskChangeFrame =
   | { kind: "task"; taskId: string }
+  | { kind: "project"; projectId: string }
+  | { kind: "project_context"; projectId: string }
   | { kind: "cycle"; taskId: string; cycleId: string }
   | {
       kind: "progress";
@@ -128,6 +130,16 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
       return null;
     }
     return { kind: "cycle", taskId: id, cycleId };
+  }
+  if (
+    o.type === "project_created" ||
+    o.type === "project_updated" ||
+    o.type === "project_deleted"
+  ) {
+    return { kind: "project", projectId: id };
+  }
+  if (o.type === "project_context_changed") {
+    return { kind: "project_context", projectId: id };
   }
   if (
     o.type === "task_created" ||

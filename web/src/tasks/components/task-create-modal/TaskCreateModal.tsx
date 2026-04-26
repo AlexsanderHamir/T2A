@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
 import type { PendingSubtaskDraft } from "../../task-tree";
 import { Modal } from "../../../shared/Modal";
@@ -52,6 +52,7 @@ type Props = {
   taskCursorModel: string;
   onTaskRunnerChange: (runner: string) => void;
   onTaskCursorModelChange: (v: string) => void;
+  projectAssignment?: ReactNode;
   /**
    * Future pickup time as an RFC3339 UTC ISO string, or `null` when
    * the operator wants the task picked up immediately. Plumbed
@@ -128,6 +129,7 @@ export function TaskCreateModal({
   taskCursorModel,
   onTaskRunnerChange,
   onTaskCursorModelChange,
+  projectAssignment,
   schedule,
   onScheduleChange,
   appTimezone,
@@ -234,6 +236,8 @@ export function TaskCreateModal({
               onRunnerChange={onTaskRunnerChange}
               onCursorModelChange={onTaskCursorModelChange}
             />
+
+            {projectAssignment}
 
             {!dmapMode ? (
               <TaskCreateModalPendingSubtasksField

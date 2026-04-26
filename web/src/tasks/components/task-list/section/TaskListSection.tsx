@@ -50,6 +50,7 @@ type Props = {
   /** Zero-based server list page (see `GET /tasks` offset). */
   listPage: number;
   listPageSize: number;
+  projectFilterOptions?: Array<{ id: string; name: string }>;
   onListPageChange: (page: number) => void;
   /** Reset to first server page when filters change. */
   onListFiltersChange: () => void;
@@ -88,6 +89,7 @@ export const TaskListSection = memo(function TaskListSection({
   hideBackgroundRefreshHint = false,
   listPage,
   listPageSize,
+  projectFilterOptions = [],
   onListPageChange,
   onListFiltersChange,
   hasNextPage,
@@ -105,18 +107,22 @@ export const TaskListSection = memo(function TaskListSection({
     useState<TaskListClientStatusFilter>("all");
   const [priorityFilter, setPriorityFilter] =
     useState<TaskListClientPriorityFilter>("all");
+  const [projectFilter, setProjectFilter] = useState("all");
   const [titleSearch, setTitleSearch] = useState("");
 
-  const filteredTasks = useMemo(
-    () =>
-      filterTasksForListView(
-        tasks,
-        statusFilter,
-        priorityFilter,
-        titleSearch,
-      ),
-    [tasks, statusFilter, priorityFilter, titleSearch],
-  );
+  const filteredTasks = useMemo(() => {
+    const base = filterTasksForListView(
+      tasks,
+      statusFilter,
+      priorityFilter,
+      titleSearch,
+    );
+    if (projectFilter === "all") return base;
+    if (projectFilter === "none") {
+      return base.filter((task) => !task.project_id);
+    }
+    return base.filter((task) => task.project_id === projectFilter);
+  }, [tasks, statusFilter, priorityFilter, titleSearch, projectFilter]);
 
   const visibleIds = useMemo(
     () => filteredTasks.map((t) => t.id),
@@ -183,6 +189,7 @@ export const TaskListSection = memo(function TaskListSection({
   }, [
     statusFilter,
     priorityFilter,
+    projectFilter,
     titleSearch,
     onListFiltersChange,
     clearSelection,
@@ -298,6 +305,9 @@ export const TaskListSection = memo(function TaskListSection({
             onPriorityFilterChange={(v) =>
               setPriorityFilter(v as TaskListClientPriorityFilter)
             }
+            projectFilter={projectFilter}
+            projectOptions={projectFilterOptions}
+            onProjectFilterChange={setProjectFilter}
             titleSearch={titleSearch}
             onTitleSearchChange={setTitleSearch}
           />

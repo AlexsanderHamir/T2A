@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseTaskChangeFrame, settingsQueryKeys, taskQueryKeys } from "../task-query";
+import { projectQueryKeys } from "@/projects/queryKeys";
 import { rumSSEReconnected, rumSSEResyncReceived } from "@/observability";
 import { pushAgentRunProgress } from "./useAgentRunProgress";
 import { shouldSuppressSSEFor } from "./optimisticVersion";
@@ -192,6 +193,14 @@ export function useTaskEventStream(): boolean {
             return;
           }
           pendingRef.current.tasks.add(frame.taskId);
+        } else if (frame.kind === "project") {
+          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
+          return;
+        } else if (frame.kind === "project_context") {
+          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.context(frame.projectId) });
+          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.detail(frame.projectId) });
+          return;
         } else if (frame.kind === "cycle") {
           // The agent worker only emits cycle frames (it never calls
           // notifyChange / task_updated), so we must treat cycle frames

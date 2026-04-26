@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { STATUSES, type Priority, type Status, type TaskType } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
@@ -19,6 +19,7 @@ type Props = {
   taskRunner: string;
   cursorModel: string;
   onCursorModelChange: (v: string) => void;
+  projectAssignment?: ReactNode;
   /** When false, the inherit checkbox is disabled (task has no parent). */
   canInheritChecklist: boolean;
   saving: boolean;
@@ -57,6 +58,7 @@ export function TaskEditForm({
   taskRunner,
   cursorModel,
   onCursorModelChange,
+  projectAssignment,
   canInheritChecklist,
   saving,
   patchPending,
@@ -169,6 +171,7 @@ export function TaskEditForm({
             onRunnerChange={() => {}}
             onCursorModelChange={onCursorModelChange}
           />
+          {projectAssignment}
           <div className="field grow stack-tight prompt-field-full">
             <FieldLabel
               id="task-edit-prompt-label"

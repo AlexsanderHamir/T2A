@@ -53,6 +53,7 @@ function makeRow(
     status: import("@/types").Status;
     priority: import("@/types").Priority;
     pickup_not_before?: string;
+    project_id?: string;
   }> = {},
 ) {
   return {
@@ -63,6 +64,7 @@ function makeRow(
     priority: extras.priority ?? ("medium" as const),
     checklist_inherit: false as const,
     pickup_not_before: extras.pickup_not_before,
+    project_id: extras.project_id,
     ...TASK_TEST_DEFAULTS,
     depth: 0,
   };
@@ -314,6 +316,43 @@ describe("TaskListSection", () => {
 
     await user.clear(search);
     expect(screen.getByText("Beta")).toBeInTheDocument();
+  });
+
+  it("filters rows by project membership", async () => {
+    const user = userEvent.setup();
+    const tasks = [
+      makeRow("1", "Moat task", { project_id: "project-1" }),
+      makeRow("2", "Unassigned task"),
+    ];
+    renderWithRouter(
+      <TaskListSection
+        tasks={tasks}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        {...listPagerDefaults}
+        rootTasksOnPage={2}
+        projectFilterOptions={[{ id: "project-1", name: "Context moat" }]}
+        onEdit={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Moat task")).toBeInTheDocument();
+    expect(screen.getByText("Unassigned task")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /^project$/i }),
+      "project-1",
+    );
+    expect(screen.getByText("Moat task")).toBeInTheDocument();
+    expect(screen.queryByText("Unassigned task")).not.toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /^project$/i }),
+      "none",
+    );
+    expect(screen.queryByText("Moat task")).not.toBeInTheDocument();
+    expect(screen.getByText("Unassigned task")).toBeInTheDocument();
   });
 
   it("shows copy when no tasks match filters", async () => {

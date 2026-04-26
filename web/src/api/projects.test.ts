@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createProjectContext,
+  deleteProjectContext,
   getProject,
   listProjectContext,
   listProjects,
+  patchProject,
+  patchProjectContext,
   parseProject,
   parseProjectContextListResponse,
 } from "./projects";
@@ -59,6 +63,20 @@ describe("project API parsers", () => {
     });
   });
 
+  it("patches projects", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ...projectWire, name: "Renamed" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const out = await patchProject(projectWire.id, { name: "Renamed" });
+
+    expect(out.name).toBe("Renamed");
+    expect(spy.mock.calls[0][1]).toMatchObject({ method: "PATCH" });
+  });
+
   it("parses project context list rows", () => {
     const out = parseProjectContextListResponse({
       items: [
@@ -91,5 +109,49 @@ describe("project API parsers", () => {
     await listProjectContext(projectWire.id, { limit: 5, pinnedOnly: true });
 
     expect(String(spy.mock.calls[0][0])).toContain("pinned_only=true");
+  });
+
+  it("creates, patches, and deletes project context", async () => {
+    const itemWire = {
+      id: "22222222-2222-4222-8222-222222222222",
+      project_id: projectWire.id,
+      kind: "note",
+      title: "Remember",
+      body: "Keep context explicit.",
+      created_by: "user",
+      pinned: false,
+      created_at: "2026-04-26T00:00:00Z",
+      updated_at: "2026-04-26T00:00:00Z",
+    };
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(itemWire), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...itemWire, pinned: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await createProjectContext(projectWire.id, {
+      kind: "note",
+      title: "Remember",
+      body: "Keep context explicit.",
+      pinned: false,
+    });
+    await patchProjectContext(projectWire.id, itemWire.id, { pinned: true });
+    await deleteProjectContext(projectWire.id, itemWire.id);
+
+    expect(spy.mock.calls.map((call) => call[1]?.method)).toEqual([
+      "POST",
+      "PATCH",
+      "DELETE",
+    ]);
   });
 });

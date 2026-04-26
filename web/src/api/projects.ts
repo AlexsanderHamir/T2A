@@ -147,6 +147,7 @@ export async function getProject(
 
 export async function createProject(input: {
   name: string;
+  id?: string;
   description?: string;
   context_summary?: string;
 }): Promise<Project> {
@@ -157,6 +158,34 @@ export async function createProject(input: {
   });
   if (!res.ok) throw new Error(await readError(res));
   return parseProject((await res.json()) as unknown);
+}
+
+export async function patchProject(
+  id: string,
+  input: {
+    name?: string;
+    description?: string;
+    status?: ProjectStatus;
+    context_summary?: string;
+  },
+): Promise<Project> {
+  const projectID = assertTaskPathId(id, "project id");
+  const res = await fetchWithTimeout(`/projects/${encodeURIComponent(projectID)}`, {
+    method: "PATCH",
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProject((await res.json()) as unknown);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const projectID = assertTaskPathId(id, "project id");
+  const res = await fetchWithTimeout(`/projects/${encodeURIComponent(projectID)}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(await readError(res));
 }
 
 export async function listProjectContext(
@@ -180,4 +209,69 @@ export async function listProjectContext(
   );
   if (!res.ok) throw new Error(await readError(res));
   return parseProjectContextListResponse((await res.json()) as unknown);
+}
+
+export async function createProjectContext(
+  projectId: string,
+  input: {
+    id?: string;
+    kind?: ProjectContextKind;
+    title: string;
+    body: string;
+    source_task_id?: string;
+    source_cycle_id?: string;
+    pinned?: boolean;
+  },
+): Promise<ProjectContextItem> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/context`,
+    {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectContextItem((await res.json()) as unknown);
+}
+
+export async function patchProjectContext(
+  projectId: string,
+  contextId: string,
+  input: {
+    kind?: ProjectContextKind;
+    title?: string;
+    body?: string;
+    pinned?: boolean;
+  },
+): Promise<ProjectContextItem> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const itemID = assertTaskPathId(contextId, "context id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/context/${encodeURIComponent(itemID)}`,
+    {
+      method: "PATCH",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectContextItem((await res.json()) as unknown);
+}
+
+export async function deleteProjectContext(
+  projectId: string,
+  contextId: string,
+): Promise<void> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const itemID = assertTaskPathId(contextId, "context id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/context/${encodeURIComponent(itemID)}`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
 }

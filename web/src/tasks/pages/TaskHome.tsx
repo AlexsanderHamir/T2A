@@ -5,6 +5,7 @@ import { TaskCreateModal } from "../components/task-create-modal";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useAppTimezone } from "@/shared/time/appTimezone";
+import { ProjectSelect, useProjects } from "@/projects";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
@@ -13,6 +14,7 @@ type Props = {
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
   const appTimezone = useAppTimezone();
+  const projects = useProjects({ includeArchived: false, limit: 100 });
 
   /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
   const listSaving = app.patchPending || app.deletePending;
@@ -27,6 +29,7 @@ export function TaskHome({ app }: Props) {
       hideBackgroundRefreshHint: app.sseLive,
       listPage: app.taskListPage,
       listPageSize: app.taskListPageSize,
+      projectFilterOptions: projects.data?.projects ?? [],
       onListPageChange: app.setTaskListPage,
       onListFiltersChange: app.resetTaskListPage,
       hasNextPage: app.hasNextTaskPage,
@@ -43,6 +46,7 @@ export function TaskHome({ app }: Props) {
       app.sseLive,
       app.taskListPage,
       app.taskListPageSize,
+      projects.data?.projects,
       app.setTaskListPage,
       app.resetTaskListPage,
       app.hasNextTaskPage,
@@ -126,6 +130,16 @@ export function TaskHome({ app }: Props) {
           taskCursorModel={app.newTaskCursorModel}
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
+          projectAssignment={
+            <ProjectSelect
+              id="task-create-project"
+              value={app.newProjectID}
+              projects={projects.data?.projects ?? []}
+              loading={projects.isLoading}
+              disabled={app.saving}
+              onChange={app.setNewProjectID}
+            />
+          }
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
           appTimezone={appTimezone}

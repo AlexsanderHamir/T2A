@@ -1,12 +1,14 @@
 import { Link, useParams } from "react-router-dom";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
-import { useProject, useProjectContext } from "./hooks";
+import { useProject } from "./hooks";
+import { ProjectContextPanel } from "./ProjectContextPanel";
+import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
+import { ProjectTasksPanel } from "./ProjectTasksPanel";
 
 export function ProjectDetailPage() {
   const { projectId = "" } = useParams();
   const project = useProject(projectId);
-  const context = useProjectContext(projectId, { enabled: Boolean(projectId) });
   const title = project.data?.name ? `${project.data.name} project` : "Project";
   useDocumentTitle(title);
 
@@ -24,7 +26,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <section className="panel task-detail-panel">
+    <section className="panel task-detail-panel project-page">
       <div className="task-detail-top-actions">
         <Link to="/projects" className="back-link">
           ← All projects
@@ -59,38 +61,9 @@ export function ProjectDetailPage() {
             </section>
           ) : null}
 
-          <section className="task-attempt-section">
-            <h3>Project context</h3>
-            {context.isLoading ? (
-              <p className="muted">Loading context...</p>
-            ) : context.error ? (
-              <div className="err" role="alert">
-                {context.error.message}
-              </div>
-            ) : (context.data?.items ?? []).length === 0 ? (
-              <EmptyState
-                title="No context items yet"
-                description="Pinned decisions, constraints, and handoff notes will appear here."
-                density="compact"
-                hideIcon
-              />
-            ) : (
-              <ol className="task-attempt-phase-list">
-                {context.data?.items.map((item) => (
-                  <li key={item.id} className="task-attempt-phase">
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p className="muted">
-                        {item.kind}
-                        {item.pinned ? " · pinned" : ""}
-                      </p>
-                      <p>{item.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+          <ProjectSettingsPanel project={project.data} />
+          <ProjectTasksPanel projectId={projectId} />
+          <ProjectContextPanel projectId={projectId} />
         </>
       ) : null}
     </section>

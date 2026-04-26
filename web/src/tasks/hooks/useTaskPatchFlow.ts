@@ -25,6 +25,7 @@ export type TaskPatchInput = {
   priority: Priority;
   task_type: TaskType;
   checklist_inherit: boolean;
+  project_id?: string | null;
   /** Per-task `cursor-agent --model` override; empty string clears override. */
   cursor_model: string;
 };
@@ -79,6 +80,10 @@ function patchTaskInList(
           priority: patch.priority,
           task_type: patch.task_type,
           checklist_inherit: patch.checklist_inherit,
+          project_id:
+            patch.project_id === undefined
+              ? t.project_id
+              : patch.project_id ?? undefined,
           cursor_model: patch.cursor_model,
         };
       }
@@ -126,6 +131,7 @@ export function useTaskPatchFlow(opts: {
         priority: input.priority,
         task_type: input.task_type,
         checklist_inherit: input.checklist_inherit,
+        project_id: input.project_id,
         cursor_model: input.cursor_model,
       }),
     onMutate: async (input) => {
@@ -157,6 +163,10 @@ export function useTaskPatchFlow(opts: {
           priority: input.priority,
           task_type: input.task_type,
           checklist_inherit: input.checklist_inherit,
+          project_id:
+            input.project_id === undefined
+              ? detailPrev.project_id
+              : input.project_id ?? undefined,
           cursor_model: input.cursor_model,
         });
       }

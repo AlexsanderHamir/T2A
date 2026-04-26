@@ -65,6 +65,17 @@ describe("parseTaskChangeFrame", () => {
     ).toEqual({ kind: "task", taskId: "task-3" });
   });
 
+  it("returns project frames for project and context changes", () => {
+    expect(
+      parseTaskChangeFrame('{"type":"project_updated","id":"project-1"}'),
+    ).toEqual({ kind: "project", projectId: "project-1" });
+    expect(
+      parseTaskChangeFrame(
+        '{"type":"project_context_changed","id":"project-1"}',
+      ),
+    ).toEqual({ kind: "project_context", projectId: "project-1" });
+  });
+
   it("returns a cycle frame only when both id and cycle_id are present", () => {
     expect(
       parseTaskChangeFrame(
