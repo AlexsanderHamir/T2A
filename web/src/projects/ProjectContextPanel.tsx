@@ -17,7 +17,7 @@ import {
 } from "@/types";
 import { useProjectContext } from "./hooks";
 import { ProjectContextEdgeEditor } from "./ProjectContextEdgeEditor";
-import { ProjectContextItemEditor } from "./ProjectContextItemEditor";
+import { ProjectContextNodeCard } from "./ProjectContextNodeCard";
 import { projectQueryKeys } from "./queryKeys";
 
 type Props = {
@@ -312,38 +312,48 @@ export function ProjectContextPanel({ projectId }: Props) {
         />
       ) : (
         <div className="project-context-graph">
-          <div>
-            <h4>Nodes</h4>
-            <ol className="task-attempt-phase-list">
+          <section className="project-context-graph__section">
+            <div className="project-context-graph__section-heading">
+              <div>
+                <h4>Memory nodes</h4>
+                <p>
+                  Durable facts, decisions, constraints, and handoff notes owned
+                  by this project.
+                </p>
+              </div>
+              <span>{items.length}</span>
+            </div>
+            <div className="project-context-node-grid">
               {items.map((item) => (
-                <li key={item.id} className="task-attempt-phase">
-                  <div className="project-context-item">
-                    <strong>{item.title}</strong>
-                    <p className="muted">
-                      {item.kind}
-                      {item.pinned ? " - pinned" : ""}
-                    </p>
-                    <p>{item.body}</p>
-                    <ProjectContextItemEditor
-                      item={item}
-                      saving={patchContextMutation.isPending}
-                      deleting={deleteContextMutation.isPending}
-                      onSave={(id, patch) =>
-                        patchContextMutation.mutate({ id, ...patch })
-                      }
-                      onDelete={(id) => deleteContextMutation.mutate(id)}
-                    />
-                  </div>
-                </li>
+                <ProjectContextNodeCard
+                  key={item.id}
+                  item={item}
+                  saving={patchContextMutation.isPending}
+                  deleting={deleteContextMutation.isPending}
+                  onSave={(id, patch) =>
+                    patchContextMutation.mutate({ id, ...patch })
+                  }
+                  onDelete={(id) => deleteContextMutation.mutate(id)}
+                />
               ))}
-            </ol>
-          </div>
-          <div>
-            <h4>Connections</h4>
+            </div>
+          </section>
+          <section className="project-context-graph__section">
+            <div className="project-context-graph__section-heading">
+              <div>
+                <h4>Connections</h4>
+                <p>Relationships that explain how selected nodes influence each other.</p>
+              </div>
+              <span>{edges.length}</span>
+            </div>
             {edges.length === 0 ? (
-              <p className="muted">
-                No connections yet. Add one once two nodes influence each other.
-              </p>
+              <div className="project-context-empty-card">
+                <strong>No connections yet</strong>
+                <p>
+                  Add a connection when two nodes support, block, refine, or
+                  depend on each other.
+                </p>
+              </div>
             ) : (
               <div className="project-context-edge-list">
                 {edges.map((edge) => (
@@ -361,7 +371,7 @@ export function ProjectContextPanel({ projectId }: Props) {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
     </section>
