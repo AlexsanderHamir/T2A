@@ -269,18 +269,40 @@ function LivePhaseTail({
   phase: TaskCyclePhase;
 }) {
   const live = useAgentRunProgress(taskId, cycleId, phase.phase_seq);
+  const now = useNow({
+    enabled: phase.status === "running" && live.length > 0,
+    intervalMs: 1000,
+  });
   if (phase.status !== "running" || live.length === 0) return null;
+  const newestFirst = [...live].sort((a, b) => b.receivedAt - a.receivedAt);
+  const latest = newestFirst[0];
   return (
     <div className="task-attempt-live-tail" aria-live="polite">
       <div className="task-attempt-live-tail-heading">
         <span className="task-attempt-live-dot" aria-hidden="true" />
         <span>Live updates for this running phase</span>
       </div>
-      <ul className="task-cycle-progress-list">
-        {live.map((item, i) => (
+      <ul className="task-cycle-progress-list" aria-label="Recent live updates">
+        <li
+          className="task-cycle-progress-item task-cycle-progress-item--pending"
+          aria-label="Waiting for the next agent update"
+        >
+          <span className="task-cycle-progress-pulse" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="task-cycle-progress-message">
+            Waiting for the next update
+          </span>
+          <span className="task-cycle-progress-time" aria-hidden="true">
+            {latest ? `Last ${formatElapsedSince(latest.receivedAt, now)}` : ""}
+          </span>
+        </li>
+        {newestFirst.map((item, i) => (
           <li
-            key={`${item.receivedAt}:${i}:${item.progress.kind}`}
-            className="task-cycle-progress-item"
+            key={`${item.receivedAt}:${i}:${item.progress.kind}:${item.progress.subtype ?? ""}`}
+            className={`task-cycle-progress-item${i === 0 ? " task-cycle-progress-item--latest" : ""}`}
           >
             <span className="task-cycle-progress-kind">
               {streamKindLabel(item.progress.kind, item.progress.subtype)}
@@ -426,4 +448,11 @@ function streamMessage(item: AgentRunProgressItem): string {
 
 function formatLiveProgressTime(receivedAt: number): string {
   return new Date(receivedAt).toLocaleTimeString();
+}
+
+function formatElapsedSince(receivedAt: number, now: number): string {
+  const elapsedSeconds = Math.max(0, Math.floor((now - receivedAt) / 1000));
+  if (elapsedSeconds < 1) return "just now";
+  if (elapsedSeconds < 60) return `${elapsedSeconds}s ago`;
+  return `${Math.floor(elapsedSeconds / 60)}m ago`;
 }

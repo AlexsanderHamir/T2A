@@ -122,9 +122,8 @@ describe("TaskCycleDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
-    vi.spyOn(Date, "now").mockReturnValue(
-      Date.parse("2026-04-25T12:00:30.000Z"),
-    );
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(Date.parse("2026-04-25T12:00:30.000Z"));
     act(() => {
       pushAgentRunProgress({
         taskId: "t1",
@@ -136,11 +135,30 @@ describe("TaskCycleDetailPage", () => {
         },
       });
     });
+    nowSpy.mockReturnValue(Date.parse("2026-04-25T12:00:35.000Z"));
+    act(() => {
+      pushAgentRunProgress({
+        taskId: "t1",
+        cycleId: "cyc-1",
+        phaseSeq: 2,
+        progress: {
+          kind: "message",
+          message: "Newest live update",
+        },
+      });
+    });
     expect(
       screen.getByText(/live updates for this running phase/i),
     ).toBeInTheDocument();
     expect(screen.getByText("Still working live")).toBeInTheDocument();
-    expect(screen.getByLabelText(/received at/i)).toBeInTheDocument();
+    expect(screen.getByText("Newest live update")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/received at/i)).toHaveLength(2);
+    const liveList = screen.getByRole("list", { name: /recent live updates/i });
+    const liveItems = within(liveList).getAllByRole("listitem");
+    expect(liveItems[0]).toHaveTextContent(/waiting for the next update/i);
+    expect(liveItems[0]).toHaveTextContent(/last just now/i);
+    expect(liveItems[1]).toHaveTextContent("Newest live update");
+    expect(liveItems[2]).toHaveTextContent("Still working live");
 
     const streamSection = screen.getByRole("heading", {
       name: /cursor events/i,

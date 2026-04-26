@@ -139,6 +139,74 @@
   box-shadow: 0 0 0 0.25rem var(--brand-soft, transparent);
 }
 
+.task-attempt-live-tail .task-cycle-progress-list {
+  margin-top: 0;
+}
+
+.task-cycle-progress-item--latest {
+  animation: task-attempt-live-row-in var(--duration-moderate) var(--ease-out) both;
+}
+
+.task-cycle-progress-item--pending {
+  border-style: dashed;
+  color: var(--text-secondary);
+  background:
+    linear-gradient(90deg, var(--surface-1), var(--brand-surface, var(--surface-soft)));
+}
+
+.task-cycle-progress-pulse {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.task-cycle-progress-pulse span {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--brand, currentColor);
+  animation: task-attempt-live-pulse 1.2s var(--ease-in-out) infinite;
+}
+
+.task-cycle-progress-pulse span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.task-cycle-progress-pulse span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes task-attempt-live-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes task-attempt-live-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-cycle-progress-item--latest,
+  .task-cycle-progress-pulse span {
+    animation: none;
+  }
+}
+
 .task-attempt-timeline-item p {
   margin: 0.35rem 0 0;
 }
