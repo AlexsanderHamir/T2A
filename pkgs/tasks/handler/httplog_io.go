@@ -106,9 +106,13 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 		"body_title_preview", truncateRunes(body.Title, maxHTTPLogTitleRunes),
 		"body_initial_prompt_len", len(body.InitialPrompt),
 		"body_initial_prompt_preview", truncateRunes(body.InitialPrompt, maxHTTPLogPromptRunes),
+		"body_project_id_set", body.ProjectID != nil,
 		"body_parent_id_set", body.ParentID != nil,
 		"body_checklist_inherit", inherit,
 		"actor", actor,
+	}
+	if body.ProjectID != nil {
+		out = append(out, "body_project_id", strings.TrimSpace(*body.ProjectID))
 	}
 	if body.ParentID != nil {
 		out = append(out, "body_parent_id", strings.TrimSpace(*body.ParentID))
@@ -144,6 +148,13 @@ func taskPatchInputFields(body *taskPatchJSON) []any {
 	}
 	if body.TaskType != nil {
 		out = append(out, "patch_task_type", string(*body.TaskType))
+	}
+	if body.ProjectID.Defined {
+		if body.ProjectID.Clear {
+			out = append(out, "patch_project_id", "clear")
+		} else {
+			out = append(out, "patch_project_id", body.ProjectID.SetID)
+		}
 	}
 	if body.ChecklistInherit != nil {
 		out = append(out, "patch_checklist_inherit", *body.ChecklistInherit)

@@ -46,6 +46,10 @@ type UpdateTaskInput = tasks.UpdateInput
 // helper used by UpdateTaskInput.Parent.
 type ParentFieldPatch = tasks.ParentFieldPatch
 
+// ProjectFieldPatch is the public re-export of the project-id patch
+// helper used by UpdateTaskInput.Project.
+type ProjectFieldPatch = tasks.ProjectFieldPatch
+
 // PickupNotBeforePatch is the public re-export of the
 // pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
 // See docs/SCHEDULING.md.

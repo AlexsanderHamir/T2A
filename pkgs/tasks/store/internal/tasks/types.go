@@ -17,6 +17,7 @@ type CreateInput struct {
 	Status           domain.Status
 	Priority         domain.Priority
 	TaskType         domain.TaskType
+	ProjectID        *string
 	ParentID         *string
 	ChecklistInherit bool
 	Runner           string
@@ -52,6 +53,7 @@ type UpdateInput struct {
 	Status           *domain.Status
 	Priority         *domain.Priority
 	TaskType         *domain.TaskType
+	Project          *ProjectFieldPatch
 	Parent           *ParentFieldPatch
 	ChecklistInherit *bool
 	// PickupNotBefore mutates tasks.pickup_not_before when non-nil.
@@ -63,6 +65,14 @@ type UpdateInput struct {
 	// CursorModel updates tasks.cursor_model when non-nil. Empty string
 	// after trim clears the column (runner uses app default / omits --model).
 	CursorModel *string
+}
+
+// ProjectFieldPatch updates project_id when non-nil. Clear true means
+// set project_id to null. Re-aliased by the public store facade as
+// store.ProjectFieldPatch.
+type ProjectFieldPatch struct {
+	Clear bool
+	ID    string
 }
 
 // Node is a task row plus nested children for API tree responses.

@@ -67,6 +67,9 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyTaskTypePatch(cur, in.TaskType); err != nil {
 		return err
 	}
+	if err := applyProjectPatch(tx, cur, in.Project); err != nil {
+		return err
+	}
 	if err := applyStatusPatch(tx, taskID, cur, in.Status, by, &seqPtr); err != nil {
 		return err
 	}
@@ -79,6 +82,30 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
 		return fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
+	return nil
+}
+
+func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyProjectPatch")
+	if project == nil {
+		return nil
+	}
+	if project.Clear {
+		cur.ProjectID = nil
+		return nil
+	}
+	pid := strings.TrimSpace(project.ID)
+	if pid == "" {
+		return fmt.Errorf("%w: project_id", domain.ErrInvalidInput)
+	}
+	var n int64
+	if err := tx.Model(&domain.Project{}).Where("id = ? AND status = ?", pid, domain.ProjectStatusActive).Count(&n).Error; err != nil {
+		return fmt.Errorf("project lookup: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
+	}
+	cur.ProjectID = &pid
 	return nil
 }
 

@@ -18,6 +18,7 @@ type taskCreateJSON struct {
 	Status           domain.Status   `json:"status"`
 	Priority         domain.Priority `json:"priority"`
 	TaskType         domain.TaskType `json:"task_type"`
+	ProjectID        *string         `json:"project_id"`
 	ParentID         *string         `json:"parent_id"`
 	ChecklistInherit *bool           `json:"checklist_inherit"`
 	Runner           *string         `json:"runner"`
@@ -55,6 +56,7 @@ type taskPatchJSON struct {
 	Status           *domain.Status            `json:"status"`
 	Priority         *domain.Priority          `json:"priority"`
 	TaskType         *domain.TaskType          `json:"task_type"`
+	ProjectID        patchProjectField         `json:"project_id"`
 	ParentID         patchParentField          `json:"parent_id"`
 	ChecklistInherit *bool                     `json:"checklist_inherit"`
 	PickupNotBefore  patchPickupNotBeforeField `json:"pickup_not_before"`

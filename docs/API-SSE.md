@@ -23,7 +23,7 @@ data: {"type":"task_updated","id":"<task-uuid>"}
 Most frames use `{type,id[,cycle_id]}`. Older clients that ignore the `id:` line keep working — they just lose the loss-free reconnect property.
 
 ```json
-{"type":"task_created|task_updated|task_deleted","id":"<task-uuid>"}
+{"type":"task_created|task_updated|task_deleted|project_created|project_updated|project_deleted|project_context_changed","id":"<task-or-project-uuid>"}
 ```
 
 `task_cycle_changed` payloads carry an extra `cycle_id` field so the SPA can scope its invalidation to the affected execution cycle subtree rather than the whole task:
@@ -84,6 +84,12 @@ Each successful write may publish more than one event so SSE clients can refresh
 
 | Trigger                                                | `type`(s) emitted                                                          |
 | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `POST /projects`                                      | `project_created` for the new project                                      |
+| `PATCH /projects/{id}`                                | `project_updated` for the patched project                                  |
+| `DELETE /projects/{id}`                               | `project_deleted` for the removed project                                  |
+| `POST /projects/{id}/context`                         | `project_context_changed` for `{id}`                                       |
+| `PATCH /projects/{id}/context/{contextId}`            | `project_context_changed` for `{id}`                                       |
+| `DELETE /projects/{id}/context/{contextId}`           | `project_context_changed` for `{id}`                                       |
 | `POST /tasks`                                          | `task_created` for the new task; plus `task_updated` for `parent_id` when the task is created under a parent |
 | `PATCH /tasks/{id}`                                    | `task_updated` for the patched task                                        |
 | `DELETE /tasks/{id}`                                   | `task_deleted` for the deleted task; plus `task_updated` for the parent when the deleted task had one |

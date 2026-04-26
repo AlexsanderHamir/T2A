@@ -75,7 +75,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
@@ -200,6 +200,15 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 			parentID = &p
 		}
 	}
+	projectID := in.ProjectID
+	if projectID != nil {
+		p := strings.TrimSpace(*projectID)
+		if p == "" {
+			projectID = nil
+		} else {
+			projectID = &p
+		}
+	}
 	if in.ChecklistInherit && (parentID == nil || *parentID == "") {
 		return nil, "", nil, "", fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
@@ -214,6 +223,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		Status:           st,
 		Priority:         pr,
 		TaskType:         tt,
+		ProjectID:        projectID,
 		ParentID:         parentID,
 		ChecklistInherit: in.ChecklistInherit,
 		Runner:           runner,
@@ -232,6 +242,15 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		}
 		if n == 0 {
 			return fmt.Errorf("%w: parent not found", domain.ErrInvalidInput)
+		}
+	}
+	if t.ProjectID != nil {
+		var n int64
+		if err := tx.Model(&domain.Project{}).Where("id = ? AND status = ?", *t.ProjectID, domain.ProjectStatusActive).Count(&n).Error; err != nil {
+			return fmt.Errorf("project lookup: %w", err)
+		}
+		if n == 0 {
+			return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
 		}
 	}
 	if err := tx.Create(t).Error; err != nil {

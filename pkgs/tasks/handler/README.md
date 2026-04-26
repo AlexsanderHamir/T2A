@@ -36,6 +36,7 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 |------|--------|
 | Health | `handler_health.go`, `handler_system_health.go` |
 | Tasks CRUD + list + stats/failures | `handler_task_crud.go`, `handler_cycle_failures.go` |
+| Projects + project context | `handler_projects.go` (DTOs in `handler_projects_json.go`) |
 | Checklist | `handler_checklist.go` |
 | Task audit / events | `handler_task_events.go` |
 | Execution cycles + phases | `handler_cycles.go` (DTOs in `handler_cycles_json.go`); see [`docs/EXECUTION-CYCLES.md`](../../docs/EXECUTION-CYCLES.md) |

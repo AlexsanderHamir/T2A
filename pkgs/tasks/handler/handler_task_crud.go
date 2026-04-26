@@ -71,6 +71,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Status:           body.Status,
 		Priority:         body.Priority,
 		TaskType:         body.TaskType,
+		ProjectID:        body.ProjectID,
 		ParentID:         body.ParentID,
 		ChecklistInherit: inherit,
 		Runner:           runner,
@@ -173,6 +174,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Status:           body.Status,
 		Priority:         body.Priority,
 		TaskType:         body.TaskType,
+		Project:          projectFieldPatchToStore(body.ProjectID),
 		ChecklistInherit: body.ChecklistInherit,
 		PickupNotBefore:  pickupNotBeforePatchToStore(body.PickupNotBefore),
 		CursorModel:      body.CursorModel,
@@ -238,6 +240,16 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		"deleted_count", len(deletedIDs),
 		"response_empty", true)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func projectFieldPatchToStore(p patchProjectField) *store.ProjectFieldPatch {
+	if !p.Defined {
+		return nil
+	}
+	if p.Clear {
+		return &store.ProjectFieldPatch{Clear: true}
+	}
+	return &store.ProjectFieldPatch{ID: p.SetID}
 }
 
 func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {
