@@ -29,7 +29,6 @@ export function TaskListFilters({
 }: Props) {
   const projectFilterOptions = [
     { value: "all", label: "All projects" },
-    { value: "none", label: "No project" },
     ...projectOptions.map((project) => ({
       value: project.id,
       label: project.name,

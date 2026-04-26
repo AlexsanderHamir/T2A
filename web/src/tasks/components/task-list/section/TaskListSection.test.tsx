@@ -346,8 +346,9 @@ describe("TaskListSection", () => {
     expect(screen.queryByText("Unassigned task")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("combobox", { name: /^project$/i }));
-    await user.click(screen.getByRole("option", { name: /^no project$/i }));
-    expect(screen.queryByText("Moat task")).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /^no project$/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /^all projects$/i }));
+    expect(screen.getByText("Moat task")).toBeInTheDocument();
     expect(screen.getByText("Unassigned task")).toBeInTheDocument();
   });
 
