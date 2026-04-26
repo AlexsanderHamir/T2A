@@ -152,7 +152,7 @@ export function parseProjectContextListResponse(
   if (!Array.isArray(raw)) {
     throw new Error("Invalid API response: items must be an array");
   }
-  const rawEdges = value.edges;
+  const rawEdges = value.edges ?? [];
   if (!Array.isArray(rawEdges)) {
     throw new Error("Invalid API response: edges must be an array");
   }
