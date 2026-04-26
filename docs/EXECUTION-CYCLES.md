@@ -20,7 +20,7 @@ Use cycles/phases for structured execution state. Use `task_events` for the full
 
 ## Why this primitive exists
 
-[`moat.md`](../moat.md) describes the work T2A is best at as a tight, observable execution loop: diagnose what the agent should attempt, execute the change, verify the result, then persist it. Until Stage 1 the only place that loop existed was the prose in `moat.md` and ad-hoc rows in `task_events`. The new tables move it into the data model so:
+[PRODUCT.md](./PRODUCT.md) and [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) describe the work T2A is best at as durable, observable agent execution with shared context when work spans many tasks. The execution loop is: diagnose what the agent should attempt, execute the change, verify the result, then persist it. Until Stage 1 that loop existed only as product prose and ad-hoc rows in `task_events`. The cycle tables move it into the data model so:
 
 - workers can answer "is this task running right now?" with one indexed lookup (`task_cycles.status='running'`) instead of scanning the audit stream;
 - a single attempt's worth of work is one row with a stable id (`task_cycles.id`) that artifacts, summaries, and SSE invalidations can hang off;

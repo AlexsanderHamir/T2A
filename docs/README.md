@@ -9,8 +9,9 @@ Read these first for the current MVP shape:
 1. [PRODUCT.md](./PRODUCT.md) — what T2A is for and how scope is chosen.
 2. [DESIGN.md](./DESIGN.md) — architecture hub, data flow, technical choices, limitations.
 3. [API-HTTP.md](./API-HTTP.md) and [API-SSE.md](./API-SSE.md) — server contracts.
-4. [WEB.md](./WEB.md) — SPA structure and client data flow.
-5. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — common local and CI failures.
+4. [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) — long-lived projects, shared context, and task run snapshots.
+5. [WEB.md](./WEB.md) — SPA structure and client data flow.
+6. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — common local and CI failures.
 
 Use [AGENTS.md](../AGENTS.md) for the short repo map and verification checklist.
 
@@ -25,6 +26,7 @@ These describe behavior that code and tests should keep in sync.
 | Runtime config | [RUNTIME-ENV.md](./RUNTIME-ENV.md) |
 | Persistence | [PERSISTENCE.md](./PERSISTENCE.md) |
 | Settings | [SETTINGS.md](./SETTINGS.md) |
+| Project context | [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) |
 | Execution attempts | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) |
 | Agent queue | [AGENT-QUEUE.md](./AGENT-QUEUE.md) |
 | Agent worker | [AGENT-WORKER.md](./AGENT-WORKER.md) |

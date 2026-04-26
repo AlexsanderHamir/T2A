@@ -14,6 +14,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [AGENT-QUEUE.md](./AGENT-QUEUE.md) | Ready-task notifier, in-memory queue, reconcile loop, fairness ordering. |
 | [AGENT-WORKER.md](./AGENT-WORKER.md) | V1 in-process Cursor CLI worker: lifecycle, runner abstraction, security model, audit trail, orphan sweep, deferrals. Configured live from the SPA Settings page (see [SETTINGS.md](./SETTINGS.md)). |
 | [SETTINGS.md](./SETTINGS.md) | Singleton `app_settings` row, SPA Settings page wiring, `GET/PATCH /settings` + `/settings/probe-cursor` + `/settings/cancel-current-run` contracts, env-var migration table. |
+| [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) | Long-lived projects as shared context memory, task membership, and run-level context snapshots. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write to `task_events`, state machine, where reads go. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
@@ -23,9 +24,10 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 ## Goals
 
 - Support mass delegation: lots of tasks in flight, with agents and people acting through the same system without ad-hoc state.
-- Postgres is the single source of truth: tasks plus an append-only `task_events` audit trail.
+- Postgres is the single source of truth: projects, tasks, context snapshots, and an append-only `task_events` audit trail.
 - Humans, scripts, and agents all change state through the same REST API; the store validates and records audit events (`X-Actor` distinguishes user vs agent on events).
 - Browsers and runners can subscribe to lightweight “something changed” signals (`GET /events`) and refetch JSON from the REST API when they need full rows.
+- Long-running work should preserve context across tasks without collapsing task hierarchy into project membership. A task can have both `project_id` and `parent_id`; they answer different questions.
 
 ## Architecture overview
 
