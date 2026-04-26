@@ -11,7 +11,9 @@ describe("EmptyState", () => {
         description="Add something to get started."
       />,
     );
-    expect(screen.getByText("Nothing here")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Nothing here" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Add something to get started."),
     ).toBeInTheDocument();

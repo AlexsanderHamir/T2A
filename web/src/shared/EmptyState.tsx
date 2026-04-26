@@ -56,9 +56,9 @@ export function EmptyState({
           {icon ?? <EmptyStateTrayGlyph />}
         </div>
       ) : null}
-      <p className="empty-state__title" id={titleId}>
+      <h2 className="empty-state__title" id={titleId}>
         {title}
-      </p>
+      </h2>
       <div className="empty-state__description">{description}</div>
       {action ? (
         <div className="empty-state__actions">

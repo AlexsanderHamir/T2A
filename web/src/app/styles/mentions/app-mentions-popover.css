@@ -2,7 +2,7 @@
   position: relative;
 }
 
-/* Tippy default theme uses #333 + padding — neutralize so inner panel matches app chrome */
+/* Neutralize Tippy's default dark fill and padding so inner panel matches app chrome. */
 .tippy-box[data-theme~="repo-files-popover"] {
   background: transparent;
   color: inherit;
@@ -36,7 +36,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-elevated);
-  border: 1px solid var(--border-hairline);
+  border: none;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }

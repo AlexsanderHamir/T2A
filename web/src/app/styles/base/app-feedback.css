@@ -137,7 +137,7 @@
   letter-spacing: var(--text-button-tracking);
   color: var(--text-on-brand);
   background: var(--brand);
-  border: 1px solid var(--brand-border-cta);
+  border: none;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition:

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { TaskEventDataPanel } from "./TaskEventDataPanel";
 
@@ -51,5 +52,40 @@ describe("TaskEventDataPanel", () => {
     );
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "A" })).toBeInTheDocument();
+  });
+
+  it("moves tab selection with arrow, home, and end keys", async () => {
+    const user = userEvent.setup();
+    render(
+      <TaskEventDataPanel
+        eventType="task_created"
+        data={{
+          task_id: "t1",
+          title: "Task",
+        }}
+      />,
+    );
+
+    const overviewTab = screen.getByRole("tab", { name: "Overview" });
+    const jsonTab = screen.getByRole("tab", { name: "Raw JSON" });
+
+    overviewTab.focus();
+    expect(overviewTab).toHaveFocus();
+
+    await user.keyboard("{ArrowRight}");
+    expect(jsonTab).toHaveAttribute("aria-selected", "true");
+    expect(jsonTab).toHaveFocus();
+
+    await user.keyboard("{Home}");
+    expect(overviewTab).toHaveAttribute("aria-selected", "true");
+    expect(overviewTab).toHaveFocus();
+
+    await user.keyboard("{End}");
+    expect(jsonTab).toHaveAttribute("aria-selected", "true");
+    expect(jsonTab).toHaveFocus();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(overviewTab).toHaveAttribute("aria-selected", "true");
+    expect(overviewTab).toHaveFocus();
   });
 });

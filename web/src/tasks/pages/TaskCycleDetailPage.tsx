@@ -13,6 +13,7 @@ import {
   phaseStatusLabel,
 } from "@/observability";
 import { CopyableId } from "@/shared/CopyableId";
+import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
 import type { TaskCyclePhase, TaskCycleStreamEvent, TaskEvent } from "@/types";
@@ -229,7 +230,12 @@ export function TaskCycleDetailPage() {
             <p>{errorMessage(streamQuery.error, "Could not load stream events.")}</p>
           </div>
         ) : streamEvents.length === 0 ? (
-          <p className="muted">No persisted Cursor updates for this attempt yet.</p>
+          <EmptyState
+            title="No Cursor updates yet"
+            description="No persisted Cursor updates for this attempt yet. Live updates can still appear while a phase is running."
+            density="compact"
+            hideIcon
+          />
         ) : (
           <>
             <ol className="task-attempt-timeline">
@@ -262,7 +268,12 @@ export function TaskCycleDetailPage() {
             <p>{errorMessage(auditQuery.error, "Could not load audit events.")}</p>
           </div>
         ) : auditEvents.length === 0 ? (
-          <p className="muted">No task audit events reference this attempt.</p>
+          <EmptyState
+            title="No audit events yet"
+            description="No task audit events reference this attempt. They will appear here once the run records cycle or phase activity."
+            density="compact"
+            hideIcon
+          />
         ) : (
           <>
             <ol className="task-attempt-timeline">

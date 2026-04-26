@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyableId } from "@/shared/CopyableId";
@@ -251,6 +252,7 @@ function PhaseEventOverviewBody({ model }: { model: PhaseEventOverviewModel }) {
 }
 
 type TabId = "overview" | "json";
+const TAB_ORDER: TabId[] = ["overview", "json"];
 
 export function TaskEventDataPanel({
   eventType,
@@ -267,8 +269,39 @@ export function TaskEventDataPanel({
   const tabJsonId = `${baseId}-tab-json`;
   const panelOverviewId = `${baseId}-panel-overview`;
   const panelJsonId = `${baseId}-panel-json`;
+  const tabRefs = useRef<Record<TabId, HTMLButtonElement | null>>({
+    overview: null,
+    json: null,
+  });
 
   const [tab, setTab] = useState<TabId>("overview");
+
+  const selectTab = (nextTab: TabId, focus = false) => {
+    setTab(nextTab);
+    if (focus) {
+      tabRefs.current[nextTab]?.focus();
+    }
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const currentIndex = TAB_ORDER.indexOf(tab);
+    let nextTab: TabId | undefined;
+
+    if (event.key === "ArrowRight") {
+      nextTab = TAB_ORDER[(currentIndex + 1) % TAB_ORDER.length];
+    } else if (event.key === "ArrowLeft") {
+      nextTab =
+        TAB_ORDER[(currentIndex - 1 + TAB_ORDER.length) % TAB_ORDER.length];
+    } else if (event.key === "Home") {
+      nextTab = TAB_ORDER[0];
+    } else if (event.key === "End") {
+      nextTab = TAB_ORDER[TAB_ORDER.length - 1];
+    }
+
+    if (!nextTab) return;
+    event.preventDefault();
+    selectTab(nextTab, true);
+  };
 
   const jsonPre = (
     <pre className="task-timeline-data task-event-detail-data-pre">
@@ -302,9 +335,13 @@ export function TaskEventDataPanel({
           aria-selected={tab === "overview"}
           aria-controls={panelOverviewId}
           tabIndex={tab === "overview" ? 0 : -1}
+          ref={(node) => {
+            tabRefs.current.overview = node;
+          }}
           className="task-event-data-tab"
           data-active={tab === "overview" ? "true" : undefined}
-          onClick={() => setTab("overview")}
+          onClick={() => selectTab("overview")}
+          onKeyDown={handleTabKeyDown}
         >
           Overview
         </button>
@@ -315,9 +352,13 @@ export function TaskEventDataPanel({
           aria-selected={tab === "json"}
           aria-controls={panelJsonId}
           tabIndex={tab === "json" ? 0 : -1}
+          ref={(node) => {
+            tabRefs.current.json = node;
+          }}
           className="task-event-data-tab"
           data-active={tab === "json" ? "true" : undefined}
-          onClick={() => setTab("json")}
+          onClick={() => selectTab("json")}
+          onKeyDown={handleTabKeyDown}
         >
           Raw JSON
         </button>

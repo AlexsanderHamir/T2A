@@ -135,5 +135,5 @@
 }
 
 .task-event-markdown tbody tr:nth-child(even) {
-  background: rgb(0 0 0 / 2%);
+  background: var(--neutral-fill-faint);
 }

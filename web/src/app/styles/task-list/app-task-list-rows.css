@@ -173,16 +173,9 @@
    the neutral stone hue from the chart palette so pills, legend
    swatches, and bar segments all read as the same "quiet stop". */
 .cell-pill--cycle-aborted {
-  background: rgb(120 113 108 / 12%);
-  color: rgb(87 83 78);
-  border-color: rgb(120 113 108 / 26%);
-}
-@media (prefers-color-scheme: dark) {
-  .cell-pill--cycle-aborted {
-    background: rgb(168 162 158 / 14%);
-    color: rgb(214 211 209);
-    border-color: rgb(168 162 158 / 30%);
-  }
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-text);
+  border-color: var(--pill-neutral-border);
 }
 
 /* Priority — escalation (low → critical) */

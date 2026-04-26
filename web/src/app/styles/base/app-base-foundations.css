@@ -95,7 +95,7 @@ h5.term-arrow, h6.term-arrow {
   gap: 0.25rem;
   padding: 0.05rem 0.4rem;
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   line-height: 1.5;
   letter-spacing: 0.08em;
@@ -108,15 +108,15 @@ h5.term-arrow, h6.term-arrow {
 }
 
 .term-pill--new {
-  background: rgb(255 247 237);
-  color: rgb(154 52 18);
-  border-color: rgb(254 215 170);
+  background: var(--term-new-bg);
+  color: var(--term-new-text);
+  border-color: var(--term-new-border);
 }
 
 .term-pill--live {
-  background: rgb(236 253 245);
-  color: rgb(4 120 87);
-  border-color: rgb(167 243 208);
+  background: var(--term-live-bg);
+  color: var(--term-live-text);
+  border-color: var(--term-live-border);
 }
 
 .term-pill--live::before {
@@ -125,7 +125,7 @@ h5.term-arrow, h6.term-arrow {
   height: 6px;
   border-radius: 50%;
   background: var(--success-bright);
-  box-shadow: 0 0 0 3px rgb(0 169 110 / 18%);
+  box-shadow: var(--shadow-success-ring-soft);
   animation: term-pill-live-pulse 2s var(--ease-in-out) infinite;
 }
 
@@ -142,9 +142,9 @@ h5.term-arrow, h6.term-arrow {
 }
 
 .term-pill--draft {
-  background: rgb(248 250 252);
-  color: rgb(71 85 105);
-  border-color: rgb(226 232 240);
+  background: var(--pill-priority-low-bg);
+  color: var(--pill-priority-low-text);
+  border-color: var(--pill-priority-low-border);
 }
 
 @media (prefers-reduced-motion: reduce) {

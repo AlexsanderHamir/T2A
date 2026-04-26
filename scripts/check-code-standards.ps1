@@ -40,6 +40,33 @@ if (Test-Path $srcRoot) {
     }
 }
 
+$stylesRoot = Join-Path $srcRoot (Join-Path "app" "styles")
+if (Test-Path $stylesRoot) {
+    $cssFiles = Get-ChildItem -Path $stylesRoot -Recurse -Filter *.css -File
+    $componentCssFiles = $cssFiles | Where-Object {
+        $_.FullName.Replace('\', '/') -notmatch '/web/src/app/styles/tokens/'
+    }
+    $rawColorPat = '#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\('
+    foreach ($f in $componentCssFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($null -eq $text) { continue }
+        if ($text -match $rawColorPat) {
+            Write-Host "VIOLATION: raw color outside web style tokens: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+
+    $tooSmallRemPat = 'font-size:\s*0\.[0-6][0-9]*rem'
+    foreach ($f in $componentCssFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($null -eq $text) { continue }
+        if ($text -match $tooSmallRemPat) {
+            Write-Host "VIOLATION: font-size below --text-xs in component CSS: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+}
+
 # Note: pkgs/tasks/domain embeds GORM struct tags and gorm.io/datatypes; a
 # naive "no gorm in domain" check would false-positive. Tightening domain
 # purity is a later CODE_STANDARDS stage (split models vs pure domain).

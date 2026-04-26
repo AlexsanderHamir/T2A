@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type UIEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { fetchTaskGraphMockJson, getTask } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
+import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { Priority, Status } from "@/types";
 import { TaskGraphPageSkeleton } from "../components/skeletons";
@@ -121,6 +122,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export function TaskGraphPage() {
   const { taskId = "" } = useParams<{ taskId: string }>();
+  const navigate = useNavigate();
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState({
     scrollLeft: 0,
@@ -228,7 +230,20 @@ export function TaskGraphPage() {
   }>;
 
   if (!taskId) {
-    return <p className="muted">Missing task id.</p>;
+    return (
+      <section className="panel task-graph-page task-graph-content--enter">
+        <EmptyState
+          title="Missing task id"
+          description="Open a task first, then use the graph view from its detail page."
+          action={{
+            label: "Back to all tasks",
+            onClick: () => {
+              navigate("/");
+            },
+          }}
+        />
+      </section>
+    );
   }
 
   if (taskQuery.isPending) {

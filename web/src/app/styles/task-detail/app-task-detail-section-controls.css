@@ -63,7 +63,7 @@ button.task-detail-add-checklist-btn {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-chrome-xs);
+  box-shadow: none;
   cursor: pointer;
   transition: border-color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
@@ -81,7 +81,7 @@ a.task-detail-open-graph-btn {
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-chrome-xs);
+  box-shadow: none;
   text-decoration: none;
   transition:
     border-color var(--duration-normal) var(--ease-out),
@@ -92,7 +92,7 @@ a.task-detail-open-graph-btn {
 a.task-detail-open-graph-btn:hover {
   background: var(--bg-subtle);
   border-color: var(--border-chrome-muted);
-  box-shadow: var(--shadow-chrome-sm);
+  box-shadow: none;
 }
 
 a.task-detail-open-graph-btn:focus-visible {
@@ -107,7 +107,7 @@ button.task-detail-add-checklist-btn:not(:disabled):hover {
   border-color: var(--border-chrome-muted);
   transform: none;
   filter: none;
-  box-shadow: var(--shadow-chrome-sm);
+  box-shadow: none;
 }
 
 button.task-detail-add-subtask-btn:focus-visible,

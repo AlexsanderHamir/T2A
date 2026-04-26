@@ -7,6 +7,11 @@
     --bg-page: #0a0a0a;
     --bg-elevated: #141414;
     --bg-subtle: #1a1a1a;
+    --surface-1: var(--bg-elevated);
+    --surface-2: var(--bg-subtle);
+    --surface-3: var(--neutral-fill-subtle);
+    --surface-soft: var(--bg-subtle);
+    --surface-card: var(--bg-elevated);
     --stream-dot-idle: rgb(255 255 255 / 22%);
     --success-thread-surface: rgb(16 185 129 / 16%);
     --success-thread-surface-soft: rgb(16 185 129 / 12%);
@@ -127,6 +132,16 @@
     --pill-priority-high-bg: rgb(251 146 60 / 12%);
     --pill-priority-high-text: rgb(253 186 116);
     --pill-priority-high-border: rgb(251 146 60 / 32%);
+    --pill-neutral-bg: rgb(168 162 158 / 14%);
+    --pill-neutral-text: rgb(214 211 209);
+    --pill-neutral-border: rgb(168 162 158 / 30%);
+    --term-new-bg: rgb(251 146 60 / 12%);
+    --term-new-text: rgb(253 186 116);
+    --term-new-border: rgb(251 146 60 / 32%);
+    --term-live-bg: rgb(16 185 129 / 14%);
+    --term-live-text: rgb(110 231 183);
+    --term-live-border: rgb(52 211 153 / 35%);
+    --shadow-success-ring-soft: 0 0 0 3px rgb(16 185 129 / 16%);
 
     --mention-syntax-keyword: #b19cff;
     --mention-syntax-string: #69d3a8;
