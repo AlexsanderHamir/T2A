@@ -340,14 +340,19 @@ func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) e
 	if projectID == "" || itemID == "" {
 		return fmt.Errorf("%w: project id and context id required", domain.ErrInvalidInput)
 	}
-	res := db.WithContext(ctx).Where("id = ? AND project_id = ?", itemID, projectID).Delete(&domain.ProjectContextItem{})
-	if res.Error != nil {
-		return mapWriteError(res.Error)
-	}
-	if res.RowsAffected == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("project_id = ? AND (source_context_id = ? OR target_context_id = ?)", projectID, itemID, itemID).Delete(&domain.ProjectContextEdge{}).Error; err != nil {
+			return mapWriteError(err)
+		}
+		res := tx.Where("id = ? AND project_id = ?", itemID, projectID).Delete(&domain.ProjectContextItem{})
+		if res.Error != nil {
+			return mapWriteError(res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+		return nil
+	})
 }
 
 // CreateSnapshot inserts an immutable task context snapshot.

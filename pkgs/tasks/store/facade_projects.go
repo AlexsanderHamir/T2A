@@ -20,6 +20,12 @@ type CreateProjectContextInput = projects.CreateContextInput
 // UpdateProjectContextInput is a partial patch for a project context item.
 type UpdateProjectContextInput = projects.UpdateContextInput
 
+// CreateProjectContextEdgeInput is the store input for connecting context nodes.
+type CreateProjectContextEdgeInput = projects.CreateContextEdgeInput
+
+// UpdateProjectContextEdgeInput is a partial patch for a project context edge.
+type UpdateProjectContextEdgeInput = projects.UpdateContextEdgeInput
+
 // CreateTaskContextSnapshotInput records the rendered project context passed to a cycle.
 type CreateTaskContextSnapshotInput = projects.CreateSnapshotInput
 
@@ -69,6 +75,30 @@ func (s *Store) ListProjectContext(ctx context.Context, projectID string, includ
 func (s *Store) ListProjectContextByIDs(ctx context.Context, projectID string, ids []string) ([]domain.ProjectContextItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectContextByIDs")
 	return projects.ListContextByIDs(ctx, s.db, projectID, ids)
+}
+
+// CreateProjectContextEdge inserts one relationship between project context nodes.
+func (s *Store) CreateProjectContextEdge(ctx context.Context, projectID string, input CreateProjectContextEdgeInput) (domain.ProjectContextEdge, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateProjectContextEdge")
+	return projects.CreateContextEdge(ctx, s.db, projectID, input)
+}
+
+// ListProjectContextEdges returns context edges for one project.
+func (s *Store) ListProjectContextEdges(ctx context.Context, projectID string, nodeIDs []string) ([]domain.ProjectContextEdge, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectContextEdges")
+	return projects.ListContextEdges(ctx, s.db, projectID, nodeIDs)
+}
+
+// UpdateProjectContextEdge applies a partial patch to one project context edge.
+func (s *Store) UpdateProjectContextEdge(ctx context.Context, projectID, edgeID string, input UpdateProjectContextEdgeInput) (domain.ProjectContextEdge, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateProjectContextEdge")
+	return projects.UpdateContextEdge(ctx, s.db, projectID, edgeID, input)
+}
+
+// DeleteProjectContextEdge removes one relationship between project context nodes.
+func (s *Store) DeleteProjectContextEdge(ctx context.Context, projectID, edgeID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteProjectContextEdge")
+	return projects.DeleteContextEdge(ctx, s.db, projectID, edgeID)
 }
 
 // UpdateProjectContext applies a partial patch to one project context item.
