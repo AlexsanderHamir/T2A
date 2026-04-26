@@ -1,4 +1,7 @@
-import type { FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { FieldLabel } from "@/shared/FieldLabel";
+import { RichPromptEditor } from "@/tasks/components/rich-prompt";
+import { promptHasVisibleContent } from "@/tasks/task-prompt";
 import {
   PROJECT_CONTEXT_KINDS,
   type ProjectContextItem,
@@ -28,13 +31,21 @@ export function ProjectContextItemEditor({
   onSave,
   onDelete,
 }: Props) {
+  const [body, setBody] = useState(item.body);
+
+  useEffect(() => {
+    setBody(item.body);
+  }, [item.body]);
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const nextBody = body.trim();
+    if (!promptHasVisibleContent(nextBody)) return;
     onSave(item.id, {
       kind: String(form.get("kind") ?? "note") as ProjectContextKind,
       title: String(form.get("title") ?? "").trim(),
-      body: String(form.get("body") ?? "").trim(),
+      body: nextBody,
       pinned: form.get("pinned") === "on",
     });
   }
@@ -67,14 +78,21 @@ export function ProjectContextItemEditor({
           />
         </div>
         <div className="field grow">
-          <label htmlFor={`context-body-${item.id}`}>Body</label>
-          <textarea
-            id={`context-body-${item.id}`}
-            name="body"
-            defaultValue={item.body}
-            rows={4}
-            required
-          />
+          <FieldLabel
+            id={`context-body-${item.id}-label`}
+            htmlFor={`context-body-${item.id}`}
+          >
+            Body
+          </FieldLabel>
+          <div className="project-context-editor-shell">
+            <RichPromptEditor
+              id={`context-body-${item.id}`}
+              value={body}
+              onChange={setBody}
+              disabled={saving || deleting}
+              placeholder="Write markdown-style context. Type @ to reference a repo file."
+            />
+          </div>
         </div>
         <label className="checkbox-label">
           <input type="checkbox" name="pinned" defaultChecked={item.pinned} />

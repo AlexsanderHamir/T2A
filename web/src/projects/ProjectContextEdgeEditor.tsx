@@ -1,4 +1,7 @@
-import type { FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { FieldLabel } from "@/shared/FieldLabel";
+import { RichPromptEditor } from "@/tasks/components/rich-prompt";
+import { previewTextFromPrompt } from "@/tasks/task-prompt";
 import {
   PROJECT_CONTEXT_RELATIONS,
   type ProjectContextEdge,
@@ -32,6 +35,12 @@ export function ProjectContextEdgeEditor({
 }: Props) {
   const source = items.find((item) => item.id === edge.source_context_id);
   const target = items.find((item) => item.id === edge.target_context_id);
+  const [note, setNote] = useState(edge.note);
+  const notePreview = previewTextFromPrompt(edge.note);
+
+  useEffect(() => {
+    setNote(edge.note);
+  }, [edge.note]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,7 +50,7 @@ export function ProjectContextEdgeEditor({
         form.get("relation") ?? "related",
       ) as ProjectContextRelation,
       strength: Number(form.get("strength") ?? edge.strength),
-      note: String(form.get("note") ?? "").trim(),
+      note: note.trim(),
     });
   }
 
@@ -53,7 +62,7 @@ export function ProjectContextEdgeEditor({
         <span>{target?.title ?? "Unknown node"}</span>
       </div>
       <p className="muted">
-        Strength {edge.strength}/5{edge.note ? ` - ${edge.note}` : ""}
+        Strength {edge.strength}/5{notePreview ? ` - ${notePreview}` : ""}
       </p>
       <details>
         <summary>Edit connection</summary>
@@ -89,13 +98,21 @@ export function ProjectContextEdgeEditor({
             </div>
           </div>
           <div className="field grow">
-            <label htmlFor={`context-edge-note-${edge.id}`}>Note</label>
-            <input
-              id={`context-edge-note-${edge.id}`}
-              name="note"
-              defaultValue={edge.note}
-              placeholder="Why are these nodes connected?"
-            />
+            <FieldLabel
+              id={`context-edge-note-${edge.id}-label`}
+              htmlFor={`context-edge-note-${edge.id}`}
+            >
+              Note
+            </FieldLabel>
+            <div className="project-context-editor-shell">
+              <RichPromptEditor
+                id={`context-edge-note-${edge.id}`}
+                value={note}
+                onChange={setNote}
+                disabled={saving || deleting}
+                placeholder="Why are these nodes connected? Type @ to reference a repo file."
+              />
+            </div>
           </div>
           <div className="row stack-row-actions">
             <button type="submit" disabled={saving}>

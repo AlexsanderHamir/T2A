@@ -9,6 +9,9 @@ import {
   patchProjectContextEdge,
 } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
+import { FieldLabel } from "@/shared/FieldLabel";
+import { RichPromptEditor } from "@/tasks/components/rich-prompt";
+import { promptHasVisibleContent } from "@/tasks/task-prompt";
 import {
   PROJECT_CONTEXT_KINDS,
   PROJECT_CONTEXT_RELATIONS,
@@ -34,6 +37,10 @@ export function ProjectContextPanel({ projectId }: Props) {
   const context = useProjectContext(projectId, { enabled: Boolean(projectId) });
   const [nodeQuery, setNodeQuery] = useState("");
   const [connectionQuery, setConnectionQuery] = useState("");
+  const [newNodeBody, setNewNodeBody] = useState("");
+  const [newNodeEditorKey, setNewNodeEditorKey] = useState(0);
+  const [newEdgeNote, setNewEdgeNote] = useState("");
+  const [newEdgeEditorKey, setNewEdgeEditorKey] = useState(0);
   const createContextMutation = useMutation({
     mutationFn: (input: {
       kind: ProjectContextKind;
@@ -115,8 +122,8 @@ export function ProjectContextPanel({ projectId }: Props) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const title = String(form.get("title") ?? "").trim();
-    const body = String(form.get("body") ?? "").trim();
-    if (!title || !body) return;
+    const body = newNodeBody.trim();
+    if (!title || !promptHasVisibleContent(body)) return;
     const formEl = event.currentTarget;
     createContextMutation.mutate(
       {
@@ -125,7 +132,13 @@ export function ProjectContextPanel({ projectId }: Props) {
         body,
         pinned: form.get("pinned") === "on",
       },
-      { onSuccess: () => formEl.reset() },
+      {
+        onSuccess: () => {
+          formEl.reset();
+          setNewNodeBody("");
+          setNewNodeEditorKey((value) => value + 1);
+        },
+      },
     );
   }
 
@@ -146,9 +159,15 @@ export function ProjectContextPanel({ projectId }: Props) {
           form.get("relation") ?? "related",
         ) as ProjectContextRelation,
         strength: Number(form.get("strength") ?? 3),
-        note: String(form.get("note") ?? "").trim(),
+        note: newEdgeNote.trim(),
       },
-      { onSuccess: () => formEl.reset() },
+      {
+        onSuccess: () => {
+          formEl.reset();
+          setNewEdgeNote("");
+          setNewEdgeEditorKey((value) => value + 1);
+        },
+      },
     );
   }
 
@@ -225,8 +244,19 @@ export function ProjectContextPanel({ projectId }: Props) {
           <input id="project-context-title" name="title" required />
         </div>
         <div className="field grow">
-          <label htmlFor="project-context-body">Body</label>
-          <textarea id="project-context-body" name="body" rows={4} required />
+          <FieldLabel id="project-context-body-label" htmlFor="project-context-body">
+            Body
+          </FieldLabel>
+          <div className="project-context-editor-shell">
+            <RichPromptEditor
+              key={newNodeEditorKey}
+              id="project-context-body"
+              value={newNodeBody}
+              onChange={setNewNodeBody}
+              disabled={createContextMutation.isPending}
+              placeholder="Write markdown-style context. Type @ to reference a repo file."
+            />
+          </div>
         </div>
         <button type="submit" disabled={createContextMutation.isPending}>
           {createContextMutation.isPending ? "Adding..." : "Add node"}
@@ -315,12 +345,22 @@ export function ProjectContextPanel({ projectId }: Props) {
               </select>
             </div>
             <div className="field grow project-context-edge-note">
-              <label htmlFor="project-context-edge-note">Note</label>
-              <input
-                id="project-context-edge-note"
-                name="note"
-                placeholder="Why does this connection matter?"
-              />
+              <FieldLabel
+                id="project-context-edge-note-label"
+                htmlFor="project-context-edge-note"
+              >
+                Note
+              </FieldLabel>
+              <div className="project-context-editor-shell">
+                <RichPromptEditor
+                  key={newEdgeEditorKey}
+                  id="project-context-edge-note"
+                  value={newEdgeNote}
+                  onChange={setNewEdgeNote}
+                  disabled={createEdgeMutation.isPending}
+                  placeholder="Why does this connection matter? Type @ to reference a repo file."
+                />
+              </div>
             </div>
           </div>
           <button type="submit" disabled={createEdgeMutation.isPending}>

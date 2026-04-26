@@ -1,4 +1,5 @@
 import type { ProjectContextItem, ProjectContextKind } from "@/types";
+import { previewTextFromPrompt } from "@/tasks/task-prompt";
 import { ProjectContextItemEditor } from "./ProjectContextItemEditor";
 
 type Props = {
@@ -24,6 +25,8 @@ export function ProjectContextNodeCard({
   onSave,
   onDelete,
 }: Props) {
+  const preview = previewTextFromPrompt(item.body);
+
   return (
     <article className="project-context-node-card">
       <div className="project-context-node-card__body">
@@ -36,7 +39,7 @@ export function ProjectContextNodeCard({
             ) : null}
           </div>
         </div>
-        <p title={item.body}>{item.body}</p>
+        <p title={preview}>{preview}</p>
       </div>
       <ProjectContextItemEditor
         item={item}
