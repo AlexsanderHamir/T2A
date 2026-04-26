@@ -171,6 +171,9 @@ func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	if id == "" {
 		return fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
 	}
+	if id == domain.DefaultProjectID {
+		return fmt.Errorf("%w: default project cannot be deleted", domain.ErrConflict)
+	}
 	var taskCount int64
 	if err := db.WithContext(ctx).Model(&domain.Task{}).Where("project_id = ?", id).Count(&taskCount).Error; err != nil {
 		return fmt.Errorf("count project tasks: %w", err)
@@ -264,6 +267,36 @@ func ListContext(ctx context.Context, db *gorm.DB, projectID string, includeUnpi
 		return nil, fmt.Errorf("list project context: %w", err)
 	}
 	return rows, nil
+}
+
+// ListContextByIDs returns selected context items for one project in caller order.
+func ListContextByIDs(ctx context.Context, db *gorm.DB, projectID string, ids []string) ([]domain.ProjectContextItem, error) {
+	defer kernel.DeferLatency(kernel.OpListProjectContext)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListContextByIDs")
+	projectID = strings.TrimSpace(projectID)
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var rows []domain.ProjectContextItem
+	if err := db.WithContext(ctx).Where("project_id = ? AND id IN ?", projectID, ids).Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list selected project context: %w", err)
+	}
+	byID := make(map[string]domain.ProjectContextItem, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = row
+	}
+	out := make([]domain.ProjectContextItem, 0, len(ids))
+	for _, id := range ids {
+		row, ok := byID[strings.TrimSpace(id)]
+		if !ok {
+			return nil, domain.ErrNotFound
+		}
+		out = append(out, row)
+	}
+	return out, nil
 }
 
 // UpdateContext applies a partial patch to one context item.

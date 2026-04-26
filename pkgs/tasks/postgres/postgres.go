@@ -12,6 +12,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -80,6 +81,10 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.AppSettings{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
+	}
+	defaultProject := domain.DefaultProject(time.Now().UTC())
+	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&defaultProject).Error; err != nil {
+		return fmt.Errorf("seed default project: %w", err)
 	}
 	return nil
 }

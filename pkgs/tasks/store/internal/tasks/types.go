@@ -10,18 +10,19 @@ import (
 // store facade as store.CreateTaskInput so handler code stays
 // unchanged.
 type CreateInput struct {
-	ID               string
-	DraftID          string
-	Title            string
-	InitialPrompt    string
-	Status           domain.Status
-	Priority         domain.Priority
-	TaskType         domain.TaskType
-	ProjectID        *string
-	ParentID         *string
-	ChecklistInherit bool
-	Runner           string
-	CursorModel      string
+	ID                    string
+	DraftID               string
+	Title                 string
+	InitialPrompt         string
+	Status                domain.Status
+	Priority              domain.Priority
+	TaskType              domain.TaskType
+	ProjectID             *string
+	ProjectContextItemIDs []string
+	ParentID              *string
+	ChecklistInherit      bool
+	Runner                string
+	CursorModel           string
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
 	// until the instant has passed (UTC).
 	PickupNotBefore *time.Time
@@ -48,14 +49,15 @@ type PickupNotBeforePatch struct {
 // optional; a nil pointer means "do not change". Re-aliased by the
 // public store facade as store.UpdateTaskInput.
 type UpdateInput struct {
-	Title            *string
-	InitialPrompt    *string
-	Status           *domain.Status
-	Priority         *domain.Priority
-	TaskType         *domain.TaskType
-	Project          *ProjectFieldPatch
-	Parent           *ParentFieldPatch
-	ChecklistInherit *bool
+	Title                 *string
+	InitialPrompt         *string
+	Status                *domain.Status
+	Priority              *domain.Priority
+	TaskType              *domain.TaskType
+	Project               *ProjectFieldPatch
+	ProjectContextItemIDs *[]string
+	Parent                *ParentFieldPatch
+	ChecklistInherit      *bool
 	// PickupNotBefore mutates tasks.pickup_not_before when non-nil.
 	// Clear true sets the column to NULL (the task is no longer
 	// scheduled and will be picked up as soon as the global

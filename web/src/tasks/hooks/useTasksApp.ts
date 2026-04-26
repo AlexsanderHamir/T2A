@@ -43,6 +43,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
   const [editProjectID, setEditProjectID] = useState("");
+  const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
   const [editCursorModel, setEditCursorModel] = useState("");
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
   const [changeModelTask, setChangeModelTask] = useState<Task | null>(null);
@@ -179,6 +180,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditStatus(t.status);
     setEditChecklistInherit(t.checklist_inherit === true);
     setEditProjectID(t.project_id ?? "");
+    setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
     setEditCursorModel(t.cursor_model ?? "");
     setEditTitleRequiredError(null);
   }
@@ -212,6 +214,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       task_type: t.task_type ?? DEFAULT_NEW_TASK_TYPE,
       checklist_inherit: t.checklist_inherit === true,
       project_id: t.project_id ?? null,
+      project_context_item_ids: t.project_context_item_ids ?? [],
       cursor_model: changeModelDraft.trim(),
     });
   }
@@ -233,6 +236,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       task_type: editTaskType,
       checklist_inherit: editChecklistInherit,
       project_id: editProjectID.trim() || null,
+      project_context_item_ids: editProjectContextItemIDs,
       cursor_model: editCursorModel.trim(),
     });
   }
@@ -282,6 +286,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditChecklistInherit,
     editProjectID,
     setEditProjectID,
+    editProjectContextItemIDs,
+    setEditProjectContextItemIDs,
     editCursorModel,
     setEditCursorModel,
     changeModelTask,

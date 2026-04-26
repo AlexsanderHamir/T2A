@@ -7,15 +7,17 @@ import (
 )
 
 type Task struct {
-	ID               string   `json:"id" gorm:"primaryKey"`
-	Title            string   `json:"title" gorm:"not null"`
-	InitialPrompt    string   `json:"initial_prompt" gorm:"type:text;not null"`
-	Status           Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
-	Priority         Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
-	TaskType         TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
-	ProjectID        *string  `json:"project_id,omitempty" gorm:"index"`
-	ParentID         *string  `json:"parent_id,omitempty" gorm:"index"`
-	ChecklistInherit bool     `json:"checklist_inherit" gorm:"not null;default:false"`
+	ID            string   `json:"id" gorm:"primaryKey"`
+	Title         string   `json:"title" gorm:"not null"`
+	InitialPrompt string   `json:"initial_prompt" gorm:"type:text;not null"`
+	Status        Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed')"`
+	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
+	TaskType      TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
+	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
+	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
+	ProjectContextItemIDs []string `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
+	ParentID              *string  `json:"parent_id,omitempty" gorm:"index"`
+	ChecklistInherit      bool     `json:"checklist_inherit" gorm:"not null;default:false"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
 	// create time from the request or app defaults; must match the worker's
 	// configured runner when the task runs.

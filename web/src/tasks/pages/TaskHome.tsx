@@ -5,7 +5,7 @@ import { TaskCreateModal } from "../components/task-create-modal";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useAppTimezone } from "@/shared/time/appTimezone";
-import { ProjectSelect, useProjects } from "@/projects";
+import { ProjectContextPicker, ProjectSelect, useProjects } from "@/projects";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
@@ -131,14 +131,25 @@ export function TaskHome({ app }: Props) {
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
           projectAssignment={
-            <ProjectSelect
-              id="task-create-project"
-              value={app.newProjectID}
-              projects={projects.data?.projects ?? []}
-              loading={projects.isLoading}
-              disabled={app.saving}
-              onChange={app.setNewProjectID}
-            />
+            <>
+              <ProjectSelect
+                id="task-create-project"
+                value={app.newProjectID}
+                projects={projects.data?.projects ?? []}
+                loading={projects.isLoading}
+                disabled={app.saving}
+                onChange={(projectId) => {
+                  app.setNewProjectID(projectId);
+                  app.setNewProjectContextItemIDs([]);
+                }}
+              />
+              <ProjectContextPicker
+                projectId={app.newProjectID}
+                selectedIds={app.newProjectContextItemIDs}
+                disabled={app.saving}
+                onChange={app.setNewProjectContextItemIDs}
+              />
+            </>
           }
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}

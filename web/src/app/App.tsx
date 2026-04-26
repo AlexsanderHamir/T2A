@@ -15,6 +15,7 @@ import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { SettingsPage } from "@/settings";
 import {
   ProjectDetailPage,
+  ProjectContextPicker,
   ProjectListPage,
   ProjectSelect,
   useProjects,
@@ -150,14 +151,25 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               cursorModel={app.editCursorModel}
               onCursorModelChange={app.setEditCursorModel}
               projectAssignment={
-                <ProjectSelect
-                  id="task-edit-project"
-                  value={app.editProjectID}
-                  projects={projects.data?.projects ?? []}
-                  loading={projects.isLoading}
-                  disabled={app.saving}
-                  onChange={app.setEditProjectID}
-                />
+                <>
+                  <ProjectSelect
+                    id="task-edit-project"
+                    value={app.editProjectID}
+                    projects={projects.data?.projects ?? []}
+                    loading={projects.isLoading}
+                    disabled={app.saving}
+                    onChange={(projectId) => {
+                      app.setEditProjectID(projectId);
+                      app.setEditProjectContextItemIDs([]);
+                    }}
+                  />
+                  <ProjectContextPicker
+                    projectId={app.editProjectID}
+                    selectedIds={app.editProjectContextItemIDs}
+                    disabled={app.saving}
+                    onChange={app.setEditProjectContextItemIDs}
+                  />
+                </>
               }
               canInheritChecklist={Boolean(app.editing.parent_id)}
               saving={app.saving}

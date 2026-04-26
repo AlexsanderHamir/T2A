@@ -39,6 +39,8 @@ export type Task = {
   pickup_not_before?: string;
   /** Present when this task belongs to a long-lived project context. */
   project_id?: string;
+  /** User-selected project context items passed to agent runs for this task. */
+  project_context_item_ids?: string[];
   /** Present when this task is nested under another (GET /tasks tree). */
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */

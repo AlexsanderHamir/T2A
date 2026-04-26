@@ -26,6 +26,7 @@ export type TaskPatchInput = {
   task_type: TaskType;
   checklist_inherit: boolean;
   project_id?: string | null;
+  project_context_item_ids?: string[];
   /** Per-task `cursor-agent --model` override; empty string clears override. */
   cursor_model: string;
 };
@@ -84,6 +85,10 @@ function patchTaskInList(
             patch.project_id === undefined
               ? t.project_id
               : patch.project_id ?? undefined,
+          project_context_item_ids:
+            patch.project_context_item_ids === undefined
+              ? t.project_context_item_ids
+              : patch.project_context_item_ids,
           cursor_model: patch.cursor_model,
         };
       }
@@ -132,6 +137,7 @@ export function useTaskPatchFlow(opts: {
         task_type: input.task_type,
         checklist_inherit: input.checklist_inherit,
         project_id: input.project_id,
+        project_context_item_ids: input.project_context_item_ids,
         cursor_model: input.cursor_model,
       }),
     onMutate: async (input) => {
@@ -167,6 +173,10 @@ export function useTaskPatchFlow(opts: {
             input.project_id === undefined
               ? detailPrev.project_id
               : input.project_id ?? undefined,
+          project_context_item_ids:
+            input.project_context_item_ids === undefined
+              ? detailPrev.project_context_item_ids
+              : input.project_context_item_ids,
           cursor_model: input.cursor_model,
         });
       }

@@ -1,5 +1,7 @@
 export type ProjectStatus = "active" | "archived";
 
+export const DEFAULT_PROJECT_ID = "00000000-0000-4000-8000-000000000001";
+
 export type ProjectContextKind = "note" | "decision" | "constraint" | "handoff";
 
 export type Project = {

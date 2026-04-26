@@ -348,6 +348,89 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 			t.Fatalf("publish[%d] = %+v, want task=%s cycle=%s", i, c, tsk.ID, cycle.ID)
 		}
 	}
+	runnerCalls := r.Calls()
+	if len(runnerCalls) != 1 || runnerCalls[0].Prompt != "do the thing" {
+		t.Fatalf("runner prompt for projectless task = %#v", runnerCalls)
+	}
+	if _, err := h.store.GetTaskContextSnapshotForCycle(bg, cycle.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("projectless snapshot err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	project, err := h.store.CreateProject(ctx, store.CreateProjectInput{
+		Name:           "Moat",
+		ContextSummary: "Use user-selected shared memory only.",
+	})
+	if err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	selected, err := h.store.CreateProjectContext(ctx, project.ID, store.CreateProjectContextInput{
+		Kind:      domain.ProjectContextKindDecision,
+		Title:     "Decision",
+		Body:      "The user chose this item.",
+		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create selected context: %v", err)
+	}
+	unselected, err := h.store.CreateProjectContext(ctx, project.ID, store.CreateProjectContextInput{
+		Kind:      domain.ProjectContextKindNote,
+		Title:     "Unselected",
+		Body:      "The worker must not include this.",
+		CreatedBy: domain.ActorUser,
+	})
+	if err != nil {
+		t.Fatalf("create unselected context: %v", err)
+	}
+	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
+		Title:                 "with selected context",
+		InitialPrompt:         "do the selected thing",
+		Status:                domain.StatusReady,
+		Priority:              domain.PriorityMedium,
+		ProjectID:             &project.ID,
+		ProjectContextItemIDs: []string{selected.ID},
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	r := runnerfake.New()
+	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "all green",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+
+	_, done := h.startWorker(ctx, r, worker.Options{})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	calls := r.Calls()
+	if len(calls) != 1 {
+		t.Fatalf("runner calls = %d, want 1", len(calls))
+	}
+	if !strings.Contains(calls[0].Prompt, "The user chose this item.") {
+		t.Fatalf("runner prompt missing selected context:\n%s", calls[0].Prompt)
+	}
+	if strings.Contains(calls[0].Prompt, unselected.Body) {
+		t.Fatalf("runner prompt included unselected context:\n%s", calls[0].Prompt)
+	}
+	cycle := assertCycleStatus(t, h.store, tsk.ID, 1, domain.CycleStatusSucceeded)
+	snapshot, err := h.store.GetTaskContextSnapshotForCycle(context.Background(), cycle.ID)
+	if err != nil {
+		t.Fatalf("get context snapshot: %v", err)
+	}
+	if snapshot.ProjectID != project.ID || !strings.Contains(snapshot.RenderedContext, selected.Body) {
+		t.Fatalf("snapshot = %#v", snapshot)
+	}
 }
 
 // TestWorker_StartCycle_recordsRunnerModelAttribution covers Phase

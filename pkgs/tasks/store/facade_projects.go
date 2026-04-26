@@ -65,6 +65,12 @@ func (s *Store) ListProjectContext(ctx context.Context, projectID string, includ
 	return projects.ListContext(ctx, s.db, projectID, includeUnpinned, limit)
 }
 
+// ListProjectContextByIDs returns selected context items in caller order.
+func (s *Store) ListProjectContextByIDs(ctx context.Context, projectID string, ids []string) ([]domain.ProjectContextItem, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectContextByIDs")
+	return projects.ListContextByIDs(ctx, s.db, projectID, ids)
+}
+
 // UpdateProjectContext applies a partial patch to one project context item.
 func (s *Store) UpdateProjectContext(ctx context.Context, projectID, itemID string, input UpdateProjectContextInput) (domain.ProjectContextItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateProjectContext")

@@ -385,6 +385,11 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   if (projectID !== undefined) {
     base.project_id = projectID;
   }
+  if (Array.isArray(value.project_context_item_ids)) {
+    base.project_context_item_ids = value.project_context_item_ids.map((raw, i) =>
+      parseNonEmptyString(raw, `project_context_item_ids[${i}]`),
+    );
+  }
   const pid = parseOptionalParentId(value.parent_id, "parent_id");
   if (pid !== undefined) {
     base.parent_id = pid;

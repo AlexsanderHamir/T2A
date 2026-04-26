@@ -268,6 +268,7 @@ describe("createTask", () => {
       status: "running",
       priority: "medium",
       draft_id: "draft-xyz",
+      project_context_item_ids: ["ctx-1", "ctx-2"],
     });
 
     expect(spy).toHaveBeenCalledWith(
@@ -287,6 +288,7 @@ describe("createTask", () => {
       status: "running",
       priority: "medium",
       draft_id: "draft-xyz",
+      project_context_item_ids: ["ctx-1", "ctx-2"],
     });
   });
 
@@ -392,7 +394,11 @@ describe("patchTask", () => {
       ),
     );
 
-    await patchTask("id1", { title: "B", status: "done" });
+    await patchTask("id1", {
+      title: "B",
+      status: "done",
+      project_context_item_ids: ["ctx-1"],
+    });
 
     expect(spy).toHaveBeenCalledTimes(1);
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
@@ -401,6 +407,7 @@ describe("patchTask", () => {
     expect(JSON.parse(String(init.body))).toEqual({
       title: "B",
       status: "done",
+      project_context_item_ids: ["ctx-1"],
     });
   });
 });

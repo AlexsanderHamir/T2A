@@ -12,6 +12,7 @@ V1 is deliberately small:
 - **One runner.** Cursor CLI through `pkgs/agents/runner/cursor`. The `pkgs/agents/runner` interface exists so Claude Code, Codex, etc. land as one new file each in V2.
 - **One attempt per task.** No retry/backoff; failure is terminal. V2 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) owns the retry policy.
 - **One execute phase per cycle.** The `diagnose → execute → verify → persist` decomposition lives in the substrate's state machine but the worker only writes a `skipped` `diagnose` (to satisfy `domain.ValidPhaseTransition`) and a real `execute` phase. Per-phase decomposition is V2.
+- **Explicit project context only.** The worker never chooses context items on its own. It injects project context only when the task has `project_context_item_ids`, loads exactly those selected rows from the task's `project_id`, snapshots the rendered bundle, and prepends that bundle to `runner.Request.Prompt`. A projectless task or a task with no selected ids receives the original `initial_prompt` unchanged.
 
 The worker is **enabled by default** as soon as a workspace repo is configured. Operators control everything from the SPA Settings page (gear icon → `/settings`), persisted in the singleton `app_settings` row — see [SETTINGS.md](./SETTINGS.md). When the page disables the worker (or the workspace repo is unset / the runner probe fails), `taskapi` behaves as it did before V1: the queue + reconcile loop run, but no worker dequeues and no cursor binary is required.
 
@@ -91,6 +92,9 @@ sequenceDiagram
   W->>N: PublishCycleChange × 2
   W->>S: StartPhase(cycle, execute)
   W->>N: PublishCycleChange
+  opt selected project context
+    W->>S: ListProjectContextByIDs + CreateTaskContextSnapshot
+  end
   W->>R: Run(ctx, Request{TaskID, AttemptSeq, Phase=execute, Prompt, WorkingDir, Timeout})
   R-->>W: (Result, error)
   W->>S: CompletePhase(execute, succeeded|failed, summary, details)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -326,13 +327,18 @@ func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycl
 		"run_timeout_ns", int64(w.options.RunTimeout))
 	runCtx, cancel := withOptionalRunTimeout(parentCtx, w.options.RunTimeout)
 	defer cancel()
+	projectContext, err := w.selectedProjectContext(runCtx, task, cycle)
+	if err != nil {
+		details, _ := json.Marshal(map[string]string{"error": err.Error()})
+		return runner.NewResult(domain.PhaseStatusFailed, "project context selection failed", details, ""), fmt.Errorf("project context: %w: %v", runner.ErrInvalidOutput, err)
+	}
 	w.setCurrentRunCancel(cancel)
 	defer w.setCurrentRunCancel(nil)
 	return w.runner.Run(runCtx, runner.Request{
 		TaskID:      task.ID,
 		AttemptSeq:  cycle.AttemptSeq,
 		Phase:       domain.PhaseExecute,
-		Prompt:      task.InitialPrompt,
+		Prompt:      promptWithProjectContext(task.InitialPrompt, projectContext.Text),
 		WorkingDir:  w.options.WorkingDir,
 		Timeout:     w.options.RunTimeout,
 		CursorModel: task.CursorModel,

@@ -75,7 +75,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
@@ -217,18 +217,19 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		runner = domain.DefaultRunner
 	}
 	t = &domain.Task{
-		ID:               id,
-		Title:            title,
-		InitialPrompt:    in.InitialPrompt,
-		Status:           st,
-		Priority:         pr,
-		TaskType:         tt,
-		ProjectID:        projectID,
-		ParentID:         parentID,
-		ChecklistInherit: in.ChecklistInherit,
-		Runner:           runner,
-		CursorModel:      in.CursorModel,
-		PickupNotBefore:  in.PickupNotBefore,
+		ID:                    id,
+		Title:                 title,
+		InitialPrompt:         in.InitialPrompt,
+		Status:                st,
+		Priority:              pr,
+		TaskType:              tt,
+		ProjectID:             projectID,
+		ProjectContextItemIDs: nil,
+		ParentID:              parentID,
+		ChecklistInherit:      in.ChecklistInherit,
+		Runner:                runner,
+		CursorModel:           in.CursorModel,
+		PickupNotBefore:       in.PickupNotBefore,
 	}
 	return t, title, parentID, st, nil
 }
@@ -253,6 +254,19 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 			return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
 		}
 	}
+	contextIDs, err := normalizeProjectContextItemIDs(in.ProjectContextItemIDs)
+	if err != nil {
+		return err
+	}
+	if len(contextIDs) > 0 {
+		if t.ProjectID == nil || strings.TrimSpace(*t.ProjectID) == "" {
+			return fmt.Errorf("%w: project_id required for project context selection", domain.ErrInvalidInput)
+		}
+		if err := validateProjectContextSelection(tx, *t.ProjectID, contextIDs); err != nil {
+			return err
+		}
+	}
+	t.ProjectContextItemIDs = contextIDs
 	if err := tx.Create(t).Error; err != nil {
 		if isDuplicatePrimaryKey(err) {
 			return fmt.Errorf("%w: task id already exists", domain.ErrConflict)

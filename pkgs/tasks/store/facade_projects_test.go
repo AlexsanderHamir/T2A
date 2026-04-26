@@ -58,15 +58,15 @@ func TestStore_ProjectCRUD_roundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list active projects: %v", err)
 	}
-	if len(active) != 0 {
-		t.Fatalf("active projects = %#v, want none", active)
+	if len(active) != 1 || active[0].ID != domain.DefaultProjectID {
+		t.Fatalf("active projects = %#v, want default only", active)
 	}
 
 	all, err := s.ListProjects(ctx, true, 10)
 	if err != nil {
 		t.Fatalf("list all projects: %v", err)
 	}
-	if len(all) != 1 || all[0].ID != project.ID {
+	if len(all) != 2 {
 		t.Fatalf("all projects = %#v", all)
 	}
 
@@ -76,6 +76,21 @@ func TestStore_ProjectCRUD_roundtrip(t *testing.T) {
 	_, err = s.GetProject(ctx, project.ID)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("get deleted err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestStore_DefaultProject_seededAndProtected(t *testing.T) {
+	s, ctx := newProjectStore(t)
+
+	project, err := s.GetProject(ctx, domain.DefaultProjectID)
+	if err != nil {
+		t.Fatalf("get default project: %v", err)
+	}
+	if project.Name == "" || project.Status != domain.ProjectStatusActive {
+		t.Fatalf("default project = %#v", project)
+	}
+	if err := s.DeleteProject(ctx, domain.DefaultProjectID); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("delete default err = %v, want ErrConflict", err)
 	}
 }
 

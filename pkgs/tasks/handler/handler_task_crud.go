@@ -64,19 +64,20 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
-		ID:               body.ID,
-		DraftID:          body.DraftID,
-		Title:            body.Title,
-		InitialPrompt:    body.InitialPrompt,
-		Status:           body.Status,
-		Priority:         body.Priority,
-		TaskType:         body.TaskType,
-		ProjectID:        body.ProjectID,
-		ParentID:         body.ParentID,
-		ChecklistInherit: inherit,
-		Runner:           runner,
-		CursorModel:      cursorModel,
-		PickupNotBefore:  pickupNotBefore,
+		ID:                    body.ID,
+		DraftID:               body.DraftID,
+		Title:                 body.Title,
+		InitialPrompt:         body.InitialPrompt,
+		Status:                body.Status,
+		Priority:              body.Priority,
+		TaskType:              body.TaskType,
+		ProjectID:             body.ProjectID,
+		ProjectContextItemIDs: body.ProjectContextItemIDs,
+		ParentID:              body.ParentID,
+		ChecklistInherit:      inherit,
+		Runner:                runner,
+		CursorModel:           cursorModel,
+		PickupNotBefore:       pickupNotBefore,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -169,15 +170,16 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	debugHTTPRequest(r, op, append(append([]any{}, "task_id", id), taskPatchInputFields(&body)...)...)
 	in := store.UpdateTaskInput{
-		Title:            body.Title,
-		InitialPrompt:    body.InitialPrompt,
-		Status:           body.Status,
-		Priority:         body.Priority,
-		TaskType:         body.TaskType,
-		Project:          projectFieldPatchToStore(body.ProjectID),
-		ChecklistInherit: body.ChecklistInherit,
-		PickupNotBefore:  pickupNotBeforePatchToStore(body.PickupNotBefore),
-		CursorModel:      body.CursorModel,
+		Title:                 body.Title,
+		InitialPrompt:         body.InitialPrompt,
+		Status:                body.Status,
+		Priority:              body.Priority,
+		TaskType:              body.TaskType,
+		Project:               projectFieldPatchToStore(body.ProjectID),
+		ProjectContextItemIDs: body.ProjectContextItemIDs,
+		ChecklistInherit:      body.ChecklistInherit,
+		PickupNotBefore:       pickupNotBeforePatchToStore(body.PickupNotBefore),
+		CursorModel:           body.CursorModel,
 	}
 	if body.ParentID.Defined {
 		if body.ParentID.Clear {

@@ -52,6 +52,7 @@ export function useTaskCreateFlow() {
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newProjectID, setNewProjectID] = useState("");
+  const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
   /**
    * Future pickup time for the new task as an RFC3339 UTC ISO
    * string, or `null` to mean "no schedule — pick up immediately
@@ -164,6 +165,7 @@ export function useTaskCreateFlow() {
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
     setNewProjectID("");
+    setNewProjectContextItemIDs([]);
     setNewSchedule(null);
     setNewChecklistItems([]);
     setPendingSubtasks([]);
@@ -249,6 +251,7 @@ export function useTaskCreateFlow() {
        */
       pickup_not_before: string | null;
       project_id: string;
+      project_context_item_ids: string[];
     }) => {
       const addChecklistItems = async (taskId: string, items: string[]) => {
         const rows = items.map((raw) => raw.trim()).filter(Boolean);
@@ -264,6 +267,9 @@ export function useTaskCreateFlow() {
         runner: input.runner,
         cursor_model: input.cursor_model,
         ...(input.project_id ? { project_id: input.project_id } : {}),
+        ...(input.project_context_item_ids.length > 0
+          ? { project_context_item_ids: input.project_context_item_ids }
+          : {}),
         ...(input.pickup_not_before !== null
           ? { pickup_not_before: input.pickup_not_before }
           : {}),
@@ -700,6 +706,7 @@ export function useTaskCreateFlow() {
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
       project_id: newProjectID.trim(),
+      project_context_item_ids: newProjectContextItemIDs,
       pickup_not_before: newSchedule,
     });
   }
@@ -943,6 +950,8 @@ export function useTaskCreateFlow() {
     setNewTaskCursorModel,
     newProjectID,
     setNewProjectID,
+    newProjectContextItemIDs,
+    setNewProjectContextItemIDs,
     newSchedule,
     setNewSchedule,
     newChecklistItems,

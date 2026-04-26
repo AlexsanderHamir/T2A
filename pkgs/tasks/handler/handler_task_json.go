@@ -11,18 +11,19 @@ import (
 )
 
 type taskCreateJSON struct {
-	ID               string          `json:"id"`
-	DraftID          string          `json:"draft_id"`
-	Title            string          `json:"title"`
-	InitialPrompt    string          `json:"initial_prompt"`
-	Status           domain.Status   `json:"status"`
-	Priority         domain.Priority `json:"priority"`
-	TaskType         domain.TaskType `json:"task_type"`
-	ProjectID        *string         `json:"project_id"`
-	ParentID         *string         `json:"parent_id"`
-	ChecklistInherit *bool           `json:"checklist_inherit"`
-	Runner           *string         `json:"runner"`
-	CursorModel      *string         `json:"cursor_model"`
+	ID                    string          `json:"id"`
+	DraftID               string          `json:"draft_id"`
+	Title                 string          `json:"title"`
+	InitialPrompt         string          `json:"initial_prompt"`
+	Status                domain.Status   `json:"status"`
+	Priority              domain.Priority `json:"priority"`
+	TaskType              domain.TaskType `json:"task_type"`
+	ProjectID             *string         `json:"project_id"`
+	ProjectContextItemIDs []string        `json:"project_context_item_ids"`
+	ParentID              *string         `json:"parent_id"`
+	ChecklistInherit      *bool           `json:"checklist_inherit"`
+	Runner                *string         `json:"runner"`
+	CursorModel           *string         `json:"cursor_model"`
 	// PickupNotBefore is an optional RFC3339 instant. When provided,
 	// the worker will not pick up the task until this time has passed
 	// (see docs/SCHEDULING.md). Omitted/null = no schedule = pick up
@@ -51,15 +52,16 @@ type taskDraftSaveJSON struct {
 }
 
 type taskPatchJSON struct {
-	Title            *string                   `json:"title"`
-	InitialPrompt    *string                   `json:"initial_prompt"`
-	Status           *domain.Status            `json:"status"`
-	Priority         *domain.Priority          `json:"priority"`
-	TaskType         *domain.TaskType          `json:"task_type"`
-	ProjectID        patchProjectField         `json:"project_id"`
-	ParentID         patchParentField          `json:"parent_id"`
-	ChecklistInherit *bool                     `json:"checklist_inherit"`
-	PickupNotBefore  patchPickupNotBeforeField `json:"pickup_not_before"`
+	Title                 *string                   `json:"title"`
+	InitialPrompt         *string                   `json:"initial_prompt"`
+	Status                *domain.Status            `json:"status"`
+	Priority              *domain.Priority          `json:"priority"`
+	TaskType              *domain.TaskType          `json:"task_type"`
+	ProjectID             patchProjectField         `json:"project_id"`
+	ProjectContextItemIDs *[]string                 `json:"project_context_item_ids"`
+	ParentID              patchParentField          `json:"parent_id"`
+	ChecklistInherit      *bool                     `json:"checklist_inherit"`
+	PickupNotBefore       patchPickupNotBeforeField `json:"pickup_not_before"`
 	// CursorModel sets tasks.cursor_model when the key is present (including
 	// the empty string, which clears per-task override). JSON null is decoded
 	// as nil and means "no change", same as omitting the key.

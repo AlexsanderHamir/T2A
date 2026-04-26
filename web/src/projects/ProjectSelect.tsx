@@ -1,4 +1,5 @@
 import type { Project } from "@/types";
+import { DEFAULT_PROJECT_ID } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 
 type Props = {
@@ -35,7 +36,9 @@ export function ProjectSelect({
         <option value="">No project</option>
         {activeProjects.map((project) => (
           <option key={project.id} value={project.id}>
-            {project.name}
+            {project.id === DEFAULT_PROJECT_ID
+              ? `${project.name} (default)`
+              : project.name}
           </option>
         ))}
       </select>
