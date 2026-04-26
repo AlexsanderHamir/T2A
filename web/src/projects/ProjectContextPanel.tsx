@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   createProjectContext,
   createProjectContextEdge,
@@ -12,7 +12,9 @@ import { EmptyState } from "@/shared/EmptyState";
 import {
   PROJECT_CONTEXT_KINDS,
   PROJECT_CONTEXT_RELATIONS,
+  type ProjectContextEdge,
   type ProjectContextKind,
+  type ProjectContextItem,
   type ProjectContextRelation,
 } from "@/types";
 import { useProjectContext } from "./hooks";
@@ -24,9 +26,14 @@ type Props = {
   projectId: string;
 };
 
+const EMPTY_CONTEXT_ITEMS: ProjectContextItem[] = [];
+const EMPTY_CONTEXT_EDGES: ProjectContextEdge[] = [];
+
 export function ProjectContextPanel({ projectId }: Props) {
   const queryClient = useQueryClient();
   const context = useProjectContext(projectId, { enabled: Boolean(projectId) });
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [connectionQuery, setConnectionQuery] = useState("");
   const createContextMutation = useMutation({
     mutationFn: (input: {
       kind: ProjectContextKind;
@@ -152,8 +159,37 @@ export function ProjectContextPanel({ projectId }: Props) {
     createEdgeMutation.error ??
     patchEdgeMutation.error ??
     deleteEdgeMutation.error;
-  const items = context.data?.items ?? [];
-  const edges = context.data?.edges ?? [];
+  const items = context.data?.items ?? EMPTY_CONTEXT_ITEMS;
+  const edges = context.data?.edges ?? EMPTY_CONTEXT_EDGES;
+  const itemTitleByID = useMemo(() => {
+    return new Map(items.map((item) => [item.id, item.title]));
+  }, [items]);
+  const filteredItems = useMemo(() => {
+    const query = nodeQuery.trim().toLowerCase();
+    if (!query) return items;
+    return items.filter((item) =>
+      [item.title, item.body, item.kind]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [items, nodeQuery]);
+  const filteredEdges = useMemo(() => {
+    const query = connectionQuery.trim().toLowerCase();
+    if (!query) return edges;
+    return edges.filter((edge) =>
+      [
+        itemTitleByID.get(edge.source_context_id) ?? "",
+        itemTitleByID.get(edge.target_context_id) ?? "",
+        edge.relation,
+        edge.note,
+        String(edge.strength),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [connectionQuery, edges, itemTitleByID]);
 
   return (
     <section className="task-attempt-section">
@@ -323,20 +359,35 @@ export function ProjectContextPanel({ projectId }: Props) {
               </div>
               <span>{items.length}</span>
             </div>
-            <div className="project-context-node-grid">
-              {items.map((item) => (
-                <ProjectContextNodeCard
-                  key={item.id}
-                  item={item}
-                  saving={patchContextMutation.isPending}
-                  deleting={deleteContextMutation.isPending}
-                  onSave={(id, patch) =>
-                    patchContextMutation.mutate({ id, ...patch })
-                  }
-                  onDelete={(id) => deleteContextMutation.mutate(id)}
-                />
-              ))}
-            </div>
+            <label className="project-context-search">
+              <span>Search nodes</span>
+              <input
+                value={nodeQuery}
+                onChange={(event) => setNodeQuery(event.target.value)}
+                placeholder="Filter by title, body, or kind"
+              />
+            </label>
+            {filteredItems.length === 0 ? (
+              <div className="project-context-empty-card">
+                <strong>No matching nodes</strong>
+                <p>Try a different search term or clear the filter.</p>
+              </div>
+            ) : (
+              <div className="project-context-node-grid">
+                {filteredItems.map((item) => (
+                  <ProjectContextNodeCard
+                    key={item.id}
+                    item={item}
+                    saving={patchContextMutation.isPending}
+                    deleting={deleteContextMutation.isPending}
+                    onSave={(id, patch) =>
+                      patchContextMutation.mutate({ id, ...patch })
+                    }
+                    onDelete={(id) => deleteContextMutation.mutate(id)}
+                  />
+                ))}
+              </div>
+            )}
           </section>
           <section className="project-context-graph__section">
             <div className="project-context-graph__section-heading">
@@ -346,6 +397,14 @@ export function ProjectContextPanel({ projectId }: Props) {
               </div>
               <span>{edges.length}</span>
             </div>
+            <label className="project-context-search">
+              <span>Search connections</span>
+              <input
+                value={connectionQuery}
+                onChange={(event) => setConnectionQuery(event.target.value)}
+                placeholder="Filter by node, relation, note, or strength"
+              />
+            </label>
             {edges.length === 0 ? (
               <div className="project-context-empty-card">
                 <strong>No connections yet</strong>
@@ -354,9 +413,14 @@ export function ProjectContextPanel({ projectId }: Props) {
                   depend on each other.
                 </p>
               </div>
+            ) : filteredEdges.length === 0 ? (
+              <div className="project-context-empty-card">
+                <strong>No matching connections</strong>
+                <p>Try a different search term or clear the filter.</p>
+              </div>
             ) : (
               <div className="project-context-edge-list">
-                {edges.map((edge) => (
+                {filteredEdges.map((edge) => (
                   <ProjectContextEdgeEditor
                     key={edge.id}
                     edge={edge}

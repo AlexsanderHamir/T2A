@@ -307,15 +307,20 @@
 
 .project-context-graph {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.82fr);
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
 
 .project-context-graph__section {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
+  align-content: start;
+  padding: var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-subtle) 34%, var(--bg-elevated));
 }
 
 .project-context-graph__section-heading {
@@ -350,40 +355,62 @@
   font-weight: 800;
 }
 
+.project-context-search {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.project-context-search span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+}
+
+.project-context-search input {
+  min-height: 2.5rem;
+}
+
 .project-context-node-grid {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  max-height: 32rem;
+  overflow: auto;
+  padding-right: var(--space-1);
 }
 
 .project-context-node-card {
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-xl);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg-elevated) 94%, var(--brand-muted)),
-      var(--bg-elevated)
-    );
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
   transition:
+    background-color 150ms var(--ease-default),
     border-color 150ms var(--ease-default),
     box-shadow 150ms var(--ease-default);
 }
 
 .project-context-node-card:hover {
   border-color: color-mix(in srgb, var(--accent, var(--brand)) 32%, var(--border-hairline));
-  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--brand-muted));
+  box-shadow: var(--shadow-xs);
 }
 
-.project-context-node-card__header {
+.project-context-node-card__title-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
+  gap: var(--space-3);
+  align-items: start;
   justify-content: space-between;
+}
+
+.project-context-node-card__badges {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: end;
 }
 
 .project-context-node-card__kind,
@@ -423,17 +450,22 @@
 .project-context-node-card__body p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .project-context-node-card details {
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .project-context-node-card summary {
   cursor: pointer;
   color: var(--accent, var(--brand));
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
@@ -461,16 +493,19 @@
 
 .project-context-edge-list {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  max-height: 32rem;
+  overflow: auto;
+  padding-right: var(--space-1);
 }
 
 .project-context-edge {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg-subtle) 52%, var(--bg-elevated));
+  background: var(--bg-elevated);
 }
 
 .project-context-edge__summary {
