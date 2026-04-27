@@ -24,6 +24,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,
+  DEFAULT_PROJECT_ID,
   type Priority,
   type PriorityChoice,
   type Status,
@@ -51,7 +52,7 @@ export function useTaskCreateFlow() {
   const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
-  const [newProjectID, setNewProjectID] = useState("");
+  const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
   const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
   /**
    * Future pickup time for the new task as an RFC3339 UTC ISO

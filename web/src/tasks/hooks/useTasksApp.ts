@@ -9,6 +9,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,
+  DEFAULT_PROJECT_ID,
   type Priority,
   type Status,
   type Task,
@@ -42,7 +43,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editTaskType, setEditTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
-  const [editProjectID, setEditProjectID] = useState("");
+  const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
   const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
   const [editCursorModel, setEditCursorModel] = useState("");
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
@@ -179,7 +180,7 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditTaskType(t.task_type ?? DEFAULT_NEW_TASK_TYPE);
     setEditStatus(t.status);
     setEditChecklistInherit(t.checklist_inherit === true);
-    setEditProjectID(t.project_id ?? "");
+    setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
     setEditCursorModel(t.cursor_model ?? "");
     setEditTitleRequiredError(null);
