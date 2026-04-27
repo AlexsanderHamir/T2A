@@ -147,18 +147,35 @@ describe("TaskCycleDetailPage", () => {
         },
       });
     });
+    nowSpy.mockReturnValue(Date.parse("2026-04-25T12:00:40.000Z"));
+    act(() => {
+      pushAgentRunProgress({
+        taskId: "t1",
+        cycleId: "cyc-1",
+        phaseSeq: 2,
+        progress: {
+          kind: "tool_call",
+          subtype: "started",
+          message: "Searching files *.go in worker",
+        },
+      });
+    });
     expect(
       screen.getByText(/live updates for this running phase/i),
     ).toBeInTheDocument();
     expect(screen.getByText("Still working live")).toBeInTheDocument();
     expect(screen.getByText("Newest live update")).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/received at/i)).toHaveLength(2);
+    expect(screen.getByText("Searching files *.go in worker")).toBeInTheDocument();
+    expect(screen.queryByText("tool_call")).toBeNull();
+    expect(screen.getAllByLabelText(/received at/i)).toHaveLength(3);
     const liveList = screen.getByRole("list", { name: /recent live updates/i });
     const liveItems = within(liveList).getAllByRole("listitem");
     expect(liveItems[0]).toHaveTextContent(/waiting for the next update/i);
     expect(liveItems[0]).toHaveTextContent(/last just now/i);
-    expect(liveItems[1]).toHaveTextContent("Newest live update");
-    expect(liveItems[2]).toHaveTextContent("Still working live");
+    expect(liveItems[1]).toHaveTextContent("Tool started");
+    expect(liveItems[1]).toHaveTextContent("Searching files *.go in worker");
+    expect(liveItems[2]).toHaveTextContent("Newest live update");
+    expect(liveItems[3]).toHaveTextContent("Still working live");
 
     const streamSection = screen.getByRole("heading", {
       name: /cursor events/i,

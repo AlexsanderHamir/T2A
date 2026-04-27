@@ -493,8 +493,20 @@ function formatAttemptStartedParts(startedAt: string): {
 }
 
 function streamKindLabel(kind: string, subtype?: string): string {
-  if (kind === "tool") return subtype ? `Tool: ${subtype}` : "Tool";
-  if (kind === "message") return "Agent note";
+  if (kind === "tool_call" || kind === "tool") {
+    if (subtype === "completed" || subtype === "success" || subtype === "done") {
+      return "Tool finished";
+    }
+    if (subtype === "failed" || subtype === "error") {
+      return "Tool failed";
+    }
+    if (subtype === "started" || subtype === "start") {
+      return "Tool started";
+    }
+    return "Tool";
+  }
+  if (kind === "assistant" || kind === "message") return "Agent";
+  if (kind === "system") return "Session";
   if (kind === "error") return "Error";
   return kind.replace(/_/g, " ");
 }
