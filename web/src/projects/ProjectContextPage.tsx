@@ -27,15 +27,6 @@ export function ProjectContextPage() {
 
   return (
     <section className="panel task-detail-panel project-page project-context-page">
-      <div className="task-detail-top-actions">
-        <Link
-          to={`/projects/${encodeURIComponent(projectId)}`}
-          className="back-link"
-        >
-          ← Back to project
-        </Link>
-      </div>
-
       {project.isLoading ? <p className="muted">Loading project...</p> : null}
       {project.error ? (
         <div className="err" role="alert">
@@ -44,15 +35,18 @@ export function ProjectContextPage() {
       ) : null}
       {project.data ? (
         <>
-          <div className="task-detail-heading-row">
-            <div>
-              <p className="eyebrow">Project memory</p>
+          <header className="project-context-hero">
+            <Link
+              to={`/projects/${encodeURIComponent(projectId)}`}
+              className="back-link project-context-back-link"
+            >
+              <span aria-hidden="true">‹</span>
+              Back to project
+            </Link>
+            <div className="project-context-hero__project" aria-label="Current project">
               <h2>{project.data.name}</h2>
             </div>
-            <span className="cell-pill cell-pill--runtime">
-              {project.data.status}
-            </span>
-          </div>
+          </header>
           <ProjectContextPanel projectId={projectId} />
         </>
       ) : null}

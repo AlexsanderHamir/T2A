@@ -185,18 +185,24 @@ export function ProjectContextPanel({ projectId }: Props) {
   const edges = context.data?.edges ?? EMPTY_CONTEXT_EDGES;
 
   return (
-    <section className="task-attempt-section">
-      <div className="project-context-panel-header">
-        <div>
-          <h3>Project context</h3>
-          <p className="muted">
-            Add project-owned memory, then inspect it as a list or graph.
-          </p>
-        </div>
-        <button type="button" onClick={() => setAddNodeOpen(true)}>
-          Add node
-        </button>
-      </div>
+    <section className="task-attempt-section project-context-workspace">
+      <ol className="project-context-guide" aria-label="Project memory workflow">
+        <li>
+          <span>1</span>
+          <strong>Capture</strong>
+          <p>Facts, decisions, constraints.</p>
+        </li>
+        <li>
+          <span>2</span>
+          <strong>Connect</strong>
+          <p>Only when a relationship matters.</p>
+        </li>
+        <li>
+          <span>3</span>
+          <strong>Reuse</strong>
+          <p>Select memory per task.</p>
+        </li>
+      </ol>
       {addNodeOpen ? (
         <Modal
           onClose={() => setAddNodeOpen(false)}
@@ -215,7 +221,7 @@ export function ProjectContextPanel({ projectId }: Props) {
                 <h2 id="project-context-add-node-title">Add memory node</h2>
                 <p id="project-context-add-node-desc" className="muted">
                   Nodes are project-owned facts, decisions, constraints, or
-                  handoff notes. Add them anytime as the project evolves.
+                  custom context. All fields are required.
                 </p>
               </div>
             </div>
@@ -224,13 +230,21 @@ export function ProjectContextPanel({ projectId }: Props) {
               disabled={createContextMutation.isPending}
             />
             <div className="field grow">
-              <label htmlFor="project-context-title">Title</label>
-              <input id="project-context-title" name="title" required />
+              <FieldLabel htmlFor="project-context-title" requirement="required">
+                Title
+              </FieldLabel>
+              <input
+                id="project-context-title"
+                name="title"
+                required
+                aria-required="true"
+              />
             </div>
             <div className="field grow">
               <FieldLabel
                 id="project-context-body-label"
                 htmlFor="project-context-body"
+                requirement="required"
               >
                 Body
               </FieldLabel>
@@ -265,107 +279,100 @@ export function ProjectContextPanel({ projectId }: Props) {
         <div className="project-context-ready-card">
           <span className="project-context-ready-card__step">Next</span>
           <div>
-            <strong>Add two nodes to unlock connections</strong>
-            <p>
-              Connections describe how project memory relates. Once this project
-              has at least two nodes, you can connect them with a relation and
-              strength.
-            </p>
+            <strong>Add two memories to link them</strong>
+            <p>Links are optional. Use them only when the relationship helps a task.</p>
           </div>
         </div>
       ) : (
-        <form className="project-context-form" onSubmit={submitEdge}>
-          <div className="project-context-form__heading">
-            <div>
-              <strong>Add connection</strong>
-              <p className="muted">
-                Connect two project nodes with an explicit relationship. Tasks only
-                receive connections between nodes the user selected.
-              </p>
-            </div>
-          </div>
-          <div className="project-context-edge-grid">
-            <div className="field grow">
-              <label htmlFor="project-context-edge-source">From node</label>
-              <select
-                id="project-context-edge-source"
-                name="source_context_id"
-                required
-              >
-                <option value="">Select source</option>
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field grow">
-              <label htmlFor="project-context-edge-target">To node</label>
-              <select
-                id="project-context-edge-target"
-                name="target_context_id"
-                required
-              >
-                <option value="">Select target</option>
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="project-context-edge-relation">Relation</label>
-              <select
-                id="project-context-edge-relation"
-                name="relation"
-                defaultValue="related"
-              >
-                {PROJECT_CONTEXT_RELATIONS.map((relation) => (
-                  <option key={relation} value={relation}>
-                    {relation.replace("_", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="project-context-edge-strength">Strength</label>
-              <select
-                id="project-context-edge-strength"
-                name="strength"
-                defaultValue="3"
-              >
-                {[1, 2, 3, 4, 5].map((strength) => (
-                  <option key={strength} value={strength}>
-                    {strength}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field grow project-context-edge-note">
-              <FieldLabel
-                id="project-context-edge-note-label"
-                htmlFor="project-context-edge-note"
-              >
-                Note
-              </FieldLabel>
-              <div className="project-context-editor-shell">
-                <RichPromptEditor
-                  key={newEdgeEditorKey}
-                  id="project-context-edge-note"
-                  value={newEdgeNote}
-                  onChange={setNewEdgeNote}
-                  disabled={createEdgeMutation.isPending}
-                  placeholder="Why does this connection matter? Type @ to reference a repo file."
-                />
+        <details className="project-context-disclosure">
+          <summary>
+            <span>Add connection</span>
+            <small>Optional</small>
+          </summary>
+          <form className="project-context-form" onSubmit={submitEdge}>
+            <div className="project-context-edge-grid">
+              <div className="field grow">
+                <label htmlFor="project-context-edge-source">From</label>
+                <select
+                  id="project-context-edge-source"
+                  name="source_context_id"
+                  required
+                >
+                  <option value="">Select memory</option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field grow">
+                <label htmlFor="project-context-edge-target">To</label>
+                <select
+                  id="project-context-edge-target"
+                  name="target_context_id"
+                  required
+                >
+                  <option value="">Select memory</option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="project-context-edge-relation">Relation</label>
+                <select
+                  id="project-context-edge-relation"
+                  name="relation"
+                  defaultValue="related"
+                >
+                  {PROJECT_CONTEXT_RELATIONS.map((relation) => (
+                    <option key={relation} value={relation}>
+                      {relation.replace("_", " ")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="project-context-edge-strength">Strength</label>
+                <select
+                  id="project-context-edge-strength"
+                  name="strength"
+                  defaultValue="3"
+                >
+                  {[1, 2, 3, 4, 5].map((strength) => (
+                    <option key={strength} value={strength}>
+                      {strength}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field grow project-context-edge-note">
+                <FieldLabel
+                  id="project-context-edge-note-label"
+                  htmlFor="project-context-edge-note"
+                >
+                  Note
+                </FieldLabel>
+                <div className="project-context-editor-shell">
+                  <RichPromptEditor
+                    key={newEdgeEditorKey}
+                    id="project-context-edge-note"
+                    value={newEdgeNote}
+                    onChange={setNewEdgeNote}
+                    disabled={createEdgeMutation.isPending}
+                    placeholder="Why does this link matter? Type @ for files."
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          <button type="submit" disabled={createEdgeMutation.isPending}>
-            {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
-          </button>
-        </form>
+            <button type="submit" disabled={createEdgeMutation.isPending}>
+              {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
+            </button>
+          </form>
+        </details>
       )}
       {mutationError ? (
         <div className="err" role="alert">
@@ -382,28 +389,46 @@ export function ProjectContextPanel({ projectId }: Props) {
         <EmptyState
           title="No context nodes yet"
           description="Add durable project memory nodes, then connect them as the work evolves."
+          action={{
+            label: "Add memory",
+            onClick: () => setAddNodeOpen(true),
+          }}
           density="compact"
           hideIcon
         />
       ) : (
         <>
-          <div className="project-context-view-toggle" role="tablist" aria-label="Context view">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={contextView === "list"}
-              onClick={() => setContextView("list")}
-            >
-              List
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={contextView === "graph"}
-              onClick={() => setContextView("graph")}
-            >
-              Graph
-            </button>
+          <div className="project-context-display-bar">
+            <div>
+              <h4>Browse</h4>
+            </div>
+            <div className="project-context-display-actions">
+              <button
+                type="button"
+                className="project-context-add-memory-button"
+                onClick={() => setAddNodeOpen(true)}
+              >
+                Add memory
+              </button>
+              <div className="project-context-view-toggle" role="tablist" aria-label="Context view">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={contextView === "list"}
+                  onClick={() => setContextView("list")}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={contextView === "graph"}
+                  onClick={() => setContextView("graph")}
+                >
+                  Graph
+                </button>
+              </div>
+            </div>
           </div>
           {contextView === "list" ? (
             <ProjectContextListView

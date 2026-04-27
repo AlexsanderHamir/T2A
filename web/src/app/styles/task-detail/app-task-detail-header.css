@@ -1,17 +1,44 @@
 .task-detail-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-bottom: 0.75rem;
 }
 
 .task-detail-back {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2rem;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
   font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--link);
+  font-weight: 650;
+  color: var(--text-secondary);
   text-decoration: none;
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default);
+}
+
+.task-detail-back span {
+  color: var(--accent, var(--brand));
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1;
+  transform: translateY(-0.03em);
 }
 
 .task-detail-back:hover {
-  color: var(--brand-hover);
-  text-decoration: underline;
+  background: var(--bg-subtle);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.task-detail-back:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 /* Task detail page — same philosophy as task-create: dividers, modest radii, brand accents */

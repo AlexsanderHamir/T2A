@@ -277,7 +277,8 @@ export function TaskGraphPage() {
     <section className="panel task-graph-page task-graph-content--enter">
       <nav className="task-detail-nav" aria-label="Task graph navigation">
         <Link to={`/tasks/${encodeURIComponent(taskId)}`} className="task-detail-back">
-          ← Back to task detail
+          <span aria-hidden="true">‹</span>
+          Back to task detail
         </Link>
       </nav>
       <header className="task-graph-header">

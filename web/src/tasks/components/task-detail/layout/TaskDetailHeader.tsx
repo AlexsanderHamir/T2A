@@ -41,7 +41,8 @@ export function TaskDetailHeader({ task }: Props) {
     <>
       <nav className="task-detail-nav" aria-label="Task navigation">
         <Link to="/" className="task-detail-back">
-          ← All tasks
+          <span aria-hidden="true">‹</span>
+          All tasks
         </Link>
       </nav>
 

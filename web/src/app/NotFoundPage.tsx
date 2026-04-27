@@ -17,7 +17,8 @@ export function NotFoundPage() {
       </p>
       <p>
         <Link to="/" className="task-detail-back">
-          ← All tasks
+          <span aria-hidden="true">‹</span>
+          All tasks
         </Link>
       </p>
     </section>

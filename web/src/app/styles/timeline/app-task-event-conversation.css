@@ -1,6 +1,38 @@
 .task-event-detail-back-task {
-  margin-left: 0.75rem;
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2rem;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: 0;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
+  font-weight: 650;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default);
+}
+
+.task-event-detail-back-task span {
+  color: var(--accent, var(--brand));
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1;
+  transform: translateY(-0.03em);
+}
+
+.task-event-detail-back-task:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.task-event-detail-back-task:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .task-event-detail-header {

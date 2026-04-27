@@ -115,13 +115,15 @@ export function TaskEventDetailPage() {
     <section className="panel task-detail-panel task-event-detail-panel task-detail-content--enter">
       <nav className="task-detail-nav" aria-label="Event navigation">
         <Link to="/" className="task-detail-back">
-          ← All tasks
+          <span aria-hidden="true">‹</span>
+          All tasks
         </Link>
         <Link
           to={`/tasks/${encodeURIComponent(taskId)}`}
           className="task-event-detail-back-task"
         >
-          ← Task
+          <span aria-hidden="true">‹</span>
+          Task
         </Link>
       </nav>
 

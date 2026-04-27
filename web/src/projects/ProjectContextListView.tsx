@@ -86,19 +86,15 @@ export function ProjectContextListView({
         <div className="project-context-graph__section-heading">
           <div>
             <h4>Memory nodes</h4>
-            <p>
-              Durable facts, decisions, constraints, and handoff notes owned by
-              this project.
-            </p>
           </div>
           <span>{items.length}</span>
         </div>
         <label className="project-context-search">
-          <span>Search nodes</span>
+          <span>Search memory nodes</span>
           <input
             value={nodeQuery}
             onChange={(event) => setNodeQuery(event.target.value)}
-            placeholder="Filter by title, body, or kind"
+            placeholder="Title, body, or kind"
           />
         </label>
         {filteredItems.length === 0 ? (
@@ -125,7 +121,6 @@ export function ProjectContextListView({
         <div className="project-context-graph__section-heading">
           <div>
             <h4>Connections</h4>
-            <p>Relationships that explain how selected nodes influence each other.</p>
           </div>
           <span>{edges.length}</span>
         </div>
@@ -134,16 +129,14 @@ export function ProjectContextListView({
           <input
             value={connectionQuery}
             onChange={(event) => setConnectionQuery(event.target.value)}
-            placeholder="Filter by node, relation, note, or strength"
+            placeholder="Node, relation, note, or strength"
           />
         </label>
         {edges.length === 0 ? (
           <div className="project-context-empty-card">
+            <span className="project-context-empty-card__icon" aria-hidden="true" />
             <strong>No connections yet</strong>
-            <p>
-              Add a connection when two nodes support, block, refine, or depend
-              on each other.
-            </p>
+            <p>Create a link when two memories should travel together.</p>
           </div>
         ) : filteredEdges.length === 0 ? (
           <div className="project-context-empty-card">

@@ -63,7 +63,6 @@ export const PROJECT_CONTEXT_KIND_SUGGESTIONS: ProjectContextKind[] = [
   "note",
   "decision",
   "constraint",
-  "handoff",
 ];
 
 export const PROJECT_CONTEXT_RELATIONS: ProjectContextRelation[] = [

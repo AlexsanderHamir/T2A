@@ -26,11 +26,17 @@ export function ProjectDetailPage() {
 
   return (
     <section className="panel task-detail-panel project-page">
-      <div className="task-detail-top-actions">
-        <Link to="/projects" className="back-link">
-          ← All projects
+      <header className="project-context-hero project-detail-hero">
+        <Link to="/projects" className="project-context-back-link">
+          <span aria-hidden="true">‹</span>
+          All projects
         </Link>
-      </div>
+        {project.data ? (
+          <div className="project-context-hero__project" aria-label="Current project">
+            <h2>{project.data.name}</h2>
+          </div>
+        ) : null}
+      </header>
 
       {project.isLoading ? <p className="muted">Loading project...</p> : null}
       {project.error ? (
@@ -40,23 +46,13 @@ export function ProjectDetailPage() {
       ) : null}
       {project.data ? (
         <>
-          <div className="task-detail-heading-row">
-            <div>
-              <p className="eyebrow">Project</p>
-              <h2>{project.data.name}</h2>
-            </div>
-            <span className="cell-pill cell-pill--runtime">
-              {project.data.status}
-            </span>
-          </div>
-
           <ProjectSettingsPanel project={project.data} />
           <section className="task-attempt-section project-context-page-card">
             <div>
+              <p className="project-context-page-card__eyebrow">Memory nodes</p>
               <h3>Project context</h3>
               <p className="muted">
-                Manage project-owned memory nodes and inspect their connections as
-                a list or graph.
+                Keep reusable facts, decisions, and constraints close to this project.
               </p>
             </div>
             <Link

@@ -35,39 +35,31 @@ export function ProjectListPage() {
     <section className="panel task-detail-panel project-page">
       <div className="project-page-hero">
         <div>
-          <p className="eyebrow">Projects</p>
-          <h2>Project context</h2>
+          <h2>Projects</h2>
           <p className="muted">
-            Shared memory for long-running work. Tasks can join a project while
-            keeping their own subtask tree.
+            Shared memory for long-running work.
           </p>
         </div>
       </div>
 
-      <form className="project-create-card" onSubmit={submitProject}>
-        <div className="project-create-card__copy">
-          <span className="project-create-card__badge">New project</span>
-          <h3>Create a project</h3>
-          <p>
-            Start with a name. Add memory nodes and relationships later as the
-            work becomes clearer.
-          </p>
+      <form
+        className="project-create-card"
+        onSubmit={submitProject}
+        aria-label="Create project"
+      >
+        <div className="field grow">
+          <label htmlFor="project-create-name">Project name</label>
+          <input
+            id="project-create-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="e.g., Agent context moat"
+            required
+          />
         </div>
-        <div className="project-create-card__controls">
-          <div className="field grow">
-            <label htmlFor="project-create-name">Project name</label>
-            <input
-              id="project-create-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g., Agent context moat"
-              required
-            />
-          </div>
-          <button type="submit" disabled={createMutation.isPending || !name.trim()}>
-            {createMutation.isPending ? "Creating..." : "Create project"}
-          </button>
-        </div>
+        <button type="submit" disabled={createMutation.isPending || !name.trim()}>
+          {createMutation.isPending ? "Creating..." : "Create project"}
+        </button>
       </form>
       {createMutation.error ? (
         <div className="err" role="alert">
