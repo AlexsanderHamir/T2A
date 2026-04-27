@@ -33,7 +33,6 @@ const RELATION_HUE_RANGES: Record<ProjectContextEdge["relation"], { start: numbe
 
 export function ProjectContextTreeView({ items, edges }: Props) {
   const forest = useMemo(() => buildProjectContextForest(items, edges), [edges, items]);
-  const rootCount = forest.length;
 
   if (items.length === 0) {
     return null;
@@ -46,7 +45,6 @@ export function ProjectContextTreeView({ items, edges }: Props) {
           key={root.item.id}
           root={root}
           childrenBySource={forest.childrenBySource}
-          defaultOpen={rootCount <= 8}
         />
       ))}
     </div>
@@ -56,11 +54,9 @@ export function ProjectContextTreeView({ items, edges }: Props) {
 function RootTree({
   root,
   childrenBySource,
-  defaultOpen,
 }: {
   root: TreeRoot;
   childrenBySource: Map<string, TreeEdge[]>;
-  defaultOpen: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -83,7 +79,6 @@ function RootTree({
     <details
       className="project-context-tree"
       ref={detailsRef}
-      open={defaultOpen}
     >
       <summary>
         <TreeRow
