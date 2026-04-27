@@ -13,6 +13,8 @@ export function ProjectListPage() {
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useProjects({ includeArchived: true });
   const projects = data?.projects ?? [];
+  const activeCount = projects.filter((p) => p.status === "active").length;
+  const archivedCount = projects.length - activeCount;
   const [name, setName] = useState("");
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -26,129 +28,141 @@ export function ProjectListPage() {
     event.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    createMutation.mutate({
-      name: trimmedName,
-    });
+    createMutation.mutate({ name: trimmedName });
   }
 
   return (
-    <section className="panel task-detail-panel project-page">
-      <div className="project-page-hero">
-        <div>
-          <h2>Projects</h2>
-          <p className="muted">
-            Shared memory for long-running work.
-          </p>
-        </div>
-      </div>
-
-      <form
-        className="project-create-card"
-        onSubmit={submitProject}
-        aria-label="Create project"
-      >
-        <div className="field grow">
-          <label htmlFor="project-create-name">Project name</label>
+    <section className="panel task-detail-panel pl">
+      <div className="pl__create-area">
+        <form className="pl__create" onSubmit={submitProject} aria-label="Create project">
           <input
             id="project-create-name"
+            className="pl__create-input"
             value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="e.g., Agent context moat"
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New project name..."
             required
+            aria-label="Project name"
           />
-        </div>
-        <button type="submit" disabled={createMutation.isPending || !name.trim()}>
-          {createMutation.isPending ? "Creating..." : "Create project"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="pl__create-btn"
+            disabled={createMutation.isPending || !name.trim()}
+          >
+            {createMutation.isPending ? "Creating..." : "Create"}
+          </button>
+        </form>
+      </div>
       {createMutation.error ? (
-        <div className="err" role="alert">
+        <div className="pd__inline-error" role="alert">
           {createMutation.error.message}
         </div>
       ) : null}
 
-      <div className="project-list-header">
-        <div>
-          <h3>Project library</h3>
-          <p className="muted">
-            Open a project to manage its nodes, connections, settings, and
-            linked tasks.
-          </p>
+      <div className="pl__list-section">
+        <div className="pl__list-header">
+          <dl className="pl__stats" aria-label="Project summary">
+            <div className="pl__stat">
+              <dd>{projects.length}</dd>
+              <dt>total</dt>
+            </div>
+            <span className="pl__stat-sep" aria-hidden="true" />
+            <div className="pl__stat pl__stat--active">
+              <dd>{activeCount}</dd>
+              <dt>active</dt>
+            </div>
+            <span className="pl__stat-sep" aria-hidden="true" />
+            <div className="pl__stat">
+              <dd>{archivedCount}</dd>
+              <dt>archived</dt>
+            </div>
+          </dl>
         </div>
-        <span className="project-list-count">
-          {projects.length} {projects.length === 1 ? "project" : "projects"}
-        </span>
-      </div>
 
-      {isLoading ? <ProjectListSkeleton /> : null}
-      {error ? (
-        <div className="err" role="alert">
-          {error.message}
-        </div>
-      ) : null}
-      {!isLoading && !error && projects.length === 0 ? (
-        <EmptyState
-          title="No projects yet"
-          description="Create a project once a body of work needs shared context across multiple tasks."
-          density="compact"
-          hideIcon
-        />
-      ) : null}
-      {projects.length > 0 ? (
-        <div className="project-card-grid" aria-label="Projects">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      ) : null}
+        {isLoading ? <ProjectListSkeleton /> : null}
+        {error ? (
+          <div className="pd__inline-error" role="alert">
+            {error.message}
+          </div>
+        ) : null}
+        {!isLoading && !error && projects.length === 0 ? (
+          <EmptyState
+            title="No projects yet"
+            description="Create your first project to start organizing shared context."
+            density="compact"
+            hideIcon
+          />
+        ) : null}
+        {projects.length > 0 ? (
+          <div className="pl__list" aria-label="Projects">
+            {projects.map((project, i) => (
+              <ProjectRow key={project.id} project={project} index={i} />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectRow({ project, index }: { project: Project; index: number }) {
   const isArchived = project.status === "archived";
   return (
     <Link
       to={`/projects/${encodeURIComponent(project.id)}`}
-      className="project-card"
+      className={isArchived ? "pl__row pl__row--archived" : "pl__row"}
+      style={{ animationDelay: `${index * 40}ms` }}
     >
-      <span className="project-card__topline">
-        <span className="project-card__label">Project</span>
+      <div className="pl__row-marker" aria-hidden="true" />
+      <div className="pl__row-main">
+        <span className="pl__row-name">{project.name}</span>
+        <span className="pl__row-desc">
+          {project.description ||
+            project.context_summary ||
+            "No description"}
+        </span>
+      </div>
+      <div className="pl__row-meta">
         <span
           className={
             isArchived
-              ? "project-status-pill project-status-pill--archived"
-              : "project-status-pill"
+              ? "pd__badge pd__badge--muted"
+              : "pd__badge pd__badge--live"
           }
         >
+          <span className="pd__badge-dot" aria-hidden="true" />
           {project.status}
         </span>
-      </span>
-      <span className="project-card__title">{project.name}</span>
-      <span className="project-card__description">
-        {project.description ||
-          project.context_summary ||
-          "Add project-owned context nodes when shared memory becomes useful."}
-      </span>
-      <span className="project-card__footer">
-        <span>Manage memory graph</span>
-        <span aria-hidden="true">&rarr;</span>
-      </span>
+        <span className="pl__row-date">{formatDate(project.updated_at)}</span>
+      </div>
+      <svg className="pl__row-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </Link>
   );
 }
 
 function ProjectListSkeleton() {
   return (
-    <div className="project-card-grid" aria-hidden="true">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div className="project-card project-card--skeleton" key={index}>
-          <span className="project-skeleton project-skeleton--meta" />
-          <span className="project-skeleton project-skeleton--title" />
-          <span className="project-skeleton project-skeleton--line" />
-          <span className="project-skeleton project-skeleton--line-short" />
+    <div className="pl__list" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div className="pl__row pl__row--skeleton" key={i}>
+          <div className="pl__row-marker" />
+          <div className="pl__row-main">
+            <span className="pd__shimmer" style={{ width: `${60 - i * 8}%`, height: "0.9rem" }} />
+            <span className="pd__shimmer" style={{ width: `${40 + i * 5}%`, height: "0.75rem" }} />
+          </div>
+          <div className="pl__row-meta">
+            <span className="pd__shimmer" style={{ width: "3rem", height: "0.75rem" }} />
+          </div>
         </div>
       ))}
     </div>
   );
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
