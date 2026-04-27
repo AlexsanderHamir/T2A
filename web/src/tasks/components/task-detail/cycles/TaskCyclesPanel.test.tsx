@@ -550,7 +550,7 @@ describe("TaskCyclesPanel", () => {
           kind: "tool_call",
           subtype: "started",
           tool: "ReadFile",
-          message: "Started ReadFile",
+          message: "Read README.md",
         },
       });
     });
@@ -558,6 +558,6 @@ describe("TaskCyclesPanel", () => {
     const progressList = await within(ticker).findByTestId("task-cycle-progress-list");
     expect(progressList).toHaveAttribute("aria-label", "Recent agent progress");
     expect(progressList).toHaveTextContent(/Tool/);
-    expect(progressList).toHaveTextContent(/Started ReadFile/);
+    expect(progressList).toHaveTextContent(/Read README\.md/);
   });
 });

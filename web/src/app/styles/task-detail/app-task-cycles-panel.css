@@ -96,14 +96,19 @@
 
 .task-cycle-progress-kind {
   flex: 0 0 auto;
-  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--brand-border-soft);
+  border-radius: var(--radius-full);
   color: var(--brand-deep);
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .task-cycle-progress-message {
   min-width: 0;
   flex: 1 1 auto;
   color: var(--text-primary);
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 

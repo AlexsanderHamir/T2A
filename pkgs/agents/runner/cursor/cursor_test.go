@@ -295,6 +295,63 @@ func TestRun_streamJSONSummarizesToolInputsForLiveProgress(t *testing.T) {
 	}
 }
 
+func TestRun_streamJSONSummarizesNestedToolCallsForLiveProgress(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"tool_call","subtype":"started","tool_call":{"readToolCall":{"args":{"path":"README.md"}}}}` + "\n" +
+			`{"type":"tool_call","subtype":"completed","tool_call":{"writeToolCall":{"args":{"path":"summary.txt","fileText":"# Summary"},"result":{"success":{"path":"/repo/summary.txt","linesCreated":1}}}}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","tool_call":{"editToolCall":{"args":{"path":"/repo/improvements_01.md","streamContent":"Enforce a non-zero default cap"}}}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","tool_call":{"function":{"name":"rg","arguments":"{\"pattern\":\"TODO\",\"path\":\"/repo/pkgs/agents/worker\"}"}}}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"sess-live"}` + "\n",
+	)
+	var c captured
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&c, stdout, nil, 0, nil)
+	})
+	var progress []runner.ProgressEvent
+	req := defaultRequest()
+	req.OnProgress = func(ev runner.ProgressEvent) {
+		progress = append(progress, ev)
+	}
+
+	if _, err := a.Run(context.Background(), req); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(progress) != 4 {
+		t.Fatalf("progress count: got %d want 4 (%+v)", len(progress), progress)
+	}
+	got := []string{
+		progress[0].Message,
+		progress[1].Message,
+		progress[2].Message,
+		progress[3].Message,
+	}
+	want := []string{
+		"Read README.md",
+		"Writing summary.txt",
+		"Editing improvements_01.md",
+		"Searching TODO in worker",
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("progress[%d].Message = %q, want %q", i, got[i], want[i])
+		}
+	}
+	gotTools := []string{
+		progress[0].Tool,
+		progress[1].Tool,
+		progress[2].Tool,
+		progress[3].Tool,
+	}
+	wantTools := []string{"ReadFile", "WriteFile", "EditFile", "rg"}
+	for i := range wantTools {
+		if gotTools[i] != wantTools[i] {
+			t.Fatalf("progress[%d].Tool = %q, want %q", i, gotTools[i], wantTools[i])
+		}
+	}
+}
+
 func TestRun_streamJSONIgnoresClosedPipeAfterResult(t *testing.T) {
 	t.Parallel()
 

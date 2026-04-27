@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -22,13 +23,14 @@ type progressContent struct {
 }
 
 type progressEventLine struct {
-	Type    string          `json:"type,omitempty"`
-	Subtype string          `json:"subtype,omitempty"`
-	Model   string          `json:"model,omitempty"`
-	Name    string          `json:"name,omitempty"`
-	Tool    string          `json:"tool,omitempty"`
-	Message progressMessage `json:"message,omitempty"`
-	Input   json.RawMessage `json:"input,omitempty"`
+	Type     string          `json:"type,omitempty"`
+	Subtype  string          `json:"subtype,omitempty"`
+	Model    string          `json:"model,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Tool     string          `json:"tool,omitempty"`
+	Message  progressMessage `json:"message,omitempty"`
+	Input    json.RawMessage `json:"input,omitempty"`
+	ToolCall json.RawMessage `json:"tool_call,omitempty"`
 }
 
 func emitProgressFromLine(onProgress func(runner.ProgressEvent), raw []byte, homePaths []string) {
@@ -70,9 +72,11 @@ func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, boo
 			return runner.ProgressEvent{Kind: cursorEventAssistant, Message: msg, Payload: progressPayload(raw, homePaths)}, true
 		}
 	case cursorEventToolCall:
-		tool := firstNonEmpty(line.Name, line.Tool)
+		nestedTool, nestedInput := toolCallDetails(line.ToolCall)
+		tool := firstNonEmpty(line.Name, line.Tool, nestedTool)
 		subtype := strings.TrimSpace(line.Subtype)
-		msg := toolProgressMessage(tool, subtype, line.Input)
+		input := firstRawMessage(line.Input, nestedInput)
+		msg := toolProgressMessage(tool, subtype, input)
 		return runner.ProgressEvent{
 			Kind:    cursorEventToolCall,
 			Subtype: subtype,
@@ -120,6 +124,109 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func firstRawMessage(values ...json.RawMessage) json.RawMessage {
+	for _, v := range values {
+		if len(bytes.TrimSpace(v)) > 0 {
+			return v
+		}
+	}
+	return nil
+}
+
+func toolCallDetails(raw json.RawMessage) (string, json.RawMessage) {
+	if len(raw) == 0 {
+		return "", nil
+	}
+	var calls map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &calls); err != nil || len(calls) == 0 {
+		return "", nil
+	}
+	for _, key := range preferredToolCallKeys() {
+		if body, ok := calls[key]; ok {
+			return toolCallBodyDetails(key, body)
+		}
+	}
+	keys := make([]string, 0, len(calls))
+	for key := range calls {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return toolCallBodyDetails(keys[0], calls[keys[0]])
+}
+
+func preferredToolCallKeys() []string {
+	return []string{
+		"readToolCall",
+		"writeToolCall",
+		"editToolCall",
+		"grepToolCall",
+		"ripgrepToolCall",
+		"globToolCall",
+		"shellToolCall",
+		"deleteToolCall",
+		"function",
+	}
+}
+
+func toolCallBodyDetails(key string, raw json.RawMessage) (string, json.RawMessage) {
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return toolNameFromCallKey(key), nil
+	}
+	if key == "function" {
+		if name := rawString(body["name"]); name != "" {
+			return name, functionArguments(body["arguments"])
+		}
+	}
+	return toolNameFromCallKey(key), body["args"]
+}
+
+func toolNameFromCallKey(key string) string {
+	switch strings.TrimSpace(key) {
+	case "readToolCall":
+		return "ReadFile"
+	case "writeToolCall":
+		return "WriteFile"
+	case "editToolCall":
+		return "EditFile"
+	case "grepToolCall", "ripgrepToolCall":
+		return "rg"
+	case "globToolCall":
+		return "Glob"
+	case "shellToolCall":
+		return "Shell"
+	case "deleteToolCall":
+		return "Delete"
+	default:
+		return strings.TrimSuffix(strings.TrimSpace(key), "ToolCall")
+	}
+}
+
+func functionArguments(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return nil
+	}
+	if json.Valid(raw) && bytes.TrimSpace(raw)[0] == '{' {
+		return raw
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil && json.Valid([]byte(s)) {
+		return json.RawMessage(s)
+	}
+	return raw
+}
+
+func rawString(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
 func toolProgressMessage(tool, subtype string, input json.RawMessage) string {
 	if msg := toolInputSummary(tool, input); msg != "" {
 		return msg
@@ -156,8 +263,10 @@ func toolInputSummary(tool string, input json.RawMessage) string {
 		return searchFilesSummary(fields)
 	case name == "rg" || strings.Contains(name, "ripgrep") || strings.Contains(name, "grep"):
 		return ripgrepSummary(fields)
-	case strings.Contains(name, "applypatch") || strings.Contains(name, "edit") || strings.Contains(name, "write"):
-		return editSummary(fields)
+	case strings.Contains(name, "applypatch") || strings.Contains(name, "edit"):
+		return pathActionSummary("Editing", fields)
+	case strings.Contains(name, "write"):
+		return pathActionSummary("Writing", fields)
 	case strings.Contains(name, "delete"):
 		return pathActionSummary("Delete", fields)
 	case strings.Contains(name, "shell") || strings.Contains(name, "terminal") || strings.Contains(name, "bash"):

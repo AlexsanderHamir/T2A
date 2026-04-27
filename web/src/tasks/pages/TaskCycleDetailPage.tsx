@@ -495,13 +495,10 @@ function formatAttemptStartedParts(startedAt: string): {
 function streamKindLabel(kind: string, subtype?: string): string {
   if (kind === "tool_call" || kind === "tool") {
     if (subtype === "completed" || subtype === "success" || subtype === "done") {
-      return "Tool finished";
+      return "Done";
     }
     if (subtype === "failed" || subtype === "error") {
-      return "Tool failed";
-    }
-    if (subtype === "started" || subtype === "start") {
-      return "Tool started";
+      return "Failed";
     }
     return "Tool";
   }

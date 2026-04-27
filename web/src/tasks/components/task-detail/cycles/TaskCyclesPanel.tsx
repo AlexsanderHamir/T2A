@@ -587,10 +587,10 @@ function formatPhaseDuration(phase: TaskCyclePhase, now: number): string {
 function progressKindLabel(kind: string, subtype: string | undefined): string {
   if (kind === "tool_call") {
     if (subtype === "completed" || subtype === "success" || subtype === "done") {
-      return "Tool finished";
+      return "Done";
     }
     if (subtype === "failed" || subtype === "error") {
-      return "Tool failed";
+      return "Failed";
     }
     return "Tool";
   }

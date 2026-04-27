@@ -172,7 +172,7 @@ describe("TaskCycleDetailPage", () => {
     const liveItems = within(liveList).getAllByRole("listitem");
     expect(liveItems[0]).toHaveTextContent(/waiting for the next update/i);
     expect(liveItems[0]).toHaveTextContent(/last just now/i);
-    expect(liveItems[1]).toHaveTextContent("Tool started");
+    expect(liveItems[1]).toHaveTextContent("Tool");
     expect(liveItems[1]).toHaveTextContent("Searching files *.go in worker");
     expect(liveItems[2]).toHaveTextContent("Newest live update");
     expect(liveItems[3]).toHaveTextContent("Still working live");
