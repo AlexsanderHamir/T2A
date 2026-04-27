@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react";
+import { useCallback, useMemo, useRef, type CSSProperties } from "react";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
 import { projectContextKindTone } from "./projectContextKindTone";
 
@@ -42,25 +42,62 @@ export function ProjectContextTreeView({ items, edges }: Props) {
   return (
     <div className="project-context-tree-view" aria-label="Project context trees">
       {forest.map((root) => (
-        <details
-          className="project-context-tree"
+        <RootTree
           key={root.item.id}
-          open={rootCount <= 8}
-        >
-          <summary>
-            <TreeRow
-              item={root.item}
-              childCount={countDescendants(root.item.id, forest.childrenBySource)}
-            />
-          </summary>
-          <TreeNode
-            item={root.item}
-            childrenBySource={forest.childrenBySource}
-            path={[root.item.id]}
-          />
-        </details>
+          root={root}
+          childrenBySource={forest.childrenBySource}
+          defaultOpen={rootCount <= 8}
+        />
       ))}
     </div>
+  );
+}
+
+function RootTree({
+  root,
+  childrenBySource,
+  defaultOpen,
+}: {
+  root: TreeRoot;
+  childrenBySource: Map<string, TreeEdge[]>;
+  defaultOpen: boolean;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  const toggleAll = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const el = detailsRef.current;
+    if (!el) return;
+    const nested = el.querySelectorAll("details");
+    const allOpen = Array.from(nested).every((d) => d.open);
+    for (const details of nested) {
+      details.open = !allOpen;
+    }
+    el.open = !allOpen;
+  }, []);
+
+  const descendantCount = countDescendants(root.item.id, childrenBySource);
+
+  return (
+    <details
+      className="project-context-tree"
+      ref={detailsRef}
+      open={defaultOpen}
+    >
+      <summary>
+        <TreeRow
+          item={root.item}
+          childCount={descendantCount}
+          onToggleAll={descendantCount > 0 ? toggleAll : undefined}
+        />
+      </summary>
+      <TreeNode
+        item={root.item}
+        childrenBySource={childrenBySource}
+        path={[root.item.id]}
+      />
+    </details>
   );
 }
 
@@ -134,14 +171,17 @@ function TreeRow({
   sourceTitle,
   childCount,
   isCycle = false,
+  onToggleAll,
 }: {
   item: ProjectContextItem;
   edge?: ProjectContextEdge;
   sourceTitle?: string;
   childCount?: number;
   isCycle?: boolean;
+  onToggleAll?: (event: React.MouseEvent) => void;
 }) {
-  const childLabel = childCount === 1 ? "1 child" : `${childCount} children`;
+  const resolvedCount = childCount ?? 0;
+  const childLabel = resolvedCount === 1 ? "1 child" : `${resolvedCount} children`;
 
   return (
     <span
@@ -178,17 +218,24 @@ function TreeRow({
         {isCycle ? <small>Already appears in this branch.</small> : null}
       </span>
       <span className="project-context-tree-row__chips">
+        {onToggleAll ? (
+          <button
+            type="button"
+            className="project-context-tree-chip project-context-tree-chip--toggle"
+            onClick={onToggleAll}
+          >
+            Expand all
+          </button>
+        ) : null}
         <span
           className="project-context-tree-chip project-context-tree-chip--kind"
           data-kind-tone={projectContextKindTone(item.kind)}
         >
           {item.kind}
         </span>
-        {childCount ? (
-          <span className="project-context-tree-chip project-context-tree-chip--count">
-            {childLabel}
-          </span>
-        ) : null}
+        <span className="project-context-tree-chip project-context-tree-chip--count">
+          {childLabel}
+        </span>
       </span>
     </span>
   );

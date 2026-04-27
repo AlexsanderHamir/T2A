@@ -1054,6 +1054,10 @@
   text-transform: uppercase;
 }
 
+.project-context-node-card__eyebrow span:first-child {
+  margin-left: calc(-1 * var(--space-1));
+}
+
 .project-context-node-card__body h5 {
   margin: 0;
   min-width: 0;
@@ -1078,10 +1082,14 @@
 .project-context-tree-view {
   display: grid;
   gap: var(--space-3);
-  max-height: 34rem;
+  min-height: 0;
+  max-height: min(78vh, 56rem);
   overflow: auto;
-  padding: var(--space-1) var(--space-1) var(--space-1) 0;
+  overscroll-behavior: contain;
+  padding: var(--space-1) var(--space-1) var(--space-8) 0;
+  scroll-padding-block-end: var(--space-8);
 }
+
 
 .project-context-tree {
   --project-tree-connector-color: color-mix(in srgb, var(--accent, var(--brand)) 28%, var(--border-hairline));
@@ -1135,7 +1143,7 @@
 
   position: relative;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-8);
   margin: 0;
   padding: var(--space-3) 0 var(--space-3) var(--space-8);
   list-style: none;
@@ -1147,7 +1155,7 @@
 
 .project-context-tree-children .project-context-tree-children {
   margin-left: 0;
-  padding-top: var(--space-3);
+  padding-top: var(--space-8);
   padding-bottom: 0;
 }
 
@@ -1164,15 +1172,15 @@
 }
 
 .project-context-tree-children li::before {
-  top: calc(-1 * var(--space-1));
-  bottom: calc(-1 * var(--space-1));
+  top: calc(-1 * var(--space-4));
+  bottom: calc(-1 * var(--space-4));
   left: calc(-1 * var(--space-4));
   width: 1px;
   background: var(--project-tree-connector-color);
 }
 
 .project-context-tree-children li:first-child::before {
-  top: calc(-1 * var(--space-2));
+  top: calc(-1 * var(--space-8));
 }
 
 .project-context-tree > .project-context-tree-children > li::before,
@@ -1189,7 +1197,7 @@
 }
 
 .project-context-tree-children .project-context-tree-children > li:first-child::before {
-  top: calc(-1 * var(--space-3));
+  top: calc(-1 * var(--space-8));
 }
 
 .project-context-tree-children li:last-child::before {
@@ -1459,6 +1467,34 @@
   background: color-mix(in srgb, var(--bg-subtle) 76%, var(--bg-elevated));
 }
 
+.project-context-tree-chip--toggle {
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 28%, var(--border-hairline));
+  background: var(--brand-muted);
+  color: var(--accent, var(--brand));
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-default),
+    border-color 150ms var(--ease-default),
+    box-shadow 150ms var(--ease-default),
+    transform 100ms var(--ease-default);
+}
+
+.project-context-tree-chip--toggle:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 52%, var(--border-strong));
+  background: color-mix(in srgb, var(--brand-muted) 62%, var(--bg-elevated));
+  box-shadow: var(--shadow-sm);
+}
+
+.project-context-tree-chip--toggle:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.project-context-tree-chip--toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .project-context-tree-leaf--cycle .project-context-tree-row {
   border-color: var(--warning-chip-border);
   background: color-mix(in srgb, var(--warning-chip-bg) 68%, var(--bg-elevated));
@@ -1519,35 +1555,46 @@
   min-height: 1.75rem;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-hairline);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-full);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  color: var(--text);
   font-size: 0.8rem;
-  font-weight: 700;
-  box-shadow: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
   opacity: 1;
-  transform: none;
+  cursor: pointer;
   transition:
     background-color 150ms var(--ease-default),
     border-color 150ms var(--ease-default),
     color 150ms var(--ease-default),
-    box-shadow 150ms var(--ease-default);
+    box-shadow 150ms var(--ease-default),
+    transform 100ms var(--ease-default);
 }
 
 .project-context-node-card__action-button--primary {
-  border-color: color-mix(in srgb, var(--accent, var(--brand)) 28%, var(--border-hairline));
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 36%, var(--border-strong));
   background: var(--brand-muted);
   color: var(--accent, var(--brand));
 }
 
 .project-context-node-card__action-button:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-subtle);
+  border-color: color-mix(in srgb, var(--text) 22%, var(--border-strong));
+  background: color-mix(in srgb, var(--bg-subtle) 70%, var(--bg-elevated));
   color: var(--text);
-  box-shadow: none;
-  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.project-context-node-card__action-button--primary:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 56%, var(--border-strong));
+  background: color-mix(in srgb, var(--brand-muted) 72%, var(--bg-elevated));
+  color: var(--accent, var(--brand));
+}
+
+.project-context-node-card__action-button:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-xs);
 }
 
 .project-context-node-card__action-button:focus-visible {
