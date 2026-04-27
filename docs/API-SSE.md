@@ -45,13 +45,13 @@ Most frames use `{type,id[,cycle_id]}`. Older clients that ignore the `id:` line
   "progress": {
     "kind": "tool_call|assistant|system",
     "subtype": "started|completed|...",
-    "message": "Started ReadFile",
+    "message": "Read facade_projects.go L1-91",
     "tool": "ReadFile"
   }
 }
 ```
 
-The server normalizes Cursor CLI `stream-json` events before publishing them. It sends short human-readable messages only; raw Cursor JSON, stderr, and secrets are not streamed to browsers. The worker throttles progress fanout to at most one frame per running phase every 750 ms.
+The server normalizes Cursor CLI `stream-json` events before publishing them. It sends short Cursor-like activity summaries only (for example `Searching files *.go in worker`, `Read facade_projects.go L1-91`, `Running go test`); raw Cursor JSON, stderr, and secrets are not streamed to browsers. The worker throttles progress fanout to at most one frame per running phase every 750 ms.
 
 `settings_changed` and `agent_run_cancelled` are id-less notifications fired by the [App settings](./API-HTTP.md#app-settings) routes — there is no `id` (or `cycle_id`) field, only `type`:
 
