@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   createProjectContext,
   createProjectContextEdge,
@@ -11,6 +11,7 @@ import {
 import { EmptyState } from "@/shared/EmptyState";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "@/shared/Modal";
+import { CustomSelect, type CustomSelectOption } from "@/tasks/components/custom-select";
 import { RichPromptEditor } from "@/tasks/components/rich-prompt";
 import { promptHasVisibleContent } from "@/tasks/task-prompt";
 import {
@@ -24,6 +25,7 @@ import { useProjectContext } from "./hooks";
 import { ProjectContextGraphView } from "./ProjectContextGraphView";
 import { ProjectContextKindPicker } from "./ProjectContextKindPicker";
 import { ProjectContextListView } from "./ProjectContextListView";
+import { ProjectContextTreeView } from "./ProjectContextTreeView";
 import { projectQueryKeys } from "./queryKeys";
 
 type Props = {
@@ -32,15 +34,21 @@ type Props = {
 
 const EMPTY_CONTEXT_ITEMS: ProjectContextItem[] = [];
 const EMPTY_CONTEXT_EDGES: ProjectContextEdge[] = [];
-type ContextView = "list" | "graph";
+type ContextView = "list" | "tree" | "graph";
 
 export function ProjectContextPanel({ projectId }: Props) {
   const queryClient = useQueryClient();
   const context = useProjectContext(projectId, { enabled: Boolean(projectId) });
   const [contextView, setContextView] = useState<ContextView>("list");
   const [addNodeOpen, setAddNodeOpen] = useState(false);
+  const [addEdgeOpen, setAddEdgeOpen] = useState(false);
   const [newNodeBody, setNewNodeBody] = useState("");
   const [newNodeEditorKey, setNewNodeEditorKey] = useState(0);
+  const [newEdgeSourceID, setNewEdgeSourceID] = useState("");
+  const [newEdgeTargetID, setNewEdgeTargetID] = useState("");
+  const [newEdgeRelation, setNewEdgeRelation] =
+    useState<ProjectContextRelation>("related");
+  const [newEdgeStrength, setNewEdgeStrength] = useState("3");
   const [newEdgeNote, setNewEdgeNote] = useState("");
   const [newEdgeEditorKey, setNewEdgeEditorKey] = useState(0);
   const createContextMutation = useMutation({
@@ -147,31 +155,45 @@ export function ProjectContextPanel({ projectId }: Props) {
 
   function submitEdge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const sourceContextID = String(form.get("source_context_id") ?? "").trim();
-    const targetContextID = String(form.get("target_context_id") ?? "").trim();
-    if (!sourceContextID || !targetContextID || sourceContextID === targetContextID) {
+    if (
+      !newEdgeSourceID ||
+      !newEdgeTargetID ||
+      newEdgeSourceID === newEdgeTargetID
+    ) {
       return;
     }
     const formEl = event.currentTarget;
     createEdgeMutation.mutate(
       {
-        source_context_id: sourceContextID,
-        target_context_id: targetContextID,
-        relation: String(
-          form.get("relation") ?? "related",
-        ) as ProjectContextRelation,
-        strength: Number(form.get("strength") ?? 3),
+        source_context_id: newEdgeSourceID,
+        target_context_id: newEdgeTargetID,
+        relation: newEdgeRelation,
+        strength: Number(newEdgeStrength),
         note: newEdgeNote.trim(),
       },
       {
         onSuccess: () => {
           formEl.reset();
+          setNewEdgeSourceID("");
+          setNewEdgeTargetID("");
+          setNewEdgeRelation("related");
+          setNewEdgeStrength("3");
           setNewEdgeNote("");
           setNewEdgeEditorKey((value) => value + 1);
+          setAddEdgeOpen(false);
         },
       },
     );
+  }
+
+  function openAddEdge(sourceId = "") {
+    setNewEdgeSourceID(sourceId);
+    setNewEdgeTargetID("");
+    setNewEdgeRelation("related");
+    setNewEdgeStrength("3");
+    setNewEdgeNote("");
+    setNewEdgeEditorKey((value) => value + 1);
+    setAddEdgeOpen(true);
   }
 
   const mutationError =
@@ -183,6 +205,24 @@ export function ProjectContextPanel({ projectId }: Props) {
     deleteEdgeMutation.error;
   const items = context.data?.items ?? EMPTY_CONTEXT_ITEMS;
   const edges = context.data?.edges ?? EMPTY_CONTEXT_EDGES;
+  const memoryOptions = useMemo<CustomSelectOption[]>(() => {
+    return [
+      { value: "", label: "Select memory" },
+      ...items.map((item) => ({ value: item.id, label: item.title })),
+    ];
+  }, [items]);
+  const relationOptions = useMemo<CustomSelectOption[]>(() => {
+    return PROJECT_CONTEXT_RELATIONS.map((relation) => ({
+      value: relation,
+      label: relation.replace("_", " "),
+    }));
+  }, []);
+  const strengthOptions = useMemo<CustomSelectOption[]>(() => {
+    return [1, 2, 3, 4, 5].map((strength) => ({
+      value: String(strength),
+      label: String(strength),
+    }));
+  }, []);
 
   return (
     <section className="task-attempt-section project-context-workspace">
@@ -283,72 +323,57 @@ export function ProjectContextPanel({ projectId }: Props) {
             <p>Links are optional. Use them only when the relationship helps a task.</p>
           </div>
         </div>
-      ) : (
-        <details className="project-context-disclosure">
-          <summary>
-            <span>Add connection</span>
-            <small>Optional</small>
-          </summary>
-          <form className="project-context-form" onSubmit={submitEdge}>
+      ) : null}
+      {addEdgeOpen ? (
+        <Modal
+          onClose={() => setAddEdgeOpen(false)}
+          labelledBy="project-context-add-edge-title"
+          describedBy="project-context-add-edge-desc"
+          size="wide"
+          busy={createEdgeMutation.isPending}
+          busyLabel="Adding connection..."
+        >
+          <form
+            className="panel modal-sheet modal-sheet--edit project-context-form project-context-edge-modal"
+            onSubmit={submitEdge}
+          >
+            <div className="project-context-form__heading">
+              <div>
+                <h2 id="project-context-add-edge-title">Add connection</h2>
+                <p id="project-context-add-edge-desc" className="muted">
+                  Link two memory nodes when the relationship helps future work.
+                </p>
+              </div>
+            </div>
             <div className="project-context-edge-grid">
-              <div className="field grow">
-                <label htmlFor="project-context-edge-source">From</label>
-                <select
-                  id="project-context-edge-source"
-                  name="source_context_id"
-                  required
-                >
-                  <option value="">Select memory</option>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field grow">
-                <label htmlFor="project-context-edge-target">To</label>
-                <select
-                  id="project-context-edge-target"
-                  name="target_context_id"
-                  required
-                >
-                  <option value="">Select memory</option>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="project-context-edge-relation">Relation</label>
-                <select
-                  id="project-context-edge-relation"
-                  name="relation"
-                  defaultValue="related"
-                >
-                  {PROJECT_CONTEXT_RELATIONS.map((relation) => (
-                    <option key={relation} value={relation}>
-                      {relation.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="project-context-edge-strength">Strength</label>
-                <select
-                  id="project-context-edge-strength"
-                  name="strength"
-                  defaultValue="3"
-                >
-                  {[1, 2, 3, 4, 5].map((strength) => (
-                    <option key={strength} value={strength}>
-                      {strength}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                id="project-context-edge-source"
+                label="From"
+                value={newEdgeSourceID}
+                options={memoryOptions}
+                onChange={setNewEdgeSourceID}
+              />
+              <CustomSelect
+                id="project-context-edge-target"
+                label="To"
+                value={newEdgeTargetID}
+                options={memoryOptions}
+                onChange={setNewEdgeTargetID}
+              />
+              <CustomSelect
+                id="project-context-edge-relation"
+                label="Relation"
+                value={newEdgeRelation}
+                options={relationOptions}
+                onChange={(value) => setNewEdgeRelation(value as ProjectContextRelation)}
+              />
+              <CustomSelect
+                id="project-context-edge-strength"
+                label="Strength"
+                value={newEdgeStrength}
+                options={strengthOptions}
+                onChange={setNewEdgeStrength}
+              />
               <div className="field grow project-context-edge-note">
                 <FieldLabel
                   id="project-context-edge-note-label"
@@ -368,12 +393,22 @@ export function ProjectContextPanel({ projectId }: Props) {
                 </div>
               </div>
             </div>
-            <button type="submit" disabled={createEdgeMutation.isPending}>
-              {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
-            </button>
+            <div className="row stack-row-actions">
+              <button type="submit" disabled={createEdgeMutation.isPending}>
+                {createEdgeMutation.isPending ? "Connecting..." : "Add connection"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={createEdgeMutation.isPending}
+                onClick={() => setAddEdgeOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
-        </details>
-      )}
+        </Modal>
+      ) : null}
       {mutationError ? (
         <div className="err" role="alert">
           {mutationError.message}
@@ -410,6 +445,15 @@ export function ProjectContextPanel({ projectId }: Props) {
               >
                 Add memory
               </button>
+              {items.length >= 2 ? (
+                <button
+                  type="button"
+                  className="project-context-add-connection-button"
+                  onClick={() => openAddEdge()}
+                >
+                  Add connection
+                </button>
+              ) : null}
               <div className="project-context-view-toggle" role="tablist" aria-label="Context view">
                 <button
                   type="button"
@@ -418,6 +462,14 @@ export function ProjectContextPanel({ projectId }: Props) {
                   onClick={() => setContextView("list")}
                 >
                   List
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={contextView === "tree"}
+                  onClick={() => setContextView("tree")}
+                >
+                  Tree
                 </button>
                 <button
                   type="button"
@@ -433,16 +485,14 @@ export function ProjectContextPanel({ projectId }: Props) {
           {contextView === "list" ? (
             <ProjectContextListView
               items={items}
-              edges={edges}
               nodeSaving={patchContextMutation.isPending}
               nodeDeleting={deleteContextMutation.isPending}
-              edgeSaving={patchEdgeMutation.isPending}
-              edgeDeleting={deleteEdgeMutation.isPending}
               onSaveNode={(id, patch) => patchContextMutation.mutate({ id, ...patch })}
               onDeleteNode={(id) => deleteContextMutation.mutate(id)}
-              onSaveEdge={(id, patch) => patchEdgeMutation.mutate({ id, ...patch })}
-              onDeleteEdge={(id) => deleteEdgeMutation.mutate(id)}
+              onAddConnection={openAddEdge}
             />
+          ) : contextView === "tree" ? (
+            <ProjectContextTreeView items={items} edges={edges} />
           ) : (
             <ProjectContextGraphView items={items} edges={edges} />
           )}

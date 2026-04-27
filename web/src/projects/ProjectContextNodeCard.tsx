@@ -6,6 +6,7 @@ type Props = {
   item: ProjectContextItem;
   saving: boolean;
   deleting: boolean;
+  canAddConnection?: boolean;
   onSave: (
     id: string,
     patch: {
@@ -16,14 +17,17 @@ type Props = {
     },
   ) => void;
   onDelete: (id: string) => void;
+  onAddConnection?: (sourceId: string) => void;
 };
 
 export function ProjectContextNodeCard({
   item,
   saving,
   deleting,
+  canAddConnection = false,
   onSave,
   onDelete,
+  onAddConnection,
 }: Props) {
   const preview = previewTextFromPrompt(item.body);
 
@@ -38,13 +42,24 @@ export function ProjectContextNodeCard({
         </div>
         <p title={preview}>{preview}</p>
       </div>
-      <ProjectContextItemEditor
-        item={item}
-        saving={saving}
-        deleting={deleting}
-        onSave={onSave}
-        onDelete={onDelete}
-      />
+      <div className="project-context-node-card__actions">
+        {canAddConnection ? (
+          <button
+            type="button"
+            className="project-context-node-card__edit"
+            onClick={() => onAddConnection?.(item.id)}
+          >
+            Add connection
+          </button>
+        ) : null}
+        <ProjectContextItemEditor
+          item={item}
+          saving={saving}
+          deleting={deleting}
+          onSave={onSave}
+          onDelete={onDelete}
+        />
+      </div>
     </article>
   );
 }

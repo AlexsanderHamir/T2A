@@ -1,20 +1,14 @@
 import { useMemo, useState } from "react";
 import type {
-  ProjectContextEdge,
   ProjectContextItem,
   ProjectContextKind,
-  ProjectContextRelation,
 } from "@/types";
-import { ProjectContextEdgeEditor } from "./ProjectContextEdgeEditor";
 import { ProjectContextNodeCard } from "./ProjectContextNodeCard";
 
 type Props = {
   items: ProjectContextItem[];
-  edges: ProjectContextEdge[];
   nodeSaving: boolean;
   nodeDeleting: boolean;
-  edgeSaving: boolean;
-  edgeDeleting: boolean;
   onSaveNode: (
     id: string,
     patch: {
@@ -25,34 +19,18 @@ type Props = {
     },
   ) => void;
   onDeleteNode: (id: string) => void;
-  onSaveEdge: (
-    id: string,
-    patch: {
-      relation: ProjectContextRelation;
-      strength: number;
-      note: string;
-    },
-  ) => void;
-  onDeleteEdge: (id: string) => void;
+  onAddConnection: (sourceId: string) => void;
 };
 
 export function ProjectContextListView({
   items,
-  edges,
   nodeSaving,
   nodeDeleting,
-  edgeSaving,
-  edgeDeleting,
   onSaveNode,
   onDeleteNode,
-  onSaveEdge,
-  onDeleteEdge,
+  onAddConnection,
 }: Props) {
   const [nodeQuery, setNodeQuery] = useState("");
-  const [connectionQuery, setConnectionQuery] = useState("");
-  const itemTitleByID = useMemo(() => {
-    return new Map(items.map((item) => [item.id, item.title]));
-  }, [items]);
   const filteredItems = useMemo(() => {
     const query = nodeQuery.trim().toLowerCase();
     if (!query) return items;
@@ -63,25 +41,8 @@ export function ProjectContextListView({
         .includes(query),
     );
   }, [items, nodeQuery]);
-  const filteredEdges = useMemo(() => {
-    const query = connectionQuery.trim().toLowerCase();
-    if (!query) return edges;
-    return edges.filter((edge) =>
-      [
-        itemTitleByID.get(edge.source_context_id) ?? "",
-        itemTitleByID.get(edge.target_context_id) ?? "",
-        edge.relation,
-        edge.note,
-        String(edge.strength),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [connectionQuery, edges, itemTitleByID]);
-
   return (
-    <div className="project-context-graph">
+    <div className="project-context-graph project-context-graph--nodes-only">
       <section className="project-context-graph__section">
         <div className="project-context-graph__section-heading">
           <div>
@@ -110,50 +71,10 @@ export function ProjectContextListView({
                 item={item}
                 saving={nodeSaving}
                 deleting={nodeDeleting}
+                canAddConnection={items.length >= 2}
                 onSave={onSaveNode}
                 onDelete={onDeleteNode}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-      <section className="project-context-graph__section">
-        <div className="project-context-graph__section-heading">
-          <div>
-            <h4>Connections</h4>
-          </div>
-          <span>{edges.length}</span>
-        </div>
-        <label className="project-context-search">
-          <span>Search connections</span>
-          <input
-            value={connectionQuery}
-            onChange={(event) => setConnectionQuery(event.target.value)}
-            placeholder="Node, relation, note, or strength"
-          />
-        </label>
-        {edges.length === 0 ? (
-          <div className="project-context-empty-card">
-            <span className="project-context-empty-card__icon" aria-hidden="true" />
-            <strong>No connections yet</strong>
-            <p>Create a link when two memories should travel together.</p>
-          </div>
-        ) : filteredEdges.length === 0 ? (
-          <div className="project-context-empty-card">
-            <strong>No matching connections</strong>
-            <p>Try a different search term or clear the filter.</p>
-          </div>
-        ) : (
-          <div className="project-context-edge-list">
-            {filteredEdges.map((edge) => (
-              <ProjectContextEdgeEditor
-                key={edge.id}
-                edge={edge}
-                items={items}
-                saving={edgeSaving}
-                deleting={edgeDeleting}
-                onSave={onSaveEdge}
-                onDelete={onDeleteEdge}
+                onAddConnection={onAddConnection}
               />
             ))}
           </div>
