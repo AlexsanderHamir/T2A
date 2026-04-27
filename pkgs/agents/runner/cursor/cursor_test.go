@@ -250,6 +250,51 @@ func TestRun_streamJSONEmitsLiveProgress(t *testing.T) {
 	}
 }
 
+func TestRun_streamJSONSummarizesToolInputsForLiveProgress(t *testing.T) {
+	t.Parallel()
+
+	stdout := []byte(
+		`{"type":"tool_call","subtype":"started","input":{"glob_pattern":"*.go","target_directory":"/repo/pkgs/agents/worker"}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","input":{"glob_pattern":"*.go","target_directory":"/repo/pkgs/agents/runner"}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","input":{"path":"/repo/pkgs/tasks/store/facade_projects.go","offset":1,"limit":91}}` + "\n" +
+			`{"type":"tool_call","subtype":"started","name":"Shell","input":{"command":"go test ./pkgs/agents/runner/cursor","description":"Run cursor parser tests"}}` + "\n" +
+			`{"type":"result","subtype":"success","is_error":false,"result":"done","session_id":"sess-live"}` + "\n",
+	)
+	var c captured
+	a := newAdapter(nil, func(opts *cursor.Options) {
+		opts.StreamExecFn = fakeStreamExec(&c, stdout, nil, 0, nil)
+	})
+	var progress []runner.ProgressEvent
+	req := defaultRequest()
+	req.OnProgress = func(ev runner.ProgressEvent) {
+		progress = append(progress, ev)
+	}
+
+	if _, err := a.Run(context.Background(), req); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(progress) != 4 {
+		t.Fatalf("progress count: got %d want 4 (%+v)", len(progress), progress)
+	}
+	got := []string{
+		progress[0].Message,
+		progress[1].Message,
+		progress[2].Message,
+		progress[3].Message,
+	}
+	want := []string{
+		"Searching files *.go in worker",
+		"Searching files *.go in runner",
+		"Read facade_projects.go L1-91",
+		"Run cursor parser tests",
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("progress[%d].Message = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 func TestRun_streamJSONIgnoresClosedPipeAfterResult(t *testing.T) {
 	t.Parallel()
 
