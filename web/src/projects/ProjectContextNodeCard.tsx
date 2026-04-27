@@ -1,5 +1,4 @@
 import type { ProjectContextItem, ProjectContextKind } from "@/types";
-import { previewTextFromPrompt } from "@/tasks/task-prompt";
 import { ProjectContextItemEditor } from "./ProjectContextItemEditor";
 import { projectContextKindTone } from "./projectContextKindTone";
 
@@ -30,8 +29,6 @@ export function ProjectContextNodeCard({
   onDelete,
   onAddConnection,
 }: Props) {
-  const preview = previewTextFromPrompt(item.body);
-
   return (
     <article className="project-context-node-card">
       <div className="project-context-node-card__body">
@@ -41,7 +38,6 @@ export function ProjectContextNodeCard({
             {item.pinned ? <span>Pinned</span> : null}
           </div>
           <h5>{item.title}</h5>
-          {preview ? <p>{preview}</p> : <p className="project-context-node-card__muted">No details yet</p>}
         </div>
       </div>
       <span

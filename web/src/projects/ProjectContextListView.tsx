@@ -53,7 +53,6 @@ export function ProjectContextListView({
         <div className="project-context-graph__section-heading">
           <div>
             <h4>Memory nodes</h4>
-            <p>Scan, search, and curate the saved context that shapes this project.</p>
           </div>
           <div className="project-context-list-stats" aria-label="Memory node summary">
             <span>{resultLabel}</span>
@@ -61,11 +60,11 @@ export function ProjectContextListView({
           </div>
         </div>
         <label className="project-context-search">
-          <span>Search memory nodes</span>
+          <span className="visually-hidden">Search memory nodes</span>
           <input
             value={nodeQuery}
             onChange={(event) => setNodeQuery(event.target.value)}
-            placeholder="Search by title, body, or kind"
+            placeholder="Search by title, body, or kind..."
           />
         </label>
         {filteredItems.length === 0 ? (

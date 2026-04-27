@@ -801,7 +801,8 @@
 }
 
 .project-context-graph--nodes-only .project-context-graph__section {
-  gap: var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius-xl);
   background:
     radial-gradient(
@@ -894,22 +895,15 @@
 
 .project-context-search {
   display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-1);
   border: 1px solid color-mix(in srgb, var(--border-hairline) 72%, transparent);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
 }
 
-.project-context-search span {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.03em;
-}
-
 .project-context-search input {
-  min-height: 2.75rem;
+  min-height: 2.25rem;
+  padding-block: var(--space-1);
   border-color: color-mix(in srgb, var(--accent, var(--brand)) 16%, var(--border-hairline));
   background: color-mix(in srgb, var(--bg-subtle) 42%, var(--bg-elevated));
   color: var(--text);
@@ -928,7 +922,7 @@
 
 .project-context-node-grid {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   max-height: min(54vh, 34rem);
   overflow: auto;
   padding-right: var(--space-1);
@@ -936,8 +930,8 @@
 
 .project-context-node-card {
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid color-mix(in srgb, var(--accent, var(--brand)) 12%, var(--border-hairline));
   border-radius: var(--radius-lg);
   background:
@@ -954,17 +948,13 @@
     transform 100ms var(--ease-default),
     background-color 150ms var(--ease-default);
   content-visibility: auto;
-  contain-intrinsic-size: 8rem;
+  contain-intrinsic-size: 4.5rem;
 }
 
 .project-context-graph--nodes-only .project-context-node-card {
   grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: start;
-  column-gap: var(--space-4);
-}
-
-.project-context-graph--nodes-only .project-context-node-card__body p {
-  -webkit-line-clamp: 1;
+  align-items: center;
+  column-gap: var(--space-3);
 }
 
 .project-context-node-card:hover {
@@ -977,17 +967,17 @@
     ),
     var(--bg-elevated);
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .project-context-node-card__kind {
   width: fit-content;
   max-width: 9rem;
   overflow: hidden;
-  padding: var(--space-1) var(--space-2);
+  padding: 0.2rem var(--space-2);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-full);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 720;
   letter-spacing: 0.04em;
   text-overflow: ellipsis;
@@ -1040,24 +1030,24 @@
 .project-context-node-card__title-block {
   display: grid;
   min-width: 0;
-  gap: var(--space-1);
+  gap: 0.35rem;
 }
 
 .project-context-node-card__eyebrow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
   align-items: center;
 }
 
 .project-context-node-card__eyebrow span {
   width: fit-content;
-  padding: 0.15rem var(--space-2);
+  padding: 0.12rem var(--space-2);
   border: 1px solid color-mix(in srgb, var(--border-hairline) 72%, transparent);
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--bg-subtle) 62%, transparent);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -1068,28 +1058,12 @@
   margin: 0;
   min-width: 0;
   overflow: hidden;
-  color: var(--text);
-  font-size: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
   font-weight: 760;
   letter-spacing: -0.012em;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.project-context-node-card__body p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
-  line-height: 1.45;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.project-context-node-card__body .project-context-node-card__muted {
-  color: var(--text-tertiary);
-  font-style: italic;
 }
 
 .project-context-node-card__actions {
@@ -1110,6 +1084,15 @@
 }
 
 .project-context-tree {
+  --project-tree-connector-color: color-mix(in srgb, var(--accent, var(--brand)) 28%, var(--border-hairline));
+  --project-tree-root-marker-radius: 0.325rem;
+  --project-tree-root-connector-left: calc(var(--space-4) + var(--project-tree-root-marker-radius));
+  --project-tree-root-connector-offset: calc(var(--project-tree-root-connector-left) - var(--space-8));
+  --project-tree-root-elbow-size: calc(var(--space-8) - var(--project-tree-root-connector-left));
+  --project-tree-root-rail-start: calc(var(--project-tree-root-marker-y) - var(--project-tree-root-marker-radius));
+  --project-tree-root-marker-y: 1.75rem;
+  --project-tree-row-min-height: 3.5rem;
+
   overflow: hidden;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-xl);
@@ -1145,7 +1128,6 @@
 }
 
 .project-context-tree-children {
-  --project-tree-connector-color: color-mix(in srgb, var(--accent, var(--brand)) 28%, var(--border-hairline));
   --project-tree-elbow-height: var(--space-2);
   --project-tree-elbow-size: var(--space-4);
   --project-tree-elbow-y: 2.55rem;
@@ -1193,6 +1175,19 @@
   top: calc(-1 * var(--space-2));
 }
 
+.project-context-tree > .project-context-tree-children > li::before,
+.project-context-tree > .project-context-tree-children > li::after {
+  left: var(--project-tree-root-connector-offset);
+}
+
+.project-context-tree > .project-context-tree-children > li:first-child::before {
+  top: calc(-1 * (var(--project-tree-root-rail-start) + var(--space-3)));
+}
+
+.project-context-tree > .project-context-tree-children > li::after {
+  width: var(--project-tree-root-elbow-size);
+}
+
 .project-context-tree-children .project-context-tree-children > li:first-child::before {
   top: calc(-1 * var(--space-3));
 }
@@ -1221,7 +1216,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 3.5rem;
+  min-height: var(--project-tree-row-min-height);
   padding: var(--space-3) var(--space-4);
   color: var(--text);
   background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
@@ -1252,6 +1247,13 @@
   box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--brand-muted) 58%, transparent);
 }
 
+.project-context-tree > summary .project-context-tree-row__marker {
+  z-index: 1;
+  border-color: var(--project-tree-connector-color);
+  background: var(--project-tree-connector-color);
+  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bg-subtle) 94%, transparent);
+}
+
 .project-context-tree-row--child .project-context-tree-row__marker {
   width: 0.5rem;
   height: 0.5rem;
@@ -1272,7 +1274,7 @@
 .project-context-tree-row strong {
   display: block;
   overflow: hidden;
-  color: var(--text);
+  color: var(--text-secondary);
   font-size: 0.95rem;
   font-weight: 760;
   letter-spacing: -0.012em;
@@ -1514,15 +1516,15 @@
 .project-context-node-card__action-button {
   display: inline-flex;
   width: fit-content;
-  min-height: 2rem;
+  min-height: 1.75rem;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-full);
   background: var(--bg-elevated);
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   box-shadow: none;
   opacity: 1;
