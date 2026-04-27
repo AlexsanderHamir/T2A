@@ -22,7 +22,6 @@ import {
   type ProjectContextRelation,
 } from "@/types";
 import { useProjectContext } from "./hooks";
-import { ProjectContextGraphView } from "./ProjectContextGraphView";
 import { ProjectContextKindPicker } from "./ProjectContextKindPicker";
 import { ProjectContextListView } from "./ProjectContextListView";
 import { ProjectContextTreeView } from "./ProjectContextTreeView";
@@ -34,7 +33,7 @@ type Props = {
 
 const EMPTY_CONTEXT_ITEMS: ProjectContextItem[] = [];
 const EMPTY_CONTEXT_EDGES: ProjectContextEdge[] = [];
-type ContextView = "list" | "tree" | "graph";
+type ContextView = "list" | "tree";
 
 export function ProjectContextPanel({ projectId }: Props) {
   const queryClient = useQueryClient();
@@ -471,14 +470,6 @@ export function ProjectContextPanel({ projectId }: Props) {
                 >
                   Tree
                 </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={contextView === "graph"}
-                  onClick={() => setContextView("graph")}
-                >
-                  Graph
-                </button>
               </div>
             </div>
           </div>
@@ -491,10 +482,8 @@ export function ProjectContextPanel({ projectId }: Props) {
               onDeleteNode={(id) => deleteContextMutation.mutate(id)}
               onAddConnection={openAddEdge}
             />
-          ) : contextView === "tree" ? (
-            <ProjectContextTreeView items={items} edges={edges} />
           ) : (
-            <ProjectContextGraphView items={items} edges={edges} />
+            <ProjectContextTreeView items={items} edges={edges} />
           )}
         </>
       )}

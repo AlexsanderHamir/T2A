@@ -53,7 +53,7 @@ export function ProjectContextItemEditor({
     <>
       <button
         type="button"
-        className="project-context-node-card__edit"
+        className="project-context-node-card__action-button"
         onClick={() => setIsOpen(true)}
       >
         Edit node

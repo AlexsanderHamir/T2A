@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { previewTextFromPrompt } from "@/tasks/task-prompt";
+import { useMemo, type CSSProperties } from "react";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
+import { projectContextKindTone } from "./projectContextKindTone";
 
 type Props = {
   items: ProjectContextItem[];
@@ -19,8 +19,21 @@ type ProjectContextForest = TreeRoot[] & {
   childrenBySource: Map<string, TreeEdge[]>;
 };
 
+type RelationToneStyle = CSSProperties & {
+  "--project-context-relation-hue": string;
+};
+
+const RELATION_HUE_RANGES: Record<ProjectContextEdge["relation"], { start: number; span: number }> = {
+  blocks: { start: 348, span: 28 },
+  depends_on: { start: 218, span: 30 },
+  refines: { start: 258, span: 30 },
+  related: { start: 184, span: 24 },
+  supports: { start: 132, span: 34 },
+};
+
 export function ProjectContextTreeView({ items, edges }: Props) {
   const forest = useMemo(() => buildProjectContextForest(items, edges), [edges, items]);
+  const rootCount = forest.length;
 
   if (items.length === 0) {
     return null;
@@ -29,13 +42,23 @@ export function ProjectContextTreeView({ items, edges }: Props) {
   return (
     <div className="project-context-tree-view" aria-label="Project context trees">
       {forest.map((root) => (
-        <article className="project-context-tree" key={root.item.id}>
+        <details
+          className="project-context-tree"
+          key={root.item.id}
+          open={rootCount <= 8}
+        >
+          <summary>
+            <TreeRow
+              item={root.item}
+              childCount={countDescendants(root.item.id, forest.childrenBySource)}
+            />
+          </summary>
           <TreeNode
             item={root.item}
             childrenBySource={forest.childrenBySource}
             path={[root.item.id]}
           />
-        </article>
+        </details>
       ))}
     </div>
   );
@@ -45,65 +68,129 @@ function TreeNode({
   item,
   childrenBySource,
   path,
-  edge,
 }: {
   item: ProjectContextItem;
   childrenBySource: Map<string, TreeEdge[]>;
   path: string[];
-  edge?: ProjectContextEdge;
 }) {
   const children = childrenBySource.get(item.id) ?? [];
-  const preview = previewTextFromPrompt(item.body);
+  if (children.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="project-context-tree-node">
-      {edge ? (
-        <div className="project-context-tree-edge">
-          <span>{formatRelation(edge.relation)}</span>
-        </div>
-      ) : null}
-      <div className="project-context-tree-card">
-        <div>
-          <strong>{item.title}</strong>
-          <p>{preview}</p>
-        </div>
-        <span className="project-context-node-card__kind">{item.kind}</span>
-      </div>
-      {children.length > 0 ? (
-        <ol className="project-context-tree-children">
-          {children.map((childEdge) => {
-            const loopsBack = path.includes(childEdge.target.id);
-            return (
-              <li key={childEdge.id}>
-                {loopsBack ? (
-                  <div className="project-context-tree-node">
-                    <div className="project-context-tree-edge">
-                      <span>{formatRelation(childEdge.relation)}</span>
-                    </div>
-                    <div className="project-context-tree-card project-context-tree-card--cycle">
-                      <div>
-                        <strong>{childEdge.target.title}</strong>
-                        <p>Already appears in this branch.</p>
-                      </div>
-                      <span className="project-context-node-card__kind">
-                        {childEdge.target.kind}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <TreeNode
+    <ol className="project-context-tree-children">
+      {children.map((childEdge) => {
+        const loopsBack = path.includes(childEdge.target.id);
+        const childCount = loopsBack
+          ? 0
+          : countDescendants(childEdge.target.id, childrenBySource);
+        return (
+          <li key={childEdge.id}>
+            {loopsBack ? (
+              <div className="project-context-tree-leaf project-context-tree-leaf--cycle">
+                <TreeRow
+                  item={childEdge.target}
+                  edge={childEdge}
+                  sourceTitle={item.title}
+                  isCycle
+                />
+              </div>
+            ) : childCount > 0 ? (
+              <details className="project-context-tree-branch" open={path.length < 2}>
+                <summary>
+                  <TreeRow
                     item={childEdge.target}
-                    childrenBySource={childrenBySource}
-                    path={[...path, childEdge.target.id]}
                     edge={childEdge}
+                    sourceTitle={item.title}
+                    childCount={childCount}
                   />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
-    </div>
+                </summary>
+                <TreeNode
+                  item={childEdge.target}
+                  childrenBySource={childrenBySource}
+                  path={[...path, childEdge.target.id]}
+                />
+              </details>
+            ) : (
+              <div className="project-context-tree-leaf">
+                <TreeRow
+                  item={childEdge.target}
+                  edge={childEdge}
+                  sourceTitle={item.title}
+                />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function TreeRow({
+  item,
+  edge,
+  sourceTitle,
+  childCount,
+  isCycle = false,
+}: {
+  item: ProjectContextItem;
+  edge?: ProjectContextEdge;
+  sourceTitle?: string;
+  childCount?: number;
+  isCycle?: boolean;
+}) {
+  const childLabel = childCount === 1 ? "1 child" : `${childCount} children`;
+
+  return (
+    <span
+      className={
+        edge
+          ? "project-context-tree-row project-context-tree-row--child"
+          : "project-context-tree-row"
+      }
+    >
+      <span className="project-context-tree-row__marker" aria-hidden="true" />
+      <span className="project-context-tree-row__main">
+        <strong>{item.title}</strong>
+        {edge && sourceTitle ? (
+          <span
+            className="project-context-tree-relationship"
+            aria-label={`${sourceTitle} ${formatRelation(edge.relation)} ${item.title}`}
+            style={relationToneStyle(edge)}
+          >
+            <span className="project-context-tree-relationship__source">
+              <span>From</span>
+              <strong>{sourceTitle}</strong>
+            </span>
+            <span className="project-context-tree-relationship__relation">
+              {formatRelation(edge.relation)}
+            </span>
+            <span className="project-context-tree-relationship__target">
+              <span>To</span>
+              <strong>{item.title}</strong>
+            </span>
+          </span>
+        ) : (
+          null
+        )}
+        {isCycle ? <small>Already appears in this branch.</small> : null}
+      </span>
+      <span className="project-context-tree-row__chips">
+        <span
+          className="project-context-tree-chip project-context-tree-chip--kind"
+          data-kind-tone={projectContextKindTone(item.kind)}
+        >
+          {item.kind}
+        </span>
+        {childCount ? (
+          <span className="project-context-tree-chip project-context-tree-chip--count">
+            {childLabel}
+          </span>
+        ) : null}
+      </span>
+    </span>
   );
 }
 
@@ -154,6 +241,43 @@ function markReachable(
   }
 }
 
+function countDescendants(
+  itemID: string,
+  childrenBySource: Map<string, TreeEdge[]>,
+  seen = new Set<string>(),
+): number {
+  if (seen.has(itemID)) return 0;
+  seen.add(itemID);
+  let count = 0;
+  for (const edge of childrenBySource.get(itemID) ?? []) {
+    count += 1 + countDescendants(edge.target.id, childrenBySource, new Set(seen));
+  }
+  return count;
+}
+
 function formatRelation(relation: ProjectContextEdge["relation"]) {
-  return relation.replace("_", " ");
+  const labels: Record<ProjectContextEdge["relation"], string> = {
+    blocks: "Blocks",
+    depends_on: "Depends on",
+    refines: "Refines",
+    related: "Related",
+    supports: "Supports",
+  };
+  return labels[relation];
+}
+
+function relationToneStyle(edge: ProjectContextEdge): RelationToneStyle {
+  const range = RELATION_HUE_RANGES[edge.relation];
+  const offset = hashString(`${edge.id}:${edge.source_context_id}:${edge.target_context_id}`) % range.span;
+  return {
+    "--project-context-relation-hue": `${(range.start + offset) % 360}deg`,
+  };
+}
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
 }

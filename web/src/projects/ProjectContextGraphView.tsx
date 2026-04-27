@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { previewTextFromPrompt } from "@/tasks/task-prompt";
-import { GRAPH_LAYOUT_PX } from "@/tasks/task-graph";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
+import { projectContextKindTone } from "./projectContextKindTone";
 
 type Props = {
   items: ProjectContextItem[];
@@ -22,7 +22,13 @@ const {
   COL_GAP,
   ROW_GAP,
   PADDING,
-} = GRAPH_LAYOUT_PX;
+} = {
+  CARD_WIDTH: 192,
+  CARD_HEIGHT: 76,
+  COL_GAP: 56,
+  ROW_GAP: 12,
+  PADDING: 16,
+} as const;
 
 export function ProjectContextGraphView({ items, edges }: Props) {
   const layout = useMemo(() => buildProjectContextGraphLayout(items, edges), [
@@ -70,7 +76,10 @@ export function ProjectContextGraphView({ items, edges }: Props) {
               </div>
               <p>{preview}</p>
               <div className="task-graph-node-meta">
-                <span className="project-context-node-card__kind">
+                <span
+                  className="project-context-node-card__kind"
+                  data-kind-tone={projectContextKindTone(node.item.kind)}
+                >
                   {node.item.kind}
                 </span>
               </div>

@@ -41,21 +41,31 @@ export function ProjectContextListView({
         .includes(query),
     );
   }, [items, nodeQuery]);
+  const pinnedCount = items.filter((item) => item.pinned).length;
+  const resultLabel =
+    nodeQuery.trim().length > 0
+      ? `${filteredItems.length} of ${items.length}`
+      : `${items.length}`;
+
   return (
     <div className="project-context-graph project-context-graph--nodes-only">
       <section className="project-context-graph__section">
         <div className="project-context-graph__section-heading">
           <div>
             <h4>Memory nodes</h4>
+            <p>Scan, search, and curate the saved context that shapes this project.</p>
           </div>
-          <span>{items.length}</span>
+          <div className="project-context-list-stats" aria-label="Memory node summary">
+            <span>{resultLabel}</span>
+            {pinnedCount > 0 ? <span>{pinnedCount} pinned</span> : null}
+          </div>
         </div>
         <label className="project-context-search">
           <span>Search memory nodes</span>
           <input
             value={nodeQuery}
             onChange={(event) => setNodeQuery(event.target.value)}
-            placeholder="Title, body, or kind"
+            placeholder="Search by title, body, or kind"
           />
         </label>
         {filteredItems.length === 0 ? (
