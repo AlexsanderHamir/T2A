@@ -14,7 +14,7 @@ export function ProjectContextPage() {
 
   if (!projectId) {
     return (
-      <section className="panel task-detail-panel project-page">
+      <section className="panel task-detail-panel">
         <EmptyState
           title="Missing project id"
           description="Choose a project before opening its context graph."
@@ -26,30 +26,40 @@ export function ProjectContextPage() {
   }
 
   return (
-    <section className="panel task-detail-panel project-page project-context-page">
-      {project.isLoading ? <p className="muted">Loading project...</p> : null}
-      {project.error ? (
-        <div className="err" role="alert">
-          {project.error.message}
+    <section className="panel task-detail-panel pc">
+      <header className="pc__header">
+        <Link
+          to={`/projects/${encodeURIComponent(projectId)}`}
+          className="pd__back project-context-back-link"
+        >
+          <span aria-hidden="true">&#8249;</span>
+          Back to project
+        </Link>
+        {project.data ? (
+          <div className="pc__project-pill" aria-label="Current project">
+            <h2>{project.data.name}</h2>
+          </div>
+        ) : null}
+      </header>
+
+      {project.isLoading ? (
+        <div className="pc__skeleton" aria-hidden="true">
+          <div className="pd__shimmer pd__shimmer--card" />
+          <div className="pd__shimmer pd__shimmer--card pd__shimmer--card-sm" />
         </div>
       ) : null}
-      {project.data ? (
-        <>
-          <header className="project-context-hero">
-            <Link
-              to={`/projects/${encodeURIComponent(projectId)}`}
-              className="back-link project-context-back-link"
-            >
-              <span aria-hidden="true">‹</span>
-              Back to project
-            </Link>
-            <div className="project-context-hero__project" aria-label="Current project">
-              <h2>{project.data.name}</h2>
-            </div>
-          </header>
-          <ProjectContextPanel projectId={projectId} />
-        </>
+
+      {project.error ? (
+        <div className="pd__error" role="alert">
+          <div className="pd__error-dot" aria-hidden="true" />
+          <div>
+            <p className="pd__error-title">Unable to load project</p>
+            <p className="pd__error-message">{project.error.message}</p>
+          </div>
+        </div>
       ) : null}
+
+      {project.data ? <ProjectContextPanel projectId={projectId} /> : null}
     </section>
   );
 }

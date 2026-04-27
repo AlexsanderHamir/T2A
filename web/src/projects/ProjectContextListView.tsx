@@ -41,54 +41,51 @@ export function ProjectContextListView({
         .includes(query),
     );
   }, [items, nodeQuery]);
-  const pinnedCount = items.filter((item) => item.pinned).length;
   const resultLabel =
     nodeQuery.trim().length > 0
       ? `${filteredItems.length} of ${items.length}`
       : `${items.length}`;
 
   return (
-    <div className="project-context-graph project-context-graph--nodes-only">
-      <section className="project-context-graph__section">
-        <div className="project-context-graph__section-heading">
-          <div>
-            <h4>Memory nodes</h4>
-          </div>
-          <div className="project-context-list-stats" aria-label="Memory node summary">
-            <span>{resultLabel}</span>
-            {pinnedCount > 0 ? <span>{pinnedCount} pinned</span> : null}
-          </div>
-        </div>
-        <label className="project-context-search">
+    <div className="pc__list-view">
+      <div className="pc__list-bar">
+        <label className="pc__search">
           <span className="visually-hidden">Search memory nodes</span>
+          <svg className="pc__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
           <input
             value={nodeQuery}
             onChange={(event) => setNodeQuery(event.target.value)}
             placeholder="Search by title, body, or kind..."
           />
         </label>
-        {filteredItems.length === 0 ? (
-          <div className="project-context-empty-card">
-            <strong>No matching nodes</strong>
-            <p>Try a different search term or clear the filter.</p>
-          </div>
-        ) : (
-          <div className="project-context-node-grid">
-            {filteredItems.map((item) => (
-              <ProjectContextNodeCard
-                key={item.id}
-                item={item}
-                saving={nodeSaving}
-                deleting={nodeDeleting}
-                canAddConnection={items.length >= 2}
-                onSave={onSaveNode}
-                onDelete={onDeleteNode}
-                onAddConnection={onAddConnection}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        <span className="pc__count">{resultLabel}</span>
+      </div>
+
+      {filteredItems.length === 0 ? (
+        <div className="pc__empty">
+          <p>No matching nodes</p>
+          <span>Try a different search term or clear the filter.</span>
+        </div>
+      ) : (
+        <div className="pc__node-grid">
+          {filteredItems.map((item, i) => (
+            <ProjectContextNodeCard
+              key={item.id}
+              item={item}
+              index={i}
+              saving={nodeSaving}
+              deleting={nodeDeleting}
+              canAddConnection={items.length >= 2}
+              onSave={onSaveNode}
+              onDelete={onDeleteNode}
+              onAddConnection={onAddConnection}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

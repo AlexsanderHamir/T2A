@@ -224,24 +224,7 @@ export function ProjectContextPanel({ projectId }: Props) {
   }, []);
 
   return (
-    <section className="task-attempt-section project-context-workspace">
-      <ol className="project-context-guide" aria-label="Project memory workflow">
-        <li>
-          <span>1</span>
-          <strong>Capture</strong>
-          <p>Facts, decisions, constraints.</p>
-        </li>
-        <li>
-          <span>2</span>
-          <strong>Connect</strong>
-          <p>Only when a relationship matters.</p>
-        </li>
-        <li>
-          <span>3</span>
-          <strong>Reuse</strong>
-          <p>Select memory per task.</p>
-        </li>
-      </ol>
+    <section className="pc__workspace">
       {addNodeOpen ? (
         <Modal
           onClose={() => setAddNodeOpen(false)}
@@ -315,13 +298,9 @@ export function ProjectContextPanel({ projectId }: Props) {
         </Modal>
       ) : null}
       {items.length < 2 ? (
-        <div className="project-context-ready-card">
-          <span className="project-context-ready-card__step">Next</span>
-          <div>
-            <strong>Add two memories to link them</strong>
-            <p>Links are optional. Use them only when the relationship helps a task.</p>
-          </div>
-        </div>
+        <p className="pc__hint">
+          Add at least two memory nodes to start connecting them.
+        </p>
       ) : null}
       {addEdgeOpen ? (
         <Modal
@@ -409,14 +388,16 @@ export function ProjectContextPanel({ projectId }: Props) {
         </Modal>
       ) : null}
       {mutationError ? (
-        <div className="err" role="alert">
+        <div className="pd__inline-error" role="alert">
           {mutationError.message}
         </div>
       ) : null}
       {context.isLoading ? (
-        <p className="muted">Loading context...</p>
+        <div className="pc__skeleton" aria-hidden="true">
+          <div className="pd__shimmer pd__shimmer--card" />
+        </div>
       ) : context.error ? (
-        <div className="err" role="alert">
+        <div className="pd__inline-error" role="alert">
           {context.error.message}
         </div>
       ) : items.length === 0 ? (
@@ -432,14 +413,11 @@ export function ProjectContextPanel({ projectId }: Props) {
         />
       ) : (
         <>
-          <div className="project-context-display-bar">
-            <div>
-              <h4>Browse</h4>
-            </div>
-            <div className="project-context-display-actions">
+          <div className="pc__action-bar">
+            <div className="pc__actions-left">
               <button
                 type="button"
-                className="project-context-add-memory-button"
+                className="pc__btn-primary"
                 onClick={() => setAddNodeOpen(true)}
               >
                 Add memory
@@ -447,30 +425,30 @@ export function ProjectContextPanel({ projectId }: Props) {
               {items.length >= 2 ? (
                 <button
                   type="button"
-                  className="project-context-add-connection-button"
+                  className="pc__btn-secondary"
                   onClick={() => openAddEdge()}
                 >
                   Add connection
                 </button>
               ) : null}
-              <div className="project-context-view-toggle" role="tablist" aria-label="Context view">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={contextView === "list"}
-                  onClick={() => setContextView("list")}
-                >
-                  List
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={contextView === "tree"}
-                  onClick={() => setContextView("tree")}
-                >
-                  Tree
-                </button>
-              </div>
+            </div>
+            <div className="pc__view-toggle" role="tablist" aria-label="Context view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contextView === "list"}
+                onClick={() => setContextView("list")}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contextView === "tree"}
+                onClick={() => setContextView("tree")}
+              >
+                Tree
+              </button>
             </div>
           </div>
           {contextView === "list" ? (

@@ -2,8 +2,20 @@ import type { ProjectContextItem, ProjectContextKind } from "@/types";
 import { ProjectContextItemEditor } from "./ProjectContextItemEditor";
 import { projectContextKindTone } from "./projectContextKindTone";
 
+const NODE_HUES = [
+  "248, 63%",
+  "160, 60%",
+  "330, 55%",
+  "38, 75%",
+  "200, 65%",
+  "280, 50%",
+  "15, 65%",
+  "175, 55%",
+];
+
 type Props = {
   item: ProjectContextItem;
+  index: number;
   saving: boolean;
   deleting: boolean;
   canAddConnection?: boolean;
@@ -22,6 +34,7 @@ type Props = {
 
 export function ProjectContextNodeCard({
   item,
+  index,
   saving,
   deleting,
   canAddConnection = false,
@@ -29,31 +42,34 @@ export function ProjectContextNodeCard({
   onDelete,
   onAddConnection,
 }: Props) {
+  const hue = NODE_HUES[index % NODE_HUES.length];
   return (
-    <article className="project-context-node-card">
-      <div className="project-context-node-card__body">
-        <div className="project-context-node-card__title-block">
-          <div className="project-context-node-card__eyebrow">
-            <span>{item.created_by === "agent" ? "Agent memory" : "User memory"}</span>
-            {item.pinned ? <span>Pinned</span> : null}
-          </div>
-          <h5>{item.title}</h5>
-        </div>
+    <article
+      className="pc__node"
+      style={{ "--pc-hue": hue, animationDelay: `${index * 30}ms` } as React.CSSProperties}
+    >
+      <div className="pc__node-marker" aria-hidden="true" />
+      <div className="pc__node-body">
+        <h5 className="pc__node-title">{item.title}</h5>
+        <span className="pc__node-source">
+          {item.created_by === "agent" ? "Agent" : "User"}
+          {item.pinned ? " · Pinned" : ""}
+        </span>
       </div>
       <span
-        className="project-context-node-card__kind"
+        className="pc__node-kind"
         data-kind-tone={projectContextKindTone(item.kind)}
       >
         {item.kind}
       </span>
-      <div className="project-context-node-card__actions">
+      <div className="pc__node-actions">
         {canAddConnection ? (
           <button
             type="button"
-            className="project-context-node-card__action-button project-context-node-card__action-button--primary"
+            className="pc__btn-ghost"
             onClick={() => onAddConnection?.(item.id)}
           >
-            Add connection
+            Link
           </button>
         ) : null}
         <ProjectContextItemEditor
