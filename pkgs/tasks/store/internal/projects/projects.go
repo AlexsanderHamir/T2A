@@ -484,8 +484,8 @@ func validateContextKind(kind domain.ProjectContextKind) error {
 	if trimmed == "" {
 		return fmt.Errorf("%w: context kind required", domain.ErrInvalidInput)
 	}
-	if len(trimmed) > 64 {
-		return fmt.Errorf("%w: context kind must be 64 characters or fewer", domain.ErrInvalidInput)
+	if len(trimmed) > 24 {
+		return fmt.Errorf("%w: context kind must be 24 characters or fewer", domain.ErrInvalidInput)
 	}
 	return nil
 }
