@@ -309,6 +309,58 @@ Format for each entry:
   `web/src/shared/time/relativeTime.test.ts`,
   `web/src/tasks/pages/TaskDraftsPage.tsx`.
 
+### Navbar uses an underline accent under the active item AND the existing brand pill
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: The active nav item now carries both the existing
+  brand-tinted pill (background + border + brand-color text) AND a
+  small `::after` underline indicator below it (Stripe.com top-nav
+  vocabulary). Should we collapse to one cue (pill OR underline) for
+  a quieter look?
+- Default chosen if no answer: Keep both. The pill alone made the
+  active state read as "this is a button" rather than "you are
+  here"; the underline alone (no pill) would lose the `aria-current`
+  affordance for users who can't perceive thin marks. Two
+  complementary cues — color tint + underline — pairs the Apple
+  pill with the Stripe rule, and stays accessible without color.
+- Files affected: `web/src/app/styles/base/app-shell.css`
+  (`.app-nav__link[aria-current="page"]::after`).
+
+### Sticky header lifts to `--shadow-md` once scrolled past 4px
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: A new `useStickyShellElevation` hook toggles
+  `data-elevated="true"` on the sticky header once `window.scrollY`
+  passes 4px. The header then lifts to `--shadow-md` plus a hairline
+  brand-tinted top edge. Is 4px the right threshold, or should it be
+  more conservative (e.g. 16–24px) so the elevation only kicks in
+  after a deliberate scroll?
+- Default chosen if no answer: 4px. Matches Stripe / Linear / Notion
+  dashboard top-nav behavior — the elevation appears the moment the
+  page edge passes under the sticky frame, so the chrome reads as
+  "floating" without ambiguity. Higher thresholds delay the cue
+  enough that operators feel "is this stuck or floating?" briefly,
+  which is the affordance the elevation is meant to resolve.
+- Files affected: `web/src/lib/useStickyShellElevation.ts`,
+  `web/src/lib/useStickyShellElevation.test.ts`,
+  `web/src/app/App.tsx`,
+  `web/src/app/styles/base/app-shell.css`
+  (`.app-header--sticky[data-elevated="true"]`).
+
+### Settings cog rotates 35° on hover
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: The settings cog gains a `transform: rotate(35deg)`
+  on hover (Apple-style affordance signaling "this control is
+  interactive"). Should it rotate further (e.g. 90° / 180°), spin
+  continuously, or not move at all?
+- Default chosen if no answer: 35° subtle quarter-rotation under the
+  shared `--ease-out` easing, disabled by `prefers-reduced-motion`.
+  Anything more becomes playful (Slack-style bounce) and out of
+  character with the rest of the calm, terminal-inflected aesthetic.
+- Files affected: `web/src/settings/settings.css`
+  (`.app-header-settings-link:hover .app-header-settings-icon`).
+
 ### Drafts row does not surface project / runner / task-type metadata
 - Date: 2026-04-29
 - From task: Drafts page polish
