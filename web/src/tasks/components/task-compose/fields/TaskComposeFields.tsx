@@ -3,7 +3,10 @@ import type { PriorityChoice, TaskType } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import { TaskTypeSelect } from "./TaskTypeSelect";
-import { RichPromptEditor } from "../../rich-prompt";
+import {
+  RichPromptEditor,
+  type RichPromptEditorProjectContextProps,
+} from "../../rich-prompt";
 import { ChecklistCriterionModal } from "../modals/ChecklistCriterionModal";
 import { TaskComposeChecklistFields } from "./TaskComposeChecklistFields";
 
@@ -27,6 +30,13 @@ export type TaskComposeFieldsProps = {
   onRemoveChecklistRow: (index: number) => void;
   /** Passed to `RichPromptEditor` as `key` so the editor resets when needed. */
   editorKey: string;
+  /**
+   * When provided, the prompt editor wires the `#` project context
+   * suggestion plugin and renders the read-only REFERENCES block above the
+   * editable area. Pass `undefined` for surfaces where project context
+   * isn't applicable (e.g. nested subtask drafts that inherit from parent).
+   */
+  projectContext?: RichPromptEditorProjectContextProps;
 };
 
 export function TaskComposeFields({
@@ -46,6 +56,7 @@ export function TaskComposeFields({
   onUpdateChecklistRow,
   onRemoveChecklistRow,
   editorKey,
+  projectContext,
 }: TaskComposeFieldsProps) {
   const titleId = `${idsPrefix}-title`;
   const promptId = `${idsPrefix}-prompt`;
@@ -134,7 +145,12 @@ export function TaskComposeFields({
             value={prompt}
             onChange={onPromptChange}
             disabled={disabled}
-            placeholder="Optional context. Toolbar for headings and bold; type @ to mention a repo file."
+            placeholder={
+              projectContext
+                ? "Optional context. Toolbar for headings and bold; type @ to mention a repo file or # to reference project context."
+                : "Optional context. Toolbar for headings and bold; type @ to mention a repo file."
+            }
+            projectContext={projectContext}
           />
         </div>
       </div>

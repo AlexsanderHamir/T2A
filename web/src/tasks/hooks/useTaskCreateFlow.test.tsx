@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task } from "@/types";
+import type { Task, TaskDraftDetail } from "@/types";
 import { DEFAULT_PROJECT_ID } from "@/types";
 import { settingsQueryKeys } from "../task-query";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
@@ -17,10 +17,17 @@ vi.mock("../../api", () => ({
   saveTaskDraft: vi.fn(),
 }));
 
-import { createTask, listTaskDrafts } from "../../api";
+import {
+  createTask,
+  getTaskDraft,
+  listTaskDrafts,
+  saveTaskDraft,
+} from "../../api";
 
 const mockedCreateTask = vi.mocked(createTask);
 const mockedListDrafts = vi.mocked(listTaskDrafts);
+const mockedSaveDraft = vi.mocked(saveTaskDraft);
+const mockedGetDraft = vi.mocked(getTaskDraft);
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -104,5 +111,148 @@ describe("useTaskCreateFlow", () => {
     expect(mockedCreateTask).toHaveBeenCalledWith(
       expect.objectContaining({ project_id: DEFAULT_PROJECT_ID }),
     );
+  });
+
+  it("forwards the operator's project_context_item_ids on create", async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+      result.current.setNewTitle("With context");
+      result.current.setNewPriority("medium");
+      result.current.setNewProjectID("project-7");
+      result.current.setNewProjectContextItemIDs(["ctx-a", "ctx-b"]);
+    });
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent);
+    });
+
+    await waitFor(() => {
+      expect(mockedCreateTask).toHaveBeenCalledTimes(1);
+    });
+    expect(mockedCreateTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_id: "project-7",
+        project_context_item_ids: ["ctx-a", "ctx-b"],
+      }),
+    );
+  });
+
+  it("persists project + context selections in the autosaved draft payload", async () => {
+    mockedSaveDraft.mockResolvedValue({ id: "draft-saved", name: "Untitled" });
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+      result.current.setNewTitle("Persisted");
+      result.current.setNewPriority("medium");
+      result.current.setNewProjectID("project-9");
+      result.current.setNewProjectContextItemIDs(["ctx-3"]);
+    });
+
+    await act(async () => {
+      await result.current.saveDraftNow();
+    });
+
+    expect(mockedSaveDraft).toHaveBeenCalled();
+    const last = mockedSaveDraft.mock.calls.at(-1)?.[0];
+    expect(last?.payload.project_id).toBe("project-9");
+    expect(last?.payload.project_context_item_ids).toEqual(["ctx-3"]);
+  });
+
+  it("applyTestScenario fills title / prompt / priority / task type / checklist with zero typing", async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+    });
+
+    const scenarios = await import("../test-scenarios");
+    const scenario = scenarios.TEST_SCENARIOS.find(
+      (s) => s.checklist.length > 0,
+    );
+    expect(scenario).toBeDefined();
+    if (!scenario) throw new Error("expected at least one scenario");
+
+    act(() => {
+      result.current.applyTestScenario(scenario);
+    });
+
+    expect(result.current.newTitle).toBe(scenario.title);
+    expect(result.current.newPriority).toBe(scenario.priority);
+    expect(result.current.newTaskType).toBe(scenario.taskType);
+    expect(result.current.newChecklistItems).toEqual(scenario.checklist);
+    // Prompt is wrapped in <p> blocks by plainTextToInitialHtml; assert the
+    // first paragraph contains the scenario's first line so we know the
+    // body actually made it into the editor.
+    const firstLine = scenario.prompt.split("\n", 1)[0]!;
+    expect(result.current.newPrompt).toContain(firstLine);
+  });
+
+  it("restores project + context selections when resuming a draft", async () => {
+    const draft: TaskDraftDetail = {
+      id: "draft-resume",
+      name: "Untitled",
+      created_at: "2026-04-29T00:00:00Z",
+      updated_at: "2026-04-29T00:00:00Z",
+      payload: {
+        title: "Resumed",
+        initial_prompt: "<p>Body</p>",
+        priority: "high",
+        task_type: "general",
+        runner: "cursor",
+        cursor_model: "",
+        parent_id: "",
+        project_id: "project-resume",
+        project_context_item_ids: ["ctx-r1", "ctx-r2"],
+        checklist_inherit: false,
+        checklist_items: [],
+        pending_subtasks: [],
+      },
+    };
+    mockedGetDraft.mockResolvedValue(draft);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.resumeDraftByID("draft-resume");
+    });
+
+    expect(result.current.newProjectID).toBe("project-resume");
+    expect(result.current.newProjectContextItemIDs).toEqual([
+      "ctx-r1",
+      "ctx-r2",
+    ]);
   });
 });

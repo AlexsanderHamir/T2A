@@ -1,12 +1,350 @@
 /* —— New task card (Stripe-like: clear hierarchy, modest radii, brand CTA) —— */
 .task-create.panel {
   padding: 1.35rem 1.5rem 1.5rem;
+  /* Subtle vertical depth so the modal doesn't read as a flat sheet. The
+     gradient is barely visible (top is bg-elevated, bottom mixes ~3% with
+     bg-page) but adds a sense of light direction and matches Stripe-style
+     surfaces that lean into very low-contrast tonal shifts. */
+  background:
+    linear-gradient(
+      180deg,
+      var(--bg-elevated) 0%,
+      color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-page)) 100%
+    );
+}
+
+/* Hairline accent at the very top of the modal panel — quietly reinforces
+   the brand without using accent text. Matches the "thin tinted strip"
+   pattern Linear/Vercel use on app cards. The corner radii pick up
+   `--radius-xl` because `.modal-shell > .panel` overrides the base
+   `panel` radius to xl on desktop (see app-modal-shell.css). */
+.task-create.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand-border-soft) 12%,
+    var(--brand) 50%,
+    var(--brand-border-soft) 88%,
+    transparent 100%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.task-create-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin: 0 0 1.05rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 80%, transparent);
+}
+
+.task-create-modal-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.task-create-modal-lede {
+  margin: 0;
+  font-size: var(--text-help);
+  letter-spacing: 0.005em;
+  opacity: 0.85;
+}
+
+/* Test scenarios trigger — sits to the right of the modal heading. Mirrors
+   the schedule-picker quick trigger so both popover triggers in the modal
+   feel like siblings (icon + label + chevron, brand-tinted active state). */
+.test-scenarios-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-secondary);
+  padding: 0.4rem 0.7rem 0.4rem 0.6rem;
+  min-height: 2rem;
+  line-height: 1.2;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-inset-lip), var(--shadow-xs);
+  cursor: pointer;
+  transition:
+    background var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default);
+}
+
+.test-scenarios-trigger:not(:disabled):hover {
+  background: var(--brand-surface-faint);
+  border-color: var(--brand-border-soft);
+  color: var(--brand-text-strong);
+}
+
+.test-scenarios-trigger:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.test-scenarios-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus), var(--shadow-inset-lip);
+  border-color: var(--brand-border-focus);
+}
+
+.test-scenarios-trigger[data-active="true"] {
+  background: var(--brand-surface-subtle);
+  border-color: var(--brand-border-soft);
+  color: var(--brand-text-strong);
+}
+
+.test-scenarios-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-scenarios-trigger-chevron {
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--chrome-icon-muted);
+  transition: transform var(--duration-normal) var(--ease-default);
+}
+
+.test-scenarios-trigger[data-active="true"] .test-scenarios-trigger-chevron {
+  transform: rotate(180deg);
+  color: var(--brand-text-strong);
+}
+
+/* —— Test scenarios popover — anchored, portal-rendered, structurally
+   identical to QuickScheduleOffsetPopover so both popovers feel like
+   siblings with their own content. —— */
+
+.test-scenarios-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.95rem 1rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  animation: test-scenarios-popover-enter var(--duration-normal) var(--ease-out) both;
+}
+
+.test-scenarios-popover[data-place-above="true"] {
+  transform-origin: bottom right;
+  animation-name: test-scenarios-popover-enter-up;
+}
+
+@keyframes test-scenarios-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes test-scenarios-popover-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-scenarios-popover {
+    animation: none;
+  }
+}
+
+.test-scenarios-popover__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 75%, transparent);
+}
+
+.test-scenarios-popover__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.test-scenarios-popover__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
+.test-scenarios-popover__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  padding-right: 0.15rem;
+  scrollbar-gutter: stable;
+}
+
+.test-scenarios-popover__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.test-scenarios-popover__section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.test-scenarios-popover__section-label {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.test-scenarios-popover__section-hint {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--text-tertiary) 78%, transparent);
+}
+
+.test-scenarios-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.test-scenarios-popover__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-inset-lip);
+  cursor: pointer;
+  transition:
+    background var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default);
+}
+
+.test-scenarios-popover__row:hover {
+  background: var(--brand-surface-faint);
+  border-color: var(--brand-border-soft);
+}
+
+.test-scenarios-popover__row:active {
+  transform: scale(0.99);
+}
+
+.test-scenarios-popover__row:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus), var(--shadow-inset-lip);
+  border-color: var(--brand-border-focus);
+}
+
+.test-scenarios-popover__row-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.test-scenarios-popover__row-description {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Lift the `>` glyph on the modal title and the `$` glyph on each
+   section heading inside the create modal so they read as deliberate
+   anchors instead of decorative whispers. Scoped to the create
+   modal only — other surfaces keep the historical 0.55 opacity. */
+.task-create-modal-sheet .term-arrow::before,
+.task-create-modal-sheet .term-prompt::before {
+  opacity: 0.78;
 }
 
 .task-create-form {
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
+}
+
+/* Subtle stagger fade-in on each top-level section when the modal opens.
+   Matches the established `--ease-ui` curve and stays within the
+   `--duration-ui-phase` budget. Disabled under reduced-motion so the
+   form simply appears in place. */
+.task-create-modal-form > * {
+  animation: task-create-section-enter var(--duration-ui-phase)
+    var(--ease-ui) both;
+}
+
+.task-create-modal-form > *:nth-child(1) { animation-delay: 0ms; }
+.task-create-modal-form > *:nth-child(2) { animation-delay: 30ms; }
+.task-create-modal-form > *:nth-child(3) { animation-delay: 60ms; }
+.task-create-modal-form > *:nth-child(4) { animation-delay: 90ms; }
+.task-create-modal-form > *:nth-child(5) { animation-delay: 120ms; }
+.task-create-modal-form > *:nth-child(6) { animation-delay: 150ms; }
+.task-create-modal-form > *:nth-child(n+7) { animation-delay: 180ms; }
+
+@keyframes task-create-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-create-modal-form > * {
+    animation: none;
+  }
 }
 
 .task-create-submit {
@@ -289,5 +627,122 @@
 .task-create-editor-shell .rich-prompt-wrap .tiptap:focus-within {
   outline: none;
   box-shadow: none;
+}
+
+/* —— Section rhythm: every top-level section in the create modal becomes a
+   visually consistent unit. Agent + Schedule already render as elevated
+   wells; we extend the same treatment to Done criteria + Subtasks so the
+   form reads as a stack of deliberate cards instead of bare blocks
+   alternating with wells. Scoped via .task-create-modal-sheet so the
+   task-detail page (which uses the same sub-components) is unaffected. —— */
+
+.task-create-modal-sheet .task-create-checklist .task-checklist-surface,
+.task-create-modal-sheet .task-create-subtasks .task-checklist-list,
+.task-create-modal-sheet .task-create-subtasks-empty {
+  margin-top: 0.55rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-chrome-xs-soft);
+}
+
+.task-create-modal-sheet .task-create-subtasks-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.55rem 0 0;
+  font-size: var(--text-help);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-subtle));
+  box-shadow: none;
+}
+
+.task-create-modal-sheet .task-create-subtasks-empty span[aria-hidden="true"] {
+  flex-shrink: 0;
+  color: var(--brand-text-strong);
+  opacity: 0.7;
+}
+
+/* Section header rule: a thin tinted underline below each section's head
+   row gives the eye a clear horizontal anchor without requiring a heavy
+   divider. Faded toward both ends so it reads as decoration, not a hard
+   separator. */
+.task-create-modal-sheet .task-create-agent .task-create-subtasks-heading,
+.task-create-modal-sheet .task-create-checklist-heading,
+.task-create-modal-sheet .task-create-subtasks-heading {
+  position: relative;
+}
+
+.task-create-modal-sheet .task-create-checklist-head,
+.task-create-modal-sheet .task-create-subtasks-head {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 60%, transparent);
+}
+
+/* When the editor's REFERENCES block is rendered (project context selected),
+   keep some breathing room so it doesn't visually merge with the toolbar
+   above or the editor body below. */
+.task-create-editor-shell .rich-prompt-references {
+  margin: 0.5rem 0.65rem;
+}
+
+/* Project assignment section: wraps the ProjectSelect + ProjectContextPicker
+   so the pair reads as one cohesive unit alongside Agent + Schedule. The
+   top hairline matches the same separator pattern those sections use so
+   the whole modal forms a steady visual rhythm. */
+.task-create-modal-sheet .task-create-project {
+  position: relative;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.task-create-modal-sheet .task-create-project::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-hairline);
+  opacity: 0.7;
+}
+
+/* Make the picker's inner panel padding sit closer to the wrapper edge
+   so we don't get a "panel inside a panel inside a modal" Russian-doll
+   feel. */
+.task-create-modal-sheet .task-create-project .project-context-picker {
+  margin-top: 0;
+}
+
+/* Footer: the action row gets a subtle top accent that mirrors the modal's
+   top brand strip — frames the form so the "compose ↦ commit" rhythm is
+   visible at a glance. */
+.task-create-modal-actions {
+  position: relative;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+.task-create-modal-actions::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border-hairline) 18%,
+    var(--brand-border-soft) 50%,
+    var(--border-hairline) 82%,
+    transparent 100%
+  );
+  opacity: 0.7;
+  pointer-events: none;
 }
 

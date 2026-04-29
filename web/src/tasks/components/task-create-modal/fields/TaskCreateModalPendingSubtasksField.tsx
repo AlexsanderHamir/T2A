@@ -69,7 +69,18 @@ export function TaskCreateModalPendingSubtasksField({
             </li>
           ))}
         </ul>
-      ) : null}
+      ) : (
+        // Empty hint: gives the section a calm presence instead of a bare
+        // heading + button + dead space. Tone matches the SchedulePicker
+        // "Picks up immediately…" caption.
+        <p
+          className="task-create-subtasks-empty muted"
+          aria-describedby={SUBTASKS_HEADING_ID}
+        >
+          <span aria-hidden="true">·</span> No subtasks yet — split the work
+          into smaller drafts to plan child tasks alongside the parent.
+        </p>
+      )}
     </div>
   );
 }

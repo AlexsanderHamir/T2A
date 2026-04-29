@@ -1,6 +1,8 @@
-import type { FormEvent, ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
 import type { PendingSubtaskDraft } from "../../task-tree";
+import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
+import type { TestScenario } from "@/tasks/test-scenarios";
 import { Modal } from "../../../shared/Modal";
 import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
@@ -16,6 +18,8 @@ import {
   TaskCreateModalEvaluationSummary,
   type TaskCreateModalEvaluation,
 } from "./fields/TaskCreateModalEvaluationSummary";
+import { TestScenariosTrigger } from "./TestScenariosTrigger";
+import { TestScenariosPopover } from "./TestScenariosPopover";
 
 type Props = {
   pending: boolean;
@@ -53,6 +57,13 @@ type Props = {
   onTaskRunnerChange: (runner: string) => void;
   onTaskCursorModelChange: (v: string) => void;
   projectAssignment?: ReactNode;
+  /**
+   * Forwarded into the rich prompt editor so the operator can type `#` to
+   * reference project context nodes for the active project. Pass
+   * `undefined` while the project list is still loading or no project is
+   * selected — the editor falls back to its repo-only `@` mention behavior.
+   */
+  promptProjectContext?: RichPromptEditorProjectContextProps;
   /**
    * Future pickup time as an RFC3339 UTC ISO string, or `null` when
    * the operator wants the task picked up immediately. Plumbed
@@ -92,6 +103,14 @@ type Props = {
    * so the user understands which action failed.
    */
   evaluateError?: Error | null;
+  /**
+   * Apply a `TestScenario` from `web/src/tasks/test-scenarios` to the form.
+   * The trigger button + popover only render when this callback is wired,
+   * which keeps the affordance scoped to the create flow (the same modal
+   * isn't reused for editing existing tasks today, but the gating leaves
+   * the door open if it ever is).
+   */
+  onApplyTestScenario?: (scenario: TestScenario) => void;
 };
 
 export function TaskCreateModal({
@@ -130,6 +149,7 @@ export function TaskCreateModal({
   onTaskRunnerChange,
   onTaskCursorModelChange,
   projectAssignment,
+  promptProjectContext,
   schedule,
   onScheduleChange,
   appTimezone,
@@ -138,6 +158,7 @@ export function TaskCreateModal({
   onSubmit,
   createError = null,
   evaluateError = null,
+  onApplyTestScenario,
 }: Props) {
   const disabled = pending || saving;
   const dmapMode = taskType === "dmap";
@@ -146,6 +167,15 @@ export function TaskCreateModal({
     dmapCommitLimit,
     dmapDomain,
   );
+
+  const [scenariosOpen, setScenariosOpen] = useState(false);
+  const scenariosTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const handleScenarioPicked = (scenario: TestScenario) => {
+    onApplyTestScenario?.(scenario);
+    setScenariosOpen(false);
+    scenariosTriggerRef.current?.focus();
+  };
 
   const {
     nestedOpen,
@@ -185,9 +215,29 @@ export function TaskCreateModal({
         dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
-          <h2 id="task-create-modal-title" className="term-arrow">
-            <span>New task</span>
-          </h2>
+          <header className="task-create-modal-header">
+            <div className="task-create-modal-header__text">
+              <h2 id="task-create-modal-title" className="term-arrow">
+                <span>New task</span>
+              </h2>
+              {/* One-line lede in the existing terminal aesthetic — gives the
+                 modal a sense of identity instead of starting cold on the form. */}
+              <p
+                className="task-create-modal-lede term-prompt muted"
+                aria-hidden="true"
+              >
+                <span>compose --next-up</span>
+              </p>
+            </div>
+            {onApplyTestScenario ? (
+              <TestScenariosTrigger
+                ref={scenariosTriggerRef}
+                open={scenariosOpen}
+                disabled={disabled}
+                onToggle={() => setScenariosOpen((open) => !open)}
+              />
+            ) : null}
+          </header>
           {draftSaveLabel ? (
             <p
               className={[
@@ -227,6 +277,7 @@ export function TaskCreateModal({
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
               onRemoveChecklistRow={onRemoveChecklistRow}
+              projectContext={promptProjectContext}
             />
 
             <TaskCreateModalAgentSection
@@ -285,6 +336,14 @@ export function TaskCreateModal({
           </form>
         </section>
       </Modal>
+
+      {scenariosOpen && onApplyTestScenario ? (
+        <TestScenariosPopover
+          anchor={scenariosTriggerRef.current}
+          onPick={handleScenarioPicked}
+          onClose={() => setScenariosOpen(false)}
+        />
+      ) : null}
 
       <TaskCreateModalNestedSubtaskModal
         open={nestedOpen}

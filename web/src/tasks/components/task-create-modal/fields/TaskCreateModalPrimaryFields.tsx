@@ -1,5 +1,6 @@
 import type { PriorityChoice, TaskType } from "@/types";
 import { TaskComposeFields } from "../../task-compose";
+import type { RichPromptEditorProjectContextProps } from "../../rich-prompt";
 import { TaskCreateModalDmapSection } from "../dmap/TaskCreateModalDmapSection";
 import { TaskCreateModalDmapTitleRow } from "../dmap/TaskCreateModalDmapTitleRow";
 
@@ -25,6 +26,8 @@ type Props = {
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
+  /** Forwarded to the rich prompt editor for `#` mentions and the REFERENCES block. */
+  projectContext?: RichPromptEditorProjectContextProps;
 };
 
 export function TaskCreateModalPrimaryFields({
@@ -49,6 +52,7 @@ export function TaskCreateModalPrimaryFields({
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
+  projectContext,
 }: Props) {
   if (dmapMode) {
     return (
@@ -93,6 +97,7 @@ export function TaskCreateModalPrimaryFields({
       onAppendChecklistCriterion={onAppendChecklistCriterion}
       onUpdateChecklistRow={onUpdateChecklistRow}
       onRemoveChecklistRow={onRemoveChecklistRow}
+      projectContext={projectContext}
     />
   );
 }

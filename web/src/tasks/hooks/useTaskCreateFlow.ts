@@ -13,6 +13,7 @@ import {
 import {
   type PendingSubtaskDraft,
 } from "../task-tree";
+import { plainTextToInitialHtml } from "../task-prompt";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import {
   buildDmapPrompt,
@@ -184,6 +185,8 @@ export function useTaskCreateFlow() {
         runner: (s?.runner ?? "cursor").trim() || "cursor",
         cursorModel: s?.cursor_model ?? "",
         parentId: "",
+        projectId: DEFAULT_PROJECT_ID,
+        projectContextItemIds: [],
         checklistInherit: false,
         checklistItems: [],
         pendingSubtasks: [],
@@ -383,6 +386,8 @@ export function useTaskCreateFlow() {
         runner: string;
         cursor_model: string;
         parent_id: string;
+        project_id: string;
+        project_context_item_ids: string[];
         checklist_inherit: boolean;
         checklist_items: string[];
         pending_subtasks: Array<{
@@ -510,6 +515,8 @@ export function useTaskCreateFlow() {
         // but the wire format still has these fields so the autosave
         // signature mirrors what the server persists.
         parentId: "",
+        projectId: newProjectID,
+        projectContextItemIds: newProjectContextItemIDs,
         checklistInherit: false,
         checklistItems: newChecklistItems,
         pendingSubtasks,
@@ -535,6 +542,8 @@ export function useTaskCreateFlow() {
       newTitle,
       newTaskRunner,
       newTaskCursorModel,
+      newProjectID,
+      newProjectContextItemIDs,
       pendingSubtasks,
     ],
   );
@@ -551,6 +560,11 @@ export function useTaskCreateFlow() {
         runner: newTaskRunner,
         cursor_model: newTaskCursorModel,
         parent_id: "",
+        // Persist the operator's project + context selection on the draft
+        // so closing and resuming restores the same REFERENCES block in the
+        // prompt editor (and the same `project_context_item_ids` on submit).
+        project_id: newProjectID,
+        project_context_item_ids: newProjectContextItemIDs,
         checklist_inherit: false,
         checklist_items: newChecklistItems,
         pending_subtasks: pendingSubtasks.map((st) => ({
@@ -594,6 +608,8 @@ export function useTaskCreateFlow() {
     newTitle,
     newTaskRunner,
     newTaskCursorModel,
+    newProjectID,
+    newProjectContextItemIDs,
     pendingSubtasks,
   ]);
 
@@ -789,6 +805,20 @@ export function useTaskCreateFlow() {
     setNewChecklistItems(draft.payload.checklist_items ?? []);
     setPendingSubtasks(pendingSubtasks);
     setLatestDraftEvaluation(latestEvaluation);
+    // Project + selected context items are optional on legacy drafts; fall
+    // back to the default project / empty selection so the REFERENCES block
+    // and the project picker show a clean state on resume.
+    const resumedProjectID =
+      typeof draft.payload.project_id === "string" && draft.payload.project_id
+        ? draft.payload.project_id
+        : DEFAULT_PROJECT_ID;
+    const resumedProjectContextIds = Array.isArray(
+      draft.payload.project_context_item_ids,
+    )
+      ? draft.payload.project_context_item_ids
+      : [];
+    setNewProjectID(resumedProjectID);
+    setNewProjectContextItemIDs(resumedProjectContextIds);
     const resumedTitle = draft.payload.title ?? "";
     setDraftAutosaveBaseline(
       draftAutosaveSignature({
@@ -812,6 +842,8 @@ export function useTaskCreateFlow() {
         // resuming a legacy draft with `parent_id` set must not flip the
         // dirty bit (the next autosave intentionally clears those fields).
         parentId: "",
+        projectId: resumedProjectID,
+        projectContextItemIds: resumedProjectContextIds,
         checklistInherit: false,
         checklistItems: draft.payload.checklist_items ?? [],
         pendingSubtasks,
@@ -834,6 +866,39 @@ export function useTaskCreateFlow() {
   async function deleteDraftByID(id: string) {
     await deleteDraftMutation.mutateAsync(id);
   }
+
+  /**
+   * Apply a `TestScenario` from `web/src/tasks/test-scenarios` to the open
+   * create-modal form. Overwrites title / prompt / priority / task type /
+   * checklist with the scenario's pre-canned content so the operator can
+   * dispatch a real agent run with zero typing — the whole point of the
+   * test-scenarios affordance.
+   *
+   * Leaves project / context / runner / model / schedule / pending
+   * subtasks alone so an operator who has already configured those for
+   * their test rig (e.g. "always run against project X with model Y")
+   * does not have those wiped by picking a scenario.
+   *
+   * Same imports kept inline so the test-scenarios module is only pulled
+   * into the bundle when this hook is loaded (it already is, since the
+   * hook is the create-modal's primary state owner).
+   */
+  const applyTestScenario = useCallback(
+    (scenario: import("../test-scenarios").TestScenario) => {
+      setNewTitle(scenario.title);
+      setNewPrompt(plainTextToInitialHtml(scenario.prompt));
+      setNewPriority(scenario.priority);
+      setNewTaskType(scenario.taskType);
+      setNewChecklistItems(
+        scenario.checklist
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0),
+      );
+      // DMAP fields stay at their defaults; scenarios don't target the
+      // DMAP runner today (they're all general / refactor / docs / etc.).
+    },
+    [],
+  );
 
   const appendNewChecklistCriterion = useCallback((raw: string) => {
     const t = raw.trim();
@@ -970,6 +1035,7 @@ export function useTaskCreateFlow() {
     saveDraftNow,
     resumeDraftByID,
     deleteDraftByID,
+    applyTestScenario,
     createModalOpen,
     openCreateModal,
     closeCreateModal,

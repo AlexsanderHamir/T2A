@@ -4,7 +4,10 @@ import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { PrioritySelect, TaskTypeSelect } from "../../task-compose";
-import { RichPromptEditor } from "../../rich-prompt";
+import {
+  RichPromptEditor,
+  type RichPromptEditorProjectContextProps,
+} from "../../rich-prompt";
 import { TaskCreateModalAgentSection } from "../../task-create-modal/fields/TaskCreateModalAgentSection";
 
 type Props = {
@@ -20,6 +23,11 @@ type Props = {
   cursorModel: string;
   onCursorModelChange: (v: string) => void;
   projectAssignment?: ReactNode;
+  /**
+   * Forwarded into the rich prompt editor so the operator can type `#` to
+   * reference project context nodes for the active project.
+   */
+  promptProjectContext?: RichPromptEditorProjectContextProps;
   /** When false, the inherit checkbox is disabled (task has no parent). */
   canInheritChecklist: boolean;
   saving: boolean;
@@ -59,6 +67,7 @@ export function TaskEditForm({
   cursorModel,
   onCursorModelChange,
   projectAssignment,
+  promptProjectContext,
   canInheritChecklist,
   saving,
   patchPending,
@@ -186,7 +195,12 @@ export function TaskEditForm({
               value={prompt}
               onChange={onPromptChange}
               disabled={saving}
-              placeholder="Use the toolbar for headings and bold. Type @ to pick a file from the repo."
+              placeholder={
+                promptProjectContext
+                  ? "Use the toolbar for headings and bold. Type @ to pick a file from the repo or # to reference project context."
+                  : "Use the toolbar for headings and bold. Type @ to pick a file from the repo."
+              }
+              projectContext={promptProjectContext}
             />
           </div>
           <MutationErrorBanner error={error} className="task-edit-form-err" />

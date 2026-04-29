@@ -184,7 +184,11 @@ describe("TaskCreateModal", () => {
     const user = userEvent.setup();
     const onScheduleChange = vi.fn();
     renderModal({ onScheduleChange, appTimezone: "UTC" });
-    await user.click(screen.getByTestId("schedule-picker-in-1h"));
+    // The new picker funnels every preset through an anchored popover; open
+    // it first, then click the +1 hour chip to verify the modal forwards the
+    // emitted ISO upward unchanged.
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-hour-1"));
     expect(onScheduleChange).toHaveBeenCalledTimes(1);
     const v = onScheduleChange.mock.calls[0][0];
     expect(typeof v).toBe("string");
@@ -275,5 +279,37 @@ describe("TaskCreateModal", () => {
     expect(screen.getByLabelText(/direction notes/i)).toBeInTheDocument();
     expect(screen.queryByText(/done criteria/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/subtasks/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the test-scenarios trigger only when onApplyTestScenario is wired", () => {
+    const { unmount } = renderModal();
+    expect(
+      screen.queryByTestId("test-scenarios-trigger"),
+    ).not.toBeInTheDocument();
+    unmount();
+    renderModal({ onApplyTestScenario: vi.fn() });
+    expect(
+      screen.getByTestId("test-scenarios-trigger"),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the test-scenarios popover and forwards the picked scenario", async () => {
+    const user = userEvent.setup();
+    const onApplyTestScenario = vi.fn();
+    renderModal({ onApplyTestScenario });
+    await user.click(screen.getByTestId("test-scenarios-trigger"));
+    expect(screen.getByTestId("test-scenarios-popover")).toBeInTheDocument();
+    // Pick the first scenario in the catalog (any will do — we only care
+    // that the modal forwards the picked object to the apply callback).
+    const scenarios = await import("@/tasks/test-scenarios");
+    const first = scenarios.TEST_SCENARIOS[0]!;
+    await user.click(
+      screen.getByTestId(`test-scenarios-pick-${first.id}`),
+    );
+    expect(onApplyTestScenario).toHaveBeenCalledWith(first);
+    // Picking closes the popover so the operator sees the freshly-filled form.
+    expect(
+      screen.queryByTestId("test-scenarios-popover"),
+    ).not.toBeInTheDocument();
   });
 });

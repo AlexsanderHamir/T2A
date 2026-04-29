@@ -19,6 +19,7 @@ import {
   ProjectContextPicker,
   ProjectListPage,
   ProjectSelect,
+  useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
 import { SystemStatusChip } from "@/observability";
@@ -32,6 +33,11 @@ import "./App.css";
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
   const projects = useProjects({ includeArchived: false, limit: 100 });
+  const editPromptProjectContext = useProjectContextPromptBinding({
+    projectId: app.editing ? app.editProjectID : "",
+    selectedIds: app.editProjectContextItemIDs,
+    onSelectedIdsChange: app.setEditProjectContextItemIDs,
+  });
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
@@ -152,7 +158,10 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               cursorModel={app.editCursorModel}
               onCursorModelChange={app.setEditCursorModel}
               projectAssignment={
-                <>
+                <section
+                  className="task-create-project"
+                  aria-label="Project assignment"
+                >
                   <ProjectSelect
                     id="task-edit-project"
                     value={app.editProjectID}
@@ -170,8 +179,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                     disabled={app.saving}
                     onChange={app.setEditProjectContextItemIDs}
                   />
-                </>
+                </section>
               }
+              promptProjectContext={editPromptProjectContext ?? undefined}
               canInheritChecklist={Boolean(app.editing.parent_id)}
               saving={app.saving}
               patchPending={app.patchPending}

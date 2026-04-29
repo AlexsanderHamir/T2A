@@ -5,7 +5,12 @@ import { TaskCreateModal } from "../components/task-create-modal";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useAppTimezone } from "@/shared/time/appTimezone";
-import { ProjectContextPicker, ProjectSelect, useProjects } from "@/projects";
+import {
+  ProjectContextPicker,
+  ProjectSelect,
+  useProjectContextPromptBinding,
+  useProjects,
+} from "@/projects";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
@@ -15,6 +20,11 @@ export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
   const appTimezone = useAppTimezone();
   const projects = useProjects({ includeArchived: false, limit: 100 });
+  const newPromptProjectContext = useProjectContextPromptBinding({
+    projectId: app.createModalOpen ? app.newProjectID : "",
+    selectedIds: app.newProjectContextItemIDs,
+    onSelectedIdsChange: app.setNewProjectContextItemIDs,
+  });
 
   /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
   const listSaving = app.patchPending || app.deletePending;
@@ -36,6 +46,10 @@ export function TaskHome({ app }: Props) {
       hasPrevPage: app.hasPrevTaskPage,
       onEdit: app.openEdit,
       onRequestDelete: app.requestDelete,
+      // Quiet inline scoreboard rendered between the heading and the
+      // filters when at least one task exists. The strip self-hides on
+      // null / 0-total so an unconfigured workspace still reads cleanly.
+      taskStats: app.taskStats ?? null,
     }),
     [
       app.tasks,
@@ -53,6 +67,7 @@ export function TaskHome({ app }: Props) {
       app.hasPrevTaskPage,
       app.openEdit,
       app.requestDelete,
+      app.taskStats,
     ],
   );
 
@@ -131,7 +146,10 @@ export function TaskHome({ app }: Props) {
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
           projectAssignment={
-            <>
+            <section
+              className="task-create-project"
+              aria-label="Project assignment"
+            >
               <ProjectSelect
                 id="task-create-project"
                 value={app.newProjectID}
@@ -149,8 +167,9 @@ export function TaskHome({ app }: Props) {
                 disabled={app.saving}
                 onChange={app.setNewProjectContextItemIDs}
               />
-            </>
+            </section>
           }
+          promptProjectContext={newPromptProjectContext ?? undefined}
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
           appTimezone={appTimezone}
@@ -159,6 +178,7 @@ export function TaskHome({ app }: Props) {
           onSubmit={(e) => void app.submitCreate(e)}
           createError={app.createError}
           evaluateError={app.evaluateError}
+          onApplyTestScenario={app.applyTestScenario}
         />
       ) : null}
       {app.draftPickerOpen ? (
