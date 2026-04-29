@@ -30,57 +30,7 @@ Format for each entry:
 
 ## Open
 
-### Navbar uses an underline accent under the active item AND the existing brand pill
-- Date: 2026-04-29
-- From task: Navbar polish
-- Decision needed: The active nav item now carries both the existing
-  brand-tinted pill (background + border + brand-color text) AND a
-  small `::after` underline indicator below it (Stripe.com top-nav
-  vocabulary). Should we collapse to one cue (pill OR underline) for
-  a quieter look?
-- Default chosen if no answer: Keep both. The pill alone made the
-  active state read as "this is a button" rather than "you are
-  here"; the underline alone (no pill) would lose the `aria-current`
-  affordance for users who can't perceive thin marks. Two
-  complementary cues — color tint + underline — pairs the Apple
-  pill with the Stripe rule, and stays accessible without color.
-- Files affected: `web/src/app/styles/base/app-shell.css`
-  (`.app-nav__link[aria-current="page"]::after`).
-
-### Sticky header lifts to `--shadow-md` once scrolled past 4px
-- Date: 2026-04-29
-- From task: Navbar polish
-- Decision needed: A new `useStickyShellElevation` hook toggles
-  `data-elevated="true"` on the sticky header once `window.scrollY`
-  passes 4px. The header then lifts to `--shadow-md` plus a hairline
-  brand-tinted top edge. Is 4px the right threshold, or should it be
-  more conservative (e.g. 16–24px) so the elevation only kicks in
-  after a deliberate scroll?
-- Default chosen if no answer: 4px. Matches Stripe / Linear / Notion
-  dashboard top-nav behavior — the elevation appears the moment the
-  page edge passes under the sticky frame, so the chrome reads as
-  "floating" without ambiguity. Higher thresholds delay the cue
-  enough that operators feel "is this stuck or floating?" briefly,
-  which is the affordance the elevation is meant to resolve.
-- Files affected: `web/src/lib/useStickyShellElevation.ts`,
-  `web/src/lib/useStickyShellElevation.test.ts`,
-  `web/src/app/App.tsx`,
-  `web/src/app/styles/base/app-shell.css`
-  (`.app-header--sticky[data-elevated="true"]`).
-
-### Settings cog rotates 35° on hover
-- Date: 2026-04-29
-- From task: Navbar polish
-- Decision needed: The settings cog gains a `transform: rotate(35deg)`
-  on hover (Apple-style affordance signaling "this control is
-  interactive"). Should it rotate further (e.g. 90° / 180°), spin
-  continuously, or not move at all?
-- Default chosen if no answer: 35° subtle quarter-rotation under the
-  shared `--ease-out` easing, disabled by `prefers-reduced-motion`.
-  Anything more becomes playful (Slack-style bounce) and out of
-  character with the rest of the calm, terminal-inflected aesthetic.
-- Files affected: `web/src/settings/settings.css`
-  (`.app-header-settings-link:hover .app-header-settings-icon`).
+_(no open items — every entry has been resolved.)_
 
 ---
 
@@ -486,3 +436,69 @@ Format for each entry:
   yet) or force a backend change for a UI that nobody has asked to be
   richer. The doc trail above is enough that a future operator can
   retrace the path if the need ever surfaces.
+
+### Navbar uses an underline accent under the active item AND the existing brand pill
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: The active nav item now carries both the existing
+  brand-tinted pill (background + border + brand-color text) AND a
+  small `::after` underline indicator below it (Stripe.com top-nav
+  vocabulary). Should we collapse to one cue (pill OR underline) for
+  a quieter look?
+- Default chosen if no answer: Keep both. The pill alone made the
+  active state read as "this is a button" rather than "you are
+  here"; the underline alone (no pill) would lose the `aria-current`
+  affordance for users who can't perceive thin marks. Two
+  complementary cues — color tint + underline — pairs the Apple
+  pill with the Stripe rule, and stays accessible without color.
+- Files affected: `web/src/app/styles/base/app-shell.css`
+  (`.app-nav__link[aria-current="page"]::after`).
+- Resolution (2026-04-29): Confirmed two-cue active state. Pill alone
+  reads as a button, underline alone fails operators who can't perceive
+  thin marks; the pair (Apple pill + Stripe underline) is the
+  established WCAG-friendly pattern for "you are here".
+
+### Sticky header lifts to `--shadow-md` once scrolled past 4px
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: A new `useStickyShellElevation` hook toggles
+  `data-elevated="true"` on the sticky header once `window.scrollY`
+  passes 4px. The header then lifts to `--shadow-md` plus a hairline
+  brand-tinted top edge. Is 4px the right threshold, or should it be
+  more conservative (e.g. 16–24px) so the elevation only kicks in
+  after a deliberate scroll?
+- Default chosen if no answer: 4px. Matches Stripe / Linear / Notion
+  dashboard top-nav behavior — the elevation appears the moment the
+  page edge passes under the sticky frame, so the chrome reads as
+  "floating" without ambiguity. Higher thresholds delay the cue
+  enough that operators feel "is this stuck or floating?" briefly,
+  which is the affordance the elevation is meant to resolve.
+- Files affected: `web/src/lib/useStickyShellElevation.ts`,
+  `web/src/lib/useStickyShellElevation.test.ts`,
+  `web/src/app/App.tsx`,
+  `web/src/app/styles/base/app-shell.css`
+  (`.app-header--sticky[data-elevated="true"]`).
+- Resolution (2026-04-29): Confirmed 4px threshold. Industry standard
+  (Stripe / Linear / Notion); higher thresholds create the
+  "is it stuck or floating?" ambiguity the elevation is supposed to
+  resolve. The threshold is a hook parameter so any future caller can
+  override per-surface.
+
+### Settings cog rotates 35° on hover
+- Date: 2026-04-29
+- From task: Navbar polish
+- Decision needed: The settings cog gains a `transform: rotate(35deg)`
+  on hover (Apple-style affordance signaling "this control is
+  interactive"). Should it rotate further (e.g. 90° / 180°), spin
+  continuously, or not move at all?
+- Default chosen if no answer: 35° subtle quarter-rotation under the
+  shared `--ease-out` easing, disabled by `prefers-reduced-motion`.
+  Anything more becomes playful (Slack-style bounce) and out of
+  character with the rest of the calm, terminal-inflected aesthetic.
+- Files affected: `web/src/settings/settings.css`
+  (`.app-header-settings-link:hover .app-header-settings-icon`).
+- Resolution (2026-04-29): Confirmed 35° subtle rotation. The whole
+  app's vocabulary is "calm, terminal-inflected" — bouncy or spinning
+  controls would feel stylistically out of place. 35° is enough to
+  read as "this moves on hover" without crossing into Slack /
+  marketing-site territory.
