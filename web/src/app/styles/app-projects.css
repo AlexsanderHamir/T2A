@@ -3203,3 +3203,118 @@
     display: none;
   }
 }
+
+/* Selected project context chip list inside the picker summary panel.
+   Mirrors the editor's REFERENCES block visually but lives next to the
+   "Choose context" button. */
+.project-context-picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-context-picker__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0.2rem 0.5rem 0.2rem 0.65rem;
+  border: 1px solid var(--brand-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  font-size: var(--text-help);
+}
+
+.project-context-picker__chip-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.project-context-picker__chip-short-id {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.project-context-picker__chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  margin-inline-start: var(--space-1);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.project-context-picker__chip-remove:not(:disabled):hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.project-context-picker__chip-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Add-context choice dialog: presented above the editor (or chooser modal)
+   so every "add a node" gesture funnels through the same node-only vs
+   with-children decision. */
+.project-context-choice {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.project-context-choice__header h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.project-context-choice__options {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.project-context-choice__option {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-short) var(--ease-out),
+    background-color var(--duration-short) var(--ease-out);
+}
+
+.project-context-choice__option:not(:disabled):hover {
+  border-color: var(--brand-border-emphasis);
+  background: var(--brand-surface-faint);
+}
+
+.project-context-choice__option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.project-context-choice__option-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.project-context-choice__option-help {
+  font-size: var(--text-help);
+}
+
+.project-context-choice__footer {
+  display: flex;
+  justify-content: flex-end;
+}

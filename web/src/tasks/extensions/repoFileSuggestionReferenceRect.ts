@@ -1,12 +1,16 @@
 import type { SuggestionProps } from "@tiptap/suggestion";
-import type { RepoSuggestionItem } from "./repoFileSuggestionList";
 
 /** Keep in sync with `--z-portal-popover` / `--z-mention-popover` in app-design-tokens.css */
 export const MENTION_POPOVER_Z_INDEX = 13000;
 
-/** TipTap may pass a clientRect that returns null or 0×0 before the suggestion decoration is in the DOM — fall back to coords at the match range. */
-export function referenceRectForSuggestion(
-  props: SuggestionProps<RepoSuggestionItem, RepoSuggestionItem>,
+/**
+ * TipTap may pass a clientRect that returns null or 0×0 before the suggestion
+ * decoration is in the DOM — fall back to coords at the match range. Generic
+ * over the item shape so multiple suggestion plugins (`@` repo files,
+ * `#` project context) can share the helper without a structural cast.
+ */
+export function referenceRectForSuggestion<TItem, TCommand>(
+  props: SuggestionProps<TItem, TCommand>,
 ): DOMRect {
   const r = props.clientRect?.() ?? null;
   if (r && (r.width > 0 || r.height > 0)) {

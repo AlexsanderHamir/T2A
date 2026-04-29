@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
+import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { ProjectContextPicker } from "./ProjectContextPicker";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -63,7 +64,11 @@ function renderPicker(selectedIds: string[] = []) {
   const onChange = vi.fn();
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ModalStackProvider>{children}</ModalStackProvider>
+      </QueryClientProvider>
+    );
   }
 
   render(
@@ -79,7 +84,7 @@ function renderPicker(selectedIds: string[] = []) {
 }
 
 describe("ProjectContextPicker", () => {
-  it("opens a searchable project-context list chooser and toggles selections", async () => {
+  it("opens the choice dialog when a node is added from the chooser list", async () => {
     const user = userEvent.setup();
     const { onChange } = renderPicker();
 
@@ -96,7 +101,56 @@ describe("ProjectContextPicker", () => {
 
     await user.click(within(dialog).getByRole("checkbox", { name: /select new one/i }));
 
+    // The choice dialog opens before any onChange fires.
+    expect(onChange).not.toHaveBeenCalled();
+    const choice = screen.getByRole("dialog", {
+      name: /reference project context/i,
+    });
+    await user.click(
+      within(choice).getByTestId("project-context-choice-node-only"),
+    );
+
     expect(onChange).toHaveBeenCalledWith(["ctx-risk"]);
+  });
+
+  it("expands node-with-children to add the descendant ids in BFS order", async () => {
+    const user = userEvent.setup();
+    const { onChange } = renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /choose context/i }));
+    const dialog = screen.getByRole("dialog", { name: /choose task context/i });
+
+    await user.click(within(dialog).getByRole("checkbox", { name: /select new one/i }));
+
+    const choice = screen.getByRole("dialog", {
+      name: /reference project context/i,
+    });
+    await user.click(
+      within(choice).getByTestId("project-context-choice-with-children"),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(["ctx-risk", "ctx-decision"]);
+  });
+
+  it("removes a selected node from the summary chip list without prompting", async () => {
+    const user = userEvent.setup();
+    const { onChange } = renderPicker(["ctx-risk", "ctx-decision"]);
+
+    expect(screen.getByText(/2 nodes selected/i)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", {
+        name: /remove reference to new one/i,
+      }),
+    );
+    expect(onChange).toHaveBeenCalledWith(["ctx-decision"]);
+  });
+
+  it("renders the selected items with title plus short id in the summary", () => {
+    renderPicker(["ctx-risk"]);
+    const chip = screen.getByText("New One").closest(".project-context-picker__chip");
+    expect(chip).not.toBeNull();
+    // The short-id helper strips dashes and lowercases the first six alnums.
+    expect(chip?.textContent).toContain("ctxris");
   });
 
   it("offers the same expandable tree view for choosing task context", async () => {
@@ -107,10 +161,17 @@ describe("ProjectContextPicker", () => {
     const dialog = screen.getByRole("dialog", { name: /choose task context/i });
 
     await user.click(within(dialog).getByRole("tab", { name: "Tree" }));
-
     expect(within(dialog).getByText(/depends on/i)).toBeInTheDocument();
+
     await user.click(
       within(dialog).getByRole("checkbox", { name: /select decision node/i }),
+    );
+
+    const choice = screen.getByRole("dialog", {
+      name: /reference project context/i,
+    });
+    await user.click(
+      within(choice).getByTestId("project-context-choice-node-only"),
     );
 
     expect(onChange).toHaveBeenCalledWith(["ctx-decision"]);
