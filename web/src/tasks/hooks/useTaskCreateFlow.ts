@@ -165,7 +165,7 @@ export function useTaskCreateFlow() {
     const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
-    setNewProjectID("");
+    setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
     setNewSchedule(null);
     setNewChecklistItems([]);
