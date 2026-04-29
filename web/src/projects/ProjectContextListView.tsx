@@ -7,9 +7,9 @@ import { ProjectContextNodeCard } from "./ProjectContextNodeCard";
 
 type Props = {
   items: ProjectContextItem[];
-  nodeSaving: boolean;
-  nodeDeleting: boolean;
-  onSaveNode: (
+  nodeSaving?: boolean;
+  nodeDeleting?: boolean;
+  onSaveNode?: (
     id: string,
     patch: {
       kind: ProjectContextKind;
@@ -18,8 +18,13 @@ type Props = {
       pinned: boolean;
     },
   ) => void;
-  onDeleteNode: (id: string) => void;
+  onDeleteNode?: (id: string) => void;
   onAddConnection: (sourceId: string) => void;
+  selection?: {
+    selectedIds: Set<string>;
+    disabled?: boolean;
+    onToggle: (item: ProjectContextItem) => void;
+  };
 };
 
 export function ProjectContextListView({
@@ -29,6 +34,7 @@ export function ProjectContextListView({
   onSaveNode,
   onDeleteNode,
   onAddConnection,
+  selection,
 }: Props) {
   const [nodeQuery, setNodeQuery] = useState("");
   const filteredItems = useMemo(() => {
@@ -76,12 +82,15 @@ export function ProjectContextListView({
               key={item.id}
               item={item}
               index={i}
-              saving={nodeSaving}
-              deleting={nodeDeleting}
-              canAddConnection={items.length >= 2}
-              onSave={onSaveNode}
-              onDelete={onDeleteNode}
+              saving={nodeSaving ?? false}
+              deleting={nodeDeleting ?? false}
+              canAddConnection={!selection && items.length >= 2}
+              selected={selection?.selectedIds.has(item.id) ?? false}
+              selectionDisabled={selection?.disabled}
+              onSave={onSaveNode ?? (() => undefined)}
+              onDelete={onDeleteNode ?? (() => undefined)}
               onAddConnection={onAddConnection}
+              onToggleSelected={selection?.onToggle}
             />
           ))}
         </div>

@@ -19,6 +19,8 @@ type Props = {
   saving: boolean;
   deleting: boolean;
   canAddConnection?: boolean;
+  selected?: boolean;
+  selectionDisabled?: boolean;
   onSave: (
     id: string,
     patch: {
@@ -30,6 +32,7 @@ type Props = {
   ) => void;
   onDelete: (id: string) => void;
   onAddConnection?: (sourceId: string) => void;
+  onToggleSelected?: (item: ProjectContextItem) => void;
 };
 
 export function ProjectContextNodeCard({
@@ -38,17 +41,32 @@ export function ProjectContextNodeCard({
   saving,
   deleting,
   canAddConnection = false,
+  selected = false,
+  selectionDisabled = false,
   onSave,
   onDelete,
   onAddConnection,
+  onToggleSelected,
 }: Props) {
   const hue = NODE_HUES[index % NODE_HUES.length];
+  const nodeClass = onToggleSelected ? "pc__node pc__node--selectable" : "pc__node";
   return (
     <article
-      className="pc__node"
+      className={nodeClass}
       style={{ "--pc-hue": hue, animationDelay: `${index * 30}ms` } as React.CSSProperties}
     >
       <div className="pc__node-marker" aria-hidden="true" />
+      {onToggleSelected ? (
+        <label className="pc__node-select">
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={selectionDisabled}
+            onChange={() => onToggleSelected(item)}
+          />
+          <span className="visually-hidden">Select {item.title}</span>
+        </label>
+      ) : null}
       <div className="pc__node-body">
         <h5 className="pc__node-title">{item.title}</h5>
         <span className="pc__node-source">
@@ -62,7 +80,8 @@ export function ProjectContextNodeCard({
       >
         {item.kind}
       </span>
-      <div className="pc__node-actions">
+      {!onToggleSelected ? (
+        <div className="pc__node-actions">
         {canAddConnection ? (
           <button
             type="button"
@@ -79,7 +98,8 @@ export function ProjectContextNodeCard({
           onSave={onSave}
           onDelete={onDelete}
         />
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }

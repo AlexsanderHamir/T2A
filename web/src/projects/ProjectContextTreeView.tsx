@@ -5,6 +5,11 @@ import { projectContextKindTone } from "./projectContextKindTone";
 type Props = {
   items: ProjectContextItem[];
   edges: ProjectContextEdge[];
+  selection?: {
+    selectedIds: Set<string>;
+    disabled?: boolean;
+    onToggle: (item: ProjectContextItem) => void;
+  };
 };
 
 type TreeEdge = ProjectContextEdge & {
@@ -31,7 +36,7 @@ const RELATION_HUE_RANGES: Record<ProjectContextEdge["relation"], { start: numbe
   supports: { start: 132, span: 34 },
 };
 
-export function ProjectContextTreeView({ items, edges }: Props) {
+export function ProjectContextTreeView({ items, edges, selection }: Props) {
   const forest = useMemo(() => buildProjectContextForest(items, edges), [edges, items]);
 
   if (items.length === 0) {
@@ -45,6 +50,7 @@ export function ProjectContextTreeView({ items, edges }: Props) {
           key={root.item.id}
           root={root}
           childrenBySource={forest.childrenBySource}
+          selection={selection}
         />
       ))}
     </div>
@@ -54,9 +60,11 @@ export function ProjectContextTreeView({ items, edges }: Props) {
 function RootTree({
   root,
   childrenBySource,
+  selection,
 }: {
   root: TreeRoot;
   childrenBySource: Map<string, TreeEdge[]>;
+  selection?: Props["selection"];
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -85,12 +93,14 @@ function RootTree({
           item={root.item}
           childCount={descendantCount}
           onToggleAll={descendantCount > 0 ? toggleAll : undefined}
+          selection={selection}
         />
       </summary>
       <TreeNode
         item={root.item}
         childrenBySource={childrenBySource}
         path={[root.item.id]}
+        selection={selection}
       />
     </details>
   );
@@ -100,10 +110,12 @@ function TreeNode({
   item,
   childrenBySource,
   path,
+  selection,
 }: {
   item: ProjectContextItem;
   childrenBySource: Map<string, TreeEdge[]>;
   path: string[];
+  selection?: Props["selection"];
 }) {
   const children = childrenBySource.get(item.id) ?? [];
   if (children.length === 0) {
@@ -126,6 +138,7 @@ function TreeNode({
                   edge={childEdge}
                   sourceTitle={item.title}
                   isCycle
+                  selection={selection}
                 />
               </div>
             ) : childCount > 0 ? (
@@ -136,12 +149,14 @@ function TreeNode({
                     edge={childEdge}
                     sourceTitle={item.title}
                     childCount={childCount}
+                    selection={selection}
                   />
                 </summary>
                 <TreeNode
                   item={childEdge.target}
                   childrenBySource={childrenBySource}
                   path={[...path, childEdge.target.id]}
+                  selection={selection}
                 />
               </details>
             ) : (
@@ -150,6 +165,7 @@ function TreeNode({
                   item={childEdge.target}
                   edge={childEdge}
                   sourceTitle={item.title}
+                  selection={selection}
                 />
               </div>
             )}
@@ -167,6 +183,7 @@ function TreeRow({
   childCount,
   isCycle = false,
   onToggleAll,
+  selection,
 }: {
   item: ProjectContextItem;
   edge?: ProjectContextEdge;
@@ -174,6 +191,7 @@ function TreeRow({
   childCount?: number;
   isCycle?: boolean;
   onToggleAll?: (event: React.MouseEvent) => void;
+  selection?: Props["selection"];
 }) {
   const resolvedCount = childCount ?? 0;
   const childLabel = resolvedCount === 1 ? "1 child" : `${resolvedCount} children`;
@@ -187,6 +205,20 @@ function TreeRow({
       }
     >
       <span className="project-context-tree-row__marker" aria-hidden="true" />
+      {selection ? (
+        <label
+          className="project-context-tree-select"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={selection.selectedIds.has(item.id)}
+            disabled={selection.disabled}
+            onChange={() => selection.onToggle(item)}
+          />
+          <span className="visually-hidden">Select {item.title}</span>
+        </label>
+      ) : null}
       <span className="project-context-tree-row__main">
         <strong>{item.title}</strong>
         {edge && sourceTitle ? (
