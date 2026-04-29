@@ -1,0 +1,211 @@
+/*
+ * Task drafts page polish.
+ *
+ * The drafts page reuses `.panel.task-list-section-panel` so it
+ * inherits the brand-tinted top accent strip, the soft vertical
+ * gradient, the lifted `$` glyph opacity, and the staggered
+ * fade-in defined for the All Tasks page (see
+ * `app-task-list-controls.css`). The rules in this partial cover
+ * what is unique to the drafts surface: the saved-count pill in
+ * the heading actions slot, the card-style row treatment, the
+ * row meta typography, and the action button cluster.
+ */
+
+/* —— Saved-count pill — sibling to `.task-list-stats-strip` over on
+   the All Tasks page; sits in the heading's actions slot so the
+   eye lands on "n drafts" before scanning the list. Uses the
+   neutral pill base from `.term-pill` (see app-base-foundations.css)
+   plus a brand wash so it reads as a meaningful count without
+   competing with the heading. —— */
+.draft-count-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4ch;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--brand-border-faint);
+  background: var(--brand-surface-subtle);
+  color: var(--brand-deep);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.draft-count-pill strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-text-strong);
+}
+
+/* —— Drafts list —— */
+.draft-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Card-style row.
+ * Each row reads as a small Stripe / Linear list item:
+ *  - hairline border at rest,
+ *  - subtle elevation on hover,
+ *  - brand-tinted left rail on hover / focus-within,
+ *  - title and edited-time stacked on the left,
+ *  - Resume + Delete buttons clustered on the right.
+ *
+ * The previous design rendered just two flat buttons with no
+ * surrounding chrome ("Resume: <name>" / "Delete") — the row
+ * carried no information about *when* the draft was last edited
+ * and the title was buried inside a button label. Lifting the
+ * draft name into its own column and adding a relative-time
+ * sub-label gives the operator scannable, Stripe-style metadata
+ * without sacrificing the underlying actions.
+ *
+ * NOTE: Resume and Delete are kept as direct siblings inside
+ * `.draft-row__actions` because the App.test.tsx batch-delete
+ * suite resolves the row by `firstResumeButton.parentElement`
+ * and then queries `within(parent).getByRole("button", { name:
+ * /^delete$/i })`. Splitting them across separate parents would
+ * silently break that test.
+ */
+.draft-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem 0.85rem 1.05rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-xs);
+  /* Used by the existing exit animation (see `.draft-row--exit`).
+     Kept for parity with the legacy `.draft-list-row` keyframe so
+     deletes still slide out. */
+  opacity: 1;
+  max-height: 6rem;
+  overflow: hidden;
+  transform: translateY(0);
+  transition:
+    border-color var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 200ms) ease,
+    transform var(--duration-short, 150ms) ease,
+    opacity var(--duration-moderate) var(--ease-out),
+    max-height var(--duration-moderate) var(--ease-out),
+    margin var(--duration-moderate) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .draft-row:hover {
+    border-color: color-mix(in srgb, var(--brand) 18%, var(--border-hairline));
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--brand) 6%, transparent),
+      var(--shadow-sm);
+  }
+}
+
+.draft-row:focus-within {
+  border-color: color-mix(in srgb, var(--brand) 26%, var(--border-hairline));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--brand) 8%, transparent),
+    var(--shadow-sm);
+}
+
+/* Brand-tinted left accent rail; mirrors the same affordance on
+   `.settings-fieldset` so the operator's eye learns one "this row
+   is engaged" signal across pages. */
+.draft-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 60%, transparent) 0%,
+    color-mix(in srgb, var(--brand) 25%, transparent) 100%
+  );
+  opacity: 0;
+  transition: opacity var(--duration-short, 200ms) ease;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .draft-row:hover::before {
+    opacity: 0.6;
+  }
+}
+
+.draft-row:focus-within::before {
+  opacity: 1;
+}
+
+.draft-row--exit {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-color: transparent;
+  transform: translateY(calc(var(--space-2) * -1));
+  pointer-events: none;
+}
+
+.draft-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.draft-row__name {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.005em;
+  /* Long draft names truncate cleanly so the row never reflows
+     when titles get long; full name still surfaces via aria-label
+     on the Resume button. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-row__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-row__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+/* Drafts list takes a generous bottom margin so the next page
+   section (or the empty space below) doesn't crowd the last row. */
+.draft-row-list {
+  margin-bottom: var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draft-row {
+    transition: none;
+  }
+  .draft-row::before {
+    transition: none;
+  }
+}

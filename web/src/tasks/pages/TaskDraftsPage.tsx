@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
 import { useTasksApp } from "../hooks/useTasksApp";
@@ -56,6 +57,12 @@ export function TaskDraftsPage({ app }: Props) {
     loading,
     TASK_TIMINGS.draftResumeMinLoadingMs,
   );
+  /* Reference "now" for relative-time rendering, captured once per render
+     so every row in a paint shows times computed against the same instant.
+     React Query refetches the draft list periodically; on each refetch
+     the page re-renders and `now` updates naturally — no manual interval
+     required. */
+  const renderNow = useMemo(() => new Date(), [drafts]);
 
   useEffect(() => {
     const draftIds = new Set(drafts.map((d) => d.id));
@@ -70,14 +77,39 @@ export function TaskDraftsPage({ app }: Props) {
     };
   }, []);
 
+  const draftCount = drafts.length;
+  const hasDrafts = draftCount > 0;
+
   return (
-    <section className="panel task-detail-content--enter">
-      <h2 className="term-arrow">
-        <span>Task drafts</span>
-      </h2>
-      <p className="muted term-prompt">
-        <span>resume --or-remove</span>
-      </p>
+    <section className="panel task-list-section-panel task-detail-content--enter">
+      <header className="task-list-section-head">
+        <div className="task-list-section-head__text">
+          <h2 className="term-arrow">
+            <span>Task drafts</span>
+          </h2>
+          {/* One-line terminal lede mirrors the create modal
+              (`$ compose --next-up`), All Tasks (`$ query --next-up
+              --filter --review`), and Settings (`$ tune --runtime
+              --workspace --agent`) so the four primary surfaces feel
+              like siblings. `aria-hidden` because the heading already
+              names the page for assistive tech. */}
+          <p
+            className="task-list-section-lede term-prompt muted"
+            aria-hidden="true"
+          >
+            <span>resume --or-remove</span>
+          </p>
+        </div>
+        {hasDrafts ? (
+          <div className="task-list-section-actions">
+            <span className="draft-count-pill" aria-live="polite">
+              <strong>{draftCount}</strong>{" "}
+              {draftCount === 1 ? "saved draft" : "saved drafts"}
+            </span>
+          </div>
+        ) : null}
+      </header>
+
       {resumeError ? (
         <div className="err" role="alert">
           <p>{resumeError}</p>
@@ -88,6 +120,7 @@ export function TaskDraftsPage({ app }: Props) {
           <p>{deleteError}</p>
         </div>
       ) : null}
+
       <div className="stack">
         {loading && showDraftsSkeleton ? <TaskDraftsListSkeleton /> : null}
         {!loading ? (
@@ -107,10 +140,11 @@ export function TaskDraftsPage({ app }: Props) {
                   </button>
                 </div>
               </div>
-            ) : drafts.length === 0 ? (
+            ) : !hasDrafts ? (
               <EmptyState
                 title="No saved drafts"
-                description="Create a task from home and your work can be saved as a draft automatically."
+                description="Drafts auto-save while you compose a new task. Anything you start that you don't dispatch right away lands here, ready to pick back up the moment you have a minute."
+                className="empty-state--task-list-fresh"
                 action={{
                   label: "Create a task",
                   onClick: () => {
@@ -120,45 +154,65 @@ export function TaskDraftsPage({ app }: Props) {
                 }}
               />
             ) : (
-              drafts.map((d) => (
-                <div
-                  key={d.id}
-                  className={[
-                    "row",
-                    "stack-row-actions",
-                    "draft-list-row",
-                    exitingDraftIds.includes(d.id) ? "draft-list-row--exit" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => void openDraftInCreateForm(d.id)}
-                    aria-label={`Open draft ${d.name} in create form`}
-                    disabled={
-                      resumePending ||
-                      deletePending ||
-                      exitingDraftIds.includes(d.id)
-                    }
-                  >
-                    {resumePending ? "Opening draft…" : `Resume: ${d.name}`}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => void deleteDraft(d.id)}
-                    disabled={
-                      resumePending ||
-                      deletePending ||
-                      exitingDraftIds.includes(d.id)
-                    }
-                  >
-                    {deletingDraftId === d.id ? "Deleting…" : "Delete"}
-                  </button>
-                </div>
-              ))
+              <ul className="draft-row-list" aria-label="Saved drafts">
+                {drafts.map((d) => {
+                  const lastEdited = d.updated_at || d.created_at;
+                  const relative = formatRelativeTime(lastEdited, renderNow);
+                  return (
+                    <li
+                      key={d.id}
+                      className={[
+                        "draft-row",
+                        exitingDraftIds.includes(d.id) ? "draft-row--exit" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      <div className="draft-row__meta">
+                        <span className="draft-row__name" title={d.name}>
+                          {d.name}
+                        </span>
+                        {lastEdited && relative ? (
+                          <time
+                            className="draft-row__time"
+                            dateTime={lastEdited}
+                            title={lastEdited}
+                          >
+                            Edited {relative}
+                          </time>
+                        ) : null}
+                      </div>
+                      <div className="draft-row__actions">
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => void openDraftInCreateForm(d.id)}
+                          aria-label={`Open draft ${d.name} in create form`}
+                          disabled={
+                            resumePending ||
+                            deletePending ||
+                            exitingDraftIds.includes(d.id)
+                          }
+                        >
+                          {resumePending ? "Opening draft…" : "Resume"}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => void deleteDraft(d.id)}
+                          disabled={
+                            resumePending ||
+                            deletePending ||
+                            exitingDraftIds.includes(d.id)
+                          }
+                        >
+                          {deletingDraftId === d.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         ) : null}
