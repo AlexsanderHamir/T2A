@@ -30,49 +30,6 @@ Format for each entry:
 
 ## Open
 
-### Quick-pick offset bucket bounds
-- Date: 2026-04-29
-- From task: Schedule quick-pick popover
-- Decision needed: The new offset popover exposes
-  Minutes (10..50 step 10), Hours (1..24), Days (1..6), Weeks (1..3),
-  Months (1..12). The operator's spec said "List of minutes up to one
-  hour" / "List of hours from 1 to 24hrs" / "Same thing for days, weeks,
-  months" without explicit bounds for days/weeks/months. Are these ranges
-  right, or should we extend (e.g. months 1..24, days 1..14, weeks 1..8)?
-- Default chosen if no answer: Bounds chosen so adjacent buckets do not
-  overlap (7d → 1w → 1mo). Keeps the popover visually compact while still
-  covering common deferrals.
-- Files affected: `web/src/shared/time/quickScheduleOffsets.ts`
-  (`QUICK_OFFSET_BUCKETS`).
-
-### Month arithmetic clamps to last day of target month
-- Date: 2026-04-29
-- From task: Schedule quick-pick popover
-- Decision needed: When the source date does not exist in the target month
-  (e.g. Jan 31 + 1 month → Feb 31), should the picker clamp to the last
-  day of the target month (chosen) or roll forward to the next month
-  (Mar 3)?
-- Default chosen if no answer: Clamp to last day of target month. Matches
-  how every major calendar app (Apple Calendar, Google Calendar,
-  iCal RFC 5545 BYMONTHDAY rules) handles the same edge case, and keeps
-  the picked instant inside the month the operator visually expects.
-- Files affected: `web/src/shared/time/quickScheduleOffsets.ts`
-  (`computeOffsetIso` month branch).
-
-### Single trigger label "Schedule for later…"
-- Date: 2026-04-29
-- From task: Schedule quick-pick popover
-- Decision needed: The QUICK PICK row now has a single trigger button
-  labelled "Schedule for later…" with a clock icon. Is the copy / icon
-  pairing right, or should it be more explicit (e.g. "Pick a delay…",
-  "Schedule (10m / 1h / 1d / 1w)")?
-- Default chosen if no answer: "Schedule for later…" reads as a
-  natural-language affordance and the trailing ellipsis signals "opens
-  more UI". The clock glyph mirrors the calendar glyph on the input field
-  so the two affordances read as siblings.
-- Files affected: `web/src/shared/time/SchedulePicker.tsx`
-  (trigger button JSX).
-
 ### Test scenarios surface as a header trigger, not a new task type
 - Date: 2026-04-29
 - From task: Pre-defined test scenarios
@@ -414,3 +371,58 @@ Format for each entry:
   speed path for "I know what I want"; the chooser is the discovery path for
   "I'm browsing what's available". Keeping both honors the two distinct user
   intents instead of forcing every operator into the same flow.
+
+### Quick-pick offset bucket bounds
+- Date: 2026-04-29
+- From task: Schedule quick-pick popover
+- Decision needed: The new offset popover exposes
+  Minutes (10..50 step 10), Hours (1..24), Days (1..6), Weeks (1..3),
+  Months (1..12). The operator's spec said "List of minutes up to one
+  hour" / "List of hours from 1 to 24hrs" / "Same thing for days, weeks,
+  months" without explicit bounds for days/weeks/months. Are these ranges
+  right, or should we extend (e.g. months 1..24, days 1..14, weeks 1..8)?
+- Default chosen if no answer: Bounds chosen so adjacent buckets do not
+  overlap (7d → 1w → 1mo). Keeps the popover visually compact while still
+  covering common deferrals.
+- Files affected: `web/src/shared/time/quickScheduleOffsets.ts`
+  (`QUICK_OFFSET_BUCKETS`).
+- Resolution (2026-04-29): Confirmed non-overlapping bounds. The mental
+  model "minutes → hours → days → weeks → months" only stays clean if each
+  bucket stops where the next one starts. Edge cases beyond the bounds (90
+  days, 6 months) can still be entered via the date+time inputs above the
+  popover, so the popover stays compact without locking the operator out.
+
+### Month arithmetic clamps to last day of target month
+- Date: 2026-04-29
+- From task: Schedule quick-pick popover
+- Decision needed: When the source date does not exist in the target month
+  (e.g. Jan 31 + 1 month → Feb 31), should the picker clamp to the last
+  day of the target month (chosen) or roll forward to the next month
+  (Mar 3)?
+- Default chosen if no answer: Clamp to last day of target month. Matches
+  how every major calendar app (Apple Calendar, Google Calendar,
+  iCal RFC 5545 BYMONTHDAY rules) handles the same edge case, and keeps
+  the picked instant inside the month the operator visually expects.
+- Files affected: `web/src/shared/time/quickScheduleOffsets.ts`
+  (`computeOffsetIso` month branch).
+- Resolution (2026-04-29): Confirmed clamping. Industry-standard behavior
+  (RFC 5545 BYMONTHDAY clamp); rolling forward would surprise operators
+  who picked "+1 month" expecting to land in February, not early March.
+
+### Single trigger label "Schedule for later…"
+- Date: 2026-04-29
+- From task: Schedule quick-pick popover
+- Decision needed: The QUICK PICK row now has a single trigger button
+  labelled "Schedule for later…" with a clock icon. Is the copy / icon
+  pairing right, or should it be more explicit (e.g. "Pick a delay…",
+  "Schedule (10m / 1h / 1d / 1w)")?
+- Default chosen if no answer: "Schedule for later…" reads as a
+  natural-language affordance and the trailing ellipsis signals "opens
+  more UI". The clock glyph mirrors the calendar glyph on the input field
+  so the two affordances read as siblings.
+- Files affected: `web/src/shared/time/SchedulePicker.tsx`
+  (trigger button JSX).
+- Resolution (2026-04-29): Confirmed copy + icon pairing. Verb-first
+  natural language ("Schedule…") plus the ellipsis-disclosure convention is
+  the same affordance vocabulary Stripe / Linear use; trying to enumerate
+  examples in the label ("10m / 1h / 1d") would only crowd the button.
