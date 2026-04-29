@@ -30,41 +30,6 @@ Format for each entry:
 
 ## Open
 
-### Stats strip lives inside the task list panel, not at the page top
-- Date: 2026-04-29
-- From task: All Tasks page polish
-- Decision needed: The new `TaskListStatsStrip` (total / ready /
-  critical / scheduled / review / blocked) renders between the heading
-  and the filters inside the same panel that hosts the table. Should
-  it instead sit as its own page-level "scoreboard" panel above the
-  list?
-- Default chosen if no answer: Inside the panel. Keeps the page to a
-  single column with one anchored container; the strip is a tight
-  one-line summary, not a dashboard, and doesn't need its own
-  elevation. Self-hides on `total === 0` so a fresh database still
-  shows the welcome empty state without a confusing "0 ready" pill.
-- Files affected:
-  `web/src/tasks/components/task-list/section/TaskListStatsStrip.tsx`,
-  `web/src/tasks/components/task-list/section/TaskListSection.tsx`.
-
-### Empty-state title kept verbatim "No tasks yet"
-- Date: 2026-04-29
-- From task: All Tasks page polish
-- Decision needed: The empty state's title was almost reworded to
-  "Ready when you are." for warmth. Reverted to "No tasks yet" because
-  many `App.test.tsx` integration tests use that literal as their
-  page-loaded sentinel. Should we still rename it (and update the
-  ~12 test sites that depend on it) for friendlier copy?
-- Default chosen if no answer: Keep the literal title; refresh only
-  the description (now reads "Hit New task to dispatch your first run.
-  Once a task is in flight, this table tracks its status, priority,
-  and prompt preview live as the worker picks it up."). Lower risk,
-  same warmth gain.
-- Files affected:
-  `web/src/tasks/components/task-list/table/TaskListDataTable.tsx`,
-  `web/src/app/styles/task-list/app-task-list-controls.css`
-  (`.empty-state--task-list-fresh`).
-
 ### Settings page lede copy is `tune --runtime --workspace --agent`
 - Date: 2026-04-29
 - From task: Settings page polish
@@ -441,3 +406,48 @@ Format for each entry:
   redirect the run to a different runner / project. If reproducible
   presets become a requirement, the type already has room to grow
   optional `runner` / `cursorModel` fields applied only when set.
+
+### Stats strip lives inside the task list panel, not at the page top
+- Date: 2026-04-29
+- From task: All Tasks page polish
+- Decision needed: The new `TaskListStatsStrip` (total / ready /
+  critical / scheduled / review / blocked) renders between the heading
+  and the filters inside the same panel that hosts the table. Should
+  it instead sit as its own page-level "scoreboard" panel above the
+  list?
+- Default chosen if no answer: Inside the panel. Keeps the page to a
+  single column with one anchored container; the strip is a tight
+  one-line summary, not a dashboard, and doesn't need its own
+  elevation. Self-hides on `total === 0` so a fresh database still
+  shows the welcome empty state without a confusing "0 ready" pill.
+- Files affected:
+  `web/src/tasks/components/task-list/section/TaskListStatsStrip.tsx`,
+  `web/src/tasks/components/task-list/section/TaskListSection.tsx`.
+- Resolution (2026-04-29): Confirmed inside-panel placement. Lifting the
+  strip to its own page-level scoreboard would imply this app has a
+  dashboard (it doesn't — All Tasks IS the dashboard). The strip is row
+  metadata for the table below, so it belongs inside the same panel that
+  owns the table.
+
+### Empty-state title kept verbatim "No tasks yet"
+- Date: 2026-04-29
+- From task: All Tasks page polish
+- Decision needed: The empty state's title was almost reworded to
+  "Ready when you are." for warmth. Reverted to "No tasks yet" because
+  many `App.test.tsx` integration tests use that literal as their
+  page-loaded sentinel. Should we still rename it (and update the
+  ~12 test sites that depend on it) for friendlier copy?
+- Default chosen if no answer: Keep the literal title; refresh only
+  the description (now reads "Hit New task to dispatch your first run.
+  Once a task is in flight, this table tracks its status, priority,
+  and prompt preview live as the worker picks it up."). Lower risk,
+  same warmth gain.
+- Files affected:
+  `web/src/tasks/components/task-list/table/TaskListDataTable.tsx`,
+  `web/src/app/styles/task-list/app-task-list-controls.css`
+  (`.empty-state--task-list-fresh`).
+- Resolution (2026-04-29): Confirmed literal title. "No tasks yet" is
+  factual, simple, and clear — Linear / Notion / GitHub use the same
+  cadence. The warmth gain comes from the inviting description, not
+  from cuter title copy. Avoiding ~12 test churn for a copy nuance is
+  the right trade.
