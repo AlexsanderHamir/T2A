@@ -270,11 +270,12 @@ describe("TaskDetailSchedule edit modal", () => {
     );
     renderPanel({ status: "ready", pickup: null });
     await user.click(screen.getByTestId("task-detail-schedule-edit"));
-    // Use a quick-pick to avoid manually typing a datetime-local in
-    // jsdom. "Tomorrow 9 AM" with no fixed clock just needs to emit
-    // *some* future schedule string; we assert the body has the
-    // pickup_not_before key set to a non-null RFC3339 string.
-    await user.click(screen.getByTestId("schedule-picker-tomorrow"));
+    // Use the offset popover to avoid manually typing a datetime-local in
+    // jsdom. "+1 day" with no fixed clock just needs to emit *some* future
+    // schedule string; we assert the body has the pickup_not_before key set
+    // to a non-null RFC3339 string.
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-day-1"));
     await user.click(screen.getByRole("button", { name: /save schedule/i }));
     await waitFor(() => {
       const patches = calls.filter((c) => c.method === "PATCH");

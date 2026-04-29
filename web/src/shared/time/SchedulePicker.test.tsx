@@ -6,12 +6,10 @@ import { SchedulePicker } from "./SchedulePicker";
 const NY = "America/New_York";
 const TOKYO = "Asia/Tokyo";
 
-// 2026-04-19T13:00:00Z is a Sunday: 09:00 EDT (NY, UTC-4 in April
-// after DST starts) and 22:00 JST (Tokyo, UTC+9, no DST). Anchoring
-// on a Sunday means "Next Monday" is unambiguously +1 day and lets
-// us assert wall-clock rendering for both eastward and westward
-// timezones.
-const SUNDAY_13Z = new Date("2026-04-19T13:00:00Z").getTime();
+// 2026-04-19T12:00:00Z = noon UTC, Sunday. Anchored against this clock so
+// quick-pick offsets ("+1h", "+3d", "+1mo") are deterministic regardless of
+// the host machine's locale or the picker's `appTimezone`.
+const NOON_2026_04_19 = new Date("2026-04-19T12:00:00Z").getTime();
 
 describe("SchedulePicker render", () => {
   it("renders empty input + 'immediately' caption when value is null", () => {
@@ -73,6 +71,15 @@ describe("SchedulePicker render", () => {
       .closest("fieldset") as HTMLFieldSetElement;
     expect(fieldset.disabled).toBe(true);
   });
+
+  it("does not show the offset popover by default", () => {
+    render(
+      <SchedulePicker value={null} onChange={() => {}} appTimezone="UTC" />,
+    );
+    expect(
+      screen.queryByTestId("schedule-picker-quick-popover"),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("SchedulePicker manual input", () => {
@@ -114,110 +121,8 @@ describe("SchedulePicker manual input", () => {
     await user.clear(input);
     expect(onChange).toHaveBeenCalledWith(null);
   });
-});
 
-describe("SchedulePicker quick picks", () => {
-  it("'In 1 hour' emits now + 60 minutes (timezone-agnostic)", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={SUNDAY_13Z}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-in-1h"));
-    expect(onChange).toHaveBeenCalledWith("2026-04-19T14:00:00.000Z");
-  });
-
-  it("'Tonight 9 PM' (NY) emits today 21:00 EDT = 01:00 UTC next day", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={SUNDAY_13Z}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-tonight"));
-    // 21:00 EDT on 2026-04-19 = 2026-04-20T01:00Z.
-    expect(onChange).toHaveBeenCalledWith("2026-04-20T01:00:00.000Z");
-  });
-
-  it("'Tonight 9 PM' falls forward to tomorrow when 21:00 already passed", async () => {
-    // 03:00Z next day = 23:00 EDT same day; 21:00 EDT has passed.
-    const lateNight = new Date("2026-04-20T03:00:00Z").getTime();
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={lateNight}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-tonight"));
-    // Should be 21:00 EDT on the *following* calendar day in NY
-    // (2026-04-20 in NY = 23:00 of 04-19 + 4h = 04-20 in NY around
-    // 23:00). Calling "tonight" at 23:00 EDT on 04-19 (= 03:00Z 04-20)
-    // means 21:00 EDT on 04-20 = 01:00Z 04-21.
-    expect(onChange).toHaveBeenCalledWith("2026-04-21T01:00:00.000Z");
-  });
-
-  it("'Tomorrow 9 AM' (NY) emits tomorrow 09:00 EDT = 13:00 UTC", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={SUNDAY_13Z}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-tomorrow"));
-    expect(onChange).toHaveBeenCalledWith("2026-04-20T13:00:00.000Z");
-  });
-
-  it("'Next Monday 9 AM' from a Sunday is +1 day (NY)", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={SUNDAY_13Z}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-next-monday"));
-    expect(onChange).toHaveBeenCalledWith("2026-04-20T13:00:00.000Z");
-  });
-
-  it("'Next Monday 9 AM' from a Monday is +7 days (never 'today' on Monday)", async () => {
-    // 2026-04-20 is the Monday after our Sunday anchor. 13:00Z = 09:00 EDT.
-    const monday = new Date("2026-04-20T13:00:00Z").getTime();
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <SchedulePicker
-        value={null}
-        onChange={onChange}
-        appTimezone={NY}
-        nowMs={monday}
-      />,
-    );
-    await user.click(screen.getByTestId("schedule-picker-next-monday"));
-    // Next Monday is 2026-04-27 09:00 EDT = 13:00 UTC.
-    expect(onChange).toHaveBeenCalledWith("2026-04-27T13:00:00.000Z");
-  });
-
-  it("'Clear' chip emits null", async () => {
+  it("'Clear' icon emits null", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -230,34 +135,51 @@ describe("SchedulePicker quick picks", () => {
     await user.click(screen.getByTestId("schedule-picker-clear"));
     expect(onChange).toHaveBeenCalledWith(null);
   });
+});
 
-  it("DST forward: a 9 AM local pick on the spring-forward day produces the correct UTC offset", async () => {
-    // 2026-03-08 is the US spring-forward Sunday. At 02:00 EDT clocks
-    // jump to 03:00 EDT. Clicking 'Tomorrow 9 AM' from 2026-03-07 (a
-    // Saturday before the cliff) should land on 09:00 EDT on 03-08,
-    // which is 13:00 UTC (UTC-4, post-jump), NOT 14:00 UTC (which
-    // would be UTC-5 EST, the pre-jump offset). Catches the classic
-    // "guessed offset at the source instant" bug.
-    const beforeSpringForward = new Date("2026-03-07T15:00:00Z").getTime();
+describe("SchedulePicker quick-pick popover", () => {
+  it("opens the popover with sectioned offset chips when the trigger is clicked", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
     render(
       <SchedulePicker
         value={null}
-        onChange={onChange}
+        onChange={() => {}}
         appTimezone={NY}
-        nowMs={beforeSpringForward}
+        nowMs={NOON_2026_04_19}
       />,
     );
-    await user.click(screen.getByTestId("schedule-picker-tomorrow"));
-    expect(onChange).toHaveBeenCalledWith("2026-03-08T13:00:00.000Z");
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    const popover = screen.getByTestId("schedule-picker-quick-popover");
+    expect(popover).toBeInTheDocument();
+    // Section headings are visible and labelled.
+    expect(
+      screen.getByRole("heading", { name: /^minutes$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^hours$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^days$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^weeks$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^months$/i }),
+    ).toBeInTheDocument();
+    // Sample chips are present.
+    expect(
+      screen.getByTestId("schedule-picker-quick-minute-10"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("schedule-picker-quick-hour-24"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("schedule-picker-quick-month-12"),
+    ).toBeInTheDocument();
   });
 
-  it("DST backward: a 9 AM local pick on the fall-back day produces the correct UTC offset", async () => {
-    // 2026-11-01 is the US fall-back Sunday. Clicking 'Tomorrow 9 AM'
-    // from 2026-10-31 (Saturday before the fall-back) should land on
-    // 09:00 EST on 11-01, which is 14:00 UTC (UTC-5, post-fallback).
-    const beforeFallBack = new Date("2026-10-31T15:00:00Z").getTime();
+  it("'+10 minutes' emits now + 10 minutes (timezone-agnostic)", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -265,10 +187,168 @@ describe("SchedulePicker quick picks", () => {
         value={null}
         onChange={onChange}
         appTimezone={NY}
-        nowMs={beforeFallBack}
+        nowMs={NOON_2026_04_19}
       />,
     );
-    await user.click(screen.getByTestId("schedule-picker-tomorrow"));
-    expect(onChange).toHaveBeenCalledWith("2026-11-01T14:00:00.000Z");
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-minute-10"));
+    expect(onChange).toHaveBeenCalledWith("2026-04-19T12:10:00.000Z");
+  });
+
+  it("'+1 hour' emits now + 60 minutes (timezone-agnostic)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-hour-1"));
+    expect(onChange).toHaveBeenCalledWith("2026-04-19T13:00:00.000Z");
+  });
+
+  it("'+24 hours' emits now + 24h (crosses midnight)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-hour-24"));
+    expect(onChange).toHaveBeenCalledWith("2026-04-20T12:00:00.000Z");
+  });
+
+  it("'+3 days' emits now + 3 calendar days", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-day-3"));
+    expect(onChange).toHaveBeenCalledWith("2026-04-22T12:00:00.000Z");
+  });
+
+  it("'+2 weeks' emits now + 14 days", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-week-2"));
+    expect(onChange).toHaveBeenCalledWith("2026-05-03T12:00:00.000Z");
+  });
+
+  it("'+1 month' uses calendar arithmetic (preserves day-of-month)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const apr15 = new Date("2026-04-15T09:00:00Z").getTime();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={apr15}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-month-1"));
+    expect(onChange).toHaveBeenCalledWith("2026-05-15T09:00:00.000Z");
+  });
+
+  it("clamps month arithmetic to the last day of a shorter target month", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const jan31 = new Date("2026-01-31T09:00:00Z").getTime();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={jan31}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.click(screen.getByTestId("schedule-picker-quick-month-1"));
+    // Feb 31 doesn't exist; clamp to Feb 28 (2026 is not a leap year).
+    expect(onChange).toHaveBeenCalledWith("2026-02-28T09:00:00.000Z");
+  });
+
+  it("closes the popover after a chip is picked", async () => {
+    const user = userEvent.setup();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={() => {}}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    expect(
+      screen.getByTestId("schedule-picker-quick-popover"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByTestId("schedule-picker-quick-hour-1"));
+    expect(
+      screen.queryByTestId("schedule-picker-quick-popover"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("Escape closes the popover without emitting a schedule", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={onChange}
+        appTimezone={NY}
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByTestId("schedule-picker-quick-popover"),
+    ).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("aria-labels each chip with the screen-reader-friendly offset", async () => {
+    const user = userEvent.setup();
+    render(
+      <SchedulePicker
+        value={null}
+        onChange={() => {}}
+        appTimezone="UTC"
+        nowMs={NOON_2026_04_19}
+      />,
+    );
+    await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+    expect(
+      screen.getByRole("button", { name: /^schedule for 1 hour from now$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^schedule for 3 days from now$/i }),
+    ).toBeInTheDocument();
   });
 });
