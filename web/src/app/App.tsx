@@ -12,6 +12,7 @@ import {
   useTasksApp,
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
+import { useStickyShellElevation } from "@/lib/useStickyShellElevation";
 import { SettingsPage } from "@/settings";
 import {
   ProjectDetailPage,
@@ -41,6 +42,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
+  const headerElevated = useStickyShellElevation();
 
   return (
     <ModalStackProvider>
@@ -48,7 +50,10 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <header className="app-header app-header--sticky">
+        <header
+          className="app-header app-header--sticky"
+          data-elevated={headerElevated ? "true" : "false"}
+        >
           <div className="app-header-top">
             {/* Brand sits OUTSIDE <nav> so the wordmark is not announced
                 as a navigation destination peer to Tasks/Drafts/etc.
