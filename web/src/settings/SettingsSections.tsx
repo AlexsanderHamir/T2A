@@ -24,9 +24,7 @@ export function SettingsLoadingState({
 }) {
   return (
     <section className="settings-page" aria-busy="true">
-      <h2 className="settings-page-title term-arrow">
-        <span>Settings</span>
-      </h2>
+      <h2 className="settings-page-title">Settings</h2>
       <p>{error ? `Error: ${error.message}` : "Loading settings…"}</p>
       {error ? (
         <button type="button" onClick={onRetry}>
@@ -47,21 +45,9 @@ export function SettingsHeader({
   return (
     <header className="settings-page-header">
       <div className="settings-page-heading">
-        <h2 className="settings-page-title term-arrow">
-          <span>Settings</span>
-        </h2>
+        <h2 className="settings-page-title">Settings</h2>
         <p className="settings-page-subtitle">
           Runtime and workspace configuration for this installation.
-        </p>
-        {/* One-line terminal lede mirrors the create modal's
-           `$ compose --next-up` and the All Tasks page's
-           `$ query --next-up --filter --review`, so the three top-level
-           surfaces feel like siblings instead of unrelated pages. */}
-        <p
-          className="settings-page-lede term-prompt muted"
-          aria-hidden="true"
-        >
-          <span>tune --runtime --workspace --agent</span>
         </p>
       </div>
       {lastUpdated ? (
@@ -126,9 +112,7 @@ export function AgentWorkerSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Agent worker</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Agent worker</legend>
       <p className="settings-section-subtitle">
         Pick up ready tasks and hand them to the configured runner.
       </p>
@@ -204,9 +188,7 @@ export function DisplaySettingsSection({
   const customValue = form.displayTimezone.trim();
   return (
     <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Display</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Display</legend>
       <label className="settings-field">
         <span className="settings-field-label">Timezone</span>
         <TimezoneCombobox
@@ -238,9 +220,7 @@ export function WorkspaceSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Workspace</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Workspace</legend>
       <p className="settings-section-subtitle">
         The repository the agent will execute tasks in.
       </p>
@@ -288,9 +268,7 @@ export function CursorAgentSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset" id="cursor-agent">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Cursor agent (CLI)</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Cursor agent (CLI)</legend>
       <p className="settings-section-subtitle">
         Model override and CLI binary used by the Cursor runner.
       </p>
@@ -394,9 +372,7 @@ export function RunTimeoutSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Run timeout</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Run timeout</legend>
       <p className="settings-section-subtitle">
         Hard ceiling on any single agent run&apos;s wall-clock duration.
       </p>
@@ -434,9 +410,7 @@ export function ProjectStepsGateSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset" id="project-steps-gate">
-      <legend className="settings-fieldset-legend term-prompt">
-        <span>Project steps</span>
-      </legend>
+      <legend className="settings-fieldset-legend">Project steps</legend>
       <p className="settings-section-subtitle">
         After every task in a step is marked done, the gate waits this many seconds
         before auto-releasing (unless you hold or release early). Set to{" "}
