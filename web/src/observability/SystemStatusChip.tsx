@@ -39,7 +39,6 @@ export function SystemStatusChip({ connected }: Props) {
   const { health, loading } = useSystemHealth();
   const summary = summarize(health, loading);
 
-  const pillClass = pillClassForChip(summary.level, connected);
   const dotClass = connected ? "stream-dot stream-dot--live" : "stream-dot";
   const label = chipMainLabel(summary.level, connected, loading);
   const live = connected ? "Live updates" : "Reconnecting";
@@ -57,30 +56,16 @@ export function SystemStatusChip({ connected }: Props) {
     >
       <span className="system-status-chip-main">
         <span className={dotClass} aria-hidden />
-        <span className="system-status-chip-text">{label}</span>
-        <span className={`stream-pill ${pillClass}`}>{live}</span>
+        <span className="system-status-chip-copy">
+          <span className="system-status-chip-text">{label}</span>
+          <span className="system-status-chip-sep" aria-hidden>
+            ·
+          </span>
+          <span className="system-status-chip-live">{live}</span>
+        </span>
       </span>
     </div>
   );
-}
-
-function pillClassForChip(
-  level: ReturnType<typeof summarize>["level"],
-  connected: boolean,
-): string {
-  if (level === "unknown" && connected) {
-    return "stream-pill--ok";
-  }
-  switch (level) {
-    case "ok":
-      return "stream-pill--ok";
-    case "paused":
-    case "degraded":
-      return "stream-pill--warn";
-    case "unknown":
-    default:
-      return "stream-pill--sync";
-  }
 }
 
 function chipMainLabel(
