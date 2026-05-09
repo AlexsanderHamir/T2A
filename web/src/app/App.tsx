@@ -8,6 +8,7 @@ import {
   TaskDraftsPage,
   TaskEventDetailPage,
   TaskGraphPage,
+  TaskCreateModalsLayer,
   TaskHome,
   useTasksApp,
 } from "@/tasks";
@@ -27,6 +28,7 @@ import {
   useProjects,
 } from "@/projects";
 import { SystemStatusChip } from "@/observability";
+import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
@@ -133,10 +135,12 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
             </div>
           </div>
         </header>
+        <UiTestModeBanner />
         {app.error ? <ErrorBanner message={app.error} /> : null}
 
         <main id="main-content" tabIndex={-1}>
           <RoutedMainOutlet />
+          <TaskCreateModalsLayer app={app} />
 
           {app.deleteTarget ? (
             <DeleteConfirmDialog
@@ -240,7 +244,7 @@ export default function App() {
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route path="projects" element={<ProjectListPage />} />
         <Route path="projects/:projectId/goals" element={<ProjectGoalsPage />} />
-        <Route path="projects/:projectId/steps" element={<ProjectStepsPage />} />
+        <Route path="projects/:projectId/steps" element={<ProjectStepsPage app={app} />} />
         <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />

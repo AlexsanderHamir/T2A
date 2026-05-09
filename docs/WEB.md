@@ -60,6 +60,8 @@ SSE carries `type` + `id` only; rows come from `GET /tasks`.
 
 Dev: browser → Vite → proxies `/projects`, `/tasks`, `/events`, `/repo`, `/settings`, `/system`, `/v1/rum`, and `/health` → `taskapi`. `VITE_TASKAPI_ORIGIN` in `web/vite.config.ts` picks the API target (default `http://127.0.0.1:8080`). Full-page loads to `/tasks/{id}` or `/projects/{id}` must still serve the SPA: the dev proxy bypasses to `index.html` when `Accept` includes `text/html` (so refresh on a detail URL does not return raw JSON from the API route).
 
+**UI test mode:** `VITE_UI_TEST_MODE=true` in `web/.env.local` (or the Settings → *UI test mode* checkbox for this tab only) makes `fetchWithTimeout` return built-in demo JSON for read-only task and project routes so goals, steps, context, and the task table can be exercised without seeding Postgres. Mutations and `/settings` still go to taskapi. See `web/src/dev/uiTestModeInterceptor.ts` for the exact path list.
+
 Prod: `npm run build` → `web/dist/`; serve so `/tasks`, `/events`, `/repo` match the API origin (or gateway).
 
 Mermaid (dev path):

@@ -1,3 +1,5 @@
+import { interceptUiTestModeFetch } from "@/dev/uiTestModeInterceptor";
+
 /** Shared headers and error text for JSON APIs. */
 export const jsonHeaders = {
   "Content-Type": "application/json",
@@ -108,6 +110,8 @@ export async function fetchWithTimeout(
   init?: RequestInit,
   options?: { timeoutMs?: number },
 ): Promise<Response> {
+  const synthetic = interceptUiTestModeFetch(input, init);
+  if (synthetic) return synthetic;
   const timeoutMs = options?.timeoutMs ?? defaultFetchTimeoutMs;
   const { signal: timeout, cleanup } = timeoutSignal(timeoutMs);
   const signal = combineSignals(init?.signal, timeout);

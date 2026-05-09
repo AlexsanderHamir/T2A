@@ -10,14 +10,6 @@ vi.mock("../components/task-list", () => ({
   TaskListSection: () => <div data-testid="task-list-section" />,
 }));
 
-vi.mock("../components/task-create-modal", () => ({
-  TaskCreateModal: () => null,
-}));
-
-vi.mock("../components/draft-resume", () => ({
-  DraftResumeModal: () => null,
-}));
-
 type App = ReturnType<typeof useTasksApp>;
 
 function makeApp(overrides: Partial<App> = {}): App {

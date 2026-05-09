@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import type { useTasksApp } from "@/tasks/hooks/useTasksApp";
 import {
   createProjectStep,
   deleteProjectStep,
@@ -16,6 +17,12 @@ import type { ProjectStep, ProjectStepCriterion, ProjectStepGateStatus } from "@
 import { useProjectGoals } from "./hooks";
 import { projectQueryKeys } from "./queryKeys";
 import { ProjectStepCreateModal } from "./ProjectStepCreateModal";
+import { ProjectStepsGraphView } from "./ProjectStepsGraphView";
+import {
+  truncateListDependencySummary,
+  truncateListDescription,
+  truncateListTitle,
+} from "./projectListDisplayText";
 
 type ViewMode = "list" | "graph";
 
@@ -70,7 +77,13 @@ function StepCountdown(props: { deadlineIso: string }) {
   );
 }
 
-export function ProjectStepsPage() {
+type TasksApp = ReturnType<typeof useTasksApp>;
+
+type ProjectStepsPageProps = {
+  app: TasksApp;
+};
+
+export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
   const { projectId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const goalId = (searchParams.get("goal_id") ?? "").trim();
@@ -327,7 +340,49 @@ export function ProjectStepsPage() {
             <span className="ps__legend-item">
               <span className="ps__dot ps__dot--blocked" aria-hidden="true" /> Blocked
             </span>
-            <span className="ps__legend-item ps__legend-item--sep">Solid arrow: depends on prior stage</span>
+            <span className="ps__legend-item ps__legend-item--sep">
+              <svg
+                className="ps__legend-edge"
+                width={28}
+                height={10}
+                viewBox="0 0 28 10"
+                aria-hidden="true"
+              >
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="18"
+                  y2="5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                  strokeLinecap="round"
+                />
+                <path d="M18 1.25 L26.5 5 L18 8.75 Z" fill="currentColor" />
+              </svg>
+              Independent
+            </span>
+            <span className="ps__legend-item">
+              <svg
+                className="ps__legend-edge"
+                width={28}
+                height={10}
+                viewBox="0 0 28 10"
+                aria-hidden="true"
+              >
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="18"
+                  y2="5"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                />
+                <path d="M18 1 L27 5 L18 9 Z" fill="currentColor" />
+              </svg>
+              Dependent
+            </span>
           </div>
 
           {stepsQuery.isLoading ? <p className="muted">Loading steps…</p> : null}
@@ -343,7 +398,6 @@ export function ProjectStepsPage() {
                 <li key={step.id} className="ps__card">
                   <ProjectStepListBody
                     step={step}
-                    projectId={projectId}
                     phase={uiPhase(step)}
                     taskStats={tasksByStepId.get(step.id)}
                     afterTitle={prevTitleByStepId.get(step.id)}
@@ -355,27 +409,26 @@ export function ProjectStepsPage() {
                         deleteMut.mutate(step.id);
                       }
                     }}
+                    onNewTask={() =>
+                      app.openCreateModal({
+                        projectID: step.project_id,
+                        projectStepID: step.id,
+                        lockProjectAssignment: true,
+                      })
+                    }
+                    newTaskDisabled={app.createModalOpen || app.draftPickerOpen}
                   />
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="ps__graph" role="list">
-              {ordered.map((step, i) => (
-                <div key={step.id} className="ps__graph-cell" role="listitem">
-                  {i > 0 ? <div className="ps__graph-arrow" aria-hidden="true" /> : null}
-                  <article className={`ps__graph-card ps__graph-card--${uiPhase(step)}`}>
-                    <header className="ps__graph-card-head">
-                      <span className={`ps__dot ps__dot--${uiPhase(step)}`} aria-hidden="true" />
-                      <span className="muted">{gateLabel(step.gate_status)}</span>
-                    </header>
-                    <h3 className="ps__graph-card-title">{step.title}</h3>
-                    {step.description.trim() ? (
-                      <p className="ps__graph-card-desc muted">{step.description}</p>
-                    ) : null}
-                  </article>
-                </div>
-              ))}
+            <div className="ps__graph-wrap">
+              <ProjectStepsGraphView
+                steps={ordered}
+                phaseOf={uiPhase}
+                gateLabel={gateLabel}
+                tasksByStepId={tasksByStepId}
+              />
             </div>
           )}
 
@@ -411,7 +464,6 @@ export function ProjectStepsPage() {
 
 type ListBodyProps = {
   step: ProjectStep;
-  projectId: string;
   phase: ReturnType<typeof uiPhase>;
   taskStats?: { total: number; done: number };
   afterTitle?: string;
@@ -419,11 +471,12 @@ type ListBodyProps = {
   deletePending: boolean;
   onPatch: (body: Parameters<typeof patchProjectStep>[2]) => void;
   onDelete: () => void;
+  onNewTask: () => void;
+  newTaskDisabled: boolean;
 };
 
 function ProjectStepListBody({
   step,
-  projectId,
   phase,
   taskStats,
   afterTitle,
@@ -431,9 +484,17 @@ function ProjectStepListBody({
   deletePending,
   onPatch,
   onDelete,
+  onNewTask,
+  newTaskDisabled,
 }: ListBodyProps) {
   const stats = taskStats ?? { total: 0, done: 0 };
   const critLabel = criterionRatio(step.criteria);
+  const titleFull = step.title.trim();
+  const titleShown = truncateListTitle(step.title);
+  const descFull = step.description.trim();
+  const descShown = descFull ? truncateListDescription(step.description) : "";
+  const afterFull = afterTitle?.trim() ?? "";
+  const afterShown = afterFull ? truncateListDependencySummary(afterFull) : "";
 
   const toggleCriterion = (id: string, done: boolean) => {
     const next = step.criteria.map((c) => (c.id === id ? { ...c, done } : c));
@@ -454,26 +515,40 @@ function ProjectStepListBody({
           <span className={`ps__dot ps__dot--${phase}`} aria-hidden="true" />
           <div className="ps__row-text">
             <div className="ps__row-title-line">
-              <span className="ps__row-title">{step.title}</span>
+              <span
+                className="ps__row-title"
+                title={titleFull !== titleShown ? titleFull : undefined}
+              >
+                {titleShown}
+              </span>
               <span className={`pd__chip pd__chip--gate pd__chip--${step.gate_status}`}>
                 {gateLabel(step.gate_status)}
               </span>
               {step.gate_hold ? <span className="pd__chip pd__chip--hold">On hold</span> : null}
             </div>
-            {step.description.trim() ? (
-              <p className="ps__row-desc muted">{step.description}</p>
+            {descShown ? (
+              <p
+                className="ps__row-desc"
+                title={descFull !== descShown ? descFull : undefined}
+              >
+                {descShown}
+              </p>
             ) : null}
             <div className="ps__row-meta">
-              <span className="ps__task-pill muted">
-                {stats.total === 0 ? "No tasks" : `${stats.done}/${stats.total} tasks`}
+              <span className="ps__task-pill">
+                {stats.total === 0 ? "No tasks yet" : `${stats.done}/${stats.total} tasks`}
               </span>
-              {critLabel ? <span className="ps__task-pill muted">{critLabel}</span> : null}
+              {critLabel ? <span className="ps__task-pill">{critLabel}</span> : null}
               {afterTitle ? (
-                <span className="ps__dep muted">
-                  After: <strong className="ps__dep-strong">{afterTitle}</strong>
+                <span
+                  className="ps__step-linkage ps__step-linkage--depends"
+                  title={afterFull !== afterShown ? afterFull : undefined}
+                >
+                  <span className="ps__step-linkage__lead">After</span>
+                  <span className="ps__step-linkage__target">{afterShown}</span>
                 </span>
               ) : (
-                <span className="ps__dep-badge">Independent</span>
+                <span className="ps__step-linkage">Independent</span>
               )}
             </div>
             {step.gate_status === "pending_release" && step.pending_release_deadline ? (
@@ -483,12 +558,14 @@ function ProjectStepListBody({
         </div>
         <div className="ps__row-actions">
           {stepAcceptsNewTasks(step.gate_status) ? (
-            <Link
-              className="secondary ps__action-btn"
-              to={`/?create=1&project=${encodeURIComponent(projectId)}&step=${encodeURIComponent(step.id)}`}
+            <button
+              type="button"
+              className="ps__row-cta"
+              onClick={onNewTask}
+              disabled={newTaskDisabled}
             >
               New task
-            </Link>
+            </button>
           ) : null}
           {step.gate_status === "pending_release" && !step.gate_hold ? (
             <button

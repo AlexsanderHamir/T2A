@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createProjectGoal, getProject, listProjectGoals, patchProjectGoal } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { ProjectGoal, ProjectGoalCriterion, ProjectStepGateStatus } from "@/types";
 import { projectQueryKeys } from "./queryKeys";
+import { ProjectGoalsGraphView } from "./ProjectGoalsGraphView";
+import {
+  truncateListDependencySummary,
+  truncateListDescription,
+  truncateListTitle,
+} from "./projectListDisplayText";
 
 type ViewMode = "list" | "graph";
 
@@ -126,16 +132,6 @@ export function ProjectGoalsPage() {
     },
   });
 
-  const graphEdges = useMemo(() => {
-    return goals.map((g) => {
-      const line =
-        g.depends_on_goal_ids.length === 0
-          ? `${g.title}: independent`
-          : `${g.title} → after: ${g.depends_on_goal_ids.map((id) => goalTitleById(goals, id)).join(", ")}`;
-      return { id: g.id, line };
-    });
-  }, [goals]);
-
   if (!projectId) {
     return (
       <section className="panel pg">
@@ -179,21 +175,50 @@ export function ProjectGoalsPage() {
         </p>
       ) : null}
 
-      <div className="pg__legend muted" aria-label="Legend">
-        <span className="pg__legend-item">
+      <div className="pg__legend ps__legend" aria-label="Legend">
+        <span className="ps__legend-item">
           <span className="ps__dot ps__dot--done" aria-hidden="true" /> Done
         </span>
-        <span className="pg__legend-item">
+        <span className="ps__legend-item">
           <span className="ps__dot ps__dot--active" aria-hidden="true" /> In progress
         </span>
-        <span className="pg__legend-item">
+        <span className="ps__legend-item">
           <span className="ps__dot ps__dot--pending" aria-hidden="true" /> Pending
         </span>
-        <span className="pg__legend-item">
+        <span className="ps__legend-item">
           <span className="ps__dot ps__dot--blocked" aria-hidden="true" /> Blocked
         </span>
-        <span aria-hidden="true"> · </span>
-        <span>Solid link: dependent · Independent: no prerequisites</span>
+        <span className="ps__legend-item ps__legend-item--sep">
+          <svg className="ps__legend-edge" width={28} height={10} viewBox="0 0 28 10" aria-hidden="true">
+            <line
+              x1="0"
+              y1="5"
+              x2="18"
+              y2="5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeDasharray="3 3"
+              strokeLinecap="round"
+            />
+            <path d="M18 1.25 L26.5 5 L18 8.75 Z" fill="currentColor" />
+          </svg>
+          Independent
+        </span>
+        <span className="ps__legend-item">
+          <svg className="ps__legend-edge" width={28} height={10} viewBox="0 0 28 10" aria-hidden="true">
+            <line
+              x1="0"
+              y1="5"
+              x2="18"
+              y2="5"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+            <path d="M18 1 L27 5 L18 9 Z" fill="currentColor" />
+          </svg>
+          Dependent
+        </span>
       </div>
 
       <section className="pg__composer" aria-labelledby="pg-new-goal-title">
@@ -310,6 +335,15 @@ export function ProjectGoalsPage() {
                 },
               });
             };
+            const titleFull = g.title.trim();
+            const titleShown = truncateListTitle(g.title);
+            const descFull = g.description.trim();
+            const descShown = descFull ? truncateListDescription(g.description) : "";
+            const depFull =
+              g.depends_on_goal_ids.length === 0
+                ? ""
+                : g.depends_on_goal_ids.map((id) => goalTitleById(goals, id)).join(", ");
+            const depShown = depFull ? truncateListDependencySummary(depFull) : "";
             return (
               <li key={g.id} className="pg__row">
                 <div className="pg__row-main">
@@ -317,23 +351,32 @@ export function ProjectGoalsPage() {
                     <span className={`ps__dot ps__dot--${phase}`} aria-hidden="true" />
                     <div className="pg__row-text">
                       <div className="pg__row-title-line">
-                        <p className="pg__row-title">{g.title}</p>
+                        <p
+                          className="pg__row-title"
+                          title={titleFull !== titleShown ? titleFull : undefined}
+                        >
+                          {titleShown}
+                        </p>
                         <span className={`pd__chip pd__chip--gate pd__chip--${g.gate_status}`}>
                           {gateLabel(g.gate_status)}
                         </span>
                         {g.gate_hold ? <span className="pd__chip pd__chip--hold">On hold</span> : null}
                       </div>
-                      {g.description ? <p className="pg__row-desc muted">{g.description}</p> : null}
-                      <p className="pg__row-meta muted">
-                        {critLabel ? <span className="ps__task-pill muted">{critLabel}</span> : null}
+                      {descShown ? (
+                        <p
+                          className="pg__row-desc"
+                          title={descFull !== descShown ? descFull : undefined}
+                        >
+                          {descShown}
+                        </p>
+                      ) : null}
+                      <p className="pg__row-meta">
+                        {critLabel ? <span className="ps__task-pill">{critLabel}</span> : null}
                         {g.depends_on_goal_ids.length === 0 ? (
                           <span className="ps__dep-badge">Independent</span>
                         ) : (
-                          <span className="ps__dep muted">
-                            After:{" "}
-                            <strong className="ps__dep-strong">
-                              {g.depends_on_goal_ids.map((id) => goalTitleById(goals, id)).join(", ")}
-                            </strong>
+                          <span className="ps__dep" title={depFull !== depShown ? depFull : undefined}>
+                            After: <strong className="ps__dep-strong">{depShown}</strong>
                           </span>
                         )}
                       </p>
@@ -413,14 +456,10 @@ export function ProjectGoalsPage() {
         </ul>
       ) : (
         <div className="pg__graph" aria-label="Dependency overview">
-          {graphEdges.length === 0 ? (
+          {goals.length === 0 ? (
             <p className="muted">No goals yet.</p>
           ) : (
-            <ul className="pg__graph-list">
-              {graphEdges.map((e) => (
-                <li key={e.id}>{e.line}</li>
-              ))}
-            </ul>
+            <ProjectGoalsGraphView goals={goals} />
           )}
         </div>
       )}

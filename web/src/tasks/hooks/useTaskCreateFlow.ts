@@ -129,11 +129,14 @@ export function useTaskCreateFlow() {
    * in `.agent/frontend-improvement-agent.log`).
    */
   const requestedResumeRef = useRef<string | null>(null);
-  /** Applied after `resetNewTaskForm` when opening from a project-step deep link. */
-  const createModalPrefillRef = useRef<{ projectID: string; projectStepID: string } | null>(
-    null,
-  );
+  /** Applied after `resetNewTaskForm` when opening the create modal with a project prefill. */
+  const createModalPrefillRef = useRef<{
+    projectID: string;
+    projectStepID: string;
+    lockProjectAssignment: boolean;
+  } | null>(null);
 
+  const [createModalAssignmentLocked, setCreateModalAssignmentLocked] = useState(false);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
   const [draftAutosaveBaselineID, setDraftAutosaveBaselineID] = useState("");
   const [createEntryDraftErrorHint, setCreateEntryDraftErrorHint] = useState<
@@ -206,6 +209,7 @@ export function useTaskCreateFlow() {
       }),
     );
     setDraftAutosaveBaselineID(generatedID);
+    setCreateModalAssignmentLocked(false);
   }, [queryClient, setNewDraftID]);
 
   const applyCreateModalPrefill = useCallback(() => {
@@ -213,6 +217,7 @@ export function useTaskCreateFlow() {
     if (!p?.projectID) return;
     setNewProjectID(p.projectID);
     setNewProjectStepID(p.projectStepID);
+    setCreateModalAssignmentLocked(p.lockProjectAssignment);
     createModalPrefillRef.current = null;
   }, []);
 
@@ -225,11 +230,19 @@ export function useTaskCreateFlow() {
   }, [resetNewTaskForm]);
 
   const openCreateModal = useCallback(
-    (prefill?: { projectID: string; projectStepID?: string }) => {
+    (prefill?: {
+      projectID: string;
+      projectStepID?: string;
+      lockProjectAssignment?: boolean;
+    }) => {
       setCreateEntryDraftErrorHint(null);
       const pid = prefill?.projectID?.trim();
       createModalPrefillRef.current = pid
-        ? { projectID: pid, projectStepID: prefill?.projectStepID?.trim() ?? "" }
+        ? {
+            projectID: pid,
+            projectStepID: prefill?.projectStepID?.trim() ?? "",
+            lockProjectAssignment: prefill?.lockProjectAssignment === true,
+          }
         : null;
       if (draftsQuery.isPending) {
         setDraftPickerOpen(true);
@@ -780,6 +793,7 @@ export function useTaskCreateFlow() {
 
   async function resumeDraftByID(id: string) {
     createModalPrefillRef.current = null;
+    setCreateModalAssignmentLocked(false);
     // Capture this request *synchronously* before awaiting. If a newer
     // `resumeDraftByID(otherId)` call is issued while this one is in
     // flight (e.g. the user clicks another draft in the picker before
@@ -1090,6 +1104,7 @@ export function useTaskCreateFlow() {
     deleteDraftByID,
     applyTestScenario,
     createModalOpen,
+    createModalAssignmentLocked,
     openCreateModal,
     closeCreateModal,
   };

@@ -23,6 +23,7 @@ import {
   WorkspaceSettingsSection,
   WorkspaceWarning,
 } from "./SettingsSections";
+import { UiTestModeSettingsSection } from "./UiTestModeSettingsSection";
 import {
   SETTINGS_SUCCESS_DISMISS_MS,
   diffPatch,
@@ -412,6 +413,8 @@ export function SettingsPage() {
 
         <SettingsStatusMessage status={status} />
       </form>
+
+      <UiTestModeSettingsSection />
     </section>
   );
 }

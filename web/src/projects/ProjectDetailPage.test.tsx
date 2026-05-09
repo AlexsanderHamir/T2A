@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
@@ -62,6 +62,12 @@ describe("ProjectDetailPage", () => {
       if (u.startsWith("/tasks?")) {
         return jsonResponse({ tasks: [], limit: 200, offset: 0, has_more: false });
       }
+      if (/\/projects\/[^/]+\/context\?/.test(u) || /\/projects\/[^/]+\/context$/.test(u)) {
+        return jsonResponse({ items: [], edges: [], limit: 100 });
+      }
+      if (/\/projects\/[^/]+\/goals(\?|$)/.test(u)) {
+        return jsonResponse({ goals: [] });
+      }
       if (u.includes("/projects/") && u.endsWith("/steps")) {
         return jsonResponse({ steps: [] });
       }
@@ -73,13 +79,16 @@ describe("ProjectDetailPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("presents settings, context, and linked work as distinct sections", () => {
+  it("presents settings, context, and linked work as distinct sections", async () => {
     renderPage();
 
     expect(screen.getByRole("heading", { name: "Default project" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Project settings" })).toBeInTheDocument();
     expect(screen.getByText(/Memory nodes/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open context|Project context/ })).toHaveAttribute(
+    await waitFor(() => {
+      expect(screen.getByText("0 nodes")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: /Project context/ })).toHaveAttribute(
       "href",
       "/projects/project-1/context",
     );

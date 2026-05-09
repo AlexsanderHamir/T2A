@@ -256,4 +256,28 @@ describe("useTaskCreateFlow", () => {
       "ctx-r2",
     ]);
   });
+
+  it("sets createModalAssignmentLocked when opening with lockProjectAssignment", async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal({
+        projectID: "project-locked",
+        projectStepID: "step-locked",
+        lockProjectAssignment: true,
+      });
+    });
+
+    expect(result.current.createModalOpen).toBe(true);
+    expect(result.current.newProjectID).toBe("project-locked");
+    expect(result.current.newProjectStepID).toBe("step-locked");
+    expect(result.current.createModalAssignmentLocked).toBe(true);
+  });
 });

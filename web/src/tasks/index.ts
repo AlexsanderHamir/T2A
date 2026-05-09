@@ -11,4 +11,5 @@ export { TaskDraftsPage } from "./pages/TaskDraftsPage";
 export { TaskCycleDetailPage } from "./pages/TaskCycleDetailPage";
 export { TaskEventDetailPage } from "./pages/TaskEventDetailPage";
 export { TaskGraphPage } from "./pages/TaskGraphPage";
+export { TaskCreateModalsLayer } from "./pages/TaskCreateModalsLayer";
 export { TaskHome } from "./pages/TaskHome";

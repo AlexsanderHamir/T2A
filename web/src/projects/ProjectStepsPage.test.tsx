@@ -7,8 +7,20 @@ import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { requestUrl } from "@/test/requestUrl";
 import type { Project } from "@/types";
+import type { useTasksApp } from "@/tasks/hooks/useTasksApp";
 import { projectQueryKeys } from "./queryKeys";
 import { ProjectStepsPage } from "./ProjectStepsPage";
+
+type TasksApp = ReturnType<typeof useTasksApp>;
+
+function makeTasksApp(overrides: Partial<TasksApp> = {}): TasksApp {
+  return {
+    openCreateModal: vi.fn(),
+    createModalOpen: false,
+    draftPickerOpen: false,
+    ...overrides,
+  } as unknown as TasksApp;
+}
 
 type FetchInput = RequestInfo | URL;
 
@@ -35,6 +47,9 @@ describe("ProjectStepsPage", () => {
   });
 
   it("renders the steps workspace for a project", async () => {
+    const openCreateModal = vi.fn();
+    const tasksApp = makeTasksApp({ openCreateModal });
+
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput) => {
       const u = requestUrl(input);
       if (u.startsWith("/tasks?")) {
@@ -90,7 +105,10 @@ describe("ProjectStepsPage", () => {
             initialEntries={[`/projects/${testProject.id}/steps?goal_id=goal-1`]}
           >
             <Routes>
-              <Route path="/projects/:projectId/steps" element={<ProjectStepsPage />} />
+              <Route
+                path="/projects/:projectId/steps"
+                element={<ProjectStepsPage app={tasksApp} />}
+              />
             </Routes>
           </MemoryRouter>
         </QueryClientProvider>
@@ -106,6 +124,13 @@ describe("ProjectStepsPage", () => {
       "href",
       `/projects/${testProject.id}`,
     );
+
+    await userEvent.click(screen.getByRole("button", { name: /^New task$/ }));
+    expect(openCreateModal).toHaveBeenCalledWith({
+      projectID: testProject.id,
+      projectStepID: "step-1",
+      lockProjectAssignment: true,
+    });
 
     await userEvent.click(screen.getByRole("button", { name: /^Add step$/ }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();

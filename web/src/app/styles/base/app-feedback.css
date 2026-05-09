@@ -69,6 +69,23 @@
   box-shadow: var(--shadow-focus-danger);
 }
 
+.app-ui-test-banner {
+  margin-bottom: var(--layout-gutter-x);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--info-soft) 55%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--info) 22%, var(--border-hairline));
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-md);
+}
+
+.app-ui-test-banner__text {
+  display: block;
+  max-width: 72ch;
+}
+
 /* Empty states (DS §11) */
 .empty-state {
   display: flex;

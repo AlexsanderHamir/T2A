@@ -9,6 +9,7 @@ import { useProject } from "./hooks";
 import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
+import { ProjectContextEntryCard } from "./ProjectContextEntryCard";
 import { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
 import { ProjectStepsEntryCard } from "./ProjectStepsEntryCard";
 import { projectQueryKeys } from "./queryKeys";
@@ -113,31 +114,7 @@ export function ProjectDetailPage() {
         <div className="pd__grid">
           <ProjectSettingsPanel project={project.data} />
 
-          <Link
-            to={`/projects/${encodeURIComponent(projectId)}/context`}
-            className="pd__context-card"
-            aria-labelledby="pd-context-title"
-          >
-            <div className="pd__context-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="5" r="2" fill="currentColor" opacity="0.9" />
-                <circle cx="5" cy="14" r="2" fill="currentColor" opacity="0.55" />
-                <circle cx="15" cy="14" r="2" fill="currentColor" opacity="0.55" />
-                <path d="M10 7v3M8.5 12l-2 1M11.5 12l2 1" stroke="currentColor" strokeWidth="1.2" opacity="0.35" />
-              </svg>
-            </div>
-            <div className="pd__context-body">
-              <h2 id="pd-context-title" className="pd__context-title">
-                Project context
-              </h2>
-              <p className="pd__context-desc">
-                Memory nodes, decisions, and constraints
-              </p>
-            </div>
-            <svg className="pd__context-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
+          <ProjectContextEntryCard projectId={projectId} />
 
           <ProjectGoalsEntryCard projectId={projectId} />
 

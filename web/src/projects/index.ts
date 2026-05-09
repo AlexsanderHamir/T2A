@@ -1,3 +1,4 @@
+export { ProjectContextEntryCard } from "./ProjectContextEntryCard";
 export { ProjectDetailPage } from "./ProjectDetailPage";
 export { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
 export { ProjectGoalsPage } from "./ProjectGoalsPage";
