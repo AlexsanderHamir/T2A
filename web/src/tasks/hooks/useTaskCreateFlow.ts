@@ -129,6 +129,10 @@ export function useTaskCreateFlow() {
    * in `.agent/frontend-improvement-agent.log`).
    */
   const requestedResumeRef = useRef<string | null>(null);
+  /** Applied after `resetNewTaskForm` when opening from a project-step deep link. */
+  const createModalPrefillRef = useRef<{ projectID: string; projectStepID: string } | null>(
+    null,
+  );
 
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
   const [draftAutosaveBaselineID, setDraftAutosaveBaselineID] = useState("");
@@ -204,33 +208,58 @@ export function useTaskCreateFlow() {
     setDraftAutosaveBaselineID(generatedID);
   }, [queryClient, setNewDraftID]);
 
+  const applyCreateModalPrefill = useCallback(() => {
+    const p = createModalPrefillRef.current;
+    if (!p?.projectID) return;
+    setNewProjectID(p.projectID);
+    setNewProjectStepID(p.projectStepID);
+    createModalPrefillRef.current = null;
+  }, []);
+
   const closeCreateModal = useCallback(() => {
+    createModalPrefillRef.current = null;
     setCreateModalOpen(false);
     setDraftPickerOpen(false);
     setCreateEntryDraftErrorHint(null);
     resetNewTaskForm();
   }, [resetNewTaskForm]);
 
-  const openCreateModal = useCallback(() => {
-    setCreateEntryDraftErrorHint(null);
-    if (draftsQuery.isPending) {
-      setDraftPickerOpen(true);
-      return;
-    }
-    if (draftsQuery.isError) {
-      setCreateEntryDraftErrorHint(errorMessage(draftsQuery.error));
+  const openCreateModal = useCallback(
+    (prefill?: { projectID: string; projectStepID?: string }) => {
+      setCreateEntryDraftErrorHint(null);
+      const pid = prefill?.projectID?.trim();
+      createModalPrefillRef.current = pid
+        ? { projectID: pid, projectStepID: prefill?.projectStepID?.trim() ?? "" }
+        : null;
+      if (draftsQuery.isPending) {
+        setDraftPickerOpen(true);
+        return;
+      }
+      if (draftsQuery.isError) {
+        setCreateEntryDraftErrorHint(errorMessage(draftsQuery.error));
+        resetNewTaskForm();
+        applyCreateModalPrefill();
+        setCreateModalOpen(true);
+        return;
+      }
+      const drafts = draftsQuery.data ?? [];
+      if (drafts.length > 0) {
+        setDraftPickerOpen(true);
+        return;
+      }
       resetNewTaskForm();
+      applyCreateModalPrefill();
       setCreateModalOpen(true);
-      return;
-    }
-    const drafts = draftsQuery.data ?? [];
-    if (drafts.length > 0) {
-      setDraftPickerOpen(true);
-      return;
-    }
-    resetNewTaskForm();
-    setCreateModalOpen(true);
-  }, [draftsQuery.data, draftsQuery.error, draftsQuery.isError, draftsQuery.isPending, resetNewTaskForm]);
+    },
+    [
+      applyCreateModalPrefill,
+      draftsQuery.data,
+      draftsQuery.error,
+      draftsQuery.isError,
+      draftsQuery.isPending,
+      resetNewTaskForm,
+    ],
+  );
 
   const createMutation = useMutation({
     mutationFn: async (input: {
@@ -744,11 +773,13 @@ export function useTaskCreateFlow() {
 
   async function startFreshDraft() {
     resetNewTaskForm();
+    applyCreateModalPrefill();
     setDraftPickerOpen(false);
     setCreateModalOpen(true);
   }
 
   async function resumeDraftByID(id: string) {
+    createModalPrefillRef.current = null;
     // Capture this request *synchronously* before awaiting. If a newer
     // `resumeDraftByID(otherId)` call is issued while this one is in
     // flight (e.g. the user clicks another draft in the picker before

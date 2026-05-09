@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   createProjectStep,
   deleteProjectStep,
@@ -12,6 +13,10 @@ import { projectQueryKeys } from "./queryKeys";
 type Props = {
   projectId: string;
 };
+
+function stepAcceptsNewTasks(s: ProjectStepGateStatus): boolean {
+  return s === "active" || s === "pending_release";
+}
 
 function gateLabel(s: ProjectStepGateStatus): string {
   switch (s) {
@@ -143,6 +148,15 @@ export function ProjectStepsPanel({ projectId }: Props) {
                 ) : null}
               </div>
               <div className="pd__step-actions">
+                {stepAcceptsNewTasks(step.gate_status) ? (
+                  <Link
+                    className="secondary pd__step-btn"
+                    to={`/?create=1&project=${encodeURIComponent(projectId)}&step=${encodeURIComponent(step.id)}`}
+                    aria-label={`Create task in step ${step.title}`}
+                  >
+                    New task
+                  </Link>
+                ) : null}
                 {step.gate_status === "pending_release" && !step.gate_hold ? (
                   <button
                     type="button"

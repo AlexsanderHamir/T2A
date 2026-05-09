@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
@@ -19,8 +20,23 @@ type Props = {
 
 export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
+  const [searchParams, setSearchParams] = useSearchParams();
   const appTimezone = useAppTimezone();
   const projects = useProjects({ includeArchived: false, limit: 100 });
+
+  const createIntent = searchParams.get("create");
+  const projectIntent = searchParams.get("project")?.trim() ?? "";
+  const stepIntent = searchParams.get("step")?.trim() ?? "";
+
+  useEffect(() => {
+    if (createIntent !== "1" || !projectIntent) return;
+    app.openCreateModal(
+      stepIntent
+        ? { projectID: projectIntent, projectStepID: stepIntent }
+        : { projectID: projectIntent },
+    );
+    setSearchParams({}, { replace: true });
+  }, [app.openCreateModal, createIntent, projectIntent, stepIntent, setSearchParams]);
   const newPromptProjectContext = useProjectContextPromptBinding({
     projectId: app.createModalOpen ? app.newProjectID : "",
     selectedIds: app.newProjectContextItemIDs,

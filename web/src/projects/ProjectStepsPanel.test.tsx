@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { requestUrl } from "@/test/requestUrl";
 import { ProjectStepsPanel } from "./ProjectStepsPanel";
 
@@ -50,7 +52,9 @@ describe("ProjectStepsPanel", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <ProjectStepsPanel projectId="proj-1" />
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+          <ProjectStepsPanel projectId="proj-1" />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
@@ -58,5 +62,10 @@ describe("ProjectStepsPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Discovery")).toBeInTheDocument();
     });
+    const newTask = screen.getByRole("link", { name: /Create task in step Discovery/ });
+    expect(newTask).toHaveAttribute(
+      "href",
+      "/?create=1&project=proj-1&step=step-1",
+    );
   });
 });
