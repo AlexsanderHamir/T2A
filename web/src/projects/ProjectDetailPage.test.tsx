@@ -61,7 +61,7 @@ describe("ProjectDetailPage", () => {
 
   it("shows delete project action for non-default projects", () => {
     renderPage();
-    expect(screen.getByRole("button", { name: /Delete project…/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Delete project$/ })).toBeInTheDocument();
   });
 
   it("does not show delete project action for the built-in default project", () => {
@@ -71,6 +71,6 @@ describe("ProjectDetailPage", () => {
       name: "Default project",
     };
     renderPage(builtIn, `/projects/${encodeURIComponent(DEFAULT_PROJECT_ID)}`);
-    expect(screen.queryByRole("button", { name: /Delete project…/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Delete project$/ })).not.toBeInTheDocument();
   });
 });

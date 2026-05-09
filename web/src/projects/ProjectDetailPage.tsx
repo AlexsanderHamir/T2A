@@ -1,15 +1,35 @@
-import { Link, useParams } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { deleteProject } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { DEFAULT_PROJECT_ID } from "@/types";
 import { useProject } from "./hooks";
+import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
+import { projectQueryKeys } from "./queryKeys";
 
 export function ProjectDetailPage() {
   const { projectId = "" } = useParams();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const project = useProject(projectId);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const title = project.data?.name ? `${project.data.name} project` : "Project";
   useDocumentTitle(title);
+
+  const isDefaultProject = project.data?.id === DEFAULT_PROJECT_ID;
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => deleteProject(projectId),
+    onSuccess: async () => {
+      setDeleteOpen(false);
+      await queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
+      navigate("/projects");
+    },
+  });
 
   if (!projectId) {
     return (
@@ -32,21 +52,58 @@ export function ProjectDetailPage() {
           All projects
         </Link>
         {project.data ? (
-          <div className="pd__header-title" aria-label="Current project">
-            <h1>{project.data.name}</h1>
-            <span
-              className={
-                project.data.status === "archived"
-                  ? "pd__badge pd__badge--muted"
-                  : "pd__badge pd__badge--live"
-              }
-            >
-              <span className="pd__badge-dot" aria-hidden="true" />
-              {project.data.status}
-            </span>
+          <div className="pd__header-cluster">
+            <div className="pd__header-title" aria-label="Current project">
+              <h1>{project.data.name}</h1>
+              <span
+                className={
+                  project.data.status === "archived"
+                    ? "pd__badge pd__badge--muted"
+                    : "pd__badge pd__badge--live"
+                }
+              >
+                <span className="pd__badge-dot" aria-hidden="true" />
+                {project.data.status}
+              </span>
+            </div>
+            {!isDefaultProject ? (
+              <button
+                type="button"
+                className="pd__header-delete"
+                aria-label="Delete project"
+                title="Delete project"
+                disabled={deleteProjectMutation.isPending}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            ) : null}
           </div>
         ) : null}
       </header>
+
+      {deleteOpen && project.data && !isDefaultProject ? (
+        <ProjectDeleteConfirmDialog
+          projectName={project.data.name}
+          deletePending={deleteProjectMutation.isPending}
+          error={deleteProjectMutation.error?.message ?? null}
+          onCancel={() => {
+            if (!deleteProjectMutation.isPending) {
+              deleteProjectMutation.reset();
+              setDeleteOpen(false);
+            }
+          }}
+          onConfirm={() => void deleteProjectMutation.mutate()}
+        />
+      ) : null}
 
       {project.data?.description ? (
         <p className="pd__subtitle">{project.data.description}</p>

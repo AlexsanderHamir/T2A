@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { deleteProject, patchProject } from "@/api";
+import { patchProject } from "@/api";
 import {
   CustomSelect,
   type CustomSelectOption,
@@ -12,7 +11,6 @@ import {
   type Project,
   type ProjectStatus,
 } from "@/types";
-import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { projectQueryKeys } from "./queryKeys";
 
 type Props = {
@@ -21,10 +19,8 @@ type Props = {
 
 export function ProjectSettingsPanel({ project }: Props) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const isDefaultProject = project.id === DEFAULT_PROJECT_ID;
   const [status, setStatus] = useState<ProjectStatus>(project.status);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const statusOptions = useMemo<CustomSelectOption[]>(
@@ -46,15 +42,6 @@ export function ProjectSettingsPanel({ project }: Props) {
       await queryClient.invalidateQueries({
         queryKey: projectQueryKeys.detail(project.id),
       });
-    },
-  });
-
-  const deleteProjectMutation = useMutation({
-    mutationFn: () => deleteProject(project.id),
-    onSuccess: async () => {
-      setDeleteOpen(false);
-      await queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
-      navigate("/projects");
     },
   });
 
@@ -126,41 +113,6 @@ export function ProjectSettingsPanel({ project }: Props) {
         <div className="pd__inline-error" role="alert">
           {patchProjectMutation.error.message}
         </div>
-      ) : null}
-
-      {!isDefaultProject ? (
-        <div className="pd__delete-zone" aria-labelledby="pd-delete-title">
-          <h3 id="pd-delete-title" className="pd__card-title pd__delete-zone-title">
-            Delete project
-          </h3>
-          <p>
-            Remove this project and its memory nodes. Tasks must not reference this project
-            before deletion.
-          </p>
-          <button
-            type="button"
-            className="secondary pd__delete-zone-trigger"
-            disabled={deleteProjectMutation.isPending}
-            onClick={() => setDeleteOpen(true)}
-          >
-            Delete project…
-          </button>
-        </div>
-      ) : null}
-
-      {deleteOpen && !isDefaultProject ? (
-        <ProjectDeleteConfirmDialog
-          projectName={project.name}
-          deletePending={deleteProjectMutation.isPending}
-          error={deleteProjectMutation.error?.message ?? null}
-          onCancel={() => {
-            if (!deleteProjectMutation.isPending) {
-              deleteProjectMutation.reset();
-              setDeleteOpen(false);
-            }
-          }}
-          onConfirm={() => void deleteProjectMutation.mutate()}
-        />
       ) : null}
     </section>
   );
