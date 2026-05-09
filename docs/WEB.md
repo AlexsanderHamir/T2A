@@ -16,9 +16,9 @@ Vite 5, React 18, TypeScript strict, TanStack Query (`queryClient.ts`), TipTap (
 
 The SPA follows `.cursor/rules/UI_AUTOMATION/web-ui-engineering-bar.mdc` as the quality bar for hierarchy, spacing, motion, accessibility, and component states. A few product-language choices are intentional:
 
-- T2A is monospace-first. `--font-sans` maps to the terminal mono stack in `web/src/app/styles/tokens/app-design-tokens-foundation.css`; use `--font-prose` only for long-form reading surfaces that explicitly opt out.
-- Token files may define raw color values and gradients. Component CSS should consume semantic tokens instead of hardcoded `hex`, `rgb()`, `rgba()`, `hsl()`, or `hsla()` values.
-- Inline surfaces should prefer border-based structure. Elevated overlays may use shadow-based elevation. Avoid combining borders and shadows on the same card-like surface unless the component has a documented affordance reason.
+- **Product chrome is sans-first.** `--font-sans` is Inter (system-ui fallbacks) in `web/src/app/styles/tokens/app-design-tokens-foundation.css`. Reserve `--font-mono` / JetBrains Mono stack for prompts, code, and stream surfaces. `--font-prose` tracks sans for long-form reading unless a view explicitly opts into mono.
+- **Color:** primary actions use near-black fills (`--control-primary-*`); indigo accent (`--accent` / link-active treatments) is restrained—links, focus, and live/active affordances—not generic purple buttons. Token files may define raw color values; component CSS should consume semantic tokens instead of hardcoded `hex`, `rgb()`, `rgba()`, `hsl()`, or `hsla()` values.
+- Inline surfaces should prefer border-based structure. Elevated overlays may use shadow-based elevation (`--shadow-overlay-float` on floating panels). Avoid combining borders and shadows on the same card-like surface unless the component has a documented affordance reason.
 - Captions and labels must not render below `--text-xs` (`0.75rem`). Dense pills, chips, and timestamps should still meet the 12px floor.
 
 ## Recent hardening and refactors
