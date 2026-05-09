@@ -5,6 +5,9 @@
   --text-tertiary: rgb(107 107 107 / 78%);
   --text-disabled: #d1d5db;
   --text-on-brand: #fafafa;
+  --control-primary-bg: #0a0a0a;
+  --control-primary-fg: #fafafa;
+  --control-primary-hover-bg: #1c1c1c;
 
   --bg-page: #f9f9f8;
   --bg-elevated: #ffffff;
@@ -107,6 +110,9 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 12%);
   /* Mobile modal bottom sheet — upward cast (DS §6 / §12) */
   --shadow-modal-sheet: 0 -8px 32px rgb(0 0 0 / 12%);
+  /* Modals, portal menus — single restrained float (redesign; replaces heavy 2xl on dialogs). */
+  --shadow-overlay-float: 0 4px 16px rgb(0 0 0 / 8%);
+  --shadow-overlay-float-hover: 0 4px 16px rgb(0 0 0 / 10%);
   /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
   --shadow-card: var(--shadow-sm);
   --shadow-focus: 0 0 0 3px var(--brand-focus);

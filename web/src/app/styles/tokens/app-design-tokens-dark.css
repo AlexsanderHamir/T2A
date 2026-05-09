@@ -4,6 +4,9 @@
     --text-secondary: rgb(160 160 160 / 92%);
     --text-tertiary: rgb(96 96 96 / 95%);
     --text-disabled: rgb(82 82 82 / 88%);
+    --control-primary-bg: #f5f5f5;
+    --control-primary-fg: #0a0a0a;
+    --control-primary-hover-bg: #e8e8e8;
     --bg-page: #0a0a0a;
     --bg-elevated: #141414;
     --bg-subtle: #1a1a1a;
@@ -39,6 +42,8 @@
     --shadow-xl: 0 20px 40px rgb(0 0 0 / 55%);
     --shadow-2xl: 0 24px 48px rgb(0 0 0 / 60%);
     --shadow-modal-sheet: 0 -8px 36px rgb(0 0 0 / 45%);
+    --shadow-overlay-float: 0 4px 24px rgb(0 0 0 / 55%);
+    --shadow-overlay-float-hover: 0 4px 28px rgb(0 0 0 / 58%);
     --shadow-card: var(--shadow-sm);
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);

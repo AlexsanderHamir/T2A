@@ -107,13 +107,13 @@
     margin-bottom: 0;
     border: none;
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-2xl);
+    box-shadow: var(--shadow-overlay-float);
   }
 
   @media (hover: hover) and (prefers-color-scheme: light) {
     .modal-shell > .panel:hover {
       border-color: transparent;
-      box-shadow: var(--shadow-2xl);
+      box-shadow: var(--shadow-overlay-float-hover);
     }
   }
 }

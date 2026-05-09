@@ -115,6 +115,25 @@ button.custom-select-trigger:focus-visible {
   white-space: nowrap;
 }
 
+.task-list-filters button.custom-select-trigger {
+  border: none;
+  border-bottom: 1px solid var(--border-hairline);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-list-filters button.custom-select-trigger:hover:not(:disabled) {
+  border-bottom-color: var(--border-interactive-hover);
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-list-filters button.custom-select-trigger:focus-visible {
+  border-bottom-color: var(--brand-border-emphasis);
+  box-shadow: 0 1px 0 0 var(--brand-border-emphasis), 0 0 0 3px var(--brand-muted);
+}
+
 .custom-select-value-pill.cell-pill,
 .custom-select-option-pill.cell-pill {
   font-size: var(--text-help);
@@ -133,9 +152,9 @@ button.custom-select-trigger:focus-visible {
   padding: var(--space-2);
   list-style: none;
   border-radius: var(--radius-lg);
-  border: none;
+  border: 1px solid var(--border-hairline);
   background: var(--surface-dropdown-panel);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-overlay-float);
   max-height: min(50vh, 22rem);
   overflow-y: auto;
 }
