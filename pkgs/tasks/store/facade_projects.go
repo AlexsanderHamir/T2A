@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects"
@@ -28,6 +29,12 @@ type UpdateProjectContextEdgeInput = projects.UpdateContextEdgeInput
 
 // CreateTaskContextSnapshotInput records the rendered project context passed to a cycle.
 type CreateTaskContextSnapshotInput = projects.CreateSnapshotInput
+
+// CreateProjectStepInput is the store input for creating a project step.
+type CreateProjectStepInput = projects.CreateProjectStepInput
+
+// UpdateProjectStepInput is the store input for patching a project step.
+type UpdateProjectStepInput = projects.UpdateProjectStepInput
 
 // CreateProject inserts a new active project.
 func (s *Store) CreateProject(ctx context.Context, input CreateProjectInput) (domain.Project, error) {
@@ -123,4 +130,40 @@ func (s *Store) CreateTaskContextSnapshot(ctx context.Context, input CreateTaskC
 func (s *Store) GetTaskContextSnapshotForCycle(ctx context.Context, cycleID string) (domain.TaskContextSnapshot, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskContextSnapshotForCycle")
 	return projects.GetSnapshotForCycle(ctx, s.db, cycleID)
+}
+
+// ListProjectSteps returns ordered steps for a project.
+func (s *Store) ListProjectSteps(ctx context.Context, projectID string) ([]domain.ProjectStep, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectSteps")
+	return projects.ListProjectSteps(ctx, s.db, projectID)
+}
+
+// CreateProjectStep inserts a project step.
+func (s *Store) CreateProjectStep(ctx context.Context, projectID string, input CreateProjectStepInput) (domain.ProjectStep, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateProjectStep")
+	return projects.CreateProjectStep(ctx, s.db, projectID, input)
+}
+
+// GetProjectStep returns one step scoped to a project.
+func (s *Store) GetProjectStep(ctx context.Context, projectID, stepID string) (domain.ProjectStep, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetProjectStep")
+	return projects.GetProjectStep(ctx, s.db, projectID, stepID)
+}
+
+// UpdateProjectStep patches one project step.
+func (s *Store) UpdateProjectStep(ctx context.Context, projectID, stepID string, input UpdateProjectStepInput) (domain.ProjectStep, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateProjectStep")
+	return projects.UpdateProjectStep(ctx, s.db, projectID, stepID, input)
+}
+
+// DeleteProjectStep removes a step when no tasks reference it.
+func (s *Store) DeleteProjectStep(ctx context.Context, projectID, stepID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteProjectStep")
+	return projects.DeleteProjectStep(ctx, s.db, projectID, stepID)
+}
+
+// SweepProjectStepGates releases gates whose grace deadline has passed.
+func (s *Store) SweepProjectStepGates(ctx context.Context, now time.Time) ([]string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SweepProjectStepGates")
+	return projects.SweepProjectStepGates(ctx, s.db, now)
 }

@@ -70,6 +70,9 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyProjectPatch(tx, cur, in.Project); err != nil {
 		return err
 	}
+	if err := applyProjectStepPatch(tx, cur, in.ProjectStep); err != nil {
+		return err
+	}
 	if err := applyProjectContextSelectionPatch(tx, cur, in.ProjectContextItemIDs); err != nil {
 		return err
 	}
@@ -116,6 +119,7 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 	}
 	if project.Clear {
 		cur.ProjectID = nil
+		cur.ProjectStepID = nil
 		cur.ProjectContextItemIDs = nil
 		return nil
 	}
@@ -131,8 +135,26 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 		return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
 	}
 	cur.ProjectID = &pid
+	cur.ProjectStepID = nil
 	cur.ProjectContextItemIDs = nil
 	return nil
+}
+
+func applyProjectStepPatch(tx *gorm.DB, cur *domain.Task, step *ProjectStepFieldPatch) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyProjectStepPatch")
+	if step == nil {
+		return nil
+	}
+	if step.Clear {
+		cur.ProjectStepID = nil
+		return nil
+	}
+	sid := strings.TrimSpace(step.ID)
+	if sid == "" {
+		return fmt.Errorf("%w: project_step_id", domain.ErrInvalidInput)
+	}
+	cur.ProjectStepID = &sid
+	return validateTaskProjectStep(tx, cur)
 }
 
 // applyPickupNotBeforePatch mutates cur.PickupNotBefore in place. The

@@ -39,6 +39,7 @@ type Patch struct {
 	// See domain.AppSettings for the per-flag semantics.
 	OptimisticMutationsEnabled *bool
 	SSEReplayEnabled           *bool
+	ProjectStepGateGraceSeconds *int
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -57,7 +58,8 @@ func (p Patch) IsEmpty() bool {
 		p.AgentPickupDelaySeconds == nil &&
 		p.DisplayTimezone == nil &&
 		p.OptimisticMutationsEnabled == nil &&
-		p.SSEReplayEnabled == nil
+		p.SSEReplayEnabled == nil &&
+		p.ProjectStepGateGraceSeconds == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -176,6 +178,12 @@ func validatePatch(patch Patch) error {
 			return fmt.Errorf("%w: agent_pickup_delay_seconds must be between 0 and 604800", domain.ErrInvalidInput)
 		}
 	}
+	if patch.ProjectStepGateGraceSeconds != nil {
+		v := *patch.ProjectStepGateGraceSeconds
+		if v < 0 || v > 604800 {
+			return fmt.Errorf("%w: project_step_gate_grace_seconds must be between 0 and 604800", domain.ErrInvalidInput)
+		}
+	}
 	if patch.CursorModel != nil && len(strings.TrimSpace(*patch.CursorModel)) > 256 {
 		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
 	}
@@ -233,5 +241,8 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.SSEReplayEnabled != nil {
 		row.SSEReplayEnabled = *patch.SSEReplayEnabled
+	}
+	if patch.ProjectStepGateGraceSeconds != nil {
+		row.ProjectStepGateGraceSeconds = *patch.ProjectStepGateGraceSeconds
 	}
 }

@@ -50,6 +50,10 @@ type ParentFieldPatch = tasks.ParentFieldPatch
 // helper used by UpdateTaskInput.Project.
 type ProjectFieldPatch = tasks.ProjectFieldPatch
 
+// ProjectStepFieldPatch is the public re-export of the project step patch
+// helper used by UpdateTaskInput.ProjectStep.
+type ProjectStepFieldPatch = tasks.ProjectStepFieldPatch
+
 // PickupNotBeforePatch is the public re-export of the
 // pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
 // See docs/SCHEDULING.md.
