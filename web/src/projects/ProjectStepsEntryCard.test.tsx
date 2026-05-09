@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { requestUrl } from "@/test/requestUrl";
-import { ProjectStepsPanel } from "./ProjectStepsPanel";
+import { ProjectStepsEntryCard } from "./ProjectStepsEntryCard";
 
 type FetchInput = RequestInfo | URL;
 
@@ -15,12 +15,12 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
-describe("ProjectStepsPanel", () => {
+describe("ProjectStepsEntryCard", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("lists steps returned by GET /projects/{id}/steps", async () => {
+  it("links to the project steps route and surfaces the step count", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput) => {
       const u = requestUrl(input);
       if (u.endsWith("/projects/proj-1/steps")) {
@@ -34,6 +34,7 @@ describe("ProjectStepsPanel", () => {
               sort_order: 1,
               gate_status: "active",
               gate_hold: false,
+              criteria: [],
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-01T00:00:00Z",
             },
@@ -53,19 +54,15 @@ describe("ProjectStepsPanel", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
-          <ProjectStepsPanel projectId="proj-1" />
+          <ProjectStepsEntryCard projectId="proj-1" />
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Steps" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Steps" });
+    expect(link).toHaveAttribute("href", "/projects/proj-1/steps");
     await waitFor(() => {
-      expect(screen.getByText("Discovery")).toBeInTheDocument();
+      expect(screen.getByText("1 stage")).toBeInTheDocument();
     });
-    const newTask = screen.getByRole("link", { name: /Create task in step Discovery/ });
-    expect(newTask).toHaveAttribute(
-      "href",
-      "/?create=1&project=proj-1&step=step-1",
-    );
   });
 });

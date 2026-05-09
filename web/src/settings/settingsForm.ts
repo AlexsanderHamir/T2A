@@ -11,6 +11,11 @@ export type SettingsFormState = {
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
   projectStepGateGraceSeconds: string;
+  projectGoalGateGraceSeconds: string;
+  goalGateNotifyEmailEnabled: boolean;
+  goalGateNotifySmsEnabled: boolean;
+  stepGateNotifyEmailEnabled: boolean;
+  stepGateNotifySmsEnabled: boolean;
   displayTimezone: string;
 };
 
@@ -32,6 +37,11 @@ export function toFormState(s: AppSettings): SettingsFormState {
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
     projectStepGateGraceSeconds: String(s.project_step_gate_grace_seconds),
+    projectGoalGateGraceSeconds: String(s.project_goal_gate_grace_seconds),
+    goalGateNotifyEmailEnabled: s.goal_gate_notify_email_enabled,
+    goalGateNotifySmsEnabled: s.goal_gate_notify_sms_enabled,
+    stepGateNotifyEmailEnabled: s.step_gate_notify_email_enabled,
+    stepGateNotifySmsEnabled: s.step_gate_notify_sms_enabled,
     displayTimezone: s.display_timezone,
   };
 }
@@ -79,6 +89,28 @@ export function diffPatch(
     parsedStepGrace !== initial.project_step_gate_grace_seconds
   ) {
     out.project_step_gate_grace_seconds = parsedStepGrace;
+  }
+  const parsedGoalGrace = Number.parseInt(
+    form.projectGoalGateGraceSeconds.trim() || "0",
+    10,
+  );
+  if (
+    Number.isFinite(parsedGoalGrace) &&
+    parsedGoalGrace !== initial.project_goal_gate_grace_seconds
+  ) {
+    out.project_goal_gate_grace_seconds = parsedGoalGrace;
+  }
+  if (form.goalGateNotifyEmailEnabled !== initial.goal_gate_notify_email_enabled) {
+    out.goal_gate_notify_email_enabled = form.goalGateNotifyEmailEnabled;
+  }
+  if (form.goalGateNotifySmsEnabled !== initial.goal_gate_notify_sms_enabled) {
+    out.goal_gate_notify_sms_enabled = form.goalGateNotifySmsEnabled;
+  }
+  if (form.stepGateNotifyEmailEnabled !== initial.step_gate_notify_email_enabled) {
+    out.step_gate_notify_email_enabled = form.stepGateNotifyEmailEnabled;
+  }
+  if (form.stepGateNotifySmsEnabled !== initial.step_gate_notify_sms_enabled) {
+    out.step_gate_notify_sms_enabled = form.stepGateNotifySmsEnabled;
   }
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== initial.display_timezone) {

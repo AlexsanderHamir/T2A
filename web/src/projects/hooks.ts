@@ -1,8 +1,15 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getProject, listProjectContext, listProjectSteps, listProjects } from "@/api";
+import {
+  getProject,
+  listProjectContext,
+  listProjectGoals,
+  listProjectSteps,
+  listProjects,
+} from "@/api";
 import type {
   Project,
   ProjectContextListResponse,
+  ProjectGoalsListResponse,
   ProjectListResponse,
   ProjectStepsListResponse,
 } from "@/types";
@@ -56,12 +63,26 @@ export function useProjectContext(
 
 export function useProjectSteps(
   projectId: string,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; goalId?: string },
 ): UseQueryResult<ProjectStepsListResponse, Error> {
+  const gid = (options?.goalId ?? "").trim();
   const enabled = (options?.enabled ?? true) && Boolean(projectId);
   return useQuery({
-    queryKey: projectQueryKeys.steps(projectId),
-    queryFn: ({ signal }) => listProjectSteps(projectId, { signal }),
+    queryKey: projectQueryKeys.steps(projectId, gid),
+    queryFn: ({ signal }) =>
+      listProjectSteps(projectId, { signal, goalId: gid !== "" ? gid : undefined }),
+    enabled,
+  });
+}
+
+export function useProjectGoals(
+  projectId: string,
+  options?: { enabled?: boolean },
+): UseQueryResult<ProjectGoalsListResponse, Error> {
+  const enabled = (options?.enabled ?? true) && Boolean(projectId);
+  return useQuery({
+    queryKey: projectQueryKeys.goals(projectId),
+    queryFn: ({ signal }) => listProjectGoals(projectId, { signal }),
     enabled,
   });
 }

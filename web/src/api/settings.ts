@@ -33,6 +33,18 @@ export type AppSettings = {
    */
   project_step_gate_grace_seconds: number;
   /**
+   * Same semantics as step gates: after every criterion on a goal is
+   * satisfied, `pending_release` waits this many seconds before
+   * auto-releasing unless the operator intervenes. 0 = immediate.
+   */
+  project_goal_gate_grace_seconds: number;
+  /** Reserved — server accepts toggles; delivery is not wired yet. */
+  goal_gate_notify_email_enabled: boolean;
+  goal_gate_notify_sms_enabled: boolean;
+  /** Reserved — server accepts toggles; delivery is not wired yet. */
+  step_gate_notify_email_enabled: boolean;
+  step_gate_notify_sms_enabled: boolean;
+  /**
    * IANA timezone identifier (e.g. "America/New_York"). Used for
    * EVERY operator-facing timestamp render in the SPA. The wire
    * format for every timestamp stays RFC3339 UTC; this field
@@ -83,6 +95,11 @@ export type AppSettingsPatch = Partial<{
   optimistic_mutations_enabled: boolean;
   sse_replay_enabled: boolean;
   project_step_gate_grace_seconds: number;
+  project_goal_gate_grace_seconds: number;
+  goal_gate_notify_email_enabled: boolean;
+  goal_gate_notify_sms_enabled: boolean;
+  step_gate_notify_email_enabled: boolean;
+  step_gate_notify_sms_enabled: boolean;
 }>;
 
 export type ProbeCursorResult = {
@@ -135,6 +152,26 @@ function assertSettings(raw: unknown): AppSettings {
     typeof o.project_step_gate_grace_seconds === "number"
       ? o.project_step_gate_grace_seconds
       : 300;
+  const goalGrace =
+    typeof o.project_goal_gate_grace_seconds === "number"
+      ? o.project_goal_gate_grace_seconds
+      : 300;
+  const goalEmail =
+    typeof o.goal_gate_notify_email_enabled === "boolean"
+      ? o.goal_gate_notify_email_enabled
+      : false;
+  const goalSms =
+    typeof o.goal_gate_notify_sms_enabled === "boolean"
+      ? o.goal_gate_notify_sms_enabled
+      : false;
+  const stepEmail =
+    typeof o.step_gate_notify_email_enabled === "boolean"
+      ? o.step_gate_notify_email_enabled
+      : false;
+  const stepSms =
+    typeof o.step_gate_notify_sms_enabled === "boolean"
+      ? o.step_gate_notify_sms_enabled
+      : false;
   // display_timezone is preserved verbatim when the server sends a
   // string. Empty string ("") is the documented auto-detect sentinel
   // (the SPA reads it as "no operator override, use the browser zone"),
@@ -172,6 +209,11 @@ function assertSettings(raw: unknown): AppSettings {
     max_run_duration_seconds: maxDur,
     agent_pickup_delay_seconds: pickupDelay,
     project_step_gate_grace_seconds: stepGrace,
+    project_goal_gate_grace_seconds: goalGrace,
+    goal_gate_notify_email_enabled: goalEmail,
+    goal_gate_notify_sms_enabled: goalSms,
+    step_gate_notify_email_enabled: stepEmail,
+    step_gate_notify_sms_enabled: stepSms,
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,
     sse_replay_enabled: sseReplay,

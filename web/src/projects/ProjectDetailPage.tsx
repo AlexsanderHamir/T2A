@@ -9,7 +9,8 @@ import { useProject } from "./hooks";
 import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
-import { ProjectStepsPanel } from "./ProjectStepsPanel";
+import { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
+import { ProjectStepsEntryCard } from "./ProjectStepsEntryCard";
 import { projectQueryKeys } from "./queryKeys";
 
 export function ProjectDetailPage() {
@@ -138,7 +139,9 @@ export function ProjectDetailPage() {
             </svg>
           </Link>
 
-          <ProjectStepsPanel projectId={projectId} />
+          <ProjectGoalsEntryCard projectId={projectId} />
+
+          <ProjectStepsEntryCard projectId={projectId} />
 
           <ProjectTasksPanel projectId={projectId} />
         </div>

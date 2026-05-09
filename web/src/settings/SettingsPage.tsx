@@ -13,6 +13,7 @@ import {
   AgentWorkerSettingsSection,
   CursorAgentSettingsSection,
   DisplaySettingsSection,
+  ProjectGoalsGateSettingsSection,
   ProjectStepsGateSettingsSection,
   RunTimeoutSettingsSection,
   SettingsActions,
@@ -143,6 +144,14 @@ export function SettingsPage() {
       stepGraceParsed < 0 ||
       stepGraceParsed > 604800
     : false;
+  const goalGraceParsed = form
+    ? Number.parseInt(form.projectGoalGateGraceSeconds.trim() || "0", 10)
+    : 0;
+  const goalGraceInvalid = form
+    ? !Number.isFinite(goalGraceParsed) ||
+      goalGraceParsed < 0 ||
+      goalGraceParsed > 604800
+    : false;
 
   function handleField<K extends keyof SettingsFormState>(
     key: K,
@@ -159,7 +168,16 @@ export function SettingsPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!settings || !form || maxInvalid || pickupInvalid || stepGraceInvalid) return;
+    if (
+      !settings ||
+      !form ||
+      maxInvalid ||
+      pickupInvalid ||
+      stepGraceInvalid ||
+      goalGraceInvalid
+    ) {
+      return;
+    }
     const body = diffPatch(settings, form);
     if (Object.keys(body).length === 0) return;
     // Snapshot the form *as submitted* so we can detect post-submit
@@ -215,6 +233,23 @@ export function SettingsPage() {
           merged.projectStepGateGraceSeconds = String(
             next.project_step_gate_grace_seconds,
           );
+        }
+        if (cur.projectGoalGateGraceSeconds === formAtSubmit.projectGoalGateGraceSeconds) {
+          merged.projectGoalGateGraceSeconds = String(
+            next.project_goal_gate_grace_seconds,
+          );
+        }
+        if (cur.goalGateNotifyEmailEnabled === formAtSubmit.goalGateNotifyEmailEnabled) {
+          merged.goalGateNotifyEmailEnabled = next.goal_gate_notify_email_enabled;
+        }
+        if (cur.goalGateNotifySmsEnabled === formAtSubmit.goalGateNotifySmsEnabled) {
+          merged.goalGateNotifySmsEnabled = next.goal_gate_notify_sms_enabled;
+        }
+        if (cur.stepGateNotifyEmailEnabled === formAtSubmit.stepGateNotifyEmailEnabled) {
+          merged.stepGateNotifyEmailEnabled = next.step_gate_notify_email_enabled;
+        }
+        if (cur.stepGateNotifySmsEnabled === formAtSubmit.stepGateNotifySmsEnabled) {
+          merged.stepGateNotifySmsEnabled = next.step_gate_notify_sms_enabled;
         }
         if (cur.displayTimezone === formAtSubmit.displayTimezone) {
           merged.displayTimezone = next.display_timezone;
@@ -353,6 +388,12 @@ export function SettingsPage() {
           onField={handleField}
         />
 
+        <ProjectGoalsGateSettingsSection
+          form={form}
+          goalGraceInvalid={goalGraceInvalid}
+          onField={handleField}
+        />
+
         <ProjectStepsGateSettingsSection
           form={form}
           stepGraceInvalid={stepGraceInvalid}
@@ -364,6 +405,7 @@ export function SettingsPage() {
           maxInvalid={maxInvalid}
           pickupInvalid={pickupInvalid}
           stepGraceInvalid={stepGraceInvalid}
+          goalGraceInvalid={goalGraceInvalid}
           patchPending={patch.isPending}
           onDiscard={() => setForm(toFormState(settings))}
         />

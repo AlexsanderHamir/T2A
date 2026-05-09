@@ -1,5 +1,8 @@
 export { ProjectDetailPage } from "./ProjectDetailPage";
-export { ProjectStepsPanel } from "./ProjectStepsPanel";
+export { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
+export { ProjectGoalsPage } from "./ProjectGoalsPage";
+export { ProjectStepsEntryCard } from "./ProjectStepsEntryCard";
+export { ProjectStepsPage } from "./ProjectStepsPage";
 export { ProjectStepSelect } from "./ProjectStepSelect";
 export { ProjectContextPage } from "./ProjectContextPage";
 export { ProjectListPage } from "./ProjectListPage";
@@ -17,7 +20,13 @@ export {
   type ProjectContextAddMode,
 } from "./projectContextRefs";
 export { projectQueryKeys } from "./queryKeys";
-export { useProject, useProjectContext, useProjectSteps, useProjects } from "./hooks";
+export {
+  useProject,
+  useProjectContext,
+  useProjectGoals,
+  useProjectSteps,
+  useProjects,
+} from "./hooks";
 export {
   useProjectContextPromptBinding,
   type UseProjectContextPromptBindingOptions,

@@ -399,6 +399,67 @@ export function RunTimeoutSettingsSection({
   );
 }
 
+export function ProjectGoalsGateSettingsSection({
+  form,
+  goalGraceInvalid,
+  onField,
+}: {
+  form: SettingsFormState;
+  goalGraceInvalid: boolean;
+  onField: HandleField;
+}) {
+  return (
+    <fieldset className="settings-fieldset" id="project-goals-gate">
+      <legend className="settings-fieldset-legend">Project goals</legend>
+      <p className="settings-section-subtitle">
+        After every criterion on a goal is satisfied, the gate waits this many seconds
+        before auto-releasing (unless you hold or release early). Set to{" "}
+        <code>0</code> for immediate release.
+      </p>
+      <label className="settings-field">
+        <span className="settings-field-label">Goal gate grace period (seconds)</span>
+        <input
+          type="number"
+          min={0}
+          max={604800}
+          step={1}
+          value={form.projectGoalGateGraceSeconds}
+          onChange={(e) => onField("projectGoalGateGraceSeconds", e.target.value)}
+          aria-invalid={goalGraceInvalid}
+        />
+      </label>
+      <p className="settings-field-help">Maximum 604800 (7 days), same as the server limit.</p>
+      {goalGraceInvalid ? (
+        <p role="alert" className="settings-field-error">
+          Must be an integer from 0 to 604800.
+        </p>
+      ) : null}
+      <label className="settings-field settings-field--inline">
+        <input
+          type="checkbox"
+          checked={form.goalGateNotifyEmailEnabled}
+          onChange={(e) => onField("goalGateNotifyEmailEnabled", e.target.checked)}
+        />
+        <span className="settings-field-label">Email when a goal enters pending release</span>
+      </label>
+      <p className="settings-field-help">
+        Not wired yet — preferences are stored for a future notifier.
+      </p>
+      <label className="settings-field settings-field--inline">
+        <input
+          type="checkbox"
+          checked={form.goalGateNotifySmsEnabled}
+          onChange={(e) => onField("goalGateNotifySmsEnabled", e.target.checked)}
+        />
+        <span className="settings-field-label">SMS when a goal enters pending release</span>
+      </label>
+      <p className="settings-field-help">
+        Not wired yet — preferences are stored for a future notifier.
+      </p>
+    </fieldset>
+  );
+}
+
 export function ProjectStepsGateSettingsSection({
   form,
   stepGraceInvalid,
@@ -434,6 +495,28 @@ export function ProjectStepsGateSettingsSection({
           Must be an integer from 0 to 604800.
         </p>
       ) : null}
+      <label className="settings-field settings-field--inline">
+        <input
+          type="checkbox"
+          checked={form.stepGateNotifyEmailEnabled}
+          onChange={(e) => onField("stepGateNotifyEmailEnabled", e.target.checked)}
+        />
+        <span className="settings-field-label">Email when a step enters pending release</span>
+      </label>
+      <p className="settings-field-help">
+        Not wired yet — preferences are stored for a future notifier.
+      </p>
+      <label className="settings-field settings-field--inline">
+        <input
+          type="checkbox"
+          checked={form.stepGateNotifySmsEnabled}
+          onChange={(e) => onField("stepGateNotifySmsEnabled", e.target.checked)}
+        />
+        <span className="settings-field-label">SMS when a step enters pending release</span>
+      </label>
+      <p className="settings-field-help">
+        Not wired yet — preferences are stored for a future notifier.
+      </p>
     </fieldset>
   );
 }
@@ -443,6 +526,7 @@ export function SettingsActions({
   maxInvalid,
   pickupInvalid,
   stepGraceInvalid,
+  goalGraceInvalid,
   patchPending,
   onDiscard,
 }: {
@@ -450,13 +534,14 @@ export function SettingsActions({
   maxInvalid: boolean;
   pickupInvalid: boolean;
   stepGraceInvalid: boolean;
+  goalGraceInvalid: boolean;
   patchPending: boolean;
   onDiscard: () => void;
 }) {
   return (
     <div className="settings-actions" data-dirty={isDirty ? "true" : "false"}>
       <div className="settings-actions-status" aria-hidden="true">
-        {maxInvalid || pickupInvalid || stepGraceInvalid ? (
+        {maxInvalid || pickupInvalid || stepGraceInvalid || goalGraceInvalid ? (
           <span className="settings-actions-hint settings-actions-hint--warn">
             Resolve the errors above to save.
           </span>
@@ -485,7 +570,14 @@ export function SettingsActions({
         <button
           type="submit"
           className="settings-btn settings-btn--primary"
-          disabled={!isDirty || patchPending || maxInvalid || pickupInvalid || stepGraceInvalid}
+          disabled={
+            !isDirty ||
+            patchPending ||
+            maxInvalid ||
+            pickupInvalid ||
+            stepGraceInvalid ||
+            goalGraceInvalid
+          }
         >
           {patchPending ? "Saving…" : "Save changes"}
         </button>

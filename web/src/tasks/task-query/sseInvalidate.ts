@@ -139,7 +139,10 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
     o.type === "project_deleted" ||
     o.type === "project_step_created" ||
     o.type === "project_step_updated" ||
-    o.type === "project_step_deleted"
+    o.type === "project_step_deleted" ||
+    o.type === "project_goal_created" ||
+    o.type === "project_goal_updated" ||
+    o.type === "project_goal_deleted"
   ) {
     return { kind: "project", projectId: id };
   }

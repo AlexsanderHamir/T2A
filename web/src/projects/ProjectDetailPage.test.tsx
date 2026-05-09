@@ -84,7 +84,10 @@ describe("ProjectDetailPage", () => {
       "/projects/project-1/context",
     );
     expect(screen.getByRole("heading", { name: /Linked tasks/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Steps" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Steps" })).toHaveAttribute(
+      "href",
+      "/projects/project-1/steps",
+    );
   });
 
   it("shows delete project action for non-default projects", () => {

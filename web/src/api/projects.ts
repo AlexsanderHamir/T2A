@@ -5,9 +5,12 @@ import type {
   ProjectContextKind,
   ProjectContextListResponse,
   ProjectContextRelation,
+  ProjectGoal,
+  ProjectGoalsListResponse,
   ProjectListResponse,
   ProjectStatus,
   ProjectStep,
+  ProjectStepCriterion,
   ProjectStepGateStatus,
   ProjectStepsListResponse,
 } from "@/types";
@@ -43,6 +46,18 @@ function parseProjectStepGateStatus(value: unknown): ProjectStepGateStatus {
   return value as ProjectStepGateStatus;
 }
 
+function parseProjectStepCriterion(value: unknown, index: number): ProjectStepCriterion {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: criteria[${index}] must be an object`);
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    text: parseString(value.text, "text"),
+    done: parseBooleanField(value.done, "done"),
+    sort_order: parseFiniteNumber(value.sort_order, "sort_order"),
+  };
+}
+
 export function parseProjectStep(value: unknown): ProjectStep {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: project step must be an object");
@@ -55,14 +70,26 @@ export function parseProjectStep(value: unknown): ProjectStep {
       "pending_release_deadline",
     );
   }
+  const critRaw = value.criteria;
+  let criteria: ProjectStepCriterion[];
+  if (critRaw === undefined || critRaw === null) {
+    criteria = [];
+  } else if (!Array.isArray(critRaw)) {
+    throw new Error("Invalid API response: criteria must be an array");
+  } else {
+    criteria = critRaw.map((row, i) => parseProjectStepCriterion(row, i));
+  }
+  const goalId = parseOptionalNonEmptyId(value.goal_id, "goal_id");
   return {
     id: parseNonEmptyString(value.id, "id"),
     project_id: parseNonEmptyString(value.project_id, "project_id"),
+    ...(goalId !== undefined ? { goal_id: goalId } : {}),
     title: parseString(value.title, "title"),
     description: parseString(value.description, "description"),
     sort_order: parseFiniteNumber(value.sort_order, "sort_order"),
     gate_status: parseProjectStepGateStatus(value.gate_status),
     gate_hold: parseBooleanField(value.gate_hold, "gate_hold"),
+    criteria,
     ...(pending_release_deadline !== undefined
       ? { pending_release_deadline }
       : {}),
@@ -89,6 +116,78 @@ export function parseProjectStepsListResponse(value: unknown): ProjectStepsListR
   });
   return { steps };
 }
+
+export function parseProjectGoal(value: unknown): ProjectGoal {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: project goal must be an object");
+  }
+  const deadlineRaw = value.pending_release_deadline;
+  let pending_release_deadline: string | undefined;
+  if (deadlineRaw !== undefined && deadlineRaw !== null) {
+    pending_release_deadline = parseISO8601Required(
+      deadlineRaw,
+      "pending_release_deadline",
+    );
+  }
+  const critRaw = value.criteria;
+  let criteria: ProjectGoal["criteria"];
+  if (critRaw === undefined || critRaw === null) {
+    criteria = [];
+  } else if (!Array.isArray(critRaw)) {
+    throw new Error("Invalid API response: criteria must be an array");
+  } else {
+    criteria = critRaw.map((row, i) => parseProjectStepCriterion(row, i));
+  }
+  const depRaw = value.depends_on_goal_ids;
+  let depends_on_goal_ids: string[];
+  if (depRaw === undefined || depRaw === null) {
+    depends_on_goal_ids = [];
+  } else if (!Array.isArray(depRaw)) {
+    throw new Error("Invalid API response: depends_on_goal_ids must be an array");
+  } else {
+    depends_on_goal_ids = depRaw.map((x, i) => {
+      if (typeof x !== "string") {
+        throw new Error(`Invalid API response: depends_on_goal_ids[${i}] must be a string`);
+      }
+      return parseNonEmptyString(x, `depends_on_goal_ids[${i}]`);
+    });
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    project_id: parseNonEmptyString(value.project_id, "project_id"),
+    title: parseString(value.title, "title"),
+    description: parseString(value.description, "description"),
+    depends_on_goal_ids,
+    gate_status: parseProjectStepGateStatus(value.gate_status),
+    gate_hold: parseBooleanField(value.gate_hold, "gate_hold"),
+    criteria,
+    ...(pending_release_deadline !== undefined
+      ? { pending_release_deadline }
+      : {}),
+    created_at: parseISO8601Required(value.created_at, "created_at"),
+    updated_at: parseISO8601Required(value.updated_at, "updated_at"),
+  };
+}
+
+export function parseProjectGoalsListResponse(value: unknown): ProjectGoalsListResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: project goals list must be an object");
+  }
+  const raw = value.goals;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: goals must be an array");
+  }
+  const goals: ProjectGoal[] = raw.map((row, i) => {
+    try {
+      return parseProjectGoal(row);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Invalid API response: goals[${i}]: ${msg}`);
+    }
+  });
+  return { goals };
+}
+
 const PROJECT_CONTEXT_RELATIONS = [
   "supports",
   "blocks",
@@ -455,20 +554,112 @@ export async function deleteProjectContext(
 
 export async function listProjectSteps(
   projectId: string,
-  opts?: { signal?: AbortSignal },
+  opts?: { signal?: AbortSignal; goalId?: string },
 ): Promise<ProjectStepsListResponse> {
   const projectID = assertTaskPathId(projectId, "project id");
+  const gid = (opts?.goalId ?? "").trim();
+  const q = gid !== "" ? `?goal_id=${encodeURIComponent(gid)}` : "";
   const res = await fetchWithTimeout(
-    `/projects/${encodeURIComponent(projectID)}/steps`,
+    `/projects/${encodeURIComponent(projectID)}/steps${q}`,
     { method: "GET", headers: { Accept: "application/json" }, signal: opts?.signal },
   );
   if (!res.ok) throw new Error(await readError(res));
   return parseProjectStepsListResponse((await res.json()) as unknown);
 }
 
+export async function listProjectGoals(
+  projectId: string,
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectGoalsListResponse> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/goals`,
+    { method: "GET", headers: { Accept: "application/json" }, signal: opts?.signal },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectGoalsListResponse((await res.json()) as unknown);
+}
+
+export async function createProjectGoal(
+  projectId: string,
+  input: {
+    id?: string;
+    title: string;
+    description?: string;
+    depends_on_goal_ids?: string[];
+    criteria?: { id?: string; text: string; done?: boolean; sort_order?: number }[];
+  },
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectGoal> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/goals`,
+    {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+      signal: opts?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectGoal((await res.json()) as unknown);
+}
+
+export async function patchProjectGoal(
+  projectId: string,
+  goalId: string,
+  input: {
+    title?: string;
+    description?: string;
+    depends_on_goal_ids?: string[];
+    gate_action?: "release" | "hold" | "clear_hold";
+    criteria?: { id: string; text: string; done: boolean; sort_order: number }[];
+  },
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectGoal> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const gid = assertTaskPathId(goalId, "goal id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/goals/${encodeURIComponent(gid)}`,
+    {
+      method: "PATCH",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+      signal: opts?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectGoal((await res.json()) as unknown);
+}
+
+export async function deleteProjectGoal(
+  projectId: string,
+  goalId: string,
+  opts?: { signal?: AbortSignal },
+): Promise<void> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const gid = assertTaskPathId(goalId, "goal id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/goals/${encodeURIComponent(gid)}`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal: opts?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+}
+
 export async function createProjectStep(
   projectId: string,
-  input: { id?: string; title: string; description?: string; sort_order?: number },
+  input: {
+    id?: string;
+    goal_id: string;
+    title: string;
+    description?: string;
+    sort_order?: number;
+    criteria?: { id?: string; text: string; done?: boolean; sort_order?: number }[];
+  },
   opts?: { signal?: AbortSignal },
 ): Promise<ProjectStep> {
   const projectID = assertTaskPathId(projectId, "project id");
@@ -493,6 +684,7 @@ export async function patchProjectStep(
     description?: string;
     sort_order?: number;
     gate_action?: "release" | "hold" | "clear_hold";
+    criteria?: { id: string; text: string; done: boolean; sort_order: number }[];
   },
   opts?: { signal?: AbortSignal },
 ): Promise<ProjectStep> {

@@ -57,15 +57,45 @@ export type ProjectStepGateStatus =
   | "pending_release"
   | "released";
 
+export type ProjectStepCriterion = {
+  id: string;
+  text: string;
+  done: boolean;
+  sort_order: number;
+};
+
+export type ProjectGoalCriterion = ProjectStepCriterion;
+
+export type ProjectGoal = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  depends_on_goal_ids: string[];
+  gate_status: ProjectStepGateStatus;
+  gate_hold: boolean;
+  pending_release_deadline?: string;
+  criteria: ProjectGoalCriterion[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectGoalsListResponse = {
+  goals: ProjectGoal[];
+};
+
 export type ProjectStep = {
   id: string;
   project_id: string;
+  /** Present on steps created after the goals layer shipped. */
+  goal_id?: string;
   title: string;
   description: string;
   sort_order: number;
   gate_status: ProjectStepGateStatus;
   gate_hold: boolean;
   pending_release_deadline?: string;
+  criteria: ProjectStepCriterion[];
   created_at: string;
   updated_at: string;
 };

@@ -18,9 +18,11 @@ import {
   ProjectDetailPage,
   ProjectContextPage,
   ProjectContextPicker,
+  ProjectGoalsPage,
   ProjectListPage,
   ProjectSelect,
   ProjectStepSelect,
+  ProjectStepsPage,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
@@ -237,11 +239,10 @@ export default function App() {
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route path="projects" element={<ProjectListPage />} />
+        <Route path="projects/:projectId/goals" element={<ProjectGoalsPage />} />
+        <Route path="projects/:projectId/steps" element={<ProjectStepsPage />} />
+        <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        <Route
-          path="projects/:projectId/context"
-          element={<ProjectContextPage />}
-        />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="tasks/:taskId/events/:eventSeq"
