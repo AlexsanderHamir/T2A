@@ -1,6 +1,10 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { listTasks } from "@/api";
+import { listProjectSteps, listTasks } from "@/api";
+import type { Task } from "@/types";
+import { taskQueryKeys } from "@/tasks/task-query";
+import { projectQueryKeys } from "./queryKeys";
 
 type Props = {
   projectId: string;
@@ -8,12 +12,51 @@ type Props = {
 
 export function ProjectTasksPanel({ projectId }: Props) {
   const projectTasks = useQuery({
-    queryKey: ["tasks", "project-members", projectId],
+    queryKey: taskQueryKeys.listRoot(),
     queryFn: ({ signal }) => listTasks(200, 0, { signal }),
     enabled: Boolean(projectId),
   });
+  const stepsQuery = useQuery({
+    queryKey: projectQueryKeys.steps(projectId),
+    queryFn: ({ signal }) => listProjectSteps(projectId, { signal }),
+    enabled: Boolean(projectId),
+  });
+
   const memberTasks = (projectTasks.data?.tasks ?? []).filter(
     (task) => task.project_id === projectId,
+  );
+
+  const stepTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of stepsQuery.data?.steps ?? []) {
+      m.set(s.id, s.title);
+    }
+    return m;
+  }, [stepsQuery.data?.steps]);
+
+  const grouped = useMemo(() => {
+    const withStep: Task[] = [];
+    const noStep: Task[] = [];
+    for (const t of memberTasks) {
+      if (t.project_step_id && stepTitleById.has(t.project_step_id)) {
+        withStep.push(t);
+      } else {
+        noStep.push(t);
+      }
+    }
+    const byStep = new Map<string, Task[]>();
+    for (const t of withStep) {
+      const sid = t.project_step_id!;
+      const bucket = byStep.get(sid);
+      if (bucket) bucket.push(t);
+      else byStep.set(sid, [t]);
+    }
+    return { byStep, noStep };
+  }, [memberTasks, stepTitleById]);
+
+  const stepOrder = useMemo(
+    () => [...(stepsQuery.data?.steps ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    [stepsQuery.data?.steps],
   );
 
   return (
@@ -42,19 +85,48 @@ export function ProjectTasksPanel({ projectId }: Props) {
       ) : null}
 
       {memberTasks.length > 0 ? (
-        <ul className="pd__task-list">
-          {memberTasks.slice(0, 8).map((task) => (
-            <li key={task.id}>
-              <Link
-                to={`/tasks/${encodeURIComponent(task.id)}`}
-                className="pd__task-row"
-              >
-                <span className="pd__task-title">{task.title}</span>
-                <span className="pd__task-chip">{task.status}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="pd__task-groups">
+          {stepOrder.map((step) => {
+            const tasks = grouped.byStep.get(step.id) ?? [];
+            if (tasks.length === 0) return null;
+            return (
+              <div key={step.id} className="pd__task-group">
+                <h3 className="pd__task-group-title">{step.title}</h3>
+                <ul className="pd__task-list">
+                  {tasks.slice(0, 8).map((task) => (
+                    <li key={task.id}>
+                      <Link
+                        to={`/tasks/${encodeURIComponent(task.id)}`}
+                        className="pd__task-row"
+                      >
+                        <span className="pd__task-title">{task.title}</span>
+                        <span className="pd__task-chip">{task.status}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+          {grouped.noStep.length > 0 ? (
+            <div className="pd__task-group">
+              <h3 className="pd__task-group-title">No step</h3>
+              <ul className="pd__task-list">
+                {grouped.noStep.slice(0, 8).map((task) => (
+                  <li key={task.id}>
+                    <Link
+                      to={`/tasks/${encodeURIComponent(task.id)}`}
+                      className="pd__task-row"
+                    >
+                      <span className="pd__task-title">{task.title}</span>
+                      <span className="pd__task-chip">{task.status}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

@@ -9,6 +9,7 @@ import { useProject } from "./hooks";
 import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
+import { ProjectStepsPanel } from "./ProjectStepsPanel";
 import { projectQueryKeys } from "./queryKeys";
 
 export function ProjectDetailPage() {
@@ -136,6 +137,8 @@ export function ProjectDetailPage() {
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
+
+          <ProjectStepsPanel projectId={projectId} />
 
           <ProjectTasksPanel projectId={projectId} />
         </div>

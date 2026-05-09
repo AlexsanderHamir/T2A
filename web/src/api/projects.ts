@@ -7,6 +7,9 @@ import type {
   ProjectContextRelation,
   ProjectListResponse,
   ProjectStatus,
+  ProjectStep,
+  ProjectStepGateStatus,
+  ProjectStepsListResponse,
 } from "@/types";
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
 import {
@@ -22,6 +25,70 @@ import {
 import { assertListIntQuery, assertTaskPathId } from "./taskRequestBounds";
 
 const PROJECT_STATUSES = ["active", "archived"] as const;
+
+const PROJECT_STEP_GATE_STATUSES = [
+  "locked",
+  "active",
+  "pending_release",
+  "released",
+] as const;
+
+function parseProjectStepGateStatus(value: unknown): ProjectStepGateStatus {
+  if (
+    typeof value !== "string" ||
+    !(PROJECT_STEP_GATE_STATUSES as readonly string[]).includes(value)
+  ) {
+    throw new Error("Invalid API response: project step gate_status is unknown");
+  }
+  return value as ProjectStepGateStatus;
+}
+
+export function parseProjectStep(value: unknown): ProjectStep {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: project step must be an object");
+  }
+  const deadlineRaw = value.pending_release_deadline;
+  let pending_release_deadline: string | undefined;
+  if (deadlineRaw !== undefined && deadlineRaw !== null) {
+    pending_release_deadline = parseISO8601Required(
+      deadlineRaw,
+      "pending_release_deadline",
+    );
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    project_id: parseNonEmptyString(value.project_id, "project_id"),
+    title: parseString(value.title, "title"),
+    description: parseString(value.description, "description"),
+    sort_order: parseFiniteNumber(value.sort_order, "sort_order"),
+    gate_status: parseProjectStepGateStatus(value.gate_status),
+    gate_hold: parseBooleanField(value.gate_hold, "gate_hold"),
+    ...(pending_release_deadline !== undefined
+      ? { pending_release_deadline }
+      : {}),
+    created_at: parseISO8601Required(value.created_at, "created_at"),
+    updated_at: parseISO8601Required(value.updated_at, "updated_at"),
+  };
+}
+
+export function parseProjectStepsListResponse(value: unknown): ProjectStepsListResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: project steps list must be an object");
+  }
+  const raw = value.steps;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: steps must be an array");
+  }
+  const steps: ProjectStep[] = raw.map((row, i) => {
+    try {
+      return parseProjectStep(row);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Invalid API response: steps[${i}]: ${msg}`);
+    }
+  });
+  return { steps };
+}
 const PROJECT_CONTEXT_RELATIONS = [
   "supports",
   "blocks",
@@ -381,6 +448,82 @@ export async function deleteProjectContext(
     {
       method: "DELETE",
       headers: { Accept: "application/json" },
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+}
+
+export async function listProjectSteps(
+  projectId: string,
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectStepsListResponse> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/steps`,
+    { method: "GET", headers: { Accept: "application/json" }, signal: opts?.signal },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectStepsListResponse((await res.json()) as unknown);
+}
+
+export async function createProjectStep(
+  projectId: string,
+  input: { id?: string; title: string; description?: string; sort_order?: number },
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectStep> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/steps`,
+    {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+      signal: opts?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectStep((await res.json()) as unknown);
+}
+
+export async function patchProjectStep(
+  projectId: string,
+  stepId: string,
+  input: {
+    title?: string;
+    description?: string;
+    sort_order?: number;
+    gate_action?: "release" | "hold" | "clear_hold";
+  },
+  opts?: { signal?: AbortSignal },
+): Promise<ProjectStep> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const sid = assertTaskPathId(stepId, "step id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/steps/${encodeURIComponent(sid)}`,
+    {
+      method: "PATCH",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+      signal: opts?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  return parseProjectStep((await res.json()) as unknown);
+}
+
+export async function deleteProjectStep(
+  projectId: string,
+  stepId: string,
+  opts?: { signal?: AbortSignal },
+): Promise<void> {
+  const projectID = assertTaskPathId(projectId, "project id");
+  const sid = assertTaskPathId(stepId, "step id");
+  const res = await fetchWithTimeout(
+    `/projects/${encodeURIComponent(projectID)}/steps/${encodeURIComponent(sid)}`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal: opts?.signal,
     },
   );
   if (!res.ok) throw new Error(await readError(res));

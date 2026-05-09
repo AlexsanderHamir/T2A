@@ -13,6 +13,7 @@ import {
   AgentWorkerSettingsSection,
   CursorAgentSettingsSection,
   DisplaySettingsSection,
+  ProjectStepsGateSettingsSection,
   RunTimeoutSettingsSection,
   SettingsActions,
   SettingsHeader,
@@ -134,6 +135,14 @@ export function SettingsPage() {
       pickupParsed < 0 ||
       pickupParsed > 604800
     : false;
+  const stepGraceParsed = form
+    ? Number.parseInt(form.projectStepGateGraceSeconds.trim() || "0", 10)
+    : 0;
+  const stepGraceInvalid = form
+    ? !Number.isFinite(stepGraceParsed) ||
+      stepGraceParsed < 0 ||
+      stepGraceParsed > 604800
+    : false;
 
   function handleField<K extends keyof SettingsFormState>(
     key: K,
@@ -150,7 +159,7 @@ export function SettingsPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!settings || !form || maxInvalid || pickupInvalid) return;
+    if (!settings || !form || maxInvalid || pickupInvalid || stepGraceInvalid) return;
     const body = diffPatch(settings, form);
     if (Object.keys(body).length === 0) return;
     // Snapshot the form *as submitted* so we can detect post-submit
@@ -200,6 +209,11 @@ export function SettingsPage() {
         if (cur.agentPickupDelaySeconds === formAtSubmit.agentPickupDelaySeconds) {
           merged.agentPickupDelaySeconds = String(
             next.agent_pickup_delay_seconds,
+          );
+        }
+        if (cur.projectStepGateGraceSeconds === formAtSubmit.projectStepGateGraceSeconds) {
+          merged.projectStepGateGraceSeconds = String(
+            next.project_step_gate_grace_seconds,
           );
         }
         if (cur.displayTimezone === formAtSubmit.displayTimezone) {
@@ -339,10 +353,17 @@ export function SettingsPage() {
           onField={handleField}
         />
 
+        <ProjectStepsGateSettingsSection
+          form={form}
+          stepGraceInvalid={stepGraceInvalid}
+          onField={handleField}
+        />
+
         <SettingsActions
           isDirty={isDirty}
           maxInvalid={maxInvalid}
           pickupInvalid={pickupInvalid}
+          stepGraceInvalid={stepGraceInvalid}
           patchPending={patch.isPending}
           onDiscard={() => setForm(toFormState(settings))}
         />

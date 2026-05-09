@@ -643,6 +643,11 @@
   background: var(--success-soft);
 }
 
+.pd__icon--violet {
+  color: var(--accent, var(--brand));
+  background: var(--brand-muted);
+}
+
 /* --- Info note --- */
 
 .pd__note {
@@ -3515,4 +3520,137 @@
 .project-context-choice__footer {
   display: flex;
   justify-content: flex-end;
+}
+
+/* --- Project detail: ordered steps + gate chips --- */
+
+.pd__step-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pd__step-row {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg-page);
+}
+
+@media (min-width: 720px) {
+  .pd__step-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+}
+
+.pd__step-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pd__step-order {
+  flex: 0 0 auto;
+  font-size: var(--text-help);
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.pd__step-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+.pd__step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.pd__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.pd__chip--gate.pd__chip--locked {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.pd__chip--gate.pd__chip--active {
+  background: color-mix(in srgb, var(--accent, var(--brand)) 14%, var(--bg-page));
+  color: var(--text-primary);
+}
+
+.pd__chip--gate.pd__chip--pending_release {
+  background: color-mix(in srgb, var(--warning) 18%, var(--bg-page));
+  color: var(--text-primary);
+}
+
+.pd__chip--gate.pd__chip--released {
+  background: var(--success-soft);
+  color: var(--text-primary);
+}
+
+.pd__chip--hold {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.pd__step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.pd__step-btn {
+  min-height: 2.25rem;
+}
+
+.pd__step-btn--danger:not(:disabled):hover {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.pd__step-add {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.pd__task-groups {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.pd__task-group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+@media (min-width: 560px) {
+  .pd__step-add {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
 }

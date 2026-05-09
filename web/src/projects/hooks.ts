@@ -1,9 +1,10 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getProject, listProjectContext, listProjects } from "@/api";
+import { getProject, listProjectContext, listProjectSteps, listProjects } from "@/api";
 import type {
   Project,
   ProjectContextListResponse,
   ProjectListResponse,
+  ProjectStepsListResponse,
 } from "@/types";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -49,6 +50,18 @@ export function useProjectContext(
         limit: options?.limit,
         pinnedOnly: options?.pinnedOnly,
       }),
+    enabled,
+  });
+}
+
+export function useProjectSteps(
+  projectId: string,
+  options?: { enabled?: boolean },
+): UseQueryResult<ProjectStepsListResponse, Error> {
+  const enabled = (options?.enabled ?? true) && Boolean(projectId);
+  return useQuery({
+    queryKey: projectQueryKeys.steps(projectId),
+    queryFn: ({ signal }) => listProjectSteps(projectId, { signal }),
     enabled,
   });
 }

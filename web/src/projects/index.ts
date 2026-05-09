@@ -1,4 +1,6 @@
 export { ProjectDetailPage } from "./ProjectDetailPage";
+export { ProjectStepsPanel } from "./ProjectStepsPanel";
+export { ProjectStepSelect } from "./ProjectStepSelect";
 export { ProjectContextPage } from "./ProjectContextPage";
 export { ProjectListPage } from "./ProjectListPage";
 export { ProjectSelect } from "./ProjectSelect";
@@ -15,7 +17,7 @@ export {
   type ProjectContextAddMode,
 } from "./projectContextRefs";
 export { projectQueryKeys } from "./queryKeys";
-export { useProject, useProjectContext, useProjects } from "./hooks";
+export { useProject, useProjectContext, useProjectSteps, useProjects } from "./hooks";
 export {
   useProjectContextPromptBinding,
   type UseProjectContextPromptBindingOptions,

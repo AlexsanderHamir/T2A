@@ -51,6 +51,29 @@ export type ProjectListResponse = {
   limit: number;
 };
 
+export type ProjectStepGateStatus =
+  | "locked"
+  | "active"
+  | "pending_release"
+  | "released";
+
+export type ProjectStep = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  sort_order: number;
+  gate_status: ProjectStepGateStatus;
+  gate_hold: boolean;
+  pending_release_deadline?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectStepsListResponse = {
+  steps: ProjectStep[];
+};
+
 export type ProjectContextListResponse = {
   items: ProjectContextItem[];
   edges: ProjectContextEdge[];

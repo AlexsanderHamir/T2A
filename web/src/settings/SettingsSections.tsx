@@ -423,23 +423,66 @@ export function RunTimeoutSettingsSection({
   );
 }
 
+export function ProjectStepsGateSettingsSection({
+  form,
+  stepGraceInvalid,
+  onField,
+}: {
+  form: SettingsFormState;
+  stepGraceInvalid: boolean;
+  onField: HandleField;
+}) {
+  return (
+    <fieldset className="settings-fieldset" id="project-steps-gate">
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Project steps</span>
+      </legend>
+      <p className="settings-section-subtitle">
+        After every task in a step is marked done, the gate waits this many seconds
+        before auto-releasing (unless you hold or release early). Set to{" "}
+        <code>0</code> for immediate release.
+      </p>
+      <label className="settings-field">
+        <span className="settings-field-label">Step gate grace period (seconds)</span>
+        <input
+          type="number"
+          min={0}
+          max={604800}
+          step={1}
+          value={form.projectStepGateGraceSeconds}
+          onChange={(e) => onField("projectStepGateGraceSeconds", e.target.value)}
+          aria-invalid={stepGraceInvalid}
+        />
+      </label>
+      <p className="settings-field-help">Maximum 604800 (7 days), same as the server limit.</p>
+      {stepGraceInvalid ? (
+        <p role="alert" className="settings-field-error">
+          Must be an integer from 0 to 604800.
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
 export function SettingsActions({
   isDirty,
   maxInvalid,
   pickupInvalid,
+  stepGraceInvalid,
   patchPending,
   onDiscard,
 }: {
   isDirty: boolean;
   maxInvalid: boolean;
   pickupInvalid: boolean;
+  stepGraceInvalid: boolean;
   patchPending: boolean;
   onDiscard: () => void;
 }) {
   return (
     <div className="settings-actions" data-dirty={isDirty ? "true" : "false"}>
       <div className="settings-actions-status" aria-hidden="true">
-        {maxInvalid || pickupInvalid ? (
+        {maxInvalid || pickupInvalid || stepGraceInvalid ? (
           <span className="settings-actions-hint settings-actions-hint--warn">
             Resolve the errors above to save.
           </span>
@@ -468,7 +511,7 @@ export function SettingsActions({
         <button
           type="submit"
           className="settings-btn settings-btn--primary"
-          disabled={!isDirty || patchPending || maxInvalid || pickupInvalid}
+          disabled={!isDirty || patchPending || maxInvalid || pickupInvalid || stepGraceInvalid}
         >
           {patchPending ? "Saving…" : "Save changes"}
         </button>

@@ -38,6 +38,8 @@ export type DraftAutosaveSignatureInput = {
    * triggers an autosave.
    */
   projectId: string;
+  /** Optional project step id when creating into a gated step. */
+  projectStepId: string;
   /** User-selected project context item ids. Order matters and is preserved. */
   projectContextItemIds: string[];
   checklistInherit: boolean;
@@ -79,6 +81,7 @@ export function draftAutosaveSignature(
       cursor_model: input.cursorModel,
       parent_id: input.parentId,
       project_id: input.projectId,
+      project_step_id: input.projectStepId,
       project_context_item_ids: input.projectContextItemIds,
       checklist_inherit: input.checklistInherit,
       checklist_items: input.checklistItems,

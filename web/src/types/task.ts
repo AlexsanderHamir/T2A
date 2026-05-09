@@ -39,6 +39,8 @@ export type Task = {
   pickup_not_before?: string;
   /** Present when this task belongs to a long-lived project context. */
   project_id?: string;
+  /** When set, the task is assigned to this step within `project_id`. */
+  project_step_id?: string;
   /** User-selected project context items passed to agent runs for this task. */
   project_context_item_ids?: string[];
   /** Present when this task is nested under another (GET /tasks tree). */
@@ -391,6 +393,8 @@ export type TaskDraftPayload = {
    * project bound" (falls back to the default project on resume).
    */
   project_id?: string;
+  /** Optional; omitted on older drafts. */
+  project_step_id?: string;
   /**
    * Optional in older drafts. Mirrors the task's `project_context_item_ids`
    * so the REFERENCES block in the prompt editor reappears with the same

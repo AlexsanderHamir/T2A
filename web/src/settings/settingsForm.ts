@@ -10,6 +10,7 @@ export type SettingsFormState = {
   cursorModel: string;
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
+  projectStepGateGraceSeconds: string;
   displayTimezone: string;
 };
 
@@ -30,6 +31,7 @@ export function toFormState(s: AppSettings): SettingsFormState {
     cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
+    projectStepGateGraceSeconds: String(s.project_step_gate_grace_seconds),
     displayTimezone: s.display_timezone,
   };
 }
@@ -67,6 +69,16 @@ export function diffPatch(
     parsedPickup !== initial.agent_pickup_delay_seconds
   ) {
     out.agent_pickup_delay_seconds = parsedPickup;
+  }
+  const parsedStepGrace = Number.parseInt(
+    form.projectStepGateGraceSeconds.trim() || "0",
+    10,
+  );
+  if (
+    Number.isFinite(parsedStepGrace) &&
+    parsedStepGrace !== initial.project_step_gate_grace_seconds
+  ) {
+    out.project_step_gate_grace_seconds = parsedStepGrace;
   }
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== initial.display_timezone) {

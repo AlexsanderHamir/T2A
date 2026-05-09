@@ -159,6 +159,11 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
           project_id: parseString(value.project_id, "payload.project_id"),
         }
       : {}),
+    ...(typeof value.project_step_id === "string"
+      ? {
+          project_step_id: parseString(value.project_step_id, "payload.project_step_id"),
+        }
+      : {}),
     ...(Array.isArray(value.project_context_item_ids)
       ? {
           project_context_item_ids: value.project_context_item_ids.map((id, i) =>

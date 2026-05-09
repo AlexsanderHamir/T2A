@@ -20,6 +20,7 @@ import {
   ProjectContextPicker,
   ProjectListPage,
   ProjectSelect,
+  ProjectStepSelect,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
@@ -175,8 +176,16 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                     disabled={app.saving}
                     onChange={(projectId) => {
                       app.setEditProjectID(projectId);
+                      app.setEditProjectStepID("");
                       app.setEditProjectContextItemIDs([]);
                     }}
+                  />
+                  <ProjectStepSelect
+                    id="task-edit-project-step"
+                    projectId={app.editProjectID}
+                    value={app.editProjectStepID}
+                    disabled={app.saving}
+                    onChange={app.setEditProjectStepID}
                   />
                   <ProjectContextPicker
                     projectId={app.editProjectID}

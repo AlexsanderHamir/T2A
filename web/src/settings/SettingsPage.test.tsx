@@ -38,11 +38,16 @@ function stubListCursorModelsFetch(
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     worker_enabled: true,
+    agent_paused: false,
     repo_root: "/Users/me/code/example",
     cursor_bin: "/usr/local/bin/cursor-agent",
     ...TASK_TEST_DEFAULTS,
     max_run_duration_seconds: 0,
     agent_pickup_delay_seconds: 5,
+    project_step_gate_grace_seconds: 300,
+    display_timezone: "UTC",
+    optimistic_mutations_enabled: true,
+    sse_replay_enabled: true,
     updated_at: "2026-04-18T12:00:00Z",
     ...overrides,
   };

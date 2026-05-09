@@ -8,6 +8,7 @@ import { useAppTimezone } from "@/shared/time/appTimezone";
 import {
   ProjectContextPicker,
   ProjectSelect,
+  ProjectStepSelect,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
@@ -158,8 +159,16 @@ export function TaskHome({ app }: Props) {
                 disabled={app.saving}
                 onChange={(projectId) => {
                   app.setNewProjectID(projectId);
+                  app.setNewProjectStepID("");
                   app.setNewProjectContextItemIDs([]);
                 }}
+              />
+              <ProjectStepSelect
+                id="task-create-project-step"
+                projectId={app.newProjectID}
+                value={app.newProjectStepID}
+                disabled={app.saving}
+                onChange={app.setNewProjectStepID}
               />
               <ProjectContextPicker
                 projectId={app.newProjectID}

@@ -1,11 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
+import { requestUrl } from "@/test/requestUrl";
 import { DEFAULT_PROJECT_ID, type Project } from "@/types";
 import { ProjectDetailPage } from "./ProjectDetailPage";
 import { projectQueryKeys } from "./queryKeys";
+
+type FetchInput = RequestInfo | URL;
+
+function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+  });
+}
 
 const testProject: Project = {
   id: "project-1",
@@ -46,6 +56,23 @@ function renderPage(
 }
 
 describe("ProjectDetailPage", () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput) => {
+      const u = requestUrl(input);
+      if (u.startsWith("/tasks?")) {
+        return jsonResponse({ tasks: [], limit: 200, offset: 0, has_more: false });
+      }
+      if (u.includes("/projects/") && u.endsWith("/steps")) {
+        return jsonResponse({ steps: [] });
+      }
+      return new Response(`unexpected fetch ${u}`, { status: 500 });
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("presents settings, context, and linked work as distinct sections", () => {
     renderPage();
 
@@ -57,6 +84,7 @@ describe("ProjectDetailPage", () => {
       "/projects/project-1/context",
     );
     expect(screen.getByRole("heading", { name: /Linked tasks/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Steps" })).toBeInTheDocument();
   });
 
   it("shows delete project action for non-default projects", () => {

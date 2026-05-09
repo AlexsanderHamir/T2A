@@ -70,6 +70,9 @@ describe("parseTaskChangeFrame", () => {
       parseTaskChangeFrame('{"type":"project_updated","id":"project-1"}'),
     ).toEqual({ kind: "project", projectId: "project-1" });
     expect(
+      parseTaskChangeFrame('{"type":"project_step_updated","id":"project-1"}'),
+    ).toEqual({ kind: "project", projectId: "project-1" });
+    expect(
       parseTaskChangeFrame(
         '{"type":"project_context_changed","id":"project-1"}',
       ),

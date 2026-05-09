@@ -27,6 +27,12 @@ export type AppSettings = {
   /** Minimum seconds before the worker runs a new ready task. Default 5; 0 = no wait. */
   agent_pickup_delay_seconds: number;
   /**
+   * Seconds to wait after every task in a project step is done before the
+   * gate auto-releases (unless held or released early). 0 = immediate.
+   * Max 604800 (7d) server-side.
+   */
+  project_step_gate_grace_seconds: number;
+  /**
    * IANA timezone identifier (e.g. "America/New_York"). Used for
    * EVERY operator-facing timestamp render in the SPA. The wire
    * format for every timestamp stays RFC3339 UTC; this field
@@ -76,6 +82,7 @@ export type AppSettingsPatch = Partial<{
   display_timezone: string;
   optimistic_mutations_enabled: boolean;
   sse_replay_enabled: boolean;
+  project_step_gate_grace_seconds: number;
 }>;
 
 export type ProbeCursorResult = {
@@ -124,6 +131,10 @@ function assertSettings(raw: unknown): AppSettings {
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
   const pickupDelay = o.agent_pickup_delay_seconds;
+  const stepGrace =
+    typeof o.project_step_gate_grace_seconds === "number"
+      ? o.project_step_gate_grace_seconds
+      : 300;
   // display_timezone is preserved verbatim when the server sends a
   // string. Empty string ("") is the documented auto-detect sentinel
   // (the SPA reads it as "no operator override, use the browser zone"),
@@ -160,6 +171,7 @@ function assertSettings(raw: unknown): AppSettings {
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
     agent_pickup_delay_seconds: pickupDelay,
+    project_step_gate_grace_seconds: stepGrace,
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,
     sse_replay_enabled: sseReplay,

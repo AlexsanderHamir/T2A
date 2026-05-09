@@ -54,6 +54,7 @@ export function useTaskCreateFlow() {
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
+  const [newProjectStepID, setNewProjectStepID] = useState("");
   const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
   /**
    * Future pickup time for the new task as an RFC3339 UTC ISO
@@ -167,6 +168,7 @@ export function useTaskCreateFlow() {
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
     setNewProjectID(DEFAULT_PROJECT_ID);
+    setNewProjectStepID("");
     setNewProjectContextItemIDs([]);
     setNewSchedule(null);
     setNewChecklistItems([]);
@@ -186,6 +188,7 @@ export function useTaskCreateFlow() {
         cursorModel: s?.cursor_model ?? "",
         parentId: "",
         projectId: DEFAULT_PROJECT_ID,
+        projectStepId: "",
         projectContextItemIds: [],
         checklistInherit: false,
         checklistItems: [],
@@ -255,6 +258,7 @@ export function useTaskCreateFlow() {
        */
       pickup_not_before: string | null;
       project_id: string;
+      project_step_id?: string;
       project_context_item_ids: string[];
     }) => {
       const addChecklistItems = async (taskId: string, items: string[]) => {
@@ -271,6 +275,7 @@ export function useTaskCreateFlow() {
         runner: input.runner,
         cursor_model: input.cursor_model,
         ...(input.project_id ? { project_id: input.project_id } : {}),
+        ...(input.project_step_id ? { project_step_id: input.project_step_id } : {}),
         ...(input.project_context_item_ids.length > 0
           ? { project_context_item_ids: input.project_context_item_ids }
           : {}),
@@ -516,6 +521,7 @@ export function useTaskCreateFlow() {
         // signature mirrors what the server persists.
         parentId: "",
         projectId: newProjectID,
+        projectStepId: newProjectStepID,
         projectContextItemIds: newProjectContextItemIDs,
         checklistInherit: false,
         checklistItems: newChecklistItems,
@@ -543,6 +549,7 @@ export function useTaskCreateFlow() {
       newTaskRunner,
       newTaskCursorModel,
       newProjectID,
+      newProjectStepID,
       newProjectContextItemIDs,
       pendingSubtasks,
     ],
@@ -564,6 +571,9 @@ export function useTaskCreateFlow() {
         // so closing and resuming restores the same REFERENCES block in the
         // prompt editor (and the same `project_context_item_ids` on submit).
         project_id: newProjectID,
+        ...(newProjectStepID.trim()
+          ? { project_step_id: newProjectStepID.trim() }
+          : {}),
         project_context_item_ids: newProjectContextItemIDs,
         checklist_inherit: false,
         checklist_items: newChecklistItems,
@@ -609,6 +619,7 @@ export function useTaskCreateFlow() {
     newTaskRunner,
     newTaskCursorModel,
     newProjectID,
+    newProjectStepID,
     newProjectContextItemIDs,
     pendingSubtasks,
   ]);
@@ -723,6 +734,9 @@ export function useTaskCreateFlow() {
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
       project_id: newProjectID.trim(),
+      ...(newProjectStepID.trim()
+        ? { project_step_id: newProjectStepID.trim() }
+        : {}),
       project_context_item_ids: newProjectContextItemIDs,
       pickup_not_before: newSchedule,
     });
@@ -818,6 +832,11 @@ export function useTaskCreateFlow() {
       ? draft.payload.project_context_item_ids
       : [];
     setNewProjectID(resumedProjectID);
+    const resumedProjectStepID =
+      typeof draft.payload.project_step_id === "string" && draft.payload.project_step_id.trim()
+        ? draft.payload.project_step_id.trim()
+        : "";
+    setNewProjectStepID(resumedProjectStepID);
     setNewProjectContextItemIDs(resumedProjectContextIds);
     const resumedTitle = draft.payload.title ?? "";
     setDraftAutosaveBaseline(
@@ -843,6 +862,7 @@ export function useTaskCreateFlow() {
         // dirty bit (the next autosave intentionally clears those fields).
         parentId: "",
         projectId: resumedProjectID,
+        projectStepId: resumedProjectStepID,
         projectContextItemIds: resumedProjectContextIds,
         checklistInherit: false,
         checklistItems: draft.payload.checklist_items ?? [],
@@ -1016,6 +1036,8 @@ export function useTaskCreateFlow() {
     setNewTaskCursorModel,
     newProjectID,
     setNewProjectID,
+    newProjectStepID,
+    setNewProjectStepID,
     newProjectContextItemIDs,
     setNewProjectContextItemIDs,
     newSchedule,

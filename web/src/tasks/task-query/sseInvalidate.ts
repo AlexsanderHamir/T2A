@@ -9,6 +9,8 @@
  * Wire shape:
  *   { "type": "task_created" | "task_updated" | "task_deleted",
  *     "id": "<task uuid>" }
+ *   { "type": "project_step_created" | "project_step_updated" | "project_step_deleted",
+ *     "id": "<project uuid>" }
  *   { "type": "task_cycle_changed",
  *     "id": "<task uuid>", "cycle_id": "<cycle uuid>" }
  */
@@ -134,7 +136,10 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
   if (
     o.type === "project_created" ||
     o.type === "project_updated" ||
-    o.type === "project_deleted"
+    o.type === "project_deleted" ||
+    o.type === "project_step_created" ||
+    o.type === "project_step_updated" ||
+    o.type === "project_step_deleted"
   ) {
     return { kind: "project", projectId: id };
   }

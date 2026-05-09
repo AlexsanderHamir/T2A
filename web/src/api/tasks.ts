@@ -232,6 +232,7 @@ export async function createTask(input: {
   id?: string;
   draft_id?: string;
   project_id?: string;
+  project_step_id?: string;
   project_context_item_ids?: string[];
   parent_id?: string;
   checklist_inherit?: boolean;
@@ -270,6 +271,10 @@ export async function createTask(input: {
   const projectId = assertOptionalTaskPathId(input.project_id, "project_id");
   if (projectId !== undefined) {
     body.project_id = projectId;
+  }
+  const projectStepId = assertOptionalTaskPathId(input.project_step_id, "project_step_id");
+  if (projectStepId !== undefined) {
+    body.project_step_id = projectStepId;
   }
   if (input.project_context_item_ids !== undefined) {
     body.project_context_item_ids = input.project_context_item_ids;
@@ -400,6 +405,7 @@ export async function patchTask(
     priority?: Priority;
     task_type?: TaskType;
     project_id?: string | null;
+    project_step_id?: string | null;
     project_context_item_ids?: string[];
     parent_id?: string | null;
     checklist_inherit?: boolean;
@@ -429,6 +435,12 @@ export async function patchTask(
       patch.project_id === null
         ? null
         : assertTaskPathId(patch.project_id, "project_id");
+  }
+  if (patch.project_step_id !== undefined) {
+    body.project_step_id =
+      patch.project_step_id === null
+        ? null
+        : assertTaskPathId(patch.project_step_id, "project_step_id");
   }
   if (patch.project_context_item_ids !== undefined) {
     body.project_context_item_ids = patch.project_context_item_ids;
