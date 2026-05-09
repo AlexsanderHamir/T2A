@@ -55,16 +55,6 @@ export function ProjectDetailPage() {
           <div className="pd__header-cluster">
             <div className="pd__header-title" aria-label="Current project">
               <h1>{project.data.name}</h1>
-              <span
-                className={
-                  project.data.status === "archived"
-                    ? "pd__badge pd__badge--muted"
-                    : "pd__badge pd__badge--live"
-                }
-              >
-                <span className="pd__badge-dot" aria-hidden="true" />
-                {project.data.status}
-              </span>
             </div>
             {!isDefaultProject ? (
               <button
