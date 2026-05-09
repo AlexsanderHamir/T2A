@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PRIORITIES, STATUSES } from "@/types";
-import { priorityPillClass, statusPillClass } from "./taskPillClasses";
+import { priorityDotClass, priorityPillClass, statusPillClass } from "./taskPillClasses";
 
 describe("taskPillClasses", () => {
   it("maps each status to a stable pill class token", () => {
@@ -16,6 +16,12 @@ describe("taskPillClasses", () => {
       expect(priorityPillClass(p)).toBe(
         `cell-pill cell-pill--priority cell-pill--priority-${p}`,
       );
+    }
+  });
+
+  it("maps each priority to a stable dot class token", () => {
+    for (const p of PRIORITIES) {
+      expect(priorityDotClass(p)).toBe(`task-list-priority-dot task-list-priority-dot--${p}`);
     }
   });
 });

@@ -5,10 +5,12 @@ import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
 import {
-  priorityPillClass,
+  priorityDotClass,
   statusNeedsUserInput,
   statusPillClass,
 } from "../../../task-display";
+import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons";
+import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
 import { previewTextFromPrompt } from "../../../task-prompt";
 import {
   EmptyState,
@@ -64,6 +66,8 @@ type Props = {
    * don't need bulk actions.
    */
   selection?: BulkSelectionProps;
+  /** Maps `task.project_id` to a label for the Project column (e.g. from `GET /projects`). */
+  projectNameById?: Record<string, string>;
 };
 
 export function TaskListDataTable({
@@ -76,6 +80,7 @@ export function TaskListDataTable({
   onEdit,
   onRequestDelete,
   selection,
+  projectNameById = {},
 }: Props) {
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null);
 
@@ -233,7 +238,7 @@ export function TaskListDataTable({
             <th scope="col">Title</th>
             <th scope="col">Status</th>
             <th scope="col">Priority</th>
-            <th scope="col">Prompt</th>
+            <th scope="col">Project</th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
@@ -244,7 +249,7 @@ export function TaskListDataTable({
                 <EmptyState
                   className="empty-state--in-table empty-state--task-list-fresh"
                   title="No tasks yet"
-                  description="Use New task to add one. Status, priority, and prompt update as the worker runs."
+                  description="Use New task to add one. Status, priority, and project show here as work runs."
                   action={emptyListAction}
                 />
               </td>
@@ -263,6 +268,22 @@ export function TaskListDataTable({
           ) : (
             rowsToRender.map(({ task: t, isEntering, isExiting }) => {
               const promptPreview = previewTextFromPrompt(t.initial_prompt);
+              const projectLabel =
+                t.project_id != null && t.project_id !== ""
+                  ? projectNameById[t.project_id]
+                  : undefined;
+              const hasProject = Boolean(
+                t.project_id != null &&
+                  t.project_id !== "" &&
+                  projectLabel != null &&
+                  projectLabel !== "",
+              );
+              const titleSubtitle = taskListRowSubtitle({
+                depth: t.depth,
+                hasProject,
+                projectStepId: t.project_step_id,
+                promptPreview,
+              });
               const rowSelected =
                 !isExiting && selection ? selection.isSelected(t.id) : false;
               const rowClass = [
@@ -297,70 +318,83 @@ export function TaskListDataTable({
                     </td>
                   ) : null}
                   <td className="cell-title">
-                    <Link
-                      to={`/tasks/${t.id}`}
-                      className={
-                        t.depth > 0
-                          ? "cell-title-link cell-title-link--tree"
-                          : "cell-title-link"
-                      }
-                      aria-label={`Open task details: ${t.title}`}
-                      style={
-                        t.depth > 0
-                          ? ({
-                              "--task-list-tree-depth": String(t.depth),
-                            } as CSSProperties)
-                          : undefined
-                      }
-                    >
-                      {t.depth > 0 ? (
-                        <span className="task-subtask-marker" aria-hidden>
-                          └{" "}
-                        </span>
-                      ) : null}
-                      <span className="cell-title-text">{t.title}</span>
-                      <span
-                        className="cell-title-open-hint"
-                        aria-hidden="true"
+                    <div className="cell-title-stack">
+                      <Link
+                        to={`/tasks/${t.id}`}
+                        className={
+                          t.depth > 0
+                            ? "cell-title-link cell-title-link--tree"
+                            : "cell-title-link"
+                        }
+                        aria-label={`Open task details: ${t.title}`}
+                        style={
+                          t.depth > 0
+                            ? ({
+                                "--task-list-tree-depth": String(t.depth),
+                              } as CSSProperties)
+                            : undefined
+                        }
                       >
-                        →
-                      </span>
-                    </Link>
+                        {t.depth > 0 ? (
+                          <span className="task-subtask-marker" aria-hidden>
+                            └{" "}
+                          </span>
+                        ) : null}
+                        <span className="cell-title-text cell-title-text--primary">
+                          {t.title}
+                        </span>
+                        <span
+                          className="cell-title-open-hint"
+                          aria-hidden="true"
+                        >
+                          →
+                        </span>
+                      </Link>
+                      {titleSubtitle ? (
+                        <div className="cell-title-sub">{titleSubtitle}</div>
+                      ) : null}
+                    </div>
                   </td>
-                  <td>
+                  <td className="cell-status">
                     <span
-                      className={statusPillClass(t.status)}
+                      className={`${statusPillClass(t.status)} cell-pill--status-table`}
                       data-needs-user={
                         statusNeedsUserInput(t.status) ? "true" : undefined
                       }
                     >
-                      {t.status}
+                      {statusListLabel(t.status)}
                     </span>
                   </td>
-                  <td>
-                    <span className={priorityPillClass(t.priority)}>
-                      {t.priority}
-                    </span>
+                  <td className="cell-priority">
+                    <span
+                      className={priorityDotClass(t.priority)}
+                      title={`Priority: ${t.priority}`}
+                      aria-label={`Priority ${t.priority}`}
+                    />
                   </td>
-                  <td>
-                    <div className="prompt-preview" title={promptPreview}>
-                      {promptPreview || "—"}
-                    </div>
+                  <td className="cell-project">
+                    {projectLabel ? (
+                      <span className="task-list-project-badge">
+                        {projectLabel}
+                      </span>
+                    ) : (
+                      <span className="task-list-project-empty">—</span>
+                    )}
                   </td>
-                  <td>
-                    <div className="actions">
+                  <td className="cell-actions">
+                    <div className="task-list-row-actions">
                       <button
                         type="button"
-                        className="secondary btn-table"
+                        className="task-list-icon-btn task-list-icon-btn--edit"
                         aria-label={`Edit task "${t.title}"`}
                         onClick={() => onEdit(t)}
                         disabled={saving || isExiting}
                       >
-                        Edit
+                        <TaskListEditGlyph />
                       </button>
                       <button
                         type="button"
-                        className="danger btn-table"
+                        className="task-list-icon-btn task-list-icon-btn--delete"
                         aria-label={`Delete task "${t.title}"`}
                         onClick={() =>
                           onRequestDelete({
@@ -370,7 +404,7 @@ export function TaskListDataTable({
                         }
                         disabled={saving || isExiting}
                       >
-                        Delete
+                        <TaskListDeleteGlyph />
                       </button>
                     </div>
                   </td>

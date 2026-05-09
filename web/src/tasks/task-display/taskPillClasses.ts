@@ -9,3 +9,8 @@ export function statusPillClass(status: Status): string {
 export function priorityPillClass(priority: Priority): string {
   return `cell-pill cell-pill--priority cell-pill--priority-${priority}`;
 }
+
+/** Home list: single dot; pair with `title` / `aria-label` for the word. */
+export function priorityDotClass(priority: Priority): string {
+  return `task-list-priority-dot task-list-priority-dot--${priority}`;
+}

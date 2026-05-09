@@ -21,7 +21,7 @@ export function TaskListTableSkeleton({ caption }: Props) {
               <th scope="col">Title</th>
               <th scope="col">Status</th>
               <th scope="col">Priority</th>
-              <th scope="col">Prompt</th>
+              <th scope="col">Project</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
@@ -38,7 +38,7 @@ export function TaskListTableSkeleton({ caption }: Props) {
                   <span className="skeleton-block skeleton-block--pill skeleton-block--pill-narrow" />
                 </td>
                 <td>
-                  <span className="skeleton-block skeleton-block--prompt" />
+                  <span className="skeleton-block skeleton-block--project" />
                 </td>
                 <td>
                   <div className="task-list-skeleton-actions">

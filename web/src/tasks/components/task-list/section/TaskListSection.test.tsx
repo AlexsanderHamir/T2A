@@ -138,7 +138,7 @@ describe("TaskListSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("table", {
-        name: /all tasks: title, status, priority, prompt preview, and row actions/i,
+        name: /all tasks: title with context line, status, priority, project, and row actions/i,
       }),
     ).toBeInTheDocument();
   });
@@ -344,6 +344,9 @@ describe("TaskListSection", () => {
     );
     expect(screen.getByText("Moat task")).toBeInTheDocument();
     expect(screen.getByText("Unassigned task")).toBeInTheDocument();
+    expect(document.querySelector(".task-list-project-badge")).toHaveTextContent(
+      "Context moat",
+    );
 
     await user.click(screen.getByRole("combobox", { name: /^project$/i }));
     await user.click(screen.getByRole("option", { name: /^context moat$/i }));

@@ -86,7 +86,7 @@ type Props = {
 const LOADING_STATUS_DELAY_MS = 220;
 
 const TASK_LIST_TABLE_CAPTION =
-  "All tasks: title, status, priority, prompt preview, and row actions.";
+  "All tasks: title with context line, status, priority, project, and row actions.";
 
 export const TaskListSection = memo(function TaskListSection({
   tasks,
@@ -111,6 +111,14 @@ export const TaskListSection = memo(function TaskListSection({
 }: Props) {
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
+
+  const projectNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of projectFilterOptions) {
+      m[p.id] = p.name;
+    }
+    return m;
+  }, [projectFilterOptions]);
 
   const [statusFilter, setStatusFilter] =
     useState<TaskListClientStatusFilter>("all");
@@ -333,6 +341,7 @@ export const TaskListSection = memo(function TaskListSection({
             emptyListAction={emptyListAction}
             onEdit={onEdit}
             onRequestDelete={onRequestDelete}
+            projectNameById={projectNameById}
             selection={{
               isSelected: selection.isSelected,
               onRowToggle: selection.toggle,

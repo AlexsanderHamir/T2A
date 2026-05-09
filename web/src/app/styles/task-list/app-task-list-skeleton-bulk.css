@@ -75,8 +75,10 @@
   width: 3.25rem;
 }
 
-.skeleton-block--prompt {
-  width: min(90%, 10rem);
+.skeleton-block--project {
+  width: min(72%, 7.5rem);
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-block--btn {
