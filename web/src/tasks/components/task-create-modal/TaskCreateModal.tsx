@@ -217,17 +217,9 @@ export function TaskCreateModal({
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
           <header className="task-create-modal-header">
             <div className="task-create-modal-header__text">
-              <h2 id="task-create-modal-title" className="term-arrow">
-                <span>New task</span>
+              <h2 id="task-create-modal-title" className="task-create-modal-title">
+                New task
               </h2>
-              {/* One-line lede in the existing terminal aesthetic — gives the
-                 modal a sense of identity instead of starting cold on the form. */}
-              <p
-                className="task-create-modal-lede term-prompt muted"
-                aria-hidden="true"
-              >
-                <span>compose --next-up</span>
-              </p>
             </div>
             {onApplyTestScenario ? (
               <TestScenariosTrigger

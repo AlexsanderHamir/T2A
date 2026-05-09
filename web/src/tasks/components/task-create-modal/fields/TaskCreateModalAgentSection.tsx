@@ -119,11 +119,8 @@ export function TaskCreateModalAgentSection({
       }
       aria-labelledby={AGENT_HEADING_ID}
     >
-      <h3
-        id={AGENT_HEADING_ID}
-        className="task-create-subtasks-heading term-prompt"
-      >
-        <span>Agent</span>
+      <h3 id={AGENT_HEADING_ID} className="task-create-subtasks-heading">
+        Agent
       </h3>
       <div className="task-create-agent-panel">
         {lockRunner && !isModelDialog ? (

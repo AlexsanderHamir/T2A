@@ -84,21 +84,9 @@ export function TaskDraftsPage({ app }: Props) {
     <section className="panel task-list-section-panel task-detail-content--enter">
       <header className="task-list-section-head">
         <div className="task-list-section-head__text">
-          <h2 className="term-arrow">
-            <span>Task drafts</span>
+          <h2 id="task-drafts-heading" className="task-list-section-title">
+            Task drafts
           </h2>
-          {/* One-line terminal lede mirrors the create modal
-              (`$ compose --next-up`), All Tasks (`$ query --next-up
-              --filter --review`), and Settings (`$ tune --runtime
-              --workspace --agent`) so the four primary surfaces feel
-              like siblings. `aria-hidden` because the heading already
-              names the page for assistive tech. */}
-          <p
-            className="task-list-section-lede term-prompt muted"
-            aria-hidden="true"
-          >
-            <span>resume --or-remove</span>
-          </p>
         </div>
         {hasDrafts ? (
           <div className="task-list-section-actions">
@@ -143,7 +131,7 @@ export function TaskDraftsPage({ app }: Props) {
             ) : !hasDrafts ? (
               <EmptyState
                 title="No saved drafts"
-                description="Drafts auto-save while you compose a new task. Anything you start that you don't dispatch right away lands here, ready to pick back up the moment you have a minute."
+                description="Autosaved while you work."
                 className="empty-state--task-list-fresh"
                 action={{
                   label: "Create a task",

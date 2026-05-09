@@ -100,8 +100,7 @@ export function DraftResumeModalDraftStack({
               </div>
               <p className="draft-resume-empty__title">No saved drafts yet.</p>
               <p className="draft-resume-empty__text">
-                Start fresh to compose your first task. Any interrupted draft
-                will return here automatically.
+                Start fresh — interrupted work autosaves here.
               </p>
             </div>
           ) : (

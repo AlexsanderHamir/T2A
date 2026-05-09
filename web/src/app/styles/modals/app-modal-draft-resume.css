@@ -19,36 +19,16 @@
   flex-direction: column;
   gap: var(--space-4);
   padding: 1.35rem 1.5rem 1.5rem;
-  background:
-    linear-gradient(
-      180deg,
-      var(--bg-elevated) 0%,
-      color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-page)) 100%
-    );
+  background: var(--bg-elevated);
 }
 
-.modal-sheet--draft-resume::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--brand-border-soft) 12%,
-    var(--brand) 50%,
-    var(--brand-border-soft) 88%,
-    transparent 100%
-  );
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.modal-sheet--draft-resume .term-arrow::before,
-.modal-sheet--draft-resume .term-prompt::before {
-  opacity: 0.78;
+.draft-resume-modal-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .draft-resume-header {
@@ -70,13 +50,6 @@
 
 .draft-resume-header h2 {
   margin: 0;
-}
-
-.draft-resume-lede {
-  margin: 0;
-  font-size: var(--text-help);
-  letter-spacing: 0.005em;
-  opacity: 0.85;
 }
 
 .draft-resume-subtitle {

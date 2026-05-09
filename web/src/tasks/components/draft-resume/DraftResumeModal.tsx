@@ -79,12 +79,9 @@ export function DraftResumeModal({
       <section className="panel modal-sheet modal-sheet--edit modal-sheet--draft-resume">
         <header className="draft-resume-header">
           <div className="draft-resume-header__text">
-            <h2 id="draft-resume-modal-title" className="term-arrow">
-              <span>Resume a draft or start fresh</span>
+            <h2 id="draft-resume-modal-title" className="draft-resume-modal-title">
+              Resume a draft or start fresh
             </h2>
-            <p className="draft-resume-lede term-prompt muted" aria-hidden="true">
-              <span>recover --draft --or-start-fresh</span>
-            </p>
             <p className="draft-resume-subtitle">
               Pick an existing draft to continue, or start a new one.
             </p>
