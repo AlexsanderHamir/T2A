@@ -27,7 +27,7 @@ describe("TaskDetailHeader", () => {
     );
     expect(screen.getByText("ready")).toBeInTheDocument();
     expect(screen.getByText("high")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /← all tasks/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^all tasks$/i })).toHaveAttribute(
       "href",
       "/",
     );

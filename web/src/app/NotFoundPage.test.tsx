@@ -21,7 +21,7 @@ describe("NotFoundPage", () => {
     await waitFor(() => {
       expect(document.title).toBe(`Page not found · ${DEFAULT_DOCUMENT_TITLE}`);
     });
-    expect(screen.getByRole("link", { name: /^← all tasks$/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^all tasks$/i })).toHaveAttribute(
       "href",
       "/",
     );

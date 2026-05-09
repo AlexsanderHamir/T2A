@@ -187,7 +187,7 @@ describe("App", () => {
       await screen.findByRole("heading", { name: /^page not found$/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /^← all tasks$/i }),
+      screen.getByRole("link", { name: /^all tasks$/i }),
     ).toHaveAttribute("href", "/");
   });
 
