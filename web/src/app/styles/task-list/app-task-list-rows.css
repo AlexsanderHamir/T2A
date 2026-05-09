@@ -42,7 +42,7 @@
 
 @media (hover: hover) {
   .task-list-table tbody tr.task-list-row:hover {
-    background: var(--chrome-fill-task-row-hover);
+    background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-elevated));
   }
 }
 
@@ -50,6 +50,14 @@
   .task-list-table tbody tr.task-list-row:hover {
     background: var(--neutral-fill-muted);
   }
+}
+
+.task-list-table th {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
 }
 
 .task-list-table .cell-title-link {
@@ -117,7 +125,7 @@
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-full);
   text-transform: capitalize;
-  border: 1px solid transparent;
+  border: none;
   /* When optimistic mutations or SSE patch a task's status/priority
      the class list changes in place; without a transition the pill
      snaps between hues, which reads as a jank frame. Reduced-motion

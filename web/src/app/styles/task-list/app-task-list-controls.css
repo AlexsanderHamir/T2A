@@ -3,42 +3,8 @@
   padding-bottom: min(14rem, 42vh);
 }
 
-/* —— Section panel polish — mirrors the create-modal treatment so the two
-   surfaces feel like siblings (same brand-tinted top accent strip, same
-   subtle vertical gradient, same rhythm). The base `.panel` styling stays
-   untouched; this scope kicks in only on the task-list shell. —— */
 .task-list-section-panel.panel {
-  background:
-    linear-gradient(
-      180deg,
-      var(--bg-elevated) 0%,
-      color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-page)) 100%
-    );
-}
-
-.task-list-section-panel.panel::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--brand-border-soft) 12%,
-    var(--brand) 50%,
-    var(--brand-border-soft) 88%,
-    transparent 100%
-  );
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-/* Lift the `$` glyph on this surface so the page heading reads as a
-   deliberate anchor, matching the same tweak on the create modal. */
-.task-list-section-panel .term-prompt::before {
-  opacity: 0.78;
+  background: var(--bg-elevated);
 }
 
 .task-list-section-head {
@@ -63,11 +29,12 @@
   margin: 0;
 }
 
-.task-list-section-lede {
-  margin: 0;
-  font-size: var(--text-help);
-  letter-spacing: 0.005em;
-  opacity: 0.85;
+.task-list-section-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .task-list-section-actions {
@@ -151,20 +118,18 @@
   color: var(--brand-text-strong);
 }
 
-/* —— Filters row — kept as a soft well, but with stronger visual rhythm so
-   it reads as a deliberate "filter shelf" rather than three loose
-   dropdowns + a search box. Matches the create modal's elevated wells. —— */
 .task-list-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-4);
   align-items: flex-end;
   margin-bottom: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg-subtle) 62%, var(--bg-elevated));
-  box-shadow: var(--shadow-chrome-xs-soft);
+  padding: 0 0 var(--space-3);
+  border: none;
+  border-bottom: 1px solid var(--border-hairline);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .task-list-filter-field {
@@ -192,7 +157,7 @@
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 
 /*
