@@ -28,6 +28,9 @@ const (
 	ProjectUpdated        TaskChangeType = "project_updated"
 	ProjectDeleted        TaskChangeType = "project_deleted"
 	ProjectContextChanged TaskChangeType = "project_context_changed"
+	ProjectStepCreated      TaskChangeType = "project_step_created"
+	ProjectStepUpdated      TaskChangeType = "project_step_updated"
+	ProjectStepDeleted      TaskChangeType = "project_step_deleted"
 	// SettingsChanged fires after PATCH /settings persists or the
 	// agent worker supervisor restarts as a result of a settings change.
 	// The event has no ID/CycleID; consumers refetch GET /settings to

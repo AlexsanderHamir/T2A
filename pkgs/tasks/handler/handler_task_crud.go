@@ -72,6 +72,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Priority:              body.Priority,
 		TaskType:              body.TaskType,
 		ProjectID:             body.ProjectID,
+		ProjectStepID:         body.ProjectStepID,
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
 		ParentID:              body.ParentID,
 		ChecklistInherit:      inherit,
@@ -91,6 +92,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.notifyChange(TaskCreated, t.ID)
 	if t.ParentID != nil && *t.ParentID != "" {
 		h.notifyChange(TaskUpdated, *t.ParentID)
+	}
+	if t.Status == domain.StatusDone && t.ProjectID != nil && strings.TrimSpace(*t.ProjectID) != "" {
+		h.notifyChange(ProjectStepUpdated, strings.TrimSpace(*t.ProjectID))
 	}
 	taskapiDomainTasksCreatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusCreated, tree)
@@ -176,6 +180,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Priority:              body.Priority,
 		TaskType:              body.TaskType,
 		Project:               projectFieldPatchToStore(body.ProjectID),
+		ProjectStep:           projectStepFieldPatchToStore(body.ProjectStepID),
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
 		ChecklistInherit:      body.ChecklistInherit,
 		PickupNotBefore:       pickupNotBeforePatchToStore(body.PickupNotBefore),
@@ -200,7 +205,8 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	by := actorFromRequest(r)
-	if _, err := h.store.Update(r.Context(), id, in, by); err != nil {
+	updated, err := h.store.Update(r.Context(), id, in, by)
+	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
@@ -210,6 +216,9 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
+	if updated != nil && updated.Status == domain.StatusDone && updated.ProjectID != nil && strings.TrimSpace(*updated.ProjectID) != "" {
+		h.notifyChange(ProjectStepUpdated, strings.TrimSpace(*updated.ProjectID))
+	}
 	taskapiDomainTasksUpdatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusOK, tree)
 }
@@ -252,6 +261,17 @@ func projectFieldPatchToStore(p patchProjectField) *store.ProjectFieldPatch {
 		return &store.ProjectFieldPatch{Clear: true}
 	}
 	return &store.ProjectFieldPatch{ID: p.SetID}
+}
+
+func projectStepFieldPatchToStore(p patchProjectStepField) *store.ProjectStepFieldPatch {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectStepFieldPatchToStore")
+	if !p.Defined {
+		return nil
+	}
+	if p.Clear {
+		return &store.ProjectStepFieldPatch{Clear: true}
+	}
+	return &store.ProjectStepFieldPatch{ID: p.SetID}
 }
 
 func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {

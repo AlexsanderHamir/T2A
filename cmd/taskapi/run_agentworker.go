@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -669,7 +670,22 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *hand
 		"tick_interval", iv.String())
 
 	reconcileCtx, reconcileCancel := context.WithCancel(ctx)
-	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv)
+	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv, func(sweepCtx context.Context, st *store.Store) error {
+		if st == nil {
+			return nil
+		}
+		ids, err := st.SweepProjectStepGates(sweepCtx, time.Now().UTC())
+		if err != nil || hub == nil {
+			return err
+		}
+		for _, pid := range ids {
+			if strings.TrimSpace(pid) == "" {
+				continue
+			}
+			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectStepUpdated, ID: strings.TrimSpace(pid)})
+		}
+		return nil
+	})
 
 	sup := newAgentWorkerSupervisor(ctx, taskStore, agentQueue, hub)
 	if err := sup.Start(ctx); err != nil {

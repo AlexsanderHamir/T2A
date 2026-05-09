@@ -19,6 +19,7 @@ type taskCreateJSON struct {
 	Priority              domain.Priority `json:"priority"`
 	TaskType              domain.TaskType `json:"task_type"`
 	ProjectID             *string         `json:"project_id"`
+	ProjectStepID         *string         `json:"project_step_id"`
 	ProjectContextItemIDs []string        `json:"project_context_item_ids"`
 	ParentID              *string         `json:"parent_id"`
 	ChecklistInherit      *bool           `json:"checklist_inherit"`
@@ -58,6 +59,7 @@ type taskPatchJSON struct {
 	Priority              *domain.Priority          `json:"priority"`
 	TaskType              *domain.TaskType          `json:"task_type"`
 	ProjectID             patchProjectField         `json:"project_id"`
+	ProjectStepID         patchProjectStepField     `json:"project_step_id"`
 	ProjectContextItemIDs *[]string                 `json:"project_context_item_ids"`
 	ParentID              patchParentField          `json:"parent_id"`
 	ChecklistInherit      *bool                     `json:"checklist_inherit"`

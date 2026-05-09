@@ -1,6 +1,11 @@
 package handler
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import (
+	"log/slog"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+)
 
 type projectCreateJSON struct {
 	ID             string `json:"id"`
@@ -69,4 +74,27 @@ type projectContextEdgePatchJSON struct {
 
 func (p projectContextEdgePatchJSON) isEmpty() bool {
 	return p.Relation == nil && p.Strength == nil && p.Note == nil
+}
+
+type projectStepCreateJSON struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	SortOrder   *int   `json:"sort_order"`
+}
+
+type projectStepPatchJSON struct {
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+	SortOrder   *int    `json:"sort_order"`
+	GateAction  *string `json:"gate_action"`
+}
+
+func (p projectStepPatchJSON) isEmpty() bool {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectStepPatchJSON.isEmpty")
+	return p.Title == nil && p.Description == nil && p.SortOrder == nil && p.GateAction == nil
+}
+
+type projectStepsListResponse struct {
+	Steps []domain.ProjectStep `json:"steps"`
 }

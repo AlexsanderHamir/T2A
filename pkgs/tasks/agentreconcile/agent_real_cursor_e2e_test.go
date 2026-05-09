@@ -176,7 +176,7 @@ func TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten(t *testing.T
 	reconcileDone := make(chan struct{})
 	go func() {
 		defer close(reconcileDone)
-		agents.RunReconcileLoop(reconcileCtx, st, q, e2eRealCursorReconcileTick)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eRealCursorReconcileTick, nil)
 	}()
 
 	workerCtx, workerCancel := context.WithCancel(rootCtx)
@@ -365,7 +365,7 @@ func TestAgentE2E_RealCursor_cancelMidRunMarksCycleCancelledByOperator(t *testin
 	reconcileDone := make(chan struct{})
 	go func() {
 		defer close(reconcileDone)
-		agents.RunReconcileLoop(reconcileCtx, st, q, e2eRealCursorReconcileTick)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eRealCursorReconcileTick, nil)
 	}()
 
 	workerCtx, workerCancel := context.WithCancel(rootCtx)

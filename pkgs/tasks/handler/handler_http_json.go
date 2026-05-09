@@ -144,6 +144,8 @@ func storeErrorClientMessage(err error) string {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return "not found"
+	case errors.Is(err, domain.ErrProjectStepHasTasks):
+		return "step has tasks"
 	case errors.Is(err, domain.ErrConflict):
 		return "task id already exists"
 	case errors.Is(err, domain.ErrInvalidInput):
@@ -211,7 +213,7 @@ func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string)
 		code = http.StatusNotFound
 	case errors.Is(err, domain.ErrInvalidInput):
 		code = http.StatusBadRequest
-	case errors.Is(err, domain.ErrConflict):
+	case errors.Is(err, domain.ErrConflict), errors.Is(err, domain.ErrProjectStepHasTasks):
 		code = http.StatusConflict
 	}
 	msg = storeErrorClientMessage(err)

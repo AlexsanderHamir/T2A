@@ -27,6 +27,37 @@ type patchProjectField struct {
 	SetID   string
 }
 
+// patchProjectStepField decodes optional JSON project_step_id with the
+// same omission / null / string semantics as patchProjectField.
+type patchProjectStepField struct {
+	Defined bool
+	Clear   bool
+	SetID   string
+}
+
+func (p *patchProjectStepField) UnmarshalJSON(b []byte) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.patchProjectStepField.UnmarshalJSON")
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 {
+		return nil
+	}
+	p.Defined = true
+	if bytes.Equal(b, []byte("null")) {
+		p.Clear = true
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return errors.New("project_step_id must not be empty")
+	}
+	p.SetID = s
+	return nil
+}
+
 func (p *patchProjectField) UnmarshalJSON(b []byte) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.patchProjectField.UnmarshalJSON")
 	b = bytes.TrimSpace(b)

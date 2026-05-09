@@ -68,7 +68,7 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	reconcileDone := make(chan struct{})
 	go func() {
 		defer close(reconcileDone)
-		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick, nil)
 	}()
 
 	workerCtx, workerCancel := context.WithCancel(rootCtx)

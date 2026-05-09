@@ -34,6 +34,7 @@ type settingsResponse struct {
 	DisplayTimezone            string `json:"display_timezone"`
 	OptimisticMutationsEnabled bool   `json:"optimistic_mutations_enabled"`
 	SSEReplayEnabled           bool   `json:"sse_replay_enabled"`
+	ProjectStepGateGraceSeconds int   `json:"project_step_gate_grace_seconds"`
 	UpdatedAt                  string `json:"updated_at,omitempty"`
 }
 
@@ -55,6 +56,7 @@ type settingsPatchBody struct {
 	DisplayTimezone            *string `json:"display_timezone,omitempty"`
 	OptimisticMutationsEnabled *bool   `json:"optimistic_mutations_enabled,omitempty"`
 	SSEReplayEnabled           *bool   `json:"sse_replay_enabled,omitempty"`
+	ProjectStepGateGraceSeconds *int   `json:"project_step_gate_grace_seconds,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -150,7 +152,8 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		CursorModel:             body.CursorModel,
 		MaxRunDurationSeconds:   body.MaxRunDurationSeconds,
 		AgentPickupDelaySeconds: body.AgentPickupDelaySeconds,
-		DisplayTimezone:         body.DisplayTimezone,
+		DisplayTimezone:             body.DisplayTimezone,
+		ProjectStepGateGraceSeconds: body.ProjectStepGateGraceSeconds,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
 	}
@@ -322,7 +325,8 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		AgentPickupDelaySeconds:    cfg.AgentPickupDelaySeconds,
 		DisplayTimezone:            cfg.DisplayTimezone,
 		OptimisticMutationsEnabled: cfg.OptimisticMutationsEnabled,
-		SSEReplayEnabled:           cfg.SSEReplayEnabled,
+		SSEReplayEnabled:            cfg.SSEReplayEnabled,
+		ProjectStepGateGraceSeconds: cfg.ProjectStepGateGraceSeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

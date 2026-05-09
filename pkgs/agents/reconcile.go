@@ -81,7 +81,9 @@ func ReconcileReadyTasksNotQueued(ctx context.Context, st *store.Store, q *Memor
 
 // RunReconcileLoop invokes ReconcileReadyTasksNotQueued once immediately, then every tickInterval
 // while ctx is active. When tickInterval <= 0, only the initial run executes.
-func RunReconcileLoop(ctx context.Context, st *store.Store, q *MemoryQueue, tickInterval time.Duration) {
+// When afterEach is non-nil it runs after every successful reconcile pass (including the initial run);
+// failures are logged and do not stop the loop.
+func RunReconcileLoop(ctx context.Context, st *store.Store, q *MemoryQueue, tickInterval time.Duration, afterEach func(context.Context, *store.Store) error) {
 	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.RunReconcileLoop", "tick_interval", tickInterval.String())
 	runOnce := func() {
 		res, err := ReconcileReadyTasksNotQueued(ctx, st, q, 200)
@@ -92,6 +94,11 @@ func RunReconcileLoop(ctx context.Context, st *store.Store, q *MemoryQueue, tick
 		slog.Info("ready task agent reconcile done", "cmd", agentsLogCmd, "operation", "agents.reconcile_once",
 			"scanned", res.Scanned, "enqueued", res.Enqueued, "skipped_already_queued", res.SkippedAlreadyQueued,
 			"stopped_on_queue_full", res.StoppedOnQueueFull)
+		if afterEach != nil {
+			if err := afterEach(ctx, st); err != nil {
+				slog.Warn("reconcile after-hook failed", "cmd", agentsLogCmd, "operation", "agents.reconcile_after_hook", "err", err)
+			}
+		}
 	}
 	runOnce()
 	if tickInterval <= 0 {

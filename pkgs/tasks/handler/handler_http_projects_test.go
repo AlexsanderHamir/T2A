@@ -197,3 +197,109 @@ func postProjectJSON(t *testing.T, srv *httptest.Server, body string, want int) 
 	}
 	return project
 }
+
+func TestHTTP_projectStepsListCreatePatchDelete(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	project := postProjectJSON(t, srv, `{"name":"StepsProj"}`, http.StatusCreated)
+
+	stepRes, err := http.Post(srv.URL+"/projects/"+project.ID+"/steps", "application/json", strings.NewReader(`{"title":"Alpha"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stepBytes, err := io.ReadAll(stepRes.Body)
+	if cerr := stepRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stepRes.StatusCode != http.StatusCreated {
+		t.Fatalf("create step status %d body %s", stepRes.StatusCode, stepBytes)
+	}
+	var step domain.ProjectStep
+	if err := json.Unmarshal(stepBytes, &step); err != nil {
+		t.Fatal(err)
+	}
+	if step.ProjectID != project.ID || strings.TrimSpace(step.Title) != "Alpha" {
+		t.Fatalf("step = %#v", step)
+	}
+
+	listRes, err := http.Get(srv.URL + "/projects/" + project.ID + "/steps")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listBytes, err := io.ReadAll(listRes.Body)
+	if cerr := listRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if listRes.StatusCode != http.StatusOK {
+		t.Fatalf("list steps status %d body %s", listRes.StatusCode, listBytes)
+	}
+	var listEnvelope struct {
+		Steps []domain.ProjectStep `json:"steps"`
+	}
+	if err := json.Unmarshal(listBytes, &listEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	if len(listEnvelope.Steps) != 1 {
+		t.Fatalf("steps len = %d", len(listEnvelope.Steps))
+	}
+
+	getRes, err := http.Get(srv.URL + "/projects/" + project.ID + "/steps/" + step.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	getBytes, err := io.ReadAll(getRes.Body)
+	if cerr := getRes.Body.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if getRes.StatusCode != http.StatusOK {
+		t.Fatalf("get step status %d body %s", getRes.StatusCode, getBytes)
+	}
+
+	patchReq, err := http.NewRequest(http.MethodPatch, srv.URL+"/projects/"+project.ID+"/steps/"+step.ID, strings.NewReader(`{"title":"Alpha renamed"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchRes, err := http.DefaultClient.Do(patchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchBytes, err := io.ReadAll(patchRes.Body)
+	if cerr := patchRes.Body.Close(); cerr != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if patchRes.StatusCode != http.StatusOK {
+		t.Fatalf("patch step status %d body %s", patchRes.StatusCode, patchBytes)
+	}
+
+	delReq, err := http.NewRequest(http.MethodDelete, srv.URL+"/projects/"+project.ID+"/steps/"+step.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delRes, err := http.DefaultClient.Do(delReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(io.Discard, delRes.Body); err != nil {
+		t.Fatal(err)
+	}
+	if cerr := delRes.Body.Close(); cerr != nil {
+		t.Fatal(err)
+	}
+	if delRes.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete step status %d", delRes.StatusCode)
+	}
+}
