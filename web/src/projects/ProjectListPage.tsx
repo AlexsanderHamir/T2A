@@ -127,7 +127,7 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
   return (
     <Link
       to={to}
-      className={isArchived ? "pl__row pl__row--archived" : "pl__row"}
+      className={isArchived ? "pl__row pl__row--archived" : "pl__row pl__row--active"}
       style={{ animationDelay: `${index * 40}ms` }}
       aria-label={openLabel}
     >

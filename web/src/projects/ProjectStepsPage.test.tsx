@@ -58,9 +58,28 @@ describe("ProjectStepsPage", () => {
       if (
         u.includes(`/projects/${testProject.id}`) &&
         !u.includes("/steps") &&
-        !u.includes("/context")
+        !u.includes("/context") &&
+        !u.includes("/goals")
       ) {
         return jsonResponse(testProject);
+      }
+      if (u.includes(`/projects/${testProject.id}/goals`) && !u.match(/\/goals\/[^/?]+/)) {
+        return jsonResponse({
+          goals: [
+            {
+              id: "goal-1",
+              project_id: testProject.id,
+              title: "Security milestone",
+              description: "",
+              depends_on_goal_ids: [],
+              gate_status: "active",
+              gate_hold: false,
+              criteria: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+        });
       }
       return new Response(`unexpected ${u}`, { status: 500 });
     });
@@ -72,6 +91,22 @@ describe("ProjectStepsPage", () => {
       },
     });
     queryClient.setQueryData(projectQueryKeys.detail(testProject.id), testProject);
+    queryClient.setQueryData(projectQueryKeys.goals(testProject.id), {
+      goals: [
+        {
+          id: "goal-1",
+          project_id: testProject.id,
+          title: "Security milestone",
+          description: "",
+          depends_on_goal_ids: [],
+          gate_status: "active",
+          gate_hold: false,
+          criteria: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+    });
     queryClient.setQueryData(projectQueryKeys.steps(testProject.id, "goal-1"), {
       steps: [
         {
@@ -116,13 +151,16 @@ describe("ProjectStepsPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /Stages and completion/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Security milestone · Steps", hidden: true }),
+      ).toBeInTheDocument();
     });
+    expect(screen.getAllByText("Security milestone").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("JWT implementation")).toBeInTheDocument();
     expect(screen.getByText("Add rotation job")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Back to project/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Back to goals/i })).toHaveAttribute(
       "href",
-      `/projects/${testProject.id}`,
+      `/projects/${testProject.id}/goals`,
     );
 
     await userEvent.click(screen.getByRole("button", { name: /^New task$/ }));
@@ -135,5 +173,61 @@ describe("ProjectStepsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Add step$/ }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Add a step/i })).toBeInTheDocument();
+  });
+
+  it("shows Back to project when steps route has no goal_id", async () => {
+    const tasksApp = makeTasksApp();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: FetchInput) => {
+      const u = requestUrl(input);
+      if (u.startsWith("/tasks?")) {
+        return jsonResponse({ tasks: [], limit: 200, offset: 0, has_more: false });
+      }
+      if (u.includes(`/projects/${testProject.id}/goals`)) {
+        return jsonResponse({ goals: [] });
+      }
+      if (
+        u.includes(`/projects/${testProject.id}`) &&
+        !u.includes("/steps") &&
+        !u.includes("/context")
+      ) {
+        return jsonResponse(testProject);
+      }
+      return new Response(`unexpected ${u}`, { status: 500 });
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0, staleTime: Infinity },
+        mutations: { retry: false },
+      },
+    });
+    queryClient.setQueryData(projectQueryKeys.detail(testProject.id), testProject);
+
+    render(
+      <ModalStackProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter
+            future={ROUTER_FUTURE_FLAGS}
+            initialEntries={[`/projects/${testProject.id}/steps`]}
+          >
+            <Routes>
+              <Route
+                path="/projects/:projectId/steps"
+                element={<ProjectStepsPage app={tasksApp} />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ModalStackProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Choose a goal" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: /Back to project/i })).toHaveAttribute(
+      "href",
+      `/projects/${testProject.id}`,
+    );
   });
 });

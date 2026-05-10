@@ -101,8 +101,8 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
     enabled: Boolean(projectId),
   });
 
-  const goalsPicker = useProjectGoals(projectId, {
-    enabled: Boolean(projectId && !goalId),
+  const projectGoalsQuery = useProjectGoals(projectId, {
+    enabled: Boolean(projectId),
   });
 
   const stepsQuery = useQuery({
@@ -118,8 +118,22 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
     enabled: Boolean(projectId),
   });
 
-  const title = project.data?.name ? `${project.data.name} · Steps` : "Project steps";
-  useDocumentTitle(title);
+  const stepsCrumbPrimaryName = useMemo(() => {
+    if (!goalId) return project.data?.name ?? "";
+    const goals = projectGoalsQuery.data?.goals;
+    if (!goals) return "";
+    const g = goals.find((x) => x.id === goalId);
+    return g?.title?.trim() || "Goal";
+  }, [goalId, project.data?.name, projectGoalsQuery.data?.goals]);
+
+  const stepsDocumentTitle = useMemo(() => {
+    if (!project.data?.name) return "Project steps";
+    if (goalId && stepsCrumbPrimaryName)
+      return `${stepsCrumbPrimaryName} · Steps · ${project.data.name}`;
+    return `${project.data.name} · Steps`;
+  }, [project.data?.name, goalId, stepsCrumbPrimaryName]);
+
+  useDocumentTitle(stepsDocumentTitle);
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: projectQueryKeys.detail(projectId) });
@@ -199,39 +213,38 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
 
   if (!projectId) {
     return (
-      <section className="panel task-detail-panel">
-        <EmptyState
-          title="Missing project id"
-          description="Choose a project from the project list."
-          density="compact"
-          hideIcon
-        />
+      <section className="panel ps">
+        <EmptyState title="Missing project id" description="" density="compact" hideIcon />
       </section>
     );
   }
 
+  const projectBase = `/projects/${encodeURIComponent(projectId)}`;
+  const stepsBackHref = goalId ? `${projectBase}/goals` : projectBase;
+  const stepsBackLabel = goalId ? "Back to goals" : "Back to project";
+
   if (!goalId) {
     return (
-      <section className="panel task-detail-panel ps">
-        <header className="ps__header">
-          <Link to={`/projects/${encodeURIComponent(projectId)}`} className="pd__back project-context-back-link">
+      <section className="panel ps">
+        <header className="pg__header">
+          <Link to={stepsBackHref} className="pg__back">
             <span aria-hidden="true">&#8249;</span>
-            Back to project
+            {stepsBackLabel}
           </Link>
         </header>
         <h2 className="ps__title">Choose a goal</h2>
-        <p className="ps__subtitle muted">
-          Steps are scoped to a goal. Pick one below or{" "}
-          <Link to={`/projects/${encodeURIComponent(projectId)}/goals`}>manage goals</Link>.
+        <p className="muted stack-tight-zero">
+          Pick a goal, or{" "}
+          <Link to={`/projects/${encodeURIComponent(projectId)}/goals`}>open goals</Link>.
         </p>
-        {goalsPicker.isLoading ? <p className="muted">Loading goals…</p> : null}
-        {goalsPicker.error ? (
+        {projectGoalsQuery.isLoading ? <p className="muted">Loading goals…</p> : null}
+        {projectGoalsQuery.error ? (
           <p className="pd__error-message" role="alert">
-            {goalsPicker.error.message}
+            {projectGoalsQuery.error.message}
           </p>
         ) : null}
         <ul className="ps__list">
-          {(goalsPicker.data?.goals ?? []).map((g) => (
+          {(projectGoalsQuery.data?.goals ?? []).map((g) => (
             <li key={g.id} className="ps__card">
               <Link
                 className="ps__row-link"
@@ -245,10 +258,10 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
             </li>
           ))}
         </ul>
-        {(goalsPicker.data?.goals ?? []).length === 0 && !goalsPicker.isLoading ? (
+        {(projectGoalsQuery.data?.goals ?? []).length === 0 && !projectGoalsQuery.isLoading ? (
           <EmptyState
             title="No goals yet"
-            description="Create a goal first, then return here to add steps."
+            description=""
             density="compact"
             action={{
               label: "Open goals",
@@ -263,14 +276,47 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
   }
 
   return (
-    <section className="panel task-detail-panel ps">
-      {project.data ? <h1 className="visually-hidden">{project.data.name}</h1> : null}
+    <section className="panel ps">
+      {project.data ? (
+        <h1 className="visually-hidden">
+          {goalId && stepsCrumbPrimaryName
+            ? `${stepsCrumbPrimaryName} · Steps`
+            : `${project.data.name} · Steps`}
+        </h1>
+      ) : null}
 
-      <header className="ps__header">
-        <Link to={`/projects/${encodeURIComponent(projectId)}`} className="pd__back project-context-back-link">
+      <header className="pg__header">
+        <Link to={stepsBackHref} className="pg__back">
           <span aria-hidden="true">&#8249;</span>
-          Back to project
+          {stepsBackLabel}
         </Link>
+        <div className="pg__header-actions">
+          <button
+            type="button"
+            className="pg__header-new-goal"
+            onClick={() => setCreateStepModalOpen(true)}
+          >
+            Add step
+          </button>
+          <div className="pg__toggle" role="group" aria-label="List or graph layout">
+            <button
+              type="button"
+              className={view === "list" ? "pg__toggle-btn is-active" : "pg__toggle-btn"}
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+            >
+              List
+            </button>
+            <button
+              type="button"
+              className={view === "graph" ? "pg__toggle-btn is-active" : "pg__toggle-btn"}
+              aria-pressed={view === "graph"}
+              onClick={() => setView("graph")}
+            >
+              Graph
+            </button>
+          </div>
+        </div>
       </header>
 
       {project.isLoading ? <p className="muted">Loading project…</p> : null}
@@ -286,46 +332,13 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
 
       {project.data ? (
         <>
-          <div className="ps__lede">
-            <div>
-              <p className="ps__crumb muted">
-                <Link to={`/projects/${encodeURIComponent(projectId)}`}>{project.data.name}</Link>
-                <span aria-hidden="true"> · </span>
-                <span>Steps</span>
-              </p>
-              <h2 className="ps__title">Stages and completion</h2>
-              <p className="ps__subtitle muted">
-                Gates advance when every task in the step is done and every criterion is checked off.
-              </p>
-            </div>
-            <div className="ps__lede-trail">
-              <button
-                type="button"
-                className="primary"
-                onClick={() => setCreateStepModalOpen(true)}
-              >
-                Add step
-              </button>
-              <div className="ps__view-toggle" role="group" aria-label="View mode">
-                <button
-                  type="button"
-                  className="ps__toggle-btn"
-                  aria-pressed={view === "list"}
-                  onClick={() => setView("list")}
-                >
-                  List
-                </button>
-                <button
-                  type="button"
-                  className="ps__toggle-btn"
-                  aria-pressed={view === "graph"}
-                  onClick={() => setView("graph")}
-                >
-                  Graph
-                </button>
-              </div>
-            </div>
-          </div>
+          <p className="pg__crumb muted">
+            <span className="pg__crumb-name">
+              {stepsCrumbPrimaryName || project.data.name}
+            </span>
+            <span aria-hidden="true"> · </span>
+            Steps
+          </p>
 
           <div className="ps__legend" aria-label="Legend">
             <span className="ps__legend-item">

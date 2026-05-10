@@ -153,15 +153,16 @@ export function ProjectGoalsPage() {
         <div className="pg__header-actions">
           <button
             type="button"
-            className="secondary pg__header-new-goal"
+            className="pg__header-new-goal"
             onClick={() => setCreateGoalOpen(true)}
           >
             New goal
           </button>
-          <div className="pg__toggle" role="group" aria-label="View">
+          <div className="pg__toggle" role="group" aria-label="List or graph layout">
             <button
               type="button"
               className={view === "list" ? "pg__toggle-btn is-active" : "pg__toggle-btn"}
+              aria-pressed={view === "list"}
               onClick={() => setView("list")}
             >
               List
@@ -169,6 +170,7 @@ export function ProjectGoalsPage() {
             <button
               type="button"
               className={view === "graph" ? "pg__toggle-btn is-active" : "pg__toggle-btn"}
+              aria-pressed={view === "graph"}
               onClick={() => setView("graph")}
             >
               Graph
@@ -284,110 +286,114 @@ export function ProjectGoalsPage() {
             const depShown = depFull ? truncateListDependencySummary(depFull) : "";
             return (
               <li key={g.id} className="pg__row">
-                <div className="pg__row-main">
-                  <div className="pg__row-top">
-                    <span className={`ps__dot ps__dot--${phase}`} aria-hidden="true" />
-                    <div className="pg__row-text">
-                      <div className="pg__row-title-line">
-                        <p
-                          className="pg__row-title"
-                          title={titleFull !== titleShown ? titleFull : undefined}
-                        >
-                          {titleShown}
+                <div className="pg__row-head">
+                  <div className="pg__row-main">
+                    <div className="pg__row-top">
+                      <span className={`ps__dot ps__dot--${phase}`} aria-hidden="true" />
+                      <div className="pg__row-text">
+                        <div className="pg__row-title-line">
+                          <p
+                            className="pg__row-title"
+                            title={titleFull !== titleShown ? titleFull : undefined}
+                          >
+                            {titleShown}
+                          </p>
+                        </div>
+                        {descShown ? (
+                          <p
+                            className="pg__row-desc"
+                            title={descFull !== descShown ? descFull : undefined}
+                          >
+                            {descShown}
+                          </p>
+                        ) : null}
+                        <p className="pg__row-meta">
+                          {critLabel ? <span className="ps__task-pill">{critLabel}</span> : null}
+                          {g.depends_on_goal_ids.length === 0 ? (
+                            <span className="ps__dep-badge">Independent</span>
+                          ) : (
+                            <span className="ps__dep" title={depFull !== depShown ? depFull : undefined}>
+                              After: <strong className="ps__dep-strong">{depShown}</strong>
+                            </span>
+                          )}
                         </p>
-                        <span className={`pd__chip pd__chip--gate pd__chip--${g.gate_status}`}>
-                          {gateLabel(g.gate_status)}
-                        </span>
-                        {g.gate_hold ? <span className="pd__chip pd__chip--hold">On hold</span> : null}
+                        {g.gate_status === "pending_release" && g.pending_release_deadline ? (
+                          <GoalCountdown deadlineIso={g.pending_release_deadline} />
+                        ) : null}
                       </div>
-                      {descShown ? (
-                        <p
-                          className="pg__row-desc"
-                          title={descFull !== descShown ? descFull : undefined}
-                        >
-                          {descShown}
-                        </p>
-                      ) : null}
-                      <p className="pg__row-meta">
-                        {critLabel ? <span className="ps__task-pill">{critLabel}</span> : null}
-                        {g.depends_on_goal_ids.length === 0 ? (
-                          <span className="ps__dep-badge">Independent</span>
-                        ) : (
-                          <span className="ps__dep" title={depFull !== depShown ? depFull : undefined}>
-                            After: <strong className="ps__dep-strong">{depShown}</strong>
-                          </span>
-                        )}
-                      </p>
-                      {g.gate_status === "pending_release" && g.pending_release_deadline ? (
-                        <GoalCountdown deadlineIso={g.pending_release_deadline} />
-                      ) : null}
                     </div>
                   </div>
-                  {g.criteria.length > 0 ? (
-                    <ul className="ps__criteria-list">
-                      {g.criteria.map((c) => (
-                        <li key={c.id} className="ps__criteria-item">
-                          <label className="ps__criteria-label">
-                            <input
-                              type="checkbox"
-                              checked={c.done}
-                              disabled={patchMut.isPending}
-                              onChange={(ev) => toggleCriterion(c.id, ev.target.checked)}
-                            />
-                            <span>{c.text}</span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  <div className="pg__row-side">
+                    {g.gate_status === "pending_release" && !g.gate_hold ? (
+                      <button
+                        type="button"
+                        className="pg__btn pg__btn--secondary"
+                        disabled={patchMut.isPending}
+                        onClick={() =>
+                          void patchMut.mutateAsync({ goalId: g.id, body: { gate_action: "hold" } })
+                        }
+                      >
+                        Hold
+                      </button>
+                    ) : null}
+                    {g.gate_status === "pending_release" && g.gate_hold ? (
+                      <button
+                        type="button"
+                        className="pg__btn pg__btn--secondary"
+                        disabled={patchMut.isPending}
+                        onClick={() =>
+                          void patchMut.mutateAsync({
+                            goalId: g.id,
+                            body: { gate_action: "clear_hold" },
+                          })
+                        }
+                      >
+                        Clear hold
+                      </button>
+                    ) : null}
+                    {g.gate_status === "pending_release" ? (
+                      <button
+                        type="button"
+                        className="pg__btn pg__btn--primary"
+                        disabled={patchMut.isPending}
+                        onClick={() =>
+                          void patchMut.mutateAsync({ goalId: g.id, body: { gate_action: "release" } })
+                        }
+                      >
+                        Release now
+                      </button>
+                    ) : null}
+                    <div className="pg__row-side-trail">
+                      <span className={`pd__chip pd__chip--gate pd__chip--${g.gate_status}`}>
+                        {gateLabel(g.gate_status)}
+                      </span>
+                      {g.gate_hold ? <span className="pd__chip pd__chip--hold">On hold</span> : null}
+                      <Link
+                        className="pg__btn pg__btn--secondary"
+                        to={`/projects/${encodeURIComponent(projectId)}/steps?goal_id=${encodeURIComponent(g.id)}`}
+                      >
+                        Open steps
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <div className="pg__row-side">
-                  {g.gate_status === "pending_release" && !g.gate_hold ? (
-                    <button
-                      type="button"
-                      className="pg__btn pg__btn--secondary"
-                      disabled={patchMut.isPending}
-                      onClick={() =>
-                        void patchMut.mutateAsync({ goalId: g.id, body: { gate_action: "hold" } })
-                      }
-                    >
-                      Hold
-                    </button>
-                  ) : null}
-                  {g.gate_status === "pending_release" && g.gate_hold ? (
-                    <button
-                      type="button"
-                      className="pg__btn pg__btn--secondary"
-                      disabled={patchMut.isPending}
-                      onClick={() =>
-                        void patchMut.mutateAsync({
-                          goalId: g.id,
-                          body: { gate_action: "clear_hold" },
-                        })
-                      }
-                    >
-                      Clear hold
-                    </button>
-                  ) : null}
-                  {g.gate_status === "pending_release" ? (
-                    <button
-                      type="button"
-                      className="pg__btn pg__btn--primary"
-                      disabled={patchMut.isPending}
-                      onClick={() =>
-                        void patchMut.mutateAsync({ goalId: g.id, body: { gate_action: "release" } })
-                      }
-                    >
-                      Release now
-                    </button>
-                  ) : null}
-                  <Link
-                    className="pg__link"
-                    to={`/projects/${encodeURIComponent(projectId)}/steps?goal_id=${encodeURIComponent(g.id)}`}
-                  >
-                    Open steps
-                  </Link>
-                </div>
+                {g.criteria.length > 0 ? (
+                  <ul className="ps__criteria-list ps__criteria-list--pg-row">
+                    {g.criteria.map((c) => (
+                      <li key={c.id} className="ps__criteria-item">
+                        <label className="ps__criteria-label">
+                          <input
+                            type="checkbox"
+                            checked={c.done}
+                            disabled={patchMut.isPending}
+                            onChange={(ev) => toggleCriterion(c.id, ev.target.checked)}
+                          />
+                          <span>{c.text}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             );
           })}

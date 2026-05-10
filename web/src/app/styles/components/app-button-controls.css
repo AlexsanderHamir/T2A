@@ -10,7 +10,7 @@ textarea {
 :where(
   button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
       .task-detail-agent-model-cta
-    ):not(.ps__toggle-btn):not(.pg__toggle-btn)
+    ):not(.pg__toggle-btn)
 ) {
   font: inherit;
   font-weight: 500;
@@ -30,7 +30,7 @@ textarea {
 :where(
   button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
-  ):not(.ps__toggle-btn):not(.pg__toggle-btn)
+  ):not(.pg__toggle-btn)
 ):not(:disabled):hover {
   background: var(--control-primary-hover-bg);
   box-shadow: none;
@@ -41,7 +41,7 @@ textarea {
 :where(
   button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
-  ):not(.ps__toggle-btn):not(.pg__toggle-btn)
+  ):not(.pg__toggle-btn)
 ):not(:disabled):active {
   transform: scale(0.98);
   box-shadow: none;
