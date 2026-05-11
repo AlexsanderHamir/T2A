@@ -266,7 +266,13 @@ export function TaskGraphPage() {
             >
               Try again
             </button>
-            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>Back to task detail</Link>
+            <Link
+              to={`/tasks/${encodeURIComponent(taskId)}`}
+              className="pd__back project-context-back-link"
+            >
+              <span aria-hidden="true">&#8249;</span>
+              Back to task detail
+            </Link>
           </div>
         </div>
       </section>
@@ -276,8 +282,11 @@ export function TaskGraphPage() {
   return (
     <section className="panel task-graph-page task-graph-content--enter">
       <nav className="task-detail-nav" aria-label="Task graph navigation">
-        <Link to={`/tasks/${encodeURIComponent(taskId)}`} className="task-detail-back">
-          <span aria-hidden="true">‹</span>
+        <Link
+          to={`/tasks/${encodeURIComponent(taskId)}`}
+          className="pd__back project-context-back-link"
+        >
+          <span aria-hidden="true">&#8249;</span>
           Back to task detail
         </Link>
       </nav>

@@ -227,7 +227,7 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
     return (
       <section className="panel ps">
         <header className="pg__header">
-          <Link to={stepsBackHref} className="pg__back">
+          <Link to={stepsBackHref} className="pd__back project-context-back-link">
             <span aria-hidden="true">&#8249;</span>
             {stepsBackLabel}
           </Link>
@@ -286,7 +286,7 @@ export function ProjectStepsPage({ app }: ProjectStepsPageProps) {
       ) : null}
 
       <header className="pg__header">
-        <Link to={stepsBackHref} className="pg__back">
+        <Link to={stepsBackHref} className="pd__back project-context-back-link">
           <span aria-hidden="true">&#8249;</span>
           {stepsBackLabel}
         </Link>

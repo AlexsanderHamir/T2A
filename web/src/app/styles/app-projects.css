@@ -465,21 +465,21 @@
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: 0.875rem;
-  font-weight: 650;
+  font-weight: 500;
   text-decoration: none;
 }
 
 .project-context-back-link span {
   color: var(--accent, var(--brand));
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1;
   transform: translateY(-0.03em);
 }
 
 .project-context-back-link:hover {
   background: var(--bg-subtle);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .project-context-back-link:focus-visible {
@@ -913,32 +913,6 @@
   gap: var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-hairline);
-}
-
-.pg__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  text-decoration: none;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  padding: 0.2rem 0.35rem 0.2rem 0.2rem;
-  margin: -0.2rem -0.35rem -0.2rem -0.2rem;
-  transition: color var(--duration-short) var(--ease-out), background var(--duration-short) var(--ease-out);
-}
-
-@media (hover: hover) {
-  .pg__back:hover {
-    color: var(--text-primary);
-    background: var(--surface-hover);
-  }
-}
-
-.pg__back:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .pg__header-actions {

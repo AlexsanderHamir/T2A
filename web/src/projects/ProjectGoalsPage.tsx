@@ -146,7 +146,10 @@ export function ProjectGoalsPage() {
   return (
     <section className="panel pg">
       <header className="pg__header">
-        <Link to={`/projects/${encodeURIComponent(projectId)}`} className="pg__back">
+        <Link
+          to={`/projects/${encodeURIComponent(projectId)}`}
+          className="pd__back project-context-back-link"
+        >
           <span aria-hidden="true">&#8249;</span>
           Back to project
         </Link>

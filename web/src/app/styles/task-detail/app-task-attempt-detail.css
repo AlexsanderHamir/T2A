@@ -42,9 +42,21 @@
 }
 
 .task-attempt-nav-link:hover {
-  color: var(--brand-deep);
+  color: var(--text-primary);
   background: var(--surface-1);
   text-decoration: none;
+}
+
+/* Compact back links inside the chrome strip (same tokens as global back links). */
+.task-attempt-nav .project-context-back-link {
+  min-height: 1.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.task-attempt-nav .project-context-back-link span {
+  font-size: 1.05rem;
 }
 
 .task-attempt-nav-link:focus-visible {

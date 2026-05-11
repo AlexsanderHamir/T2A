@@ -71,8 +71,12 @@ export function TaskEventDetailPage() {
         <div className="err" role="alert">
           <p>Invalid event sequence in the URL.</p>
           <div className="task-detail-error-actions">
-            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
-              ← Back to task
+            <Link
+              to={`/tasks/${encodeURIComponent(taskId)}`}
+              className="pd__back project-context-back-link"
+            >
+              <span aria-hidden="true">&#8249;</span>
+              Back to task
             </Link>
           </div>
         </div>
@@ -97,10 +101,17 @@ export function TaskEventDetailPage() {
             >
               Try again
             </button>
-            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>
-              ← Back to task
+            <Link
+              to={`/tasks/${encodeURIComponent(taskId)}`}
+              className="pd__back project-context-back-link"
+            >
+              <span aria-hidden="true">&#8249;</span>
+              Back to task
             </Link>
-            <Link to="/">← All tasks</Link>
+            <Link to="/" className="pd__back project-context-back-link">
+              <span aria-hidden="true">&#8249;</span>
+              All tasks
+            </Link>
           </div>
         </div>
       </section>
@@ -114,15 +125,15 @@ export function TaskEventDetailPage() {
   return (
     <section className="panel task-detail-panel task-event-detail-panel task-detail-content--enter">
       <nav className="task-detail-nav" aria-label="Event navigation">
-        <Link to="/" className="task-detail-back">
-          <span aria-hidden="true">‹</span>
+        <Link to="/" className="pd__back project-context-back-link">
+          <span aria-hidden="true">&#8249;</span>
           All tasks
         </Link>
         <Link
           to={`/tasks/${encodeURIComponent(taskId)}`}
-          className="task-event-detail-back-task"
+          className="pd__back project-context-back-link"
         >
-          <span aria-hidden="true">‹</span>
+          <span aria-hidden="true">&#8249;</span>
           Task
         </Link>
       </nav>

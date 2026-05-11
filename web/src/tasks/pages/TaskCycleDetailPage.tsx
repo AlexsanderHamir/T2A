@@ -72,7 +72,12 @@ export function TaskCycleDetailPage() {
       <section className="panel task-detail-panel task-detail-content--enter">
         <div className="err" role="alert">
           <p>Missing task or attempt id in the URL.</p>
-          <Link to="/">← All tasks</Link>
+          <div className="task-detail-error-actions">
+            <Link to="/" className="pd__back project-context-back-link">
+              <span aria-hidden="true">&#8249;</span>
+              All tasks
+            </Link>
+          </div>
         </div>
       </section>
     );
@@ -101,7 +106,13 @@ export function TaskCycleDetailPage() {
             >
               Try again
             </button>
-            <Link to={`/tasks/${encodeURIComponent(taskId)}`}>← Task</Link>
+            <Link
+              to={`/tasks/${encodeURIComponent(taskId)}`}
+              className="pd__back project-context-back-link"
+            >
+              <span aria-hidden="true">&#8249;</span>
+              Task
+            </Link>
           </div>
         </div>
       </section>
@@ -125,7 +136,11 @@ export function TaskCycleDetailPage() {
         className="task-detail-nav task-attempt-nav"
         aria-label="Attempt navigation"
       >
-        <Link to="/" className="task-detail-back task-attempt-nav-link">
+        <Link
+          to="/"
+          className="pd__back project-context-back-link task-attempt-nav-link"
+        >
+          <span aria-hidden="true">&#8249;</span>
           All tasks
         </Link>
         <span className="task-attempt-nav-separator" aria-hidden="true">
@@ -133,8 +148,9 @@ export function TaskCycleDetailPage() {
         </span>
         <Link
           to={`/tasks/${encodeURIComponent(taskId)}`}
-          className="task-event-detail-back-task task-attempt-nav-link"
+          className="pd__back project-context-back-link task-attempt-nav-link"
         >
+          <span aria-hidden="true">&#8249;</span>
           Task detail
         </Link>
       </nav>

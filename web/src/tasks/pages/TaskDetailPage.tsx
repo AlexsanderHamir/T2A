@@ -204,7 +204,10 @@ export function TaskDetailPage({ app }: Props) {
             >
               Try again
             </button>
-            <Link to="/">← Back to tasks</Link>
+            <Link to="/" className="pd__back project-context-back-link">
+              <span aria-hidden="true">&#8249;</span>
+              All tasks
+            </Link>
           </div>
         </div>
       </section>
