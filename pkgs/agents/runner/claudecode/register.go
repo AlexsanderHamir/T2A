@@ -1,6 +1,8 @@
 package claudecode
 
 import (
+	"log/slog"
+
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 )
@@ -12,6 +14,7 @@ const (
 )
 
 func init() {
+	slog.Debug("trace", "cmd", "claudecode", "operation", "agents.runner.claudecode.register")
 	registry.Register(
 		registry.Descriptor{
 			ID:                RunnerID,

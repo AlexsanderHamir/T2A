@@ -35,16 +35,25 @@ type Adapter struct {
 
 // New creates a new Claude Code adapter.
 func New(opts Options) *Adapter {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.New")
 	return &Adapter{opts: opts}
 }
 
-func (a *Adapter) Name() string    { return "claude-code" }
-func (a *Adapter) Version() string { return a.opts.Version }
+func (a *Adapter) Name() string {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.Name")
+	return "claude-code"
+}
+
+func (a *Adapter) Version() string {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.Version")
+	return a.opts.Version
+}
 
 // EffectiveModel returns the model that would be used for a given
 // request: the request-level model wins, then the adapter default,
 // then empty string (CLI default).
 func (a *Adapter) EffectiveModel(req runner.Request) string {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.EffectiveModel")
 	if m := strings.TrimSpace(req.CursorModel); m != "" {
 		return m
 	}
@@ -70,6 +79,7 @@ func (a *Adapter) Run(_ context.Context, req runner.Request) (runner.Result, err
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) ConfigSchema() runner.ConfigSchema {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.ConfigSchema")
 	return runner.ConfigSchema{
 		Version: 1,
 		Fields: []runner.ConfigField{
@@ -102,6 +112,7 @@ func (a *Adapter) ConfigSchema() runner.ConfigSchema {
 }
 
 func (a *Adapter) ValidateConfig(blob json.RawMessage) error {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.ValidateConfig")
 	if len(blob) == 0 || string(blob) == "null" || string(blob) == "{}" {
 		return nil
 	}
@@ -123,6 +134,7 @@ func (a *Adapter) ValidateConfig(blob json.RawMessage) error {
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) Probe(_ context.Context, binaryPath string, _ time.Duration) (version, resolvedBin string, err error) {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.Probe", "binary", binaryPath)
 	return "scaffold-0.0.0", binaryPath, nil
 }
 
@@ -131,6 +143,7 @@ func (a *Adapter) Probe(_ context.Context, binaryPath string, _ time.Duration) (
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) ListModels(_ context.Context, binaryPath string, _ time.Duration) ([]runner.ModelInfo, string, error) {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.ListModels", "binary", binaryPath)
 	return []runner.ModelInfo{
 		{ID: "claude-sonnet-4", Label: "Claude Sonnet 4"},
 		{ID: "claude-opus-4", Label: "Claude Opus 4"},
@@ -142,6 +155,7 @@ func (a *Adapter) ListModels(_ context.Context, binaryPath string, _ time.Durati
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) ClassifyFailure(_ string) (kind, standardizedMsg string) {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.ClassifyFailure")
 	return "", ""
 }
 
@@ -150,6 +164,7 @@ func (a *Adapter) ClassifyFailure(_ string) (kind, standardizedMsg string) {
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) MetricsLabels(req runner.Request) map[string]string {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.MetricsLabels")
 	return map[string]string{"model": a.EffectiveModel(req)}
 }
 
@@ -158,6 +173,7 @@ func (a *Adapter) MetricsLabels(req runner.Request) map[string]string {
 // ---------------------------------------------------------------------------
 
 func (a *Adapter) CycleMeta(req runner.Request) map[string]any {
+	slog.Debug("trace", "cmd", adapterLogCmd, "operation", "claudecode.Adapter.CycleMeta")
 	return map[string]any{
 		"claude_model_intent":    strings.TrimSpace(req.CursorModel),
 		"claude_model_effective": a.EffectiveModel(req),

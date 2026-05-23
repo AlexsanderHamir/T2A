@@ -86,19 +86,19 @@ type projectStepCreateJSON struct {
 }
 
 type projectGoalCreateJSON struct {
-	ID                 string                        `json:"id"`
-	Title              string                        `json:"title"`
-	Description        string                        `json:"description"`
-	DependsOnGoalIDs   []string                      `json:"depends_on_goal_ids"`
-	Criteria           []domain.ProjectGoalCriterion `json:"criteria"`
+	ID               string                        `json:"id"`
+	Title            string                        `json:"title"`
+	Description      string                        `json:"description"`
+	DependsOnGoalIDs []string                      `json:"depends_on_goal_ids"`
+	Criteria         []domain.ProjectGoalCriterion `json:"criteria"`
 }
 
 type projectGoalPatchJSON struct {
-	Title              *string                        `json:"title"`
-	Description        *string                        `json:"description"`
-	DependsOnGoalIDs   *[]string                      `json:"depends_on_goal_ids"`
-	GateAction         *string                        `json:"gate_action"`
-	Criteria           *[]domain.ProjectGoalCriterion `json:"criteria"`
+	Title            *string                        `json:"title"`
+	Description      *string                        `json:"description"`
+	DependsOnGoalIDs *[]string                      `json:"depends_on_goal_ids"`
+	GateAction       *string                        `json:"gate_action"`
+	Criteria         *[]domain.ProjectGoalCriterion `json:"criteria"`
 }
 
 func (p projectGoalPatchJSON) isEmpty() bool {

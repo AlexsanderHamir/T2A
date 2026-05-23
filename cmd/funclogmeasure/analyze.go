@@ -175,6 +175,8 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStepCriteriaAllDone":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGoalCriteriaAllDone": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectGoal.TableName": {},
 
 	// pkgs/tasks/calltrace: thin orchestration / pure-context helpers that
 	// either delegate to helperDebugIn/helperDebugOut (which DO log) or

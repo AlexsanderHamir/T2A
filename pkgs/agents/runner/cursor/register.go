@@ -1,6 +1,7 @@
 package cursor
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
@@ -8,6 +9,7 @@ import (
 )
 
 func init() {
+	slog.Debug("trace", "cmd", "cursor", "operation", "agents.runner.cursor.register")
 	registry.Register(
 		registry.Descriptor{
 			ID:                registry.CursorRunnerID,

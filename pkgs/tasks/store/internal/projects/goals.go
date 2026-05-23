@@ -19,20 +19,20 @@ const maxProjectGoalCriteria = maxProjectStepCriteria
 
 // CreateProjectGoalInput is the store input for creating a project goal.
 type CreateProjectGoalInput struct {
-	ID                 string
-	Title              string
+	ID               string
+	Title            string
 	Description      string
-	DependsOnGoalIDs   []string
-	Criteria           []domain.ProjectGoalCriterion
+	DependsOnGoalIDs []string
+	Criteria         []domain.ProjectGoalCriterion
 }
 
 // UpdateProjectGoalInput is a partial update for one goal row plus gate actions.
 type UpdateProjectGoalInput struct {
-	Title              *string
-	Description        *string
-	DependsOnGoalIDs   *[]string
-	GateAction         *string
-	Criteria           *[]domain.ProjectGoalCriterion
+	Title            *string
+	Description      *string
+	DependsOnGoalIDs *[]string
+	GateAction       *string
+	Criteria         *[]domain.ProjectGoalCriterion
 }
 
 func normalizeDependsOnGoalIDs(raw []string, selfID string) ([]string, error) {
@@ -126,6 +126,7 @@ func goalDependencyGraphHasCycle(goals []domain.ProjectGoal) bool {
 }
 
 func allPrerequisiteGoalsReleased(status map[string]domain.ProjectStepGateStatus, deps []string) bool {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.allPrerequisiteGoalsReleased")
 	for _, id := range deps {
 		id = strings.TrimSpace(id)
 		if id == "" {
@@ -179,6 +180,7 @@ func recalcLockedGoals(db *gorm.DB, projectID string, now time.Time) error {
 }
 
 func initialGateStatusForNewGoal(deps []string) domain.ProjectStepGateStatus {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.initialGateStatusForNewGoal")
 	if len(deps) == 0 {
 		return domain.ProjectStepGateActive
 	}
@@ -186,6 +188,7 @@ func initialGateStatusForNewGoal(deps []string) domain.ProjectStepGateStatus {
 }
 
 func loadProjectGoalGateGraceSeconds(db *gorm.DB) int {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.loadProjectGoalGateGraceSeconds")
 	return loadGateSettings(db).goalGraceSeconds
 }
 

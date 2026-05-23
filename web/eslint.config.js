@@ -24,7 +24,11 @@ export default defineConfig(
       "react-hooks": reactHooks,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // Core hooks only — v7 recommended also enables React Compiler rules
+      // (set-state-in-effect, refs, preserve-manual-memoization, etc.) that
+      // this codebase has not been migrated to yet.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
   {

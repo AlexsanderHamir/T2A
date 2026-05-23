@@ -1,6 +1,8 @@
 package projects
 
 import (
+	"log/slog"
+
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/gorm"
 )
@@ -15,6 +17,7 @@ type gateSettings struct {
 }
 
 func loadGateSettings(db *gorm.DB) gateSettings {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.loadGateSettings")
 	var row domain.AppSettings
 	if err := db.First(&row, "id = ?", domain.AppSettingsRowID).Error; err != nil {
 		return gateSettings{
