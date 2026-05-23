@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
 )
 
 const registryLogCmd = "taskapi"
@@ -25,6 +25,11 @@ type Descriptor struct {
 	Label             string
 	DefaultBinaryHint string
 }
+
+// Factory creates a runner.Runner from build options. Each adapter
+// registers one Factory alongside its Descriptor; the registry calls
+// it from Build.
+type Factory func(opts BuildOptions) (runner.Runner, error)
 
 // BuildOptions configures the runner adapter at construction time.
 // BinaryPath is the operator-chosen path (empty means use the
@@ -58,13 +63,42 @@ const CursorRunnerLabel = "Cursor CLI"
 // path resolves against PATH at supervisor probe time.
 const CursorDefaultBinaryHint = "cursor-agent"
 
+// ---------------------------------------------------------------------------
+// Self-registration infrastructure
+// ---------------------------------------------------------------------------
+
+type registration struct {
+	desc    Descriptor
+	factory Factory
+}
+
+var (
+	mu       sync.RWMutex
+	adapters = map[string]registration{}
+)
+
+// Register adds a runner adapter to the global registry. Adapters
+// call this from an init() function in a dedicated register.go file;
+// the cmd/taskapi binary imports registry/all to trigger all inits.
+// Last-write-wins for a given ID so tests can override registrations.
+func Register(desc Descriptor, factory Factory) {
+	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Register",
+		"id", desc.ID)
+	mu.Lock()
+	defer mu.Unlock()
+	adapters[desc.ID] = registration{desc: desc, factory: factory}
+}
+
 // List returns every registered runner descriptor, sorted by ID for
 // stable rendering in the SPA. The returned slice is a fresh copy so
 // callers can mutate it without affecting later calls.
 func List() []Descriptor {
 	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.List")
-	out := []Descriptor{
-		{ID: CursorRunnerID, Label: CursorRunnerLabel, DefaultBinaryHint: CursorDefaultBinaryHint},
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make([]Descriptor, 0, len(adapters))
+	for _, reg := range adapters {
+		out = append(out, reg.desc)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
@@ -74,12 +108,13 @@ func List() []Descriptor {
 func Lookup(id string) (Descriptor, error) {
 	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Lookup", "id", id)
 	id = strings.TrimSpace(id)
-	for _, d := range List() {
-		if d.ID == id {
-			return d, nil
-		}
+	mu.RLock()
+	reg, ok := adapters[id]
+	mu.RUnlock()
+	if !ok {
+		return Descriptor{}, fmt.Errorf("%w: %q", ErrUnknownRunner, id)
 	}
-	return Descriptor{}, fmt.Errorf("%w: %q", ErrUnknownRunner, id)
+	return reg.desc, nil
 }
 
 // Build constructs a runner.Runner for id with the supplied options.
@@ -89,27 +124,19 @@ func Lookup(id string) (Descriptor, error) {
 func Build(id string, opts BuildOptions) (runner.Runner, error) {
 	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Build",
 		"id", id, "binary", opts.BinaryPath, "version", opts.Version)
-	desc, err := Lookup(id)
-	if err != nil {
-		return nil, err
+	id = strings.TrimSpace(id)
+	mu.RLock()
+	reg, ok := adapters[id]
+	mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%w: %q", ErrUnknownRunner, id)
 	}
 	bin := strings.TrimSpace(opts.BinaryPath)
 	if bin == "" {
-		bin = desc.DefaultBinaryHint
+		bin = reg.desc.DefaultBinaryHint
 	}
-	switch desc.ID {
-	case CursorRunnerID:
-		return cursor.New(cursor.Options{
-			BinaryPath:         bin,
-			Version:            opts.Version,
-			DefaultCursorModel: strings.TrimSpace(opts.CursorModel),
-		}), nil
-	default:
-		// Defensive: List + Lookup should make this unreachable, but
-		// returning the typed sentinel keeps the handler error mapping
-		// uniform if a future descriptor is added without a Build branch.
-		return nil, fmt.Errorf("%w: %q (no Build branch)", ErrUnknownRunner, desc.ID)
-	}
+	opts.BinaryPath = bin
+	return reg.factory(opts)
 }
 
 // Probe runs the runner's --version probe with a bounded deadline and
@@ -121,28 +148,60 @@ func Build(id string, opts BuildOptions) (runner.Runner, error) {
 // runner.Version()) and by POST /settings/probe-cursor (to validate a
 // cursor binary path before saving).
 //
-// Empty binaryPath uses the descriptor's DefaultBinaryHint. timeout
-// <= 0 falls back to the runner's documented default. The resolved
-// path is best-effort: when LookPath fails the original input is
-// returned so the caller still has something to display alongside the
-// probe error.
+// Probe builds a temporary runner via the registered factory, then
+// type-asserts to runner.Prober. Adapters that do not implement Prober
+// return ErrCapabilityNotSupported.
 func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
 	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Probe",
 		"id", id, "binary", binaryPath, "timeout_ns", int64(timeout))
-	desc, err := Lookup(id)
-	if err != nil {
-		return "", "", err
+	id = strings.TrimSpace(id)
+	mu.RLock()
+	reg, ok := adapters[id]
+	mu.RUnlock()
+	if !ok {
+		return "", "", fmt.Errorf("%w: %q", ErrUnknownRunner, id)
 	}
 	bin := strings.TrimSpace(binaryPath)
 	if bin == "" {
-		bin = desc.DefaultBinaryHint
+		bin = reg.desc.DefaultBinaryHint
 	}
-	switch desc.ID {
-	case CursorRunnerID:
-		resolved := cursor.ResolveBinaryPath(bin)
-		v, probeErr := cursor.Probe(ctx, resolved, timeout, nil)
-		return v, resolved, probeErr
-	default:
-		return "", "", fmt.Errorf("%w: %q (no Probe branch)", ErrUnknownRunner, desc.ID)
+
+	r, buildErr := reg.factory(BuildOptions{BinaryPath: bin})
+	if buildErr != nil {
+		return "", "", fmt.Errorf("probe build %q: %w", id, buildErr)
 	}
+	prober, ok := r.(runner.Prober)
+	if !ok {
+		return "", "", fmt.Errorf("probe %q: %w", id, runner.ErrCapabilityNotSupported)
+	}
+	return prober.Probe(ctx, bin, timeout)
+}
+
+// ListModelsForRunner builds a temporary runner and delegates to its
+// ModelLister capability. Returns ErrCapabilityNotSupported when the
+// adapter does not implement runner.ModelLister.
+func ListModelsForRunner(ctx context.Context, id, binaryPath string, timeout time.Duration) ([]runner.ModelInfo, string, error) {
+	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.ListModelsForRunner",
+		"id", id, "binary", binaryPath, "timeout_ns", int64(timeout))
+	id = strings.TrimSpace(id)
+	mu.RLock()
+	reg, ok := adapters[id]
+	mu.RUnlock()
+	if !ok {
+		return nil, "", fmt.Errorf("%w: %q", ErrUnknownRunner, id)
+	}
+	bin := strings.TrimSpace(binaryPath)
+	if bin == "" {
+		bin = reg.desc.DefaultBinaryHint
+	}
+
+	r, buildErr := reg.factory(BuildOptions{BinaryPath: bin})
+	if buildErr != nil {
+		return nil, "", fmt.Errorf("list-models build %q: %w", id, buildErr)
+	}
+	lister, ok := r.(runner.ModelLister)
+	if !ok {
+		return nil, "", fmt.Errorf("list-models %q: %w", id, runner.ErrCapabilityNotSupported)
+	}
+	return lister.ListModels(ctx, bin, timeout)
 }

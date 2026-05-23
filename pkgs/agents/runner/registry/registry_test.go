@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
+	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
 )
 
 // TestList_pinsRegisteredRunners pins the catalogue exposed to the SPA.
@@ -109,5 +111,51 @@ func TestProbe_missingBinarySurfacesError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "cursor probe") {
 		t.Logf("error: %v", err)
+	}
+}
+
+// TestBuild_cursorImplementsCapabilities verifies that a runner built
+// via the registry implements the capability interfaces declared in
+// Phase 1. This pins the self-registration path: init() in
+// cursor/register.go must wire the factory, and the cursor adapter
+// must implement the capability interfaces.
+func TestBuild_cursorImplementsCapabilities(t *testing.T) {
+	r, err := registry.Build(registry.CursorRunnerID, registry.BuildOptions{
+		BinaryPath: "cursor-agent",
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	if _, ok := r.(runner.ConfigSchemaProvider); !ok {
+		t.Error("cursor runner does not implement ConfigSchemaProvider")
+	}
+	if _, ok := r.(runner.ConfigValidator); !ok {
+		t.Error("cursor runner does not implement ConfigValidator")
+	}
+	if _, ok := r.(runner.Prober); !ok {
+		t.Error("cursor runner does not implement Prober")
+	}
+	if _, ok := r.(runner.ModelLister); !ok {
+		t.Error("cursor runner does not implement ModelLister")
+	}
+	if _, ok := r.(runner.FailureClassifier); !ok {
+		t.Error("cursor runner does not implement FailureClassifier")
+	}
+	if _, ok := r.(runner.MetricsLabeler); !ok {
+		t.Error("cursor runner does not implement MetricsLabeler")
+	}
+	if _, ok := r.(runner.CycleMetaProvider); !ok {
+		t.Error("cursor runner does not implement CycleMetaProvider")
+	}
+}
+
+// TestListModelsForRunner_unknownRunner checks the error path.
+func TestListModelsForRunner_unknownRunner(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	_, _, err := registry.ListModelsForRunner(ctx, "zzz", "", 50*time.Millisecond)
+	if !errors.Is(err, registry.ErrUnknownRunner) {
+		t.Fatalf("err = %v, want ErrUnknownRunner", err)
 	}
 }

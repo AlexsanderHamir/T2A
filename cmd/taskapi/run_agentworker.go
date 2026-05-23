@@ -15,6 +15,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
+	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
