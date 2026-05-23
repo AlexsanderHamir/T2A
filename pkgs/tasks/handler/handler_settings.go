@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -192,6 +191,8 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, settingsResponseFrom(updated))
 }
 
+// Deprecated: use POST /runners/{id}/probe instead. Kept for backward
+// compatibility with existing SPA versions.
 func (h *Handler) probeCursor(w http.ResponseWriter, r *http.Request) {
 	const op = "settings.probe_cursor"
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.probeCursor")
@@ -250,6 +251,9 @@ func (h *Handler) probeCursor(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, resp)
 }
 
+// Deprecated: use POST /runners/{id}/list-models instead. This
+// endpoint is kept for backward compatibility with existing SPA
+// versions; new code should call the generic runner route.
 func (h *Handler) listCursorModels(w http.ResponseWriter, r *http.Request) {
 	const op = "settings.list_cursor_models"
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.listCursorModels")
@@ -282,16 +286,7 @@ func (h *Handler) listCursorModels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := registry.Lookup(body.Runner); err != nil {
-		writeError(w, r, op, err, http.StatusBadRequest)
-		return
-	}
-	if body.Runner != registry.CursorRunnerID {
-		writeJSONError(w, r, op, http.StatusBadRequest, "only the cursor runner supports model listing")
-		return
-	}
-
-	models, resolved, err := cursor.ListModels(r.Context(), body.BinaryPath, cursor.ListModelsTimeout, nil)
+	models, resolved, err := registry.ListModelsForRunner(r.Context(), body.Runner, body.BinaryPath, 30*time.Second)
 	out := listCursorModelsResponse{Runner: body.Runner, BinaryPath: resolved}
 	if err != nil {
 		out.OK = false
