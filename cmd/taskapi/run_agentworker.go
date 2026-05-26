@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -671,47 +670,7 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *hand
 		"tick_interval", iv.String())
 
 	reconcileCtx, reconcileCancel := context.WithCancel(ctx)
-	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv, func(sweepCtx context.Context, st *store.Store) error {
-		if st == nil {
-			return nil
-		}
-		now := time.Now().UTC()
-		stepIDs, err := st.SweepProjectStepGates(sweepCtx, now)
-		if err != nil {
-			return err
-		}
-		goalIDs, err := st.SweepProjectGoalGates(sweepCtx, now)
-		if err != nil {
-			return err
-		}
-		if hub == nil {
-			return nil
-		}
-		seen := make(map[string]struct{})
-		for _, pid := range stepIDs {
-			pid = strings.TrimSpace(pid)
-			if pid == "" {
-				continue
-			}
-			if _, ok := seen[pid]; ok {
-				continue
-			}
-			seen[pid] = struct{}{}
-			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectStepUpdated, ID: pid})
-		}
-		for _, pid := range goalIDs {
-			pid = strings.TrimSpace(pid)
-			if pid == "" {
-				continue
-			}
-			if _, ok := seen[pid]; ok {
-				continue
-			}
-			seen[pid] = struct{}{}
-			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectGoalUpdated, ID: pid})
-		}
-		return nil
-	})
+	go agents.RunReconcileLoop(reconcileCtx, taskStore, agentQueue, iv, nil)
 
 	sup := newAgentWorkerSupervisor(ctx, taskStore, agentQueue, hub)
 	if err := sup.Start(ctx); err != nil {

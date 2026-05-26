@@ -143,6 +143,88 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	<-reconcileDone
 }
 
+// TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone verifies the worker
+// does not run a dependent task until every depends_on task is done.
+func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
+	t.Parallel()
+
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	q := agents.NewMemoryQueue(8)
+
+	upstream, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:         "upstream",
+		InitialPrompt: "first",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create upstream: %v", err)
+	}
+	dependent, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:         "dependent",
+		InitialPrompt: "after upstream",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create dependent: %v", err)
+	}
+	if err := st.AddTaskDependency(rootCtx, dependent.ID, upstream.ID); err != nil {
+		t.Fatalf("add dependency: %v", err)
+	}
+
+	r := runnerfake.New().WithName("fake")
+	r.Script(upstream.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "upstream ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+	r.Script(dependent.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "dependent ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+
+	w := worker.NewWorker(st, q, r, worker.Options{RunTimeout: 30 * time.Second})
+
+	reconcileCtx, reconcileCancel := context.WithCancel(rootCtx)
+	defer reconcileCancel()
+	reconcileDone := make(chan struct{})
+	go func() {
+		defer close(reconcileDone)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick, nil)
+	}()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	defer workerCancel()
+	workerDone := make(chan error, 1)
+	go func() {
+		workerDone <- w.Run(workerCtx)
+	}()
+
+	waitTaskStatusE2E(t, rootCtx, st, upstream.ID, domain.StatusDone)
+	waitTaskStatusE2E(t, rootCtx, st, dependent.ID, domain.StatusDone)
+
+	calls := r.Calls()
+	if len(calls) != 2 {
+		t.Fatalf("runner Run calls = %d, want 2 (upstream then dependent)", len(calls))
+	}
+	if calls[0].TaskID != upstream.ID {
+		t.Fatalf("first runner call task_id = %q, want upstream %q", calls[0].TaskID, upstream.ID)
+	}
+	if calls[1].TaskID != dependent.ID {
+		t.Fatalf("second runner call task_id = %q, want dependent %q", calls[1].TaskID, dependent.ID)
+	}
+
+	workerCancel()
+	if err := <-workerDone; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+	reconcileCancel()
+	<-reconcileDone
+}
+
 func waitTaskStatusE2E(t *testing.T, ctx context.Context, st *store.Store, taskID string, want domain.Status) {
 	t.Helper()
 	deadline := time.Now().Add(e2ePollTimeout)

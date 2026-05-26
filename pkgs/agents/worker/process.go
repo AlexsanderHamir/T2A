@@ -69,6 +69,17 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			"status", string(fresh.Status))
 		return
 	}
+	now := w.options.Clock()
+	ready, err := w.store.ReadyForAgentPickup(parentCtx, fresh, now)
+	if err != nil {
+		slog.Warn("agent worker readiness check failed", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.processOne.readiness", "task_id", task.ID, "err", err)
+		return
+	}
+	if !ready {
+		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
+		return
+	}
 	if !w.transitionTask(parentCtx, task.ID, domain.StatusRunning, "transition_to_running") {
 		return
 	}
@@ -202,6 +213,17 @@ func (w *Worker) reloadTask(ctx context.Context, taskID string) (*domain.Task, b
 	slog.Warn("agent worker reload failed", "cmd", workerLogCmd,
 		"operation", "agent.worker.Worker.reloadTask.err", "task_id", taskID, "err", err)
 	return nil, false
+}
+
+func (w *Worker) deferTaskPickup(ctx context.Context, taskID string, delay time.Duration) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.deferTaskPickup",
+		"task_id", taskID, "delay", delay.String())
+	at := w.options.Clock().Add(delay).UTC()
+	patch := store.PickupNotBeforePatch{At: at}
+	if _, err := w.store.Update(ctx, taskID, store.UpdateTaskInput{PickupNotBefore: &patch}, domain.ActorAgent); err != nil {
+		slog.Warn("agent worker defer pickup failed", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.deferTaskPickup.err", "task_id", taskID, "err", err)
+	}
 }
 
 // transitionTask flips the task to next; returns false on any store
