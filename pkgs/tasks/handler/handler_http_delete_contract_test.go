@@ -140,7 +140,7 @@ func TestHTTP_deleteTask_unknownIDIs404(t *testing.T) {
 
 // TestHTTP_deleteTask_cascadesToSubtasks pins the documented cascade
 // contract: a single DELETE /tasks/{id} on a task with descendants
-// removes the entire subtree (root + every child + every grandchild)
+// removes the entire subtree (root + every direct child; depth-1 create rejects grandchildren)
 // in one call, returning 204. After the call every id in the subtree
 // must respond 404 to a follow-up GET.
 //
@@ -155,9 +155,6 @@ func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
 	child := mustCreateTask(t, srv.URL,
 		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
-	grandchild := mustCreateTask(t, srv.URL,
-		`{"title":"gc","priority":"medium","parent_id":"`+child+`"}`)
-
 	res, raw := deleteTask(t, srv.URL, parent)
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("status %d (want 204 — cascade) body=%s", res.StatusCode, raw)
@@ -166,7 +163,7 @@ func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 		t.Fatalf("body=%q want empty (DELETE cascade still returns 204 + empty body)", raw)
 	}
 
-	for _, id := range []string{parent, child, grandchild} {
+	for _, id := range []string{parent, child} {
 		resGet, _ := http.Get(srv.URL + "/tasks/" + id)
 		_ = resGet.Body.Close()
 		if resGet.StatusCode != http.StatusNotFound {
@@ -217,31 +214,22 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 		})
 	})
 
-	// Cascade pin: deleting a parent that has its own descendants must
-	// emit one task_deleted per removed row (root first, then BFS
-	// children) plus exactly one task_updated for the surviving
-	// grandparent. Mirrors the row-level metric contract: counter
-	// increments by N, not by 1.
-	t.Run("cascade_emitsOneTaskDeletedPerRowPlusGrandparentUpdated", func(t *testing.T) {
-		grandparent := mustCreateTask(t, srv.URL, `{"title":"gp","priority":"medium"}`)
+	// Cascade pin: deleting a parent with a child emits task_deleted for
+	// both rows plus task_updated for the surviving root parent.
+	t.Run("cascade_emitsOneTaskDeletedPerRowPlusParentUpdated", func(t *testing.T) {
+		root := mustCreateTask(t, srv.URL, `{"title":"gp","priority":"medium"}`)
 		parent := mustCreateTask(t, srv.URL,
-			`{"title":"p","priority":"medium","parent_id":"`+grandparent+`"}`)
-		child := mustCreateTask(t, srv.URL,
-			`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+			`{"title":"p","priority":"medium","parent_id":"`+root+`"}`)
 		ch, unsub := hub.Subscribe()
 		defer unsub()
 
 		if res, raw := deleteTask(t, srv.URL, parent); res.StatusCode != http.StatusNoContent {
 			t.Fatalf("delete parent (cascade) status %d body=%s", res.StatusCode, raw)
 		}
-		// 2 task_deleted (parent + child) and 1 task_updated (grandparent).
-		// summarize() sorts alphabetically; UUIDs are random, so we sort
-		// `want` the same way instead of betting on UUID-collation luck.
-		got := summarize(drainSSE(t, ch, 3, 2*time.Second))
+		got := summarize(drainSSE(t, ch, 2, 2*time.Second))
 		want := []string{
-			string(TaskDeleted) + ":" + child,
 			string(TaskDeleted) + ":" + parent,
-			string(TaskUpdated) + ":" + grandparent,
+			string(TaskUpdated) + ":" + root,
 		}
 		sort.Strings(want)
 		mustEqualEvents(t, "DELETE /tasks/{id} (cascade)", got, want)

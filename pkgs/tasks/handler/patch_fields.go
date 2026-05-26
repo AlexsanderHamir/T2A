@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 // patchParentField decodes optional JSON parent_id: omitted (no change), null (clear), or string.
@@ -27,35 +28,11 @@ type patchProjectField struct {
 	SetID   string
 }
 
-// patchProjectStepField decodes optional JSON project_step_id with the
-// same omission / null / string semantics as patchProjectField.
-type patchProjectStepField struct {
+// patchGateField decodes optional JSON gate: omitted (no change), null (clear), or object.
+type patchGateField struct {
 	Defined bool
 	Clear   bool
-	SetID   string
-}
-
-func (p *patchProjectStepField) UnmarshalJSON(b []byte) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.patchProjectStepField.UnmarshalJSON")
-	b = bytes.TrimSpace(b)
-	if len(b) == 0 {
-		return nil
-	}
-	p.Defined = true
-	if bytes.Equal(b, []byte("null")) {
-		p.Clear = true
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return errors.New("project_step_id must not be empty")
-	}
-	p.SetID = s
-	return nil
+	Set     *domain.TaskGate
 }
 
 func (p *patchProjectField) UnmarshalJSON(b []byte) error {
@@ -164,5 +141,24 @@ func (p *patchPickupNotBeforeField) UnmarshalJSON(b []byte) error {
 		return errors.New("pickup_not_before must be on or after 2000-01-01T00:00:00Z")
 	}
 	p.Set = t.UTC()
+	return nil
+}
+
+func (p *patchGateField) UnmarshalJSON(b []byte) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.patchGateField.UnmarshalJSON")
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 {
+		return nil
+	}
+	p.Defined = true
+	if bytes.Equal(b, []byte("null")) {
+		p.Clear = true
+		return nil
+	}
+	var g domain.TaskGate
+	if err := json.Unmarshal(b, &g); err != nil {
+		return err
+	}
+	p.Set = &g
 	return nil
 }

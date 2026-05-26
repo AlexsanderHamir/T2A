@@ -72,13 +72,16 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Priority:              body.Priority,
 		TaskType:              body.TaskType,
 		ProjectID:             body.ProjectID,
-		ProjectStepID:         body.ProjectStepID,
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
 		ParentID:              body.ParentID,
 		ChecklistInherit:      inherit,
 		Runner:                runner,
 		CursorModel:           cursorModel,
 		PickupNotBefore:       pickupNotBefore,
+		Tags:                  body.Tags,
+		Milestone:             body.Milestone,
+		Gate:                  body.Gate,
+		DependsOn:             body.DependsOn,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -90,11 +93,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskCreated, t.ID)
+	if t.Gate != nil {
+		h.notifyChange(TaskGateChanged, t.ID)
+	}
+	if len(t.DependsOn) > 0 {
+		h.notifyChange(TaskDependencyChanged, t.ID)
+	}
 	if t.ParentID != nil && *t.ParentID != "" {
 		h.notifyChange(TaskUpdated, *t.ParentID)
-	}
-	if t.Status == domain.StatusDone && t.ProjectID != nil && strings.TrimSpace(*t.ProjectID) != "" {
-		h.notifyChange(ProjectStepUpdated, strings.TrimSpace(*t.ProjectID))
 	}
 	taskapiDomainTasksCreatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusCreated, tree)
@@ -180,11 +186,14 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Priority:              body.Priority,
 		TaskType:              body.TaskType,
 		Project:               projectFieldPatchToStore(body.ProjectID),
-		ProjectStep:           projectStepFieldPatchToStore(body.ProjectStepID),
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
 		ChecklistInherit:      body.ChecklistInherit,
 		PickupNotBefore:       pickupNotBeforePatchToStore(body.PickupNotBefore),
 		CursorModel:           body.CursorModel,
+		Tags:                  body.Tags,
+		Milestone:             body.Milestone,
+		Gate:                  gateFieldPatchToStore(body.Gate),
+		DependsOn:             body.DependsOn,
 	}
 	if body.ParentID.Defined {
 		if body.ParentID.Clear {
@@ -205,7 +214,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	by := actorFromRequest(r)
-	updated, err := h.store.Update(r.Context(), id, in, by)
+	_, err = h.store.Update(r.Context(), id, in, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -216,8 +225,11 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskUpdated, id)
-	if updated != nil && updated.Status == domain.StatusDone && updated.ProjectID != nil && strings.TrimSpace(*updated.ProjectID) != "" {
-		h.notifyChange(ProjectStepUpdated, strings.TrimSpace(*updated.ProjectID))
+	if body.Gate.Defined {
+		h.notifyChange(TaskGateChanged, id)
+	}
+	if body.DependsOn != nil {
+		h.notifyChange(TaskDependencyChanged, id)
 	}
 	taskapiDomainTasksUpdatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusOK, tree)
@@ -263,15 +275,15 @@ func projectFieldPatchToStore(p patchProjectField) *store.ProjectFieldPatch {
 	return &store.ProjectFieldPatch{ID: p.SetID}
 }
 
-func projectStepFieldPatchToStore(p patchProjectStepField) *store.ProjectStepFieldPatch {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectStepFieldPatchToStore")
+func gateFieldPatchToStore(p patchGateField) **domain.TaskGate {
 	if !p.Defined {
 		return nil
 	}
 	if p.Clear {
-		return &store.ProjectStepFieldPatch{Clear: true}
+		var cleared *domain.TaskGate
+		return &cleared
 	}
-	return &store.ProjectStepFieldPatch{ID: p.SetID}
+	return &p.Set
 }
 
 func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afterID string, err error) {

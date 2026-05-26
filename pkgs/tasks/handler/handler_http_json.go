@@ -144,12 +144,6 @@ func storeErrorClientMessage(err error) string {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return "not found"
-	case errors.Is(err, domain.ErrProjectStepHasTasks):
-		return "step has tasks"
-	case errors.Is(err, domain.ErrProjectGoalHasSteps):
-		return "goal has steps"
-	case errors.Is(err, domain.ErrProjectGoalHasDependents):
-		return "goal has dependents"
 	case errors.Is(err, domain.ErrConflict):
 		if d := conflictDetail(err); d != "" {
 			return d
@@ -230,10 +224,7 @@ func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string)
 		code = http.StatusNotFound
 	case errors.Is(err, domain.ErrInvalidInput):
 		code = http.StatusBadRequest
-	case errors.Is(err, domain.ErrConflict),
-		errors.Is(err, domain.ErrProjectStepHasTasks),
-		errors.Is(err, domain.ErrProjectGoalHasSteps),
-		errors.Is(err, domain.ErrProjectGoalHasDependents):
+	case errors.Is(err, domain.ErrConflict):
 		code = http.StatusConflict
 	}
 	msg = storeErrorClientMessage(err)

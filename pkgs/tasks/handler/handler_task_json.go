@@ -18,9 +18,8 @@ type taskCreateJSON struct {
 	Status                domain.Status   `json:"status"`
 	Priority              domain.Priority `json:"priority"`
 	TaskType              domain.TaskType `json:"task_type"`
-	ProjectID             *string         `json:"project_id"`
-	ProjectStepID         *string         `json:"project_step_id"`
-	ProjectContextItemIDs []string        `json:"project_context_item_ids"`
+	ProjectID             *string  `json:"project_id"`
+	ProjectContextItemIDs []string `json:"project_context_item_ids"`
 	ParentID              *string         `json:"parent_id"`
 	ChecklistInherit      *bool           `json:"checklist_inherit"`
 	Runner                *string         `json:"runner"`
@@ -31,7 +30,11 @@ type taskCreateJSON struct {
 	// as soon as the global agent_pickup_delay_seconds elapses. The
 	// pre-2000 sentinel is rejected to guard against accidental
 	// zero-value timestamps.
-	PickupNotBefore *string `json:"pickup_not_before,omitempty"`
+	PickupNotBefore *string          `json:"pickup_not_before,omitempty"`
+	Tags            []string         `json:"tags,omitempty"`
+	Milestone       *string          `json:"milestone,omitempty"`
+	Gate            *domain.TaskGate `json:"gate,omitempty"`
+	DependsOn       []string         `json:"depends_on,omitempty"`
 }
 
 type taskEvaluateJSON struct {
@@ -59,7 +62,6 @@ type taskPatchJSON struct {
 	Priority              *domain.Priority          `json:"priority"`
 	TaskType              *domain.TaskType          `json:"task_type"`
 	ProjectID             patchProjectField         `json:"project_id"`
-	ProjectStepID         patchProjectStepField     `json:"project_step_id"`
 	ProjectContextItemIDs *[]string                 `json:"project_context_item_ids"`
 	ParentID              patchParentField          `json:"parent_id"`
 	ChecklistInherit      *bool                     `json:"checklist_inherit"`
@@ -67,7 +69,23 @@ type taskPatchJSON struct {
 	// CursorModel sets tasks.cursor_model when the key is present (including
 	// the empty string, which clears per-task override). JSON null is decoded
 	// as nil and means "no change", same as omitting the key.
-	CursorModel *string `json:"cursor_model"`
+	CursorModel *string          `json:"cursor_model"`
+	Tags        *[]string        `json:"tags,omitempty"`
+	Milestone   *string          `json:"milestone,omitempty"`
+	Gate        patchGateField   `json:"gate"`
+	DependsOn   *[]string        `json:"depends_on,omitempty"`
+}
+
+type taskGateActionJSON struct {
+	Action string `json:"action"`
+}
+
+type taskDependenciesListResponse struct {
+	DependsOn []string `json:"depends_on"`
+}
+
+type taskDependencyCreateJSON struct {
+	DependsOnTaskID string `json:"depends_on_task_id"`
 }
 
 type listResponse struct {
