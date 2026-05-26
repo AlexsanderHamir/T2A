@@ -70,9 +70,6 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyProjectPatch(tx, cur, in.Project); err != nil {
 		return err
 	}
-	if err := applyProjectStepPatch(tx, cur, in.ProjectStep); err != nil {
-		return err
-	}
 	if err := applyProjectContextSelectionPatch(tx, cur, in.ProjectContextItemIDs); err != nil {
 		return err
 	}
@@ -83,6 +80,18 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 		return err
 	}
 	if err := applyCursorModelPatch(cur, in.CursorModel); err != nil {
+		return err
+	}
+	if err := applyTagsPatch(cur, in.Tags); err != nil {
+		return err
+	}
+	if err := applyMilestonePatch(cur, in.Milestone); err != nil {
+		return err
+	}
+	if err := applyGatePatch(cur, in.Gate); err != nil {
+		return err
+	}
+	if err := applyDependsOnPatch(tx, taskID, cur, in.DependsOn); err != nil {
 		return err
 	}
 	if cur.ChecklistInherit && (cur.ParentID == nil || *cur.ParentID == "") {
@@ -138,23 +147,6 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 	cur.ProjectStepID = nil
 	cur.ProjectContextItemIDs = nil
 	return nil
-}
-
-func applyProjectStepPatch(tx *gorm.DB, cur *domain.Task, step *ProjectStepFieldPatch) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyProjectStepPatch")
-	if step == nil {
-		return nil
-	}
-	if step.Clear {
-		cur.ProjectStepID = nil
-		return nil
-	}
-	sid := strings.TrimSpace(step.ID)
-	if sid == "" {
-		return fmt.Errorf("%w: project_step_id", domain.ErrInvalidInput)
-	}
-	cur.ProjectStepID = &sid
-	return validateTaskProjectStep(tx, cur)
 }
 
 // applyPickupNotBeforePatch mutates cur.PickupNotBefore in place. The
@@ -273,6 +265,9 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 		}
 		if cycle {
 			return fmt.Errorf("%w: parent would create a cycle", domain.ErrInvalidInput)
+		}
+		if err := validateParentIsRootTask(tx, pid); err != nil {
+			return err
 		}
 		nextPtr = &pid
 		nextStr = pid

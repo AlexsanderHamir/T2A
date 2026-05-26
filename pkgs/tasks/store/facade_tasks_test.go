@@ -268,11 +268,6 @@ func TestStore_Delete_cascadesSubtree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cid := child.ID
-	grand, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "gc", ParentID: &cid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
 	deletedIDs, parentNotify, err := s.Delete(ctx, parent.ID, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("cascade delete: %v", err)
@@ -280,10 +275,10 @@ func TestStore_Delete_cascadesSubtree(t *testing.T) {
 	if parentNotify != "" {
 		t.Fatalf("parentNotify=%q want empty (root has no parent)", parentNotify)
 	}
-	if len(deletedIDs) != 3 {
-		t.Fatalf("deletedIDs=%v want 3 ids (parent+child+grandchild)", deletedIDs)
+	if len(deletedIDs) != 2 {
+		t.Fatalf("deletedIDs=%v want 2 ids (parent+child)", deletedIDs)
 	}
-	want := map[string]bool{parent.ID: true, child.ID: true, grand.ID: true}
+	want := map[string]bool{parent.ID: true, child.ID: true}
 	for _, id := range deletedIDs {
 		if !want[id] {
 			t.Fatalf("unexpected id %q in deletedIDs=%v", id, deletedIDs)
@@ -293,7 +288,7 @@ func TestStore_Delete_cascadesSubtree(t *testing.T) {
 	if len(want) != 0 {
 		t.Fatalf("missing ids from cascade: %v (got %v)", want, deletedIDs)
 	}
-	for _, id := range []string{parent.ID, child.ID, grand.ID} {
+	for _, id := range []string{parent.ID, child.ID} {
 		if _, err := s.Get(ctx, id); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("Get(%s) after cascade err=%v want ErrNotFound", id, err)
 		}
@@ -603,7 +598,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		}
 	}
 
-	out, err := s.ListFlat(ctx, 2, 0)
+	out, err := s.ListFlat(ctx, 2, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -611,7 +606,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("page1 len %d", len(out))
 	}
 
-	out2, err := s.ListFlat(ctx, 2, 2)
+	out2, err := s.ListFlat(ctx, 2, 2, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -619,7 +614,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("page2 len %d", len(out2))
 	}
 
-	all, err := s.ListFlat(ctx, 0, 0)
+	all, err := s.ListFlat(ctx, 0, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,7 +622,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 		t.Fatalf("limit 0 normalized len %d", len(all))
 	}
 
-	capped, err := s.ListFlat(ctx, 500, 0)
+	capped, err := s.ListFlat(ctx, 500, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -639,7 +634,7 @@ func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 func TestStore_List_empty_table(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
-	got, err := s.ListFlat(context.Background(), 10, 0)
+	got, err := s.ListFlat(context.Background(), 10, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -823,24 +818,48 @@ func TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) 
 }
 
 func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
+	db := tasktestdb.OpenSQLite(t)
+	s := NewStore(db)
 	ctx := context.Background()
 	root, err := s.Create(ctx, CreateTaskInput{Title: "root", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Depth-1 create rejects grandchildren; seed a deep chain via direct insert to pin the read guard.
 	pid := root.ID
 	for i := 0; i < MaxTaskTreeDepth; i++ {
-		child, err := s.Create(ctx, CreateTaskInput{Title: fmt.Sprintf("d%d", i), Priority: domain.PriorityMedium, ParentID: &pid}, domain.ActorUser)
-		if err != nil {
+		childID := fmt.Sprintf("deep-%d", i)
+		parent := pid
+		row := domain.Task{
+			ID:            childID,
+			Title:         childID,
+			InitialPrompt: childID,
+			Status:        domain.StatusBlocked,
+			Priority:      domain.PriorityMedium,
+			TaskType:      domain.TaskTypeGeneral,
+			ParentID:      &parent,
+			Runner:        "cursor",
+		}
+		if err := db.Create(&row).Error; err != nil {
 			t.Fatal(err)
 		}
-		pid = child.ID
+		pid = childID
 	}
 	if _, err := s.GetTaskTree(ctx, root.ID); err != nil {
 		t.Fatalf("tree at max depth should succeed: %v", err)
 	}
-	if _, err := s.Create(ctx, CreateTaskInput{Title: "too-deep", Priority: domain.PriorityMedium, ParentID: &pid}, domain.ActorUser); err != nil {
+	tooDeepParent := pid
+	tooDeep := domain.Task{
+		ID:            "too-deep",
+		Title:         "too-deep",
+		InitialPrompt: "too-deep",
+		Status:        domain.StatusBlocked,
+		Priority:      domain.PriorityMedium,
+		TaskType:      domain.TaskTypeGeneral,
+		ParentID:      &tooDeepParent,
+		Runner:        "cursor",
+	}
+	if err := db.Create(&tooDeep).Error; err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.GetTaskTree(ctx, root.ID)

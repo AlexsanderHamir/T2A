@@ -50,10 +50,6 @@ type ParentFieldPatch = tasks.ParentFieldPatch
 // helper used by UpdateTaskInput.Project.
 type ProjectFieldPatch = tasks.ProjectFieldPatch
 
-// ProjectStepFieldPatch is the public re-export of the project step patch
-// helper used by UpdateTaskInput.ProjectStep.
-type ProjectStepFieldPatch = tasks.ProjectStepFieldPatch
-
 // PickupNotBeforePatch is the public re-export of the
 // pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
 // See docs/SCHEDULING.md.
@@ -128,7 +124,31 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if transitionedToReady || pickupTouched {
 		s.notifyReadyTask(ctx, *updated)
 	}
+	if updated.Status == domain.StatusDone && prev != domain.StatusDone {
+		s.notifyReadyDependents(ctx, updated.ID)
+	}
 	return updated, nil
+}
+
+func (s *Store) notifyReadyDependents(ctx context.Context, completedTaskID string) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.notifyReadyDependents", "completed_task_id", completedTaskID)
+	dependents, err := tasks.ListDependents(ctx, s.db, completedTaskID)
+	if err != nil {
+		slog.Warn("list dependents after task done", "task_id", completedTaskID, "err", err)
+		return
+	}
+	now := time.Now().UTC()
+	for _, id := range dependents {
+		t, err := tasks.Get(ctx, s.db, id)
+		if err != nil {
+			continue
+		}
+		ok, err := tasks.ReadyForAgentPickup(ctx, s.db, t, now)
+		if err != nil || !ok {
+			continue
+		}
+		s.notifyReadyTask(ctx, *t)
+	}
 }
 
 // Delete removes the task at id and every descendant in one
@@ -149,17 +169,20 @@ func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]strin
 	return deletedIDs, parent, nil
 }
 
+// ListFilter is the public re-export for optional flat-list filters.
+type ListFilter = tasks.ListFilter
+
 // ListFlat returns tasks ordered by id ASC with limit/offset over
 // all rows (no tree). See tasks.ListFlat for clamp rules.
-func (s *Store) ListFlat(ctx context.Context, limit, offset int) ([]domain.Task, error) {
+func (s *Store) ListFlat(ctx context.Context, limit, offset int, filter *ListFilter) ([]domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
-	return tasks.ListFlat(ctx, s.db, limit, offset)
+	return tasks.ListFlat(ctx, s.db, limit, offset, filter)
 }
 
 // List is an alias for ListFlat. Prefer ListFlat in new code.
 func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.List")
-	return tasks.ListFlat(ctx, s.db, limit, offset)
+	return tasks.ListFlat(ctx, s.db, limit, offset, nil)
 }
 
 // ListRootForest pages root tasks and attaches the full descendant
@@ -180,4 +203,36 @@ func (s *Store) ListRootForestAfter(ctx context.Context, limit int, afterID stri
 func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskTree")
 	return tasks.GetTree(ctx, s.db, id)
+}
+
+func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddTaskDependency")
+	return tasks.AddDependency(ctx, s.db, taskID, dependsOnTaskID)
+}
+
+func (s *Store) RemoveTaskDependency(ctx context.Context, taskID, dependsOnTaskID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.RemoveTaskDependency")
+	return tasks.RemoveDependency(ctx, s.db, taskID, dependsOnTaskID)
+}
+
+func (s *Store) ListTaskDependencies(ctx context.Context, taskID string) ([]string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskDependencies")
+	return tasks.ListDependencies(ctx, s.db, taskID)
+}
+
+func (s *Store) SetTaskDependencies(ctx context.Context, taskID string, dependsOn []string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetTaskDependencies")
+	return tasks.SetDependencies(ctx, s.db, taskID, dependsOn)
+}
+
+// ReadyForAgentPickup reports whether the task passes dequeue predicates.
+func (s *Store) ReadyForAgentPickup(ctx context.Context, t *domain.Task, now time.Time) (bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ReadyForAgentPickup")
+	return tasks.ReadyForAgentPickup(ctx, s.db, t, now)
+}
+
+// ApplyTaskGateAction applies release/hold/clear_hold to a task gate.
+func (s *Store) ApplyTaskGateAction(ctx context.Context, taskID, action string, by domain.Actor) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApplyTaskGateAction")
+	return tasks.ApplyTaskGateAction(ctx, s.db, taskID, action, by)
 }

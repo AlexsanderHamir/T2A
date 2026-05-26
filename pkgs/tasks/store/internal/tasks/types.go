@@ -26,8 +26,10 @@ type CreateInput struct {
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
 	// until the instant has passed (UTC).
 	PickupNotBefore *time.Time
-	// ProjectStepID optionally assigns the task to a project step (requires ProjectID).
-	ProjectStepID *string
+	Tags            []string
+	Milestone     *string
+	Gate          *domain.TaskGate
+	DependsOn     []string
 }
 
 // ParentFieldPatch updates parent_id when non-nil. Clear true means
@@ -57,7 +59,6 @@ type UpdateInput struct {
 	Priority              *domain.Priority
 	TaskType              *domain.TaskType
 	Project               *ProjectFieldPatch
-	ProjectStep           *ProjectStepFieldPatch
 	ProjectContextItemIDs *[]string
 	Parent                *ParentFieldPatch
 	ChecklistInherit      *bool
@@ -70,19 +71,22 @@ type UpdateInput struct {
 	// CursorModel updates tasks.cursor_model when non-nil. Empty string
 	// after trim clears the column (runner uses app default / omits --model).
 	CursorModel *string
+	Tags        *[]string
+	Milestone   *string
+	Gate        **domain.TaskGate
+	DependsOn   *[]string
+}
+
+// ListFilter optionally restricts flat task listing.
+type ListFilter struct {
+	Tag       *string
+	Milestone *string
 }
 
 // ProjectFieldPatch updates project_id when non-nil. Clear true means
 // set project_id to null. Re-aliased by the public store facade as
 // store.ProjectFieldPatch.
 type ProjectFieldPatch struct {
-	Clear bool
-	ID    string
-}
-
-// ProjectStepFieldPatch updates project_step_id when non-nil. Clear true clears
-// the step assignment. Re-aliased by the public store facade as store.ProjectStepFieldPatch.
-type ProjectStepFieldPatch struct {
 	Clear bool
 	ID    string
 }

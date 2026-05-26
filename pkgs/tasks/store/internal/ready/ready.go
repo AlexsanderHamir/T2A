@@ -75,8 +75,9 @@ func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *Qu
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ?`,
 			int64(1), domain.EventTaskCreated).
 		Where("tasks.status = ?", domain.StatusReady).
-		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now).
-		Order(order).
+		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now)
+	q = applyDequeuableTaskPredicates(q, db)
+	q = q.Order(order).
 		Limit(limit)
 
 	if cursor != nil {
@@ -124,8 +125,9 @@ func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ? AND te.by = ?`,
 			int64(1), domain.EventTaskCreated, domain.ActorUser).
 		Where("tasks.status = ?", domain.StatusReady).
-		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now).
-		Order("tasks.id ASC").
+		Where("(tasks.pickup_not_before IS NULL OR tasks.pickup_not_before <= ?)", now)
+	q = applyDequeuableTaskPredicates(q, db)
+	q = q.Order("tasks.id ASC").
 		Limit(limit)
 	if afterID != "" {
 		q = q.Where("tasks.id > ?", afterID)

@@ -120,7 +120,7 @@ func PersistAllTasks(ctx context.Context, st *store.Store, opts Options, publish
 		per = maxEventsPerTick
 	}
 	for offset := 0; ; offset += listPage {
-		rows, err := st.ListFlat(ctx, listPage, offset)
+		rows, err := st.ListFlat(ctx, listPage, offset, nil)
 		if err != nil {
 			slog.Debug("sse dev ticker list failed", "cmd", logCmd, "operation", "devsim.tick_list", "err", err)
 			return

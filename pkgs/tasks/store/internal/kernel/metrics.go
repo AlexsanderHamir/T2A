@@ -67,19 +67,7 @@ const (
 	OpUpdateProjectContext    = "update_project_context"
 	OpDeleteProjectContext    = "delete_project_context"
 	OpCreateContextSnapshot   = "create_context_snapshot"
-	OpGetContextSnapshot      = "get_context_snapshot"
-	OpListProjectSteps        = "list_project_steps"
-	OpCreateProjectStep       = "create_project_step"
-	OpGetProjectStep          = "get_project_step"
-	OpUpdateProjectStep       = "update_project_step"
-	OpDeleteProjectStep       = "delete_project_step"
-	OpSweepProjectStepGates   = "sweep_project_step_gates"
-	OpListProjectGoals        = "list_project_goals"
-	OpCreateProjectGoal       = "create_project_goal"
-	OpGetProjectGoal          = "get_project_goal"
-	OpUpdateProjectGoal       = "update_project_goal"
-	OpDeleteProjectGoal       = "delete_project_goal"
-	OpSweepProjectGoalGates   = "sweep_project_goal_gates"
+	OpGetContextSnapshot = "get_context_snapshot"
 )
 
 // opDurationBuckets favor sub-100ms resolution for SQL point reads and short tx.

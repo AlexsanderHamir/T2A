@@ -15,7 +15,7 @@ import (
 // ListFlat returns tasks ordered by id ASC with limit/offset over all
 // rows; no tree shape is built. limit is clamped to [1, 200] (default
 // 50) and offset to [0, +inf).
-func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int) ([]domain.Task, error) {
+func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int, filter *ListFilter) ([]domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpListFlat)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListFlat")
 	if limit <= 0 {
@@ -27,14 +27,20 @@ func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int) ([]domain.Tas
 	if offset < 0 {
 		offset = 0
 	}
+	q := db.WithContext(ctx).Model(&domain.Task{})
+	q = applyListFilter(q, db, filter)
 	var out []domain.Task
-	err := db.WithContext(ctx).
-		Order("id ASC").
+	err := q.Order("id ASC").
 		Limit(limit).
 		Offset(offset).
 		Find(&out).Error
 	if err != nil {
 		return nil, fmt.Errorf("list tasks: %w", err)
+	}
+	for i := range out {
+		if err := hydrateDependsOn(ctx, db, &out[i]); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -132,6 +138,9 @@ func GetTree(ctx context.Context, db *gorm.DB, id string) (Node, error) {
 		}
 		return Node{}, fmt.Errorf("get task: %w", err)
 	}
+	if err := hydrateDependsOn(ctx, db, &root); err != nil {
+		return Node{}, err
+	}
 	all, err := loadTasksForForest(ctx, db, []domain.Task{root})
 	if err != nil {
 		return Node{}, err
@@ -181,6 +190,13 @@ func loadTasksForForest(ctx context.Context, db *gorm.DB, seeds []domain.Task) (
 			all[t.ID] = t
 			queue = append(queue, t.ID)
 		}
+	}
+	for id, t := range all {
+		cur := t
+		if err := hydrateDependsOn(ctx, db, &cur); err != nil {
+			return nil, err
+		}
+		all[id] = cur
 	}
 	return all, nil
 }

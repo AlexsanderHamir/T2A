@@ -7,14 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/drafts"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/eval"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -38,6 +36,9 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 		}
 		return nil, fmt.Errorf("get task: %w", err)
 	}
+	if err := hydrateDependsOn(ctx, db, &t); err != nil {
+		return nil, err
+	}
 	return &t, nil
 }
 
@@ -60,6 +61,9 @@ func Create(ctx context.Context, db *gorm.DB, in CreateInput, by domain.Actor) (
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
 	}
+	if err := hydrateDependsOn(ctx, db, t); err != nil {
+		return nil, err
+	}
 	return t, nil
 }
 
@@ -77,7 +81,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.ProjectStep == nil && in.ProjectContextItemIDs == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.Parent == nil && in.ChecklistInherit == nil && in.PickupNotBefore == nil && in.CursorModel == nil && in.Tags == nil && in.Milestone == nil && in.Gate == nil && in.DependsOn == nil {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
@@ -101,11 +105,8 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 		if err := tx.Save(&cur).Error; err != nil {
 			return fmt.Errorf("save task: %w", err)
 		}
-		if cur.Status == domain.StatusDone && origStatus != domain.StatusDone {
-			grace := loadProjectStepGateGraceSeconds(tx)
-			if err := projects.MaybeAdvanceStepGateAfterTaskDone(tx, &cur, grace, time.Now().UTC()); err != nil {
-				return err
-			}
+		if err := hydrateDependsOn(ctx, tx, &cur); err != nil {
+			return err
 		}
 		updated = &cur
 		return nil
@@ -217,15 +218,6 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 			projectID = &p
 		}
 	}
-	var projectStepID *string
-	if in.ProjectStepID != nil {
-		s := strings.TrimSpace(*in.ProjectStepID)
-		if s == "" {
-			projectStepID = nil
-		} else {
-			projectStepID = &s
-		}
-	}
 	if in.ChecklistInherit && (parentID == nil || *parentID == "") {
 		return nil, "", nil, "", fmt.Errorf("%w: checklist_inherit requires parent_id", domain.ErrInvalidInput)
 	}
@@ -241,13 +233,15 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		Priority:              pr,
 		TaskType:              tt,
 		ProjectID:             projectID,
-		ProjectStepID:         projectStepID,
 		ProjectContextItemIDs: nil,
 		ParentID:              parentID,
 		ChecklistInherit:      in.ChecklistInherit,
 		Runner:                runner,
 		CursorModel:           in.CursorModel,
 		PickupNotBefore:       in.PickupNotBefore,
+	}
+	if err := normalizeCreateTaskModelFields(t, in); err != nil {
+		return nil, "", nil, "", err
 	}
 	return t, title, parentID, st, nil
 }
@@ -262,6 +256,9 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		if n == 0 {
 			return fmt.Errorf("%w: parent not found", domain.ErrInvalidInput)
 		}
+		if err := validateParentIsRootTask(tx, *parentID); err != nil {
+			return err
+		}
 	}
 	if t.ProjectID != nil {
 		var n int64
@@ -270,11 +267,6 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		}
 		if n == 0 {
 			return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
-		}
-	}
-	if t.ProjectStepID != nil {
-		if err := validateTaskProjectStep(tx, t); err != nil {
-			return err
 		}
 	}
 	contextIDs, err := normalizeProjectContextItemIDs(in.ProjectContextItemIDs)
@@ -295,6 +287,12 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 			return fmt.Errorf("%w: task id already exists", domain.ErrConflict)
 		}
 		return fmt.Errorf("insert task: %w", err)
+	}
+	if len(in.DependsOn) > 0 {
+		if err := setDependenciesInTx(tx, t.ID, in.DependsOn); err != nil {
+			return err
+		}
+		t.DependsOn = append([]string(nil), in.DependsOn...)
 	}
 	seq := int64(1)
 	if err := eval.AttachDraftEvaluationsInTx(tx, in.DraftID, t.ID); err != nil {
@@ -327,47 +325,8 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		if err := checklist.ValidateCanMarkDoneInTx(tx, t.ID); err != nil {
 			return err
 		}
-		grace := loadProjectStepGateGraceSeconds(tx)
-		if err := projects.MaybeAdvanceStepGateAfterTaskDone(tx, t, grace, time.Now().UTC()); err != nil {
-			return err
-		}
 	}
 	return nil
-}
-
-func loadProjectStepGateGraceSeconds(tx *gorm.DB) int {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.loadProjectStepGateGraceSeconds")
-	var row domain.AppSettings
-	if err := tx.First(&row, "id = ?", domain.AppSettingsRowID).Error; err != nil {
-		return domain.DefaultProjectStepGateGraceSeconds
-	}
-	return row.ProjectStepGateGraceSeconds
-}
-
-func validateTaskProjectStep(tx *gorm.DB, t *domain.Task) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.validateTaskProjectStep")
-	if t.ProjectStepID == nil || strings.TrimSpace(*t.ProjectStepID) == "" {
-		return nil
-	}
-	if t.ProjectID == nil || strings.TrimSpace(*t.ProjectID) == "" {
-		return fmt.Errorf("%w: project_step_id requires project_id", domain.ErrInvalidInput)
-	}
-	var step domain.ProjectStep
-	if err := tx.First(&step, "id = ?", strings.TrimSpace(*t.ProjectStepID)).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("%w: project step not found", domain.ErrInvalidInput)
-		}
-		return fmt.Errorf("project step lookup: %w", err)
-	}
-	if step.ProjectID != strings.TrimSpace(*t.ProjectID) {
-		return fmt.Errorf("%w: project step does not belong to task project", domain.ErrInvalidInput)
-	}
-	switch step.GateStatus {
-	case domain.ProjectStepGateActive, domain.ProjectStepGatePendingRelease:
-		return nil
-	default:
-		return fmt.Errorf("%w: project step is not accepting tasks", domain.ErrInvalidInput)
-	}
 }
 
 // deleteTaskSubtreeInTx is the in-transaction worker for Delete. It
