@@ -23,10 +23,8 @@ data: {"type":"task_updated","id":"<task-uuid>"}
 Most frames use `{type,id[,cycle_id]}`. Older clients that ignore the `id:` line keep working — they just lose the loss-free reconnect property.
 
 ```json
-{"type":"task_created|task_updated|task_deleted|project_created|project_updated|project_deleted|project_context_changed|project_goal_created|project_goal_updated|project_goal_deleted|project_step_created|project_step_updated|project_step_deleted","id":"<task-or-project-uuid>"}
+{"type":"task_created|task_updated|task_deleted|task_gate_changed|task_dependency_changed|project_created|project_updated|project_deleted|project_context_changed","id":"<task-or-project-uuid>"}
 ```
-
-For `project_goal_*` and `project_step_*` events, **`id` is always the owning project id** (not the goal or step row id) so clients can invalidate `GET /projects/{id}/goals`, `GET /projects/{id}/steps`, and project detail caches the same way as other project-scoped frames.
 
 `task_cycle_changed` payloads carry an extra `cycle_id` field so the SPA can scope its invalidation to the affected execution cycle subtree rather than the whole task:
 
@@ -92,14 +90,11 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `POST /projects/{id}/context`                         | `project_context_changed` for `{id}`                                       |
 | `PATCH /projects/{id}/context/{contextId}`            | `project_context_changed` for `{id}`                                       |
 | `DELETE /projects/{id}/context/{contextId}`           | `project_context_changed` for `{id}`                                       |
-| `POST /projects/{id}/goals`                           | `project_goal_created` for the project (`id` = project)                    |
-| `PATCH /projects/{id}/goals/{goalId}`                | `project_goal_updated` for the project (`id` = project)                    |
-| `DELETE /projects/{id}/goals/{goalId}`                | `project_goal_deleted` for the project (`id` = project)                    |
-| `POST /projects/{id}/steps`                           | `project_step_created` for the project (`id` = project)                      |
-| `PATCH /projects/{id}/steps/{stepId}`               | `project_step_updated` for the project (`id` = project)                    |
-| `DELETE /projects/{id}/steps/{stepId}`              | `project_step_deleted` for the project (`id` = project)                    |
 | `POST /tasks`                                          | `task_created` for the new task; plus `task_updated` for `parent_id` when the task is created under a parent |
-| `PATCH /tasks/{id}`                                    | `task_updated` for the patched task; plus `project_step_updated` for the project when the resulting task is `done` and has a non-null `project_id` |
+| `PATCH /tasks/{id}`                                    | `task_updated` for the patched task; `task_gate_changed` when `gate` is in the body; `task_dependency_changed` when `depends_on` is in the body |
+| `POST /tasks/{id}/dependencies`                        | `task_dependency_changed` for `{id}` |
+| `DELETE /tasks/{id}/dependencies/{depId}`              | `task_dependency_changed` for `{id}` |
+| `PATCH /tasks/{id}/gate`                               | `task_gate_changed` and `task_updated` for `{id}` |
 | `DELETE /tasks/{id}`                                   | `task_deleted` for the deleted task; plus `task_updated` for the parent when the deleted task had one |
 | `POST /tasks/{id}/checklist/items`                     | `task_updated` for `{id}`                                                  |
 | `PATCH /tasks/{id}/checklist/items/{itemId}`           | `task_updated` for `{id}`                                                  |
@@ -114,8 +109,6 @@ Each successful write may publish more than one event so SSE clients can refresh
 | `POST /settings/cancel-current-run`                    | `agent_run_cancelled` (no id) when a run was actually cancelled (`{"cancelled": true}`); no event when nothing was running |
 
 Read-only `GET` routes never publish. Failed writes (any non-2xx) never publish. Task drafts (`/task-drafts/*`), the draft scorer (`POST /tasks/evaluate`), and the cursor binary probe (`POST /settings/probe-cursor`) are not part of the SSE surface — `task_updated` only fires once a `POST /tasks` actually creates the underlying row, and the probe is a best-effort one-shot read against the runner that never mutates app state.
-
-**Project goal and step gates:** when `pending_release` deadlines elapse without an operator hold, the server advances gates inside the agent reconcile loop (same cadence as queue reconciliation). Each affected project may receive extra `project_goal_updated` and/or `project_step_updated` frames so browsers refresh countdowns without polling.
 
 ## Dev-only: SSE “cron” (`T2A_SSE_TEST=1`)
 

@@ -4,6 +4,8 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 
 **Product angle:** T2A is a control plane for agent-heavy workflows—as execution shifts to agents, orchestration moves out of the IDE into a shared API and persistent store. See [docs/PRODUCT.md](./PRODUCT.md) and the root [README](../README.md).
 
+**In flight:** flattening the work hierarchy to Project → Task (DAG, gates, tags) — [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md).
+
 ## Contract docs (taskapi)
 
 | Doc | Contents |
@@ -19,6 +21,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write to `task_events`, state machine, where reads go. |
 | [CHECKLIST.md](./CHECKLIST.md) | Done criteria, verification guardrail, evidence fields, edit locks, and checklist HTTP routes. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
+| [TASK-MODEL.md](./TASK-MODEL.md) | Flat task hierarchy: tags, milestone, `depends_on`, gate, depth-1 subtasks, worker readiness. |
 
 **`cmd/taskapi` wiring (code, not prose contracts):** binary layout [`cmd/taskapi/README.md`](../cmd/taskapi/README.md); startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`pkgs/tasks/middleware`](../pkgs/tasks/middleware) (`Stack` in `stack.go`, called from [`internal/taskapi`](../internal/taskapi) `NewHTTPHandler` with `calltrace.Path`); REST/SSE handlers in [`pkgs/tasks/handler`](../pkgs/tasks/handler) ([`README.md`](../pkgs/tasks/handler/README.md)).
 

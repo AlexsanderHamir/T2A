@@ -31,6 +31,8 @@ These describe behavior that code and tests should keep in sync.
 | Checklist / verification | [CHECKLIST.md](./CHECKLIST.md) |
 | Agent queue | [AGENT-QUEUE.md](./AGENT-QUEUE.md) |
 | Agent worker | [AGENT-WORKER.md](./AGENT-WORKER.md) |
+| Task pickup deferral | [SCHEDULING.md](./SCHEDULING.md) |
+| Flat task model (tags, deps, gate) | [TASK-MODEL.md](./TASK-MODEL.md) |
 | Web SPA | [WEB.md](./WEB.md) |
 
 ## Build and Extend
@@ -61,6 +63,7 @@ These are not current runtime contracts.
 | --- | --- |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term V2–V4 worker roadmap. |
 | [proposals/](./proposals/) | Designs that have not shipped. |
+| [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md) | In-flight: Project → Task with DAG, gates, tags (replaces goals/steps). |
 
 ## Where To Update
 
