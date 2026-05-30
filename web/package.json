@@ -26,7 +26,7 @@
     "@emnapi/core": "^1.10.0",
     "@emnapi/runtime": "^1.10.0",
     "@floating-ui/dom": "^1.7.6",
-    "@tanstack/react-query": "^5.100.5",
+    "@tanstack/react-query": "^5.100.14",
     "@tiptap/extension-placeholder": "^3.23.1",
     "@tiptap/react": "^3.21.0",
     "@tiptap/starter-kit": "^3.21.0",
