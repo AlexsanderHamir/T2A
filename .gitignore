@@ -18,6 +18,7 @@ web/.env.*.local
 web/public/mock-data/graphs/*.json
 work_technique/*.md
 .agent/
+.cursor/skills/
 moat.md
 
 # Defense in depth against the 2026-04-19 incident: a Windows component
