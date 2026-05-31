@@ -261,7 +261,9 @@
 
 /* ── Home table: title stack, status dot+label, priority dot, project badge, icon actions ── */
 .task-list-table .cell-title {
-  vertical-align: top;
+  /* Match `.cell-status` / `.cell-priority` / etc. — `top` made the title link
+     sit above the row's visual center while pills and actions stayed middle. */
+  vertical-align: middle;
 }
 
 .cell-title-stack {
