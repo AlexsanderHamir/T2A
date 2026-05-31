@@ -97,6 +97,10 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 
 	state.verifySnap, _ = w.loadVerificationSnapshot(parentCtx, task.ID)
 
+	// Cycle phase loop. Each iteration is one execute → (optional) verify
+	// pair. On verify failure we re-enter the loop (verify → execute is a
+	// legal transition); the runner's outcome and verification's verdict
+	// stay on their own phase rows so neither pollutes the other.
 	for {
 		execPhase, ok := w.startExecutePhase(parentCtx, cycle, &state)
 		if !ok {
@@ -125,42 +129,20 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			}
 		}
 
-		var verdicts []criterionVerdict
-		if runErr == nil && !operatorCancelled {
-			if state.verifySnap.enabled {
-				var verifyErr error
-				var feedback string
-				verdicts, feedback, verifyErr = w.runVerificationPipeline(parentCtx, fresh, cycle, state.verifySnap, state.verifyFeedback)
-				if verifyErr != nil && feedback != "" {
-					state.verifyFeedback = feedback
-				}
-				if verifyErr != nil {
-					if state.verifyAttempt < state.verifySnap.maxRetries {
-						state.verifyAttempt++
-						_ = w.completeExecutePhase(parentCtx, &state, cycle, execPhase, domain.PhaseStatusFailed, result)
-						continue
-					}
-					phaseStatus = domain.PhaseStatusFailed
-					cycleStatus = domain.CycleStatusFailed
-					taskStatus = domain.StatusFailed
-					reason = verificationFailedReason
-				}
-			} else if err := w.completeChecklistLegacy(parentCtx, task.ID); err != nil {
-				slog.Warn("agent worker checklist completion failed",
-					"cmd", workerLogCmd,
-					"operation", "agent.worker.Worker.processOne.checklist_err",
-					"task_id", task.ID, "err", err)
-				phaseStatus = domain.PhaseStatusFailed
-				cycleStatus = domain.CycleStatusFailed
-				taskStatus = domain.StatusFailed
-				reason = checklistCompletionFailedReason
-			}
+		// The execute phase's verdict is the runner's verdict, full stop.
+		// Closing it here (a) frees the cycle's "no running phase"
+		// invariant so the verify phase can open, and (b) keeps execute's
+		// status from being retroactively rewritten by a later
+		// verification failure. See pkgs/tasks/store/internal/cycles
+		// for the assertNoRunningPhase / ValidPhaseTransition contracts.
+		if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
+			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+			return
 		}
-		if runErr != nil || operatorCancelled || reason == verificationFailedReason {
-			if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
-				w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
-				return
-			}
+
+		// Runner failure / cancellation: cycle terminates here.
+		// Verification is meaningless without runner output.
+		if runErr != nil || operatorCancelled {
 			if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 				return
 			}
@@ -169,15 +151,52 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			}
 			return
 		}
-		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, verdicts); err != nil {
-			phaseStatus = domain.PhaseStatusFailed
+
+		// Verification path. Always opens a verify phase when enabled so
+		// the cycle's phase ledger reflects what we actually did, and so
+		// the next execute (on retry) has a legal verify → execute
+		// transition.
+		var verdicts []criterionVerdict
+		if state.verifySnap.enabled {
+			var verifyErr error
+			var feedback string
+			verdicts, feedback, verifyErr = w.runVerificationPipeline(parentCtx, fresh, cycle, &state, state.verifySnap, state.verifyFeedback)
+			if verifyErr != nil && feedback != "" {
+				state.verifyFeedback = feedback
+			}
+			if verifyErr != nil {
+				if state.verifyAttempt < state.verifySnap.maxRetries {
+					state.verifyAttempt++
+					continue
+				}
+				cycleStatus = domain.CycleStatusFailed
+				taskStatus = domain.StatusFailed
+				reason = verificationFailedReason
+				if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+					return
+				}
+				_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
+				return
+			}
+		} else if err := w.completeChecklistLegacy(parentCtx, task.ID); err != nil {
+			slog.Warn("agent worker checklist completion failed",
+				"cmd", workerLogCmd,
+				"operation", "agent.worker.Worker.processOne.checklist_err",
+				"task_id", task.ID, "err", err)
 			cycleStatus = domain.CycleStatusFailed
 			taskStatus = domain.StatusFailed
 			reason = checklistCompletionFailedReason
-		}
-		if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
-			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+			if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+				return
+			}
+			_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
 			return
+		}
+
+		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, verdicts); err != nil {
+			cycleStatus = domain.CycleStatusFailed
+			taskStatus = domain.StatusFailed
+			reason = checklistCompletionFailedReason
 		}
 		if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 			return

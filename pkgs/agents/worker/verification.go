@@ -94,10 +94,17 @@ func (w *Worker) applyVerifiedCompletions(ctx context.Context, taskID, cycleID s
 	return nil
 }
 
+// runVerificationPipeline opens a verify phase, runs deterministic and
+// optional LLM-driven checks within it, then closes the phase. The
+// caller must have already terminated the execute phase — verification
+// is its own phase row, not a step inside execute. See process.go for
+// the loop that depends on this contract (verify → execute is the only
+// legal retry transition allowed by domain.ValidPhaseTransition).
 func (w *Worker) runVerificationPipeline(
 	parentCtx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
+	state *processState,
 	snap verificationSnapshot,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
@@ -108,6 +115,54 @@ func (w *Worker) runVerificationPipeline(
 	}
 	_ = ensureT2ADir(w.options.WorkingDir)
 
+	phase, err := w.store.StartPhase(parentCtx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
+	if err != nil {
+		slog.Warn("agent worker StartPhase(verify) failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.start_err",
+			"cycle_id", cycle.ID, "err", err)
+		return nil, "", fmt.Errorf("start verify phase: %w", err)
+	}
+	state.runningPhase = domain.PhaseVerify
+	state.runningPhaseSeq = phase.PhaseSeq
+	w.publish(cycle.TaskID, cycle.ID)
+
+	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, snap, feedback)
+
+	phaseStatus := domain.PhaseStatusSucceeded
+	summary := "verify complete"
+	if verifyErr != nil {
+		phaseStatus = domain.PhaseStatusFailed
+		summary = verifyErr.Error()
+	}
+	if _, err := w.store.CompletePhase(parentCtx, store.CompletePhaseInput{
+		CycleID:  cycle.ID,
+		PhaseSeq: phase.PhaseSeq,
+		Status:   phaseStatus,
+		Summary:  &summary,
+		By:       domain.ActorAgent,
+	}); err != nil {
+		slog.Warn("agent worker CompletePhase(verify) failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.complete_err",
+			"cycle_id", cycle.ID, "phase_seq", phase.PhaseSeq, "err", err)
+	}
+	state.runningPhase = ""
+	state.runningPhaseSeq = 0
+	w.publish(cycle.TaskID, cycle.ID)
+	return verdicts, feedbackOut, verifyErr
+}
+
+// runVerifyChecks performs the deterministic and (when needed) LLM
+// verification work. It does NOT manage the verify phase row — the
+// caller wraps it with StartPhase / CompletePhase.
+func (w *Worker) runVerifyChecks(
+	parentCtx context.Context,
+	task *domain.Task,
+	cycle *domain.TaskCycle,
+	snap verificationSnapshot,
+	feedback string,
+) ([]criterionVerdict, string, error) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks",
+		"task_id", task.ID, "cycle_id", cycle.ID, "criteria_count", len(snap.criteria))
 	expected := make(map[string]struct{}, len(snap.criteria))
 	for _, it := range snap.criteria {
 		expected[it.ID] = struct{}{}
@@ -152,7 +207,7 @@ func (w *Worker) runVerificationPipeline(
 	}
 
 	if needLLMVerify {
-		if err := w.runVerifyPhase(parentCtx, task, cycle, snap, selfReport, feedback); err != nil {
+		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, snap, selfReport, feedback); err != nil {
 			return nil, "", err
 		}
 		vrep, err := parseVerifyReport(w.options.WorkingDir, cycle.ID, expected)
@@ -204,7 +259,10 @@ func findVerifyItem(items []store.ChecklistVerifyItem, id string) *store.Checkli
 	return nil
 }
 
-func (w *Worker) runVerifyPhase(
+// runLLMVerifyAgent invokes the verify runner against the criteria
+// self-report. It performs no phase bookkeeping; the caller (the verify
+// phase wrapper in runVerificationPipeline) owns StartPhase / CompletePhase.
+func (w *Worker) runLLMVerifyAgent(
 	ctx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
@@ -212,63 +270,38 @@ func (w *Worker) runVerifyPhase(
 	selfReport map[string]criteriaReportEntry,
 	feedback string,
 ) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyPhase",
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID)
-	phase, err := w.store.StartPhase(ctx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
+	diff, err := gitDiff(w.options.WorkingDir, "HEAD")
 	if err != nil {
-		return err
+		diff = "(diff unavailable: " + err.Error() + ")"
 	}
-	w.publish(cycle.TaskID, cycle.ID)
-
-	runErr := func() error {
-		diff, err := gitDiff(w.options.WorkingDir, "HEAD")
-		if err != nil {
-			diff = "(diff unavailable: " + err.Error() + ")"
+	var b strings.Builder
+	b.WriteString("You are the verification agent. Do not modify source files.\n")
+	b.WriteString(fmt.Sprintf("Write `.t2a/%s/verify-report.json` only.\n\n", cycle.ID))
+	b.WriteString("Schema: {\"criteria\":[{\"id\":\"...\",\"verified\":true|false,\"reasoning\":\"...\"}]}\n\n")
+	for _, it := range snap.criteria {
+		if strings.TrimSpace(it.Check) != "" {
+			continue
 		}
-		var b strings.Builder
-		b.WriteString("You are the verification agent. Do not modify source files.\n")
-		b.WriteString(fmt.Sprintf("Write `.t2a/%s/verify-report.json` only.\n\n", cycle.ID))
-		b.WriteString("Schema: {\"criteria\":[{\"id\":\"...\",\"verified\":true|false,\"reasoning\":\"...\"}]}\n\n")
-		for _, it := range snap.criteria {
-			if strings.TrimSpace(it.Check) != "" {
-				continue
-			}
-			e := selfReport[it.ID]
-			b.WriteString(fmt.Sprintf("- [%s] %s\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
-		}
-		b.WriteString("\nDiff:\n")
-		b.WriteString(diff)
-		prompt := b.String()
-		if feedback != "" {
-			prompt = appendVerifyFeedback(prompt, feedback)
-		}
-		_, err = snap.verifyRunner.Run(ctx, runner.Request{
-			TaskID:      task.ID,
-			AttemptSeq:  cycle.AttemptSeq,
-			Phase:       domain.PhaseVerify,
-			Prompt:      prompt,
-			WorkingDir:  w.options.WorkingDir,
-			CursorModel: snap.verifyModel,
-		})
-		return err
-	}()
-
-	status := domain.PhaseStatusSucceeded
-	summary := "verify complete"
-	if runErr != nil {
-		status = domain.PhaseStatusFailed
-		s := runErr.Error()
-		summary = s
+		e := selfReport[it.ID]
+		b.WriteString(fmt.Sprintf("- [%s] %s\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
 	}
-	_, _ = w.store.CompletePhase(ctx, store.CompletePhaseInput{
-		CycleID:  cycle.ID,
-		PhaseSeq: phase.PhaseSeq,
-		Status:   status,
-		Summary:  &summary,
-		By:       domain.ActorAgent,
+	b.WriteString("\nDiff:\n")
+	b.WriteString(diff)
+	prompt := b.String()
+	if feedback != "" {
+		prompt = appendVerifyFeedback(prompt, feedback)
+	}
+	_, err = snap.verifyRunner.Run(ctx, runner.Request{
+		TaskID:      task.ID,
+		AttemptSeq:  cycle.AttemptSeq,
+		Phase:       domain.PhaseVerify,
+		Prompt:      prompt,
+		WorkingDir:  w.options.WorkingDir,
+		CursorModel: snap.verifyModel,
 	})
-	w.publish(cycle.TaskID, cycle.ID)
-	return runErr
+	return err
 }
 
 func gitDiff(dir, rev string) (string, error) {

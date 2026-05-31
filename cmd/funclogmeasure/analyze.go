@@ -373,8 +373,8 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\testimateTokens":                 {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tpromptWithProjectContext":       {},
 	// Criteria verification guardrail: pure helpers and thin wrappers; pipeline
-	// entry points (runVerificationPipeline, runVerifyPhase, applyVerifiedCompletions,
-	// completeChecklistLegacy) emit the canonical trace.
+	// entry points (runVerificationPipeline, runVerifyChecks, runLLMVerifyAgent,
+	// applyVerifiedCompletions, completeChecklistLegacy) emit the canonical trace.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidVerifierKind":                         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tisTaskCycleRunningInTx":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tvalidateEvidencePayload": {},
@@ -431,6 +431,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tshellSummary":                      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tgenericInputSummary":               {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tstringField":                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tinputField":                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tpathLabel":                         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tscopeLabel":                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor\tlineRange":                         {},
