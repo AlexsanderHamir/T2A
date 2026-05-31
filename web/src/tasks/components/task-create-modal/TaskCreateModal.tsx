@@ -13,6 +13,7 @@ import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNeste
 import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
+import { TaskCreateModalAutonomyToggle } from "./fields/TaskCreateModalAutonomyToggle";
 import { TaskCreateModalSchedulingFields } from "./fields/TaskCreateModalSchedulingFields";
 import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import {
@@ -77,6 +78,15 @@ type Props = {
    */
   schedule: string | null;
   onScheduleChange: (next: string | null) => void;
+  /**
+   * `true` (default) creates the task as `ready` (the agent worker can
+   * pick it up). `false` creates it as `on_hold` so the agent never
+   * dequeues it; the operator resumes the task later from the detail
+   * page. The toggle's helper text explains which side of that choice
+   * the user is currently on.
+   */
+  autonomyEnabled: boolean;
+  onAutonomyChange: (enabled: boolean) => void;
   tagsCsv: string;
   milestone: string;
   dependsOnCsv: string;
@@ -160,6 +170,8 @@ export function TaskCreateModal({
   promptProjectContext,
   schedule,
   onScheduleChange,
+  autonomyEnabled,
+  onAutonomyChange,
   tagsCsv,
   milestone,
   dependsOnCsv,
@@ -297,6 +309,12 @@ export function TaskCreateModal({
                 onRemovePendingSubtask={onRemovePendingSubtask}
               />
             ) : null}
+
+            <TaskCreateModalAutonomyToggle
+              enabled={autonomyEnabled}
+              disabled={disabled}
+              onChange={onAutonomyChange}
+            />
 
             <details className="task-create-advanced">
               <summary

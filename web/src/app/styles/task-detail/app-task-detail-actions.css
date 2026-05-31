@@ -113,6 +113,50 @@ button.task-detail-btn-model-config:disabled {
   cursor: not-allowed;
 }
 
+/* Autonomy toggle. Same secondary chrome as model-config; the button
+   label flips between "Put on hold" and "Resume" based on
+   data-autonomy-mode, so a single visual treatment covers both
+   directions. The redesign brief reserves bright accents for primary
+   CTAs — autonomy is meta, so we render it in the quiet chrome row. */
+button.task-detail-btn-autonomy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-autonomy:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  transform: none;
+  filter: none;
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+button.task-detail-btn-autonomy:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+button.task-detail-btn-autonomy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Per redesign brief: destructive controls render as white background +
    --danger text and border. A delete that's already gated by a confirm
    dialog doesn't need to scream — the colour is the affordance, the

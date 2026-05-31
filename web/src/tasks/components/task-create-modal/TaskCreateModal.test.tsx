@@ -61,6 +61,8 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onTaskCursorModelChange: vi.fn(),
     schedule: null,
     onScheduleChange: vi.fn(),
+    autonomyEnabled: true,
+    onAutonomyChange: vi.fn(),
     tagsCsv: "",
     milestone: "",
     dependsOnCsv: "",
@@ -344,6 +346,43 @@ describe("TaskCreateModal", () => {
     expect(toggle).toHaveTextContent(/Scheduled/);
     expect(toggle).toHaveTextContent(/2 tags/);
     expect(toggle).toHaveTextContent(/Milestone/);
+  });
+
+  describe("autonomy toggle", () => {
+    function getAutonomyCheckbox() {
+      return document.getElementById(
+        "task-create-autonomy-toggle",
+      ) as HTMLInputElement;
+    }
+
+    it("renders the autonomy section with the toggle checked by default", () => {
+      renderModal();
+      const toggle = getAutonomyCheckbox();
+      expect(toggle).toBeInTheDocument();
+      expect(toggle).toBeChecked();
+      expect(
+        screen.getByText(
+          /agent will pick this task up when its scheduling and dependencies allow/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("renders unchecked + on-hold helper copy when autonomyEnabled is false", () => {
+      renderModal({ autonomyEnabled: false });
+      const toggle = getAutonomyCheckbox();
+      expect(toggle).not.toBeChecked();
+      expect(
+        screen.getByText(/will be created on hold/i),
+      ).toBeInTheDocument();
+    });
+
+    it("forwards the new value through onAutonomyChange when toggled", async () => {
+      const user = userEvent.setup();
+      const onAutonomyChange = vi.fn();
+      renderModal({ onAutonomyChange });
+      await user.click(getAutonomyCheckbox());
+      expect(onAutonomyChange).toHaveBeenCalledWith(false);
+    });
   });
 
   it("opens the test-scenarios popover and forwards the picked scenario", async () => {

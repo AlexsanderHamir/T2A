@@ -125,6 +125,74 @@ describe("TaskDetailAttentionBar", () => {
     expect(onConfigureModel).toHaveBeenCalledOnce();
   });
 
+  describe("autonomy toggle", () => {
+    it("does not render the toggle when autonomyMode is hidden / unset", () => {
+      render(
+        <TaskDetailAttentionBar
+          attention={{ show: false, headline: "", body: "" }}
+          saving={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByRole("button", { name: /^(resume|put on hold)$/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders 'Put on hold' when autonomyMode=ready", async () => {
+      const user = userEvent.setup();
+      const onToggleAutonomy = vi.fn();
+      render(
+        <TaskDetailAttentionBar
+          attention={{ show: false, headline: "", body: "" }}
+          saving={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          autonomyMode="ready"
+          onToggleAutonomy={onToggleAutonomy}
+        />,
+      );
+      const button = screen.getByRole("button", { name: /^put on hold$/i });
+      await user.click(button);
+      expect(onToggleAutonomy).toHaveBeenCalledOnce();
+    });
+
+    it("renders 'Resume' when autonomyMode=on_hold", async () => {
+      const user = userEvent.setup();
+      const onToggleAutonomy = vi.fn();
+      render(
+        <TaskDetailAttentionBar
+          attention={{ show: false, headline: "", body: "" }}
+          saving={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          autonomyMode="on_hold"
+          onToggleAutonomy={onToggleAutonomy}
+        />,
+      );
+      const button = screen.getByRole("button", { name: /^resume$/i });
+      await user.click(button);
+      expect(onToggleAutonomy).toHaveBeenCalledOnce();
+    });
+
+    it("shows the pending label and disables the toggle while pending", () => {
+      render(
+        <TaskDetailAttentionBar
+          attention={{ show: false, headline: "", body: "" }}
+          saving={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          autonomyMode="ready"
+          onToggleAutonomy={vi.fn()}
+          autonomyPending
+        />,
+      );
+      const button = screen.getByRole("button", { name: /^holding…$/i });
+      expect(button).toBeDisabled();
+    });
+  });
+
   it("no longer renders the legacy inline model-config panel", () => {
     render(
       <TaskDetailAttentionBar

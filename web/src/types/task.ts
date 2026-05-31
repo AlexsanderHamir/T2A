@@ -4,7 +4,8 @@ export type Status =
   | "blocked"
   | "review"
   | "done"
-  | "failed";
+  | "failed"
+  | "on_hold";
 
 export type { GateCriterion, GateStatus, TaskGate } from "./gate";
 import type { TaskGate } from "./gate";
@@ -219,6 +220,7 @@ export const STATUSES: Status[] = [
   "review",
   "done",
   "failed",
+  "on_hold",
 ];
 
 export const PRIORITIES: Priority[] = [

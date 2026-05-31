@@ -112,6 +112,8 @@ export function TaskCreateModalsLayer({ app }: Props) {
           promptProjectContext={newPromptProjectContext ?? undefined}
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
+          autonomyEnabled={app.newAutonomyEnabled}
+          onAutonomyChange={app.setNewAutonomyEnabled}
           tagsCsv={app.newTagsCsv}
           milestone={app.newMilestone}
           dependsOnCsv={app.newDependsOnCsv}

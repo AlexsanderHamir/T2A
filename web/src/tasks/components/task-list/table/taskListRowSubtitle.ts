@@ -47,5 +47,7 @@ export function statusListLabel(status: Status): string {
       return "Done";
     case "failed":
       return "Failed";
+    case "on_hold":
+      return "On hold";
   }
 }

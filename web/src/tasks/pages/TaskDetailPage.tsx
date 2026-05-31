@@ -32,6 +32,7 @@ import {
   TaskGatePanel,
   TaskModelConfigModal,
 } from "../components/task-detail";
+import { AutonomyConfirmDialog } from "../components/dialogs";
 import { sanitizePromptHtml } from "../task-prompt";
 import { taskDescendantCount, userAttention } from "../task-display";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
@@ -52,6 +53,7 @@ export function TaskDetailPage({ app }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
+  const [autonomyConfirmOpen, setAutonomyConfirmOpen] = useState(false);
   const {
     subtaskModalOpen,
     subtaskTitle,
@@ -180,6 +182,71 @@ export function TaskDetailPage({ app }: Props) {
     },
   });
 
+  // Autonomy toggle: PATCH status between "ready" and "on_hold". Mirrors
+  // the requeue shape (optimistic on the detail row, server-truth
+  // invalidation for list/stats/tree caches) so the autonomy state
+  // updates feel as snappy as the existing requeue. The button label +
+  // dialog copy in TaskDetailAttentionBar / AutonomyConfirmDialog
+  // diverge between directions; the mutation itself is symmetric.
+  const autonomyMutation = useMutation<
+    unknown,
+    unknown,
+    "ready" | "on_hold",
+    { prev: Task | undefined; startedAtMs: number; next: "ready" | "on_hold" }
+  >({
+    mutationFn: (next) => patchTask(taskId, { status: next }),
+    onMutate: async (next) => {
+      const startedAtMs = performance.now();
+      rumMutationStarted("task_autonomy");
+      if (!optimisticMutationsEnabled) {
+        return { prev: undefined, startedAtMs, next };
+      }
+      bumpOptimisticVersion(taskId);
+      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
+      const detailKey = taskQueryKeys.detail(taskId);
+      const prev = queryClient.getQueryData<Task>(detailKey);
+      if (prev) {
+        queryClient.setQueryData<Task>(detailKey, { ...prev, status: next });
+      }
+      rumMutationOptimisticApplied("task_autonomy", performance.now() - startedAtMs);
+      return { prev, startedAtMs, next };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(taskQueryKeys.detail(taskId), context.prev);
+      }
+      if (context) {
+        if (context.prev !== undefined) {
+          rumMutationRolledBack(
+            "task_autonomy",
+            performance.now() - context.startedAtMs,
+          );
+        }
+        rumMutationSettled(
+          "task_autonomy",
+          performance.now() - context.startedAtMs,
+          0,
+        );
+      }
+      toast.error("Couldn't update autonomy — reverted.");
+    },
+    onSuccess: async (_data, _vars, context) => {
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+      setAutonomyConfirmOpen(false);
+      if (context) {
+        rumMutationSettled(
+          "task_autonomy",
+          performance.now() - context.startedAtMs,
+          200,
+        );
+      }
+    },
+    onSettled: () => {
+      clearOptimisticVersion(taskId);
+    },
+  });
+
   const taskDocTitle =
     taskId && taskQuery.isSuccess && taskQuery.data
       ? taskQuery.data.title.trim() || "Untitled task"
@@ -238,6 +305,18 @@ export function TaskDetailPage({ app }: Props) {
     approvalPending: eventsQuery.data?.approval_pending ?? false,
   });
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
+  // Autonomy is meaningful only for the two states the operator can
+  // freely move between without colliding with the agent — `ready`
+  // (eligible) and `on_hold` (parked). Running / blocked / review /
+  // done / failed are owned by the agent or by deeper state and
+  // hiding the toggle keeps the surface honest.
+  const autonomyMode: "hidden" | "ready" | "on_hold" =
+    task.status === "ready"
+      ? "ready"
+      : task.status === "on_hold"
+      ? "on_hold"
+      : "hidden";
+  const autonomyEnable = autonomyMode === "on_hold";
 
   return (
     <section className="panel task-detail-panel task-detail-content--enter">
@@ -263,7 +342,40 @@ export function TaskDetailPage({ app }: Props) {
         requeuePending={requeueMutation.isPending}
         onConfigureModel={() => setModelConfigOpen(true)}
         showModelConfig={task.status === "failed"}
+        autonomyMode={autonomyMode}
+        onToggleAutonomy={
+          autonomyMode !== "hidden"
+            ? () => setAutonomyConfirmOpen(true)
+            : undefined
+        }
+        autonomyPending={autonomyMutation.isPending}
       />
+
+      {autonomyConfirmOpen && autonomyMode !== "hidden" ? (
+        <AutonomyConfirmDialog
+          enable={autonomyEnable}
+          taskTitle={task.title}
+          saving={app.saving}
+          pending={autonomyMutation.isPending}
+          error={
+            autonomyMutation.isError
+              ? errorMessage(
+                  autonomyMutation.error,
+                  autonomyEnable
+                    ? "Couldn't resume autonomous execution."
+                    : "Couldn't put this task on hold.",
+                )
+              : null
+          }
+          onCancel={() => {
+            setAutonomyConfirmOpen(false);
+            if (autonomyMutation.isError) autonomyMutation.reset();
+          }}
+          onConfirm={() =>
+            autonomyMutation.mutate(autonomyEnable ? "ready" : "on_hold")
+          }
+        />
+      ) : null}
 
       {modelConfigOpen ? (
         <TaskModelConfigModal

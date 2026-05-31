@@ -11,7 +11,7 @@ import (
 func ValidStatus(s domain.Status) bool {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidStatus")
 	switch s {
-	case domain.StatusReady, domain.StatusRunning, domain.StatusBlocked, domain.StatusReview, domain.StatusDone, domain.StatusFailed:
+	case domain.StatusReady, domain.StatusRunning, domain.StatusBlocked, domain.StatusReview, domain.StatusDone, domain.StatusFailed, domain.StatusOnHold:
 		return true
 	default:
 		return false

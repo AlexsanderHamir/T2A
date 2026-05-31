@@ -76,6 +76,20 @@ export function useTaskCreateFlow() {
    * resumed draft re-anchors correctly.
    */
   const [newSchedule, setNewSchedule] = useState<string | null>(null);
+  /**
+   * Whether the new task should be created in agent-pickup-eligible
+   * (`ready`) state or held back (`on_hold`). Default `true` matches the
+   * pre-existing behavior — clearing the toggle creates the task in
+   * `on_hold` so the worker never picks it up until the operator flips
+   * it to `ready` from the detail page.
+   *
+   * Not persisted to drafts: drafts capture the *content* of a task, and
+   * the operator's intent to start in hold is a one-time decision tied
+   * to "I am submitting this task right now". Resumed drafts default
+   * back to autonomy ON so a stale held draft from weeks ago does not
+   * silently keep getting created on hold.
+   */
+  const [newAutonomyEnabled, setNewAutonomyEnabled] = useState(true);
   const [newTagsCsv, setNewTagsCsv] = useState("");
   const [newMilestone, setNewMilestone] = useState("");
   const [newDependsOnCsv, setNewDependsOnCsv] = useState("");
@@ -178,6 +192,7 @@ export function useTaskCreateFlow() {
     setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
     setNewSchedule(null);
+    setNewAutonomyEnabled(true);
     setNewTagsCsv("");
     setNewMilestone("");
     setNewDependsOnCsv("");
@@ -754,6 +769,15 @@ export function useTaskCreateFlow() {
     if (!newTitle.trim() || !newPriority) return;
     const dmapDomain = newDmapDomain.trim();
     if (newTaskType === "dmap" && !dmapDomain) return;
+    // Autonomy off => create the task in on_hold so the agent worker
+    // skips it on dequeue (ReadyForAgentPickup gates on Status==Ready,
+    // see pkgs/tasks/store/internal/tasks/readiness.go). The operator
+    // resumes the task by flipping status back to ready from the
+    // detail page, which goes through the standard PATCH /tasks/{id}
+    // path.
+    const submitStatus: Status = newAutonomyEnabled
+      ? DEFAULT_NEW_TASK_STATUS
+      : "on_hold";
     createMutation.mutate({
       title: newTitle.trim(),
       initial_prompt:
@@ -764,7 +788,7 @@ export function useTaskCreateFlow() {
               description: newDmapDescription,
             })
           : newPrompt,
-      status: DEFAULT_NEW_TASK_STATUS,
+      status: submitStatus,
       priority: newPriority,
       task_type: toApiTaskType(newTaskType),
       draft_id: newDraftID,
@@ -845,6 +869,7 @@ export function useTaskCreateFlow() {
     // `newSchedule` above. Clear so a stale schedule from a previous
     // open of a different draft does not leak into the resumed form.
     setNewSchedule(null);
+    setNewAutonomyEnabled(true);
     setNewDraftID(draft.id);
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
@@ -1082,6 +1107,8 @@ export function useTaskCreateFlow() {
     setNewProjectContextItemIDs,
     newSchedule,
     setNewSchedule,
+    newAutonomyEnabled,
+    setNewAutonomyEnabled,
     newTagsCsv,
     setNewTagsCsv,
     newMilestone,

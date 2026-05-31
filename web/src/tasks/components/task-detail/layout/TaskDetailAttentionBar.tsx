@@ -25,6 +25,16 @@ type Props = {
    * as `failedRunnerHint`.
    */
   showModelConfig?: boolean;
+  /**
+   * Autonomous-execution mode for this task. `"hidden"` suppresses the
+   * toggle entirely (e.g. running, done, failed — the autonomy concept
+   * does not apply). `"ready"` shows a "Put on hold" action; `"on_hold"`
+   * shows a "Resume" action. Both actions go through a confirm dialog
+   * upstream of `onToggleAutonomy`.
+   */
+  autonomyMode?: "hidden" | "ready" | "on_hold";
+  onToggleAutonomy?: () => void;
+  autonomyPending?: boolean;
 };
 
 export function TaskDetailAttentionBar({
@@ -36,7 +46,16 @@ export function TaskDetailAttentionBar({
   requeuePending,
   onConfigureModel,
   showModelConfig,
+  autonomyMode = "hidden",
+  onToggleAutonomy,
+  autonomyPending = false,
 }: Props) {
+  const showAutonomy =
+    autonomyMode !== "hidden" && typeof onToggleAutonomy === "function";
+  const autonomyLabel =
+    autonomyMode === "on_hold" ? "Resume" : "Put on hold";
+  const autonomyPendingLabel =
+    autonomyMode === "on_hold" ? "Resuming…" : "Holding…";
   return (
     <>
       {attention.show ? (
@@ -67,6 +86,17 @@ export function TaskDetailAttentionBar({
             disabled={saving || requeuePending}
           >
             {requeuePending ? "Queueing…" : "Run again"}
+          </button>
+        ) : null}
+        {showAutonomy ? (
+          <button
+            type="button"
+            className="task-detail-btn-autonomy"
+            onClick={onToggleAutonomy}
+            disabled={saving || autonomyPending}
+            data-autonomy-mode={autonomyMode}
+          >
+            {autonomyPending ? autonomyPendingLabel : autonomyLabel}
           </button>
         ) : null}
         <button
