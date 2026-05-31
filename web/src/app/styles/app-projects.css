@@ -6,32 +6,13 @@
   position: relative;
   display: grid;
   gap: var(--space-6);
-  background:
-    linear-gradient(
-      180deg,
-      var(--bg-elevated) 0%,
-      color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-page)) 100%
-    );
+  background: var(--bg-elevated);
 }
 
-.pl::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--brand-border-soft) 12%,
-    var(--brand) 50%,
-    var(--brand-border-soft) 88%,
-    transparent 100%
-  );
-  opacity: 0.55;
-  pointer-events: none;
-}
+/* Per redesign brief: "No gradients on UI surfaces. Gradients are for hero
+   sections only, used sparingly." The previous brand-coloured top accent
+   stripe was decoration that read as "this is the active page" — we already
+   communicate page-level state via the nav underline. */
 
 .pl__head {
   display: flex;
@@ -3742,14 +3723,16 @@ a.pg__btn:focus-visible {
   align-items: baseline;
 }
 
+/* Inline section, not a nested card. Keeping the picker inside the modal
+   panel without its own border/background avoids the panel-in-panel stack
+   when the create form is open. */
 .project-context-picker {
   display: grid;
   gap: var(--space-3);
   margin: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg-subtle) 68%, var(--bg-elevated));
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .project-context-picker__head {

@@ -156,12 +156,15 @@
   width: 100%;
 }
 
+/* Borderless table — the surrounding panel is already the card chrome.
+   Wrapping the table in another bordered surface stacked two cards on top
+   of each other and was the visible "panel-in-panel" tell. */
 .task-list-table-wrap {
   position: relative;
   transition: opacity var(--duration-short) var(--ease-out);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -203,15 +206,14 @@
   vertical-align: middle;
 }
 
-/* Fresh-database welcome — hairline panel when the workspace has no tasks.
-   Post-filter "no matching tasks" stays unscoped so it reads as a filter outcome. */
+/* Fresh-database welcome — keep it as inline copy under the table head, no
+   secondary card chrome. Per redesign.mdc: "icon (20px), one line of copy,
+   one CTA. Nothing else." */
 .empty-state.empty-state--task-list-fresh {
-  position: relative;
-  padding: var(--space-8) var(--space-6);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-hairline);
-  background: var(--surface-1);
-  max-width: min(34rem, 100%);
+  padding: var(--space-12) var(--space-6);
+  background: transparent;
+  border: 0;
+  max-width: min(28rem, 100%);
   margin-inline: auto;
 }
 
@@ -228,6 +230,9 @@
 .empty-state.empty-state--task-list-fresh .empty-state__description {
   font-size: var(--text-sm);
   line-height: 1.45;
+  /* Per redesign.mdc — empty-state copy is one line; clamp visually so a long
+     description never grows the column. */
+  -webkit-line-clamp: 1;
 }
 
 /* Subtle stagger fade-in for the section's children. Matches the same

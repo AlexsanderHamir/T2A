@@ -44,7 +44,8 @@
     --shadow-modal-sheet: 0 -8px 36px rgb(0 0 0 / 45%);
     --shadow-overlay-float: 0 4px 24px rgb(0 0 0 / 55%);
     --shadow-overlay-float-hover: 0 4px 28px rgb(0 0 0 / 58%);
-    --shadow-card: var(--shadow-sm);
+    /* Cards stay flat in dark mode too (redesign.mdc — border, not shadow). */
+    --shadow-card: none;
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);
     --shadow-inset-lip: 0 1px 0 rgb(255 255 255 / 8%) inset;
@@ -62,6 +63,7 @@
     --border-chrome-spinner: rgb(255 255 255 / 18%);
     --chrome-fill-wash: rgb(255 255 255 / 8%);
     --chrome-fill-muted: rgb(255 255 255 / 5%);
+    --surface-glass-strip: rgb(10 10 10 / 72%);
     --surface-glass-pill: linear-gradient(180deg, rgb(42 42 42) 0%, rgb(30 30 30) 100%);
     --surface-glass-pill-sync: linear-gradient(180deg, rgb(40 40 40) 0%, rgb(34 34 34) 100%);
     --chrome-glass-lip-inset: 0 1px 0 rgb(255 255 255 / 6%) inset;

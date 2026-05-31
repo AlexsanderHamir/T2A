@@ -123,22 +123,25 @@ button.task-detail-add-checklist-btn:disabled {
   cursor: not-allowed;
 }
 
+/* Per redesign brief: "Never use purple or indigo as a primary button color.
+   It weakens the professional signal." Primary section CTAs match the page
+   primary CTA chrome (near-black `--control-primary-bg`). */
 button.task-detail-add-subtask-btn--primary {
-  color: var(--text-on-brand);
-  background: var(--brand);
-  border-color: var(--brand-border-cta);
-  box-shadow: var(--shadow-sm);
+  color: var(--control-primary-fg);
+  background: var(--control-primary-bg);
+  border-color: var(--control-primary-bg);
+  box-shadow: none;
 }
 
 button.task-detail-add-subtask-btn--primary:not(:disabled):hover {
-  background: var(--brand-hover);
-  border-color: var(--brand-border-cta);
-  box-shadow: var(--shadow-md);
+  background: var(--control-primary-hover-bg);
+  border-color: var(--control-primary-hover-bg);
+  box-shadow: none;
 }
 
 button.task-detail-add-subtask-btn--primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--brand-muted), var(--shadow-sm);
+  box-shadow: var(--shadow-focus);
 }
 
 button.task-home-new-task-btn {

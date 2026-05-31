@@ -80,10 +80,13 @@
   }
 }
 
+/* Active state uses neutral chrome — matches the nav's underline-only
+   active treatment so we don't flood the header with brand purple when
+   /settings is open. */
 .app-header-settings-link[aria-current="page"] {
-  color: var(--brand);
-  background: color-mix(in srgb, var(--brand) 10%, transparent);
-  border-color: color-mix(in srgb, var(--brand) 22%, transparent);
+  color: var(--text-primary);
+  background: var(--neutral-fill-subtle);
+  border-color: var(--border-hairline);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -59,26 +59,27 @@
   line-height: 1.45;
 }
 
+/* Quiet metadata count next to the modal title — same treatment as the
+   drafts page count: a count is informational, not a status, so it doesn't
+   wear brand colour or caps. */
 .draft-resume-count-pill {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4ch;
   flex-shrink: 0;
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--brand-border-faint);
-  background: var(--brand-surface-subtle);
-  color: var(--brand-deep);
-  font-family: var(--font-mono);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
   font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   white-space: nowrap;
 }
 
 .draft-resume-count-pill strong {
-  color: var(--brand-text-strong);
-  font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -174,8 +175,8 @@
 }
 
 .draft-resume-action:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--brand) 32%, var(--border-strong));
-  background: color-mix(in srgb, var(--brand-subtle) 28%, var(--bg-elevated));
+  border-color: var(--border-interactive-hover);
+  background: var(--bg-subtle);
 }
 
 .draft-resume-action:focus-visible {

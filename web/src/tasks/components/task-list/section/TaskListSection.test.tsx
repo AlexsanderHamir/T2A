@@ -128,11 +128,13 @@ describe("TaskListSection", () => {
       />,
     );
     // Title stays "No tasks yet" (precise, used as a page-ready sentinel
-    // by App.test.tsx integration tests). Description copy is refreshed
-    // to be more inviting; assert on a phrase from the new body so a
-    // future copy regression is caught here.
+    // by App.test.tsx integration tests). Description copy is one short line
+    // per redesign.mdc — assert on the new phrase so a future copy regression
+    // is caught here.
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/Use New task to add one/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/create your first task to get started/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: /^all tasks$/i }),
     ).toBeInTheDocument();

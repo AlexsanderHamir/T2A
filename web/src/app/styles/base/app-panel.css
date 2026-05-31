@@ -158,6 +158,10 @@
   }
 }
 
+/* Card surface for primary content regions. Redesign.mdc rule: cards use
+   border + background contrast, never shadow + border together. Keeping the
+   panel flat is what lets the rest of the chrome (header, modals) earn their
+   depth when they need it. */
 .panel {
   position: relative;
   background: var(--bg-elevated);
@@ -166,16 +170,12 @@
   margin-bottom: var(--layout-gutter-x);
   border: 1px solid var(--border-hairline);
   box-shadow: var(--shadow-card);
-  transition: border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out);
+  transition: border-color var(--duration-normal) var(--ease-out);
 }
 
-@media (hover: hover) and (prefers-color-scheme: light) {
-  .panel:hover {
-    border-color: var(--border-soft);
-    box-shadow: var(--shadow-md);
-  }
-}
+/* Intentionally no hover treatment on `.panel` — the card itself isn't an
+   interactive target. Page-level "lift on hover" was reading as "this is
+   clickable" and adding visual noise on idle pages. */
 
 .panel.panel--busy {
   position: relative;

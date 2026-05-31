@@ -9,7 +9,7 @@
   --control-primary-fg: #fafafa;
   --control-primary-hover-bg: #1c1c1c;
 
-  --bg-page: #f9f9f8;
+  --bg-page: #fafaf9;
   --bg-elevated: #ffffff;
   --bg-subtle: #f4f4f2;
   --surface-1: var(--bg-elevated);
@@ -17,10 +17,13 @@
   --surface-3: var(--neutral-fill-subtle);
   --surface-soft: var(--bg-subtle);
   --surface-card: var(--bg-elevated);
-  --bg-linear-wash-start: #f9f9f8;
+  /* Page wash: the body radial gradients reference these; hold them within
+     a single hue step of --bg-page so the result reads as a flat warm white
+     instead of a gradient surface (Stripe / Linear shells are visually flat). */
+  --bg-linear-wash-start: #fafaf9;
   --bg-linear-wash-end: #ffffff;
-  --bg-mesh-dark-brand-glow: rgb(61 59 243 / 4%);
-  --bg-mesh-dark-success-glow: rgb(26 127 75 / 4%);
+  --bg-mesh-dark-brand-glow: rgb(61 59 243 / 0%);
+  --bg-mesh-dark-success-glow: rgb(26 127 75 / 0%);
   --stream-dot-idle: rgb(60 60 60 / 28%);
 
   /* Brand — restrained indigo (links, active, live accents only) */
@@ -96,10 +99,10 @@
   --neutral-lip-shadow: 0 1px 0 rgb(0 0 0 / 4%);
   --shadow-neutral-micro: 0 1px 2px rgb(0 0 0 / 6%);
 
-  --border-hairline: #e5e5e3;
-  --border-soft: rgb(0 0 0 / 12%);
+  --border-hairline: #ebebe8;
+  --border-soft: rgb(0 0 0 / 9%);
   /* Outlined secondary actions — DS §7 (--color-border-strong ~16%) */
-  --border-strong: rgb(var(--slate-shadow) / 16%);
+  --border-strong: rgb(var(--slate-shadow) / 14%);
   /* Neutral controls — hover/focus-adjacent border step (inputs, outlined buttons; DS §7) */
   --border-interactive-hover: rgb(var(--slate-shadow) / 18%);
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 4%);
@@ -110,11 +113,15 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 12%);
   /* Mobile modal bottom sheet — upward cast (DS §6 / §12) */
   --shadow-modal-sheet: 0 -8px 32px rgb(0 0 0 / 12%);
-  /* Modals, portal menus — single restrained float (redesign; replaces heavy 2xl on dialogs). */
+  /* Floating layers: only modals + portal menus actually float. Use the
+     redesign-rule shadow `0 4px 16px rgba(0,0,0,0.08)` for everything that
+     leaves the page plane — kept consistent so depth = "this overlays". */
   --shadow-overlay-float: 0 4px 16px rgb(0 0 0 / 8%);
   --shadow-overlay-float-hover: 0 4px 16px rgb(0 0 0 / 10%);
-  /* Cards: elevation without stacking border + heavy shadow (DS: pick one affordance) */
-  --shadow-card: var(--shadow-sm);
+  /* Cards stay flat (redesign.mdc — border + bg contrast, NOT shadow).
+     The previous `var(--shadow-sm)` made every panel float on the page,
+     which was the dominant "panel-in-panel" tell. */
+  --shadow-card: none;
   --shadow-focus: 0 0 0 3px var(--brand-focus);
   --shadow-inset: inset 0 1px 2px rgb(var(--slate-shadow) / 8%);
   /* Slate-tinted chrome on elevated controls (task detail, selects — DS §6) */
@@ -131,6 +138,10 @@
   --border-chrome-spinner: rgb(var(--slate-shadow) / 10%);
   --chrome-fill-wash: rgb(var(--slate-shadow) / 5%);
   --chrome-fill-muted: rgb(var(--slate-shadow) / 4%);
+  /* Frosted strip behind the sticky app header (and any Stripe/Apple-style
+     "translucent over canvas" surface). Light theme = warm-white wash; dark
+     theme overrides in app-design-tokens-dark.css to a near-black wash. */
+  --surface-glass-strip: rgb(255 255 255 / 78%);
   /* White glass / frost on light UI (pills, panels, table hovers — DS §3 / §9).
      Terminal redesign: opacity dropped from 88% so the body radial
      spot at the top of the page becomes a near-imperceptible warm

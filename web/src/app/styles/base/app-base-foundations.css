@@ -1,58 +1,37 @@
 /* Base layout and globals — tokens live in app-design-tokens.css */
 
 /*
- * The SPA adopts a console / terminal aesthetic: monospace
- * everywhere, page titles prefixed with `>`, section headings
- * prefixed with `$`, and small uppercase pill badges that read
- * like build / deploy tags. Everything below is opt-in: pages
- * apply these classes to their existing nodes; nothing changes
- * automatically so we don't double-prefix headings inside
- * markdown bodies / event payloads / JSON code wells.
+ * Legacy "console" prompt classes — the previous design prefixed page and
+ * section titles with `$` / `>` glyphs to evoke a terminal. Per the
+ * redesign brief (`.cursor/rules/redesign.mdc`): "Remove all CLI-style
+ * decorative copy unless it appears in actual terminal or code contexts."
  *
- * The prompt glyphs are rendered as ::before pseudo-elements so
- * screen readers don't announce a literal "$" / ">" before
- * every heading; sighted users see the prompt, AT users hear the
- * heading text directly.
+ * The classes still exist so we don't have to migrate ~6 component files
+ * in one pass; the glyphs are simply suppressed. The mono font fallback is
+ * also dropped — page titles read with the rest of the product chrome.
  */
 .term-prompt,
 .term-arrow {
-  display: inline-flex;
+  display: inline;
   align-items: baseline;
-  gap: 0.5ch;
-  font-family: var(--font-mono);
+  gap: 0;
+  font-family: inherit;
   font-feature-settings: "kern" 1, "calt" 1;
 }
 
-/* When applied to a block-level heading we still want it to
-   participate in the surrounding column flow as a block but
-   keep its glyph + label tightly grouped — flex on a heading
-   keeps the inline alignment without collapsing the row. */
 h1.term-prompt, h2.term-prompt, h3.term-prompt, h4.term-prompt,
 h5.term-prompt, h6.term-prompt,
 h1.term-arrow, h2.term-arrow, h3.term-arrow, h4.term-arrow,
 h5.term-arrow, h6.term-arrow {
-  display: flex;
+  display: block;
 }
 
+/* Glyph suppressed — kept the rules so any consumer relying on the
+   pseudo-element layout doesn't crash, but no character renders. */
 .term-prompt::before,
 .term-arrow::before {
-  flex-shrink: 0;
-  font-weight: 600;
-  opacity: 0.55;
-  user-select: none;
-  -webkit-user-select: none;
-  speak: none;
-}
-
-.term-prompt::before {
-  content: "$";
-  color: var(--brand-text-strong);
-}
-
-.term-arrow::before {
-  content: ">";
-  color: var(--brand);
-  opacity: 0.85;
+  content: "";
+  display: none;
 }
 
 /*
@@ -202,31 +181,14 @@ h5.term-arrow, h6.term-arrow {
   box-sizing: border-box;
 }
 
+/* Page surface stays flat — Stripe/Linear/Apple dashboards never gradient
+   the canvas. The previous radial mesh was decoration; what we want is for
+   panels to sit on a single warm-white wash and earn their own depth via
+   border. Dark mode mirrors the same intent. */
 body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--bg-page);
-  background-attachment: fixed;
-}
-
-@media (prefers-color-scheme: light) {
-  body {
-    background-image: radial-gradient(
-        ellipse 100% 55% at 50% -14%,
-        var(--surface-glass-spot),
-        transparent 52%
-      ),
-      radial-gradient(ellipse 48% 42% at 100% 0%, var(--brand-mesh), transparent 48%),
-      radial-gradient(ellipse 42% 38% at 0% 100%, var(--success-mesh), transparent 50%),
-      linear-gradient(168deg, var(--bg-linear-wash-start) 0%, var(--bg-page) 42%, var(--bg-linear-wash-end) 100%);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-image: radial-gradient(ellipse 80% 50% at 50% 0%, var(--bg-mesh-dark-brand-glow), transparent 55%),
-      radial-gradient(ellipse 40% 35% at 100% 100%, var(--bg-mesh-dark-success-glow), transparent 50%);
-  }
 }
 
 /* Keyboard focus — visible ring */

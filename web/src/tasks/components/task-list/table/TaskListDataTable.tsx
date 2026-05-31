@@ -250,7 +250,7 @@ export function TaskListDataTable({
                 <EmptyState
                   className="empty-state--in-table empty-state--task-list-fresh"
                   title="No tasks yet"
-                  description="Use New task to add one. Status, priority, and project show here as work runs."
+                  description="Create your first task to get started."
                   action={emptyListAction}
                 />
               </td>

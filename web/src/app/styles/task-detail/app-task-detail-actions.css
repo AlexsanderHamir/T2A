@@ -72,6 +72,11 @@ button.task-detail-btn-edit:focus-visible {
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
+/* Per redesign brief: destructive controls render as white background +
+   --danger text and border. A delete that's already gated by a confirm
+   dialog doesn't need to scream — the colour is the affordance, the
+   chrome stays quiet. The previous filled red gradient was the loudest
+   element on the page and competed with primary CTAs for attention. */
 button.task-detail-btn-delete {
   display: inline-flex;
   align-items: center;
@@ -79,21 +84,25 @@ button.task-detail-btn-delete {
   min-height: var(--touch-target-min);
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--text-sm);
-  color: var(--text-on-brand);
-  background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
-  border: 1px solid var(--danger-delete-border);
-  box-shadow: var(--shadow-danger-delete-xs);
-  transition: filter var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+  color: var(--danger);
+  background: var(--bg-elevated);
+  border: 1px solid var(--danger-control-hover-border);
+  box-shadow: none;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
 }
 
 button.task-detail-btn-delete:not(:disabled):hover {
-  /* Reassert gradient: global `button:not(.custom-select-trigger):hover` sets brand background. */
-  background: linear-gradient(180deg, var(--danger-bright) 0%, var(--danger) 55%, var(--danger-deep) 100%);
-  filter: brightness(1.04);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger-deep);
+  filter: none;
   transform: none;
-  box-shadow: var(--shadow-danger-delete-sm);
+  box-shadow: none;
 }
 
 button.task-detail-btn-delete:focus-visible {

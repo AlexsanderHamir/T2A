@@ -78,64 +78,34 @@
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  /* Bleed into the shell padding so the sticky strip spans the full width
+     of the viewport-bounded `.app` column, not just the inner content. */
   margin-top: calc(-1 * var(--space-10));
-  margin-bottom: var(--space-6);
-  /* Stay in the same column as `main` / panels — no negative horizontal margin
-     (that bled into `.app` padding and made the header wider than content). */
-  margin-left: 0;
-  margin-right: 0;
-  /* Inset matches `.panel` horizontal padding (`--layout-gutter-x`) */
-  padding: var(--layout-gutter-x) var(--layout-gutter-x) var(--space-4);
-  /* Slight saturation on the wash + a touch more transparency than before
-     so the bg blur shows through. Matches the Apple / Stripe top-nav
-     "frosted glass" treatment more faithfully than a flat near-white. */
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg-page) 76%, white) 0%,
-      color-mix(in srgb, var(--bg-page) 88%, white) 100%
-    );
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  /* Match `.panel` chrome so the shell header reads as the same card family (DS §5 / §6) */
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
-  /* Quiet at the top of the page; lifts to a subtle elevation when the
-     operator scrolls (see the `--app-header-elevated` modifier the
-     scroll-affordance hook below toggles). Matches Stripe / Linear
-     dashboard top-nav scroll behavior. */
+  margin-bottom: var(--space-8);
+  margin-left: calc(-1 * var(--layout-gutter-x));
+  margin-right: calc(-1 * var(--layout-gutter-x));
+  padding: var(--space-4) var(--layout-gutter-x);
+  /* Frosted-glass strip — Stripe/Apple top-nav cue. The translucent fill
+     lets the page wash show through; the bottom hairline is what actually
+     separates the header from content (redesign.mdc — border, not shadow).
+     Color tokens live in app-design-tokens-{light,dark}.css. */
+  background: var(--surface-glass-strip);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
   box-shadow: none;
   transition:
     border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out),
     background var(--duration-normal) var(--ease-out);
 }
 
-/* When the page is scrolled past the top, the sticky header lifts via
-   border contrast only (no card shadow on chrome — redesign.mdc). */
+/* When scrolled, the hairline materializes — that single 1px line is the
+   only chrome separating the sticky strip from page content. */
 .app-header--sticky[data-elevated="true"] {
-  border-color: var(--border-soft);
+  border-bottom-color: var(--border-hairline);
   box-shadow: none;
-}
-
-@media (hover: hover) and (prefers-color-scheme: light) {
-  .app-header--sticky:hover {
-    border-color: var(--border-soft);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .app-header--sticky {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg-page) 80%, black) 0%,
-      color-mix(in srgb, var(--bg-page) 92%, black) 100%
-    );
-  }
-
-  .app-header--sticky[data-elevated="true"] {
-    box-shadow: none;
-  }
 }
 
 /*
