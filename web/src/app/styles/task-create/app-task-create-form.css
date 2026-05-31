@@ -880,3 +880,283 @@
   cursor: not-allowed;
 }
 
+/* === Depends-on picker ===
+   Sits inside the scheduling fieldset. Three layers stack vertically:
+   the search row (typeahead input + Browse button), an optional
+   anchored listbox (dropdown of typeahead matches), and a chips row
+   summarising the operator's current picks. The whole thing reads as
+   one field — no card chrome — so it sits flush with sibling
+   scheduling fields (Tags, Milestone) above it. */
+.task-create-deps {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-create-deps__row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.task-create-deps__search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.task-create-deps__browse-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Floating typeahead listbox. Anchored under the input row by sitting
+   inside the same flex container; absolute positioning keeps it from
+   pushing the chips and helper text down while the operator types. */
+.task-create-deps__list {
+  position: absolute;
+  top: calc(100% - var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay-float);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.task-create-deps__option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.task-create-deps__option:hover,
+.task-create-deps__option:focus-visible {
+  background: var(--brand-surface-faint);
+  outline: none;
+}
+
+.task-create-deps__option--empty {
+  display: block;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.task-create-deps__option--empty:hover {
+  background: transparent;
+}
+
+.task-create-deps__option-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-create-deps__option-meta {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Chips row: each chip is a single button — clicking removes the
+   dependency. The trailing × icon is purely decorative; a screen
+   reader reads the title via the chip's `aria-label`. */
+.task-create-deps__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-create-deps__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.task-create-deps__chip:hover:not(:disabled) {
+  background: var(--brand-surface-faint);
+  border-color: var(--border-soft);
+}
+
+.task-create-deps__chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.task-create-deps__chip-title {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-create-deps__chip-remove {
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: var(--text-tertiary);
+}
+
+/* === Browse-all sub-modal ===
+   Opens stacked above the create modal so the operator can scan every
+   task in the project at once instead of guessing search terms. The
+   list scrolls inside the modal so the action footer stays visible. */
+.task-create-deps-browse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  max-height: min(80vh, 560px);
+}
+
+.task-create-deps-browse__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.task-create-deps-browse__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-create-deps-browse__lede {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.task-create-deps-browse__search {
+  display: flex;
+}
+
+.task-create-deps-browse__search .input {
+  flex: 1 1 auto;
+}
+
+.task-create-deps-browse__list {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
+  overflow-y: auto;
+  max-height: 22rem;
+}
+
+.task-create-deps-browse__item + .task-create-deps-browse__item {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-create-deps-browse__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.task-create-deps-browse__row:hover {
+  background: var(--brand-surface-faint);
+}
+
+.task-create-deps-browse__check {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.task-create-deps-browse__title-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.task-create-deps-browse__row-title {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-create-deps-browse__row-meta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+}
+
+.task-create-deps-browse__empty {
+  margin: 0;
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.task-create-deps-browse__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.task-create-deps-browse__count {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.task-create-deps-browse__done {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.task-create-deps-browse__done:hover {
+  filter: brightness(0.92);
+}
+

@@ -14,7 +14,7 @@ export function advancedSummaryLine(input: {
   schedule: string | null;
   tagsCsv: string;
   milestone: string;
-  dependsOnCsv: string;
+  dependsOn: string[];
 }): string {
   const parts: string[] = [];
 
@@ -37,7 +37,7 @@ export function advancedSummaryLine(input: {
     parts.push("Milestone");
   }
 
-  const depCount = countCsv(input.dependsOnCsv);
+  const depCount = input.dependsOn.length;
   if (depCount > 0) {
     parts.push(`${depCount} ${depCount === 1 ? "dep" : "deps"}`);
   }

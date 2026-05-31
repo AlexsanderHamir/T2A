@@ -1,13 +1,20 @@
 import { FieldLabel } from "@/shared/FieldLabel";
+import { TaskCreateDependsOnPicker } from "./TaskCreateDependsOnPicker";
 
 type Props = {
   disabled: boolean;
   tagsCsv: string;
   milestone: string;
-  dependsOnCsv: string;
+  /**
+   * Project the new task is scoped to. Forwarded to the dependency
+   * picker so it filters task lookups by `project_id`. Empty string
+   * means "no project bound" — the picker reads as disabled chrome.
+   */
+  projectId: string;
+  dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
-  onDependsOnCsvChange: (value: string) => void;
+  onDependsOnChange: (value: string[]) => void;
   /** When false, hides the depends-on field (detail page owns dependency edits). */
   showDependsOn?: boolean;
 };
@@ -16,10 +23,11 @@ export function TaskCreateModalSchedulingFields({
   disabled,
   tagsCsv,
   milestone,
-  dependsOnCsv,
+  projectId,
+  dependsOn,
   onTagsCsvChange,
   onMilestoneChange,
-  onDependsOnCsvChange,
+  onDependsOnChange,
   showDependsOn = true,
 }: Props) {
   return (
@@ -47,16 +55,12 @@ export function TaskCreateModalSchedulingFields({
         />
       </div>
       {showDependsOn ? (
-      <div className="task-create-scheduling__field">
-        <FieldLabel htmlFor="create-deps">Depends on (task ids)</FieldLabel>
-        <input
-          id="create-deps"
-          className="input"
-          value={dependsOnCsv}
-          onChange={(e) => onDependsOnCsvChange(e.target.value)}
-          placeholder="Comma-separated upstream task ids"
+        <TaskCreateDependsOnPicker
+          projectId={projectId}
+          selected={dependsOn}
+          onChange={onDependsOnChange}
+          disabled={disabled}
         />
-      </div>
       ) : null}
     </fieldset>
   );

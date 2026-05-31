@@ -116,10 +116,11 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onAutonomyChange={app.setNewAutonomyEnabled}
           tagsCsv={app.newTagsCsv}
           milestone={app.newMilestone}
-          dependsOnCsv={app.newDependsOnCsv}
+          projectId={app.newProjectID}
+          dependsOn={app.newDependsOn}
           onTagsCsvChange={app.setNewTagsCsv}
           onMilestoneChange={app.setNewMilestone}
-          onDependsOnCsvChange={app.setNewDependsOnCsv}
+          onDependsOnChange={app.setNewDependsOn}
           appTimezone={appTimezone}
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}

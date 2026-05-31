@@ -89,10 +89,17 @@ type Props = {
   onAutonomyChange: (enabled: boolean) => void;
   tagsCsv: string;
   milestone: string;
-  dependsOnCsv: string;
+  /**
+   * Project the new task is being scoped to. Forwarded to the
+   * dependency picker so it filters task lookups by `project_id`.
+   * Empty string means "no project bound" — the picker reads as
+   * disabled chrome.
+   */
+  projectId: string;
+  dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
-  onDependsOnCsvChange: (value: string) => void;
+  onDependsOnChange: (value: string[]) => void;
   /**
    * IANA timezone the picker should render its wall-clock literal
    * + caption in. Forwarded as a prop (rather than read from a hook
@@ -174,10 +181,11 @@ export function TaskCreateModal({
   onAutonomyChange,
   tagsCsv,
   milestone,
-  dependsOnCsv,
+  projectId,
+  dependsOn,
   onTagsCsvChange,
   onMilestoneChange,
-  onDependsOnCsvChange,
+  onDependsOnChange,
   appTimezone,
   onSaveDraft,
   onEvaluate,
@@ -333,7 +341,7 @@ export function TaskCreateModal({
                     schedule,
                     tagsCsv,
                     milestone,
-                    dependsOnCsv,
+                    dependsOn,
                   })}
                 </span>
               </summary>
@@ -358,10 +366,11 @@ export function TaskCreateModal({
                   disabled={disabled}
                   tagsCsv={tagsCsv}
                   milestone={milestone}
-                  dependsOnCsv={dependsOnCsv}
+                  projectId={projectId}
+                  dependsOn={dependsOn}
                   onTagsCsvChange={onTagsCsvChange}
                   onMilestoneChange={onMilestoneChange}
-                  onDependsOnCsvChange={onDependsOnCsvChange}
+                  onDependsOnChange={onDependsOnChange}
                 />
               </div>
             </details>

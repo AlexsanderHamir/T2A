@@ -92,8 +92,25 @@ export function useTaskCreateFlow() {
   const [newAutonomyEnabled, setNewAutonomyEnabled] = useState(true);
   const [newTagsCsv, setNewTagsCsv] = useState("");
   const [newMilestone, setNewMilestone] = useState("");
-  const [newDependsOnCsv, setNewDependsOnCsv] = useState("");
+  const [newDependsOn, setNewDependsOn] = useState<string[]>([]);
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
+  // Drop the staged dependency picks whenever the operator switches the
+  // task's project. The picker scopes its lookup to a single project, so
+  // a chip carried over from project A would refer to a task the picker
+  // can't even surface — surfacing a stale id we never resolved would be
+  // worse UX than asking the user to re-pick. Skip the very first run
+  // (initial mount sets `newProjectID` to its default) by anchoring the
+  // ref on the first observed value.
+  const prevProjectIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevProjectIdRef.current === null) {
+      prevProjectIdRef.current = newProjectID;
+      return;
+    }
+    if (prevProjectIdRef.current === newProjectID) return;
+    prevProjectIdRef.current = newProjectID;
+    setNewDependsOn((prev) => (prev.length === 0 ? prev : []));
+  }, [newProjectID]);
   const [newDraftID, setNewDraftIDState] = useState("");
   /**
    * Mirror of `newDraftID` for use inside async mutation callbacks. Reading
@@ -195,7 +212,7 @@ export function useTaskCreateFlow() {
     setNewAutonomyEnabled(true);
     setNewTagsCsv("");
     setNewMilestone("");
-    setNewDependsOnCsv("");
+    setNewDependsOn([]);
     setNewChecklistItems([]);
     setPendingSubtasks([]);
     setLatestDraftEvaluation(null);
@@ -804,10 +821,7 @@ export function useTaskCreateFlow() {
         .map((t) => t.trim())
         .filter(Boolean),
       milestone: newMilestone.trim() || undefined,
-      depends_on: newDependsOnCsv
-        .split(/[,;\n]+/)
-        .map((t) => t.trim())
-        .filter(Boolean),
+      depends_on: newDependsOn,
     });
   }
 
@@ -1113,8 +1127,8 @@ export function useTaskCreateFlow() {
     setNewTagsCsv,
     newMilestone,
     setNewMilestone,
-    newDependsOnCsv,
-    setNewDependsOnCsv,
+    newDependsOn,
+    setNewDependsOn,
     newChecklistItems,
     latestDraftEvaluation,
     pendingSubtasks,

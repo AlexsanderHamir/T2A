@@ -11,6 +11,15 @@ import {
 import { TaskCreateModalAgentSection } from "../../task-create-modal/fields/TaskCreateModalAgentSection";
 import { TaskCreateModalSchedulingFields } from "../../task-create-modal/fields/TaskCreateModalSchedulingFields";
 
+// Module-scoped sentinel passed to <TaskCreateModalSchedulingFields> when
+// `showDependsOn={false}` so the no-op props keep stable identity across
+// renders. Without these, every render of the edit form would hand the
+// child fresh `[]` and `() => {}` references, which the dependency
+// picker's `useMemo`/`useEffect` chain would interpret as a real prop
+// churn even though the field is invisible.
+const EMPTY_DEPENDS_ON: string[] = [];
+const noopOnDependsOnChange = (): void => {};
+
 type Props = {
   taskId: string;
   title: string;
@@ -194,11 +203,12 @@ export function TaskEditForm({
             disabled={saving}
             tagsCsv={tagsCsv}
             milestone={milestone}
-            dependsOnCsv=""
+            projectId=""
+            dependsOn={EMPTY_DEPENDS_ON}
             showDependsOn={false}
             onTagsCsvChange={onTagsCsvChange}
             onMilestoneChange={onMilestoneChange}
-            onDependsOnCsvChange={() => {}}
+            onDependsOnChange={noopOnDependsOnChange}
           />
           <div className="field grow stack-tight prompt-field-full">
             <FieldLabel
