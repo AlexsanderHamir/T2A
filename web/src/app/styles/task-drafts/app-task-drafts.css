@@ -45,7 +45,7 @@
 .draft-row-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -57,10 +57,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: var(--space-3) 0;
+  padding: var(--space-3) var(--space-3);
   border: 0;
-  border-bottom: 1px solid var(--border-hairline);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   box-shadow: none;
   opacity: 1;
@@ -68,22 +67,36 @@
   overflow: hidden;
   transform: translateY(0);
   transition:
-    background-color var(--duration-fast) var(--ease-out),
     opacity var(--duration-moderate) var(--ease-out),
     max-height var(--duration-moderate) var(--ease-out);
 }
 
-.draft-row:last-child {
-  border-bottom: 0;
+/* Hover/focus wash is painted on a pseudo so it can carry border-radius.
+   Applying background directly on the row made a square fill that butted
+   into the hairline dividers and looked clipped on the left/right edges. */
+.draft-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: transparent;
+  pointer-events: none;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.draft-row__meta,
+.draft-row__actions {
+  position: relative;
+  z-index: 1;
 }
 
 @media (hover: hover) {
-  .draft-row:hover {
+  .draft-row:hover::before {
     background: var(--neutral-fill-faint);
   }
 }
 
-.draft-row:focus-within {
+.draft-row:focus-within::before {
   background: var(--neutral-fill-ghost);
 }
 
