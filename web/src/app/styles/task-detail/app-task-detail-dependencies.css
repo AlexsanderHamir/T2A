@@ -1,0 +1,61 @@
+/* Read-only upstream dependency list on the task detail page. Mirrors the
+   subtask-row card treatment so the two relationship lists (subtasks /
+   dependencies) read as siblings. Each row is a quiet card: title link +
+   trailing status pill, no add/remove affordances (the graph is fixed at
+   creation time). */
+.task-deps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-deps-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs-soft);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.task-deps-list__item:hover {
+  border-color: var(--border-chrome-muted);
+  box-shadow: var(--shadow-chrome-raised);
+}
+
+.task-deps-list__link {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.task-deps-list__link:hover {
+  color: var(--link);
+}
+
+.task-deps-list__link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.task-detail-empty-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
