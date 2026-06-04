@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { TaskChecklistItemView } from "@/types";
-import { CHECKLIST_EVIDENCE_DISPLAY_CAP } from "@/types/task";
+import { ChecklistVerificationModal } from "./ChecklistVerificationModal";
 
 type Props = {
   items: TaskChecklistItemView[];
@@ -20,11 +21,29 @@ export function TaskDetailChecklistItemList({
   onOpenEditCriterionModal,
   onRemoveChecklistItem,
 }: Props) {
+  // Identity of the criterion whose verification detail is currently
+  // open in the popup. Single-open is intentional — verification detail
+  // can be long, and stacking multiple sheets would defeat the goal of
+  // keeping the checklist row scannable.
+  const [openVerificationId, setOpenVerificationId] = useState<string | null>(
+    null,
+  );
+
+  const openItem = openVerificationId
+    ? items.find((item) => item.id === openVerificationId) ?? null
+    : null;
+
   return (
     <div className="task-checklist-surface">
       <ul className="task-checklist-list task-checklist-list--grouped">
-        {items.map((item) => (
-          <li key={item.id} className="task-checklist-row">
+        {items.map((item) => {
+          const hasVerificationDetail =
+            item.done &&
+            ((typeof item.evidence === "string" && item.evidence.length > 0) ||
+              (typeof item.verifier_reasoning === "string" &&
+                item.verifier_reasoning.length > 0));
+          return (
+            <li key={item.id} className="task-checklist-row">
             <div className="task-checklist-row-main">
               <span
                 className={
@@ -42,23 +61,33 @@ export function TaskDetailChecklistItemList({
                 {item.check ? (
                   <code className="task-checklist-check">{item.check}</code>
                 ) : null}
-                {item.done && item.verified_by ? (
-                  <span className="task-checklist-verified-badge">
-                    Verified ({item.verified_by})
-                  </span>
-                ) : null}
-                {item.done && item.evidence ? (
-                  <details className="task-checklist-evidence">
-                    <summary>Evidence</summary>
-                    <pre>{item.evidence.slice(0, CHECKLIST_EVIDENCE_DISPLAY_CAP)}</pre>
-                  </details>
-                ) : null}
-                {item.done && item.verifier_reasoning ? (
-                  <details className="task-checklist-reasoning">
-                    <summary>Verifier reasoning</summary>
-                    <pre>{item.verifier_reasoning}</pre>
-                  </details>
-                ) : null}
+                <div className="task-checklist-row-meta">
+                  {item.done && item.verified_by ? (
+                    <span className="task-checklist-verified-badge">
+                      Verified
+                      <span className="task-checklist-verified-badge-by">
+                        {" "}
+                        ({item.verified_by})
+                      </span>
+                    </span>
+                  ) : null}
+                  {hasVerificationDetail ? (
+                    <button
+                      type="button"
+                      className="task-checklist-verification-trigger"
+                      onClick={() => setOpenVerificationId(item.id)}
+                      aria-label={`View verification details for: ${item.text}`}
+                    >
+                      View verification
+                      <span
+                        className="task-checklist-verification-trigger-arrow"
+                        aria-hidden="true"
+                      >
+                        &rarr;
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
             {!checklistInherit ? (
@@ -122,8 +151,18 @@ export function TaskDetailChecklistItemList({
               </div>
             ) : null}
           </li>
-        ))}
+          );
+        })}
       </ul>
+      {openItem ? (
+        <ChecklistVerificationModal
+          criterionText={openItem.text}
+          verifiedBy={openItem.verified_by}
+          evidence={openItem.evidence}
+          verifierReasoning={openItem.verifier_reasoning}
+          onClose={() => setOpenVerificationId(null)}
+        />
+      ) : null}
     </div>
   );
 }

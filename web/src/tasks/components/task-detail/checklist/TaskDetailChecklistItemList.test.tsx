@@ -18,6 +18,17 @@ const DONE: TaskChecklistItemView = {
   done: true,
 };
 
+const DONE_VERIFIED: TaskChecklistItemView = {
+  id: "done-verified-1",
+  sort_order: 3,
+  text: "The summary names the primary language, runtime, and main entry point.",
+  done: true,
+  verified_by: "verify_agent",
+  evidence: "CODEBASE_TOUR.md names Go 1.25+ as the primary backend language.",
+  verifier_reasoning:
+    "CODEBASE_TOUR.md paragraph explicitly names Go 1.25+ (matches go.mod go 1.25.0).",
+};
+
 function renderList(items: TaskChecklistItemView[], overrides?: Partial<{
   editCriterionPending: boolean;
   removeItemPending: boolean;
@@ -121,5 +132,72 @@ describe("TaskDetailChecklistItemList", () => {
     const removeDone = screen.getByRole("button", { name: /remove.*locked/i });
     await user.click(removeDone);
     expect(onRemoveChecklistItem).not.toHaveBeenCalled();
+  });
+
+  // Pins the verification-popup contract: a satisfied criterion with
+  // evidence and/or verifier_reasoning must NOT inline either payload
+  // on the row (older builds used `<details>` disclosures which
+  // ballooned the criterion row and obscured the criterion text). It
+  // must instead expose a "View verification" trigger that opens a
+  // dialog containing both payloads. This guards against accidental
+  // regression to the inline disclosure pattern.
+  it("does not inline evidence or verifier reasoning on a satisfied row", () => {
+    renderList([DONE_VERIFIED]);
+
+    expect(
+      screen.queryByText(/CODEBASE_TOUR\.md names Go 1\.25\+/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/matches go\.mod go 1\.25\.0/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /view verification details for:/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the verification modal with evidence and reasoning on click", async () => {
+    const user = userEvent.setup();
+    renderList([DONE_VERIFIED]);
+
+    await user.click(
+      screen.getByRole("button", { name: /view verification details for:/i }),
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /evidence/i, level: 3 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /verifier reasoning/i, level: 3 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/CODEBASE_TOUR\.md names Go 1\.25\+/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/matches go\.mod go 1\.25\.0/),
+    ).toBeInTheDocument();
+  });
+
+  it("closes the verification modal when Close is clicked", async () => {
+    const user = userEvent.setup();
+    renderList([DONE_VERIFIED]);
+
+    await user.click(
+      screen.getByRole("button", { name: /view verification details for:/i }),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^close$/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not expose a View verification trigger when no evidence or reasoning exists", () => {
+    // DONE has neither evidence nor verifier_reasoning. The trigger
+    // must stay off so we don't open an empty modal.
+    renderList([DONE]);
+    expect(
+      screen.queryByRole("button", { name: /view verification/i }),
+    ).not.toBeInTheDocument();
   });
 });
