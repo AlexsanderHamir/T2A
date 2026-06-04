@@ -32,8 +32,7 @@ export function TaskGatePanel({
           Release gate
         </h3>
         <p className="task-detail-empty-hint" data-testid="task-gate-empty">
-          No gate on this task. The agent may pick it up when status is ready and
-          dependencies are done.
+          No gate on this task.
         </p>
       </section>
     );
