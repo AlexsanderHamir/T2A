@@ -2,23 +2,25 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 /* Back links use `.pd__back.project-context-back-link` (app-projects.css). */
 
-/* Task detail page — same philosophy as task-create: dividers, modest radii, brand accents */
+/* Task detail page — same philosophy as task-create: dividers, modest radii, brand accents.
+   Padding is symmetric on a 4-px multiple so the panel reads as deliberate
+   container, not a wrapped div. */
 .task-detail-panel {
-  padding: 1.35rem 1.5rem 1.65rem;
+  padding: var(--space-6) var(--space-8) var(--space-8);
 }
 
 .task-detail-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
-  gap: 0.35rem 1rem;
+  gap: var(--space-2) var(--space-4);
   align-items: start;
-  padding-bottom: 1rem;
+  padding-bottom: var(--space-5);
   margin-bottom: 0;
   border-bottom: 1px solid var(--border-hairline);
 }
@@ -29,16 +31,50 @@
   margin: 0;
   font-size: var(--text-title-app);
   font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 
+/* Stance line ("Agent needs input" / "Informational") is the single most
+   important read on this page — it tells the operator whether they own the
+   next move. The old plain-body treatment hid that signal in caption text.
+   Rendering it as a leading dot + medium label lifts it to a glance-able
+   status indicator without changing the markup. */
 .task-detail-panel .task-event-detail-stance {
   grid-column: 1;
   grid-row: 2;
   margin: 0;
   max-width: 36rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.task-detail-panel .task-event-detail-stance::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-tertiary) 14%, transparent);
+}
+
+.task-detail-panel
+  .task-event-detail-stance[data-stance="needs-user"] {
+  color: var(--warning-ink);
+  font-weight: 600;
+}
+
+.task-detail-panel
+  .task-event-detail-stance[data-stance="needs-user"]::before {
+  background: var(--warning-ink);
+  box-shadow: 0 0 0 3px var(--warning-soft);
 }
 
 .task-detail-meta {
@@ -48,11 +84,12 @@
   align-self: start;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: var(--space-2);
   justify-content: flex-end;
   /* Default flex `align-items: stretch` made status/priority pills match a
      taller runtime column; keep start alignment so pill heights stay natural. */
-  align-items: flex-start;
+  align-items: center;
+  max-width: min(100%, 28rem);
 }
 
 /* Runtime identity chip in the header — cap width for long model names. */
