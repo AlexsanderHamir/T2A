@@ -1,9 +1,5 @@
 import { Link } from "react-router-dom";
 import type { Task } from "@/types";
-import {
-  EmptyState,
-  EmptyStateSubtasksGlyph,
-} from "@/shared/EmptyState";
 import { priorityPillClass, statusPillClass } from "../../../task-display";
 
 export function SubtaskTree({
@@ -17,15 +13,22 @@ export function SubtaskTree({
 }) {
   if (!nodes.length) {
     if (nested) return null;
+    // Quiet empty hint that mirrors Dependencies / Release Gate.
+    // The previous treatment was a full `<EmptyState>` card with an
+    // icon glyph + h2 title + description body, which made the
+    // empty subtasks slot the loudest section on the page — taller
+    // and bolder than the populated Dependencies or Gate sections
+    // above it, even though "no subtasks" is the least eventful
+    // possible state. A single muted line matches the established
+    // section-empty rhythm: one fact, no chrome.
     return (
-      <EmptyState
+      <p
+        className="task-detail-empty-hint"
         id="task-subtasks-empty"
-        density="compact"
-        className="task-detail-section-empty"
-        icon={<EmptyStateSubtasksGlyph />}
-        title="No subtasks yet"
-        description="Use Add subtask to break work into smaller steps."
-      />
+        data-testid="task-subtasks-empty"
+      >
+        No subtasks yet. Use Add subtask to break work into smaller steps.
+      </p>
     );
   }
   return (

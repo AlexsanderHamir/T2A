@@ -426,6 +426,27 @@ describe("TaskDetailPage", () => {
     }
   });
 
+  // The empty subtasks state is a quiet `task-detail-empty-hint`
+  // matching Dependencies / Release Gate, not a heavy `EmptyState`
+  // card. (2026-06-04 design alignment: no icon / no h2, one muted
+  // line — the empty subtasks slot should not be the loudest
+  // section on the page.)
+  it("renders the empty subtasks state as a quiet hint (no h2 / no icon)", async () => {
+    mockTaskDetailFetch(taskDetail("tsub", "Subtaskless task"));
+
+    renderDetail("/tasks/tsub", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^subtaskless task$/i }),
+    ).toBeInTheDocument();
+    const hint = await screen.findByTestId("task-subtasks-empty");
+    expect(hint).toHaveTextContent(/no subtasks yet/i);
+    expect(hint.tagName).toBe("P");
+    expect(
+      screen.queryByRole("heading", { name: /no subtasks yet/i }),
+    ).not.toBeInTheDocument();
+  });
+
   // The Dependencies section is always present so the absence of upstream
   // tasks is stated explicitly rather than rendering nothing. (2026-06-04:
   // reverted an earlier "hide when empty" pass per product feedback.)
