@@ -139,10 +139,13 @@ a.task-create-agent-lock-notice-link:hover {
 
 /* "All clear" state. Deliberately NOT a card — the happy path is the
    common case and should recede. A single muted line with a small
-   success dot communicates "nothing for you here" without the visual
+   neutral dot communicates "nothing for you here" without the visual
    weight of the warning callout it sits in for. The leading dot keeps a
    faint family resemblance to the alert glyph so the two states still
-   read as the same slot, just at very different urgencies. */
+   read as the same slot, just at very different urgencies. The dot is
+   neutral (text-tertiary) rather than success-green: green reads as a
+   positive state signal, but the happy path here is the *absence* of a
+   signal, not a celebration — neutral chrome is more honest. */
 .task-detail-ok {
   display: flex;
   align-items: center;
@@ -157,11 +160,10 @@ a.task-create-agent-lock-notice-link:hover {
 .task-detail-ok::before {
   content: "";
   flex-shrink: 0;
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.4rem;
+  height: 0.4rem;
   border-radius: var(--radius-full);
-  background: var(--success-border);
-  box-shadow: 0 0 0 3px var(--success-soft);
+  background: var(--text-tertiary);
 }
 
 /* Action row — a single tidy cluster, primary CTA leads. The previous
@@ -192,12 +194,104 @@ a.task-create-agent-lock-notice-link:hover {
   }
 }
 
-/* Heavy horizontal rule directly under the action row felt jammed. Replace
-   the next-section's top border with breathing room — the action row is
-   already a strong visual break. */
-.task-detail-actions + .task-detail-section {
+/* === Hero toolbar =====================================================
+   Wraps the attention bar (ok line OR rich warning callout) + actions +
+   schedule line into ONE rhythmic strip beneath the title. Before this
+   wrapper the three pieces stacked as orphan rows with competing margins
+   and the action cluster split the metadata in half — facts above,
+   facts below, buttons stranded between. The grid below puts state
+   facts on the left and a right-anchored action cluster on the right,
+   with a single hairline separator at the bottom replacing the three
+   stray dividers that used to live below each row.
+
+   The grid uses two columns (facts | actions) and grows rows as needed:
+   - ok line + actions (single row, common case)
+   - schedule row sits below the ok line on the left, actions stay aligned
+   - warning callout spans both columns on row 1; everything else shifts
+     down so the alert gets full emphasis. ==================================== */
+.task-detail-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-2);
+  margin-top: var(--space-5);
+  margin-bottom: 0;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+/* All toolbar children own zero outer margin — the grid owns spacing. */
+.task-detail-toolbar > .task-detail-ok,
+.task-detail-toolbar > .task-detail-attention,
+.task-detail-toolbar > .task-detail-schedule,
+.task-detail-toolbar > .task-detail-actions {
+  margin: 0;
+}
+
+.task-detail-toolbar > .task-detail-ok {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.task-detail-toolbar > .task-detail-schedule {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.task-detail-toolbar > .task-detail-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
+  flex-wrap: nowrap;
+}
+
+/* Rich warning callout takes the whole top row; the schedule and the
+   action cluster drop to row 2 underneath it so the message is the
+   loudest thing in the strip. */
+.task-detail-toolbar > .task-detail-attention {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule {
+  grid-row: 2;
+}
+
+.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* The toolbar already carries its own bottom hairline, so the first
+   section beneath it should not double up with its own top border. */
+.task-detail-toolbar + .task-detail-section {
   border-top: none;
-  padding-top: var(--space-8);
+  padding-top: var(--space-6);
+}
+
+/* Narrow screens: collapse the two-column toolbar to a single column.
+   The action cluster slides under the facts and stretches edge-to-edge
+   so Edit/Delete remain reachable as full-width touch targets. */
+@media (max-width: 720px) {
+  .task-detail-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .task-detail-toolbar > .task-detail-ok,
+  .task-detail-toolbar > .task-detail-schedule,
+  .task-detail-toolbar > .task-detail-actions,
+  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule,
+  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: stretch;
+  }
+
+  .task-detail-toolbar > .task-detail-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* Model-configuration popup: opened from the Model configuration button in

@@ -322,34 +322,47 @@ export function TaskDetailPage({ app }: Props) {
     <section className="panel task-detail-panel task-detail-content--enter">
       <TaskDetailHeader task={task} />
 
-      <TaskDetailAttentionBar
-        attention={attention}
-        saving={app.saving}
-        onEdit={() => app.openEdit(task)}
-        onDelete={() =>
-          app.requestDelete({
-            ...task,
-            subtaskCount: taskDescendantCount(task),
-          })
-        }
-        onRequeue={
-          task.status === "failed"
-            ? () => {
-                requeueMutation.mutate();
-              }
-            : undefined
-        }
-        requeuePending={requeueMutation.isPending}
-        onConfigureModel={() => setModelConfigOpen(true)}
-        showModelConfig={task.status === "failed"}
-        autonomyMode={autonomyMode}
-        onToggleAutonomy={
-          autonomyMode !== "hidden"
-            ? () => setAutonomyConfirmOpen(true)
-            : undefined
-        }
-        autonomyPending={autonomyMutation.isPending}
-      />
+      {/* Hero toolbar: groups the operator-facing state facts (attention /
+          "all clear" message + schedule) with the action cluster (edit,
+          delete, requeue, autonomy…) into a single rhythmic strip. The
+          previous layout stacked these as four orphan rows with competing
+          dots, which made the upper region feel ad-hoc — Edit and Delete
+          rendered LEFT-aligned BETWEEN the ok line and the schedule, so
+          metadata was visually cut in half by the action row. One grid
+          puts facts on the left and a right-anchored action cluster on
+          the right, with a single bottom hairline replacing the three
+          stray separators below. */}
+      <div className="task-detail-toolbar">
+        <TaskDetailAttentionBar
+          attention={attention}
+          saving={app.saving}
+          onEdit={() => app.openEdit(task)}
+          onDelete={() =>
+            app.requestDelete({
+              ...task,
+              subtaskCount: taskDescendantCount(task),
+            })
+          }
+          onRequeue={
+            task.status === "failed"
+              ? () => {
+                  requeueMutation.mutate();
+                }
+              : undefined
+          }
+          requeuePending={requeueMutation.isPending}
+          onConfigureModel={() => setModelConfigOpen(true)}
+          showModelConfig={task.status === "failed"}
+          autonomyMode={autonomyMode}
+          onToggleAutonomy={
+            autonomyMode !== "hidden"
+              ? () => setAutonomyConfirmOpen(true)
+              : undefined
+          }
+          autonomyPending={autonomyMutation.isPending}
+        />
+        <TaskDetailSchedule task={task} />
+      </div>
 
       {autonomyConfirmOpen && autonomyMode !== "hidden" ? (
         <AutonomyConfirmDialog
@@ -394,8 +407,6 @@ export function TaskDetailPage({ app }: Props) {
           )}
         </p>
       ) : null}
-
-      <TaskDetailSchedule task={task} />
 
       {/* Dependencies are fixed at creation time: a task's upstream graph is
           chosen in the create modal, not edited afterward. The detail page

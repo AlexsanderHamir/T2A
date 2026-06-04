@@ -25,7 +25,10 @@ export function TaskGatePanel({
         id="task-detail-gate"
         aria-labelledby="task-detail-gate-title"
       >
-        <h3 id="task-detail-gate-title" className="task-detail-section-title">
+        <h3
+          id="task-detail-gate-title"
+          className="task-detail-section-heading"
+        >
           Release gate
         </h3>
         <p className="task-detail-empty-hint" data-testid="task-gate-empty">
@@ -50,7 +53,10 @@ export function TaskGatePanel({
       id="task-detail-gate"
       aria-labelledby="task-detail-gate-title"
     >
-      <h3 id="task-detail-gate-title" className="task-detail-section-title">
+      <h3
+        id="task-detail-gate-title"
+        className="task-detail-section-heading"
+      >
         Release gate
       </h3>
       <div className="task-detail-meta" data-testid="task-gate-meta">

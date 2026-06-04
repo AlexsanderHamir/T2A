@@ -1,14 +1,19 @@
-/* Schedule line. Previously a full-width bordered + filled band that
-   read as a heavy stray strip beneath the action row. It carries one
-   short fact ("Scheduled for …"), so it now renders as a quiet metadata
-   line — small dot + muted text — matching the slim "all clear" line in
-   the hero. Edit/Clear (non-terminal tasks) sit at the trailing edge. */
+/* Schedule line. Renders as a quiet metadata fact inside the hero
+   toolbar — small neutral dot + muted text — matching the slim
+   "all clear" line above it. Edit/Clear (non-terminal tasks) sit at
+   the trailing edge of the line, before the right-anchored action
+   cluster.
+
+   The schedule sits inside `.task-detail-toolbar`, which owns its
+   margins; the legacy `margin-top` here would only fire if the
+   schedule rendered outside the toolbar (which no longer happens),
+   but is kept tiny so a stray usage doesn't crash visual rhythm. */
 .task-detail-schedule {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  margin-top: var(--space-4);
+  margin-top: 0;
   margin-bottom: 0;
 }
 
@@ -22,14 +27,19 @@
   color: var(--text-secondary);
 }
 
+/* Dot is intentionally NEUTRAL (text-tertiary) and ring-less. The
+   previous brand-purple dot wrapped in a 3px brand-muted glow ring
+   was the noisiest atom in the upper region — it screamed "primary
+   accent" for a piece of quiet metadata. Keeping the dot in the same
+   neutral family as `.task-detail-ok::before` lets the two fact lines
+   read as a coherent pair instead of two competing signals. */
 .task-detail-schedule-badge-dot {
   display: inline-block;
   flex-shrink: 0;
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.4rem;
+  height: 0.4rem;
   border-radius: var(--radius-full);
-  background: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-muted);
+  background: var(--text-tertiary);
 }
 
 .task-detail-schedule-empty {
