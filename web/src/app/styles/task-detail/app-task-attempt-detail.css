@@ -104,7 +104,7 @@
 .task-attempt-meta-inline-item + .task-attempt-meta-inline-item {
   margin-left: 0.75rem;
   padding-left: 0.75rem;
-  border-left: 1px solid var(--border-chrome-strong, rgba(0, 0, 0, 0.16));
+  border-left: 1px solid var(--border-chrome-muted);
 }
 
 time.task-attempt-meta-inline-item {

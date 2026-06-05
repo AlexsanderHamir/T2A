@@ -161,24 +161,20 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		tasks, hasMore, err = h.store.ListRootForest(r.Context(), limit, offset)
 	}
 	if err != nil {
-		writeStoreError(w, r, op, err, listFailureLogAttrs(limit, offset, afterID, "store_list")...)
+		mode := "offset"
+		if afterID != "" {
+			mode = "keyset"
+		}
+		writeStoreError(w, r, op, err,
+			"failure_stage", "store_list",
+			"limit", limit,
+			"offset", offset,
+			"after_id", afterID,
+			"pagination_mode", mode,
+		)
 		return
 	}
 	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
-}
-
-func listFailureLogAttrs(limit, offset int, afterID, stage string) []any {
-	mode := "offset"
-	if afterID != "" {
-		mode = "keyset"
-	}
-	return []any{
-		"failure_stage", stage,
-		"limit", limit,
-		"offset", offset,
-		"after_id", afterID,
-		"pagination_mode", mode,
-	}
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
