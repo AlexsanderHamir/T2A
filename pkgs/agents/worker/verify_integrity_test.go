@@ -71,18 +71,24 @@ func TestIntegritySnapshot_CleanRepo_NoChanges(t *testing.T) {
 	}
 }
 
-func TestIntegrityDiff_AllowedVerifyReportPath(t *testing.T) {
+// TestIntegrityDiff_AnyRepoRootChange_Tampered pins PR1's tightened
+// contract: the worker now writes report files outside RepoRoot, so
+// the integrity-check whitelist is empty by design. The previous
+// .t2a/<cycleID>/verify-report.json allowance no longer exists — any
+// new path inside the porcelain diff is tampering, even if it would
+// once have been a legitimate report write.
+func TestIntegrityDiff_AnyRepoRootChange_Tampered(t *testing.T) {
 	cycleID := "abc123"
 	pre := integritySnapshot{head: "deadbeef", changed: map[string]struct{}{}}
 	post := integritySnapshot{
 		head: "deadbeef",
 		changed: map[string]struct{}{
-			allowedVerifyArtifactPath(cycleID): {},
+			".t2a/" + cycleID + "/verify-report.json": {},
 		},
 	}
 	tampered, summary := classifyIntegrityDiff(diffIntegritySnapshots(pre, post), cycleID)
-	if tampered {
-		t.Errorf("verify-report.json mutation should be allowed, got tampered=true summary=%q", summary)
+	if !tampered {
+		t.Errorf("any RepoRoot change must be tampered after PR1; summary=%q", summary)
 	}
 }
 

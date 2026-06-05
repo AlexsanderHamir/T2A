@@ -223,9 +223,9 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 When `app_settings.verify_enabled` is true (default):
 
-1. **Execute** — prompt includes all criteria with stable ids; agent writes `.t2a/<cycle_id>/criteria-report.json`.
+1. **Execute** — prompt includes all criteria with stable ids and the **absolute** worker-managed path the agent must write its report to (`<worker-managed dir>/<cycle_id>/criteria-report.json`, see "Report file contracts" below).
 2. **Deterministic checks** — for each item with a non-empty `check`, the worker runs the command in the execute working dir with `app_settings.check_command_timeout_seconds`.
-3. **Verify** — the verify runner runs in the execute working dir (where execute's uncommitted changes live so the verifier can inspect actual file contents) and writes `.t2a/<cycle_id>/verify-report.json`. The verifier MUST NOT modify any other path. The worker enforces this with a pre/post integrity snapshot of `git status --porcelain` plus `git rev-parse HEAD`; any change outside `.t2a/<cycle_id>/verify-report.json`, any HEAD movement, or any failure to capture the post-snapshot terminates the cycle as `verify_tampered` (terminal — no retries, no completion rows). When the working dir is not a git repo, the integrity check is bypassed and logged once at startup. Adversarial separation: when `app_settings.verify_runner_name` is set, the verify pass runs on a different runner adapter (and optionally a different model) than execute — see `docs/configuration.md`.
+3. **Verify** — the verify runner runs in the execute working dir (where execute's uncommitted changes live so the verifier can inspect actual file contents) and writes its verdict to the **absolute** worker-managed `<worker-managed dir>/<cycle_id>/verify-report.json` path. The verifier MUST NOT modify any path inside the working dir. The worker enforces this with a pre/post integrity snapshot of `git status --porcelain` plus `git rev-parse HEAD`; the whitelist is empty (report files live outside the working tree, so any porcelain diff is tampering), any HEAD movement, or any failure to capture the post-snapshot terminates the cycle as `verify_tampered` (terminal — no retries, no completion rows). When the working dir is not a git repo, the integrity check is bypassed and logged once at startup. Adversarial separation: when `app_settings.verify_runner_name` is set, the verify pass runs on a different runner adapter (and optionally a different model) than execute — see `docs/configuration.md`.
 4. **Decision** — all pass → atomic `SetDoneWithEvidence` + `status=done`; any fail → retry execute up to `verify_max_retries` (hard cap 10) or terminate with reason `verification_failed:<id>,<id>,…` (sorted, deduped failing criterion IDs after the prefix) and **no** completion rows. The `verification_failed` prefix is contract-stable; consumers MUST use prefix matching (`startsWith`). Bare `verification_failed` (older cycles) remains a valid value. The reason column is 256 chars; long failure lists are truncated with a trailing `…` while keeping the prefix intact.
 5. **Retry efficiency** — verdicts that passed in earlier attempts are carried in memory across retries. The next execute prompt lists them under "Already verified (do not re-do)" and excludes them from the active checklist; the next verify pass short-circuits them. The atomic-decision contract is preserved: nothing is committed to `task_checklist_completions` until the cycle terminates `succeeded`, at which point all passes (this attempt + earlier) land in one transaction. On terminal failure, no completion rows are written even for criteria that passed on every attempt.
 
@@ -233,14 +233,14 @@ When `verify_enabled` is false, the worker uses the legacy bulk-mark path (empty
 
 ### Report file contracts
 
-Paths under `WorkingDir` (`app_settings.repo_root`).
+Paths live under a **worker-managed scratch directory** (`<worker-managed dir>/<cycle_id>/...`) which the operator never sees. The worker resolves the directory from `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`); the agent CLI is told the absolute path in its prompt and writes there directly. The directory lives outside `app_settings.repo_root` so customer working trees stay clean and the verify-pass integrity check has an empty whitelist (any porcelain diff against the working tree during verify is tampering). The per-cycle subdirectory is GC'd by the worker at cycle terminate so disk use stays bounded.
 
 | File | Writer | Schema |
 |---|---|---|
-| `.t2a/<cycle_id>/criteria-report.json` | Execute agent | `{ "criteria": [{ "id", "claimed_done", "evidence" }] }` |
-| `.t2a/<cycle_id>/verify-report.json` | Verify agent | `{ "criteria": [{ "id", "verified", "reasoning" }] }` |
+| `<worker-managed dir>/<cycle_id>/criteria-report.json` | Execute agent | `{ "criteria": [{ "id", "claimed_done", "evidence" }] }` |
+| `<worker-managed dir>/<cycle_id>/verify-report.json` | Verify agent | `{ "criteria": [{ "id", "verified", "reasoning" }] }` |
 
-Limits: 256 KB per report file; `evidence` and `reasoning` ≤ 16 KB each; verify `reasoning` ≥ 40 chars when `verified=true`. Duplicate ids in a report → invalid. Symlinks rejected. `.t2a/.gitignore` contains `*`.
+Limits: 256 KB per report file; `evidence` and `reasoning` ≤ 16 KB each; verify `reasoning` ≥ 40 chars when `verified=true`. Duplicate ids in a report → invalid. Symlinks rejected.
 
 ## Project context
 

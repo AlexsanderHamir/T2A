@@ -41,28 +41,52 @@ type verifyReportEntry struct {
 	Reasoning string `json:"reasoning"`
 }
 
-func criteriaReportPath(workingDir, cycleID string) string {
-	return filepath.Join(workingDir, ".t2a", cycleID, "criteria-report.json")
+// reportCycleDir is the worker-managed scratch directory for one
+// cycle's report files. Lives under Options.ReportDir (defaulted by
+// NewWorker to <os.TempDir()>/t2a-worker) so the operator's RepoRoot
+// is never touched. Cleaned up at terminateCycle time via
+// cleanupReportDir; cycle subdirectories from a previous worker run
+// are scrubbed at startExecutePhase via scrubCycleArtifacts so a
+// stale file from an aborted-without-cleanup cycle never poisons
+// parseCriteriaReport.
+func reportCycleDir(reportDir, cycleID string) string {
+	return filepath.Join(reportDir, cycleID)
 }
 
-func verifyReportPath(workingDir, cycleID string) string {
-	return filepath.Join(workingDir, ".t2a", cycleID, "verify-report.json")
+func criteriaReportPath(reportDir, cycleID string) string {
+	return filepath.Join(reportCycleDir(reportDir, cycleID), "criteria-report.json")
 }
 
-func ensureT2ADir(workingDir string) error {
-	dir := filepath.Join(workingDir, ".t2a")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	gitignore := filepath.Join(dir, ".gitignore")
-	if _, err := os.Stat(gitignore); os.IsNotExist(err) {
-		return os.WriteFile(gitignore, []byte("*\n"), 0o644)
-	}
-	return nil
+func verifyReportPath(reportDir, cycleID string) string {
+	return filepath.Join(reportCycleDir(reportDir, cycleID), "verify-report.json")
 }
 
-func scrubCycleArtifacts(workingDir, cycleID string) error {
-	return os.RemoveAll(filepath.Join(workingDir, ".t2a", cycleID))
+// ensureReportCycleDir creates <reportDir>/<cycleID>/ with a permissive
+// directory mode so the agent CLI can write its report into it.
+// Idempotent — repeated calls within a cycle are no-ops. The directory
+// lives outside any git repo, so unlike the prior .t2a/ helper there
+// is no .gitignore to write here; a stray entry would be a bug.
+func ensureReportCycleDir(reportDir, cycleID string) error {
+	return os.MkdirAll(reportCycleDir(reportDir, cycleID), 0o755)
+}
+
+// scrubCycleArtifacts removes the per-cycle report subdirectory before
+// the next execute attempt writes into it. Used at the top of every
+// execute phase so a stale criteria-report.json from a previous
+// attempt cannot satisfy parseCriteriaReport against this attempt's
+// expected-IDs set.
+func scrubCycleArtifacts(reportDir, cycleID string) error {
+	return os.RemoveAll(reportCycleDir(reportDir, cycleID))
+}
+
+// cleanupReportDir removes <reportDir>/<cycleID>/ at cycle terminate
+// time. Closes the unbounded-disk-growth gap that existed when files
+// were written under .t2a/ — there was no per-cycle GC. Called from
+// terminateCycle and the cleanup paths (handleShutdownAfterRun,
+// recoverFromPanic, bestEffortTerminate) so every exit point clears
+// its scratch.
+func cleanupReportDir(reportDir, cycleID string) error {
+	return os.RemoveAll(reportCycleDir(reportDir, cycleID))
 }
 
 func readJSONFile(path string, dest any) error {
@@ -89,8 +113,8 @@ func readJSONFile(path string, dest any) error {
 	return nil
 }
 
-func parseCriteriaReport(workingDir, cycleID string, expectedIDs map[string]struct{}) (map[string]criteriaReportEntry, error) {
-	path := criteriaReportPath(workingDir, cycleID)
+func parseCriteriaReport(reportDir, cycleID string, expectedIDs map[string]struct{}) (map[string]criteriaReportEntry, error) {
+	path := criteriaReportPath(reportDir, cycleID)
 	var rep criteriaReport
 	if err := readJSONFile(path, &rep); err != nil {
 		return nil, err
@@ -117,8 +141,8 @@ func parseCriteriaReport(workingDir, cycleID string, expectedIDs map[string]stru
 	return out, nil
 }
 
-func parseVerifyReport(workingDir, cycleID string, expectedIDs map[string]struct{}) (map[string]verifyReportEntry, error) {
-	path := verifyReportPath(workingDir, cycleID)
+func parseVerifyReport(reportDir, cycleID string, expectedIDs map[string]struct{}) (map[string]verifyReportEntry, error) {
+	path := verifyReportPath(reportDir, cycleID)
 	var rep verifyReport
 	if err := readJSONFile(path, &rep); err != nil {
 		if errors.Is(err, ErrCriteriaReportMissing) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -21,9 +22,23 @@ const (
 	// EnvListenHost is T2A_LISTEN_HOST (HTTP bind address).
 	EnvListenHost = "T2A_LISTEN_HOST"
 	// EnvLogLevel is T2A_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
-	EnvLogLevel                  = "T2A_LOG_LEVEL"
+	EnvLogLevel = "T2A_LOG_LEVEL"
+	// EnvWorkerReportDir is T2A_WORKER_REPORT_DIR. Overrides the default
+	// worker-managed scratch directory (<os.TempDir()>/t2a-worker)
+	// where the agent CLI writes criteria-report.json /
+	// verify-report.json. Lives outside the operator's RepoRoot so
+	// customer working trees stay clean. The supervisor validates the
+	// path is writable at startup; failure logs a warn and falls back
+	// to the default rather than blocking the worker.
+	EnvWorkerReportDir           = "T2A_WORKER_REPORT_DIR"
 	defaultUserTaskAgentQueueCap = 256
 	defaultSSETestInterval       = 3 * time.Second
+	// defaultWorkerReportDirSubdir matches worker.DefaultReportDirSubdir;
+	// duplicated here so the env layer does not depend on the worker
+	// package. The Worker package is the source of truth for the leaf
+	// name; supervising code that wants the resolved path should call
+	// WorkerReportDir() rather than recomputing.
+	defaultWorkerReportDirSubdir = "t2a-worker"
 )
 
 // DefaultUserTaskAgentQueueCap is used when T2A_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
@@ -116,6 +131,21 @@ func SSETestTickerInterval() time.Duration {
 		return defaultSSETestInterval
 	}
 	return d
+}
+
+// WorkerReportDir resolves the worker-managed scratch root for the
+// agent <-> worker side-channel report files. Returns the value of
+// T2A_WORKER_REPORT_DIR when set (after TrimSpace); otherwise
+// <os.TempDir()>/t2a-worker. Never returns an empty string — callers
+// can pass the result straight into worker.Options.ReportDir without
+// a nil/empty guard.
+func WorkerReportDir() string {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.WorkerReportDir")
+	s := strings.TrimSpace(os.Getenv(EnvWorkerReportDir))
+	if s != "" {
+		return s
+	}
+	return filepath.Join(os.TempDir(), defaultWorkerReportDirSubdir)
 }
 
 // UserTaskAgentQueueCap returns the in-memory ready-task queue depth.

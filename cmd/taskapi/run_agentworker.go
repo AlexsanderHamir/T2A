@@ -406,9 +406,21 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	notifier := newCycleChangeSSEAdapter(s.hub)
 	progressNotifier := newRunProgressSSEAdapter(s.hub, agentRunProgressMinInterval)
 	verifyRunner, verifyStatus := s.buildVerifyRunner(ctx, cfg)
+	reportDir := taskapiconfig.WorkerReportDir()
+	if err := ensureWorkerReportDirWritable(reportDir); err != nil {
+		// Loud warn, but do NOT block the worker — the cost of a
+		// non-writable scratch dir is "verify reports never land",
+		// surfaces immediately on the first verify pass, and is
+		// fixable from the operator side. Blocking startup would
+		// trade a transient mis-config for a dead worker.
+		slog.Warn("agent worker report dir not writable; worker will start but verify will fail",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.report_dir_not_writable",
+			"path", reportDir, "err", err)
+	}
 	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
 		RunTimeout:       runTimeout,
 		WorkingDir:       cfg.RepoRoot,
+		ReportDir:        reportDir,
 		Notifier:         notifier,
 		ProgressNotifier: progressNotifier,
 		Metrics:          s.metrics,
@@ -762,6 +774,32 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *hand
 		reconcileCancel()
 	}
 	return stopAgents, agentQueue, sup, nil
+}
+
+// ensureWorkerReportDirWritable creates the worker-managed scratch
+// directory if it does not exist and confirms the worker process can
+// write into it by touching a sentinel file. Distinct from
+// assertWorkingDirExists because RepoRoot is operator-supplied and
+// MUST exist (idle if missing), while the report dir is a worker
+// internal detail that we create on demand. A failure here is a warn,
+// not a fatal: see the call site in applySettings for the rationale.
+func ensureWorkerReportDirWritable(dir string) error {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.ensureWorkerReportDirWritable",
+		"dir", dir)
+	if dir == "" {
+		return errors.New("report dir is empty")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("mkdir %q: %w", dir, err)
+	}
+	probe, err := os.CreateTemp(dir, ".t2a-worker-probe-*")
+	if err != nil {
+		return fmt.Errorf("write probe in %q: %w", dir, err)
+	}
+	probePath := probe.Name()
+	_ = probe.Close()
+	_ = os.Remove(probePath)
+	return nil
 }
 
 // assertWorkingDirExists is the fail-fast guard for AppSettings.RepoRoot.

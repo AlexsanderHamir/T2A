@@ -71,6 +71,25 @@ func (w *Worker) handleShutdownAfterRun(state *processState, taskID string) {
 				"task_id", taskID, "err", err)
 		}
 	}
+	w.cleanupCycleReports(state.cycleID, "shutdown")
+}
+
+// cleanupCycleReports is the shared GC for the worker's scratch dir.
+// Every cycle exit path (happy terminate, panic, shutdown, best-effort)
+// calls it so disk growth stays bounded regardless of how the cycle
+// ends. Idempotent and best-effort: a missing dir is normal, a real
+// error is logged but never propagated.
+func (w *Worker) cleanupCycleReports(cycleID, reason string) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.cleanupCycleReports",
+		"cycle_id", cycleID, "reason", reason)
+	if cycleID == "" {
+		return
+	}
+	if err := cleanupReportDir(w.options.ReportDir, cycleID); err != nil {
+		slog.Warn("agent worker cleanupCycleReports failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.cleanupCycleReports.err",
+			"cycle_id", cycleID, "report_dir", w.options.ReportDir, "reason", reason, "err", err)
+	}
 }
 
 // recoverFromPanic is the deferred safety net for any panic inside
@@ -126,6 +145,7 @@ func (w *Worker) recoverFromPanic(state *processState, task domain.Task) {
 				"task_id", task.ID, "err", err)
 		}
 	}
+	w.cleanupCycleReports(state.cycleID, "panic")
 }
 
 // bestEffortFailTask is the cleanup path used when StartCycle itself
@@ -188,4 +208,5 @@ func (w *Worker) bestEffortTerminate(ctx context.Context, state *processState, t
 		state.cycleStarted = false
 	}
 	w.bestEffortFailTask(ctx, taskID)
+	w.cleanupCycleReports(state.cycleID, "best_effort_terminate")
 }

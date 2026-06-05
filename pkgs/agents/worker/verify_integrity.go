@@ -130,42 +130,29 @@ func diffIntegritySnapshots(pre, post integritySnapshot) integrityDiff {
 	return d
 }
 
-// allowedVerifyArtifactPath returns the only working-tree path the
-// verifier is permitted to add or modify: the verify-report.json file
-// for THIS cycle. A different cycle's report is not tolerated — the
-// verifier is supposed to write to its own cycle dir or nowhere.
-//
-// Returned in forward-slash form to match git status's path output;
-// callers compare against parsePorcelainZ output directly.
-func allowedVerifyArtifactPath(cycleID string) string {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.allowedVerifyArtifactPath",
-		"cycle_id", cycleID)
-	return filepath.ToSlash(filepath.Join(".t2a", cycleID, "verify-report.json"))
-}
-
 // classifyIntegrityDiff turns the diff into a (tampered, summary)
 // pair. summary is a short, operator-facing string suitable for the
 // cycle's terminate_reason field; it lists at most a handful of paths
 // so the SPA cycle-list view does not need to truncate. If tampered
 // is false the summary is "".
+//
+// The whitelist is empty by design: the worker writes report files to
+// Options.ReportDir (outside RepoRoot) so the verifier cannot legally
+// modify anything inside the working tree during the verify pass. Any
+// added path here is tampering, full stop. This is a tightening of
+// the previous .t2a/<cycleID>/verify-report.json allowance — files no
+// longer live under RepoRoot and therefore cannot show up in the
+// porcelain diff under any non-misbehaving codepath.
 func classifyIntegrityDiff(diff integrityDiff, cycleID string) (bool, string) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.classifyIntegrityDiff",
 		"cycle_id", cycleID, "head_changed", diff.headChanged, "added_count", len(diff.addedPaths))
 	if diff.headChanged {
 		return true, "HEAD ref moved during verify pass"
 	}
-	allowed := allowedVerifyArtifactPath(cycleID)
-	violations := make([]string, 0, len(diff.addedPaths))
-	for _, p := range diff.addedPaths {
-		if p == allowed {
-			continue
-		}
-		violations = append(violations, p)
-	}
-	if len(violations) == 0 {
+	if len(diff.addedPaths) == 0 {
 		return false, ""
 	}
-	return true, summariseTamperedPaths(violations)
+	return true, summariseTamperedPaths(diff.addedPaths)
 }
 
 // summariseTamperedPaths renders up to 5 paths inline; anything beyond

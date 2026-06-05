@@ -142,7 +142,15 @@ func (w *Worker) runVerificationPipeline(
 	if !snap.enabled {
 		return nil, "", nil
 	}
-	_ = ensureT2ADir(w.options.WorkingDir)
+	if err := ensureReportCycleDir(w.options.ReportDir, cycle.ID); err != nil {
+		// Best-effort: the worker can still proceed if the dir
+		// already exists. Hard errors (e.g. ENOSPC, EACCES on the
+		// worker tempdir) surface later when parseVerifyReport
+		// can't find the file the verifier was told to write.
+		slog.Warn("agent worker ensureReportCycleDir failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.ensure_err",
+			"cycle_id", cycle.ID, "report_dir", w.options.ReportDir, "err", err)
+	}
 
 	verifyStarted := w.options.Clock()
 	defer func() {
@@ -274,7 +282,7 @@ func (w *Worker) runVerifyChecks(
 		expected[it.ID] = struct{}{}
 	}
 
-	selfReport, err := parseCriteriaReport(w.options.WorkingDir, cycle.ID, expected)
+	selfReport, err := parseCriteriaReport(w.options.ReportDir, cycle.ID, expected)
 	if err != nil {
 		return nil, "", err
 	}
@@ -328,7 +336,7 @@ func (w *Worker) runVerifyChecks(
 		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback); err != nil {
 			return nil, "", err
 		}
-		vrep, err := parseVerifyReport(w.options.WorkingDir, cycle.ID, expected)
+		vrep, err := parseVerifyReport(w.options.ReportDir, cycle.ID, expected)
 		if err != nil {
 			return nil, "", err
 		}
@@ -408,7 +416,11 @@ func (w *Worker) runLLMVerifyAgent(
 	}
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
-	b.WriteString(fmt.Sprintf("Write `.t2a/%s/verify-report.json` only.\n\n", cycle.ID))
+	// Render the absolute, worker-managed verify-report path so the
+	// agent CLI writes outside the operator's RepoRoot. Any source
+	// mutation in RepoRoot during the verify pass is now treated as
+	// tampering with no allowlist (see verify_integrity.go).
+	b.WriteString(fmt.Sprintf("Write `%s` only.\n\n", verifyReportPath(w.options.ReportDir, cycle.ID)))
 	b.WriteString("Schema: {\"criteria\":[{\"id\":\"...\",\"verified\":true|false,\"reasoning\":\"...\"}]}\n\n")
 	if len(previouslyPassed) > 0 {
 		b.WriteString("## Locked passes (do not re-evaluate)\n\n")

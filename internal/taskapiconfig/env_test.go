@@ -2,6 +2,9 @@ package taskapiconfig
 
 import (
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -153,6 +156,38 @@ func TestSSETestTickerInterval(t *testing.T) {
 		t.Setenv(EnvSSETestInterval, "7s")
 		if got := SSETestTickerInterval(); got != 7*time.Second {
 			t.Fatalf("got %v", got)
+		}
+	})
+}
+
+func TestWorkerReportDir(t *testing.T) {
+	t.Run("defaults to <os.TempDir>/t2a-worker when env unset", func(t *testing.T) {
+		t.Setenv(EnvWorkerReportDir, "")
+		got := WorkerReportDir()
+		want := filepath.Join(os.TempDir(), defaultWorkerReportDirSubdir)
+		if got != want {
+			t.Fatalf("got %q want %q", got, want)
+		}
+	})
+	t.Run("env override wins over default", func(t *testing.T) {
+		override := filepath.Join(os.TempDir(), "t2a-override")
+		t.Setenv(EnvWorkerReportDir, override)
+		if got := WorkerReportDir(); got != override {
+			t.Fatalf("got %q want %q", got, override)
+		}
+	})
+	t.Run("trims surrounding whitespace", func(t *testing.T) {
+		override := filepath.Join(os.TempDir(), "t2a-trim")
+		t.Setenv(EnvWorkerReportDir, "  "+override+"\t")
+		if got := WorkerReportDir(); got != override {
+			t.Fatalf("got %q want %q", got, override)
+		}
+	})
+	t.Run("blank env falls back to default", func(t *testing.T) {
+		t.Setenv(EnvWorkerReportDir, "   \t")
+		got := WorkerReportDir()
+		if !strings.HasSuffix(got, defaultWorkerReportDirSubdir) {
+			t.Fatalf("blank env should fall back to default; got %q", got)
 		}
 	})
 }

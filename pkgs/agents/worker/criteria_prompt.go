@@ -15,7 +15,14 @@ import (
 // under a separate "Already verified" header and are omitted from the
 // active checklist + the report schema's expected-IDs set so the
 // agent doesn't waste tokens re-doing settled work.
-func injectCriteria(prompt string, items []store.ChecklistVerifyItem, cycleID string, alreadyVerified map[string]criterionVerdict) string {
+//
+// reportPath is the absolute path the worker has chosen for this
+// cycle's criteria-report.json (under Options.ReportDir, not under
+// the operator's RepoRoot). The prompt renders that absolute path
+// verbatim so the agent CLI writes outside the working tree and never
+// dirties the operator's repo. cycleID is retained for the trace log
+// only; it is no longer baked into a relative path.
+func injectCriteria(prompt string, items []store.ChecklistVerifyItem, cycleID, reportPath string, alreadyVerified map[string]criterionVerdict) string {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.injectCriteria",
 		"cycle_id", cycleID, "items", len(items), "already_verified", len(alreadyVerified))
 	if len(items) == 0 {
@@ -53,7 +60,7 @@ func injectCriteria(prompt string, items []store.ChecklistVerifyItem, cycleID st
 
 	b.WriteString("\n\n## Done criteria (required)\n\n")
 	b.WriteString("You must satisfy every criterion below. When finished, write a JSON report at:\n")
-	b.WriteString(fmt.Sprintf("`.t2a/%s/criteria-report.json`\n\n", cycleID))
+	b.WriteString(fmt.Sprintf("`%s`\n\n", reportPath))
 	b.WriteString("Schema:\n```json\n{\"criteria\":[{\"id\":\"<id>\",\"claimed_done\":true,\"evidence\":\"...\"}]}\n```\n")
 	if len(locked) > 0 {
 		b.WriteString("(Report only the criteria below; do NOT include already-verified IDs.)\n")

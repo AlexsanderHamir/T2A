@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -20,7 +19,9 @@ func TestParseCriteriaReport_missingFile(t *testing.T) {
 func TestParseCriteriaReport_valid(t *testing.T) {
 	dir := t.TempDir()
 	cycleID := "cycle-1"
-	_ = os.MkdirAll(filepath.Join(dir, ".t2a", cycleID), 0o755)
+	if err := ensureReportCycleDir(dir, cycleID); err != nil {
+		t.Fatal(err)
+	}
 	body := `{"criteria":[{"id":"a","claimed_done":true,"evidence":"did the thing"}]}`
 	if err := os.WriteFile(criteriaReportPath(dir, cycleID), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
@@ -37,7 +38,9 @@ func TestParseCriteriaReport_valid(t *testing.T) {
 func TestParseCriteriaReport_duplicateID(t *testing.T) {
 	dir := t.TempDir()
 	cycleID := "cycle-1"
-	_ = os.MkdirAll(filepath.Join(dir, ".t2a", cycleID), 0o755)
+	if err := ensureReportCycleDir(dir, cycleID); err != nil {
+		t.Fatal(err)
+	}
 	rep := criteriaReport{Criteria: []criteriaReportEntry{
 		{ID: "a", ClaimedDone: true, Evidence: "x"},
 		{ID: "a", ClaimedDone: true, Evidence: "y"},

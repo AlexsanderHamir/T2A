@@ -12,12 +12,22 @@ func TestInjectCriteria_NoAlreadyVerified_RendersAllItems(t *testing.T) {
 		{ID: "c1", Text: "first criterion"},
 		{ID: "c2", Text: "second criterion"},
 	}
-	out := injectCriteria("base", items, "cycle-1", nil)
+	reportPath := "/tmp/t2a-worker/cycle-1/criteria-report.json"
+	out := injectCriteria("base", items, "cycle-1", reportPath, nil)
 	if !strings.Contains(out, "first criterion") || !strings.Contains(out, "second criterion") {
 		t.Fatalf("expected all items in prompt, got:\n%s", out)
 	}
 	if strings.Contains(out, "Already verified") {
 		t.Errorf("unexpected Already-verified header when no locked passes; out=%q", out)
+	}
+	// PR1 contract: the prompt MUST render the absolute,
+	// worker-managed report path, never the legacy .t2a/<cycleID>/...
+	// relative path that lived inside RepoRoot.
+	if !strings.Contains(out, reportPath) {
+		t.Fatalf("absolute report path missing from prompt; want=%q got=%s", reportPath, out)
+	}
+	if strings.Contains(out, ".t2a/") {
+		t.Fatalf(".t2a/ relative path leaked into prompt:\n%s", out)
 	}
 }
 
@@ -34,7 +44,7 @@ func TestInjectCriteria_LockedItem_OmittedFromActiveChecklist(t *testing.T) {
 	already := map[string]criterionVerdict{
 		"c1": {id: "c1", passed: true},
 	}
-	out := injectCriteria("base", items, "cycle-1", already)
+	out := injectCriteria("base", items, "cycle-1", "/tmp/t2a-worker/cycle-1/criteria-report.json", already)
 
 	if !strings.Contains(out, "## Already verified") {
 		t.Fatalf("missing Already-verified header in:\n%s", out)
@@ -70,7 +80,7 @@ func TestInjectCriteria_AllLocked_NoActiveSchema(t *testing.T) {
 	already := map[string]criterionVerdict{
 		"c1": {id: "c1", passed: true},
 	}
-	out := injectCriteria("base", items, "cycle-1", already)
+	out := injectCriteria("base", items, "cycle-1", "/tmp/t2a-worker/cycle-1/criteria-report.json", already)
 	if strings.Contains(out, "Schema:") {
 		t.Errorf("schema instructions must be omitted when nothing is active:\n%s", out)
 	}

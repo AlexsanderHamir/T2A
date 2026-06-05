@@ -37,9 +37,15 @@ func (h *hookRunner) Run(ctx context.Context, req runner.Request) (runner.Result
 	return h.Runner.Run(ctx, req)
 }
 
-func writeCriteriaReport(t *testing.T, dir, cycleID string, ids []string) {
+// writeCriteriaReport scripts the agent CLI side-effect: drop a
+// criteria-report.json under the worker-managed scratch dir so the
+// next parseCriteriaReport call succeeds. reportDir is the value the
+// worker was given via Options.ReportDir; helpers do NOT prepend any
+// `.t2a/` segment after PR1 — files live outside the operator's
+// RepoRoot, so the path is just <reportDir>/<cycleID>/...
+func writeCriteriaReport(t *testing.T, reportDir, cycleID string, ids []string) {
 	t.Helper()
-	cdir := filepath.Join(dir, ".t2a", cycleID)
+	cdir := filepath.Join(reportDir, cycleID)
 	if err := os.MkdirAll(cdir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -60,9 +66,9 @@ func writeCriteriaReport(t *testing.T, dir, cycleID string, ids []string) {
 	}
 }
 
-func writeVerifyReport(t *testing.T, dir, cycleID string, ids []string) {
+func writeVerifyReport(t *testing.T, reportDir, cycleID string, ids []string) {
 	t.Helper()
-	cdir := filepath.Join(dir, ".t2a", cycleID)
+	cdir := filepath.Join(reportDir, cycleID)
 	if err := os.MkdirAll(cdir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -239,6 +245,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 
 	execRunner := runnerfake.New().WithName("exec-runner")
 	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
@@ -247,7 +254,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -260,7 +267,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeVerifyReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
 	}}
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
@@ -268,6 +275,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
@@ -311,6 +319,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 	gitInitTestRepo(t, workDir)
 
 	execRunner := runnerfake.New()
@@ -320,7 +329,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -333,10 +342,11 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeVerifyReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
-		// Tamper: drop a stray file in the working dir root, outside
-		// the allowed .t2a/<cycleID>/verify-report.json path.
+		// Tamper: drop a stray file in the working dir root. After
+		// PR1 the integrity-check whitelist is empty (reports live
+		// outside RepoRoot), so any RepoRoot mutation is tampering.
 		if err := os.WriteFile(filepath.Join(workDir, "MUTATED.txt"), []byte("hi"), 0o644); err != nil {
 			t.Logf("tamper write: %v", err)
 		}
@@ -346,6 +356,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
@@ -413,6 +424,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 
 	execRunner := runnerfake.New()
 	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
@@ -421,7 +433,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -438,7 +450,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeVerifyReport(t, workDir, cycles[0].ID, []string{item.ID})
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
 	}}
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
@@ -446,6 +458,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
@@ -506,9 +519,9 @@ func writeCriteriaReportFor(t *testing.T, dir, cycleID string, ids []string) {
 	writeCriteriaReport(t, dir, cycleID, ids)
 }
 
-func writePartialVerifyReport(t *testing.T, dir, cycleID string, verdicts map[string]bool) {
+func writePartialVerifyReport(t *testing.T, reportDir, cycleID string, verdicts map[string]bool) {
 	t.Helper()
-	cdir := filepath.Join(dir, ".t2a", cycleID)
+	cdir := filepath.Join(reportDir, cycleID)
 	if err := os.MkdirAll(cdir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -562,6 +575,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 	var execAttempt atomic.Int32
 	execRunner := runnerfake.New()
 	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
@@ -581,7 +595,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		if n >= 2 {
 			ids = []string{c2.ID}
 		}
-		writeCriteriaReportFor(t, workDir, cycles[0].ID, ids)
+		writeCriteriaReportFor(t, reportDir, cycles[0].ID, ids)
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
@@ -601,11 +615,11 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		// (c1 is locked from attempt 1 and not in the expected set.)
 		switch n {
 		case 1:
-			writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+			writePartialVerifyReport(t, reportDir, cycles[0].ID, map[string]bool{
 				c1.ID: true, c2.ID: false,
 			})
 		default:
-			writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+			writePartialVerifyReport(t, reportDir, cycles[0].ID, map[string]bool{
 				c2.ID: true,
 			})
 		}
@@ -615,6 +629,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
@@ -666,6 +681,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 	var execAttempt atomic.Int32
 	execRunner := runnerfake.New()
 	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
@@ -681,7 +697,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		if n >= 2 {
 			ids = []string{c2.ID}
 		}
-		writeCriteriaReportFor(t, workDir, cycles[0].ID, ids)
+		writeCriteriaReportFor(t, reportDir, cycles[0].ID, ids)
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
@@ -697,18 +713,14 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		}
 		// c1 always passes; c2 always fails. Both attempts.
 		ids := map[string]bool{c1.ID: true, c2.ID: false}
-		// Skip c1 from attempt 2's verifier output (it's locked).
-		if cycles != nil {
-			// Detect retry by checking if this is the second verify
-			// call: attempt counter mirror.
-		}
-		writePartialVerifyReport(t, workDir, cycles[0].ID, ids)
+		writePartialVerifyReport(t, reportDir, cycles[0].ID, ids)
 	}}
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
@@ -753,6 +765,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 	r := runnerfake.New()
 	hook := &hookRunner{Runner: r, preRun: func(req runner.Request) {
 		if req.Phase != domain.PhaseExecute {
@@ -762,7 +775,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 		if len(cycles) == 0 {
 			return
 		}
-		cdir := filepath.Join(workDir, ".t2a", cycles[0].ID)
+		cdir := filepath.Join(reportDir, cycles[0].ID)
 		if err := os.MkdirAll(cdir, 0o755); err != nil {
 			t.Fatalf("mkdir: %v", err)
 		}
@@ -776,7 +789,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
 
 	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, hook, worker.Options{WorkingDir: workDir, Metrics: metrics})
+	_, done := h.startWorker(ctx, hook, worker.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
 	if err := <-done; err != nil {
@@ -834,6 +847,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	}
 
 	workDir := t.TempDir()
+	reportDir := t.TempDir()
 	execRunner := runnerfake.New()
 	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
 		if req.Phase != domain.PhaseExecute {
@@ -843,7 +857,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		if len(cycles) == 0 {
 			return
 		}
-		writeCriteriaReport(t, workDir, cycles[0].ID, []string{c1.ID, c2.ID})
+		writeCriteriaReport(t, reportDir, cycles[0].ID, []string{c1.ID, c2.ID})
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
@@ -857,7 +871,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		if len(cycles) == 0 {
 			return
 		}
-		writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+		writePartialVerifyReport(t, reportDir, cycles[0].ID, map[string]bool{
 			c1.ID: false, c2.ID: false,
 		})
 	}}
@@ -866,6 +880,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 
 	_, done := h.startWorker(ctx, execHook, worker.Options{
 		WorkingDir:   workDir,
+		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
@@ -903,5 +918,232 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	// IDs are sorted; assert both appear regardless of seed order.
 	if !strings.Contains(reason, c1.ID) || !strings.Contains(reason, c2.ID) {
 		t.Fatalf("reason must include both failing IDs; got %q (c1=%s c2=%s)", reason, c1.ID, c2.ID)
+	}
+}
+
+// TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle pins PR1's
+// headline UX promise: customer working trees no longer accumulate
+// `.t2a/` scratch files. The worker writes scratch outside RepoRoot
+// (Options.ReportDir) and never touches the operator's repo. Both
+// pre- and post-cycle `git status --porcelain` MUST report the
+// working tree as clean.
+func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-clean-repo")
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add checklist item: %v", err)
+	}
+
+	workDir := t.TempDir()
+	reportDir := t.TempDir()
+	gitInitTestRepo(t, workDir)
+
+	preStatus, preErr := exec.Command("git", "-C", workDir, "status", "--porcelain").CombinedOutput()
+	if preErr != nil {
+		t.Fatalf("pre git status: %v\n%s", preErr, preStatus)
+	}
+	if strings.TrimSpace(string(preStatus)) != "" {
+		t.Fatalf("precondition failed: working tree not clean before cycle: %s", preStatus)
+	}
+
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+		}
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
+		}
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		ReportDir:    reportDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	postStatus, postErr := exec.Command("git", "-C", workDir, "status", "--porcelain").CombinedOutput()
+	if postErr != nil {
+		t.Fatalf("post git status: %v\n%s", postErr, postStatus)
+	}
+	if strings.TrimSpace(string(postStatus)) != "" {
+		t.Fatalf("RepoRoot dirty after cycle: %q", postStatus)
+	}
+	if entries, err := os.ReadDir(workDir); err == nil {
+		for _, e := range entries {
+			if e.Name() == ".t2a" {
+				t.Fatalf("RepoRoot still contains legacy .t2a/ dir; PR1 contract is broken")
+			}
+		}
+	}
+}
+
+// TestWorker_terminateCycle_cleansReportDir pins PR1's GC contract:
+// after the cycle terminates, <reportDir>/<cycleID>/ must be gone so
+// disk use stays bounded across thousands of cycles. The previous
+// .t2a/-under-RepoRoot scheme had no GC and would have grown
+// unboundedly.
+func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-cleanup")
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add checklist item: %v", err)
+	}
+
+	workDir := t.TempDir()
+	reportDir := t.TempDir()
+
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+		}
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
+		}
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		ReportDir:    reportDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	cycles, _ := h.store.ListCyclesForTask(context.Background(), tsk.ID, 1)
+	if len(cycles) != 1 {
+		t.Fatalf("cycle count = %d, want 1", len(cycles))
+	}
+	cycleScratch := filepath.Join(reportDir, cycles[0].ID)
+	if _, err := os.Stat(cycleScratch); !os.IsNotExist(err) {
+		t.Fatalf("expected per-cycle scratch dir gone after terminate; stat err=%v path=%s", err, cycleScratch)
+	}
+}
+
+// TestWorker_VerifyPhase_repoRootMutationStillTampered pins the
+// strengthened integrity contract: with the report-file allowlist
+// removed in PR1, ANY mutation under RepoRoot during the verify pass
+// is tampering. Even paths that mimic the legacy `.t2a/<cycleID>/...`
+// shape are no longer tolerated — the verifier has no business
+// touching the working tree.
+func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-no-allowlist")
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add checklist item: %v", err)
+	}
+
+	workDir := t.TempDir()
+	reportDir := t.TempDir()
+	gitInitTestRepo(t, workDir)
+
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+		}
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) > 0 {
+			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
+			// Drop a fake legacy-shaped artifact INSIDE the working
+			// tree. Pre-PR1 this would have been tolerated by the
+			// allowlist; post-PR1 it must trip integrity.
+			legacyDir := filepath.Join(workDir, ".t2a", cycles[0].ID)
+			_ = os.MkdirAll(legacyDir, 0o755)
+			_ = os.WriteFile(filepath.Join(legacyDir, "verify-report.json"), []byte("{}"), 0o644)
+		}
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		ReportDir:    reportDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	events, _ := h.store.ListTaskEvents(context.Background(), tsk.ID)
+	sawTampered := false
+	for _, e := range events {
+		if e.Type == domain.EventCycleFailed && strings.Contains(string(e.Data), "verify_tampered") {
+			sawTampered = true
+		}
+	}
+	if !sawTampered {
+		t.Fatalf("expected verify_tampered cycle_failed event after legacy-shaped RepoRoot write; events=%+v", events)
 	}
 }

@@ -117,8 +117,15 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
 			return
 		}
-		_ = scrubCycleArtifacts(w.options.WorkingDir, cycle.ID)
-		prompt := injectCriteria(fresh.InitialPrompt, state.verifySnap.criteria, cycle.ID, state.previouslyPassed)
+		_ = scrubCycleArtifacts(w.options.ReportDir, cycle.ID)
+		_ = ensureReportCycleDir(w.options.ReportDir, cycle.ID)
+		prompt := injectCriteria(
+			fresh.InitialPrompt,
+			state.verifySnap.criteria,
+			cycle.ID,
+			criteriaReportPath(w.options.ReportDir, cycle.ID),
+			state.previouslyPassed,
+		)
 		prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
 		freshExec := *fresh
 		freshExec.InitialPrompt = prompt
@@ -572,6 +579,15 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	w.publish(taskID, state.cycleID)
 	w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
 	w.observeVerifyRetries(state.verifyAttempt)
+	// GC the worker-managed scratch dir for this cycle. Idempotent
+	// against a missing dir; logged at Debug because operators rarely
+	// care unless cleanup itself errors. Closes the unbounded-disk-
+	// growth gap that existed when files were written under RepoRoot/.t2a.
+	if err := cleanupReportDir(w.options.ReportDir, state.cycleID); err != nil {
+		slog.Warn("agent worker cleanupReportDir failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.terminateCycle.cleanup_err",
+			"cycle_id", state.cycleID, "report_dir", w.options.ReportDir, "err", err)
+	}
 	return true
 }
 

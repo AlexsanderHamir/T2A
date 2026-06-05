@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -46,6 +48,22 @@ const SkippedDiagnoseSummary = "single-phase V1; diagnose deferred"
 // PanicReason is the cycle/phase termination reason recorded when the
 // recover path fires after a runner or store panic.
 const PanicReason = "panic"
+
+// DefaultReportDirSubdir is the leaf directory the worker manages
+// under os.TempDir() for the agent <-> worker side-channel report
+// files (criteria-report.json, verify-report.json) when the operator
+// does not override the location via Options.ReportDir. The directory
+// is created on first use and per-cycle subdirectories are GC'd at
+// terminateCycle time. See pkgs/agents/worker/criteria_parse.go for
+// the full path helpers and docs/data-model.md "Report file contracts"
+// for the on-disk layout.
+//
+// The path lives outside the operator's RepoRoot so customer working
+// trees stay clean — the previous .t2a/<cycleID>/ layout leaked files
+// into the repo, had no GC, and complicated the integrity-check
+// allowlist; PR1 of the verdicts-on-the-database plan moves the files
+// here and PR2 mirrors the verdicts to the database for durability.
+const DefaultReportDirSubdir = "t2a-worker"
 
 // ShutdownReason is the termination reason written when the parent
 // context cancels mid-run.
@@ -108,6 +126,22 @@ type Options struct {
 	// V1 uses one shared directory across sequential runs; V2 will
 	// move to per-cycle isolation (see Notes / followups).
 	WorkingDir string
+	// ReportDir is the worker-managed root for the agent <-> worker
+	// side-channel report files (criteria-report.json,
+	// verify-report.json). Empty means "use os.TempDir() +
+	// DefaultReportDirSubdir"; NewWorker resolves the default before
+	// the worker starts so the rest of the codepath can rely on a
+	// non-empty value.
+	//
+	// The directory MUST be writable by the worker process and is
+	// internal-only — operators do not interact with it. Files land
+	// under <ReportDir>/<cycleID>/ and the per-cycle subdirectory is
+	// removed by cleanupReportDir at terminateCycle time so disk use
+	// stays bounded regardless of cycle volume. Lives outside RepoRoot
+	// so customer working trees never see worker scratch files; the
+	// integrity check now treats any RepoRoot mutation during verify
+	// as tampering with no allowlist.
+	ReportDir string
 	// Notifier, when non-nil, receives one PublishCycleChange call after
 	// each successful StartCycle / StartPhase / CompletePhase /
 	// TerminateCycle. Nil disables fan-out (used in unit tests).
@@ -184,6 +218,9 @@ func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Opt
 		opts.Clock = func() time.Time {
 			return time.Now().UTC()
 		}
+	}
+	if opts.ReportDir == "" {
+		opts.ReportDir = filepath.Join(os.TempDir(), DefaultReportDirSubdir)
 	}
 	return &Worker{store: st, queue: q, runner: r, options: opts}
 }
