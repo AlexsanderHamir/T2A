@@ -124,14 +124,31 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, t)
 }
 
+// list serves GET /tasks — the hottest read path in taskapi (SPA initial load
+// and SSE-driven refetch). Failure contract for operators:
+//   - Invalid query params → 400 {"error":"..."} with failure_stage=parse_list_params
+//     and raw limit_q/offset_q/after_id_q on the warn-level "request failed" log.
+//   - Store/persistence errors (closed DB, driver faults) → 500 with
+//     failure_stage=store_list plus resolved limit/offset/after_id/pagination_mode.
+//   - Request context canceled or deadline exceeded → 408/504 via storeErrHTTPResponse.
+//   - JSON encode or response-body write failures → 500 or truncated body with
+//     "response encode failed" / "response write failed" error logs (never silent).
+//
+// Successful responses never publish SSE events.
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.list")
 	const op = "tasks.list"
 	r = calltrace.WithRequestRoot(r, op)
-	limit, offset, afterID, err := parseListParams(r.Context(), r.URL.Query())
+	q := r.URL.Query()
+	limit, offset, afterID, err := parseListParams(r.Context(), q)
 	if err != nil {
 		debugHTTPRequest(r, op, "list_params_invalid", true)
-		writeStoreError(w, r, op, err)
+		writeStoreError(w, r, op, err,
+			"failure_stage", "parse_list_params",
+			"limit_q", q.Get("limit"),
+			"offset_q", q.Get("offset"),
+			"after_id_q", q.Get("after_id"),
+		)
 		return
 	}
 	debugHTTPRequest(r, op, "limit", limit, "offset", offset, "after_id", afterID)
@@ -144,10 +161,24 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		tasks, hasMore, err = h.store.ListRootForest(r.Context(), limit, offset)
 	}
 	if err != nil {
-		writeStoreError(w, r, op, err)
+		writeStoreError(w, r, op, err, listFailureLogAttrs(limit, offset, afterID, "store_list")...)
 		return
 	}
 	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
+}
+
+func listFailureLogAttrs(limit, offset int, afterID, stage string) []any {
+	mode := "offset"
+	if afterID != "" {
+		mode = "keyset"
+	}
+	return []any{
+		"failure_stage", stage,
+		"limit", limit,
+		"offset", offset,
+		"after_id", afterID,
+		"pagination_mode", mode,
+	}
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {

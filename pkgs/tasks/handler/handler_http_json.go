@@ -115,8 +115,14 @@ func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v an
 			"http_status", code, "response_json_bytes", len(payload), "response_body", preview)
 	}
 	w.WriteHeader(code)
-	_, _ = w.Write(payload)
-	_, _ = w.Write([]byte("\n"))
+	if _, err := w.Write(payload); err != nil {
+		logResponseWriteFailure(ctx, r, op, err, "body")
+		return
+	}
+	if _, err := w.Write([]byte("\n")); err != nil {
+		logResponseWriteFailure(ctx, r, op, err, "newline")
+		return
+	}
 }
 
 func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int, msg string) {
@@ -234,13 +240,13 @@ func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string)
 	return code, msg
 }
 
-func writeStoreError(w http.ResponseWriter, r *http.Request, op string, err error) {
+func writeStoreError(w http.ResponseWriter, r *http.Request, op string, err error, logExtras ...any) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.writeStoreError", "http_op", op)
 	ctxErr := calltrace.Push(requestCtx(r), "writeStoreError")
 	calltrace.HelperIOIn(ctxErr, "writeStoreError", "http_op", op, "err", err)
 	code, msg := storeErrHTTPResponse(ctxErr, err)
 	calltrace.HelperIOOut(ctxErr, "writeStoreError", "http_status", code, "client_facing_msg", msg)
-	logRequestFailure(r, op, err, code)
+	logRequestFailure(r, op, err, code, logExtras...)
 	writeJSONError(w, r, op, code, msg)
 }
 
@@ -266,7 +272,7 @@ func requestRouteLabel(r *http.Request) string {
 	return ""
 }
 
-func logRequestFailure(r *http.Request, op string, err error, httpStatus int) {
+func logRequestFailure(r *http.Request, op string, err error, httpStatus int, extra ...any) {
 	ctx := requestCtx(r)
 	rid := ""
 	route := ""
@@ -280,9 +286,23 @@ func logRequestFailure(r *http.Request, op string, err error, httpStatus int) {
 		"http_status", httpStatus, "err", err,
 		"request_id", rid, "route", route,
 	}
+	attrs = append(attrs, extra...)
 	if httpStatus >= 500 {
 		slog.Log(ctx, slog.LevelError, "request failed", attrs...)
 		return
 	}
 	slog.Log(ctx, slog.LevelWarn, "request failed", attrs...)
+}
+
+func logResponseWriteFailure(ctx context.Context, r *http.Request, op string, err error, stage string) {
+	rid := ""
+	route := ""
+	if r != nil {
+		rid = logctx.RequestIDFromContext(ctx)
+		route = requestRouteLabel(r)
+	}
+	slog.Log(ctx, slog.LevelError, "response write failed",
+		"cmd", calltrace.LogCmd, "operation", op,
+		"request_id", rid, "route", route,
+		"failure_stage", stage, "err", err)
 }

@@ -103,6 +103,15 @@ Without the dev ticker, `task_updated` SSE only fires after real writes. Set `T2
 
 JSON error bodies may include `request_id` (and the response echoes `X-Request-ID`). The same value appears on `http.access` lines and related handler logs. Build version: `GET /health` returns `version`; `taskapi` logs the same string on its `listening` line; `dbcheck` on `dbcheck.start`.
 
+`GET /tasks` (`tasks.list`) is the highest-traffic read route. On failure, search logs for `operation=tasks.list` with `msg=request failed` (4xx warn, 5xx error). Structured fields help triage:
+
+| `failure_stage` | Meaning | Typical `http_status` |
+|-----------------|---------|----------------------|
+| `parse_list_params` | Bad `limit`, `offset`, or `after_id` query | 400 |
+| `store_list` | Persistence read failed after params validated | 500 |
+
+`parse_list_params` logs include raw query echoes (`limit_q`, `offset_q`, `after_id_q`). `store_list` logs include resolved `limit`, `offset`, `after_id`, and `pagination_mode` (`offset` or `keyset`). Truncated or empty 200 bodies on an otherwise successful list may show `msg=response write failed` with `failure_stage` `body` or `newline` (client disconnect mid-write).
+
 ### Tests fail with "database" or connection errors
 
 Default tests should use SQLite helpers. If a test needs `DATABASE_URL`, gate with `//go:build integration` or refactor to `tasktestdb.OpenSQLite`.
