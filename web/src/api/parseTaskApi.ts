@@ -16,6 +16,9 @@ export {
   parseTaskDraftSummaryList,
 } from "./parseTaskApiDrafts";
 export {
+  parseCycleCriteriaReport,
+  parseCycleVerdictsResponse,
+  parseCycleVerifyReport,
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,

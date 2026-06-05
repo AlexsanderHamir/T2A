@@ -179,6 +179,8 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycle.TableName":               {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCyclePhase.TableName":          {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleStreamEvent.TableName":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleCriteriaReport.TableName": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleVerifyReport.TableName":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tAppSettings.TableName":             {},
 	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
 	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)

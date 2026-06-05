@@ -1,5 +1,6 @@
 import type {
   CompleteTaskCyclePhaseInput,
+  CycleVerdictsResponse,
   StartTaskCycleInput,
   StartTaskCyclePhaseInput,
   TaskCycle,
@@ -10,6 +11,7 @@ import type {
   TerminateTaskCycleInput,
 } from "@/types";
 import {
+  parseCycleVerdictsResponse,
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,
@@ -109,6 +111,31 @@ export async function listTaskCycleStreamEvents(
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();
   return parseTaskCycleStreamResponse(raw);
+}
+
+/**
+ * Fetches per-criterion verdict evidence for one cycle. Pre-PR2
+ * cycles return empty arrays inside the envelope, not 404 — callers
+ * should render that as "feature not yet available" rather than
+ * surfacing it as an error.
+ */
+export async function getCycleVerdicts(
+  taskId: string,
+  cycleId: string,
+  options?: { signal?: AbortSignal },
+): Promise<CycleVerdictsResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const cid = assertTaskPathId(cycleId, "cycle id");
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/cycles/${encodeURIComponent(cid)}/verdicts`,
+    {
+      headers: { Accept: "application/json" },
+      signal: options?.signal,
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseCycleVerdictsResponse(raw);
 }
 
 export async function startTaskCycle(

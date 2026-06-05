@@ -133,6 +133,68 @@ export type TaskCycleStreamResponse = {
   next_after_seq?: number;
 };
 
+/**
+ * Verifier kind for completion / verdict rows. Mirrors
+ * `domain.VerifierKind` in the backend. The SPA renders a chip per
+ * value so users can tell at-a-glance how a criterion was decided.
+ */
+export type VerifierKind =
+  | "agent_self"
+  | "verify_agent"
+  | "deterministic_check"
+  | "human_override"
+  | "legacy"
+  | "";
+
+/**
+ * One row from `GET /tasks/{id}/cycles/{cycleId}/verdicts.criteria_reports`.
+ * Records what the execute agent claimed about one criterion in one
+ * retry attempt of one cycle. Pre-PR2 cycles return an empty array;
+ * the SPA must render the absence as "feature not yet available"
+ * rather than an error.
+ */
+export type CycleCriteriaReport = {
+  id: string;
+  cycle_id: string;
+  attempt_seq: number;
+  criterion_id: string;
+  claimed_done: boolean;
+  evidence: string;
+  /** ISO 8601 from API. */
+  written_at: string;
+};
+
+/**
+ * One row from `GET /tasks/{id}/cycles/{cycleId}/verdicts.verify_reports`.
+ * Records the verify phase's verdict for one criterion in one retry
+ * attempt. `verifier_kind` distinguishes deterministic_check (cheap),
+ * verify_agent (LLM judgement), and agent_self (the agent did not
+ * claim done).
+ */
+export type CycleVerifyReport = {
+  id: string;
+  cycle_id: string;
+  attempt_seq: number;
+  criterion_id: string;
+  verified: boolean;
+  verifier_kind: VerifierKind;
+  reasoning: string;
+  /** ISO 8601 from API. */
+  written_at: string;
+};
+
+/**
+ * Envelope for `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Both
+ * arrays are always present (`[]` when no rows mirrored, never
+ * null) so the SPA can iterate without a presence check.
+ */
+export type CycleVerdictsResponse = {
+  task_id: string;
+  cycle_id: string;
+  criteria_reports: CycleCriteriaReport[];
+  verify_reports: CycleVerifyReport[];
+};
+
 /** Body for `POST /tasks/{id}/cycles`. Both fields are optional. */
 export type StartTaskCycleInput = {
   /** Same-task lineage; omit (or pass `null`) for a top-level attempt. */

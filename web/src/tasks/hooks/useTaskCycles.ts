@@ -1,6 +1,12 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getTaskCycle, listTaskCycleStreamEvents, listTaskCycles } from "@/api";
+import {
+  getCycleVerdicts,
+  getTaskCycle,
+  listTaskCycleStreamEvents,
+  listTaskCycles,
+} from "@/api";
 import type {
+  CycleVerdictsResponse,
   TaskCycleDetail,
   TaskCycleStreamResponse,
   TaskCyclesListResponse,
@@ -39,6 +45,29 @@ export function useTaskCycle(
   return useQuery({
     queryKey: taskQueryKeys.cycle(taskId, cycleId),
     queryFn: ({ signal }) => getTaskCycle(taskId, cycleId, { signal }),
+    enabled,
+  });
+}
+
+/**
+ * Fetches the per-criterion verdict envelope for one cycle. Pre-PR2
+ * cycles return empty arrays inside the envelope (not 404), so the
+ * hook stays in success state with `criteria_reports` / `verify_reports`
+ * empty — UIs render that as "no verdicts captured".
+ *
+ * SSE invalidation: `task_cycle_changed` invalidates the
+ * `taskQueryKeys.cycles(taskId)` prefix, which sweeps this query too.
+ */
+export function useTaskCycleVerdicts(
+  taskId: string,
+  cycleId: string,
+  options?: { enabled?: boolean },
+): UseQueryResult<CycleVerdictsResponse, Error> {
+  const enabled =
+    (options?.enabled ?? true) && Boolean(taskId) && Boolean(cycleId);
+  return useQuery({
+    queryKey: taskQueryKeys.cycleVerdicts(taskId, cycleId),
+    queryFn: ({ signal }) => getCycleVerdicts(taskId, cycleId, { signal }),
     enabled,
   });
 }

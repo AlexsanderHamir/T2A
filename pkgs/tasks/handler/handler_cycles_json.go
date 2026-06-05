@@ -151,6 +151,47 @@ type taskCycleStreamEventResponse struct {
 	Payload   json.RawMessage `json:"payload"`
 }
 
+// cycleCriteriaReportEntry is the JSON shape for one
+// task_cycle_criteria_reports row — one criterion's claim from one
+// retry attempt of one cycle. Grouping by attempt_seq is the SPA's
+// responsibility; rows ship pre-sorted by (attempt_seq, criterion_id).
+type cycleCriteriaReportEntry struct {
+	ID          string    `json:"id"`
+	CycleID     string    `json:"cycle_id"`
+	AttemptSeq  int64     `json:"attempt_seq"`
+	CriterionID string    `json:"criterion_id"`
+	ClaimedDone bool      `json:"claimed_done"`
+	Evidence    string    `json:"evidence"`
+	WrittenAt   time.Time `json:"written_at"`
+}
+
+// cycleVerifyReportEntry is the JSON shape for one
+// task_cycle_verify_reports row — one criterion's verdict from the
+// verify phase of one retry attempt. verifier_kind is the same enum
+// as task_checklist_completions.verified_by so the SPA can render
+// the same chip in both surfaces.
+type cycleVerifyReportEntry struct {
+	ID           string              `json:"id"`
+	CycleID      string              `json:"cycle_id"`
+	AttemptSeq   int64               `json:"attempt_seq"`
+	CriterionID  string              `json:"criterion_id"`
+	Verified     bool                `json:"verified"`
+	VerifierKind domain.VerifierKind `json:"verifier_kind"`
+	Reasoning    string              `json:"reasoning"`
+	WrittenAt    time.Time           `json:"written_at"`
+}
+
+// cycleVerdictsResponse is the JSON envelope for
+// GET /tasks/{id}/cycles/{cycleId}/verdicts. Both arrays are always
+// non-null (defaulted to []) so the SPA can iterate without a
+// presence check; pre-PR2 cycles return empty arrays.
+type cycleVerdictsResponse struct {
+	TaskID          string                     `json:"task_id"`
+	CycleID         string                     `json:"cycle_id"`
+	CriteriaReports []cycleCriteriaReportEntry `json:"criteria_reports"`
+	VerifyReports   []cycleVerifyReportEntry   `json:"verify_reports"`
+}
+
 // taskCycleStreamListResponse is the JSON envelope for
 // GET /tasks/{id}/cycles/{cycleId}/stream.
 type taskCycleStreamListResponse struct {

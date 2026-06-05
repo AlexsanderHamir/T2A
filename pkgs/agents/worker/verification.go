@@ -180,7 +180,13 @@ func (w *Worker) runVerificationPipeline(
 			"cycle_id", cycle.ID, "err", preErr)
 	}
 
-	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, snap, state.previouslyPassed, feedback)
+	// attemptSeq is the per-cycle retry counter (1-indexed) used as
+	// the idempotency key for verdict upserts. state.verifyAttempt
+	// starts at 0 for the first attempt; incrementing here keeps the
+	// DB rows aligned with how the SPA renders attempts ("Attempt 1"
+	// on first try, "Attempt 2" after the first retry, …).
+	attemptSeq := int64(state.verifyAttempt) + 1
+	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, attemptSeq, snap, state.previouslyPassed, feedback)
 
 	tampered, tamperReason := w.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
 
@@ -261,6 +267,7 @@ func (w *Worker) runVerifyChecks(
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
+	attemptSeq int64,
 	snap verificationSnapshot,
 	previouslyPassed map[string]criterionVerdict,
 	feedback string,
@@ -285,6 +292,20 @@ func (w *Worker) runVerifyChecks(
 	selfReport, err := parseCriteriaReport(w.options.ReportDir, cycle.ID, expected)
 	if err != nil {
 		return nil, "", err
+	}
+
+	// Mirror the criteria-report file into the DB at the same boundary
+	// the worker parses it. Rows are keyed by (cycle, attempt,
+	// criterion) so a parse-then-store retry (e.g. transient SQL
+	// failure on a flaky network) is idempotent. Upsert errors are
+	// logged and dropped — the verify pass continues against the
+	// in-memory report — because durable mirroring is observability,
+	// not gating logic. If we ever need it to be gating, swap the log
+	// for a return.
+	if uerr := w.persistCriteriaReports(parentCtx, cycle.ID, attemptSeq, snap.criteria, previouslyPassed, selfReport); uerr != nil {
+		slog.Warn("agent worker UpsertCriteriaReports failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks.upsert_criteria_err",
+			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 
 	verdicts := make([]criterionVerdict, 0, len(snap.criteria))
@@ -372,6 +393,22 @@ func (w *Worker) runVerifyChecks(
 			w.recordVerifyVerdict(domain.VerifierVerifyAgent, nv.passed)
 		}
 		verdicts = next
+	}
+
+	// Mirror this attempt's final verdicts (deterministic_check +
+	// agent_self + verify_agent) into the DB at the verify-phase
+	// boundary. Carrying-over locked passes from earlier attempts is
+	// intentionally NOT replayed here — those rows already exist
+	// under their original attempt_seq, and re-writing them would
+	// violate the "rows reflect what each attempt actually decided"
+	// invariant the SPA timeline depends on. Idempotent against
+	// (cycle, attempt, criterion) so a partial-failure rewrite is
+	// safe; observability-only, errors are logged and dropped (same
+	// rationale as persistCriteriaReports).
+	if uerr := w.persistVerifyReports(parentCtx, cycle.ID, attemptSeq, verdicts, previouslyPassed); uerr != nil {
+		slog.Warn("agent worker UpsertVerifyReports failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks.upsert_verify_err",
+			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 
 	var failures []string
@@ -537,6 +574,74 @@ func formatVerificationFailedReason(finalVerdicts []criterionVerdict, lockedPass
 		trimmed = trimmed[:i]
 	}
 	return prefix + trimmed + ellipsis
+}
+
+// persistCriteriaReports mirrors the parsed criteria-report.json
+// payload for one (cycle, attempt) into task_cycle_criteria_reports.
+// Filters out criteria that were already locked-passed in earlier
+// attempts because the agent does not re-include them in the file
+// (they are not in the expected-IDs set passed to parseCriteriaReport
+// at line 285), so a row would be missing fields and would only
+// confuse the SPA timeline.
+func (w *Worker) persistCriteriaReports(
+	ctx context.Context,
+	cycleID string,
+	attemptSeq int64,
+	criteria []store.ChecklistVerifyItem,
+	previouslyPassed map[string]criterionVerdict,
+	selfReport map[string]criteriaReportEntry,
+) error {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistCriteriaReports",
+		"cycle_id", cycleID, "attempt_seq", attemptSeq)
+	entries := make([]store.CriteriaReportEntry, 0, len(criteria))
+	for _, it := range criteria {
+		if _, locked := previouslyPassed[it.ID]; locked {
+			continue
+		}
+		e, ok := selfReport[it.ID]
+		if !ok {
+			continue
+		}
+		entries = append(entries, store.CriteriaReportEntry{
+			CriterionID: it.ID,
+			ClaimedDone: e.ClaimedDone,
+			Evidence:    e.Evidence,
+		})
+	}
+	return w.store.UpsertCriteriaReports(ctx, cycleID, attemptSeq, entries)
+}
+
+// persistVerifyReports mirrors this attempt's final verdicts into
+// task_cycle_verify_reports. Stores every verdict produced in the
+// verify phase (deterministic_check, agent_self for "did not claim
+// done", verify_agent for LLM verdicts) so the SPA can render a
+// uniform per-criterion timeline regardless of how the decision was
+// reached. Rows for criteria that were locked-passed in earlier
+// attempts are skipped — those already exist at their original
+// attempt_seq and re-writing them under the current attempt_seq
+// would lie about which attempt evaluated them.
+func (w *Worker) persistVerifyReports(
+	ctx context.Context,
+	cycleID string,
+	attemptSeq int64,
+	verdicts []criterionVerdict,
+	previouslyPassed map[string]criterionVerdict,
+) error {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistVerifyReports",
+		"cycle_id", cycleID, "attempt_seq", attemptSeq, "verdict_count", len(verdicts))
+	entries := make([]store.VerifyReportEntry, 0, len(verdicts))
+	for _, v := range verdicts {
+		if _, locked := previouslyPassed[v.id]; locked {
+			continue
+		}
+		entries = append(entries, store.VerifyReportEntry{
+			CriterionID:  v.id,
+			Verified:     v.passed,
+			VerifierKind: v.verifier,
+			Reasoning:    v.reasoning,
+		})
+	}
+	return w.store.UpsertVerifyReports(ctx, cycleID, attemptSeq, entries)
 }
 
 func encodeCriteriaSnapshot(items []store.ChecklistVerifyItem) []byte {

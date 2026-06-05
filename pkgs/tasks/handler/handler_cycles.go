@@ -226,6 +226,60 @@ func (h *Handler) getTaskCycleStream(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, resp)
 }
 
+// getTaskCycleVerdicts handles GET /tasks/{id}/cycles/{cycleId}/verdicts.
+//
+// Returns the per-criterion durable verdict evidence persisted by the
+// worker for one cycle: criteria_reports (one row per (attempt,
+// criterion) the execute agent claimed about) and verify_reports (one
+// row per verdict the verify phase produced — deterministic_check,
+// agent_self, or verify_agent). Both are ordered by
+// (attempt_seq ASC, criterion_id ASC) so the SPA can render a uniform
+// per-attempt timeline without re-sorting.
+//
+// Pre-PR2 cycles (cycles whose verify phase ran before this endpoint
+// shipped) return empty arrays, not 404 / 500. The contract is "this
+// endpoint never lies; missing rows simply mean the worker didn't
+// mirror them." Same convention as GET /tasks/{id}/events on a
+// brand-new task.
+func (h *Handler) getTaskCycleVerdicts(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.getTaskCycleVerdicts")
+	const op = "tasks.cycle.verdicts.get"
+	r = calltrace.WithRequestRoot(r, op)
+	taskID, cycleID, err := parseCyclePathPair(r)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	debugHTTPRequest(r, op, "task_id", taskID, "cycle_id", cycleID)
+	if err := assertCycleBelongsToTask(r.Context(), h.store, taskID, cycleID); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	criteriaRows, err := h.store.ListCriteriaReportsForCycle(r.Context(), cycleID)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	verifyRows, err := h.store.ListVerifyReportsForCycle(r.Context(), cycleID)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	resp := cycleVerdictsResponse{
+		TaskID:          taskID,
+		CycleID:         cycleID,
+		CriteriaReports: make([]cycleCriteriaReportEntry, 0, len(criteriaRows)),
+		VerifyReports:   make([]cycleVerifyReportEntry, 0, len(verifyRows)),
+	}
+	for i := range criteriaRows {
+		resp.CriteriaReports = append(resp.CriteriaReports, cycleCriteriaReportFromDomain(&criteriaRows[i]))
+	}
+	for i := range verifyRows {
+		resp.VerifyReports = append(resp.VerifyReports, cycleVerifyReportFromDomain(&verifyRows[i]))
+	}
+	writeJSON(w, r, op, http.StatusOK, resp)
+}
+
 // patchTaskCycle handles PATCH /tasks/{id}/cycles/{cycleId}.
 func (h *Handler) patchTaskCycle(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.patchTaskCycle")
@@ -559,6 +613,33 @@ func taskCycleDetailFromDomain(c *domain.TaskCycle, phases []domain.TaskCyclePha
 		out.Phases = append(out.Phases, taskCyclePhaseResponseFromDomain(&phases[i]))
 	}
 	return out
+}
+
+func cycleCriteriaReportFromDomain(r *domain.TaskCycleCriteriaReport) cycleCriteriaReportEntry {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.cycleCriteriaReportFromDomain")
+	return cycleCriteriaReportEntry{
+		ID:          r.ID,
+		CycleID:     r.CycleID,
+		AttemptSeq:  r.AttemptSeq,
+		CriterionID: r.CriterionID,
+		ClaimedDone: r.ClaimedDone,
+		Evidence:    r.Evidence,
+		WrittenAt:   r.WrittenAt,
+	}
+}
+
+func cycleVerifyReportFromDomain(r *domain.TaskCycleVerifyReport) cycleVerifyReportEntry {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.cycleVerifyReportFromDomain")
+	return cycleVerifyReportEntry{
+		ID:           r.ID,
+		CycleID:      r.CycleID,
+		AttemptSeq:   r.AttemptSeq,
+		CriterionID:  r.CriterionID,
+		Verified:     r.Verified,
+		VerifierKind: r.VerifierKind,
+		Reasoning:    r.Reasoning,
+		WrittenAt:    r.WrittenAt,
+	}
 }
 
 func taskCycleStreamEventResponseFromDomain(ev *domain.TaskCycleStreamEvent) taskCycleStreamEventResponse {

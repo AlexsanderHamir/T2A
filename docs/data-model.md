@@ -242,6 +242,39 @@ Paths live under a **worker-managed scratch directory** (`<worker-managed dir>/<
 
 Limits: 256 KB per report file; `evidence` and `reasoning` ≤ 16 KB each; verify `reasoning` ≥ 40 chars when `verified=true`. Duplicate ids in a report → invalid. Symlinks rejected.
 
+### Verdict tables
+
+The two report files above are the agent ↔ worker wire format. They are GC'd at cycle terminate, so they are NOT the durable record. The worker mirrors each parsed report into one row per criterion per attempt in two normalized tables. These rows are the source of truth for the SPA's verdict UI and for support / prompt-tuning analytics.
+
+`task_cycle_criteria_reports`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | server-assigned at upsert. |
+| `cycle_id` | string fk → `task_cycles.id` (`ON DELETE CASCADE`) | indexed; verdicts disappear with their cycle. |
+| `attempt_seq` | int (>0) | which retry attempt produced this row. |
+| `criterion_id` | string fk → `task_checklist_items.id` (`ON DELETE NO ACTION`) | non-cascade preserves verdict history if an operator deletes a criterion later. |
+| `claimed_done` | bool | execute agent's self-claim from `criteria-report.json`. |
+| `evidence` | text (≤ 16 KB at the boundary) | mirrored from the file. |
+| `written_at` | timestamptz | indexed. |
+
+`task_cycle_verify_reports`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | server-assigned. |
+| `cycle_id` | string fk → `task_cycles.id` (`ON DELETE CASCADE`) | indexed. |
+| `attempt_seq` | int (>0) | retry attempt. |
+| `criterion_id` | string fk → `task_checklist_items.id` (`ON DELETE NO ACTION`) | history preserved on criterion delete. |
+| `verified` | bool | per-criterion verdict for this attempt. |
+| `verifier_kind` | string | one of `domain.VerifierKind` (`agent_self` / `verify_agent` / `deterministic_check` / `human_override` / `legacy`); same enum as `task_checklist_completions.verified_by` so the SPA can render the same chip in both surfaces. |
+| `reasoning` | text (≤ 16 KB) | verifier rationale. |
+| `written_at` | timestamptz | indexed. |
+
+Both tables enforce a composite unique index on `(cycle_id, attempt_seq, criterion_id)`. The worker's bulk insert is `ON CONFLICT … DO UPDATE`, so a transient store error during upsert is safe to retry (the same row is rewritten). One row per criterion per attempt is intentional: the `previouslyPassed` retry-efficiency lock is in-memory only, but the durable table preserves *all* attempts so the SPA's per-attempt timeline can be rendered without losing the rejected attempt that triggered the retry.
+
+Pre-PR2 cycles return zero rows from these tables; the handler returns empty arrays, never 404. Cleanup is FK-driven: deleting a cycle (which itself cascades from task deletion) cascades to the verdict rows; `criterion_id` is intentionally `NO ACTION` so that historical cycles remain readable after a checklist edit.
+
 ## Project context
 
 Curated context nodes (`project_context_items`) and user-curated relationships (`project_context_edges`, typed `relation` + `1..5 strength`) owned by a project. A task's run captures the user-selected bundle in `task_context_snapshots` — immutable, cycle-scoped.

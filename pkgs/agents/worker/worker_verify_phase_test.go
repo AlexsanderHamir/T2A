@@ -652,6 +652,34 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	if doneCount != 2 {
 		t.Fatalf("expected both criteria done, got %d (items=%+v)", doneCount, items)
 	}
+
+	// Per-attempt verdict rows must survive in
+	// task_cycle_verify_reports / task_cycle_criteria_reports so the
+	// SPA's verdict block can render the retry timeline. The
+	// carry-passes lock must NOT erase prior-attempt evidence: c1's
+	// attempt 1 row should still be there alongside c2's attempt 2 row.
+	cycles, err := h.store.ListCyclesForTask(bg, tsk.ID, 5)
+	if err != nil {
+		t.Fatalf("list cycles: %v", err)
+	}
+	if len(cycles) == 0 {
+		t.Fatalf("no cycles recorded")
+	}
+	cycleID := cycles[0].ID
+	verifyRows, err := h.store.ListVerifyReportsForCycle(bg, cycleID)
+	if err != nil {
+		t.Fatalf("list verify reports: %v", err)
+	}
+	if len(verifyRows) < 2 {
+		t.Fatalf("expected ≥2 verify rows (one per attempted criterion), got %d", len(verifyRows))
+	}
+	criteriaRows, err := h.store.ListCriteriaReportsForCycle(bg, cycleID)
+	if err != nil {
+		t.Fatalf("list criteria reports: %v", err)
+	}
+	if len(criteriaRows) < 2 {
+		t.Fatalf("expected ≥2 criteria rows, got %d", len(criteriaRows))
+	}
 }
 
 // TestWorker_VerifyPhase_finalFailureWritesNoCompletions pins the

@@ -16,17 +16,24 @@ import {
   phaseStatusLabel,
 } from "@/observability";
 import type {
+  CycleCriteriaReport,
+  CycleVerifyReport,
   Phase,
   PhaseStatus,
   TaskCycle,
   TaskCyclePhase,
   TaskCyclesListResponse,
+  VerifierKind,
 } from "@/types/cycle";
 import {
   useAgentRunProgress,
   type AgentRunProgress,
 } from "../../../hooks/useAgentRunProgress";
-import { useTaskCycle, useTaskCycles } from "../../../hooks/useTaskCycles";
+import {
+  useTaskCycle,
+  useTaskCycleVerdicts,
+  useTaskCycles,
+} from "../../../hooks/useTaskCycles";
 
 type Props = {
   taskId: string;
@@ -440,10 +447,208 @@ function CycleRow({
             View run details
           </a>
         </summary>
-        {open ? <CycleRowPhases taskId={taskId} cycleId={cycle.id} /> : null}
+        {open ? (
+          <>
+            <CycleRowPhases taskId={taskId} cycleId={cycle.id} />
+            <CycleRowVerdicts taskId={taskId} cycleId={cycle.id} />
+          </>
+        ) : null}
       </details>
     </li>
   );
+}
+
+/**
+ * Per-criterion verdict block shown when a cycle row is expanded.
+ * The data comes from `GET /tasks/{id}/cycles/{cycleId}/verdicts` —
+ * cycles produced before the verdict-tables migration return empty
+ * arrays, which we render as a small muted note rather than a hard
+ * error so the operator immediately understands "no verdicts captured
+ * for this cycle" without having to interpret a stack trace.
+ *
+ * Within an attempt we render verify-side rows first (the verifier's
+ * judgement is what the operator usually opens this panel for) and
+ * fall back to the agent-self-claimed criteria report when there's
+ * no verify-side row (verify-failed early or verify-tampered cases).
+ */
+function CycleRowVerdicts({
+  taskId,
+  cycleId,
+}: {
+  taskId: string;
+  cycleId: string;
+}) {
+  const verdictsQuery = useTaskCycleVerdicts(taskId, cycleId);
+  if (verdictsQuery.isPending) {
+    return (
+      <p className="task-cycle-row-verdicts muted" aria-busy="true">
+        Loading verdicts…
+      </p>
+    );
+  }
+  if (verdictsQuery.isError) {
+    return (
+      <p className="task-cycle-row-verdicts err" role="alert">
+        {errorMessage(verdictsQuery.error, "Could not load verdicts.")}
+      </p>
+    );
+  }
+  const data = verdictsQuery.data;
+  if (
+    data.criteria_reports.length === 0 &&
+    data.verify_reports.length === 0
+  ) {
+    return (
+      <p
+        className="task-cycle-row-verdicts muted"
+        data-testid="task-cycle-verdicts-empty"
+      >
+        No verdicts captured for this cycle.
+      </p>
+    );
+  }
+  const groups = groupVerdictsByAttempt(
+    data.criteria_reports,
+    data.verify_reports,
+  );
+  return (
+    <div
+      className="task-cycle-row-verdicts"
+      data-testid="task-cycle-verdicts"
+    >
+      <h4 className="task-cycle-row-verdicts-heading">Verdicts</h4>
+      {groups.map((group) => (
+        <section
+          key={group.attemptSeq}
+          className="task-cycle-verdicts-attempt"
+          aria-label={`Attempt ${group.attemptSeq}`}
+        >
+          <p className="task-cycle-verdicts-attempt-eyebrow muted">
+            Attempt #{group.attemptSeq}
+          </p>
+          <ul className="task-cycle-verdicts-list">
+            {group.rows.map((row) => (
+              <li
+                key={row.criterionId}
+                className="task-cycle-verdict-item"
+                data-verified={String(row.verified)}
+              >
+                <header className="task-cycle-verdict-item-header">
+                  <span
+                    className={`cell-pill ${verdictPillClass(row.verified)}`}
+                  >
+                    {row.verified ? "Verified" : "Not verified"}
+                  </span>
+                  {row.verifierKind ? (
+                    <span className="task-cycle-verdict-kind muted">
+                      {verifierKindLabel(row.verifierKind)}
+                    </span>
+                  ) : null}
+                  <span className="task-cycle-verdict-criterion">
+                    {row.criterionId}
+                  </span>
+                </header>
+                {row.reasoning ? (
+                  <p className="task-cycle-verdict-reasoning">
+                    {row.reasoning}
+                  </p>
+                ) : row.evidence ? (
+                  <p className="task-cycle-verdict-evidence muted">
+                    Agent-claimed evidence: {row.evidence}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+type VerdictRow = {
+  criterionId: string;
+  verified: boolean;
+  verifierKind: VerifierKind | "";
+  reasoning: string;
+  evidence: string;
+};
+
+type AttemptGroup = {
+  attemptSeq: number;
+  rows: VerdictRow[];
+};
+
+/**
+ * Joins criteria-side and verify-side rows by `(attempt_seq, criterion_id)`.
+ * The verify row wins when both exist; the criteria row provides
+ * `evidence` text used as the fallback display when no verify row was
+ * recorded (e.g. the verifier never ran for that criterion).
+ */
+function groupVerdictsByAttempt(
+  criteria: ReadonlyArray<CycleCriteriaReport>,
+  verify: ReadonlyArray<CycleVerifyReport>,
+): AttemptGroup[] {
+  const byAttempt = new Map<number, Map<string, VerdictRow>>();
+  const ensure = (attemptSeq: number): Map<string, VerdictRow> => {
+    let m = byAttempt.get(attemptSeq);
+    if (!m) {
+      m = new Map();
+      byAttempt.set(attemptSeq, m);
+    }
+    return m;
+  };
+  for (const c of criteria) {
+    const m = ensure(c.attempt_seq);
+    m.set(c.criterion_id, {
+      criterionId: c.criterion_id,
+      verified: false,
+      verifierKind: "",
+      reasoning: "",
+      evidence: c.evidence,
+    });
+  }
+  for (const v of verify) {
+    const m = ensure(v.attempt_seq);
+    const existing = m.get(v.criterion_id);
+    m.set(v.criterion_id, {
+      criterionId: v.criterion_id,
+      verified: v.verified,
+      verifierKind: v.verifier_kind,
+      reasoning: v.reasoning,
+      evidence: existing?.evidence ?? "",
+    });
+  }
+  const groups: AttemptGroup[] = [];
+  for (const [attemptSeq, m] of byAttempt) {
+    const rows = Array.from(m.values()).sort((a, b) =>
+      a.criterionId.localeCompare(b.criterionId),
+    );
+    groups.push({ attemptSeq, rows });
+  }
+  groups.sort((a, b) => a.attemptSeq - b.attemptSeq);
+  return groups;
+}
+
+function verdictPillClass(verified: boolean): string {
+  return verified ? "cell-pill--status-done" : "cell-pill--status-failed";
+}
+
+function verifierKindLabel(kind: VerifierKind | ""): string {
+  switch (kind) {
+    case "verify_agent":
+      return "Verify agent";
+    case "agent_self":
+      return "Self-reported";
+    case "deterministic_check":
+      return "Deterministic check";
+    case "human_override":
+      return "Human override";
+    case "legacy":
+      return "Legacy";
+    default:
+      return "";
+  }
 }
 
 /**

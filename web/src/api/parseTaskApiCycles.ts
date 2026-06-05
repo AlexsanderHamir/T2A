@@ -1,12 +1,16 @@
 import { errorMessage } from "@/lib/errorMessage";
 import {
+  type CycleCriteriaReport,
   type CycleMeta,
+  type CycleVerdictsResponse,
+  type CycleVerifyReport,
   type TaskCycle,
   type TaskCycleDetail,
   type TaskCyclePhase,
   type TaskCycleStreamEvent,
   type TaskCycleStreamResponse,
   type TaskCyclesListResponse,
+  type VerifierKind,
 } from "@/types";
 import {
   isRecord,
@@ -167,6 +171,92 @@ export function parseTaskCycleStreamEvent(value: unknown): TaskCycleStreamEvent 
     out.tool = parseString(value.tool, "tool");
   }
   return out;
+}
+
+const verifierKindValues: ReadonlySet<VerifierKind> = new Set([
+  "agent_self",
+  "verify_agent",
+  "deterministic_check",
+  "human_override",
+  "legacy",
+  "",
+]);
+
+function parseVerifierKind(value: unknown): VerifierKind {
+  if (typeof value !== "string") return "";
+  if (!verifierKindValues.has(value as VerifierKind)) return "";
+  return value as VerifierKind;
+}
+
+export function parseCycleCriteriaReport(value: unknown): CycleCriteriaReport {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: criteria report must be an object");
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    attempt_seq: parseFiniteNumber(value.attempt_seq, "attempt_seq"),
+    criterion_id: parseNonEmptyString(value.criterion_id, "criterion_id"),
+    claimed_done: parseBooleanField(value.claimed_done, "claimed_done"),
+    evidence: typeof value.evidence === "string" ? value.evidence : "",
+    written_at: parseISO8601Required(value.written_at, "written_at"),
+  };
+}
+
+export function parseCycleVerifyReport(value: unknown): CycleVerifyReport {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: verify report must be an object");
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    attempt_seq: parseFiniteNumber(value.attempt_seq, "attempt_seq"),
+    criterion_id: parseNonEmptyString(value.criterion_id, "criterion_id"),
+    verified: parseBooleanField(value.verified, "verified"),
+    verifier_kind: parseVerifierKind(value.verifier_kind),
+    reasoning: typeof value.reasoning === "string" ? value.reasoning : "",
+    written_at: parseISO8601Required(value.written_at, "written_at"),
+  };
+}
+
+/**
+ * Validates `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Both arrays
+ * are mandatory but may be empty (pre-PR2 cycles produce no rows).
+ */
+export function parseCycleVerdictsResponse(
+  value: unknown,
+): CycleVerdictsResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: verdicts payload must be an object");
+  }
+  const rawCriteria = value.criteria_reports;
+  if (!Array.isArray(rawCriteria)) {
+    throw new Error("Invalid API response: criteria_reports must be an array");
+  }
+  const rawVerify = value.verify_reports;
+  if (!Array.isArray(rawVerify)) {
+    throw new Error("Invalid API response: verify_reports must be an array");
+  }
+  const criteriaReports = rawCriteria.map((item, i) => {
+    try {
+      return parseCycleCriteriaReport(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: criteria_reports[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  const verifyReports = rawVerify.map((item, i) => {
+    try {
+      return parseCycleVerifyReport(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: verify_reports[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  return {
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    criteria_reports: criteriaReports,
+    verify_reports: verifyReports,
+  };
 }
 
 export function parseTaskCycleStreamResponse(

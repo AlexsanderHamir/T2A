@@ -272,3 +272,63 @@ type TaskCycleStreamEvent struct {
 
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.
 func (TaskCycleStreamEvent) TableName() string { return "task_cycle_stream_events" }
+
+// TaskCycleCriteriaReport is the per-criterion durable record of what
+// the execute agent claimed about a single criterion in one retry
+// attempt. Mirrors the `criteria-report.json` side-channel file the
+// agent CLI writes (see docs/data-model.md "Report file contracts")
+// into the database so verdict evidence survives the cycle. The file
+// is still produced and parsed by the worker — it is the agent ↔
+// worker wire format — but the file is GC'd at cycle terminate; this
+// row is the audit trail.
+//
+// (CycleID, AttemptSeq, CriterionID) is the natural read key and the
+// idempotency key for the worker's bulk upsert: re-parsing the same
+// report after a transient store error is safe.
+//
+// Cascade semantics:
+//   - cycle_id: ON DELETE CASCADE — verdicts disappear with their cycle.
+//   - criterion_id: ON DELETE NO ACTION — when an operator deletes a
+//     checklist item, prior verdicts for it stay so historical cycles
+//     remain readable. The handler returns the row even if the FK is
+//     stale; the SPA renders the criterion id verbatim in that case.
+type TaskCycleCriteriaReport struct {
+	ID          string    `gorm:"primaryKey"`
+	CycleID     string    `gorm:"not null;index;uniqueIndex:idx_cycle_criteria_unique,priority:1"`
+	AttemptSeq  int64     `gorm:"not null;check:chk_task_cycle_criteria_reports_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_criteria_unique,priority:2"`
+	CriterionID string    `gorm:"not null;index;uniqueIndex:idx_cycle_criteria_unique,priority:3"`
+	ClaimedDone bool      `gorm:"not null;default:false"`
+	Evidence    string    `gorm:"type:text;not null;default:''"`
+	WrittenAt   time.Time `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCycleCriteriaReport) TableName() string { return "task_cycle_criteria_reports" }
+
+// TaskCycleVerifyReport is the per-criterion durable record of the
+// verify agent's verdict for a single criterion in one retry attempt.
+// See TaskCycleCriteriaReport for cascade and idempotency rationale.
+//
+// VerifierKind is recorded so the SPA can distinguish a deterministic
+// check pass (`deterministic_check`) from an LLM verifier pass
+// (`verify_agent`) without re-parsing the workflow — same field as
+// task_checklist_completions.VerifiedBy.
+type TaskCycleVerifyReport struct {
+	ID           string       `gorm:"primaryKey"`
+	CycleID      string       `gorm:"not null;index;uniqueIndex:idx_cycle_verify_unique,priority:1"`
+	AttemptSeq   int64        `gorm:"not null;check:chk_task_cycle_verify_reports_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_verify_unique,priority:2"`
+	CriterionID  string       `gorm:"not null;index;uniqueIndex:idx_cycle_verify_unique,priority:3"`
+	Verified     bool         `gorm:"not null;default:false"`
+	VerifierKind VerifierKind `gorm:"not null;default:''"`
+	Reasoning    string       `gorm:"type:text;not null;default:''"`
+	WrittenAt    time.Time    `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCycleVerifyReport) TableName() string { return "task_cycle_verify_reports" }
