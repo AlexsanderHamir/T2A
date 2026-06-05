@@ -17,6 +17,24 @@ import (
 
 const verificationFailedReason = "verification_failed"
 
+// verifyTamperedError is returned by runVerificationPipeline when the
+// post-verify integrity check detects unauthorized changes outside the
+// verifier's documented output file. The caller in process.go uses
+// errors.As to unwrap and reads (status, reason) so the cycle is
+// terminated as failed with a stable, audit-friendly reason. This is
+// terminal: a verifier that mutates source cannot be retried — the
+// trust property is gone for that cycle.
+type verifyTamperedError struct {
+	reason string
+}
+
+func (e *verifyTamperedError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return "verify_tampered: " + e.reason
+}
+
 type verificationSnapshot struct {
 	enabled      bool
 	maxRetries   int
@@ -35,6 +53,8 @@ type criterionVerdict struct {
 }
 
 func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (verificationSnapshot, error) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.loadVerificationSnapshot",
+		"task_id", taskID)
 	settings, err := w.store.GetSettings(ctx)
 	if err != nil {
 		return verificationSnapshot{}, err
@@ -47,17 +67,25 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 	if maxRetries > domain.MaxVerifyMaxRetries {
 		maxRetries = domain.MaxVerifyMaxRetries
 	}
+	// The supervisor (cmd/taskapi/run_agentworker.go::applySettings) is
+	// the source of truth for which runner verify uses: if the operator
+	// configured app_settings.VerifyRunnerName, the supervisor probed
+	// and built it and passed it as Options.VerifyRunner. A nil
+	// VerifyRunner means either (a) the operator did not configure one
+	// (V1 default) or (b) the supervisor's build/probe failed and
+	// demoted verify back to the execute runner with a warn — either
+	// way, fall back to w.runner here.
+	verifyRunner := w.runner
+	if w.options.VerifyRunner != nil {
+		verifyRunner = w.options.VerifyRunner
+	}
 	snap := verificationSnapshot{
 		enabled:      settings.VerifyEnabled && len(items) > 0,
 		maxRetries:   maxRetries,
 		checkTimeout: time.Duration(settings.CheckCommandTimeoutSeconds) * time.Second,
 		criteria:     items,
-		verifyRunner: w.runner,
+		verifyRunner: verifyRunner,
 		verifyModel:  strings.TrimSpace(settings.VerifyRunnerModel),
-	}
-	if name := strings.TrimSpace(settings.VerifyRunnerName); name != "" && name != w.runner.Name() {
-		slog.Warn("verify_runner_name ignored; using execute runner", "cmd", workerLogCmd,
-			"wanted", name, "have", w.runner.Name())
 	}
 	return snap, nil
 }
@@ -126,11 +154,32 @@ func (w *Worker) runVerificationPipeline(
 	state.runningPhaseSeq = phase.PhaseSeq
 	w.publish(cycle.TaskID, cycle.ID)
 
-	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, snap, feedback)
+	// Pre-snapshot the working dir so we can detect any modifications
+	// the verifier makes to source. The snapshot helper is fail-safe:
+	// snapshot errors return an error here and we treat the cycle as
+	// tampered (a critical safety property cannot be defeated by the
+	// check throwing). Non-git working dirs degrade to a no-op.
+	pre, preErr := captureIntegritySnapshot(parentCtx, w.options.WorkingDir)
+	if preErr != nil {
+		slog.Warn("agent worker pre-verify integrity snapshot failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.pre_snapshot_err",
+			"cycle_id", cycle.ID, "err", preErr)
+	}
+
+	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, snap, feedback)
+
+	tampered, tamperReason := w.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
 
 	phaseStatus := domain.PhaseStatusSucceeded
 	summary := "verify complete"
-	if verifyErr != nil {
+	if tampered {
+		phaseStatus = domain.PhaseStatusFailed
+		summary = tamperReason
+		// Replace any in-flight verifyErr with a tampered error so the
+		// caller routes this as terminal. A misbehaving verifier
+		// invalidates the verdicts regardless of what it claimed.
+		verifyErr = &verifyTamperedError{reason: tamperReason}
+	} else if verifyErr != nil {
 		phaseStatus = domain.PhaseStatusFailed
 		summary = verifyErr.Error()
 	}
@@ -151,13 +200,53 @@ func (w *Worker) runVerificationPipeline(
 	return verdicts, feedbackOut, verifyErr
 }
 
+// checkVerifyIntegrity performs the post-verify integrity check. Returns
+// (tampered, reason). tampered=true means the cycle should be
+// terminated with verifyTamperedReason. Fail-safe under uncertainty:
+// if the pre-snapshot itself errored, OR the post-snapshot errors
+// here, OR HEAD moved, OR any path outside the allowed verify-report
+// changed, the verifier failed integrity and the cycle dies terminal.
+func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre integritySnapshot, preErr error) (bool, string) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity",
+		"cycle_id", cycleID)
+	if pre.notGitRepo {
+		return false, ""
+	}
+	if preErr != nil {
+		return true, "pre-verify integrity snapshot failed: " + preErr.Error()
+	}
+	post, err := captureIntegritySnapshot(ctx, w.options.WorkingDir)
+	if err != nil {
+		slog.Warn("agent worker post-verify integrity snapshot failed",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity.post_snapshot_err",
+			"cycle_id", cycleID, "err", err)
+		return true, "post-verify integrity snapshot failed: " + err.Error()
+	}
+	if post.notGitRepo {
+		// Pre saw a git repo, post sees no git repo: verifier nuked .git.
+		return true, ".git directory disappeared during verify pass"
+	}
+	diff := diffIntegritySnapshots(pre, post)
+	tampered, summary := classifyIntegrityDiff(diff, cycleID)
+	if tampered {
+		slog.Warn("verify pass tampered with working dir",
+			"cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity.tampered",
+			"cycle_id", cycleID, "summary", summary)
+	}
+	return tampered, summary
+}
+
 // runVerifyChecks performs the deterministic and (when needed) LLM
 // verification work. It does NOT manage the verify phase row — the
-// caller wraps it with StartPhase / CompletePhase.
+// caller wraps it with StartPhase / CompletePhase. phaseSeq is the
+// verify phase row's seq, threaded through so progress events from the
+// verify runner land on the verify phase (not execute) for the SPA
+// activity panel's per-phase filter.
 func (w *Worker) runVerifyChecks(
 	parentCtx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
+	phaseSeq int64,
 	snap verificationSnapshot,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
@@ -207,7 +296,7 @@ func (w *Worker) runVerifyChecks(
 	}
 
 	if needLLMVerify {
-		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, snap, selfReport, feedback); err != nil {
+		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, selfReport, feedback); err != nil {
 			return nil, "", err
 		}
 		vrep, err := parseVerifyReport(w.options.WorkingDir, cycle.ID, expected)
@@ -266,6 +355,7 @@ func (w *Worker) runLLMVerifyAgent(
 	ctx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
+	phaseSeq int64,
 	snap verificationSnapshot,
 	selfReport map[string]criteriaReportEntry,
 	feedback string,
@@ -300,6 +390,15 @@ func (w *Worker) runLLMVerifyAgent(
 		Prompt:      prompt,
 		WorkingDir:  w.options.WorkingDir,
 		CursorModel: snap.verifyModel,
+		// Stream verify-phase progress events under the verify phase
+		// row's seq (not execute's). The SPA Activity panel filters
+		// stream events by phase_seq, so without this verify shows up
+		// as an empty P3 entry. See process.go::invokeRunner for the
+		// matching execute-phase wiring.
+		OnProgress: func(ev runner.ProgressEvent) {
+			w.persistProgress(ctx, task.ID, cycle.ID, phaseSeq, ev)
+			w.publishProgress(task.ID, cycle.ID, phaseSeq, ev)
+		},
 	})
 	return err
 }

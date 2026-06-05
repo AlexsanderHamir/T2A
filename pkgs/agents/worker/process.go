@@ -165,6 +165,19 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				state.verifyFeedback = feedback
 			}
 			if verifyErr != nil {
+				// Tampering is terminal regardless of retries left:
+				// the verifier modified source (or moved HEAD), which
+				// invalidates the trust property the verify pass
+				// exists to provide. Retrying execute cannot fix
+				// verifier misbehaviour, so we short-circuit.
+				var tampered *verifyTamperedError
+				if errors.As(verifyErr, &tampered) {
+					if !w.terminateCycle(parentCtx, &state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
+						return
+					}
+					_ = w.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
+					return
+				}
 				if state.verifyAttempt < state.verifySnap.maxRetries {
 					state.verifyAttempt++
 					continue

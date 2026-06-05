@@ -122,6 +122,12 @@ type agentWorkerInstance struct {
 	runTimeout time.Duration
 	settings   store.AppSettings
 	runner     runner.Runner
+	// verifyRunner is the optional adversarial verify-pass runner. Nil
+	// means "reuse execute runner" — either VerifyRunnerName was empty
+	// in app_settings or the supervisor's build/probe failed and
+	// demoted with a warn. instanceMatchesSettings inspects this so a
+	// settings-page edit to VerifyRunnerName/Model triggers a restart.
+	verifyRunner runner.Runner
 }
 
 // effectiveSettingsLog is a struct-shaped projection of the settings
@@ -138,6 +144,14 @@ type effectiveSettingsLog struct {
 	RunnerVersion         string
 	Idle                  bool
 	IdleReason            string
+	// VerifyRunner is the resolved verify-pass runner id ("" =
+	// reuse execute runner). VerifyRunnerStatus is one of "ok",
+	// "demoted_probe_failed", "demoted_build_failed", or "" when
+	// no verify runner was requested. Surfaced in the effective
+	// config log so operators can confirm the adversarial runner
+	// is wired without grepping per-cycle logs.
+	VerifyRunner       string
+	VerifyRunnerStatus string
 }
 
 // AgentWorkerSupervisor is the public alias the HTTP handler uses to
@@ -346,6 +360,12 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	}
 
 	if prev != nil && instanceMatchesSettings(prev, cfg, version) {
+		prevStatus := ""
+		if prev.verifyRunner != nil {
+			prevStatus = "ok"
+		} else if cfg.VerifyRunnerName == cfg.Runner && cfg.VerifyRunnerName != "" {
+			prevStatus = "reuse_execute_runner"
+		}
 		s.logEffective(phase, effectiveSettingsLog{
 			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
 			Runner:   cfg.Runner,
@@ -354,6 +374,8 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			RunnerVersion:         version,
 			IdleReason:            s.probeSchedulingHint(ctx),
+			VerifyRunner:          cfg.VerifyRunnerName,
+			VerifyRunnerStatus:    prevStatus,
 		})
 		s.publishSettingsChanged()
 		return nil
@@ -383,12 +405,14 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	runTimeout := time.Duration(cfg.MaxRunDurationSeconds) * time.Second
 	notifier := newCycleChangeSSEAdapter(s.hub)
 	progressNotifier := newRunProgressSSEAdapter(s.hub, agentRunProgressMinInterval)
+	verifyRunner, verifyStatus := s.buildVerifyRunner(ctx, cfg)
 	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
 		RunTimeout:       runTimeout,
 		WorkingDir:       cfg.RepoRoot,
 		Notifier:         notifier,
 		ProgressNotifier: progressNotifier,
 		Metrics:          s.metrics,
+		VerifyRunner:     verifyRunner,
 	})
 
 	workerCtx, cancelWorker := context.WithCancel(s.parentCtx)
@@ -404,6 +428,7 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	next := &agentWorkerInstance{
 		worker: w, cancelCtx: cancelWorker, doneCh: done,
 		runTimeout: runTimeout, settings: cfg, runner: r,
+		verifyRunner: verifyRunner,
 	}
 
 	s.mu.Lock()
@@ -426,9 +451,56 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 		RunnerVersion:         version,
 		IdleReason:            s.probeSchedulingHint(ctx),
+		VerifyRunner:          cfg.VerifyRunnerName,
+		VerifyRunnerStatus:    verifyStatus,
 	})
 	s.publishSettingsChanged()
 	return nil
+}
+
+// buildVerifyRunner returns the verify-pass runner the worker should
+// use, plus a status label for the effective-config log. Returns
+// (nil, "") when the operator did not configure VerifyRunnerName, in
+// which case the worker reuses the execute runner (V1 behaviour).
+//
+// Build / probe failures DO NOT block worker startup. The cost of an
+// opt-in feature failure is its own absence — verify silently demotes
+// to "reuse execute runner" with a loud warn, the worker still picks
+// up tasks, and the operator sees "demoted_*" in the effective config
+// log so they can fix the misconfiguration without losing throughput.
+func (s *agentWorkerSupervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSettings) (runner.Runner, string) {
+	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.agentWorkerSupervisor.buildVerifyRunner",
+		"verify_runner", cfg.VerifyRunnerName)
+	if cfg.VerifyRunnerName == "" {
+		return nil, ""
+	}
+	if cfg.VerifyRunnerName == cfg.Runner {
+		// Operator picked the same id as execute; treat as "reuse"
+		// without paying for a second build/probe. Distinct status
+		// so logs explain "verify_runner=cursor" + "status=reuse".
+		return nil, "reuse_execute_runner"
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, s.probeBudge)
+	version, _, probeErr := s.probe(probeCtx, cfg.VerifyRunnerName, cfg.CursorBin, s.probeBudge)
+	cancel()
+	if probeErr != nil {
+		slog.Warn("verify_runner_probe_failed; demoting to execute runner",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.verify_runner_probe_err",
+			"runner", cfg.VerifyRunnerName, "binary", cfg.CursorBin, "err", probeErr)
+		return nil, "demoted_probe_failed"
+	}
+	r, err := registry.Build(cfg.VerifyRunnerName, registry.BuildOptions{
+		BinaryPath:  cfg.CursorBin,
+		Version:     version,
+		CursorModel: cfg.VerifyRunnerModel,
+	})
+	if err != nil {
+		slog.Warn("verify_runner_build_failed; demoting to execute runner",
+			"cmd", cmdName, "operation", "taskapi.agent_worker.verify_runner_build_err",
+			"runner", cfg.VerifyRunnerName, "err", err)
+		return nil, "demoted_build_failed"
+	}
+	return r, "ok"
 }
 
 // probeSchedulingHint runs the bounded queue+stats probes used by
@@ -491,7 +563,8 @@ func (s *agentWorkerSupervisor) logEffective(phase string, eff effectiveSettings
 		"runner", eff.Runner, "runner_version", eff.RunnerVersion,
 		"repo_root", eff.RepoRoot, "cursor_bin", eff.CursorBin,
 		"cursor_model", eff.CursorModel,
-		"max_run_duration_sec", eff.MaxRunDurationSeconds)
+		"max_run_duration_sec", eff.MaxRunDurationSeconds,
+		"verify_runner", eff.VerifyRunner, "verify_runner_status", eff.VerifyRunnerStatus)
 }
 
 // publishSettingsChanged fires a settings_changed SSE so any open SPA
@@ -604,6 +677,12 @@ func instanceMatchesSettings(inst *agentWorkerInstance, cfg store.AppSettings, v
 		return false
 	}
 	if inst.settings.MaxRunDurationSeconds != cfg.MaxRunDurationSeconds {
+		return false
+	}
+	if inst.settings.VerifyRunnerName != cfg.VerifyRunnerName {
+		return false
+	}
+	if inst.settings.VerifyRunnerModel != cfg.VerifyRunnerModel {
 		return false
 	}
 	if !inst.settings.WorkerEnabled {

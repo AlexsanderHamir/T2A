@@ -225,7 +225,7 @@ When `app_settings.verify_enabled` is true (default):
 
 1. **Execute** — prompt includes all criteria with stable ids; agent writes `.t2a/<cycle_id>/criteria-report.json`.
 2. **Deterministic checks** — for each item with a non-empty `check`, the worker runs the command in the execute working dir with `app_settings.check_command_timeout_seconds`.
-3. **Verify** — in a separate git worktree, the verify runner reads the diff + execute report and writes `.t2a/<cycle_id>/verify-report.json`.
+3. **Verify** — the verify runner runs in the execute working dir (where execute's uncommitted changes live so the verifier can inspect actual file contents) and writes `.t2a/<cycle_id>/verify-report.json`. The verifier MUST NOT modify any other path. The worker enforces this with a pre/post integrity snapshot of `git status --porcelain` plus `git rev-parse HEAD`; any change outside `.t2a/<cycle_id>/verify-report.json`, any HEAD movement, or any failure to capture the post-snapshot terminates the cycle as `verify_tampered` (terminal — no retries, no completion rows). When the working dir is not a git repo, the integrity check is bypassed and logged once at startup. Adversarial separation: when `app_settings.verify_runner_name` is set, the verify pass runs on a different runner adapter (and optionally a different model) than execute — see `docs/configuration.md`.
 4. **Decision** — all pass → atomic `SetDoneWithEvidence` + `status=done`; any fail → retry execute up to `verify_max_retries` (hard cap 10) or terminate `verification_failed` with **no** completion rows.
 
 When `verify_enabled` is false, the worker uses the legacy bulk-mark path (empty evidence). Existing `legacy` rows remain valid.

@@ -608,3 +608,112 @@ func TestSupervisor_probeSchedulingHint_silentWhenNothingScheduled(t *testing.T)
 		t.Fatalf("probeSchedulingHint = %q, want \"\" (empty DB must not fire the hint)", hint)
 	}
 }
+
+// TestSupervisor_buildVerifyRunner_returnsNilWhenUnconfigured pins the
+// V1 default: with VerifyRunnerName="" the supervisor must NOT build a
+// second runner. Verify reuses the execute runner and the worker sees
+// Options.VerifyRunner=nil.
+func TestSupervisor_buildVerifyRunner_returnsNilWhenUnconfigured(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		t.Fatal("probe must not be called when VerifyRunnerName is empty")
+		return "", "", nil
+	})
+	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{Runner: "cursor", VerifyRunnerName: ""})
+	if r != nil || status != "" {
+		t.Fatalf("buildVerifyRunner(unconfigured) = (%v, %q), want (nil, \"\")", r, status)
+	}
+}
+
+// TestSupervisor_buildVerifyRunner_demotesOnProbeFailure pins the
+// "fail loudly, keep running" contract: a probe error for the verify
+// runner MUST NOT block the worker. The verify pass demotes to
+// "reuse execute runner" with a stable demote_probe_failed status so
+// the operator can see it in the effective-config log without losing
+// throughput.
+func TestSupervisor_buildVerifyRunner_demotesOnProbeFailure(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	probeCalls := 0
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, id, _ string, _ time.Duration) (string, string, error) {
+		probeCalls++
+		return "", "", errors.New("verify binary not found")
+	})
+	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{
+		Runner:           "cursor",
+		VerifyRunnerName: "claudecode",
+	})
+	if r != nil {
+		t.Fatalf("expected nil runner on probe failure, got %v", r)
+	}
+	if status != "demoted_probe_failed" {
+		t.Fatalf("status = %q, want demoted_probe_failed", status)
+	}
+	if probeCalls != 1 {
+		t.Fatalf("probe calls = %d, want 1", probeCalls)
+	}
+}
+
+// TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName pins
+// the optimisation: configuring VerifyRunnerName=Runner is equivalent
+// to leaving it empty. We must not build/probe the runner twice — the
+// status label "reuse_execute_runner" makes this visible in logs.
+func TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+		t.Fatal("probe must not be called when verify == execute")
+		return "", "", nil
+	})
+	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{
+		Runner:           "cursor",
+		VerifyRunnerName: "cursor",
+	})
+	if r != nil || status != "reuse_execute_runner" {
+		t.Fatalf("buildVerifyRunner(same name) = (%v, %q), want (nil, reuse_execute_runner)", r, status)
+	}
+}
+
+// TestInstanceMatchesSettings_restartsOnVerifyRunnerChange pins the
+// hot-reload trigger: editing VerifyRunnerName via the settings page
+// must force a restart, otherwise the running worker would silently
+// keep the old verify runner. Same property for VerifyRunnerModel.
+func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
+	t.Parallel()
+	prev := &agentWorkerInstance{
+		settings: store.AppSettings{
+			WorkerEnabled:     true,
+			Runner:            "cursor",
+			VerifyRunnerName:  "claudecode",
+			VerifyRunnerModel: "opus",
+			RepoRoot:          "/x",
+		},
+	}
+	matches := instanceMatchesSettings(prev, store.AppSettings{
+		WorkerEnabled:     true,
+		Runner:            "cursor",
+		VerifyRunnerName:  "claudecode",
+		VerifyRunnerModel: "sonnet-4.5",
+		RepoRoot:          "/x",
+	}, "")
+	if matches {
+		t.Fatal("expected restart trigger on VerifyRunnerModel change; instanceMatchesSettings returned true")
+	}
+	matches = instanceMatchesSettings(prev, store.AppSettings{
+		WorkerEnabled:     true,
+		Runner:            "cursor",
+		VerifyRunnerName:  "cursor",
+		VerifyRunnerModel: "opus",
+		RepoRoot:          "/x",
+	}, "")
+	if matches {
+		t.Fatal("expected restart trigger on VerifyRunnerName change; instanceMatchesSettings returned true")
+	}
+}

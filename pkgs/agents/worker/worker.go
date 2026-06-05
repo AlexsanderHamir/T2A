@@ -116,6 +116,21 @@ type Options struct {
 	// progress for the currently running execute phase. Nil disables
 	// progress fan-out (used in unit tests).
 	ProgressNotifier ProgressNotifier
+	// VerifyRunner, when non-nil, is the runner used for the LLM
+	// verify pass instead of the execute runner. Nil means "reuse the
+	// execute runner" — preserves V1 behaviour. The supervisor builds
+	// this from app_settings.VerifyRunnerName (and probes it) before
+	// constructing the Worker; a build/probe failure demotes verify
+	// to the execute runner with a loud warn rather than blocking the
+	// worker (see cmd/taskapi/run_agentworker.go::applySettings).
+	//
+	// Adversarial separation matters because a verifier graded on the
+	// same weights as the agent that produced the work is functionally
+	// just self-attestation — the docs (data-model.md) document
+	// `verifier_kind=verify_agent` as "Adversarial verify phase
+	// accepted the criterion", and that claim is only honest when this
+	// field points at a different runner adapter / model.
+	VerifyRunner runner.Runner
 	// Metrics, when non-nil, receives one RecordRun call after every
 	// TerminateCycle write (happy path, panic, shutdown abort, and
 	// best-effort intermediate failures). Nil disables observation

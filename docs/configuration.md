@@ -78,8 +78,8 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `sse_replay_enabled` | bool | `true` | Always-on compatibility field. |
 | `verify_enabled` | bool | `true` | When true, runs the execute → criteria report → checks → verify guardrail before marking checklist items done (see [data-model.md](./data-model.md)). When false, legacy bulk completion path. |
 | `verify_max_retries` | int (0–10) | `2` | Max execute↔verify retry loops per cycle. |
-| `verify_runner_name` | string | `""` | Optional runner for the verify phase. Empty = reuse the execute runner. |
-| `verify_runner_model` | string | `""` | Optional model for the verify runner. |
+| `verify_runner_name` | string | `""` | Adversarial verify runner id. Empty = reuse execute runner. When set to a different id (e.g. `claudecode`), the supervisor builds and probes that runner separately at startup and on every `PATCH /settings`; build/probe failure logs `verify_runner_probe_failed` / `verify_runner_build_failed` and demotes verify to "reuse execute runner" so the worker keeps running. Setting it equal to `runner` is equivalent to leaving it empty. |
+| `verify_runner_model` | string | `""` | Optional model for the verify runner. Changing this triggers a worker restart on `PATCH /settings`. |
 | `check_command_timeout_seconds` | int (1–600) | `120` | Wall-clock cap for each deterministic `check` command. |
 | `updated_at` | RFC3339 (response only) | server clock | Last successful upsert. SPA shows "last changed N ago". |
 

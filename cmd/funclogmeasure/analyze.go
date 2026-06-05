@@ -135,6 +135,19 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tlogSeqFromContext":              {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tWrapSlogHandlerWithLogSequence": {},
 
+	// pkgs/agents/worker: error/Stringer interface methods called on
+	// every wrapped error (Error, Unwrap) and a tiny int-to-string
+	// helper used inside summariseTamperedPaths. Logging here would
+	// fire on every error.Error() call (formatter, comparison,
+	// log.Fatal stack walk), which is hot-path category 2. The
+	// surrounding integrity-check entry point (checkVerifyIntegrity)
+	// already logs decisions and tampering verdicts at a stable
+	// operation key.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*verifyTamperedError.Error": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*gitErr.Error":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*gitErr.Unwrap":             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\titoa":                       {},
+
 	// pkgs/tasks/domain: per-row hot path. Every database/sql Scan and Value
 	// call goes through one of the typed Scan/Value pairs below; logging on
 	// each per-type wrapper would emit two trace lines per row (the wrapper
