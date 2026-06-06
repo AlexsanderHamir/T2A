@@ -168,7 +168,7 @@ sequenceDiagram
   W->>S: StartPhase(execute)
   W->>R: Run(ctx, Request{Prompt, WorkingDir, Timeout})
   R-->>W: Result or typed error
-  opt verify_enabled and checklist items
+  opt task has done criteria
     W->>W: parse criteria-report.json, run checks, StartPhase(verify), parse verify-report.json
   end
   W->>S: CompletePhase(execute, succeeded or failed)

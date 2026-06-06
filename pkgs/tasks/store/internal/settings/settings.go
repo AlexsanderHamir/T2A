@@ -23,7 +23,6 @@ const logCmd = "taskapi"
 // (e.g. *int = 0 means MaxRunDurationSeconds explicitly set to 0 == "no
 // limit"; nil means "leave unchanged").
 type Patch struct {
-	WorkerEnabled           *bool
 	AgentPaused             *bool
 	Runner                  *string
 	RepoRoot                *string
@@ -46,7 +45,6 @@ type Patch struct {
 	// column. The handler is responsible for merging deltas before
 	// passing the blob here.
 	RunnerConfigs              *json.RawMessage
-	VerifyEnabled              *bool
 	VerifyMaxRetries           *int
 	VerifyRunnerName           *string
 	VerifyRunnerModel          *string
@@ -59,8 +57,7 @@ type Patch struct {
 // predicate called once per PATCH /settings request, where the surrounding
 // handler already logs the no-op short-circuit decision.
 func (p Patch) IsEmpty() bool {
-	return p.WorkerEnabled == nil &&
-		p.AgentPaused == nil &&
+	return p.AgentPaused == nil &&
 		p.Runner == nil &&
 		p.RepoRoot == nil &&
 		p.CursorBin == nil &&
@@ -71,7 +68,6 @@ func (p Patch) IsEmpty() bool {
 		p.OptimisticMutationsEnabled == nil &&
 		p.SSEReplayEnabled == nil &&
 		p.RunnerConfigs == nil &&
-		p.VerifyEnabled == nil &&
 		p.VerifyMaxRetries == nil &&
 		p.VerifyRunnerName == nil &&
 		p.VerifyRunnerModel == nil &&
@@ -114,7 +110,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 	}
 	slog.Info("app settings seeded with defaults",
 		"cmd", logCmd, "operation", "tasks.store.settings.seeded",
-		"worker_enabled", row.WorkerEnabled, "agent_paused", row.AgentPaused,
+		"agent_paused", row.AgentPaused,
 		"runner", row.Runner,
 		"repo_root", row.RepoRoot, "cursor_bin", row.CursorBin,
 		"max_run_duration_seconds", row.MaxRunDurationSeconds,
@@ -230,9 +226,6 @@ func validatePatch(patch Patch) error {
 
 func applyPatch(row *domain.AppSettings, patch Patch) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.applyPatch")
-	if patch.WorkerEnabled != nil {
-		row.WorkerEnabled = *patch.WorkerEnabled
-	}
 	if patch.AgentPaused != nil {
 		row.AgentPaused = *patch.AgentPaused
 	}
@@ -269,9 +262,6 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.RunnerConfigs != nil {
 		row.RunnerConfigs = datatypes.JSON(*patch.RunnerConfigs)
-	}
-	if patch.VerifyEnabled != nil {
-		row.VerifyEnabled = *patch.VerifyEnabled
 	}
 	if patch.VerifyMaxRetries != nil {
 		row.VerifyMaxRetries = *patch.VerifyMaxRetries

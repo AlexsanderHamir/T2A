@@ -15,7 +15,6 @@ type FetchInput = Parameters<typeof fetch>[0];
 const NY_SETTINGS: AppSettings = {
   ...APP_SETTINGS_DEFAULTS,
   ...TASK_TEST_DEFAULTS,
-  worker_enabled: false,
   agent_pickup_delay_seconds: 0,
   display_timezone: "America/New_York",
   optimistic_mutations_enabled: false,

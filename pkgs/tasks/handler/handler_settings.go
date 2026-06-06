@@ -22,7 +22,6 @@ import (
 // ago" without a parser; nil-safe because the row always exists once
 // GET seeds defaults on first boot.
 type settingsResponse struct {
-	WorkerEnabled              bool   `json:"worker_enabled"`
 	AgentPaused                bool   `json:"agent_paused"`
 	Runner                     string `json:"runner"`
 	RepoRoot                   string `json:"repo_root"`
@@ -33,7 +32,6 @@ type settingsResponse struct {
 	DisplayTimezone            string `json:"display_timezone"`
 	OptimisticMutationsEnabled bool   `json:"optimistic_mutations_enabled"`
 	SSEReplayEnabled           bool   `json:"sse_replay_enabled"`
-	VerifyEnabled              bool   `json:"verify_enabled"`
 	VerifyMaxRetries           int    `json:"verify_max_retries"`
 	VerifyRunnerName           string `json:"verify_runner_name"`
 	VerifyRunnerModel          string `json:"verify_runner_model"`
@@ -48,7 +46,6 @@ type settingsResponse struct {
 // store.SettingsPatch one-for-one so the handler can map fields
 // directly without any field-by-field adapter logic.
 type settingsPatchBody struct {
-	WorkerEnabled              *bool   `json:"worker_enabled,omitempty"`
 	AgentPaused                *bool   `json:"agent_paused,omitempty"`
 	Runner                     *string `json:"runner,omitempty"`
 	RepoRoot                   *string `json:"repo_root,omitempty"`
@@ -59,7 +56,6 @@ type settingsPatchBody struct {
 	DisplayTimezone            *string `json:"display_timezone,omitempty"`
 	OptimisticMutationsEnabled *bool   `json:"optimistic_mutations_enabled,omitempty"`
 	SSEReplayEnabled           *bool   `json:"sse_replay_enabled,omitempty"`
-	VerifyEnabled              *bool   `json:"verify_enabled,omitempty"`
 	VerifyMaxRetries           *int    `json:"verify_max_retries,omitempty"`
 	VerifyRunnerName           *string `json:"verify_runner_name,omitempty"`
 	VerifyRunnerModel          *string `json:"verify_runner_model,omitempty"`
@@ -151,7 +147,6 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	patch := store.SettingsPatch{
-		WorkerEnabled:              body.WorkerEnabled,
 		AgentPaused:                body.AgentPaused,
 		Runner:                     body.Runner,
 		RepoRoot:                   body.RepoRoot,
@@ -160,7 +155,6 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		MaxRunDurationSeconds:      body.MaxRunDurationSeconds,
 		AgentPickupDelaySeconds:    body.AgentPickupDelaySeconds,
 		DisplayTimezone:            body.DisplayTimezone,
-		VerifyEnabled:              body.VerifyEnabled,
 		VerifyMaxRetries:           body.VerifyMaxRetries,
 		VerifyRunnerName:           body.VerifyRunnerName,
 		VerifyRunnerModel:          body.VerifyRunnerModel,
@@ -322,7 +316,6 @@ func (h *Handler) cancelCurrentRun(w http.ResponseWriter, r *http.Request) {
 func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsResponseFrom")
 	resp := settingsResponse{
-		WorkerEnabled:              cfg.WorkerEnabled,
 		AgentPaused:                cfg.AgentPaused,
 		Runner:                     cfg.Runner,
 		RepoRoot:                   cfg.RepoRoot,
@@ -333,7 +326,6 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		DisplayTimezone:            cfg.DisplayTimezone,
 		OptimisticMutationsEnabled: cfg.OptimisticMutationsEnabled,
 		SSEReplayEnabled:           cfg.SSEReplayEnabled,
-		VerifyEnabled:              cfg.VerifyEnabled,
 		VerifyMaxRetries:           cfg.VerifyMaxRetries,
 		VerifyRunnerName:           cfg.VerifyRunnerName,
 		VerifyRunnerModel:          cfg.VerifyRunnerModel,

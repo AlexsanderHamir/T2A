@@ -16,15 +16,13 @@ func newSettingsStore(t *testing.T) (*Store, context.Context) {
 	return NewStore(tasktestdb.OpenSQLite(t)), context.Background()
 }
 
-func ptrBool(v bool) *bool       { return &v }
 func ptrString(v string) *string { return &v }
 func ptrInt(v int) *int          { return &v }
 
 // TestStore_GetSettings_seedsDefaultsOnFirstRead pins the contract that
-// a fresh DB returns a fully populated AppSettings (worker enabled,
-// runner=cursor, no repo root, no cursor bin override, no run-duration
-// cap). The handler relies on this invariant: GET /settings never
-// returns a sparse row.
+// a fresh DB returns a fully populated AppSettings (runner=cursor, no
+// repo root, no cursor bin override, no run-duration cap). The handler
+// relies on this invariant: GET /settings never returns a sparse row.
 func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 	s, ctx := newSettingsStore(t)
 	got, err := s.GetSettings(ctx)
@@ -32,9 +30,6 @@ func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 		t.Fatalf("get settings: %v", err)
 	}
 	want := domain.DefaultAppSettings()
-	if got.WorkerEnabled != want.WorkerEnabled {
-		t.Errorf("WorkerEnabled = %v, want %v", got.WorkerEnabled, want.WorkerEnabled)
-	}
 	if got.Runner != want.Runner {
 		t.Errorf("Runner = %q, want %q", got.Runner, want.Runner)
 	}
@@ -104,9 +99,6 @@ func TestStore_UpdateSettings_partialPatchRoundtrip(t *testing.T) {
 	if updated.MaxRunDurationSeconds != 900 {
 		t.Errorf("MaxRunDurationSeconds = %d, want 900", updated.MaxRunDurationSeconds)
 	}
-	if !updated.WorkerEnabled {
-		t.Error("WorkerEnabled should remain true (not in patch)")
-	}
 	if updated.Runner != "cursor" {
 		t.Errorf("Runner = %q, want cursor (not in patch)", updated.Runner)
 	}
@@ -139,9 +131,6 @@ func TestStore_UpdateSettings_createsRowOnFirstWrite(t *testing.T) {
 	}
 	if updated.Runner != "cursor" {
 		t.Errorf("Runner = %q, want cursor (default seed)", updated.Runner)
-	}
-	if !updated.WorkerEnabled {
-		t.Error("WorkerEnabled should default to true")
 	}
 }
 
@@ -203,24 +192,6 @@ func TestStore_UpdateSettings_trimsAndClamps(t *testing.T) {
 		}
 		if updated.MaxRunDurationSeconds != 0 {
 			t.Errorf("MaxRunDurationSeconds = %d, want 0 (no limit)", updated.MaxRunDurationSeconds)
-		}
-	})
-
-	t.Run("disable_worker_persists", func(t *testing.T) {
-		s, ctx := newSettingsStore(t)
-		updated, err := s.UpdateSettings(ctx, SettingsPatch{WorkerEnabled: ptrBool(false)})
-		if err != nil {
-			t.Fatalf("update: %v", err)
-		}
-		if updated.WorkerEnabled {
-			t.Error("WorkerEnabled = true, want false")
-		}
-		got, err := s.GetSettings(ctx)
-		if err != nil {
-			t.Fatalf("re-get: %v", err)
-		}
-		if got.WorkerEnabled {
-			t.Error("WorkerEnabled did not persist as false")
 		}
 	})
 

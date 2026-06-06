@@ -71,46 +71,11 @@ func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 	}
 }
 
-// TestSupervisor_StaysIdleWhenWorkerDisabled confirms WorkerEnabled=false
-// short-circuits before the probe — same fail-fast logic as repo root
-// (no point spending the probe budget on a runner that won't run).
-func TestSupervisor_StaysIdleWhenWorkerDisabled(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	rig := newSupervisorTestRig(t, ctx, nil)
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		WorkerEnabled: ptrBool(false),
-		RepoRoot:      ptrString(t.TempDir()),
-	}); err != nil {
-		t.Fatalf("seed settings: %v", err)
-	}
-	probeCalled := false
-	rig.sup.probe = func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
-		probeCalled = true
-		return "x", "", nil
-	}
-
-	if err := rig.sup.Start(ctx); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur != nil {
-		t.Errorf("supervisor spawned worker despite WorkerEnabled=false")
-	}
-	if probeCalled {
-		t.Error("probe called for disabled worker")
-	}
-}
-
-// TestSupervisor_StaysIdleWhenAgentPaused mirrors the WorkerEnabled
-// idle path for the soft-pause flag. The pause flag is the
-// operator-facing "stop dequeuing for now" toggle exposed in the SPA
-// header chip; it must short-circuit before the probe so a paused
-// process doesn't burn its probe budget on every Reload.
+// TestSupervisor_StaysIdleWhenAgentPaused pins the operator-facing
+// soft-pause idle path. The pause flag is the only "stop dequeuing"
+// knob today (there is no separate enabled/disabled master switch);
+// it must short-circuit before the probe so a paused process doesn't
+// burn its probe budget on every Reload.
 func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -689,7 +654,6 @@ func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
 	t.Parallel()
 	prev := &agentWorkerInstance{
 		settings: store.AppSettings{
-			WorkerEnabled:     true,
 			Runner:            "cursor",
 			VerifyRunnerName:  "claudecode",
 			VerifyRunnerModel: "opus",
@@ -697,7 +661,6 @@ func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
 		},
 	}
 	matches := instanceMatchesSettings(prev, store.AppSettings{
-		WorkerEnabled:     true,
 		Runner:            "cursor",
 		VerifyRunnerName:  "claudecode",
 		VerifyRunnerModel: "sonnet-4.5",
@@ -707,7 +670,6 @@ func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
 		t.Fatal("expected restart trigger on VerifyRunnerModel change; instanceMatchesSettings returned true")
 	}
 	matches = instanceMatchesSettings(prev, store.AppSettings{
-		WorkerEnabled:     true,
 		Runner:            "cursor",
 		VerifyRunnerName:  "cursor",
 		VerifyRunnerModel: "opus",

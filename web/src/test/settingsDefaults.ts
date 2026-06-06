@@ -9,7 +9,6 @@ import {
  * individual fields via the spread operator.
  */
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
-  worker_enabled: true,
   agent_paused: false,
   runner: "cursor",
   repo_root: "",
@@ -20,7 +19,6 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   display_timezone: "UTC",
   optimistic_mutations_enabled: true,
   sse_replay_enabled: false,
-  verify_enabled: true,
   verify_max_retries: DEFAULT_VERIFY_MAX_RETRIES,
   verify_runner_name: "",
   verify_runner_model: "",

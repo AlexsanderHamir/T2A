@@ -64,7 +64,7 @@ const agentRunProgressThrottleEntries = 512
 // Lifecycle states and the methods that drive them:
 //
 //   - "not started" → Start() reads settings, builds runner, spawns
-//     worker goroutine (or stays idle when WorkerEnabled is false /
+//     worker goroutine (or stays idle when AgentPaused is true /
 //     RepoRoot is empty / runner probe fails).
 //   - "running" → CancelCurrentRun() proxies to Worker.CancelCurrentRun;
 //     Reload() rebuilds config under the lifecycle lock and respawns
@@ -73,7 +73,7 @@ const agentRunProgressThrottleEntries = 512
 //     run loop with a bounded deadline.
 //
 // "Material change" means anything that affects how the worker would
-// behave on the next dequeue: enabled flag, runner id, cursor binary,
+// behave on the next dequeue: pause flag, runner id, cursor binary,
 // repo root, or the per-run cap. We always restart on a material
 // change (V1) instead of trying to mutate a live worker; the dequeue
 // loop is a single goroutine so the cost of a restart is one in-flight
@@ -134,7 +134,6 @@ type agentWorkerInstance struct {
 // snapshot used for startup / reload INFO logs so the operator can see
 // the resolved values without having to hit GET /settings.
 type effectiveSettingsLog struct {
-	WorkerEnabled         bool
 	AgentPaused           bool
 	Runner                string
 	RepoRoot              string
@@ -323,9 +322,9 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		}
 		s.mu.Unlock()
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
-			Runner:   cfg.Runner,
-			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			AgentPaused: cfg.AgentPaused,
+			Runner:      cfg.Runner,
+			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			Idle:                  true, IdleReason: reason,
@@ -348,9 +347,9 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 			"operation", "taskapi.agent_worker.probe_err", "phase", phase,
 			"runner", cfg.Runner, "binary", cfg.CursorBin, "err", probeErr)
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
-			Runner:   cfg.Runner,
-			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			AgentPaused: cfg.AgentPaused,
+			Runner:      cfg.Runner,
+			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			Idle:                  true, IdleReason: "probe_failed",
@@ -367,9 +366,9 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 			prevStatus = "reuse_execute_runner"
 		}
 		s.logEffective(phase, effectiveSettingsLog{
-			WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
-			Runner:   cfg.Runner,
-			RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+			AgentPaused: cfg.AgentPaused,
+			Runner:      cfg.Runner,
+			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
 			CursorModel:           cfg.CursorModel,
 			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 			RunnerVersion:         version,
@@ -456,9 +455,9 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	stopWorkerInstance(prev, "reload")
 
 	s.logEffective(phase, effectiveSettingsLog{
-		WorkerEnabled: cfg.WorkerEnabled, AgentPaused: cfg.AgentPaused,
-		Runner:   cfg.Runner,
-		RepoRoot: cfg.RepoRoot, CursorBin: cfg.CursorBin,
+		AgentPaused: cfg.AgentPaused,
+		Runner:      cfg.Runner,
+		RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
 		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
 		RunnerVersion:         version,
@@ -570,7 +569,7 @@ func (s *agentWorkerSupervisor) logEffective(phase string, eff effectiveSettings
 		"phase", phase)
 	slog.Info("agent worker effective config", "cmd", cmdName, "operation", "taskapi.agent_worker",
 		"phase", phase,
-		"enabled", eff.WorkerEnabled, "paused", eff.AgentPaused,
+		"paused", eff.AgentPaused,
 		"idle", eff.Idle, "idle_reason", eff.IdleReason,
 		"runner", eff.Runner, "runner_version", eff.RunnerVersion,
 		"repo_root", eff.RepoRoot, "cursor_bin", eff.CursorBin,
@@ -641,17 +640,11 @@ func decideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
 // function's doc.
 func decideIdle(cfg store.AppSettings) (bool, string) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideIdle",
-		"enabled", cfg.WorkerEnabled, "paused", cfg.AgentPaused,
-		"repo_root", cfg.RepoRoot)
-	if !cfg.WorkerEnabled {
-		return true, "disabled_by_settings"
-	}
-	// Operator-facing soft pause. Distinct reason from
-	// disabled_by_settings so the observability page can render
-	// "Paused" (amber) vs "Disabled" (red/grey) accurately. Pause is
-	// checked AFTER WorkerEnabled because a fully-disabled worker
-	// dominates a paused-but-otherwise-running worker; either keeps
-	// us idle, but disabled is the stronger signal.
+		"paused", cfg.AgentPaused, "repo_root", cfg.RepoRoot)
+	// Operator-facing soft pause is the only "stop dequeuing" knob
+	// today. The supervisor surfaces idle_reason="paused_by_operator"
+	// so the observability page can render "Paused" (amber) distinctly
+	// from "Disabled" / probe-failed states.
 	if cfg.AgentPaused {
 		return true, "paused_by_operator"
 	}
@@ -697,9 +690,6 @@ func instanceMatchesSettings(inst *agentWorkerInstance, cfg store.AppSettings, v
 	if inst.settings.VerifyRunnerModel != cfg.VerifyRunnerModel {
 		return false
 	}
-	if !inst.settings.WorkerEnabled {
-		return false
-	}
 	// A pause flip changes effective state (idle vs running) even
 	// though all other fields match — return false so applySettings
 	// reaches its idle branch and stops the running instance.
@@ -740,11 +730,10 @@ func stopWorkerInstance(inst *agentWorkerInstance, reason string) {
 
 // startReadyTaskAgents wires the bounded ready-task queue, pickup wake
 // scheduler, reconcile loop, and the agent worker supervisor. The
-// reconcile loop is always on; the worker is gated on
-// AppSettings.WorkerEnabled and dependencies (repo root, runner probe).
-// The returned cancel func stops pickup wake and tears down the reconcile
-// goroutine; the supervisor owns the worker lifecycle and exposes Drain
-// for shutdown.
+// reconcile loop is always on; the worker is gated on AppSettings.AgentPaused
+// and dependencies (repo root, runner probe). The returned cancel func stops
+// pickup wake and tears down the reconcile goroutine; the supervisor owns
+// the worker lifecycle and exposes Drain for shutdown.
 func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *handler.SSEHub) (context.CancelFunc, *agents.MemoryQueue, *agentWorkerSupervisor, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.startReadyTaskAgents")
 	qcap := taskapiconfig.UserTaskAgentQueueCap()

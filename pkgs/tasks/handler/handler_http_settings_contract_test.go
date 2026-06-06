@@ -104,9 +104,6 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, body)
 	}
-	if !resp.WorkerEnabled {
-		t.Error("expected WorkerEnabled=true on first read")
-	}
 	if resp.AgentPaused {
 		t.Error("expected AgentPaused=false on first read (operator opt-in)")
 	}
@@ -133,7 +130,7 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 func TestHTTP_GetSettings_worksWithoutAgentControl(t *testing.T) {
 	srv, _ := settingsTestServerNoAgent(t)
 	body := mustGetSettingsJSON(t, srv.URL+"/settings", http.StatusOK)
-	if !strings.Contains(string(body), `"worker_enabled":true`) {
+	if !strings.Contains(string(body), `"runner":"cursor"`) {
 		t.Fatalf("unexpected body: %s", body)
 	}
 }
@@ -150,13 +147,13 @@ func TestHTTP_PatchSettings_persistsAndReloads(t *testing.T) {
 	defer cancel()
 
 	body := mustPatchSettingsJSON(t, srv.URL+"/settings",
-		`{"repo_root":"/tmp/x","max_run_duration_seconds":120,"worker_enabled":false}`,
+		`{"repo_root":"/tmp/x","max_run_duration_seconds":120}`,
 		http.StatusOK)
 	var resp settingsResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, body)
 	}
-	if resp.RepoRoot != "/tmp/x" || resp.MaxRunDurationSeconds != 120 || resp.WorkerEnabled {
+	if resp.RepoRoot != "/tmp/x" || resp.MaxRunDurationSeconds != 120 {
 		t.Errorf("response did not reflect patch: %+v", resp)
 	}
 	if got := ctrl.reloadCalls.Load(); got != 1 {

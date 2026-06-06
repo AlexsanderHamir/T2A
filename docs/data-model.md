@@ -203,7 +203,7 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 | `verified_by` value | Meaning |
 |---|---|
-| `agent_self` | Execute agent claimed done in the criteria report (not sufficient alone when `verify_enabled`). |
+| `agent_self` | Execute agent claimed done in the criteria report (not sufficient on its own — verify must also accept). |
 | `verify_agent` | Adversarial verify phase accepted the criterion. |
 | `deterministic_check` | Optional `check` shell command exited 0. |
 | `human_override` | Reserved; schema only. |
@@ -221,7 +221,7 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 ### Worker verification loop
 
-When `app_settings.verify_enabled` is true (default):
+Verify runs after every successful execute when the task has at least one done criterion. Tasks with zero criteria fall through to the legacy bulk-mark path (see end of this section).
 
 1. **Execute** — prompt includes all criteria with stable ids and the **absolute** worker-managed path the agent must write its report to (`<worker-managed dir>/<cycle_id>/criteria-report.json`, see "Report file contracts" below).
 2. **Deterministic checks** — for each item with a non-empty `check`, the worker runs the command in the execute working dir with `app_settings.check_command_timeout_seconds`.
@@ -229,7 +229,7 @@ When `app_settings.verify_enabled` is true (default):
 4. **Decision** — all pass → atomic `SetDoneWithEvidence` + `status=done`; any fail → retry execute up to `verify_max_retries` (hard cap 10) or terminate with reason `verification_failed:<id>,<id>,…` (sorted, deduped failing criterion IDs after the prefix) and **no** completion rows. The `verification_failed` prefix is contract-stable; consumers MUST use prefix matching (`startsWith`). Bare `verification_failed` (older cycles) remains a valid value. The reason column is 256 chars; long failure lists are truncated with a trailing `…` while keeping the prefix intact.
 5. **Retry efficiency** — verdicts that passed in earlier attempts are carried in memory across retries. The next execute prompt lists them under "Already verified (do not re-do)" and excludes them from the active checklist; the next verify pass short-circuits them. The atomic-decision contract is preserved: nothing is committed to `task_checklist_completions` until the cycle terminates `succeeded`, at which point all passes (this attempt + earlier) land in one transaction. On terminal failure, no completion rows are written even for criteria that passed on every attempt.
 
-When `verify_enabled` is false, the worker uses the legacy bulk-mark path (empty evidence). Existing `legacy` rows remain valid.
+When the task has no done criteria, the worker uses the legacy bulk-mark path (empty evidence) on a successful execute. Existing `legacy` rows remain valid.
 
 ### Report file contracts
 

@@ -12,14 +12,11 @@ import {
  * is always populated by the time the SPA sees the response).
  */
 export type AppSettings = {
-  worker_enabled: boolean;
   /**
-   * Operator-facing soft pause. Distinct from worker_enabled in intent:
-   * worker_enabled is the "configured to run at all" master switch
-   * (defaults true), agent_paused is the one-click "stop dequeuing for
-   * a few minutes" toggle exposed in the SPA header chip (defaults
-   * false). Both keep the supervisor idle, but they surface as
-   * different idle reasons in the supervisor logs and header status.
+   * Operator-facing soft pause exposed in the SPA header chip. The
+   * supervisor honors it by going idle with reason
+   * "paused_by_operator". Default false; this is the only "stop
+   * dequeuing" knob today.
    */
   agent_paused: boolean;
   runner: string;
@@ -52,7 +49,6 @@ export type AppSettings = {
    * Stored for API compatibility; lossless SSE replay is always on server-side.
    */
   sse_replay_enabled: boolean;
-  verify_enabled: boolean;
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
@@ -67,7 +63,6 @@ export type AppSettings = {
  * "no limit"; cursor_bin = "" means "auto-detect via PATH at boot".
  */
 export type AppSettingsPatch = Partial<{
-  worker_enabled: boolean;
   agent_paused: boolean;
   runner: string;
   repo_root: string;
@@ -85,7 +80,6 @@ export type AppSettingsPatch = Partial<{
   display_timezone: string;
   optimistic_mutations_enabled: boolean;
   sse_replay_enabled: boolean;
-  verify_enabled: boolean;
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
@@ -125,7 +119,6 @@ function assertSettings(raw: unknown): AppSettings {
     throw new Error("unexpected settings response shape");
   }
   const o = raw as Record<string, unknown>;
-  const worker = o.worker_enabled;
   // Default agent_paused to false when the server omits the field so
   // older builds (pre-4a) stay decodable by a freshly-deployed SPA.
   // We could throw instead, but a boolean default that matches the DB
@@ -154,8 +147,6 @@ function assertSettings(raw: unknown): AppSettings {
   const sseReplay = typeof o.sse_replay_enabled === "boolean"
     ? o.sse_replay_enabled
     : true;
-  const verifyEnabled =
-    typeof o.verify_enabled === "boolean" ? o.verify_enabled : true;
   const verifyMaxRetries =
     typeof o.verify_max_retries === "number"
       ? o.verify_max_retries
@@ -169,7 +160,6 @@ function assertSettings(raw: unknown): AppSettings {
       ? o.check_command_timeout_seconds
       : DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS;
   if (
-    typeof worker !== "boolean" ||
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
     typeof cursorBin !== "string" ||
@@ -180,7 +170,6 @@ function assertSettings(raw: unknown): AppSettings {
     throw new Error("unexpected settings response shape");
   }
   const out: AppSettings = {
-    worker_enabled: worker,
     agent_paused: paused,
     runner,
     repo_root: repoRoot,
@@ -191,7 +180,6 @@ function assertSettings(raw: unknown): AppSettings {
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,
     sse_replay_enabled: sseReplay,
-    verify_enabled: verifyEnabled,
     verify_max_retries: verifyMaxRetries,
     verify_runner_name: verifyRunnerName,
     verify_runner_model: verifyRunnerModel,

@@ -19,8 +19,8 @@ type ProbeFn = adapterkit.ProbeFunc
 // Probe runs `<binaryPath> --version` with a bounded deadline and
 // returns the trimmed first line of stdout (or stderr, whichever is
 // non-empty) as the version string. The agent worker supervisor calls
-// this whenever app_settings.worker_enabled flips on (and on every
-// /settings probe-cursor request) and uses the returned string as
+// this on every supervisor (re)start and on every /settings probe-cursor
+// request and uses the returned string as
 // runner.Version() so the audit trail records the exact CLI build
 // that produced each cycle.
 //

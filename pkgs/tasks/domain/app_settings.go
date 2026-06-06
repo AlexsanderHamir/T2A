@@ -16,17 +16,11 @@ import (
 // is the only source of truth and is "saved until changed".
 //
 // Field semantics:
-//   - WorkerEnabled: master switch for the in-process agent worker.
-//     Default true.
-//   - AgentPaused: operator-facing soft pause. Distinct from
-//     WorkerEnabled in intent, even though both keep the worker idle:
-//     WorkerEnabled is the "configured to run at all" flag (defaults
-//     to true; flipping it off is a deliberate teardown), AgentPaused
-//     is the "stop dequeuing for now, I'll resume in a minute"
-//     flag (defaults to false; the SPA exposes a toggle in the
-//     header). The supervisor honors either by going idle with a
-//     distinct reason ("disabled_by_settings" vs "paused_by_operator")
-//     so the observability page can tell them apart.
+//   - AgentPaused: operator-facing soft pause exposed in the SPA
+//     header. The supervisor honors it by going idle with reason
+//     "paused_by_operator". Default false; there is no separate
+//     "disabled" master switch — the worker is always configured to
+//     run, and pause is the operator's stop-the-dequeue knob.
 //   - Runner: id of the runner registered in pkgs/agents/runner/registry
 //     (today only "cursor"). Default "cursor".
 //   - RepoRoot: absolute or process-relative path used for both the
@@ -62,7 +56,6 @@ import (
 //     is migrated to true on read for older databases.
 type AppSettings struct {
 	ID                         uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled              bool   `gorm:"not null;default:true"`
 	AgentPaused                bool   `gorm:"not null;default:false"`
 	Runner                     string `gorm:"not null;default:'cursor'"`
 	RepoRoot                   string `gorm:"not null;default:''"`
@@ -78,8 +71,6 @@ type AppSettings struct {
 	// Dual-written alongside the legacy CursorBin/CursorModel columns
 	// during the migration to pluggable runners.
 	RunnerConfigs datatypes.JSON `gorm:"column:runner_configs;type:jsonb;not null;default:'{}'"`
-	// VerifyEnabled gates the execute→verify checklist guardrail (see docs/data-model.md).
-	VerifyEnabled bool `gorm:"not null;default:true"`
 	// VerifyMaxRetries is the corrective execute retries after verify failure (hard cap 10).
 	VerifyMaxRetries int `gorm:"not null;default:2;check:chk_app_settings_verify_max_retries,verify_max_retries >= 0 AND verify_max_retries <= 10"`
 	// VerifyRunnerName empty means use the execute runner id.
@@ -138,7 +129,6 @@ const DefaultDisplayTimezone = ""
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
 		ID:                         AppSettingsRowID,
-		WorkerEnabled:              true,
 		AgentPaused:                false,
 		Runner:                     DefaultRunner,
 		RepoRoot:                   "",
@@ -148,7 +138,6 @@ func DefaultAppSettings() AppSettings {
 		DisplayTimezone:            DefaultDisplayTimezone,
 		OptimisticMutationsEnabled: true,
 		SSEReplayEnabled:           true,
-		VerifyEnabled:              true,
 		VerifyMaxRetries:           DefaultVerifyMaxRetries,
 		VerifyRunnerName:           "",
 		VerifyRunnerModel:          "",

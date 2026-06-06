@@ -13,7 +13,6 @@ import { TaskEditForm } from "./TaskEditForm";
 const testAppSettings: AppSettings = {
   ...APP_SETTINGS_DEFAULTS,
   ...TASK_TEST_DEFAULTS,
-  worker_enabled: false,
   optimistic_mutations_enabled: false,
 };
 

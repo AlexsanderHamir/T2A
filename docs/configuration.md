@@ -66,8 +66,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 
 | Field | Type | Default | Effect |
 |---|---|---|---|
-| `worker_enabled` | bool | `true` | Master switch for the in-process agent worker. When `false` the supervisor stays idle (queue + reconcile loop still run). Idle reason: `disabled_by_settings`. |
-| `agent_paused` | bool | `false` | Operator-facing soft pause, distinct from `worker_enabled` in intent. SPA header chip exposes it as a one-click toggle. Idle reason: `paused_by_operator`. Surfaces in `GET /system/health`. |
+| `agent_paused` | bool | `false` | Operator-facing soft pause exposed as a one-click toggle in the SPA header chip. The agent worker always starts at boot; pause is the only "stop dequeuing" knob. Idle reason: `paused_by_operator`. Surfaces in `GET /system/health`. |
 | `runner` | string | `"cursor"` | Identifier from `pkgs/agents/runner/registry`. Only `cursor` is registered today. |
 | `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty = `PATH` lookup of `cursor`. Absolute paths pin a build. |
@@ -77,7 +76,6 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `display_timezone` | string | `""` | IANA timezone for SPA timestamps. Empty = browser auto-detect. Validated via `time.LoadLocation`. |
 | `optimistic_mutations_enabled` | bool | `true` | Always-on compatibility field. |
 | `sse_replay_enabled` | bool | `true` | Always-on compatibility field. |
-| `verify_enabled` | bool | `true` | When true, runs the execute → criteria report → checks → verify guardrail before marking checklist items done (see [data-model.md](./data-model.md)). When false, legacy bulk completion path. |
 | `verify_max_retries` | int (0–10) | `2` | Max execute↔verify retry loops per cycle. |
 | `verify_runner_name` | string | `""` | Adversarial verify runner id. Empty = reuse execute runner. When set to a different id (e.g. `claudecode`), the supervisor builds and probes that runner separately at startup and on every `PATCH /settings`; build/probe failure logs `verify_runner_probe_failed` / `verify_runner_build_failed` and demotes verify to "reuse execute runner" so the worker keeps running. Setting it equal to `runner` is equivalent to leaving it empty. |
 | `verify_runner_model` | string | `""` | Optional model for the verify runner. Changing this triggers a worker restart on `PATCH /settings`. |
@@ -128,7 +126,7 @@ The variables below are silently ignored if still present in `.env`. Move the va
 
 | Old env var | Replacement |
 |---|---|
-| `T2A_AGENT_WORKER_ENABLED` | `app_settings.worker_enabled`. |
+| `T2A_AGENT_WORKER_ENABLED` | Deprecated. The agent worker always starts; use the header pause toggle (`agent_paused`) for a runtime stop. |
 | `T2A_AGENT_WORKER_CURSOR_BIN` | `app_settings.cursor_bin`. |
 | `T2A_AGENT_WORKER_RUN_TIMEOUT` | `app_settings.max_run_duration_seconds` (default `0` = no limit, not 5m). |
 | `T2A_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root`. |

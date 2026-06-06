@@ -53,7 +53,6 @@ function makeWrapper() {
     },
   });
   queryClient.setQueryData(settingsQueryKeys.app(), {
-    worker_enabled: false,
     agent_paused: false,
     runner: "cursor",
     repo_root: "",

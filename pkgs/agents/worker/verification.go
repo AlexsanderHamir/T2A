@@ -81,7 +81,11 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 		verifyRunner = w.options.VerifyRunner
 	}
 	snap := verificationSnapshot{
-		enabled:      settings.VerifyEnabled && len(items) > 0,
+		// Verify always runs when the task has at least one done
+		// criterion. Tasks with zero criteria fall through to the
+		// legacy bulk-mark path in completeChecklistLegacy — see
+		// process.go for the dispatch.
+		enabled:      len(items) > 0,
 		maxRetries:   maxRetries,
 		checkTimeout: time.Duration(settings.CheckCommandTimeoutSeconds) * time.Second,
 		criteria:     items,
