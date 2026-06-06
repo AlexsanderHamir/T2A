@@ -8,8 +8,22 @@
 /** `running` is the only non-terminal status; the other three are terminal. */
 export type CycleStatus = "running" | "succeeded" | "failed" | "aborted";
 
-/** Phases follow `domain.ValidPhaseTransition` in the backend. */
-export type Phase = "execute" | "verify";
+/**
+ * Phases the backend writes today. `execute` and `verify` are the only
+ * phases `domain.ValidPhaseTransition` will start. `diagnose` and
+ * `persist` are kept on the wire type so historical cycle rows that
+ * predate the trim still parse and render — the SPA must never refuse
+ * to display an audit trail because of a deprecated phase value.
+ */
+export type Phase = "execute" | "verify" | "diagnose" | "persist";
+
+/**
+ * The subset of {@link Phase} the backend is willing to start. Used by
+ * stats payloads (`/tasks/stats`) which only ever carry the writable
+ * enum keys, so the heatmap type stays narrow even though historical
+ * read paths still accept the legacy values.
+ */
+export type WritablePhase = Exclude<Phase, "diagnose" | "persist">;
 
 /** `running` is the only non-terminal status; the other three are terminal. */
 export type PhaseStatus = "running" | "succeeded" | "failed" | "skipped";
@@ -21,7 +35,20 @@ export const CYCLE_STATUSES: CycleStatus[] = [
   "aborted",
 ];
 
+/**
+ * Phases the backend will start on a new cycle. Used to seed the stats
+ * heatmap and as the write-side enum (`POST /cycles/{id}/phases` body).
+ * Excludes the legacy `diagnose` and `persist` kept on {@link Phase} for
+ * read-side compatibility.
+ */
 export const PHASES: Phase[] = ["execute", "verify"];
+
+/**
+ * Phase values the server may return on historical cycle rows but no
+ * longer writes. Surfaced so the parser can accept them and the UI can
+ * render an honest label instead of breaking the page.
+ */
+export const LEGACY_PHASES: readonly Phase[] = ["diagnose", "persist"];
 
 export const PHASE_STATUSES: PhaseStatus[] = [
   "running",

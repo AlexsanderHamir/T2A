@@ -399,7 +399,37 @@ describe("parseTaskStatsResponse", () => {
     ).toThrow(/cycles\.by_status/);
   });
 
-  it("parses phases heatmap with all four phases always present", () => {
+  // Legacy phase buckets (diagnose / persist) can still appear on the
+  // stats endpoint when historical task_cycle_phases rows exist. The
+  // parser must drop them silently rather than throwing — otherwise the
+  // Observability page breaks the moment a deprecated phase value is
+  // returned by an older deployment.
+  it("ignores legacy diagnose / persist buckets in stats response", () => {
+    const got = parseTaskStatsResponse({
+      total: 0,
+      ready: 0,
+      critical: 0,
+      by_status: {},
+      by_priority: {},
+      by_scope: { parent: 0, subtask: 0 },
+      ...emptyExtras,
+      phases: {
+        by_phase_status: {
+          execute: { succeeded: 3 },
+          verify: {},
+          diagnose: { skipped: 9 },
+          persist: { succeeded: 1 },
+        },
+      },
+    });
+    expect(Object.keys(got.phases.by_phase_status).sort()).toEqual([
+      "execute",
+      "verify",
+    ]);
+    expect(got.phases.by_phase_status.execute).toEqual({ succeeded: 3 });
+  });
+
+  it("parses phases heatmap with all writable phases always present", () => {
     const got = parseTaskStatsResponse({
       total: 0,
       ready: 0,
@@ -1024,6 +1054,20 @@ describe("parseTaskCyclePhase", () => {
     );
     expect(() => parseTaskCyclePhase({ ...validPhase, status: "weird" })).toThrow(
       /known phase status/,
+    );
+  });
+
+  // Historical cycle rows that predate the diagnose/persist trim must
+  // still parse so the SPA can render an honest audit trail for old
+  // attempts instead of throwing on the detail page. Pinned because the
+  // write-side PHASES enum no longer includes these values — accidentally
+  // tightening parsePhase to PHASES alone would silently break old data.
+  it("accepts legacy diagnose / persist phase values on read", () => {
+    expect(parseTaskCyclePhase({ ...validPhase, phase: "diagnose" }).phase).toBe(
+      "diagnose",
+    );
+    expect(parseTaskCyclePhase({ ...validPhase, phase: "persist" }).phase).toBe(
+      "persist",
     );
   });
 });

@@ -42,7 +42,12 @@ const PHASE_EVENT_ACTION: Partial<Record<TaskEventType, string>> = {
 };
 
 function isPhase(value: string): value is Phase {
-  return value === "execute" || value === "verify";
+  return (
+    value === "execute" ||
+    value === "verify" ||
+    value === "diagnose" ||
+    value === "persist"
+  );
 }
 
 export function eventTypeLabel(type: TaskEventType): string {

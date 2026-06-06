@@ -7,8 +7,8 @@ import {
   STATUSES,
   type CycleFailuresListResponse,
   type CycleStatus,
-  type Phase,
   type PhaseStatus,
+  type WritablePhase,
   type Priority,
   type Status,
   type Task,
@@ -190,14 +190,21 @@ function parseTaskStatsPhases(value: unknown): TaskStatsPhases {
     throw new Error("Invalid API response: phases.by_phase_status must be an object");
   }
   const by_phase_status = {} as TaskStatsPhases["by_phase_status"];
-  for (const phase of PHASES) {
+  // PHASES is the canonical writable set (`execute`, `verify`). We
+  // narrow it to `WritablePhase[]` here because the stats heatmap
+  // type is keyed on the writable subset only — legacy phase values
+  // are dropped at the parser boundary below.
+  const writablePhases = PHASES as readonly WritablePhase[];
+  for (const phase of writablePhases) {
     by_phase_status[phase] = {};
   }
+  // Legacy phase rows (diagnose / persist) may surface from historical
+  // task_cycle_phases data even though the worker no longer writes them.
+  // Drop the bucket silently rather than refusing to render the heatmap.
+  const writablePhaseKeys = writablePhases as readonly string[];
   for (const [phaseKey, inner] of Object.entries(byPhaseStatusRaw)) {
-    if (!(PHASES as readonly string[]).includes(phaseKey)) {
-      throw new Error(
-        `Invalid API response: phases.by_phase_status.${phaseKey} is not a known phase`,
-      );
+    if (!writablePhaseKeys.includes(phaseKey)) {
+      continue;
     }
     if (!isRecord(inner)) {
       throw new Error(
@@ -216,7 +223,7 @@ function parseTaskStatsPhases(value: unknown): TaskStatsPhases {
         `phases.by_phase_status.${phaseKey}.${statusKey}`,
       );
     }
-    by_phase_status[phaseKey as Phase] = bucket;
+    by_phase_status[phaseKey as WritablePhase] = bucket;
   }
   return { by_phase_status };
 }

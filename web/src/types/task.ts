@@ -112,14 +112,16 @@ export type TaskStatsCycles = {
 };
 
 /**
- * Phase aggregates from `GET /tasks/stats`. The outer map is the four
- * `domain.Phase` values; every key is always present (the inner map is
- * `{}` for phases that have never run). The `(phase x status)` shape
- * is pinned so clients can render every phase/status cell.
+ * Phase aggregates from `GET /tasks/stats`. The outer map keys are the
+ * writable `domain.Phase` values (`execute`, `verify`); every key is
+ * always present (the inner map is `{}` for phases that have never
+ * run). Legacy phase buckets returned by historical task_cycle_phases
+ * rows are dropped at the parser boundary — see
+ * {@link import("./cycle").WritablePhase}.
  */
 export type TaskStatsPhases = {
   by_phase_status: Record<
-    import("./cycle").Phase,
+    import("./cycle").WritablePhase,
     Partial<Record<import("./cycle").PhaseStatus, number>>
   >;
 };

@@ -1,5 +1,6 @@
 import {
   CYCLE_STATUSES,
+  LEGACY_PHASES,
   PHASE_STATUSES,
   PHASES,
   PRIORITIES,
@@ -83,8 +84,17 @@ export function parseCycleStatus(v: unknown): CycleStatus {
   return v as CycleStatus;
 }
 
+// Accept legacy phase values on read so historical cycle rows that
+// predate the diagnose/persist trim still render in the SPA. The
+// write-side enum (PHASES) is unchanged — only execute/verify can be
+// started by new POSTs.
+const READABLE_PHASES: readonly string[] = [
+  ...(PHASES as readonly string[]),
+  ...(LEGACY_PHASES as readonly string[]),
+];
+
 export function parsePhase(v: unknown): Phase {
-  if (typeof v !== "string" || !(PHASES as readonly string[]).includes(v)) {
+  if (typeof v !== "string" || !READABLE_PHASES.includes(v)) {
     throw new Error("Invalid API response: phase must be a known phase");
   }
   return v as Phase;
