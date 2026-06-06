@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Sticky in-page section index for the Settings page.
@@ -6,15 +6,12 @@ import { useEffect, useRef, useState } from "react";
  * The settings form spans ~2400px of vertical scroll across seven
  * sections. Without a navigation surface the operator's only path
  * to a specific knob is "scroll and scan." This component renders
- * a sticky list of section anchors and uses IntersectionObserver
- * to track which section is currently in view, mirroring the
- * pattern used by Stripe / Vercel / Linear settings pages.
+ * a sticky list of section anchors and tracks which section heading
+ * has crossed the activation line below the sticky app header.
  *
  * Visibility is desktop-only: at <1024px the page falls back to
  * vertical scroll without a nav rail (see the matching
- * @media rule in settings.css). The nav element is always
- * rendered so the IntersectionObserver wiring stays consistent
- * across breakpoints — only its container collapses.
+ * @media rule in settings.css).
  */
 export type SettingsNavItem = {
   /** DOM id of the section element. */
@@ -23,50 +20,71 @@ export type SettingsNavItem = {
   label: string;
 };
 
+/** Aligns with `.settings-section` / phase panel `scroll-margin-top`. */
+const ACTIVATION_TOP_PX = 96;
+
+/** Ignore scroll-driven updates while smooth scroll from a nav click runs. */
+const CLICK_LOCK_MS = 900;
+
 export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
   const [activeId, setActiveId] = useState<string>(items[0]?.id ?? "");
-  // Track the most recently observed visible section. The
-  // IntersectionObserver fires once per crossing, so we keep the
-  // last-known id and only update React state when it changes —
-  // avoids re-rendering the nav on every scroll tick.
   const lastActiveRef = useRef<string>(activeId);
+  const clickLockUntilRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  const computeActiveId = useCallback((): string => {
+    if (items.length === 0) return "";
+
+    const doc = document.documentElement;
+    const atBottom =
+      window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
+    if (atBottom) {
+      return items[items.length - 1].id;
+    }
+
+    let active = items[0].id;
+    for (const item of items) {
+      const el = document.getElementById(item.id);
+      if (!el) continue;
+      if (el.getBoundingClientRect().top <= ACTIVATION_TOP_PX) {
+        active = item.id;
+      }
+    }
+    return active;
+  }, [items]);
+
+  const syncActive = useCallback(() => {
+    if (Date.now() < clickLockUntilRef.current) return;
+    const next = computeActiveId();
+    if (next === lastActiveRef.current) return;
+    lastActiveRef.current = next;
+    setActiveId(next);
+  }, [computeActiveId]);
+
+  const scheduleSync = useCallback(() => {
+    if (rafRef.current !== null) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = null;
+      syncActive();
+    });
+  }, [syncActive]);
 
   useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-    const targets = items
-      .map((it) => document.getElementById(it.id))
-      .filter((el): el is HTMLElement => el !== null);
-    if (targets.length === 0) return;
+    syncActive();
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Pick the entry closest to the top of the viewport that's
-        // currently intersecting. rootMargin biases the active band
-        // to the upper third so the highlight matches what the
-        // operator's eye is drawn to, not what's barely peeking in
-        // at the bottom.
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length === 0) return;
-        const id = visible[0].target.id;
-        if (id !== lastActiveRef.current) {
-          lastActiveRef.current = id;
-          setActiveId(id);
-        }
-      },
-      {
-        // Top inset matches the sticky app header (~56px) plus a
-        // small breathing band; bottom inset keeps the active
-        // section locked in until the next section's heading
-        // crosses ~30% of the viewport.
-        rootMargin: "-80px 0px -55% 0px",
-        threshold: [0, 0.25, 0.5, 1],
-      },
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [items]);
+    window.addEventListener("scroll", scheduleSync, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("resize", scheduleSync, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", scheduleSync, true);
+      window.removeEventListener("resize", scheduleSync);
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [scheduleSync, syncActive]);
 
   function handleClick(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
     e.preventDefault();
@@ -75,15 +93,21 @@ export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
     const prefersReduced =
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    lastActiveRef.current = id;
+    setActiveId(id);
+    if (!prefersReduced) {
+      clickLockUntilRef.current = Date.now() + CLICK_LOCK_MS;
+    }
+
     el.scrollIntoView({
       behavior: prefersReduced ? "auto" : "smooth",
       block: "start",
     });
-    // Optimistically update the active marker so the click feels
-    // immediate; the IntersectionObserver will reconcile within a
-    // frame anyway.
-    setActiveId(id);
-    lastActiveRef.current = id;
+
+    if (prefersReduced) {
+      syncActive();
+    }
   }
 
   return (

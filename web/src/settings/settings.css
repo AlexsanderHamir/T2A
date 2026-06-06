@@ -393,10 +393,10 @@
 }
 
 .settings-nav-link[aria-current="true"] {
-  background: color-mix(in srgb, currentColor 6%, transparent);
-  border-left-color: currentColor;
+  background: color-mix(in srgb, var(--focus-ring, #635bff) 10%, transparent);
   color: var(--text-primary, #0a0a0a);
   font-weight: 500;
+  box-shadow: inset 3px 0 0 var(--focus-ring, #635bff);
 }
 
 /*
@@ -606,8 +606,8 @@
 .settings-field input[type="number"]:focus-visible,
 .settings-field select:focus-visible {
   outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+  border-color: var(--border-strong, var(--color-border-strong, #a1a1aa));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring, #635bff) 28%, transparent);
 }
 
 .settings-field input[type="text"]::placeholder,
@@ -965,15 +965,9 @@
 }
 
 @media (hover: hover) {
-  .settings-phase-panel:hover {
+  .settings-phase-panel:hover:not(:has(.settings-dropdown-shell--open)) {
     border-color: var(--border-soft, var(--color-border, #d0d0d5));
   }
-}
-
-.settings-phase-panel:focus-within {
-  border-color: var(--text-primary, #0a0a0a);
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--text-primary, #0a0a0a) 10%, transparent);
 }
 
 .settings-phase-panel-header {
