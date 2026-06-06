@@ -11,10 +11,11 @@ import {
 import { useAppSettings } from "./useAppSettings";
 import {
   AgentWorkerSettingsSection,
+  CursorRunnerSettingsSection,
   DisplaySettingsSection,
+  PhasesSettingsSection,
   RunTimeoutSettingsSection,
   SECTION_IDS,
-  VerificationSettingsSection,
   SettingsActions,
   SettingsHeader,
   SettingsLoadingState,
@@ -34,15 +35,16 @@ import {
 
 /**
  * In-page navigation rail entries. Order matches the form below
- * (workspace → runtime → verification → safety → cosmetic → dev) so
- * the operator's vertical scroll path matches the rail's top-to-
- * bottom reading order. Keep ids in sync with `SECTION_IDS` exported
- * from SettingsSections.tsx.
+ * (workspace → worker lifecycle → runner config → phases → safety →
+ * cosmetic → dev) so the operator's vertical scroll path matches the
+ * rail's top-to-bottom reading order. Keep ids in sync with
+ * `SECTION_IDS` exported from SettingsSections.tsx.
  */
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: SECTION_IDS.workspace, label: "Workspace" },
   { id: SECTION_IDS.agentWorker, label: "Agent worker" },
-  { id: SECTION_IDS.verification, label: "Verification" },
+  { id: SECTION_IDS.cursorAgent, label: "Cursor" },
+  { id: SECTION_IDS.phases, label: "Phases" },
   { id: SECTION_IDS.runTimeout, label: "Run timeout" },
   { id: SECTION_IDS.display, label: "Display" },
   { id: SECTION_IDS.developer, label: "Developer" },
@@ -50,9 +52,9 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
 
 /**
  * Hash targets the deep-link scroll handler will honour. Includes
- * `cursor-agent` even though it is no longer a top-level nav entry —
- * legacy links (e.g. TaskModelConfigModal → /settings#cursor-agent)
- * scroll to the runner-settings subgroup inside Agent worker.
+ * `verification` even though it is no longer a top-level nav entry —
+ * legacy links keep working by landing inside the Phases section's
+ * verify subgroup, which carries that id.
  */
 const SETTINGS_HASH_TARGETS: ReadonlySet<string> = new Set([
   ...Object.values(SECTION_IDS),
@@ -395,8 +397,11 @@ export function SettingsPage() {
           <AgentWorkerSettingsSection
             form={form}
             pickupInvalid={pickupInvalid}
-            cursorModelsQuery={cursorModelsQuery}
-            modelIdsFromList={modelIdsFromList}
+            onField={handleField}
+          />
+
+          <CursorRunnerSettingsSection
+            form={form}
             resolvedDefaultBin={resolvedDefaultBin}
             probePending={probe.isPending}
             onField={handleField}
@@ -405,8 +410,10 @@ export function SettingsPage() {
             }}
           />
 
-          <VerificationSettingsSection
+          <PhasesSettingsSection
             form={form}
+            cursorModelsQuery={cursorModelsQuery}
+            modelIdsFromList={modelIdsFromList}
             verifyModelsQuery={verifyModelsQuery}
             verifyModelIdsFromList={verifyModelIdsFromList}
             onField={handleField}

@@ -9,8 +9,6 @@ import type { TimezoneSelectOption } from "@/shared/time/appTimezone";
 import { formatTimezoneMenuLabel } from "@/shared/time/appTimezone";
 import { TimezoneCombobox } from "./TimezoneCombobox";
 import {
-  RUNNERS,
-  runnerShortLabel,
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
@@ -31,11 +29,18 @@ type HandleField = <K extends keyof SettingsFormState>(
  * Section ids used both as DOM anchors (for the in-page nav rail)
  * and as test/select hooks. Keep in sync with SETTINGS_NAV_ITEMS in
  * SettingsPage.tsx.
+ *
+ * `cursorAgent` and `verification` are retained so existing deep
+ * links (e.g. TaskModelConfigModal -> /settings#cursor-agent) still
+ * scroll to a meaningful target after the redesign:
+ * `#cursor-agent` lands on the Cursor runner card; `#verification`
+ * lands on the Phases section that hosts the verify subgroup.
  */
 export const SECTION_IDS = {
   workspace: "workspace",
   agentWorker: "agent-worker",
   cursorAgent: "cursor-agent",
+  phases: "phases",
   verification: "verification",
   runTimeout: "run-timeout",
   display: "display",
@@ -197,31 +202,12 @@ export function WorkspaceSettingsSection({
 export function AgentWorkerSettingsSection({
   form,
   pickupInvalid,
-  cursorModelsQuery,
-  modelIdsFromList,
-  resolvedDefaultBin,
-  probePending,
   onField,
-  onProbe,
 }: {
   form: SettingsFormState;
   pickupInvalid: boolean;
-  cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
-  modelIdsFromList: Set<string>;
-  resolvedDefaultBin: string | null;
-  probePending: boolean;
   onField: HandleField;
-  onProbe: () => void;
 }) {
-  const runnerLabel = runnerShortLabel(form.runner);
-  const showCursorRunnerFields = form.runner.trim() === "cursor";
-  const cursorModelSelectValue = normalizeCursorModelSelectValue(
-    form.cursorModel,
-  );
-  const cursorModelsForSelect = filterCursorModelsForSelect(
-    cursorModelsQuery.data?.ok ? cursorModelsQuery.data.models : undefined,
-  );
-
   return (
     <SectionCard id={SECTION_IDS.agentWorker} title="Agent worker">
       <label className="settings-field settings-field--inline">
@@ -233,25 +219,8 @@ export function AgentWorkerSettingsSection({
         <span className="settings-field-label">Enable agent worker</span>
       </label>
       <p className="settings-field-help">
-        Pulls ready tasks and dispatches them to the configured runner.
+        Pulls ready tasks and dispatches them to the runner configured below.
       </p>
-
-      <label className="settings-field">
-        <span className="settings-field-label">Runner</span>
-        <select
-          value={form.runner}
-          onChange={(e) => onField("runner", e.target.value)}
-        >
-          {RUNNERS.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-          {RUNNERS.find((r) => r.id === form.runner) ? null : (
-            <option value={form.runner}>{form.runner} (custom)</option>
-          )}
-        </select>
-      </label>
 
       <label className="settings-field">
         <span className="settings-field-label">Pickup delay</span>
@@ -280,173 +249,227 @@ export function AgentWorkerSettingsSection({
           Must be between 0 and 604800 (7 days).
         </p>
       ) : null}
-
-      {showCursorRunnerFields ? (
-        <div
-          id={SECTION_IDS.cursorAgent}
-          className="settings-runner-group"
-          aria-labelledby={`${SECTION_IDS.cursorAgent}-title`}
-        >
-          <p
-            id={`${SECTION_IDS.cursorAgent}-title`}
-            className="settings-runner-group-title"
-          >
-            {runnerLabel} settings
-          </p>
-
-          <label className="settings-field">
-            <span className="settings-field-label">Model</span>
-            <select
-              data-testid="settings-cursor-model-select"
-              value={cursorModelSelectValue}
-              onChange={(e) => onField("cursorModel", e.target.value)}
-              disabled={cursorModelsQuery.isFetching}
-              aria-busy={cursorModelsQuery.isFetching}
-            >
-              <option value="">Auto</option>
-              {cursorModelsForSelect.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-              {cursorModelSelectValue !== "" &&
-              !modelIdsFromList.has(cursorModelSelectValue) ? (
-                <option value={cursorModelSelectValue}>
-                  {cursorModelSelectValue} (saved — not in current list)
-                </option>
-              ) : null}
-            </select>
-          </label>
-          {cursorModelsQuery.isError ? (
-            <p role="alert" className="settings-field-error">
-              Could not load models from the Cursor CLI:{" "}
-              {cursorModelsQuery.error instanceof Error
-                ? cursorModelsQuery.error.message
-                : String(cursorModelsQuery.error)}
-            </p>
-          ) : null}
-          {cursorModelsQuery.data && !cursorModelsQuery.data.ok ? (
-            <p role="alert" className="settings-field-error">
-              {cursorModelsQuery.data.error ?? "Model list failed."}
-            </p>
-          ) : null}
-          <p className="settings-field-help">
-            Auto lets cursor-agent choose. Pick a model to pin it for every
-            run.
-          </p>
-
-          <label className="settings-field">
-            <span className="settings-field-label">Cursor CLI path</span>
-            <input
-              type="text"
-              value={form.cursorBin}
-              onChange={(e) => onField("cursorBin", e.target.value)}
-              placeholder="/usr/local/bin/cursor-agent"
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </label>
-          <p className="settings-field-help">
-            Empty = auto-detect on PATH. Test before saving.
-          </p>
-          {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
-            <div className="settings-resolved-bin">
-              <span className="settings-resolved-bin-label">
-                Currently resolves to
-              </span>
-              <code
-                className="settings-resolved-bin-path"
-                data-testid="settings-resolved-cursor-bin"
-              >
-                {resolvedDefaultBin}
-              </code>
-            </div>
-          ) : null}
-          <div className="settings-inline-actions">
-            <button
-              type="button"
-              className="settings-btn settings-btn--secondary"
-              onClick={onProbe}
-              disabled={probePending}
-            >
-              {probePending ? "Testing…" : "Test cursor binary"}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </SectionCard>
   );
 }
 
-export function VerificationSettingsSection({
+/**
+ * Cursor — the only runner today. Holds the runner-level
+ * configuration that is independent of any single phase: which
+ * binary to invoke and a probe to verify it works.
+ *
+ * Per-phase choices (which model to pass to cursor-agent for execute
+ * vs verify) live under the Phases section. This split mirrors the
+ * backend: `cursor_bin` is a runner setting (shared across phases),
+ * while `cursor_model` and `verify_runner_model` are phase-keyed
+ * model overrides handed to that one runner.
+ *
+ * The card carries `id="cursor-agent"` so legacy deep links from
+ * TaskModelConfigModal (and elsewhere) still land on a meaningful
+ * target after the section was renamed from "Cursor agent".
+ */
+export function CursorRunnerSettingsSection({
   form,
+  resolvedDefaultBin,
+  probePending,
+  onField,
+  onProbe,
+}: {
+  form: SettingsFormState;
+  resolvedDefaultBin: string | null;
+  probePending: boolean;
+  onField: HandleField;
+  onProbe: () => void;
+}) {
+  return (
+    <SectionCard id={SECTION_IDS.cursorAgent} title="Cursor">
+      <label className="settings-field">
+        <span className="settings-field-label">Cursor CLI path</span>
+        <input
+          type="text"
+          value={form.cursorBin}
+          onChange={(e) => onField("cursorBin", e.target.value)}
+          placeholder="/usr/local/bin/cursor-agent"
+          spellCheck={false}
+          autoComplete="off"
+        />
+      </label>
+      <p className="settings-field-help">
+        Empty = auto-detect on PATH. Test before saving.
+      </p>
+      {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
+        <div className="settings-resolved-bin">
+          <span className="settings-resolved-bin-label">
+            Currently resolves to
+          </span>
+          <code
+            className="settings-resolved-bin-path"
+            data-testid="settings-resolved-cursor-bin"
+          >
+            {resolvedDefaultBin}
+          </code>
+        </div>
+      ) : null}
+      <div className="settings-inline-actions">
+        <button
+          type="button"
+          className="settings-btn settings-btn--secondary"
+          onClick={onProbe}
+          disabled={probePending}
+        >
+          {probePending ? "Testing…" : "Test cursor binary"}
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
+/**
+ * Reusable model picker for a phase. Centralises the "Auto + filtered
+ * runner models + saved-but-unknown synthetic option + loading and
+ * error inline reporting" pattern shared by the execute and verify
+ * phase blocks. Both phases drive the same cursor-agent binary, so
+ * the wire shape is identical; the only thing that varies per call
+ * site is which form field the value writes back to and which
+ * react-query observable feeds the option list.
+ */
+function PhaseModelField({
+  testId,
+  value,
+  onChange,
+  query,
+  knownIds,
+  disabled,
+}: {
+  testId: string;
+  value: string;
+  onChange: (next: string) => void;
+  query: UseQueryResult<ListCursorModelsResult, Error>;
+  knownIds: Set<string>;
+  disabled?: boolean;
+}) {
+  const selectValue = normalizeCursorModelSelectValue(value);
+  const models = filterCursorModelsForSelect(
+    query.data?.ok ? query.data.models : undefined,
+  );
+  return (
+    <>
+      <label className="settings-field">
+        <span className="settings-field-label">Model</span>
+        <select
+          data-testid={testId}
+          value={selectValue}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled || query.isFetching}
+          aria-busy={query.isFetching}
+        >
+          <option value="">Auto</option>
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+          {selectValue !== "" && !knownIds.has(selectValue) ? (
+            <option value={selectValue}>
+              {selectValue} (saved — not in current list)
+            </option>
+          ) : null}
+        </select>
+      </label>
+      {query.isError ? (
+        <p role="alert" className="settings-field-error">
+          Could not load models for this runner:{" "}
+          {query.error instanceof Error
+            ? query.error.message
+            : String(query.error)}
+        </p>
+      ) : null}
+      {query.data && !query.data.ok ? (
+        <p role="alert" className="settings-field-error">
+          {query.data.error ?? "Model list failed."}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Phases — execute and verify configuration, side-by-side under a
+ * single card. Each phase has its own block with its own Model field
+ * and any phase-specific controls (verify additionally has the
+ * enable toggle, retry budget, and check-command timeout).
+ *
+ * The runner picker is intentionally absent today: only one runner
+ * (Cursor) is registered, so showing a "Same as execute / Cursor"
+ * dropdown would offer no real choice. When a second runner ships,
+ * a per-phase runner select can return alongside the model field
+ * without disturbing this layout.
+ */
+export function PhasesSettingsSection({
+  form,
+  cursorModelsQuery,
+  modelIdsFromList,
   verifyModelsQuery,
   verifyModelIdsFromList,
   onField,
 }: {
   form: SettingsFormState;
+  cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
+  modelIdsFromList: Set<string>;
   verifyModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
   verifyModelIdsFromList: Set<string>;
   onField: HandleField;
 }) {
-  const enabled = form.verifyEnabled;
-  const verifyRunnerSaved = form.verifyRunnerName.trim();
-  const verifyModelSaved = form.verifyRunnerModel.trim();
-  const verifyRunnerKnown =
-    verifyRunnerSaved === "" ||
-    RUNNERS.some((r) => r.id === verifyRunnerSaved);
-  /**
-   * Resolved execute-runner label, surfaced inside the verify-runner
-   * dropdown so the operator can see WHICH runner verify will reuse
-   * when the field is left at its default. Per pkgs/agents/worker/
-   * verification.go, an empty `verify_runner_name` falls back to
-   * `w.runner` (the execute runner) — without surfacing that here
-   * the operator has to read backend code to find out what
-   * "Same as execute runner" actually means.
-   *
-   * Phrased as "Same as execute runner: <value>" rather than
-   * "<value> (same as execute runner)" so it reads as a live
-   * pointer to the Agent worker section above, not a hardcoded
-   * default that happens to be Cursor.
-   */
-  const executeRunnerTrim = form.runner.trim();
-  const executeRunnerEntry = RUNNERS.find((r) => r.id === executeRunnerTrim);
-  const executeRunnerLabel =
-    executeRunnerEntry?.label ??
-    (executeRunnerTrim || "(none configured)");
-  const verifyModelSelectValue = normalizeCursorModelSelectValue(
-    verifyModelSaved,
-  );
-  const verifyModelsForSelect = filterCursorModelsForSelect(
-    verifyModelsQuery.data?.ok ? verifyModelsQuery.data.models : undefined,
-  );
+  const verifyEnabled = form.verifyEnabled;
   return (
-    <SectionCard id={SECTION_IDS.verification} title="Verification">
-      <label className="settings-verify-toggle">
-        <input
-          type="checkbox"
-          role="switch"
-          aria-checked={enabled}
-          checked={enabled}
-          onChange={(e) => onField("verifyEnabled", e.target.checked)}
+    <SectionCard id={SECTION_IDS.phases} title="Phases">
+      <div className="settings-phase-block">
+        <p className="settings-phase-title">Execute</p>
+        <p className="settings-phase-help">
+          The agent runs the work for each task. Pick the model
+          cursor-agent should use, or leave on Auto to let it choose.
+        </p>
+        <PhaseModelField
+          testId="settings-cursor-model-select"
+          value={form.cursorModel}
+          onChange={(v) => onField("cursorModel", v)}
+          query={cursorModelsQuery}
+          knownIds={modelIdsFromList}
         />
-        <span className="settings-verify-toggle-copy">
-          <span className="settings-verify-toggle-title">
-            Verify done criteria before marking them complete
-          </span>
-          <span className="settings-verify-toggle-help">
-            The agent must prove each criterion passed — via your{" "}
-            <code>check</code> command or an LLM verifier — before it&apos;s
-            marked done. When off, criteria are bulk-marked done on a
-            successful execute run.
-          </span>
-        </span>
-      </label>
+      </div>
 
-      {enabled ? (
-        <div className="settings-verify-details">
-          <div className="settings-verify-group">
-            <p className="settings-verify-group-title">Budget</p>
+      <div id={SECTION_IDS.verification} className="settings-phase-block">
+        <p className="settings-phase-title">Verify</p>
+        <label className="settings-verify-toggle">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-checked={verifyEnabled}
+            checked={verifyEnabled}
+            onChange={(e) => onField("verifyEnabled", e.target.checked)}
+          />
+          <span className="settings-verify-toggle-copy">
+            <span className="settings-verify-toggle-title">
+              Verify done criteria before marking them complete
+            </span>
+            <span className="settings-verify-toggle-help">
+              The agent must prove each criterion passed — via your{" "}
+              <code>check</code> command or an LLM verifier — before it&apos;s
+              marked done. When off, criteria are bulk-marked done on a
+              successful execute run.
+            </span>
+          </span>
+        </label>
+
+        {verifyEnabled ? (
+          <div className="settings-verify-details">
+            <PhaseModelField
+              testId="settings-verify-model-select"
+              value={form.verifyRunnerModel}
+              onChange={(v) => onField("verifyRunnerModel", v)}
+              query={verifyModelsQuery}
+              knownIds={verifyModelIdsFromList}
+            />
 
             <label className="settings-field">
               <span className="settings-field-label">
@@ -502,89 +525,8 @@ export function VerificationSettingsSection({
               <code>{MAX_CHECK_COMMAND_TIMEOUT_SECONDS}</code>.
             </p>
           </div>
-
-          <details className="settings-learn-more settings-verify-advanced">
-            <summary>Override verifier for this phase</summary>
-            <p>
-              By default, verify reuses your execute runner and lets it pick
-              the model. Override either field below to pin a specific judge
-              for the verify phase only.
-            </p>
-
-            <label className="settings-field">
-              <span className="settings-field-label">Verify runner</span>
-              <select
-                data-testid="settings-verify-runner-select"
-                value={form.verifyRunnerName}
-                onChange={(e) => onField("verifyRunnerName", e.target.value)}
-              >
-                <option value="">
-                  Same as execute runner: {executeRunnerLabel}
-                </option>
-                {RUNNERS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-                {!verifyRunnerKnown ? (
-                  <option value={verifyRunnerSaved}>
-                    {verifyRunnerSaved} (saved — not registered here)
-                  </option>
-                ) : null}
-              </select>
-            </label>
-            <p className="settings-field-help">
-              {verifyRunnerSaved === ""
-                ? "Reads the runner you set in Agent worker above. Pick a runner here to override for verify only."
-                : "Override active — verify uses this runner instead of the execute runner."}
-            </p>
-
-            <label className="settings-field">
-              <span className="settings-field-label">Verify runner model</span>
-              <select
-                data-testid="settings-verify-model-select"
-                value={verifyModelSelectValue}
-                onChange={(e) =>
-                  onField("verifyRunnerModel", e.target.value)
-                }
-                disabled={verifyModelsQuery.isFetching}
-                aria-busy={verifyModelsQuery.isFetching}
-              >
-                <option value="">Auto</option>
-                {verifyModelsForSelect.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-                {verifyModelSelectValue !== "" &&
-                !verifyModelIdsFromList.has(verifyModelSelectValue) ? (
-                  <option value={verifyModelSelectValue}>
-                    {verifyModelSelectValue} (saved — not in current list)
-                  </option>
-                ) : null}
-              </select>
-            </label>
-            <p className="settings-field-help">
-              {verifyModelSelectValue === ""
-                ? "Auto lets the verify runner choose. Pick a model to pin for verify only."
-                : "Override active — verify pins this model regardless of execute."}
-            </p>
-            {verifyModelsQuery.isError ? (
-              <p role="alert" className="settings-field-error">
-                Could not load models for this runner:{" "}
-                {verifyModelsQuery.error instanceof Error
-                  ? verifyModelsQuery.error.message
-                  : String(verifyModelsQuery.error)}
-              </p>
-            ) : null}
-            {verifyModelsQuery.data && !verifyModelsQuery.data.ok ? (
-              <p role="alert" className="settings-field-error">
-                {verifyModelsQuery.data.error ?? "Model list failed."}
-              </p>
-            ) : null}
-          </details>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </SectionCard>
   );
 }

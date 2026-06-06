@@ -844,49 +844,38 @@
   }
 }
 
-.settings-verify-group,
-.settings-runner-group {
+/*
+ * Phase block — Execute / Verify subgroups inside the Phases card.
+ * Sibling blocks share a top hairline so the visual rhythm reads as
+ * "section title → first phase → divider → next phase". The first
+ * block's hairline separates it from the section heading; subsequent
+ * blocks reuse the same rule for consistency.
+ */
+.settings-phase-block {
   display: flex;
   flex-direction: column;
   gap: var(--space-3, 12px);
-}
-
-.settings-runner-group {
   margin-top: var(--space-2, 8px);
   padding-top: var(--space-4, 16px);
   border-top: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
 }
 
-.settings-runner-group-title {
+.settings-phase-title {
   margin: 0;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary, var(--color-text-muted, #777));
-}
-
-/* Deep link /settings#cursor-agent — subgroup inside Agent worker */
-.settings-runner-group#cursor-agent {
-  scroll-margin-top: 5.5rem;
-}
-
-.settings-verify-group-title {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary, var(--color-text-muted, #777));
-}
-
-.settings-verify-advanced {
-  margin: 0;
-}
-
-.settings-verify-advanced > summary {
-  font-size: 13px;
   color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+.settings-phase-help {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+/* Deep link /settings#verification — verify subgroup inside Phases */
+.settings-phase-block#verification {
+  scroll-margin-top: 5.5rem;
 }
 
 /*
