@@ -370,12 +370,21 @@ export function CursorAgentSettingsSection({
 
 export function VerificationSettingsSection({
   form,
+  verifyModelsQuery,
+  verifyModelIdsFromList,
   onField,
 }: {
   form: SettingsFormState;
+  verifyModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
+  verifyModelIdsFromList: Set<string>;
   onField: HandleField;
 }) {
   const enabled = form.verifyEnabled;
+  const verifyRunnerSaved = form.verifyRunnerName.trim();
+  const verifyModelSaved = form.verifyRunnerModel.trim();
+  const verifyRunnerKnown =
+    verifyRunnerSaved === "" ||
+    RUNNERS.some((r) => r.id === verifyRunnerSaved);
   return (
     <fieldset className="settings-fieldset" id="verification">
       <legend className="settings-fieldset-legend">Verification</legend>
@@ -464,30 +473,73 @@ export function VerificationSettingsSection({
           <details className="settings-learn-more settings-verify-advanced">
             <summary>Advanced verifier</summary>
             <p>
-              Use a different runner to judge the work the execute runner
-              produced. Most teams leave both fields empty — the execute runner
-              also acts as verifier.
+              Pick a different runner — or a different model on the same
+              runner — to judge the work the execute runner produced. Leave
+              both fields on their default to reuse the execute runner and
+              its default model.
             </p>
 
             <label className="settings-field">
               <span className="settings-field-label">Verify runner</span>
-              <input
-                type="text"
+              <select
+                data-testid="settings-verify-runner-select"
                 value={form.verifyRunnerName}
                 onChange={(e) => onField("verifyRunnerName", e.target.value)}
-                placeholder="Same as execute runner when empty"
-              />
+              >
+                <option value="">Same as execute runner</option>
+                {RUNNERS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+                {!verifyRunnerKnown ? (
+                  <option value={verifyRunnerSaved}>
+                    {verifyRunnerSaved} (saved — not registered here)
+                  </option>
+                ) : null}
+              </select>
             </label>
 
             <label className="settings-field">
               <span className="settings-field-label">Verify runner model</span>
-              <input
-                type="text"
+              <select
+                data-testid="settings-verify-model-select"
                 value={form.verifyRunnerModel}
-                onChange={(e) => onField("verifyRunnerModel", e.target.value)}
-                placeholder="Runner default"
-              />
+                onChange={(e) =>
+                  onField("verifyRunnerModel", e.target.value)
+                }
+                disabled={verifyModelsQuery.isFetching}
+                aria-busy={verifyModelsQuery.isFetching}
+              >
+                <option value="">Default (runner picks)</option>
+                {verifyModelsQuery.data?.ok && verifyModelsQuery.data.models
+                  ? verifyModelsQuery.data.models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))
+                  : null}
+                {verifyModelSaved !== "" &&
+                !verifyModelIdsFromList.has(verifyModelSaved) ? (
+                  <option value={verifyModelSaved}>
+                    {verifyModelSaved} (saved — not in current list)
+                  </option>
+                ) : null}
+              </select>
             </label>
+            {verifyModelsQuery.isError ? (
+              <p role="alert" className="settings-field-error">
+                Could not load models for this runner:{" "}
+                {verifyModelsQuery.error instanceof Error
+                  ? verifyModelsQuery.error.message
+                  : String(verifyModelsQuery.error)}
+              </p>
+            ) : null}
+            {verifyModelsQuery.data && !verifyModelsQuery.data.ok ? (
+              <p role="alert" className="settings-field-error">
+                {verifyModelsQuery.data.error ?? "Model list failed."}
+              </p>
+            ) : null}
           </details>
         </div>
       ) : null}

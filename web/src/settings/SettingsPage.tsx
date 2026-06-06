@@ -120,6 +120,44 @@ export function SettingsPage() {
     return new Set(m.models.map((x) => x.id));
   }, [cursorModelsQuery.data]);
 
+  // Verify-runner model list — same wire shape as the execute runner
+  // model query, just keyed on the effective verify runner. When
+  // `verify_runner_name` is empty the verify path reuses the execute
+  // runner (see worker.go::loadVerificationSnapshot), so the model
+  // list collapses onto cursorModelsQuery's response. We could share
+  // the cache by keying on the same tuple, but a separate query
+  // makes "verify uses runner X" explicit in network traces and
+  // keeps the section autonomous if a future verify runner ever
+  // ships its own binary input.
+  const verifyEffectiveRunner =
+    (form?.verifyRunnerName ?? "").trim() ||
+    form?.runner ||
+    settings?.runner ||
+    "cursor";
+  const verifyModelsQuery = useQuery({
+    queryKey: [
+      "settings",
+      "verify-models",
+      verifyEffectiveRunner,
+      form?.cursorBin,
+    ],
+    queryFn: ({ signal }) =>
+      listCursorModels(
+        {
+          runner: verifyEffectiveRunner,
+          binary_path: (form?.cursorBin ?? "").trim() || undefined,
+        },
+        { signal },
+      ),
+    enabled: Boolean(settings && form && form.verifyEnabled),
+  });
+
+  const verifyModelIdsFromList = useMemo(() => {
+    const m = verifyModelsQuery.data;
+    if (!m?.ok || !m.models) return new Set<string>();
+    return new Set(m.models.map((x) => x.id));
+  }, [verifyModelsQuery.data]);
+
   const tzSelectOptions = useMemo(() => getTimezoneSelectOptions(), []);
   const tzValueSet = useMemo(
     () => new Set(tzSelectOptions.map((o) => o.value)),
@@ -342,7 +380,12 @@ export function SettingsPage() {
           }}
         />
 
-        <VerificationSettingsSection form={form} onField={handleField} />
+        <VerificationSettingsSection
+          form={form}
+          verifyModelsQuery={verifyModelsQuery}
+          verifyModelIdsFromList={verifyModelIdsFromList}
+          onField={handleField}
+        />
 
         <RunTimeoutSettingsSection
           form={form}
