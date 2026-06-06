@@ -6,6 +6,7 @@ import { formatTimezoneMenuLabel } from "@/shared/time/appTimezone";
 import { TimezoneCombobox } from "./TimezoneCombobox";
 import {
   RUNNERS,
+  runnerShortLabel,
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
@@ -131,23 +132,14 @@ export function WorkspaceWarning() {
  * gives the section a real anchor a sighted operator can scan and
  * an assistive-tech user can land on.
  *
- * `description` is reserved for the rare case where the section's
- * title alone does not convey that the section's contents are
- * dynamically scoped to a choice made elsewhere on the page (e.g.
- * the Runner section configures whichever runner was picked under
- * Agent worker). Most sections leave this undefined; the redesign
- * deliberately dropped per-section subtitle paragraphs that simply
- * restated the heading.
  */
 function SectionCard({
   id,
   title,
-  description,
   children,
 }: {
   id: string;
   title: string;
-  description?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -159,12 +151,7 @@ function SectionCard({
       <h2 id={`${id}-title`} className="settings-section-title">
         {title}
       </h2>
-      <div className="settings-section-body">
-        {description ? (
-          <p className="settings-section-description">{description}</p>
-        ) : null}
-        {children}
-      </div>
+      <div className="settings-section-body">{children}</div>
     </section>
   );
 }
@@ -206,12 +193,25 @@ export function WorkspaceSettingsSection({
 export function AgentWorkerSettingsSection({
   form,
   pickupInvalid,
+  cursorModelsQuery,
+  modelIdsFromList,
+  resolvedDefaultBin,
+  probePending,
   onField,
+  onProbe,
 }: {
   form: SettingsFormState;
   pickupInvalid: boolean;
+  cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
+  modelIdsFromList: Set<string>;
+  resolvedDefaultBin: string | null;
+  probePending: boolean;
   onField: HandleField;
+  onProbe: () => void;
 }) {
+  const runnerLabel = runnerShortLabel(form.runner);
+  const showCursorRunnerFields = form.runner.trim() === "cursor";
+
   return (
     <SectionCard id={SECTION_IDS.agentWorker} title="Agent worker">
       <label className="settings-field settings-field--inline">
@@ -223,7 +223,7 @@ export function AgentWorkerSettingsSection({
         <span className="settings-field-label">Enable agent worker</span>
       </label>
       <p className="settings-field-help">
-        Pulls ready tasks and dispatches them to the runner.
+        Pulls ready tasks and dispatches them to the configured runner.
       </p>
 
       <label className="settings-field">
@@ -270,123 +270,109 @@ export function AgentWorkerSettingsSection({
           Must be between 0 and 604800 (7 days).
         </p>
       ) : null}
-    </SectionCard>
-  );
-}
 
-export function CursorAgentSettingsSection({
-  form,
-  title,
-  cursorModelsQuery,
-  modelIdsFromList,
-  resolvedDefaultBin,
-  probePending,
-  onField,
-  onProbe,
-}: {
-  form: SettingsFormState;
-  /**
-   * Dynamic section title resolved by the parent from
-   * `runnerShortLabel(form.runner) + " runner"`. Passed in rather
-   * than hardcoded so the section heading and nav rail label both
-   * reflect the operator's chosen runner.
-   */
-  title: string;
-  cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
-  modelIdsFromList: Set<string>;
-  resolvedDefaultBin: string | null;
-  probePending: boolean;
-  onField: HandleField;
-  onProbe: () => void;
-}) {
-  return (
-    <SectionCard
-      id={SECTION_IDS.cursorAgent}
-      title={title}
-      description="Configures the runner you selected in Agent worker. Changing the runner above swaps this section for that runner's settings."
-    >
-      <label className="settings-field">
-        <span className="settings-field-label">Model</span>
-        <select
-          data-testid="settings-cursor-model-select"
-          value={form.cursorModel}
-          onChange={(e) => onField("cursorModel", e.target.value)}
-          disabled={cursorModelsQuery.isFetching}
-          aria-busy={cursorModelsQuery.isFetching}
+      {showCursorRunnerFields ? (
+        <div
+          id={SECTION_IDS.cursorAgent}
+          className="settings-runner-group"
+          aria-labelledby={`${SECTION_IDS.cursorAgent}-title`}
         >
-          <option value="">Default (runner picks)</option>
-          {cursorModelsQuery.data?.ok && cursorModelsQuery.data.models
-            ? cursorModelsQuery.data.models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))
-            : null}
-          {form.cursorModel.trim() !== "" &&
-          !modelIdsFromList.has(form.cursorModel.trim()) ? (
-            <option value={form.cursorModel.trim()}>
-              {form.cursorModel.trim()} (saved — not in current list)
-            </option>
-          ) : null}
-        </select>
-      </label>
-      {cursorModelsQuery.isError ? (
-        <p role="alert" className="settings-field-error">
-          Could not load models from the Cursor CLI:{" "}
-          {cursorModelsQuery.error instanceof Error
-            ? cursorModelsQuery.error.message
-            : String(cursorModelsQuery.error)}
-        </p>
-      ) : null}
-      {cursorModelsQuery.data && !cursorModelsQuery.data.ok ? (
-        <p role="alert" className="settings-field-error">
-          {cursorModelsQuery.data.error ?? "Model list failed."}
-        </p>
-      ) : null}
-      <p className="settings-field-help">
-        From <code>cursor-agent --list-models</code>. Default omits{" "}
-        <code>--model</code>.
-      </p>
-      <details className="settings-learn-more">
-        <summary>Hit a usage-limit error?</summary>
-        <p>Pick a different model here and save to route new runs through it.</p>
-      </details>
-
-      <label className="settings-field">
-        <span className="settings-field-label">Cursor CLI path</span>
-        <input
-          type="text"
-          value={form.cursorBin}
-          onChange={(e) => onField("cursorBin", e.target.value)}
-          placeholder="/usr/local/bin/cursor-agent"
-          spellCheck={false}
-          autoComplete="off"
-        />
-      </label>
-      <p className="settings-field-help">
-        Empty = auto-detect on PATH. Test before saving.
-      </p>
-      {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
-        <div className="settings-resolved-bin">
-          <span className="settings-resolved-bin-label">Currently resolves to</span>
-          <code
-            className="settings-resolved-bin-path"
-            data-testid="settings-resolved-cursor-bin"
+          <p
+            id={`${SECTION_IDS.cursorAgent}-title`}
+            className="settings-runner-group-title"
           >
-            {resolvedDefaultBin}
-          </code>
+            {runnerLabel} settings
+          </p>
+
+          <label className="settings-field">
+            <span className="settings-field-label">Model</span>
+            <select
+              data-testid="settings-cursor-model-select"
+              value={form.cursorModel}
+              onChange={(e) => onField("cursorModel", e.target.value)}
+              disabled={cursorModelsQuery.isFetching}
+              aria-busy={cursorModelsQuery.isFetching}
+            >
+              <option value="">Default (runner picks)</option>
+              {cursorModelsQuery.data?.ok && cursorModelsQuery.data.models
+                ? cursorModelsQuery.data.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))
+                : null}
+              {form.cursorModel.trim() !== "" &&
+              !modelIdsFromList.has(form.cursorModel.trim()) ? (
+                <option value={form.cursorModel.trim()}>
+                  {form.cursorModel.trim()} (saved — not in current list)
+                </option>
+              ) : null}
+            </select>
+          </label>
+          {cursorModelsQuery.isError ? (
+            <p role="alert" className="settings-field-error">
+              Could not load models from the Cursor CLI:{" "}
+              {cursorModelsQuery.error instanceof Error
+                ? cursorModelsQuery.error.message
+                : String(cursorModelsQuery.error)}
+            </p>
+          ) : null}
+          {cursorModelsQuery.data && !cursorModelsQuery.data.ok ? (
+            <p role="alert" className="settings-field-error">
+              {cursorModelsQuery.data.error ?? "Model list failed."}
+            </p>
+          ) : null}
+          <p className="settings-field-help">
+            From <code>cursor-agent --list-models</code>. Default omits{" "}
+            <code>--model</code>.
+          </p>
+          <details className="settings-learn-more">
+            <summary>Hit a usage-limit error?</summary>
+            <p>
+              Pick a different model here and save to route new runs through
+              it.
+            </p>
+          </details>
+
+          <label className="settings-field">
+            <span className="settings-field-label">Cursor CLI path</span>
+            <input
+              type="text"
+              value={form.cursorBin}
+              onChange={(e) => onField("cursorBin", e.target.value)}
+              placeholder="/usr/local/bin/cursor-agent"
+              spellCheck={false}
+              autoComplete="off"
+            />
+          </label>
+          <p className="settings-field-help">
+            Empty = auto-detect on PATH. Test before saving.
+          </p>
+          {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
+            <div className="settings-resolved-bin">
+              <span className="settings-resolved-bin-label">
+                Currently resolves to
+              </span>
+              <code
+                className="settings-resolved-bin-path"
+                data-testid="settings-resolved-cursor-bin"
+              >
+                {resolvedDefaultBin}
+              </code>
+            </div>
+          ) : null}
+          <div className="settings-inline-actions">
+            <button
+              type="button"
+              className="settings-btn settings-btn--secondary"
+              onClick={onProbe}
+              disabled={probePending}
+            >
+              {probePending ? "Testing…" : "Test cursor binary"}
+            </button>
+          </div>
         </div>
       ) : null}
-      <div className="settings-inline-actions">
-        <button
-          type="button"
-          className="settings-btn settings-btn--secondary"
-          onClick={onProbe}
-          disabled={probePending}
-        >
-          {probePending ? "Testing…" : "Test cursor binary"}
-        </button>
-      </div>
     </SectionCard>
   );
 }

@@ -460,24 +460,6 @@
   padding: 18px var(--layout-gutter-x) 22px;
 }
 
-/*
- * Optional one-line description directly under the section title.
- *
- * Reserved for sections whose title alone does not communicate that
- * they are dynamically scoped to a choice elsewhere on the page —
- * e.g. the runner section's title tracks Agent worker's runner pick
- * and would otherwise read as a hardcoded "Cursor runner". Sized
- * one tier below body copy so it reads as orienting metadata rather
- * than primary content; tighter top margin so it sits visually
- * paired with the heading instead of with the first field below.
- */
-.settings-section-description {
-  margin: -4px 0 4px;
-  font-size: var(--text-sm, 0.875rem);
-  line-height: 1.5;
-  color: var(--text-secondary, var(--color-text-muted, #555));
-}
-
 /* Legacy: pre-existing fieldset selector. Kept as an alias so any
    markup that still uses `.settings-fieldset` (older docs/screens,
    embedded help) inherits the new card styling without breaking.
@@ -862,10 +844,31 @@
   }
 }
 
-.settings-verify-group {
+.settings-verify-group,
+.settings-runner-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-3, 12px);
+}
+
+.settings-runner-group {
+  margin-top: var(--space-2, 8px);
+  padding-top: var(--space-4, 16px);
+  border-top: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+}
+
+.settings-runner-group-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, var(--color-text-muted, #777));
+}
+
+/* Deep link /settings#cursor-agent — subgroup inside Agent worker */
+.settings-runner-group#cursor-agent {
+  scroll-margin-top: 5.5rem;
 }
 
 .settings-verify-group-title {
