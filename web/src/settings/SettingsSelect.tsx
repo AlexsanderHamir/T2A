@@ -125,6 +125,7 @@ export function SettingsSelect({
   const listId = `${baseId}-list`;
   const searchId = `${baseId}-search`;
   const rootRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -179,7 +180,7 @@ export function SettingsSelect({
   );
 
   const updatePosition = useCallback(() => {
-    const el = triggerRef.current;
+    const el = shellRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     setPos({ top: r.bottom + 6, left: r.left, width: r.width });
@@ -417,7 +418,7 @@ export function SettingsSelect({
 
   return (
     <div ref={rootRef} className="settings-dropdown">
-      <div className={shellClass}>
+      <div ref={shellRef} className={shellClass}>
         <button
           ref={triggerRef}
           type="button"
