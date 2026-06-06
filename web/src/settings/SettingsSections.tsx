@@ -10,6 +10,8 @@ import {
   type SettingsStatus,
 } from "./settingsForm";
 import {
+  DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
+  DEFAULT_VERIFY_MAX_RETRIES,
   MAX_CHECK_COMMAND_TIMEOUT_SECONDS,
   MAX_VERIFY_MAX_RETRIES,
   MIN_CHECK_COMMAND_TIMEOUT_SECONDS,
@@ -373,60 +375,122 @@ export function VerificationSettingsSection({
   form: SettingsFormState;
   onField: HandleField;
 }) {
+  const enabled = form.verifyEnabled;
   return (
     <fieldset className="settings-fieldset" id="verification">
       <legend className="settings-fieldset-legend">Verification</legend>
-      <p className="settings-section-subtitle">
-        Execute → verify guardrail for done criteria. Disable to fall back to
-        legacy bulk completion on successful runs.
-      </p>
-      <label className="settings-field settings-field--checkbox">
+
+      <label className="settings-verify-toggle">
         <input
           type="checkbox"
-          checked={form.verifyEnabled}
+          role="switch"
+          aria-checked={enabled}
+          checked={enabled}
           onChange={(e) => onField("verifyEnabled", e.target.checked)}
         />
-        <span>Enable criteria verification</span>
+        <span className="settings-verify-toggle-copy">
+          <span className="settings-verify-toggle-title">
+            Verify done criteria before marking them complete
+          </span>
+          <span className="settings-verify-toggle-help">
+            The agent must prove each criterion passed — via your{" "}
+            <code>check</code> command or an LLM verifier — before it&apos;s
+            marked done. When off, criteria are bulk-marked done on a successful
+            execute run.
+          </span>
+        </span>
       </label>
-      <label className="settings-field">
-        <span className="settings-field-label">Max verify retries</span>
-        <input
-          type="number"
-          min={0}
-          max={MAX_VERIFY_MAX_RETRIES}
-          step={1}
-          value={form.verifyMaxRetries}
-          onChange={(e) => onField("verifyMaxRetries", e.target.value)}
-        />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">Verify runner name (optional)</span>
-        <input
-          type="text"
-          value={form.verifyRunnerName}
-          onChange={(e) => onField("verifyRunnerName", e.target.value)}
-          placeholder="Same as execute runner when empty"
-        />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">Verify runner model (optional)</span>
-        <input
-          type="text"
-          value={form.verifyRunnerModel}
-          onChange={(e) => onField("verifyRunnerModel", e.target.value)}
-        />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">Check command timeout (seconds)</span>
-        <input
-          type="number"
-          min={MIN_CHECK_COMMAND_TIMEOUT_SECONDS}
-          max={MAX_CHECK_COMMAND_TIMEOUT_SECONDS}
-          step={1}
-          value={form.checkCommandTimeoutSeconds}
-          onChange={(e) => onField("checkCommandTimeoutSeconds", e.target.value)}
-        />
-      </label>
+
+      {enabled ? (
+        <div className="settings-verify-details">
+          <div className="settings-verify-group">
+            <h3 className="settings-verify-group-title">Budget</h3>
+
+            <label className="settings-field">
+              <span className="settings-field-label">
+                Retry attempts on failure
+              </span>
+              <span className="settings-field-input-suffix">
+                <input
+                  type="number"
+                  min={0}
+                  max={MAX_VERIFY_MAX_RETRIES}
+                  step={1}
+                  value={form.verifyMaxRetries}
+                  onChange={(e) =>
+                    onField("verifyMaxRetries", e.target.value)
+                  }
+                />
+                <span className="settings-field-suffix" aria-hidden="true">
+                  attempts
+                </span>
+              </span>
+            </label>
+            <p className="settings-field-help">
+              How many times to re-run execute after a verify failure. Default{" "}
+              <code>{DEFAULT_VERIFY_MAX_RETRIES}</code> · Range{" "}
+              <code>0</code>–<code>{MAX_VERIFY_MAX_RETRIES}</code>.
+            </p>
+
+            <label className="settings-field">
+              <span className="settings-field-label">
+                Check command timeout
+              </span>
+              <span className="settings-field-input-suffix">
+                <input
+                  type="number"
+                  min={MIN_CHECK_COMMAND_TIMEOUT_SECONDS}
+                  max={MAX_CHECK_COMMAND_TIMEOUT_SECONDS}
+                  step={1}
+                  value={form.checkCommandTimeoutSeconds}
+                  onChange={(e) =>
+                    onField("checkCommandTimeoutSeconds", e.target.value)
+                  }
+                />
+                <span className="settings-field-suffix" aria-hidden="true">
+                  seconds
+                </span>
+              </span>
+            </label>
+            <p className="settings-field-help">
+              Each criterion&apos;s <code>check</code> shell command is killed
+              after this. Default{" "}
+              <code>{DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS}</code>s · Range{" "}
+              <code>{MIN_CHECK_COMMAND_TIMEOUT_SECONDS}</code>–
+              <code>{MAX_CHECK_COMMAND_TIMEOUT_SECONDS}</code>.
+            </p>
+          </div>
+
+          <details className="settings-learn-more settings-verify-advanced">
+            <summary>Advanced verifier</summary>
+            <p>
+              Use a different runner to judge the work the execute runner
+              produced. Most teams leave both fields empty — the execute runner
+              also acts as verifier.
+            </p>
+
+            <label className="settings-field">
+              <span className="settings-field-label">Verify runner</span>
+              <input
+                type="text"
+                value={form.verifyRunnerName}
+                onChange={(e) => onField("verifyRunnerName", e.target.value)}
+                placeholder="Same as execute runner when empty"
+              />
+            </label>
+
+            <label className="settings-field">
+              <span className="settings-field-label">Verify runner model</span>
+              <input
+                type="text"
+                value={form.verifyRunnerModel}
+                onChange={(e) => onField("verifyRunnerModel", e.target.value)}
+                placeholder="Runner default"
+              />
+            </label>
+          </details>
+        </div>
+      ) : null}
     </fieldset>
   );
 }
