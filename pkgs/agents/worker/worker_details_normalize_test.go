@@ -83,10 +83,10 @@ func TestRegression_Worker_normalizes_non_object_runner_details(t *testing.T) {
 			if err != nil {
 				t.Fatalf("list phases: %v", err)
 			}
-			if len(phases) != 2 {
-				t.Fatalf("phase count = %d, want 2", len(phases))
+			if len(phases) != 1 {
+				t.Fatalf("phase count = %d, want 1", len(phases))
 			}
-			exec := phases[1]
+			exec := phases[0]
 			if exec.Phase != domain.PhaseExecute || exec.Status != domain.PhaseStatusSucceeded {
 				t.Fatalf("execute phase = %q/%q, want execute/succeeded", exec.Phase, exec.Status)
 			}
@@ -138,7 +138,7 @@ func TestRegression_Worker_object_details_pass_through_unchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list phases: %v", err)
 	}
-	exec := phases[1]
+	exec := phases[0]
 	if !bytes.Equal(exec.DetailsJSON, []byte(original)) {
 		t.Fatalf("phase details_json = %q, want %q", string(exec.DetailsJSON), string(original))
 	}

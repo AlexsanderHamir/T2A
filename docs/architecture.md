@@ -164,7 +164,6 @@ sequenceDiagram
   Q->>W: Receive(task)
   W->>S: Update(task, status=running)
   W->>S: StartCycle(task, meta)
-  W->>S: StartPhase(diagnose) -> CompletePhase(skipped)
   W->>S: StartPhase(execute)
   W->>R: Run(ctx, Request{Prompt, WorkingDir, Timeout})
   R-->>W: Result or typed error

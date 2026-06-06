@@ -148,6 +148,21 @@ export function TaskCycleDetailPage() {
     now,
   );
   const showPhaseBadge = cycle.phases.length > 1;
+  // Terminal-only endcap: the running case keeps the rail visually open
+  // (the running phase's brand-colored marker already conveys liveness),
+  // so we only close the rail with a status marker once the attempt has
+  // actually reached a terminal state. See AttemptTerminalEndcap below.
+  const endcapLabel = attemptEndcapLabel(cycle.status);
+  const showEndcap = endcapLabel !== null && cycle.phases.length > 0;
+  const endcapTime = showEndcap ? formatAttemptEndedTime(cycle.ended_at) : null;
+  // Neutral top bookend: pairs with the terminal endcap so the rail
+  // reads as "Attempt started → phases → Attempt {completed/failed/aborted}".
+  // Intentionally muted (text-tertiary) — a start is an entry marker,
+  // not an outcome. See AttemptStartCap below.
+  const showStartCap = cycle.phases.length > 0;
+  const startCapTime = showStartCap
+    ? formatAttemptEndedTime(cycle.started_at)
+    : null;
 
   return (
     <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
@@ -201,38 +216,62 @@ export function TaskCycleDetailPage() {
         <h3 className="task-detail-subheading" id="attempt-phases">
           <span>Phases</span>
         </h3>
-        <ol
-          className={
-            showPhaseBadge
-              ? "task-attempt-phase-track task-attempt-phase-track--numbered"
-              : "task-attempt-phase-track"
-          }
-        >
-          {cycle.phases.map((phase, index) => (
-            <li
-              key={phase.id}
-              className="task-attempt-phase-step"
-              data-status={phase.status}
-              data-last={index === cycle.phases.length - 1 ? "true" : undefined}
-            >
-              <span className="task-attempt-phase-step-marker" aria-hidden="true" />
-              <div className="task-attempt-phase-step-main">
-                <span className="task-attempt-phase-step-name">
-                  {phaseLabel(phase.phase)}
-                </span>
-                <span
-                  className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
-                >
-                  {phaseStatusLabel(phase.status)}
-                </span>
-                {showPhaseBadge ? (
-                  <PhaseSeqBadge seq={phase.phase_seq} />
-                ) : null}
-              </div>
-              <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
-            </li>
-          ))}
-        </ol>
+        <div className="task-attempt-phase-timeline">
+          {showStartCap ? (
+            <AttemptStartCap
+              startedAt={cycle.started_at}
+              startedTime={startCapTime}
+            />
+          ) : null}
+          <ol
+            className={
+              showPhaseBadge
+                ? "task-attempt-phase-track task-attempt-phase-track--numbered"
+                : "task-attempt-phase-track"
+            }
+          >
+            {cycle.phases.map((phase, index) => (
+              <li
+                key={phase.id}
+                className="task-attempt-phase-step"
+                data-status={phase.status}
+                // data-last suppresses the row's outgoing rail connector.
+                // When the terminal endcap is rendered below, the last
+                // phase row must keep its connector so the rail flows
+                // continuously into the endcap marker.
+                data-last={
+                  !showEndcap && index === cycle.phases.length - 1
+                    ? "true"
+                    : undefined
+                }
+              >
+                <span className="task-attempt-phase-step-marker" aria-hidden="true" />
+                <div className="task-attempt-phase-step-main">
+                  <span className="task-attempt-phase-step-name">
+                    {phaseLabel(phase.phase)}
+                  </span>
+                  <span
+                    className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
+                  >
+                    {phaseStatusLabel(phase.status)}
+                  </span>
+                  {showPhaseBadge ? (
+                    <PhaseSeqBadge seq={phase.phase_seq} />
+                  ) : null}
+                </div>
+                <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
+              </li>
+            ))}
+          </ol>
+          {showEndcap && endcapLabel ? (
+            <AttemptTerminalEndcap
+              status={cycle.status}
+              label={endcapLabel}
+              endedAt={cycle.ended_at}
+              endedTime={endcapTime}
+            />
+          ) : null}
+        </div>
       </section>
 
       <section
@@ -495,6 +534,103 @@ function PhaseSeqBadge({ seq }: { seq: number }) {
       PHASE {seq}
     </span>
   );
+}
+
+/**
+ * Closes the phase rail with a single marker representing the cycle's
+ * terminal outcome. The phase track on its own ends abruptly at the last
+ * phase row, leaving the reader to look up at the header pill to learn
+ * how the attempt as a whole ended; this endcap puts the rollup at the
+ * natural end of the timeline. Only rendered for terminal statuses —
+ * running attempts intentionally leave the rail open so the brand-color
+ * halo on the running phase remains the dominant liveness signal.
+ */
+function AttemptTerminalEndcap({
+  status,
+  label,
+  endedAt,
+  endedTime,
+}: {
+  status: CycleStatus;
+  label: string;
+  endedAt: string | undefined;
+  endedTime: string | null;
+}) {
+  return (
+    <div
+      className="task-attempt-phase-endcap"
+      data-status={status}
+      aria-label={
+        endedTime ? `${label} at ${endedTime}` : label
+      }
+    >
+      <span className="task-attempt-phase-endcap-marker" aria-hidden="true" />
+      <span className="task-attempt-phase-endcap-name">{label}</span>
+      {endedTime && endedAt ? (
+        <time className="task-attempt-phase-endcap-time" dateTime={endedAt}>
+          {endedTime}
+        </time>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Opens the phase rail with a neutral entry marker so the timeline
+ * reads as a complete arc: "Attempt started → phases → Attempt
+ * {completed/failed/aborted}". Always rendered (regardless of the
+ * cycle's status) when at least one phase exists, because the start
+ * is a fact, not an outcome. Intentionally muted-neutral — a start is
+ * not a completion or a failure, so it does not borrow the success or
+ * danger palettes.
+ */
+function AttemptStartCap({
+  startedAt,
+  startedTime,
+}: {
+  startedAt: string;
+  startedTime: string | null;
+}) {
+  const label = "Attempt started";
+  return (
+    <div
+      className="task-attempt-phase-startcap"
+      aria-label={startedTime ? `${label} at ${startedTime}` : label}
+    >
+      <span className="task-attempt-phase-startcap-marker" aria-hidden="true" />
+      <span className="task-attempt-phase-startcap-name">{label}</span>
+      {startedTime ? (
+        <time className="task-attempt-phase-startcap-time" dateTime={startedAt}>
+          {startedTime}
+        </time>
+      ) : null}
+    </div>
+  );
+}
+
+function attemptEndcapLabel(status: CycleStatus): string | null {
+  switch (status) {
+    case "succeeded":
+      return "Attempt completed";
+    case "failed":
+      return "Attempt failed";
+    case "aborted":
+      return "Attempt aborted";
+    default:
+      return null;
+  }
+}
+
+function formatAttemptEndedTime(
+  endedAt: string | undefined,
+): string | null {
+  if (!endedAt) return null;
+  const d = new Date(endedAt);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function StreamEventRow({

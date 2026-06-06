@@ -234,15 +234,12 @@ func TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten(t *testing.T
 	if err != nil {
 		t.Fatalf("list phases for cycle %s: %v", cyc.ID, err)
 	}
-	if len(phases) != 2 {
-		t.Fatalf("phase count = %d, want 2 (diagnose+execute); phases=%+v", len(phases), phases)
+	if len(phases) != 1 {
+		t.Fatalf("phase count = %d, want 1 (execute); phases=%+v", len(phases), phases)
 	}
-	if phases[0].Phase != domain.PhaseDiagnose || phases[0].Status != domain.PhaseStatusSkipped {
-		t.Fatalf("phase[0] = %q/%q, want diagnose/skipped", phases[0].Phase, phases[0].Status)
-	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusSucceeded {
-		t.Fatalf("phase[1] = %q/%q, want execute/succeeded (summary=%q)",
-			phases[1].Phase, phases[1].Status, derefString(phases[1].Summary))
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusSucceeded {
+		t.Fatalf("phase[0] = %q/%q, want execute/succeeded (summary=%q)",
+			phases[0].Phase, phases[0].Status, derefString(phases[0].Summary))
 	}
 
 	fixture.AssertSucceeded(t)

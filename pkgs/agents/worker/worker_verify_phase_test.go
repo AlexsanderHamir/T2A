@@ -167,13 +167,12 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 		t.Fatalf("list phases: %v", err)
 	}
 
-	// Expected ledger: diagnose(skipped) → execute(succeeded) →
-	// verify(failed) → execute(succeeded) → verify(failed).
+	// Expected ledger: execute(succeeded) → verify(failed) →
+	// execute(succeeded) → verify(failed).
 	wantSeq := []struct {
 		phase  domain.Phase
 		status domain.PhaseStatus
 	}{
-		{domain.PhaseDiagnose, domain.PhaseStatusSkipped},
 		{domain.PhaseExecute, domain.PhaseStatusSucceeded},
 		{domain.PhaseVerify, domain.PhaseStatusFailed},
 		{domain.PhaseExecute, domain.PhaseStatusSucceeded},

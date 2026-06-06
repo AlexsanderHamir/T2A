@@ -9,7 +9,7 @@
 export type CycleStatus = "running" | "succeeded" | "failed" | "aborted";
 
 /** Phases follow `domain.ValidPhaseTransition` in the backend. */
-export type Phase = "diagnose" | "execute" | "verify" | "persist";
+export type Phase = "execute" | "verify";
 
 /** `running` is the only non-terminal status; the other three are terminal. */
 export type PhaseStatus = "running" | "succeeded" | "failed" | "skipped";
@@ -21,7 +21,7 @@ export const CYCLE_STATUSES: CycleStatus[] = [
   "aborted",
 ];
 
-export const PHASES: Phase[] = ["diagnose", "execute", "verify", "persist"];
+export const PHASES: Phase[] = ["execute", "verify"];
 
 export const PHASE_STATUSES: PhaseStatus[] = [
   "running",

@@ -217,28 +217,18 @@ describe("TaskCycleDetailPage", () => {
             {
               id: "phase-1",
               cycle_id: "cyc-1",
-              phase: "diagnose",
-              phase_seq: 1,
-              status: "skipped",
-              started_at: "2026-04-25T12:00:00.000Z",
-              ended_at: "2026-04-25T12:00:01.000Z",
-              details: {},
-            },
-            {
-              id: "phase-2",
-              cycle_id: "cyc-1",
               phase: "execute",
-              phase_seq: 2,
+              phase_seq: 1,
               status: "succeeded",
               started_at: "2026-04-25T12:00:10.000Z",
               ended_at: "2026-04-25T12:00:20.000Z",
               details: {},
             },
             {
-              id: "phase-3",
+              id: "phase-2",
               cycle_id: "cyc-1",
               phase: "verify",
-              phase_seq: 3,
+              phase_seq: 2,
               status: "succeeded",
               started_at: "2026-04-25T12:00:20.000Z",
               ended_at: "2026-04-25T12:00:30.000Z",
@@ -277,7 +267,6 @@ describe("TaskCycleDetailPage", () => {
     if (!phasesSection) throw new Error("missing phases section");
     expect(within(phasesSection).getByLabelText("Phase 1")).toHaveTextContent("PHASE 1");
     expect(within(phasesSection).getByLabelText("Phase 2")).toHaveTextContent("PHASE 2");
-    expect(within(phasesSection).getByLabelText("Phase 3")).toHaveTextContent("PHASE 3");
 
     const activitySection = screen.getByRole("heading", {
       name: /^activity$/i,

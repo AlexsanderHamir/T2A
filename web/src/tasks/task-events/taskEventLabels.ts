@@ -24,9 +24,9 @@ const LABELS: Record<TaskEventType, string> = {
   approval_granted: "Approval granted",
   task_completed: "Task completed",
   task_failed: "Task failed",
-  cycle_started: "Execution cycle started",
-  cycle_completed: "Execution cycle completed",
-  cycle_failed: "Execution cycle failed",
+  cycle_started: "Attempt started",
+  cycle_completed: "Attempt completed",
+  cycle_failed: "Attempt failed",
   phase_started: "Phase started",
   phase_completed: "Phase completed",
   phase_failed: "Phase failed",
@@ -42,12 +42,7 @@ const PHASE_EVENT_ACTION: Partial<Record<TaskEventType, string>> = {
 };
 
 function isPhase(value: string): value is Phase {
-  return (
-    value === "diagnose" ||
-    value === "execute" ||
-    value === "verify" ||
-    value === "persist"
-  );
+  return value === "execute" || value === "verify";
 }
 
 export function eventTypeLabel(type: TaskEventType): string {
@@ -56,7 +51,7 @@ export function eventTypeLabel(type: TaskEventType): string {
 
 /**
  * Human label for compact timelines. Phase mirror events include the phase
- * kind (Execute, Diagnose, …) so rows are scannable without opening detail.
+ * kind (Execute, Verify) so rows are scannable without opening detail.
  */
 export function eventDisplayLabel(ev: TaskEvent): string {
   const action = PHASE_EVENT_ACTION[ev.type];

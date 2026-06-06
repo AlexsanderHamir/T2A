@@ -17,10 +17,8 @@ const CYCLE_STATUS_LABELS: Record<CycleStatus, string> = {
 };
 
 const PHASE_LABELS: Record<Phase, string> = {
-  diagnose: "Diagnose",
   execute: "Execute",
   verify: "Verify",
-  persist: "Persist",
 };
 
 const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {

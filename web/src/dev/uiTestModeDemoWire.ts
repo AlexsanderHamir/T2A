@@ -320,10 +320,8 @@ const cyclesPhasesEmpty = {
   cycles: { by_status: {}, by_triggered_by: {} },
   phases: {
     by_phase_status: {
-      diagnose: {},
       execute: {},
       verify: {},
-      persist: {},
     },
   },
   runner: {

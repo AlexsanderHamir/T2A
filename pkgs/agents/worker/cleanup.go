@@ -16,7 +16,7 @@ import (
 //   - handleShutdownAfterRun  parent ctx cancelled mid-run (edge #5)
 //   - recoverFromPanic        deferred panic safety net   (edge #4)
 //   - bestEffortFailTask      StartCycle failed, task is "running"
-//   - bestEffortTerminate     StartPhase / diagnose write tripped
+//   - bestEffortTerminate     StartPhase / phase write tripped
 //
 // Each path runs on a non-cancelled background context bounded by
 // Options.ShutdownAbortTimeout so even a dead parent ctx leaves the
@@ -166,9 +166,9 @@ func (w *Worker) bestEffortFailTask(ctx context.Context, taskID string) {
 }
 
 // bestEffortTerminate closes a cycle that was opened but whose phase
-// pipeline tripped before runner.Run; used when StartPhase or the
-// CompletePhase for the skipped-diagnose row failed. Best-effort: store
-// errors are logged and swallowed, the startup sweep is the safety net.
+// pipeline tripped before runner.Run; used when StartPhase or its
+// follow-up writes failed. Best-effort: store errors are logged and
+// swallowed, the startup sweep is the safety net.
 func (w *Worker) bestEffortTerminate(ctx context.Context, state *processState, taskID string, status domain.CycleStatus, reason string) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.bestEffortTerminate",
 		"cycle_id", state.cycleID, "status", string(status), "reason", reason)

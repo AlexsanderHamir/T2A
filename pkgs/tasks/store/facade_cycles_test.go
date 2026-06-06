@@ -147,7 +147,7 @@ func TestStore_TerminateCycle_rejects_when_phase_running(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent); err != nil {
+	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.TerminateCycle(ctx, c.ID, domain.CycleStatusSucceeded, "", domain.ActorAgent)
@@ -361,20 +361,6 @@ func mustCreateCycleWithExecutePhase(t *testing.T, s *Store, ctx context.Context
 	if err != nil {
 		t.Fatalf("start cycle: %v", err)
 	}
-	diag, err := s.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("start diagnose: %v", err)
-	}
-	summary := "skip"
-	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
-		CycleID:  cycle.ID,
-		PhaseSeq: diag.PhaseSeq,
-		Status:   domain.PhaseStatusSkipped,
-		Summary:  &summary,
-		By:       domain.ActorAgent,
-	}); err != nil {
-		t.Fatalf("complete diagnose: %v", err)
-	}
 	phase, err := s.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatalf("start execute: %v", err)
@@ -392,34 +378,22 @@ func TestStore_StartPhase_enforces_state_machine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("first phase Execute err = %v, want ErrInvalidInput", err)
-	}
-
-	d, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("start diagnose: %v", err)
-	}
-	if d.PhaseSeq != 1 {
-		t.Fatalf("diagnose phase_seq = %d, want 1", d.PhaseSeq)
-	}
-
-	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("start execute while diagnose running err = %v, want ErrInvalidInput", err)
-	}
-
-	if _, err := s.CompletePhase(ctx, CompletePhaseInput{CycleID: c.ID, PhaseSeq: d.PhaseSeq, Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent}); err != nil {
-		t.Fatalf("complete diagnose: %v", err)
-	}
-
 	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseVerify, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("diagnose -> verify err = %v, want ErrInvalidInput", err)
+		t.Fatalf("first phase Verify err = %v, want ErrInvalidInput", err)
 	}
 
 	e, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatalf("start execute: %v", err)
 	}
+	if e.PhaseSeq != 1 {
+		t.Fatalf("execute phase_seq = %d, want 1", e.PhaseSeq)
+	}
+
+	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseVerify, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("start verify while execute running err = %v, want ErrInvalidInput", err)
+	}
+
 	if _, err := s.CompletePhase(ctx, CompletePhaseInput{CycleID: c.ID, PhaseSeq: e.PhaseSeq, Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent}); err != nil {
 		t.Fatal(err)
 	}
@@ -436,8 +410,8 @@ func TestStore_StartPhase_enforces_state_machine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("corrective execute after failing verify: %v", err)
 	}
-	if e2.PhaseSeq != 4 {
-		t.Fatalf("corrective execute phase_seq = %d, want 4", e2.PhaseSeq)
+	if e2.PhaseSeq != 3 {
+		t.Fatalf("corrective execute phase_seq = %d, want 3", e2.PhaseSeq)
 	}
 }
 
@@ -451,7 +425,7 @@ func TestStore_StartPhase_rejects_on_terminal_cycle(t *testing.T) {
 	if _, err := s.TerminateCycle(ctx, c.ID, domain.CycleStatusAborted, "", domain.ActorAgent); err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	_, err = s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("err = %v, want ErrInvalidInput", err)
 	}
@@ -459,13 +433,13 @@ func TestStore_StartPhase_rejects_on_terminal_cycle(t *testing.T) {
 
 func TestStore_StartPhase_rejects_invalid_inputs(t *testing.T) {
 	s, ctx := newCycleStore(t)
-	if _, err := s.StartPhase(ctx, "", domain.PhaseDiagnose, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
+	if _, err := s.StartPhase(ctx, "", domain.PhaseExecute, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("empty cycle err = %v, want ErrInvalidInput", err)
 	}
 	if _, err := s.StartPhase(ctx, "x", domain.Phase("nope"), domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("bad phase err = %v, want ErrInvalidInput", err)
 	}
-	if _, err := s.StartPhase(ctx, "missing", domain.PhaseDiagnose, domain.ActorAgent); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := s.StartPhase(ctx, "missing", domain.PhaseExecute, domain.ActorAgent); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("missing cycle err = %v, want ErrNotFound", err)
 	}
 }
@@ -477,7 +451,7 @@ func TestStore_CompletePhase_updates_summary_and_details(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	d, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +488,7 @@ func TestStore_CompletePhase_rejects_double_complete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	d, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -559,14 +533,14 @@ func TestStore_ListPhasesForCycle_returns_in_seq_order(t *testing.T) {
 		t.Fatalf("empty list len = %d", len(empty))
 	}
 
-	d, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	e, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CompletePhase(ctx, CompletePhaseInput{CycleID: c.ID, PhaseSeq: d.PhaseSeq, Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent}); err != nil {
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{CycleID: c.ID, PhaseSeq: e.PhaseSeq, Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent}); err != nil {
 		t.Fatal(err)
 	}
-	e, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	v, err := s.StartPhase(ctx, c.ID, domain.PhaseVerify, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -578,8 +552,8 @@ func TestStore_ListPhasesForCycle_returns_in_seq_order(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("list len = %d, want 2", len(got))
 	}
-	if got[0].ID != d.ID || got[1].ID != e.ID {
-		t.Fatalf("order = [%s, %s], want [%s, %s]", got[0].ID, got[1].ID, d.ID, e.ID)
+	if got[0].ID != e.ID || got[1].ID != v.ID {
+		t.Fatalf("order = [%s, %s], want [%s, %s]", got[0].ID, got[1].ID, e.ID, v.ID)
 	}
 	if got[0].PhaseSeq != 1 || got[1].PhaseSeq != 2 {
 		t.Fatalf("seqs = [%d, %d], want [1, 2]", got[0].PhaseSeq, got[1].PhaseSeq)
@@ -593,7 +567,7 @@ func TestStore_TaskDelete_cascades_to_cycles_and_phases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseDiagnose, domain.ActorAgent); err != nil {
+	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent); err != nil {
 		t.Fatal(err)
 	}
 
@@ -693,7 +667,7 @@ func TestStore_CompletePhase_details_normalizes_and_validates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start cycle: %v", err)
 	}
-	phase, err := s.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	phase, err := s.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatalf("start phase: %v", err)
 	}
@@ -721,7 +695,7 @@ func TestStore_CompletePhase_details_normalizes_and_validates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start cycle 2: %v", err)
 	}
-	phase2, err := s.StartPhase(ctx, cycle2.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	phase2, err := s.StartPhase(ctx, cycle2.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatalf("start phase 2: %v", err)
 	}
@@ -919,7 +893,7 @@ func TestStore_DualWrite_StartPhase_backfills_event_seq(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -932,7 +906,7 @@ func TestStore_DualWrite_StartPhase_backfills_event_seq(t *testing.T) {
 		wantBy:   domain.ActorAgent,
 		wantPayload: map[string]any{
 			"cycle_id":  cyc.ID,
-			"phase":     "diagnose",
+			"phase":     "execute",
 			"phase_seq": int(ph.PhaseSeq),
 		},
 	})
@@ -962,7 +936,7 @@ func TestStore_DualWrite_CompletePhase_emits_terminal_mirror_and_updates_event_s
 			if err != nil {
 				t.Fatal(err)
 			}
-			ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
+			ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -991,7 +965,7 @@ func TestStore_DualWrite_CompletePhase_emits_terminal_mirror_and_updates_event_s
 				wantBy:   domain.ActorAgent,
 				wantPayload: map[string]any{
 					"cycle_id":  cyc.ID,
-					"phase":     "diagnose",
+					"phase":     "execute",
 					"phase_seq": int(ph.PhaseSeq),
 					"status":    string(tc.status),
 					"summary":   tc.summary,
@@ -1012,7 +986,7 @@ func TestStore_DualWrite_seq_is_monotonic_across_entrypoints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
+	ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -103,14 +103,11 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list phases: %v", err)
 	}
-	if len(phases) != 2 {
-		t.Fatalf("phase count = %d, want 2 (diagnose+execute)", len(phases))
+	if len(phases) != 1 {
+		t.Fatalf("phase count = %d, want 1 (execute)", len(phases))
 	}
-	if phases[0].Phase != domain.PhaseDiagnose || phases[0].Status != domain.PhaseStatusSkipped {
-		t.Fatalf("phase[0] = %q/%q, want diagnose/skipped", phases[0].Phase, phases[0].Status)
-	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusSucceeded {
-		t.Fatalf("phase[1] = %q/%q, want execute/succeeded", phases[1].Phase, phases[1].Status)
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusSucceeded {
+		t.Fatalf("phase[0] = %q/%q, want execute/succeeded", phases[0].Phase, phases[0].Status)
 	}
 
 	events, err := st.ListTaskEvents(rootCtx, tsk.ID)
@@ -119,8 +116,6 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	}
 	wantTypes := []domain.EventType{
 		domain.EventCycleStarted,
-		domain.EventPhaseStarted,
-		domain.EventPhaseSkipped,
 		domain.EventPhaseStarted,
 		domain.EventPhaseCompleted,
 		domain.EventCycleCompleted,

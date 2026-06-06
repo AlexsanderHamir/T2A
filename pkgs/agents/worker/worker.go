@@ -40,11 +40,6 @@ const CancelledByOperatorReason = "cancelled_by_operator"
 // docs/architecture.md "Lifecycle of one task" for the shutdown path.
 const DefaultShutdownAbortTimeout = 5 * time.Second
 
-// SkippedDiagnoseSummary is the canonical summary written on the no-op
-// diagnose phase row. Pinned so the audit trail string is stable
-// across worker invocations and refactors.
-const SkippedDiagnoseSummary = "single-phase V1; diagnose deferred"
-
 // PanicReason is the cycle/phase termination reason recorded when the
 // recover path fires after a runner or store panic.
 const PanicReason = "panic"

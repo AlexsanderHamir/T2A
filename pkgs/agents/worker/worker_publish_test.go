@@ -176,8 +176,8 @@ func TestWorker_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 	if got.CycleID == "" {
 		t.Fatal("CycleID must be populated")
 	}
-	if got.PhaseSeq != 2 {
-		t.Fatalf("PhaseSeq: got %d want execute phase seq 2", got.PhaseSeq)
+	if got.PhaseSeq != 1 {
+		t.Fatalf("PhaseSeq: got %d want execute phase seq 1", got.PhaseSeq)
 	}
 	if got.Event.Kind != "tool_call" || got.Event.Tool != "ReadFile" {
 		t.Fatalf("Event: %+v", got.Event)

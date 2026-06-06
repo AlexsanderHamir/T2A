@@ -65,10 +65,8 @@ type PhaseStats struct {
 // outer map always carries every enum key — empty inner map for phases
 // that have never run, populated for those that have.
 var allPhases = []domain.Phase{
-	domain.PhaseDiagnose,
 	domain.PhaseExecute,
 	domain.PhaseVerify,
-	domain.PhasePersist,
 }
 
 // Get returns global counters across all tasks. Six SQL round-trips:

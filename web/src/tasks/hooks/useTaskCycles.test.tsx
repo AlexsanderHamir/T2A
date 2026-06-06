@@ -117,7 +117,7 @@ describe("useTaskCycle", () => {
           {
             id: "ph-1",
             cycle_id: "cyc-1",
-            phase: "diagnose",
+            phase: "execute",
             phase_seq: 1,
             status: "succeeded",
             started_at: "2026-04-18T10:00:01.000Z",
@@ -135,7 +135,7 @@ describe("useTaskCycle", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(result.current.data?.phases[0].phase).toBe("diagnose");
+    expect(result.current.data?.phases[0].phase).toBe("execute");
     expect(String(fetchSpy.mock.calls[0][0])).toBe(
       "/tasks/task-1/cycles/cyc-1",
     );

@@ -32,19 +32,19 @@ describe("eventDisplayLabel", () => {
   it("includes phase kind for phase mirror events", () => {
     expect(
       eventDisplayLabel(
-        ev("phase_skipped", { phase: "diagnose", phase_seq: 1 }),
-      ),
-    ).toBe("Diagnose skipped");
-    expect(
-      eventDisplayLabel(
-        ev("phase_started", { phase: "execute", phase_seq: 2 }),
+        ev("phase_started", { phase: "execute", phase_seq: 1 }),
       ),
     ).toBe("Execute started");
     expect(
       eventDisplayLabel(
-        ev("phase_completed", { phase: "verify", phase_seq: 3 }),
+        ev("phase_completed", { phase: "verify", phase_seq: 2 }),
       ),
     ).toBe("Verify completed");
+    expect(
+      eventDisplayLabel(
+        ev("phase_failed", { phase: "verify", phase_seq: 2 }),
+      ),
+    ).toBe("Verify failed");
   });
 
   it("falls back to type label when phase is missing", () => {

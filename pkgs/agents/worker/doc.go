@@ -1,12 +1,11 @@
 // Package worker is the V1 in-process consumer of the ready-task queue.
 //
-// One Worker drives one task end-to-end through the
-// diagnose -> execute -> verify -> persist substrate defined in moat.md.
-// V1 records exactly two phase rows per cycle: a no-op diagnose row
-// closed as PhaseStatusSkipped to satisfy the
-// domain.ValidPhaseTransition "first phase must be diagnose" rule, and
-// an execute row that wraps the actual runner.Runner invocation. See
-// docs/architecture.md for the contract and the rationale.
+// One Worker drives one task end-to-end through the execute -> verify
+// substrate defined in docs/architecture.md. V1 records a single
+// execute phase row per cycle that wraps the actual runner.Runner
+// invocation; the verify phase is opened on demand by follow-up work
+// (a corrective execute may follow a failed verify — see
+// domain.ValidPhaseTransition).
 //
 // Lifecycle per task (full contract in docs/architecture.md):
 //
@@ -14,10 +13,9 @@
 //  2. Reload the task; if it is no longer StatusReady, log warn and ack.
 //  3. Transition task ready -> running.
 //  4. StartCycle with MetaJSON {"runner","runner_version","prompt_hash"}.
-//  5. StartPhase(diagnose) -> CompletePhase(skipped, "single-phase V1; diagnose deferred").
-//  6. StartPhase(execute) -> runner.Run -> CompletePhase(succeeded|failed).
-//  7. TerminateCycle(succeeded|failed) and Update task -> done|failed.
-//  8. AckAfterRecv as the very last step so a redelivery during the run
+//  5. StartPhase(execute) -> runner.Run -> CompletePhase(succeeded|failed).
+//  6. TerminateCycle(succeeded|failed) and Update task -> done|failed.
+//  7. AckAfterRecv as the very last step so a redelivery during the run
 //     is ignored by the queue's pending-set guard.
 //
 // Edge cases the package handles directly:

@@ -1,8 +1,8 @@
 // Package runner is the contract every agent invocation must satisfy.
 //
 // One Runner.Run call corresponds to exactly one execution-cycle phase
-// (diagnose / execute / verify / persist as defined in moat.md and
-// docs/data-model.md). The worker in pkgs/agents/worker (contract:
+// (execute / verify as defined in docs/data-model.md). The worker in
+// pkgs/agents/worker (contract:
 // docs/architecture.md) drives the lifecycle (start cycle, start phase,
 // patch phase) and asks a Runner to actually do the per-phase work.
 //

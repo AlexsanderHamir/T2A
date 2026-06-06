@@ -67,8 +67,8 @@ func TestRequest_jsonRoundtrip(t *testing.T) {
 	want := runner.Request{
 		TaskID:      "22222222-2222-4222-8222-222222222222",
 		AttemptSeq:  7,
-		Phase:       domain.PhaseDiagnose,
-		Prompt:      "diagnose the failure",
+		Phase:       domain.PhaseExecute,
+		Prompt:      "execute the change",
 		WorkingDir:  "/work",
 		Timeout:     250 * time.Millisecond,
 		Env:         map[string]string{"PATH": "/bin", "HOME": "/home/runner"},
@@ -483,7 +483,7 @@ func TestRunnerFake_unknownScriptReturnsErrInvalidOutput(t *testing.T) {
 
 	r := runnerfake.New()
 	_, err := r.Run(context.Background(), runner.Request{
-		TaskID: "missing", Phase: domain.PhaseDiagnose,
+		TaskID: "missing", Phase: domain.PhaseExecute,
 	})
 	if !errors.Is(err, runner.ErrInvalidOutput) {
 		t.Errorf("got %v want errors.Is(_, ErrInvalidOutput)", err)

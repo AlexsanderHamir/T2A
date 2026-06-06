@@ -246,7 +246,7 @@ func eventTypeCounts(events []domain.TaskEvent) map[domain.EventType]int {
 
 // --- test cases ----------------------------------------------------------
 
-func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
+func TestWorker_HappyPath_writesOnePhaseAndFourMirrors(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -300,17 +300,11 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list phases: %v", err)
 	}
-	if len(phases) != 2 {
-		t.Fatalf("phase count = %d, want 2", len(phases))
+	if len(phases) != 1 {
+		t.Fatalf("phase count = %d, want 1", len(phases))
 	}
-	if phases[0].Phase != domain.PhaseDiagnose || phases[0].Status != domain.PhaseStatusSkipped {
-		t.Fatalf("phase[0] = %q/%q, want diagnose/skipped", phases[0].Phase, phases[0].Status)
-	}
-	if phases[0].Summary == nil || *phases[0].Summary != worker.SkippedDiagnoseSummary {
-		t.Fatalf("phase[0].summary = %v, want %q", phases[0].Summary, worker.SkippedDiagnoseSummary)
-	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusSucceeded {
-		t.Fatalf("phase[1] = %q/%q, want execute/succeeded", phases[1].Phase, phases[1].Status)
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusSucceeded {
+		t.Fatalf("phase[0] = %q/%q, want execute/succeeded", phases[0].Phase, phases[0].Status)
 	}
 
 	events, err := h.store.ListTaskEvents(bg, tsk.ID)
@@ -324,24 +318,22 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 	if counts[domain.EventCycleCompleted] != 1 {
 		t.Fatalf("cycle_completed count = %d, want 1", counts[domain.EventCycleCompleted])
 	}
-	if counts[domain.EventPhaseStarted] != 2 {
-		t.Fatalf("phase_started count = %d, want 2", counts[domain.EventPhaseStarted])
-	}
-	if counts[domain.EventPhaseSkipped] != 1 {
-		t.Fatalf("phase_skipped count = %d, want 1", counts[domain.EventPhaseSkipped])
+	if counts[domain.EventPhaseStarted] != 1 {
+		t.Fatalf("phase_started count = %d, want 1", counts[domain.EventPhaseStarted])
 	}
 	if counts[domain.EventPhaseCompleted] != 1 {
 		t.Fatalf("phase_completed count = %d, want 1", counts[domain.EventPhaseCompleted])
 	}
 
 	calls := h.notifier.snapshot()
-	// 6 publishes from cycle/phase row writes + 1 trailing publish
+	// 4 publishes from cycle/phase row writes (cycle start, execute
+	// start, execute complete, cycle terminate) + 1 trailing publish
 	// after the final transitionTask succeeds (see process.go: that
 	// trailing publish is the cure for the "task stuck in running on
 	// the open detail page until refresh" race; the SPA's debounced
 	// invalidation needs it to refetch *after* the status row flips).
-	if len(calls) != 7 {
-		t.Fatalf("notifier publish count = %d, want 7 (calls=%+v)", len(calls), calls)
+	if len(calls) != 5 {
+		t.Fatalf("notifier publish count = %d, want 5 (calls=%+v)", len(calls), calls)
 	}
 	for i, c := range calls {
 		if c.TaskID != tsk.ID || c.CycleID != cycle.ID {
@@ -586,11 +578,11 @@ func TestWorker_RunnerFailure_marksCycleAndTaskFailed(t *testing.T) {
 	bg := context.Background()
 	cycle := assertCycleStatus(t, h.store, tsk.ID, 1, domain.CycleStatusFailed)
 	phases, _ := h.store.ListPhasesForCycle(bg, cycle.ID)
-	if len(phases) != 2 {
-		t.Fatalf("phase count = %d, want 2", len(phases))
+	if len(phases) != 1 {
+		t.Fatalf("phase count = %d, want 1", len(phases))
 	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusFailed {
-		t.Fatalf("execute phase = %q/%q, want execute/failed", phases[1].Phase, phases[1].Status)
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusFailed {
+		t.Fatalf("execute phase = %q/%q, want execute/failed", phases[0].Phase, phases[0].Status)
 	}
 
 	events, _ := h.store.ListTaskEvents(bg, tsk.ID)
@@ -729,11 +721,11 @@ func TestWorker_PanicInRunner_terminatesAndContinues(t *testing.T) {
 	bg := context.Background()
 	c := assertCycleStatus(t, h.store, first.ID, 1, domain.CycleStatusFailed)
 	phases, _ := h.store.ListPhasesForCycle(bg, c.ID)
-	if len(phases) != 2 {
-		t.Fatalf("panic cycle phase count = %d, want 2", len(phases))
+	if len(phases) != 1 {
+		t.Fatalf("panic cycle phase count = %d, want 1", len(phases))
 	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusFailed {
-		t.Fatalf("execute phase after panic = %q/%q, want execute/failed", phases[1].Phase, phases[1].Status)
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusFailed {
+		t.Fatalf("execute phase after panic = %q/%q, want execute/failed", phases[0].Phase, phases[0].Status)
 	}
 
 	events, _ := h.store.ListTaskEvents(bg, first.ID)
@@ -791,14 +783,14 @@ func TestWorker_ShutdownMidRun_writesAbortedCycleAndFailedTask(t *testing.T) {
 	}
 
 	phases, _ := h.store.ListPhasesForCycle(bg, cycle.ID)
-	if len(phases) != 2 {
-		t.Fatalf("phase count after shutdown = %d, want 2", len(phases))
+	if len(phases) != 1 {
+		t.Fatalf("phase count after shutdown = %d, want 1", len(phases))
 	}
-	if phases[1].Phase != domain.PhaseExecute || phases[1].Status != domain.PhaseStatusFailed {
-		t.Fatalf("execute phase after shutdown = %q/%q", phases[1].Phase, phases[1].Status)
+	if phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusFailed {
+		t.Fatalf("execute phase after shutdown = %q/%q", phases[0].Phase, phases[0].Status)
 	}
-	if phases[1].Summary == nil || !strings.Contains(*phases[1].Summary, worker.ShutdownReason) {
-		t.Fatalf("execute phase summary = %v, want contains %q", phases[1].Summary, worker.ShutdownReason)
+	if phases[0].Summary == nil || !strings.Contains(*phases[0].Summary, worker.ShutdownReason) {
+		t.Fatalf("execute phase summary = %v, want contains %q", phases[0].Summary, worker.ShutdownReason)
 	}
 
 	events, _ := h.store.ListTaskEvents(bg, tsk.ID)

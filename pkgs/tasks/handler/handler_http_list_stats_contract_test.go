@@ -448,18 +448,18 @@ func assertCyclesEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
 // assertPhasesAllZeroEnumKeys pins the documented invariant that
 // `phases.by_phase_status` always carries every domain.Phase enum value
 // as a key, with an empty inner map on a fresh database. Clients rely on
-// the four-key shape so they can render every cell (rather than guess
+// the two-key shape so they can render every cell (rather than guess
 // which phases are missing).
 func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw) {
 	t.Helper()
 	if got.Phases.ByPhaseStatus == nil {
 		t.Fatalf("phases.by_phase_status is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
-	wantPhases := []string{"diagnose", "execute", "verify", "persist"}
+	wantPhases := []string{"execute", "verify"}
 	for _, p := range wantPhases {
 		inner, ok := got.Phases.ByPhaseStatus[p]
 		if !ok {
-			t.Errorf("phases.by_phase_status missing key %q; the 4-key heatmap shape is mandatory (docs/api.md): %s",
+			t.Errorf("phases.by_phase_status missing key %q; the 2-key heatmap shape is mandatory (docs/api.md): %s",
 				p, raw)
 			continue
 		}

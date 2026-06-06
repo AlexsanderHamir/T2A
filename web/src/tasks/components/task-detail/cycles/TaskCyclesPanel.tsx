@@ -116,7 +116,7 @@ export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
         <EmptyState
           icon={<EmptyStateTimelineGlyph />}
           title="No execution cycles yet"
-          description="Each agent run records phases here as diagnose → execute → verify → persist."
+          description="Each agent run records phases here as execute → verify."
         />
       ) : (
         <>

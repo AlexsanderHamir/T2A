@@ -203,11 +203,22 @@ time.task-attempt-meta-inline-item {
   gap: 0.75rem;
 }
 
-.task-attempt-phase-track {
+/* Wraps the phase <ol> and the terminal endcap as one continuous rail.
+   The parent section uses gap:1rem between its children, which would split
+   the rail in two; this container collapses that gap so the connector
+   line flows from the last phase row straight into the endcap marker.
+   Rail geometry vars are hoisted here (instead of on .task-attempt-phase-track)
+   so the endcap, a sibling of the <ol>, can reference the same values. */
+.task-attempt-phase-timeline {
   --phase-marker-size: 10px;
   --phase-connector-width: 2px;
   --phase-rail-x: calc(var(--phase-marker-size) / 2);
   --phase-row-gap: 1.15rem;
+  display: grid;
+  gap: 0;
+}
+
+.task-attempt-phase-track {
   display: grid;
   gap: 0;
   padding: 0;
@@ -276,6 +287,154 @@ time.task-attempt-meta-inline-item {
   width: var(--phase-connector-width);
   background: var(--border-chrome-hairline);
   border-radius: var(--phase-connector-width);
+}
+
+/* Top bookend — opens the phase rail with a neutral "Attempt started"
+   marker so the timeline reads as a complete arc: start → phases →
+   terminal endcap. Always rendered when the cycle has phases (the
+   start is a fact, not an outcome). Intentionally muted-neutral: a
+   start is not a completion or a failure, so it borrows the tertiary
+   text colour instead of the success or danger palette. Geometry
+   mirrors a phase row's marker + outgoing connector so the rail flows
+   continuously into the first phase below. */
+.task-attempt-phase-startcap {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0 var(--phase-row-gap) calc(var(--phase-marker-size) + 0.85rem);
+  min-height: calc(var(--phase-marker-size) + 0.5rem);
+}
+
+/* Outgoing connector — bridges from the startcap marker's bottom down
+   to the top of the first phase row's marker. Same geometry as the
+   per-row outgoing connector on .task-attempt-phase-step. */
+.task-attempt-phase-startcap::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--phase-rail-x) - (var(--phase-connector-width) / 2));
+  top: calc(0.45rem + var(--phase-marker-size) + 2px);
+  bottom: 2px;
+  width: var(--phase-connector-width);
+  background: var(--border-chrome-hairline);
+  border-radius: var(--phase-connector-width);
+}
+
+.task-attempt-phase-startcap-marker {
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  width: var(--phase-marker-size);
+  height: var(--phase-marker-size);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-chrome-strong, var(--border-chrome-hairline));
+  background: var(--surface-1);
+}
+
+.task-attempt-phase-startcap-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.005em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-attempt-phase-startcap-time {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+/* Terminal endcap — closes the phase rail with the cycle's final outcome
+   (`Attempt completed` / `Attempt failed` / `Attempt aborted`). It sits as
+   a sibling of the phase <ol> inside .task-attempt-phase-timeline so the
+   shared rail vars are in scope and the connector flows without seams.
+   Visual contract: same marker geometry as a phase row, distinct status
+   colors, and explicitly no PHASE chip — the endcap is the rail's full
+   stop, not a fifth phase. */
+.task-attempt-phase-endcap {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0 0 calc(var(--phase-marker-size) + 0.85rem);
+  min-height: calc(var(--phase-marker-size) + 0.5rem);
+}
+
+/* Incoming connector — bridges from the last phase row's outgoing
+   connector (which ends at row-bottom - 2px) down to the top of the
+   endcap's own marker. Sits in the small geometric gap between the
+   phase <ol>'s bottom edge and the marker's `top: 0.45rem`. */
+.task-attempt-phase-endcap::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--phase-rail-x) - (var(--phase-connector-width) / 2));
+  top: 0;
+  height: calc(0.45rem - 2px);
+  width: var(--phase-connector-width);
+  background: var(--border-chrome-hairline);
+}
+
+.task-attempt-phase-endcap-marker {
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  width: var(--phase-marker-size);
+  height: var(--phase-marker-size);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-chrome-hairline);
+  background: var(--surface-1);
+  transition:
+    background-color var(--duration-moderate) var(--ease-default),
+    border-color var(--duration-moderate) var(--ease-default),
+    box-shadow var(--duration-moderate) var(--ease-default);
+}
+
+.task-attempt-phase-endcap[data-status="succeeded"]
+  .task-attempt-phase-endcap-marker {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.task-attempt-phase-endcap[data-status="failed"]
+  .task-attempt-phase-endcap-marker {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+/* Aborted is a third terminal state distinct from a failure (operator
+   stop, shutdown, etc.). Render it muted-neutral so the eye reads it as
+   "intentional stop", not "broken". */
+.task-attempt-phase-endcap[data-status="aborted"]
+  .task-attempt-phase-endcap-marker {
+  border-color: var(--text-tertiary);
+  background: var(--text-tertiary);
+}
+
+.task-attempt-phase-endcap-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.005em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-attempt-phase-endcap-time {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 /* Overrides the shared flex rule at the top of the file. The 3-column grid

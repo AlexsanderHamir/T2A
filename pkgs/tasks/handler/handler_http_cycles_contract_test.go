@@ -400,7 +400,7 @@ func TestHTTP_postTaskCyclePhase_400ErrorStrings(t *testing.T) {
 		body string
 		want string
 	}{
-		{"unknownField", `{"phase":"diagnose","oops":1}`, `json: unknown field "oops"`},
+		{"unknownField", `{"phase":"execute","oops":1}`, `json: unknown field "oops"`},
 		{"emptyPhase", `{}`, "phase"},
 		{"invalidPhase", `{"phase":"nope"}`, "phase"},
 	}
@@ -431,7 +431,7 @@ func TestHTTP_postTaskCyclePhase_invalid_transition_400(t *testing.T) {
 	cycleID := mustStartCycle(t, srv.URL, taskID)
 
 	res, raw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"persist"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"verify"}`)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}
@@ -453,7 +453,7 @@ func TestHTTP_postTaskCyclePhase_404_when_taskMismatch(t *testing.T) {
 	cycleID := mustStartCycle(t, srv.URL, taskA)
 
 	res, raw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskB+"/cycles/"+cycleID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskB+"/cycles/"+cycleID+"/phases", `{"phase":"execute"}`)
 	if res.StatusCode != http.StatusNotFound {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}
@@ -502,7 +502,7 @@ func TestHTTP_patchTaskCyclePhase_400ErrorStrings(t *testing.T) {
 	taskID := mustCreateTaskForCycles(t, srv.URL)
 	cycleID := mustStartCycle(t, srv.URL, taskID)
 	_, phRaw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"execute"}`)
 	var ph taskCyclePhaseResponse
 	if err := json.Unmarshal(phRaw, &ph); err != nil {
 		t.Fatal(err)
@@ -581,7 +581,7 @@ func TestHTTP_getTaskCycle_phase_response_shape(t *testing.T) {
 	taskID := mustCreateTaskForCycles(t, srv.URL)
 	cycleID := mustStartCycle(t, srv.URL, taskID)
 	doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID+"/phases", `{"phase":"execute"}`)
 
 	res, raw := doCyclesRequest(t, http.MethodGet, srv.URL+"/tasks/"+taskID+"/cycles/"+cycleID, "")
 	if res.StatusCode != http.StatusOK {

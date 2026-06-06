@@ -55,7 +55,7 @@ func ValidateActor(a domain.Actor) error {
 func ValidPhase(p domain.Phase) bool {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidPhase")
 	switch p {
-	case domain.PhaseDiagnose, domain.PhaseExecute, domain.PhaseVerify, domain.PhasePersist:
+	case domain.PhaseExecute, domain.PhaseVerify:
 		return true
 	default:
 		return false

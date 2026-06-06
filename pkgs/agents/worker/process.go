@@ -100,11 +100,6 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		return
 	}
 
-	if !w.runSkippedDiagnose(parentCtx, cycle, &state) {
-		w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "diagnose_phase_write_failed")
-		return
-	}
-
 	state.verifySnap, _ = w.loadVerificationSnapshot(parentCtx, task.ID)
 
 	// Cycle phase loop. Each iteration is one execute → (optional) verify
@@ -360,43 +355,6 @@ func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *proce
 	}
 	w.publish(task.ID, cycle.ID)
 	return cycle, true
-}
-
-// runSkippedDiagnose writes the no-op diagnose row required by the
-// substrate's "first phase must be diagnose" rule and immediately marks
-// it skipped. Returns false on any store error so the caller can clean
-// up the parent cycle.
-func (w *Worker) runSkippedDiagnose(ctx context.Context, cycle *domain.TaskCycle, state *processState) bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runSkippedDiagnose",
-		"cycle_id", cycle.ID)
-	diag, err := w.store.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		slog.Warn("agent worker StartPhase(diagnose) failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.runSkippedDiagnose.start_err",
-			"cycle_id", cycle.ID, "err", err)
-		return false
-	}
-	state.runningPhase = domain.PhaseDiagnose
-	state.runningPhaseSeq = diag.PhaseSeq
-	w.publish(cycle.TaskID, cycle.ID)
-
-	summary := SkippedDiagnoseSummary
-	if _, err := w.store.CompletePhase(ctx, store.CompletePhaseInput{
-		CycleID:  cycle.ID,
-		PhaseSeq: diag.PhaseSeq,
-		Status:   domain.PhaseStatusSkipped,
-		Summary:  &summary,
-		By:       domain.ActorAgent,
-	}); err != nil {
-		slog.Warn("agent worker CompletePhase(diagnose) failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.runSkippedDiagnose.complete_err",
-			"cycle_id", cycle.ID, "err", err)
-		return false
-	}
-	state.runningPhase = ""
-	state.runningPhaseSeq = 0
-	w.publish(cycle.TaskID, cycle.ID)
-	return true
 }
 
 // startExecutePhase opens the execute phase row that wraps runner.Run.

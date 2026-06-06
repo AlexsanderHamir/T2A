@@ -270,7 +270,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		defer cancel()
 
 		mustDoJSON(t, http.MethodPost, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID+"/phases",
-			`{"phase":"diagnose"}`, "agent", http.StatusCreated)
+			`{"phase":"execute"}`, "agent", http.StatusCreated)
 		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
 		mustEqualEvents(t, "POST /tasks/{id}/cycles/{cycleId}/phases", got, []string{
 			"task_cycle_changed:" + task.ID + "/" + cycleID,
@@ -283,7 +283,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
 		cycleID := postCycleJSON(t, srv, task.ID, `{}`, http.StatusCreated)
 		mustDoJSON(t, http.MethodPost, srv.URL+"/tasks/"+task.ID+"/cycles/"+cycleID+"/phases",
-			`{"phase":"diagnose"}`, "agent", http.StatusCreated)
+			`{"phase":"execute"}`, "agent", http.StatusCreated)
 		ch, cancel := hub.Subscribe()
 		defer cancel()
 

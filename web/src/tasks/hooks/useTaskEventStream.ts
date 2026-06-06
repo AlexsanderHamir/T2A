@@ -10,9 +10,9 @@ import { setSseLiveForQueries } from "@/lib/queryClient";
 
 /**
  * Coalesce window for trailing-debounced SSE invalidations. The agent
- * worker emits ~6 `task_cycle_changed` frames per task run (StartCycle
- * → diagnose start/complete → execute start/complete → terminate),
- * spaced ~1–1.5s apart in real workloads. A short 400ms debounce never
+ * worker emits ~4 `task_cycle_changed` frames per task run (StartCycle
+ * → execute start/complete → terminate), spaced ~1–1.5s apart in real
+ * workloads. A short 400ms debounce never
  * actually batched them — every frame fired its own flush, kicking off
  * a refetch storm (events list + checklist + task row + cycles) on the
  * open task detail page roughly every second.

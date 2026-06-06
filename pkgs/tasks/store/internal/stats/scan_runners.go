@@ -96,10 +96,11 @@ const RunnerUnknownKey = "unknown"
 //
 // ExecDetails is the execute-phase details_json (LEFT JOIN'd via
 // task_cycle_phases.phase='execute'). Nullable because a cycle may
-// have no execute phase row yet (diagnose-only skip path). The cursor
-// adapter stuffs the stream-json-derived resolved_model in there, so
-// scanRunnerStats lifts the value out without needing a second
-// round-trip to the worker or a separate table.
+// have terminated before its first execute phase opened (e.g. a
+// store-error during StartCycle). The cursor adapter stuffs the
+// stream-json-derived resolved_model in there, so scanRunnerStats
+// lifts the value out without needing a second round-trip to the
+// worker or a separate table.
 type runnerStatsRow struct {
 	Status      domain.CycleStatus
 	StartedAt   time.Time
@@ -137,9 +138,8 @@ type runnerStatsExecDetailsProjection struct {
 // That JSON is where the cursor adapter persists the resolved_model
 // (lifted from cursor-agent's stream-json `system.init.model` event).
 // LEFT so pre-feature cycles and cycles that never reached the
-// execute phase (e.g. diagnose-only skip path) still contribute to
-// the first three maps; they simply don't populate
-// ByRunnerModelResolved.
+// execute phase still contribute to the first three maps; they
+// simply don't populate ByRunnerModelResolved.
 func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanRunnerStats")
 	out := RunnerStats{

@@ -87,19 +87,17 @@ Task -> many cycles (attempts) -> many phases (steps in an attempt)
 
 A **cycle** is one execution attempt. Cycles live in `task_cycles` and are ordered per task by `attempt_seq` (positive integer, `max + 1` assigned by the store inside the same transaction as the insert).
 
-A **phase** is one step inside a cycle. Phases live in `task_cycle_phases` and are ordered per cycle by `phase_seq`. The intended path is `diagnose → execute → verify → persist`, with `verify → execute` allowed for corrective retries. A cycle may repeat phase kinds — each visit is a separate row with a higher `phase_seq`.
+A **phase** is one step inside a cycle. Phases live in `task_cycle_phases` and are ordered per cycle by `phase_seq`. The path is `execute → verify`, with `verify → execute` allowed for corrective retries. A cycle may repeat phase kinds — each visit is a separate row with a higher `phase_seq`.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> diagnose
-  diagnose --> execute
+  [*] --> execute
   execute --> verify
-  verify --> persist
+  verify --> [*]
   verify --> execute : corrective retry
-  persist --> [*]
 ```
 
-`domain.ValidPhaseTransition(prev, next)` defines the graph. `persist` is terminal **within the cycle**, not for the cycle row itself — the caller still has to `TerminateCycle(succeeded)`.
+`domain.ValidPhaseTransition(prev, next)` defines the graph. Reaching the end of the phase graph is not the same as terminating the cycle — the caller still has to `TerminateCycle(succeeded|failed|aborted)`.
 
 ### Schema
 
@@ -126,7 +124,7 @@ erDiagram
   TASK_CYCLE_PHASES {
     string id PK
     string cycle_id FK
-    string phase     "diagnose|execute|verify|persist"
+    string phase     "execute|verify"
     int64  phase_seq "unique per cycle"
     string status    "running|succeeded|failed|skipped"
     json   details_json

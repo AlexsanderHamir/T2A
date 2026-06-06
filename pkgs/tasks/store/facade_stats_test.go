@@ -52,8 +52,7 @@ func TestStore_TaskStats_emptyDatabase(t *testing.T) {
 		t.Fatalf("phases.by_phase_status must be non-nil on empty DB")
 	}
 	wantPhases := []domain.Phase{
-		domain.PhaseDiagnose, domain.PhaseExecute,
-		domain.PhaseVerify, domain.PhasePersist,
+		domain.PhaseExecute, domain.PhaseVerify,
 	}
 	for _, p := range wantPhases {
 		inner, ok := got.Phases.ByPhaseStatus[p]
@@ -210,21 +209,6 @@ func TestStore_TaskStats_runnerBreakdown_resolvedModelFromExecDetails(t *testing
 			t.Fatalf("seed %d StartCycle: %v", i, err)
 		}
 		if sd.execDetails != "" {
-			// The state machine requires a terminated diagnose
-			// phase before execute can start; mirror the worker's
-			// runSkippedDiagnose path.
-			diag, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
-			if err != nil {
-				t.Fatalf("seed %d StartPhase(diagnose): %v", i, err)
-			}
-			if _, err := s.CompletePhase(ctx, CompletePhaseInput{
-				CycleID:  cyc.ID,
-				PhaseSeq: diag.PhaseSeq,
-				Status:   domain.PhaseStatusSkipped,
-				By:       domain.ActorAgent,
-			}); err != nil {
-				t.Fatalf("seed %d CompletePhase(diagnose): %v", i, err)
-			}
 			ph, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 			if err != nil {
 				t.Fatalf("seed %d StartPhase(execute): %v", i, err)
@@ -376,7 +360,7 @@ func mapKeys(m map[string]RunnerBucket) []string {
 }
 
 // TestStore_TaskStats_populatesCyclesPhasesAndFailures drives one cycle
-// through diagnose/execute and terminates it as failed, then asserts
+// through an execute phase and terminates it as failed, then asserts
 // every aggregation in the cycles/phases/recent_failures blocks
 // reflects the data. This is the integration check that lets us trust
 // the stats numbers.
@@ -388,16 +372,6 @@ func TestStore_TaskStats_populatesCyclesPhasesAndFailures(t *testing.T) {
 	cyc, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
 	if err != nil {
 		t.Fatalf("StartCycle: %v", err)
-	}
-	dx, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("StartPhase diagnose: %v", err)
-	}
-	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
-		CycleID: cyc.ID, PhaseSeq: dx.PhaseSeq,
-		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
-	}); err != nil {
-		t.Fatalf("CompletePhase diagnose: %v", err)
 	}
 	ex, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
@@ -427,10 +401,6 @@ func TestStore_TaskStats_populatesCyclesPhasesAndFailures(t *testing.T) {
 	if got.Cycles.ByTriggeredBy[domain.ActorAgent] != 1 {
 		t.Fatalf("cycles.by_triggered_by[agent]=%d want 1: %+v",
 			got.Cycles.ByTriggeredBy[domain.ActorAgent], got.Cycles.ByTriggeredBy)
-	}
-	if got.Phases.ByPhaseStatus[domain.PhaseDiagnose][domain.PhaseStatusSucceeded] != 1 {
-		t.Fatalf("phases.diagnose.succeeded=%d want 1",
-			got.Phases.ByPhaseStatus[domain.PhaseDiagnose][domain.PhaseStatusSucceeded])
 	}
 	if got.Phases.ByPhaseStatus[domain.PhaseExecute][domain.PhaseStatusFailed] != 1 {
 		t.Fatalf("phases.execute.failed=%d want 1",
@@ -472,16 +442,6 @@ func TestStore_TaskStats_recentFailures_prefersPhaseStandardizedMessage(t *testi
 	cyc, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
 	if err != nil {
 		t.Fatalf("StartCycle: %v", err)
-	}
-	dx, err := s.StartPhase(ctx, cyc.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("StartPhase diagnose: %v", err)
-	}
-	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
-		CycleID: cyc.ID, PhaseSeq: dx.PhaseSeq,
-		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
-	}); err != nil {
-		t.Fatalf("CompletePhase diagnose: %v", err)
 	}
 	ex, err := s.StartPhase(ctx, cyc.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {

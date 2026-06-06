@@ -194,7 +194,10 @@ describe("resolveAttemptAuditRightColumn", () => {
     });
   });
 
-  it("prefers failure detail over cycle scope when both apply", () => {
+  it("keeps the CYCLE scope badge on cycle_failed even when a reason exists", () => {
+    // Cycle lifecycle rows must look structurally identical regardless of
+    // outcome: failure detail lives on the event detail page so the
+    // timeline row stays as scannable as cycle_started/cycle_completed.
     expect(
       resolveAttemptAuditRightColumn(
         ev({
@@ -208,9 +211,11 @@ describe("resolveAttemptAuditRightColumn", () => {
         }),
       ),
     ).toEqual({
-      label: "execute phase timed out",
-      variant: "detail",
-      title: "execute phase timed out",
+      label: "CYCLE",
+      variant: "scope",
+      tone: "cycle",
+      title: "Applies to the whole execution attempt",
+      ariaLabel: "Whole attempt",
     });
   });
 });

@@ -230,7 +230,7 @@ func (TaskCycle) TableName() string { return "task_cycles" }
 type TaskCyclePhase struct {
 	ID        string      `gorm:"primaryKey"`
 	CycleID   string      `gorm:"not null;index;index:task_cycle_phases_cycle_id_seq,unique,priority:1"`
-	Phase     Phase       `gorm:"column:phase;not null;check:chk_task_cycle_phases_phase,phase IN ('diagnose','execute','verify','persist')"`
+	Phase     Phase       `gorm:"column:phase;not null;check:chk_task_cycle_phases_phase,phase IN ('execute','verify')"`
 	PhaseSeq  int64       `gorm:"not null;check:chk_task_cycle_phases_phase_seq,phase_seq > 0;index:task_cycle_phases_cycle_id_seq,unique,priority:2"`
 	Status    PhaseStatus `gorm:"not null;index;check:chk_task_cycle_phases_status,status IN ('running','succeeded','failed','skipped')"`
 	StartedAt time.Time   `gorm:"not null"`

@@ -78,7 +78,7 @@ func TestSweep_OrphanRunningCycle_isAbortedAndTaskWalkedToFailed(t *testing.T) {
 	h := newSweepHarness(t)
 	ctx := context.Background()
 
-	tsk, cycle, ph := h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "orphan-cycle", domain.PhaseDiagnose)
+	tsk, cycle, ph := h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "orphan-cycle", domain.PhaseExecute)
 
 	res, err := worker.SweepOrphanRunningCycles(ctx, h.st)
 	if err != nil {
@@ -157,23 +157,11 @@ func TestSweep_OrphanPhaseUnderTerminalCycle_isFailed(t *testing.T) {
 	h := newSweepHarness(t)
 	ctx := context.Background()
 
-	tsk, cycle, ph := h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "orphan-phase", domain.PhaseDiagnose)
+	tsk, cycle, ph := h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "orphan-phase", domain.PhaseExecute)
 
 	if _, err := h.st.CompletePhase(ctx, store.CompletePhaseInput{
 		CycleID:  cycle.ID,
 		PhaseSeq: ph.PhaseSeq,
-		Status:   domain.PhaseStatusSucceeded,
-		By:       domain.ActorAgent,
-	}); err != nil {
-		t.Fatalf("complete diagnose: %v", err)
-	}
-	exec, err := h.st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("start execute: %v", err)
-	}
-	if _, err := h.st.CompletePhase(ctx, store.CompletePhaseInput{
-		CycleID:  cycle.ID,
-		PhaseSeq: exec.PhaseSeq,
 		Status:   domain.PhaseStatusSucceeded,
 		By:       domain.ActorAgent,
 	}); err != nil {
@@ -185,7 +173,7 @@ func TestSweep_OrphanPhaseUnderTerminalCycle_isFailed(t *testing.T) {
 
 	tx := h.db.Exec(
 		"UPDATE task_cycle_phases SET status = ?, ended_at = NULL WHERE phase_seq = ? AND cycle_id = ?",
-		domain.PhaseStatusRunning, exec.PhaseSeq, cycle.ID,
+		domain.PhaseStatusRunning, ph.PhaseSeq, cycle.ID,
 	)
 	if tx.Error != nil {
 		t.Fatalf("synthesize orphan running phase: %v", tx.Error)
@@ -222,7 +210,7 @@ func TestSweep_Idempotent(t *testing.T) {
 	h := newSweepHarness(t)
 	ctx := context.Background()
 
-	_, _, _ = h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "idemp", domain.PhaseDiagnose)
+	_, _, _ = h.makeRunningTaskWithRunningCycleAndPhase(t, ctx, "idemp", domain.PhaseExecute)
 
 	first, err := worker.SweepOrphanRunningCycles(ctx, h.st)
 	if err != nil {

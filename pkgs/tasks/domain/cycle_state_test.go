@@ -10,11 +10,10 @@ func TestValidPhaseTransition_initialEntry(t *testing.T) {
 		next Phase
 		want bool
 	}{
-		{name: "empty -> diagnose is the only valid start", next: PhaseDiagnose, want: true},
-		{name: "empty -> execute rejected", next: PhaseExecute, want: false},
+		{name: "empty -> execute is the only valid start", next: PhaseExecute, want: true},
 		{name: "empty -> verify rejected", next: PhaseVerify, want: false},
-		{name: "empty -> persist rejected", next: PhasePersist, want: false},
 		{name: "empty -> empty rejected", next: "", want: false},
+		{name: "empty -> unknown rejected", next: Phase("garbage"), want: false},
 	}
 
 	for _, tc := range cases {
@@ -37,9 +36,7 @@ func TestValidPhaseTransition_forwardEdges(t *testing.T) {
 		next Phase
 		want bool
 	}{
-		{name: "diagnose -> execute", prev: PhaseDiagnose, next: PhaseExecute, want: true},
 		{name: "execute -> verify", prev: PhaseExecute, next: PhaseVerify, want: true},
-		{name: "verify -> persist", prev: PhaseVerify, next: PhasePersist, want: true},
 		{name: "verify -> execute is the corrective re-entry edge", prev: PhaseVerify, next: PhaseExecute, want: true},
 	}
 
@@ -62,19 +59,11 @@ func TestValidPhaseTransition_rejectsInvalidEdges(t *testing.T) {
 		prev Phase
 		next Phase
 	}{
-		{name: "diagnose -> verify skips execute", prev: PhaseDiagnose, next: PhaseVerify},
-		{name: "diagnose -> persist skips work", prev: PhaseDiagnose, next: PhasePersist},
-		{name: "diagnose -> diagnose is not a valid loop", prev: PhaseDiagnose, next: PhaseDiagnose},
-		{name: "execute -> persist skips verify", prev: PhaseExecute, next: PhasePersist},
-		{name: "execute -> diagnose moves backwards", prev: PhaseExecute, next: PhaseDiagnose},
 		{name: "execute -> execute self-loop without verify gate", prev: PhaseExecute, next: PhaseExecute},
-		{name: "verify -> diagnose moves backwards", prev: PhaseVerify, next: PhaseDiagnose},
 		{name: "verify -> verify self-loop", prev: PhaseVerify, next: PhaseVerify},
-		{name: "persist -> anything is rejected (cycle terminal)", prev: PhasePersist, next: PhaseExecute},
-		{name: "persist -> diagnose is rejected (cycle terminal)", prev: PhasePersist, next: PhaseDiagnose},
-		{name: "persist -> persist self-loop", prev: PhasePersist, next: PhasePersist},
-		{name: "unknown prev rejects everything", prev: Phase("garbage"), next: PhaseDiagnose},
+		{name: "unknown prev rejects everything", prev: Phase("garbage"), next: PhaseExecute},
 		{name: "any -> empty next rejected", prev: PhaseExecute, next: ""},
+		{name: "any -> unknown next rejected", prev: PhaseExecute, next: Phase("garbage")},
 	}
 
 	for _, tc := range cases {
@@ -145,8 +134,8 @@ func TestTerminalPhaseStatus(t *testing.T) {
 func TestCycleAndPhaseEnumValues(t *testing.T) {
 	t.Parallel()
 
-	if string(PhaseDiagnose) != "diagnose" || string(PhaseExecute) != "execute" || string(PhaseVerify) != "verify" || string(PhasePersist) != "persist" {
-		t.Fatalf("phase enum string drift: %q %q %q %q", PhaseDiagnose, PhaseExecute, PhaseVerify, PhasePersist)
+	if string(PhaseExecute) != "execute" || string(PhaseVerify) != "verify" {
+		t.Fatalf("phase enum string drift: %q %q", PhaseExecute, PhaseVerify)
 	}
 	if string(CycleStatusRunning) != "running" || string(CycleStatusSucceeded) != "succeeded" || string(CycleStatusFailed) != "failed" || string(CycleStatusAborted) != "aborted" {
 		t.Fatalf("cycle status enum string drift: %q %q %q %q", CycleStatusRunning, CycleStatusSucceeded, CycleStatusFailed, CycleStatusAborted)

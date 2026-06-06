@@ -240,10 +240,8 @@ describe("parseTaskStatsResponse", () => {
     cycles: { by_status: {}, by_triggered_by: {} },
     phases: {
       by_phase_status: {
-        diagnose: {},
         execute: {},
         verify: {},
-        persist: {},
       },
     },
     runner: {
@@ -414,17 +412,13 @@ describe("parseTaskStatsResponse", () => {
         by_phase_status: {
           // Server omits phases with no data; parser must still seed
           // every Phase enum value with `{}` so the heatmap renders.
-          diagnose: { succeeded: 4 },
           execute: { failed: 2, succeeded: 1 },
           verify: {},
-          persist: {},
         },
       },
     });
     expect(Object.keys(got.phases.by_phase_status).sort()).toEqual([
-      "diagnose",
       "execute",
-      "persist",
       "verify",
     ]);
     expect(got.phases.by_phase_status.execute).toEqual({
@@ -991,7 +985,7 @@ describe("parseTaskCycle", () => {
 const validPhase = {
   id: "ph-1",
   cycle_id: "cyc-1",
-  phase: "diagnose",
+  phase: "execute",
   phase_seq: 1,
   status: "running",
   started_at: "2026-04-18T10:00:01.000Z",

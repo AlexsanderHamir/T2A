@@ -253,6 +253,16 @@ function resolveAttemptAuditScope(
 export function resolveAttemptAuditRightColumn(
   ev: TaskEvent,
 ): AttemptAuditRightColumn | null {
+  // Cycle lifecycle rows are scope-level: the row label ("Attempt
+  // started/completed/failed") already conveys the outcome, and the
+  // failure reason lives one click away on the event detail page. Falling
+  // through to the detail-text branch (which surfaced cycle_failed's
+  // reason inline) made the failed row look structurally different from
+  // the completed/started rows — visually noisy and inconsistent with
+  // every other CYCLE-scope event.
+  if (CYCLE_SCOPE_TYPES.has(ev.type)) {
+    return resolveAttemptAuditScope(ev);
+  }
   const preview = formatAttemptAuditPreview(ev);
   if (preview) {
     const phaseMatch = /^PHASE (\d+)$/.exec(preview);

@@ -82,7 +82,7 @@ func TestTaskCyclePhaseResponseFromDomain_normalizes_non_object_details(t *testi
 			p := &domain.TaskCyclePhase{
 				ID:          "phs_1",
 				CycleID:     "cyc_1",
-				Phase:       domain.PhaseDiagnose,
+				Phase:       domain.PhaseExecute,
 				PhaseSeq:    1,
 				Status:      domain.PhaseStatusRunning,
 				StartedAt:   time.Now().UTC(),

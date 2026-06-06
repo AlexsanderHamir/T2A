@@ -212,20 +212,6 @@ func mustCreateCycleWithExecutePhase(t *testing.T, st *store.Store, ctx context.
 	if err != nil {
 		t.Fatalf("start cycle: %v", err)
 	}
-	diag, err := st.StartPhase(ctx, cycle.ID, domain.PhaseDiagnose, domain.ActorAgent)
-	if err != nil {
-		t.Fatalf("start diagnose: %v", err)
-	}
-	summary := "skip"
-	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
-		CycleID:  cycle.ID,
-		PhaseSeq: diag.PhaseSeq,
-		Status:   domain.PhaseStatusSkipped,
-		Summary:  &summary,
-		By:       domain.ActorAgent,
-	}); err != nil {
-		t.Fatalf("complete diagnose: %v", err)
-	}
 	phase, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
 		t.Fatalf("start execute: %v", err)
@@ -273,7 +259,7 @@ func TestHTTP_getTaskCycle_embeds_phases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, p := range []string{"diagnose", "execute"} {
+	for _, p := range []string{"execute", "verify"} {
 		res, raw := doCyclesRequest(t, http.MethodPost,
 			srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"`+p+`"}`)
 		if res.StatusCode != http.StatusCreated {
@@ -305,11 +291,11 @@ func TestHTTP_getTaskCycle_embeds_phases(t *testing.T) {
 	if len(got.Phases) != 2 {
 		t.Fatalf("phases=%d want 2 body=%s", len(got.Phases), raw)
 	}
-	if got.Phases[0].Phase != domain.PhaseDiagnose || got.Phases[0].PhaseSeq != 1 {
-		t.Fatalf("phases[0] %#v want diagnose seq 1", got.Phases[0])
+	if got.Phases[0].Phase != domain.PhaseExecute || got.Phases[0].PhaseSeq != 1 {
+		t.Fatalf("phases[0] %#v want execute seq 1", got.Phases[0])
 	}
-	if got.Phases[1].Phase != domain.PhaseExecute || got.Phases[1].PhaseSeq != 2 {
-		t.Fatalf("phases[1] %#v want execute seq 2", got.Phases[1])
+	if got.Phases[1].Phase != domain.PhaseVerify || got.Phases[1].PhaseSeq != 2 {
+		t.Fatalf("phases[1] %#v want verify seq 2", got.Phases[1])
 	}
 	if got.Phases[0].Status != domain.PhaseStatusSucceeded || got.Phases[0].Summary == nil || *got.Phases[0].Summary != "ok" {
 		t.Fatalf("phases[0] terminal state %#v", got.Phases[0])
@@ -356,7 +342,7 @@ func TestHTTP_postTaskCyclePhase_starts_running_phase(t *testing.T) {
 		t.Fatal(err)
 	}
 	res, raw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"execute"}`)
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}
@@ -364,7 +350,7 @@ func TestHTTP_postTaskCyclePhase_starts_running_phase(t *testing.T) {
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Phase != domain.PhaseDiagnose || got.PhaseSeq != 1 || got.Status != domain.PhaseStatusRunning {
+	if got.Phase != domain.PhaseExecute || got.PhaseSeq != 1 || got.Status != domain.PhaseStatusRunning {
 		t.Fatalf("phase create %#v", got)
 	}
 	if got.EndedAt != nil {
@@ -385,14 +371,14 @@ func TestHTTP_patchTaskCyclePhase_completes_with_summary_and_details(t *testing.
 		t.Fatal(err)
 	}
 	_, phRaw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"execute"}`)
 	var ph taskCyclePhaseResponse
 	if err := json.Unmarshal(phRaw, &ph); err != nil {
 		t.Fatal(err)
 	}
 	startEventSeq := ph.EventSeq
 
-	body := `{"status":"succeeded","summary":"diagnosed root cause","details":{"file":"a.go","line":42}}`
+	body := `{"status":"succeeded","summary":"applied the change","details":{"file":"a.go","line":42}}`
 	res, raw := doCyclesRequest(t, http.MethodPatch,
 		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases/"+strItoa(ph.PhaseSeq), body)
 	if res.StatusCode != http.StatusOK {
@@ -405,7 +391,7 @@ func TestHTTP_patchTaskCyclePhase_completes_with_summary_and_details(t *testing.
 	if got.Status != domain.PhaseStatusSucceeded {
 		t.Fatalf("status=%s want succeeded", got.Status)
 	}
-	if got.Summary == nil || *got.Summary != "diagnosed root cause" {
+	if got.Summary == nil || *got.Summary != "applied the change" {
 		t.Fatalf("summary=%v", got.Summary)
 	}
 	if got.EventSeq == nil || startEventSeq == nil || *got.EventSeq <= *startEventSeq {
@@ -435,7 +421,7 @@ func TestHTTP_cycle_routes_appendMirrorEvents_into_audit_log(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, phRaw := doCyclesRequest(t, http.MethodPost,
-		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"diagnose"}`)
+		srv.URL+"/tasks/"+taskID+"/cycles/"+cycle.ID+"/phases", `{"phase":"execute"}`)
 	var ph taskCyclePhaseResponse
 	if err := json.Unmarshal(phRaw, &ph); err != nil {
 		t.Fatal(err)
