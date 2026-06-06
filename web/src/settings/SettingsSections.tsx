@@ -22,6 +22,21 @@ type HandleField = <K extends keyof SettingsFormState>(
   value: SettingsFormState[K],
 ) => void;
 
+/**
+ * Section ids used both as DOM anchors (for the in-page nav rail)
+ * and as test/select hooks. Keep in sync with SETTINGS_NAV_ITEMS in
+ * SettingsPage.tsx.
+ */
+export const SECTION_IDS = {
+  workspace: "workspace",
+  agentWorker: "agent-worker",
+  cursorAgent: "cursor-agent",
+  verification: "verification",
+  runTimeout: "run-timeout",
+  display: "display",
+  developer: "developer",
+} as const;
+
 export function SettingsLoadingState({
   error,
   onRetry,
@@ -100,11 +115,76 @@ export function WorkspaceWarning() {
           <strong>Workspace not configured.</strong>
         </p>
         <p className="settings-banner-text">
-          Set the repository root below to enable the agent worker, file
-          mentions, and the <code>/repo/*</code> endpoints.
+          Set the repository root in <strong>Workspace</strong> below to enable
+          the agent worker, file mentions, and the <code>/repo/*</code> endpoints.
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Section card scaffold. Renders a real `<h2>` heading inside an
+ * accessible region so the page has proper outline structure for
+ * screen readers and the in-page nav. The previous inset `<legend>`
+ * pattern was visually decorative chrome; promoting it to an h2
+ * gives the section a real anchor a sighted operator can scan and
+ * an assistive-tech user can land on.
+ */
+function SectionCard({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="settings-section"
+      aria-labelledby={`${id}-title`}
+    >
+      <h2 id={`${id}-title`} className="settings-section-title">
+        {title}
+      </h2>
+      <div className="settings-section-body">{children}</div>
+    </section>
+  );
+}
+
+export function WorkspaceSettingsSection({
+  form,
+  onField,
+}: {
+  form: SettingsFormState;
+  onField: HandleField;
+}) {
+  return (
+    <SectionCard id={SECTION_IDS.workspace} title="Workspace">
+      <label className="settings-field">
+        <span className="settings-field-label">Repository root</span>
+        <input
+          type="text"
+          value={form.repoRoot}
+          onChange={(e) => onField("repoRoot", e.target.value)}
+          placeholder="/Users/me/code/my-project"
+          spellCheck={false}
+          autoComplete="off"
+        />
+      </label>
+      <p className="settings-field-help">
+        Absolute path. Empty disables repo features until you pick a workspace.
+      </p>
+      <details className="settings-learn-more">
+        <summary>What reads this path?</summary>
+        <p>
+          The agent worker, <code>/repo/*</code> endpoints, and{" "}
+          <code>@file</code> mentions all resolve paths against this root.
+        </p>
+      </details>
+    </SectionCard>
   );
 }
 
@@ -118,12 +198,7 @@ export function AgentWorkerSettingsSection({
   onField: HandleField;
 }) {
   return (
-    <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend">Agent worker</legend>
-      <p className="settings-section-subtitle">
-        Pick up ready tasks and hand them to the configured runner.
-      </p>
-
+    <SectionCard id={SECTION_IDS.agentWorker} title="Agent worker">
       <label className="settings-field settings-field--inline">
         <input
           type="checkbox"
@@ -133,7 +208,7 @@ export function AgentWorkerSettingsSection({
         <span className="settings-field-label">Enable agent worker</span>
       </label>
       <p className="settings-field-help">
-        When on, the worker pulls ready tasks and dispatches them.
+        Pulls ready tasks and dispatches them to the runner.
       </p>
 
       <label className="settings-field">
@@ -154,17 +229,22 @@ export function AgentWorkerSettingsSection({
       </label>
 
       <label className="settings-field">
-        <span className="settings-field-label">Agent pickup delay (seconds)</span>
-        <input
-          type="number"
-          min={0}
-          max={604800}
-          step={1}
-          placeholder="5"
-          value={form.agentPickupDelaySeconds}
-          onChange={(e) => onField("agentPickupDelaySeconds", e.target.value)}
-          aria-invalid={pickupInvalid}
-        />
+        <span className="settings-field-label">Pickup delay</span>
+        <span className="settings-field-input-suffix">
+          <input
+            type="number"
+            min={0}
+            max={604800}
+            step={1}
+            placeholder="5"
+            value={form.agentPickupDelaySeconds}
+            onChange={(e) => onField("agentPickupDelaySeconds", e.target.value)}
+            aria-invalid={pickupInvalid}
+          />
+          <span className="settings-field-suffix" aria-hidden="true">
+            seconds
+          </span>
+        </span>
       </label>
       <p className="settings-field-help">
         Minimum wait before the next ready task runs. Default <code>5</code>s ·{" "}
@@ -175,84 +255,7 @@ export function AgentWorkerSettingsSection({
           Must be between 0 and 604800 (7 days).
         </p>
       ) : null}
-    </fieldset>
-  );
-}
-
-export function DisplaySettingsSection({
-  form,
-  browserTz,
-  options,
-  showCustomTz,
-  onField,
-}: {
-  form: SettingsFormState;
-  browserTz: string;
-  options: TimezoneSelectOption[];
-  showCustomTz: boolean;
-  onField: HandleField;
-}) {
-  const customValue = form.displayTimezone.trim();
-  return (
-    <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend">Display</legend>
-      <label className="settings-field">
-        <span className="settings-field-label">Timezone</span>
-        <TimezoneCombobox
-          testId="settings-display-timezone-select"
-          value={form.displayTimezone}
-          onChange={(v) => onField("displayTimezone", v)}
-          browserTz={browserTz}
-          options={options}
-          customSaved={
-            showCustomTz
-              ? {
-                  value: customValue,
-                  label: `${formatTimezoneMenuLabel(customValue)} (saved — not in list)`,
-                }
-              : null
-          }
-        />
-      </label>
-    </fieldset>
-  );
-}
-
-export function WorkspaceSettingsSection({
-  form,
-  onField,
-}: {
-  form: SettingsFormState;
-  onField: HandleField;
-}) {
-  return (
-    <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend">Workspace</legend>
-      <p className="settings-section-subtitle">
-        The repository the agent will execute tasks in.
-      </p>
-      <label className="settings-field">
-        <span className="settings-field-label">Repository root (absolute path)</span>
-        <input
-          type="text"
-          value={form.repoRoot}
-          onChange={(e) => onField("repoRoot", e.target.value)}
-          placeholder="/Users/me/code/my-project"
-          spellCheck={false}
-          autoComplete="off"
-        />
-      </label>
-      <p className="settings-field-help">
-        Leave empty to disable repo features until you pick a workspace.
-      </p>
-      <details className="settings-learn-more">
-        <summary>What reads this path?</summary>
-        <p>
-          The agent worker, <code>/repo/*</code> endpoints, and{" "}
-          <code>@file</code> mentions all resolve paths against this root.
-        </p>
-      </details>
-    </fieldset>
+    </SectionCard>
   );
 }
 
@@ -274,13 +277,9 @@ export function CursorAgentSettingsSection({
   onProbe: () => void;
 }) {
   return (
-    <fieldset className="settings-fieldset" id="cursor-agent">
-      <legend className="settings-fieldset-legend">Cursor agent (CLI)</legend>
-      <p className="settings-section-subtitle">
-        Model override and CLI binary used by the Cursor runner.
-      </p>
+    <SectionCard id={SECTION_IDS.cursorAgent} title="Cursor runner">
       <label className="settings-field">
-        <span className="settings-field-label">Model override</span>
+        <span className="settings-field-label">Model</span>
         <select
           data-testid="settings-cursor-model-select"
           value={form.cursorModel}
@@ -288,9 +287,7 @@ export function CursorAgentSettingsSection({
           disabled={cursorModelsQuery.isFetching}
           aria-busy={cursorModelsQuery.isFetching}
         >
-          <option value="">
-            Default (omit --model; Cursor chooses for your account)
-          </option>
+          <option value="">Default (runner picks)</option>
           {cursorModelsQuery.data?.ok && cursorModelsQuery.data.models
             ? cursorModelsQuery.data.models.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -320,8 +317,8 @@ export function CursorAgentSettingsSection({
         </p>
       ) : null}
       <p className="settings-field-help">
-        List comes from <code>cursor-agent --list-models</code>. Leave{" "}
-        <em>Default</em> to omit <code>--model</code>.
+        From <code>cursor-agent --list-models</code>. Default omits{" "}
+        <code>--model</code>.
       </p>
       <details className="settings-learn-more">
         <summary>Hit a usage-limit error?</summary>
@@ -340,8 +337,7 @@ export function CursorAgentSettingsSection({
         />
       </label>
       <p className="settings-field-help">
-        Leave empty to auto-detect on PATH. Use the test button to verify
-        before saving.
+        Empty = auto-detect on PATH. Test before saving.
       </p>
       {form.cursorBin.trim() === "" && resolvedDefaultBin ? (
         <div className="settings-resolved-bin">
@@ -364,7 +360,7 @@ export function CursorAgentSettingsSection({
           {probePending ? "Testing…" : "Test cursor binary"}
         </button>
       </div>
-    </fieldset>
+    </SectionCard>
   );
 }
 
@@ -386,9 +382,7 @@ export function VerificationSettingsSection({
     verifyRunnerSaved === "" ||
     RUNNERS.some((r) => r.id === verifyRunnerSaved);
   return (
-    <fieldset className="settings-fieldset" id="verification">
-      <legend className="settings-fieldset-legend">Verification</legend>
-
+    <SectionCard id={SECTION_IDS.verification} title="Verification">
       <label className="settings-verify-toggle">
         <input
           type="checkbox"
@@ -404,8 +398,8 @@ export function VerificationSettingsSection({
           <span className="settings-verify-toggle-help">
             The agent must prove each criterion passed — via your{" "}
             <code>check</code> command or an LLM verifier — before it&apos;s
-            marked done. When off, criteria are bulk-marked done on a successful
-            execute run.
+            marked done. When off, criteria are bulk-marked done on a
+            successful execute run.
           </span>
         </span>
       </label>
@@ -413,7 +407,7 @@ export function VerificationSettingsSection({
       {enabled ? (
         <div className="settings-verify-details">
           <div className="settings-verify-group">
-            <h3 className="settings-verify-group-title">Budget</h3>
+            <p className="settings-verify-group-title">Budget</p>
 
             <label className="settings-field">
               <span className="settings-field-label">
@@ -436,7 +430,7 @@ export function VerificationSettingsSection({
               </span>
             </label>
             <p className="settings-field-help">
-              How many times to re-run execute after a verify failure. Default{" "}
+              Re-runs of execute after a verify failure. Default{" "}
               <code>{DEFAULT_VERIFY_MAX_RETRIES}</code> · Range{" "}
               <code>0</code>–<code>{MAX_VERIFY_MAX_RETRIES}</code>.
             </p>
@@ -474,9 +468,8 @@ export function VerificationSettingsSection({
             <summary>Advanced verifier</summary>
             <p>
               Pick a different runner — or a different model on the same
-              runner — to judge the work the execute runner produced. Leave
-              both fields on their default to reuse the execute runner and
-              its default model.
+              runner — to judge the work. Leave both at default to reuse the
+              execute runner.
             </p>
 
             <label className="settings-field">
@@ -543,7 +536,7 @@ export function VerificationSettingsSection({
           </details>
         </div>
       ) : null}
-    </fieldset>
+    </SectionCard>
   );
 }
 
@@ -557,31 +550,73 @@ export function RunTimeoutSettingsSection({
   onField: HandleField;
 }) {
   return (
-    <fieldset className="settings-fieldset">
-      <legend className="settings-fieldset-legend">Run timeout</legend>
-      <p className="settings-section-subtitle">
-        Hard ceiling on any single agent run&apos;s wall-clock duration.
-      </p>
+    <SectionCard id={SECTION_IDS.runTimeout} title="Run timeout">
       <label className="settings-field">
-        <span className="settings-field-label">Max run duration (seconds)</span>
-        <input
-          type="number"
-          min={0}
-          step={1}
-          value={form.maxRunDurationSeconds}
-          onChange={(e) => onField("maxRunDurationSeconds", e.target.value)}
-          aria-invalid={maxInvalid}
-        />
+        <span className="settings-field-label">Max run duration</span>
+        <span className="settings-field-input-suffix">
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.maxRunDurationSeconds}
+            onChange={(e) => onField("maxRunDurationSeconds", e.target.value)}
+            aria-invalid={maxInvalid}
+          />
+          <span className="settings-field-suffix" aria-hidden="true">
+            seconds
+          </span>
+        </span>
       </label>
       <p className="settings-field-help">
-        Set to <code>0</code> for no limit.
+        Hard ceiling per run. <code>0</code> = no limit.
       </p>
       {maxInvalid ? (
         <p role="alert" className="settings-field-error">
           Must be a non-negative integer.
         </p>
       ) : null}
-    </fieldset>
+    </SectionCard>
+  );
+}
+
+export function DisplaySettingsSection({
+  form,
+  browserTz,
+  options,
+  showCustomTz,
+  onField,
+}: {
+  form: SettingsFormState;
+  browserTz: string;
+  options: TimezoneSelectOption[];
+  showCustomTz: boolean;
+  onField: HandleField;
+}) {
+  const customValue = form.displayTimezone.trim();
+  return (
+    <SectionCard id={SECTION_IDS.display} title="Display">
+      <label className="settings-field">
+        <span className="settings-field-label">Timezone</span>
+        <TimezoneCombobox
+          testId="settings-display-timezone-select"
+          value={form.displayTimezone}
+          onChange={(v) => onField("displayTimezone", v)}
+          browserTz={browserTz}
+          options={options}
+          customSaved={
+            showCustomTz
+              ? {
+                  value: customValue,
+                  label: `${formatTimezoneMenuLabel(customValue)} (saved — not in list)`,
+                }
+              : null
+          }
+        />
+      </label>
+      <p className="settings-field-help">
+        Used for every operator-facing timestamp. Storage stays in UTC.
+      </p>
+    </SectionCard>
   );
 }
 

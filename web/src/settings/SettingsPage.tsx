@@ -14,6 +14,7 @@ import {
   CursorAgentSettingsSection,
   DisplaySettingsSection,
   RunTimeoutSettingsSection,
+  SECTION_IDS,
   VerificationSettingsSection,
   SettingsActions,
   SettingsHeader,
@@ -23,6 +24,24 @@ import {
   WorkspaceWarning,
 } from "./SettingsSections";
 import { UiTestModeSettingsSection } from "./UiTestModeSettingsSection";
+import { SettingsNav, type SettingsNavItem } from "./SettingsNav";
+
+/**
+ * In-page navigation rail entries. Order matches the form below
+ * (workspace → runtime → verification → safety → cosmetic → dev) so
+ * the operator's vertical scroll path matches the rail's top-to-
+ * bottom reading order. Keep ids in sync with `SECTION_IDS` exported
+ * from SettingsSections.tsx.
+ */
+const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  { id: SECTION_IDS.workspace, label: "Workspace" },
+  { id: SECTION_IDS.agentWorker, label: "Agent worker" },
+  { id: SECTION_IDS.cursorAgent, label: "Cursor runner" },
+  { id: SECTION_IDS.verification, label: "Verification" },
+  { id: SECTION_IDS.runTimeout, label: "Run timeout" },
+  { id: SECTION_IDS.display, label: "Display" },
+  { id: SECTION_IDS.developer, label: "Developer" },
+];
 import {
   SETTINGS_SUCCESS_DISMISS_MS,
   diffPatch,
@@ -61,14 +80,19 @@ export function SettingsPage() {
   }, [status]);
 
   /**
-   * Client navigations to `/settings#cursor-agent` do not scroll the way a full
-   * page load would, and the `#cursor-agent` target is not in the DOM until
-   * settings finish loading — scroll after the form mounts.
+   * Client navigations to `/settings#<section>` do not scroll the way
+   * a full page load would, and the `<section>` target is not in the
+   * DOM until settings finish loading — scroll after the form mounts.
+   * Supports any section id registered in SETTINGS_NAV_ITEMS, not
+   * just the legacy `#cursor-agent` deep link.
    */
   useEffect(() => {
     if (isLoading || !form || !settings) return;
-    if (location.hash !== "#cursor-agent") return;
-    const el = document.getElementById("cursor-agent");
+    const hash = location.hash.replace(/^#/, "");
+    if (!hash) return;
+    const known = SETTINGS_NAV_ITEMS.some((it) => it.id === hash);
+    if (!known) return;
+    const el = document.getElementById(hash);
     if (!el) return;
     const prefersReduced =
       typeof window.matchMedia === "function" &&
@@ -351,60 +375,69 @@ export function SettingsPage() {
 
       {repoRootEmpty ? <WorkspaceWarning /> : null}
 
-      <form className="settings-form" onSubmit={(e) => void handleSubmit(e)}>
-        <AgentWorkerSettingsSection
-          form={form}
-          pickupInvalid={pickupInvalid}
-          onField={handleField}
-        />
+      <div className="settings-layout">
+        <aside className="settings-layout-aside">
+          <SettingsNav items={SETTINGS_NAV_ITEMS} />
+        </aside>
 
-        <DisplaySettingsSection
-          form={form}
-          browserTz={browserTz}
-          options={tzSelectOptions}
-          showCustomTz={showCustomTz}
-          onField={handleField}
-        />
+        <form
+          className="settings-form"
+          onSubmit={(e) => void handleSubmit(e)}
+        >
+          <WorkspaceSettingsSection form={form} onField={handleField} />
 
-        <WorkspaceSettingsSection form={form} onField={handleField} />
+          <AgentWorkerSettingsSection
+            form={form}
+            pickupInvalid={pickupInvalid}
+            onField={handleField}
+          />
 
-        <CursorAgentSettingsSection
-          form={form}
-          cursorModelsQuery={cursorModelsQuery}
-          modelIdsFromList={modelIdsFromList}
-          resolvedDefaultBin={resolvedDefaultBin}
-          probePending={probe.isPending}
-          onField={handleField}
-          onProbe={() => {
-            void handleProbe();
-          }}
-        />
+          <CursorAgentSettingsSection
+            form={form}
+            cursorModelsQuery={cursorModelsQuery}
+            modelIdsFromList={modelIdsFromList}
+            resolvedDefaultBin={resolvedDefaultBin}
+            probePending={probe.isPending}
+            onField={handleField}
+            onProbe={() => {
+              void handleProbe();
+            }}
+          />
 
-        <VerificationSettingsSection
-          form={form}
-          verifyModelsQuery={verifyModelsQuery}
-          verifyModelIdsFromList={verifyModelIdsFromList}
-          onField={handleField}
-        />
+          <VerificationSettingsSection
+            form={form}
+            verifyModelsQuery={verifyModelsQuery}
+            verifyModelIdsFromList={verifyModelIdsFromList}
+            onField={handleField}
+          />
 
-        <RunTimeoutSettingsSection
-          form={form}
-          maxInvalid={maxInvalid}
-          onField={handleField}
-        />
+          <RunTimeoutSettingsSection
+            form={form}
+            maxInvalid={maxInvalid}
+            onField={handleField}
+          />
 
-        <SettingsActions
-          isDirty={isDirty}
-          maxInvalid={maxInvalid}
-          pickupInvalid={pickupInvalid}
-          patchPending={patch.isPending}
-          onDiscard={() => setForm(toFormState(settings))}
-        />
+          <DisplaySettingsSection
+            form={form}
+            browserTz={browserTz}
+            options={tzSelectOptions}
+            showCustomTz={showCustomTz}
+            onField={handleField}
+          />
 
-        <SettingsStatusMessage status={status} />
-      </form>
+          <UiTestModeSettingsSection />
 
-      <UiTestModeSettingsSection />
+          <SettingsStatusMessage status={status} />
+
+          <SettingsActions
+            isDirty={isDirty}
+            maxInvalid={maxInvalid}
+            pickupInvalid={pickupInvalid}
+            patchPending={patch.isPending}
+            onDiscard={() => setForm(toFormState(settings))}
+          />
+        </form>
+      </div>
     </section>
   );
 }

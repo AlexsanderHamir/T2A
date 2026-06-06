@@ -285,28 +285,185 @@
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
+/*
+ * Two-column page layout — sticky in-page index on the left,
+ * stacked section cards on the right. Mirrors Stripe / Linear /
+ * Vercel settings pages: at desktop widths the operator can see
+ * both the section they're in and the section they're heading to;
+ * below 1024px the rail collapses and the form scrolls full-width.
+ *
+ * The aside is independently sticky so it stays anchored under the
+ * app header without re-flowing the form. `min-width: 0` on the
+ * form column is the standard CSS-Grid escape hatch that prevents
+ * `<input>`s and `<pre>`-style code blocks from blowing the column
+ * out past its track width.
+ */
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.settings-layout-aside {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .settings-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 48px;
+  }
+
+  .settings-layout-aside {
+    display: block;
+    position: sticky;
+    /* App header is ~56px; add breathing room so the rail's first
+       item doesn't collide with the header's bottom border. */
+    top: 88px;
+  }
+}
+
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  /* Reserve space for the sticky save bar's drop-shadow at the
+     bottom so the last section card doesn't sit visually on top of
+     the bar when the operator scrolls to the end of the form. */
+  padding-bottom: 16px;
+  min-width: 0;
+}
+
+/*
+ * In-page section index.
+ *
+ * Stripe-style left-rail navigation — vertical list, light divider,
+ * subtle active-state pill. The `aria-current="true"` link uses the
+ * brand-subtle background instead of a heavy fill so the rail reads
+ * as informational chrome, not an action surface. Keep the visual
+ * weight LOWER than the section headings to its right, otherwise
+ * the page reads "navigation -> form" twice.
+ */
+.settings-nav {
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+}
+
+.settings-nav-label {
+  margin: 0 0 8px;
+  padding-left: 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, var(--text-secondary, #6b7280));
+}
+
+.settings-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-link {
+  display: block;
+  padding: 6px 12px;
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-secondary, #4b5563);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition:
+    background-color var(--duration-short, 150ms) ease,
+    color var(--duration-short, 150ms) ease,
+    border-color var(--duration-short, 150ms) ease;
+}
+
+.settings-nav-link:hover {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  color: var(--text-primary, #0a0a0a);
+}
+
+.settings-nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring, rgba(99, 91, 255, 0.35));
+}
+
+.settings-nav-link[aria-current="true"] {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border-left-color: currentColor;
+  color: var(--text-primary, #0a0a0a);
+  font-weight: 500;
 }
 
 /*
  * Section cards.
- * Every fieldset is rendered as a flat card: surface-card fill,
- * hairline border, tiny shadow, generous padding. The legend
- * becomes a true section heading (block-level, type-scaled) and
- * the subtitle right underneath sets the section's intent in a
- * single line. The prior inset `<legend>` sitting astride the
- * border was a 1990s form pattern — we explicitly reset it to a
- * flow element so the card can own the visual frame.
+ * The form is a stack of `.settings-section` cards. Each card has
+ * a real `<h2>` heading at the top — a true page-outline anchor,
+ * not the inset `<legend>` chrome the page used previously. The
+ * heading sits flush-left, matches the type scale of other
+ * primary/secondary headings in the app (1rem / 600 weight), and
+ * is followed by a hairline rule that visually separates the
+ * heading from the form body without introducing a heavy second
+ * border on top of the card's own outline.
  *
- * On hover / focus-within the card lifts to `--shadow-sm` and
- * the border tone strengthens slightly — the same Apple/Stripe
- * "this row is in focus" affordance used everywhere else in the
- * app, so the operator gets clear feedback about which section
- * they're acting on without needing a stronger color treatment.
+ * Hover / focus-within strengthens the hairline tone slightly —
+ * same Apple/Stripe "this row is in focus" affordance used
+ * elsewhere in the app, so the operator gets clear feedback about
+ * which section they're acting on without a heavy color treatment.
  */
+.settings-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-elevated);
+  transition: border-color var(--duration-short, 150ms) ease;
+  /* Anchor offset for in-page nav clicks and deep links —
+     nav-rail click handlers use scrollIntoView({ block: "start" })
+     and the app header is sticky at ~56px, so each section needs
+     enough top inset that its heading clears the header. */
+  scroll-margin-top: 88px;
+}
+
+@media (hover: hover) {
+  .settings-section:hover {
+    border-color: var(--border-soft, var(--color-border, #d0d0d5));
+  }
+}
+
+.settings-section:focus-within {
+  border-color: var(--border-soft, var(--color-border, #d0d0d5));
+}
+
+.settings-section-title {
+  margin: 0;
+  padding: 18px var(--layout-gutter-x) 14px;
+  font-size: var(--text-md, 1rem);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary, #0a0a0a);
+  border-bottom: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+  letter-spacing: -0.005em;
+}
+
+.settings-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px var(--layout-gutter-x) 22px;
+}
+
+/* Legacy: pre-existing fieldset selector. Kept as an alias so any
+   markup that still uses `.settings-fieldset` (older docs/screens,
+   embedded help) inherits the new card styling without breaking.
+   New section markup uses `.settings-section` exclusively. */
 .settings-fieldset {
   position: relative;
   display: flex;
@@ -317,48 +474,6 @@
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
   border-radius: var(--radius-lg, 12px);
   background: var(--bg-elevated);
-  transition: border-color var(--duration-short, 150ms) ease;
-}
-
-@media (hover: hover) {
-  .settings-fieldset:hover {
-    border-color: var(--border-soft, var(--color-border, #d0d0d5));
-  }
-}
-
-.settings-fieldset:focus-within {
-  border-color: var(--border-soft, var(--color-border, #d0d0d5));
-}
-
-/* Deep link /settings#cursor-agent — keep section clear of sticky app header */
-fieldset.settings-fieldset#cursor-agent {
-  scroll-margin-top: 5.5rem;
-}
-
-.settings-fieldset legend {
-  display: block;
-  float: none;
-  width: auto;
-  margin: 0;
-  padding: 0;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-/*
- * Section subtitle — sits right under the legend, one-line
- * description of what this section configures. Pairs with
- * `.settings-field-help` (which is one-line per-field copy)
- * to give the page a consistent two-tier typographic rhythm.
- */
-.settings-section-subtitle {
-  margin: -6px 0 4px;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-secondary, var(--color-text-muted, #555));
 }
 
 /*
@@ -453,6 +568,32 @@ fieldset.settings-fieldset#cursor-agent {
     border-color var(--duration-short, 150ms) ease,
     box-shadow var(--duration-short, 150ms) ease,
     background-color var(--duration-short, 150ms) ease;
+}
+
+/*
+ * Native <select> chevron.
+ *
+ * Chrome/Safari/Firefox each ship a different platform chevron
+ * (some too small, some too dark) and the result on a settings
+ * page next to plain text inputs is that the operator can't tell
+ * a select from an input until they click. Replace the platform
+ * chevron with an SVG that matches the icon weight used elsewhere
+ * in the app, and reserve right padding so long values don't run
+ * under it.
+ */
+.settings-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none' stroke='%23667085' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='3.5 5.5 7 9 10.5 5.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 14px;
+}
+
+.settings-field select::-ms-expand {
+  display: none;
 }
 
 .settings-field input[type="text"]:hover,
@@ -899,9 +1040,14 @@ fieldset.settings-fieldset#cursor-agent {
  * aligned button cluster. The context chip solves the common
  * Settings-page confusion of "why is Save disabled?" without
  * forcing the operator to hunt for an inline validation error.
- * Renders as a sticky-adjacent footer card so it reads as the
- * committed-action surface, not just a stray button at the end
- * of the form.
+ *
+ * When the form is dirty the bar sticks to the bottom of the
+ * viewport so the operator can save from anywhere on the page —
+ * mirrors the treatment used by Stripe Dashboard / Vercel
+ * project settings / GitHub repo settings, where a long settings
+ * form would otherwise force a scroll-to-bottom round trip per
+ * edit. The clean state reverts to a static card so the form
+ * can rest at the end of the page when there's nothing to save.
  */
 .settings-actions {
   position: relative;
@@ -917,12 +1063,27 @@ fieldset.settings-fieldset#cursor-agent {
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
   border-radius: var(--radius-lg, 12px);
   background: var(--bg-elevated);
-  transition: border-color var(--duration-short, 200ms) ease, background var(--duration-short, 200ms) ease;
+  transition:
+    border-color var(--duration-short, 200ms) ease,
+    background var(--duration-short, 200ms) ease,
+    box-shadow var(--duration-short, 200ms) ease;
 }
 
 .settings-actions[data-dirty="true"] {
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
   border-color: var(--border-soft, var(--color-border, #d0d0d5));
-  background: var(--bg-subtle);
+  background: var(--bg-elevated);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px -10px rgba(0, 0, 0, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-actions {
+    transition: none;
+  }
 }
 
 .settings-actions-status {
@@ -1104,74 +1265,8 @@ fieldset.settings-fieldset#cursor-agent {
   }
 }
 
-/* Dev-only: sits below the main settings form — extra top margin so it
-   does not read as part of the save strip; looser vertical rhythm than
-   dense fieldsets. */
-.settings-ui-test-mode {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4, 1rem);
-  box-sizing: border-box;
-  width: 100%;
-  margin-top: var(--space-10, 2.5rem);
-  padding: var(--space-6, 1.5rem) var(--layout-gutter-x) var(--space-5, 1.25rem);
-  border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-  border-radius: var(--radius-lg, 12px);
-  background: var(--bg-elevated);
-}
-
-.settings-ui-test-mode__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-  color: var(--text-primary, var(--color-text, #1a1a1a));
-}
-
-.settings-ui-test-mode__lede {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--text-secondary, var(--color-text-muted, #555));
-  max-width: 65ch;
-}
-
-.settings-ui-test-mode__control {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--space-3, 0.75rem);
-  margin: var(--space-1, 0.25rem) 0 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--text-primary, var(--color-text, #1a1a1a));
-  cursor: pointer;
-}
-
-.settings-ui-test-mode__control input {
-  margin-top: 0.2em;
-  flex-shrink: 0;
-}
-
-.settings-ui-test-mode__status {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--text-secondary, var(--color-text-muted, #555));
-}
-
-.settings-ui-test-mode__status code,
-.settings-ui-test-mode__footnote code {
-  font-size: 0.92em;
-}
-
-.settings-ui-test-mode__footnote {
-  margin: var(--space-2, 0.5rem) 0 0;
-  padding-top: var(--space-4, 1rem);
-  border-top: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--text-tertiary, var(--color-text-muted, #888));
-  max-width: 65ch;
-}
+/* Developer section now uses the standard `.settings-section`
+   shape, so the legacy `.settings-ui-test-mode__*` selectors no
+   longer have a home. The Developer card inherits the same border,
+   heading, and body styling as every other section so the page
+   reads as one consistent vocabulary. */
