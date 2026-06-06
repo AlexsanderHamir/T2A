@@ -133,6 +133,12 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	// not separately, so a misbehaving SPA cannot amplify a load
 	// incident into a metrics-storage bill.
 	m.Handle("POST /v1/rum", http.HandlerFunc(h.postRUM))
+	// /v1/bootstrap is the cold-start aggregate the SPA uses to seed
+	// its TanStack Query cache from a single round trip — combines
+	// settings, root tasks page, stats, projects, and drafts head.
+	// Documented in docs/api.md; clients must tolerate 5xx and fall
+	// back to per-endpoint fan-out.
+	m.Handle("GET /v1/bootstrap", http.HandlerFunc(h.bootstrap))
 	return m
 }
 

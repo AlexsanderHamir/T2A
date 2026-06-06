@@ -1,4 +1,4 @@
-import { readError } from "./shared";
+import { apiErrorFromResponse } from "./shared";
 
 /** Match pkgs/tasks/handler/repo_handlers.go and docs/api.md (abuse guards). */
 export const maxRepoPathQueryBytes = 4096;
@@ -150,7 +150,7 @@ export async function searchRepoFiles(
   if (res.status === 503 || res.status === 409) {
     return null;
   }
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (
     raw !== null &&
@@ -191,7 +191,7 @@ export async function validateRepoRange(
   if (res.status === 503 || res.status === 409) {
     return null;
   }
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (raw !== null && typeof raw === "object" && "ok" in raw) {
     const o = raw as {
@@ -232,7 +232,7 @@ export async function fetchRepoFile(
   if (res.status === 503 || res.status === 409) {
     return null;
   }
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (raw === null || typeof raw !== "object") {
     throw new Error("unexpected file response");

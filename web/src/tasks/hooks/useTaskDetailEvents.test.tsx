@@ -99,7 +99,19 @@ describe("useTaskDetailEvents", () => {
     });
   });
 
-  it("pager prev requests older events using max seq on page", async () => {
+  it("pager prev (newer) requests afterSeq using max seq when has_more_newer", async () => {
+    // Override default: newer page available so `fetchPreviousPage`
+    // can walk back. Min/max seq cursors are still derived from the
+    // current head page (max = 30).
+    mockListEvents.mockReset();
+    mockListEvents.mockResolvedValue({
+      task_id: TASK_ID,
+      events: [ev(30), ev(10)],
+      total: 2,
+      has_more_newer: true,
+      has_more_older: false,
+      approval_pending: false,
+    });
     const qc = newQueryClient();
     const { result } = renderHook(() => useTaskDetailEvents(TASK_ID, true), {
       wrapper: createWrapper(qc),
@@ -119,7 +131,7 @@ describe("useTaskDetailEvents", () => {
     });
   });
 
-  it("pager next requests newer events using min seq on page", async () => {
+  it("pager next (older) requests beforeSeq using min seq when has_more_older", async () => {
     const qc = newQueryClient();
     const { result } = renderHook(() => useTaskDetailEvents(TASK_ID, true), {
       wrapper: createWrapper(qc),
@@ -158,5 +170,26 @@ describe("useTaskDetailEvents", () => {
       result.current.onEventsPagerNext();
     });
     expect(mockListEvents).not.toHaveBeenCalled();
+  });
+
+  it("exposes approvalPending from the head page directly", async () => {
+    mockListEvents.mockReset();
+    mockListEvents.mockResolvedValue({
+      task_id: TASK_ID,
+      events: [ev(7)],
+      total: 1,
+      has_more_newer: false,
+      has_more_older: false,
+      approval_pending: true,
+    });
+    const qc = newQueryClient();
+    const { result } = renderHook(() => useTaskDetailEvents(TASK_ID, true), {
+      wrapper: createWrapper(qc),
+    });
+    await waitFor(() => {
+      expect(result.current.approvalPending).toBe(true);
+    });
+    expect(result.current.timelineEvents.map((e) => e.seq)).toEqual([7]);
+    expect(result.current.eventsTotal).toBe(1);
   });
 });

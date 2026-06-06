@@ -1,4 +1,4 @@
-import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
 import {
   DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
   DEFAULT_VERIFY_MAX_RETRIES,
@@ -201,7 +201,7 @@ export async function listCursorModels(
     body: JSON.stringify(body),
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (raw === null || typeof raw !== "object") {
     throw new Error("unexpected list-cursor-models response");
@@ -238,7 +238,7 @@ export async function fetchAppSettings(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return assertSettings(await res.json());
 }
 
@@ -255,7 +255,7 @@ export async function patchAppSettings(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return assertSettings(await res.json());
 }
 
@@ -272,7 +272,7 @@ export async function probeCursor(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (raw === null || typeof raw !== "object") {
     throw new Error("unexpected probe-cursor response");
@@ -299,7 +299,7 @@ export async function cancelCurrentRun(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (raw === null || typeof raw !== "object") {
     throw new Error("unexpected cancel-current-run response");

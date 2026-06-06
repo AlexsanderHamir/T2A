@@ -13,10 +13,35 @@
  *     "id": "<task uuid>", "cycle_id": "<cycle uuid>" }
  */
 export type TaskChangeFrame =
-  | { kind: "task"; taskId: string }
+  | {
+      kind: "task";
+      taskId: string;
+      /**
+       * Raw `data` field from the SSE frame, unvalidated. Present when
+       * the server enriches task_created / task_updated with the full
+       * task tree so the SPA can apply it via setQueryData and skip
+       * the follow-up GET. Consumers MUST validate via `parseTask`
+       * before writing to the cache; we keep the parse out of the
+       * frame decoder so a malformed enrichment payload degrades to
+       * the existing invalidate-and-refetch path instead of breaking
+       * the whole stream.
+       */
+      data?: unknown;
+    }
   | { kind: "project"; projectId: string }
   | { kind: "project_context"; projectId: string }
-  | { kind: "cycle"; taskId: string; cycleId: string }
+  | {
+      kind: "cycle";
+      taskId: string;
+      cycleId: string;
+      /**
+       * Raw `data` field from `task_cycle_changed`, unvalidated. When
+       * present, carries the same shape as `GET /tasks/{id}/cycles/{cycleId}`
+       * (cycle + phases). Validate via `parseTaskCycleDetail` before
+       * applying.
+       */
+      data?: unknown;
+    }
   | {
       kind: "progress";
       taskId: string;
@@ -129,7 +154,11 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
     if (cycleId === "") {
       return null;
     }
-    return { kind: "cycle", taskId: id, cycleId };
+    const frame: TaskChangeFrame = { kind: "cycle", taskId: id, cycleId };
+    if (o.data !== undefined) {
+      frame.data = o.data;
+    }
+    return frame;
   }
   if (
     o.type === "project_created" ||
@@ -148,7 +177,11 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
     o.type === "task_gate_changed" ||
     o.type === "task_dependency_changed"
   ) {
-    return { kind: "task", taskId: id };
+    const frame: TaskChangeFrame = { kind: "task", taskId: id };
+    if (o.data !== undefined) {
+      frame.data = o.data;
+    }
+    return frame;
   }
   return null;
 }

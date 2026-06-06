@@ -1,4 +1,4 @@
-import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,7 +59,7 @@ export async function fetchRunners(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   if (!Array.isArray(raw)) {
     throw new Error("unexpected /runners response shape");
@@ -75,7 +75,7 @@ export async function fetchRunnerConfigSchema(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return assertConfigSchema(raw);
 }
@@ -92,7 +92,7 @@ export async function probeRunner(
     signal: options?.signal,
   });
   if (!res.ok && res.status !== 404 && res.status !== 501) {
-    throw new Error(await readError(res));
+    throw await apiErrorFromResponse(res);
   }
   const raw: unknown = await res.json();
   return assertProbeResult(raw);
@@ -110,7 +110,7 @@ export async function listRunnerModels(
     signal: options?.signal,
   });
   if (!res.ok && res.status !== 404 && res.status !== 501) {
-    throw new Error(await readError(res));
+    throw await apiErrorFromResponse(res);
   }
   const raw: unknown = await res.json();
   return assertListModelsResult(raw);
@@ -131,7 +131,7 @@ export async function validateRunnerConfig(
     },
   );
   if (!res.ok && res.status !== 422) {
-    throw new Error(await readError(res));
+    throw await apiErrorFromResponse(res);
   }
   const raw: unknown = await res.json();
   if (raw === null || typeof raw !== "object") {

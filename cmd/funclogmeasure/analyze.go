@@ -61,6 +61,17 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/repo\tisMentionDelimiter":               {},
 	// Header-only helper on every response; JSON paths log via setJSONHeaders / setAPISecurityHeaders.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tApplySecurityHeaders": {},
+	// Header-only sibling of ApplySecurityHeaders for ETag/304-revalidating
+	// GETs. Same rationale as the parent entry: this is a single block of
+	// h.Set() calls, no decision logic to trace; per-response logging
+	// happens at the caller (writeJSONWithETag in handler/handler_http_json.go).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tApplyRevalidatableHeaders": {},
+	// Pure SHA-256 hash function and tolerant header comparison. Both are
+	// called on every conditional GET; per-call slog would flood the trace
+	// volume and the decisions are logged once at the writeJSONWithETag
+	// chokepoint that calls them.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tComputeETag":        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson\tIfNoneMatchMatches": {},
 	// Thin wrapper over internal/version.String (already excluded); health and JSON embed version without duplicating logs here.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tServerVersion": {},
 	// Prometheus metrics wrapper: per-chunk Write / Flush must not allocate log attrs on hot paths.

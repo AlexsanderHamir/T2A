@@ -28,9 +28,18 @@ const LIST_REFRESH_HIDE_MS = TASK_TIMINGS.listRefreshHideMs;
 export type UseTasksAppOptions = {
   /** Whether the task change SSE stream is connected; owned by `App` via `useTaskEventStream`. */
   sseLive: boolean;
+  /**
+   * Whether the home-list / stats queries should be active. When the
+   * user is on a route that does not consume `app.tasks` / `app.taskStats`
+   * (e.g. `/settings`), passing `false` suspends the queries — the
+   * cache remains populated for the next visit but no new GETs fire
+   * while the route is mounted. Defaults to `true` so callers that
+   * do not pass this stay on the historical eager-fetch behaviour.
+   */
+  dataEnabled?: boolean;
 };
 
-export function useTasksApp({ sseLive }: UseTasksAppOptions) {
+export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions) {
   const {
     createFlowError,
     ...createFlow
@@ -81,13 +90,29 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   });
 
   const tasksQuery = useQuery({
-    queryKey: taskQueryKeys.list(taskListPage),
+    queryKey: taskQueryKeys.list({
+      limit: TASK_LIST_PAGE_SIZE,
+      offset: taskListPage * TASK_LIST_PAGE_SIZE,
+    }),
     queryFn: ({ signal }) =>
       listTasks(
         TASK_LIST_PAGE_SIZE,
         taskListPage * TASK_LIST_PAGE_SIZE,
         { signal },
       ),
+    // When the active route does not consume the task list (e.g. the
+    // user navigated to /settings), suspend the query so SSE
+    // invalidations and window-focus refetches stop firing GET /tasks
+    // for a view nobody is rendering. The cache stays populated; the
+    // next time the home route mounts, React Query will revalidate
+    // through its normal stale-while-revalidate path.
+    enabled: dataEnabled,
+    // SSE keeps this cache fresh in real time and bootstrap seeds it
+    // on cold start. The default 15s staleTime forced unnecessary
+    // background refetches whenever a component remounted (e.g.
+    // returning from the task detail page); 60s matches the freshness
+    // budget that SSE already enforces.
+    staleTime: 60_000,
   });
   const taskStatsQuery = useQuery({
     queryKey: taskQueryKeys.stats(),
@@ -98,6 +123,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
         return null;
       }
     },
+    enabled: dataEnabled,
+    staleTime: 60_000,
   });
 
   const resetTaskListPage = useCallback(() => {

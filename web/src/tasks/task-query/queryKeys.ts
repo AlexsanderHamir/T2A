@@ -4,11 +4,23 @@ export type TaskEventsCursorKey =
   | { k: "before"; seq: number }
   | { k: "after"; seq: number };
 
+/** Parameters that identify a single page of `GET /tasks`. */
+export type TaskListParams = { limit: number; offset: number };
+
 export const taskQueryKeys = {
   all: ["tasks"] as const,
   /** Prefix for all task list queries (use with `invalidateQueries` partial match). */
   listRoot: () => [...taskQueryKeys.all, "list"] as const,
-  list: (page: number) => [...taskQueryKeys.listRoot(), page] as const,
+  /**
+   * A single page of `GET /tasks`. Keyed by `{ limit, offset }` so every
+   * consumer — the home list (limit=20), the depends-on picker
+   * (limit=200), the project tasks panel (limit=200) — shares the same
+   * cache tree. Previously the picker / panel keyed off `listRoot()`
+   * (the prefix itself), which created a parallel "all tasks" cache
+   * entry duplicating storage, fetches, and SSE invalidation work.
+   */
+  list: (params: TaskListParams) =>
+    [...taskQueryKeys.listRoot(), params] as const,
   detail: (id: string) => [...taskQueryKeys.all, "detail", id] as const,
   checklist: (id: string) =>
     [...taskQueryKeys.all, "detail", id, "checklist"] as const,

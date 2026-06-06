@@ -9,7 +9,7 @@ type Props = {
 
 export function ProjectTasksPanel({ projectId }: Props) {
   const projectTasks = useQuery({
-    queryKey: taskQueryKeys.listRoot(),
+    queryKey: taskQueryKeys.list({ limit: 200, offset: 0 }),
     queryFn: ({ signal }) => listTasks(200, 0, { signal }),
     enabled: Boolean(projectId),
   });

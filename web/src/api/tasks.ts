@@ -31,7 +31,7 @@ import {
   parseTaskStatsResponse,
   parseCycleFailuresListResponse,
 } from "./parseTaskApi";
-import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
 import {
   assertAfterId,
   assertListIntQuery,
@@ -73,7 +73,7 @@ export async function getTask(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTask(raw);
 }
@@ -107,7 +107,7 @@ export async function listTaskEvents(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskEventsResponse(raw);
 }
@@ -126,7 +126,7 @@ export async function getTaskEvent(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskEventDetail(raw);
 }
@@ -151,7 +151,7 @@ export async function patchTaskEventUserResponse(
       body: JSON.stringify({ user_response: userResponse }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskEventDetail(raw);
 }
@@ -172,7 +172,7 @@ export async function listTasks(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskListResponse(raw);
 }
@@ -184,7 +184,7 @@ export async function getTaskStats(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskStatsResponse(raw);
 }
@@ -220,7 +220,7 @@ export async function getCycleFailures(options: {
     headers: { Accept: "application/json" },
     signal: options.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseCycleFailuresListResponse(raw);
 }
@@ -307,7 +307,7 @@ export async function createTask(input: {
     headers: jsonHeaders,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTask(raw);
 }
@@ -347,7 +347,7 @@ export async function evaluateDraftTask(
     headers: jsonHeaders,
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseDraftTaskEvaluation(raw);
 }
@@ -361,7 +361,7 @@ export async function listTaskDrafts(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskDraftSummaryList(raw);
 }
@@ -381,7 +381,7 @@ export async function saveTaskDraft(input: {
       ...(sid !== undefined ? { id: sid } : {}),
     }),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw = (await res.json()) as { id: string; name: string };
   if (!raw?.id || !raw?.name) throw new Error("Invalid API response: draft save payload");
   return raw;
@@ -396,7 +396,7 @@ export async function getTaskDraft(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskDraftDetail(raw);
 }
@@ -406,7 +406,7 @@ export async function deleteTaskDraft(id: string): Promise<void> {
   const res = await fetchWithTimeout(`/task-drafts/${encodeURIComponent(did)}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function patchTask(
@@ -487,7 +487,7 @@ export async function patchTask(
     headers: jsonHeaders,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTask(raw);
 }
@@ -501,7 +501,7 @@ export async function listTaskDependencies(
     `/tasks/${encodeURIComponent(tid)}/dependencies`,
     { headers: { Accept: "application/json" }, signal: options?.signal },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw = (await res.json()) as { depends_on?: unknown };
   if (!Array.isArray(raw.depends_on)) {
     return [];
@@ -523,7 +523,7 @@ export async function addTaskDependency(
       body: JSON.stringify({ depends_on_task_id: dep }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw = (await res.json()) as { depends_on?: unknown };
   if (!Array.isArray(raw.depends_on)) {
     return [];
@@ -541,7 +541,7 @@ export async function removeTaskDependency(
     `/tasks/${encodeURIComponent(tid)}/dependencies/${encodeURIComponent(dep)}`,
     { method: "DELETE" },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function patchTaskGate(
@@ -554,7 +554,7 @@ export async function patchTaskGate(
     headers: jsonHeaders,
     body: JSON.stringify({ action }),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTask(raw);
 }
@@ -564,7 +564,7 @@ export async function deleteTask(id: string): Promise<void> {
   const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function listChecklist(
@@ -579,7 +579,7 @@ export async function listChecklist(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskChecklistResponse(raw);
 }
@@ -604,7 +604,7 @@ export async function addChecklistItem(
       }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function patchChecklistItemText(
@@ -627,7 +627,7 @@ export async function patchChecklistItemText(
       body: JSON.stringify({ text }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskChecklistResponse(raw);
 }
@@ -653,7 +653,7 @@ export async function patchChecklistItemDone(
       body: JSON.stringify({ done }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskChecklistResponse(raw);
 }
@@ -668,5 +668,5 @@ export async function deleteChecklistItem(
     `/tasks/${encodeURIComponent(tid)}/checklist/items/${encodeURIComponent(iid)}`,
     { method: "DELETE" },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }

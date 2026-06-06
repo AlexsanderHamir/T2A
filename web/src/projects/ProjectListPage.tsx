@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useProjectDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import { createProject } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
@@ -113,6 +114,8 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
   const isArchived = project.status === "archived";
   const openLabel = `Open project ${project.name}`;
   const to = `/projects/${encodeURIComponent(project.id)}`;
+  const prefetchProjectDetail = useProjectDetailPrefetcher();
+  const onIntent = () => prefetchProjectDetail(project.id);
 
   return (
     <Link
@@ -120,6 +123,8 @@ function ProjectRow({ project, index }: { project: Project; index: number }) {
       className={isArchived ? "pl__row pl__row--archived" : "pl__row pl__row--active"}
       style={{ animationDelay: `${index * 40}ms` }}
       aria-label={openLabel}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
     >
       <div className="pl__row-marker" aria-hidden="true" />
       <div className="pl__row-main">

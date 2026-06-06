@@ -8,7 +8,7 @@ import type {
   ProjectListResponse,
   ProjectStatus,
 } from "@/types";
-import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
 import {
   isRecord,
   parseActor,
@@ -176,7 +176,7 @@ export async function listProjects(options?: {
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectListResponse((await res.json()) as unknown);
 }
 
@@ -189,7 +189,7 @@ export async function getProject(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProject((await res.json()) as unknown);
 }
 
@@ -204,7 +204,7 @@ export async function createProject(input: {
     headers: jsonHeaders,
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProject((await res.json()) as unknown);
 }
 
@@ -223,7 +223,7 @@ export async function patchProject(
     headers: jsonHeaders,
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProject((await res.json()) as unknown);
 }
 
@@ -233,7 +233,7 @@ export async function deleteProject(id: string): Promise<void> {
     method: "DELETE",
     headers: { Accept: "application/json" },
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function listProjectContext(
@@ -255,7 +255,7 @@ export async function listProjectContext(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectContextListResponse((await res.json()) as unknown);
 }
 
@@ -280,7 +280,7 @@ export async function createProjectContext(
       body: JSON.stringify(input),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectContextItem((await res.json()) as unknown);
 }
 
@@ -304,7 +304,7 @@ export async function createProjectContextEdge(
       body: JSON.stringify(input),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectContextEdge((await res.json()) as unknown);
 }
 
@@ -327,7 +327,7 @@ export async function patchProjectContextEdge(
       body: JSON.stringify(input),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectContextEdge((await res.json()) as unknown);
 }
 
@@ -344,7 +344,7 @@ export async function deleteProjectContextEdge(
       headers: { Accept: "application/json" },
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function patchProjectContext(
@@ -367,7 +367,7 @@ export async function patchProjectContext(
       body: JSON.stringify(input),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseProjectContextItem((await res.json()) as unknown);
 }
 
@@ -384,5 +384,5 @@ export async function deleteProjectContext(
       headers: { Accept: "application/json" },
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }

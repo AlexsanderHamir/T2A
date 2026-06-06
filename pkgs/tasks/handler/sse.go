@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,12 +55,21 @@ const (
 // invalidate just the affected cycle subtree instead of the whole task.
 // It is omitted from the wire for every other type to keep existing
 // payloads byte-identical to the pre-Stage-5 contract.
+//
+// Data, when populated, carries the full updated entity (task tree for
+// task_created / task_updated, cycle detail for task_cycle_changed) so
+// the SPA can apply the change with setQueryData and skip the
+// follow-up GET. The field is intentionally optional: events without
+// Data remain valid "hint-only" change notifications and clients fall
+// back to refetching via REST. Wire-compatible with older clients
+// that ignore unknown fields.
 type TaskChangeEvent struct {
 	Type     TaskChangeType           `json:"type"`
 	ID       string                   `json:"id"`
 	CycleID  string                   `json:"cycle_id,omitempty"`
 	PhaseSeq int64                    `json:"phase_seq,omitempty"`
 	Progress *AgentRunProgressPayload `json:"progress,omitempty"`
+	Data     any                      `json:"data,omitempty"`
 }
 
 // AgentRunProgressPayload is a normalized live runner update carried by
@@ -289,8 +299,17 @@ func (h *SSEHub) appendRingLocked(ev bufferedEvent) {
 // identical frames inside the coalesceWindow. Cycle frames carry a
 // distinct cycle id so they are *intentionally* not coalesced — each
 // phase transition is informationally distinct.
+//
+// Data-bearing events are also not coalesced: dropping the second of
+// two enriched task_updated frames would discard the newer entity
+// payload and leave the SPA with stale data. The whole point of the
+// enrichment is to deliver the latest body, so we accept the slightly
+// larger fanout instead.
 func coalesceKey(ev TaskChangeEvent) string {
 	if ev.Type == TaskCycleChanged || ev.Type == AgentRunProgress {
+		return ""
+	}
+	if ev.Data != nil {
 		return ""
 	}
 	return string(ev.Type) + ":" + ev.ID
@@ -577,6 +596,20 @@ func (h *Handler) notifyChange(typ TaskChangeType, id string) {
 	h.hub.Publish(TaskChangeEvent{Type: typ, ID: id})
 }
 
+// notifyTaskChanged publishes a hint event AND embeds the full updated
+// entity in Data so the SPA can apply it directly via setQueryData and
+// skip the follow-up GET. Used for the two highest-frequency task
+// lifecycle frames (task_created, task_updated). When data is nil this
+// degrades to the same wire payload as notifyChange, so callers that
+// fail to load the post-write snapshot can still publish the hint.
+func (h *Handler) notifyTaskChanged(typ TaskChangeType, id string, data any) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.notifyTaskChanged", "change_type", typ)
+	if h.hub == nil || id == "" {
+		return
+	}
+	h.hub.Publish(TaskChangeEvent{Type: typ, ID: id, Data: data})
+}
+
 // notifyCycleChange publishes a `task_cycle_changed` event carrying both the
 // owning task id and the affected cycle id. SPA cache invalidation hooks use
 // the cycle id to scope their refetch instead of pulling the entire task tree.
@@ -587,6 +620,42 @@ func (h *Handler) notifyCycleChange(taskID, cycleID string) {
 		return
 	}
 	h.hub.Publish(TaskChangeEvent{Type: TaskCycleChanged, ID: taskID, CycleID: cycleID})
+}
+
+// notifyCycleChanged publishes a cycle change event with the full cycle
+// detail embedded in Data so the SPA can apply it directly via
+// setQueryData. When data is nil this degrades to notifyCycleChange's
+// hint-only payload.
+func (h *Handler) notifyCycleChanged(taskID, cycleID string, data any) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.notifyCycleChanged", "task_id", taskID, "cycle_id", cycleID)
+	if h.hub == nil || taskID == "" || cycleID == "" {
+		return
+	}
+	h.hub.Publish(TaskChangeEvent{Type: TaskCycleChanged, ID: taskID, CycleID: cycleID, Data: data})
+}
+
+// notifyCycleChangedFromStore loads the latest cycle detail (cycle row +
+// phases) and publishes it as the SSE payload. On load failure it
+// degrades to a hint-only frame so subscribers still know to refetch.
+// Callers pass the request context so the extra reads inherit the
+// request's deadline; a separate Background context would outlive the
+// HTTP request and cancel itself when the DB pool closes.
+func (h *Handler) notifyCycleChangedFromStore(ctx context.Context, taskID, cycleID string) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.notifyCycleChangedFromStore", "task_id", taskID, "cycle_id", cycleID)
+	if h.hub == nil || taskID == "" || cycleID == "" {
+		return
+	}
+	cycle, err := h.store.GetCycle(ctx, cycleID)
+	if err != nil {
+		h.notifyCycleChange(taskID, cycleID)
+		return
+	}
+	phases, err := h.store.ListPhasesForCycle(ctx, cycleID)
+	if err != nil {
+		h.notifyCycleChange(taskID, cycleID)
+		return
+	}
+	h.notifyCycleChanged(taskID, cycleID, taskCycleDetailFromDomain(cycle, phases))
 }
 
 // legacySubscribeBuffer is the per-subscriber buffer the legacy in-process

@@ -7,7 +7,8 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 ## Conventions
 
 - Mux is mounted at `/` (no `/api` prefix).
-- All routes return `application/json` with `Cache-Control: no-store`. Error bodies are `{"error":"<message>"}`; some responses include `request_id` for correlation with `X-Request-ID` / `http.access` logs.
+- All routes return `application/json`. Error bodies are `{"error":"<message>"}`; some responses include `request_id` for correlation with `X-Request-ID` / `http.access` logs.
+- Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners, evaluate) return `Cache-Control: no-store` and do not participate in revalidation.
 - `X-Actor` header: `user` (default) or `agent`. The handler ignores any body `triggered_by` and uses this header.
 - `Idempotency-Key` (≤ 128 bytes) caches successful (2xx) `POST`/`PATCH`/`DELETE` responses for `T2A_IDEMPOTENCY_TTL` (default 24h, in-process only). Replays are byte-identical.
 - Rate limit: `T2A_RATE_LIMIT_PER_MIN` per `RemoteAddr` (default 120; `0` disables). `429` returns `Retry-After: 60`.
@@ -24,6 +25,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `t2a_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |
+| GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
 
 ## Projects
 
@@ -137,12 +139,12 @@ Lossless reconnects via `Last-Event-ID`: a ring buffer (default 1024 entries) re
 
 | Type | When | Payload |
 |---|---|---|
-| `task_created` | `POST /tasks` succeeds. | `{ type, id }` |
-| `task_updated` | Any task mutation (PATCH, checklist, event response, etc.). | `{ type, id }` |
+| `task_created` | `POST /tasks` succeeds. | `{ type, id, data: <task tree> }` |
+| `task_updated` | Any task mutation (PATCH, checklist, event response, etc.). `data` carries the full task tree for `PATCH /tasks/{id}`; other publishers emit hint-only frames (no `data`). | `{ type, id, data?: <task tree> }` |
 | `task_deleted` | `DELETE /tasks/{id}` for each removed row (BFS-ordered). | `{ type, id }` |
 | `task_dependency_changed` | Dependency add/remove/replace. | `{ type, id }` |
 | `task_gate_changed` | Gate create/patch/action. | `{ type, id }` |
-| `task_cycle_changed` | Cycle/phase mutation. | `{ type, id, cycle_id }` |
+| `task_cycle_changed` | Cycle/phase mutation. | `{ type, id, cycle_id, data?: <cycle detail> }` |
 | `agent_run_progress` | Live Cursor activity hint while a phase runs. Not persisted in `task_events`; durable history via `GET /tasks/{id}/cycles/{cycleId}/stream`. Throttled to one frame per 750ms per running phase. | `{ type, id, cycle_id, phase_seq, progress: { kind, subtype, message, tool } }` |
 | `project_created` / `project_updated` / `project_deleted` | Project CRUD. | `{ type, id }` |
 | `project_context_changed` | Context item / edge mutation. | `{ type, id }` (project id) |

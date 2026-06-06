@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
+  apiErrorFromResponse,
   fetchWithTimeout,
   jsonHeaders,
   maxErrorResponseBodyBytes,
@@ -162,5 +164,52 @@ describe("readError", () => {
     );
     const msg = await readError(res);
     expect(msg).toBe("short (request r1)");
+  });
+});
+
+describe("ApiError + apiErrorFromResponse", () => {
+  it("preserves status, message, code and request id from the response body", async () => {
+    const res = new Response(
+      JSON.stringify({
+        error: "validation failed",
+        code: "validation_failed",
+        request_id: "req-42",
+      }),
+      { status: 422 },
+    );
+    const err = await apiErrorFromResponse(res);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.status).toBe(422);
+    expect(err.code).toBe("validation_failed");
+    expect(err.requestId).toBe("req-42");
+    // `.message` keeps the legacy display string so existing UI that
+    // renders `error.message` directly does not regress.
+    expect(err.message).toBe("validation failed (request req-42)");
+  });
+
+  it("falls back to statusText when the body is empty", async () => {
+    const res = new Response("", {
+      status: 503,
+      statusText: "Service Unavailable",
+    });
+    const err = await apiErrorFromResponse(res);
+    expect(err.status).toBe(503);
+    expect(err.message).toBe("Service Unavailable");
+    expect(err.code).toBeUndefined();
+    expect(err.requestId).toBeUndefined();
+  });
+
+  it("lets callers branch on status without regex-matching the message", async () => {
+    const res = new Response(JSON.stringify({ error: "not found" }), {
+      status: 404,
+    });
+    const err = await apiErrorFromResponse(res);
+    expect(err.status).toBe(404);
+    if (err instanceof ApiError && err.status === 404) {
+      expect(err.message).toBe("not found");
+    } else {
+      throw new Error("expected an ApiError with status 404");
+    }
   });
 });

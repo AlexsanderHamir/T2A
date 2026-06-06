@@ -107,7 +107,7 @@ export function TaskDetailPage({ app }: Props) {
     enabled: Boolean(taskId),
   });
 
-  const { eventsQuery } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
+  const { approvalPending } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
 
   const checklistQuery = useQuery({
     queryKey: taskQueryKeys.checklist(taskId),
@@ -296,7 +296,7 @@ export function TaskDetailPage({ app }: Props) {
   const checklistDoneCount = checklistItems.filter((i) => i.done).length;
   const checklistTotal = checklistItems.length;
   const attention = userAttention(task, {
-    approvalPending: eventsQuery.data?.approval_pending ?? false,
+    approvalPending,
   });
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
   // Autonomy is meaningful only for the two states the operator can

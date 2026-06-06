@@ -18,7 +18,7 @@ import {
   parseTaskCycleStreamResponse,
   parseTaskCyclesListResponse,
 } from "./parseTaskApi";
-import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
 import {
   assertListIntQuery,
   assertPositiveSeq,
@@ -58,7 +58,7 @@ export async function listTaskCycles(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCyclesListResponse(raw);
 }
@@ -77,7 +77,7 @@ export async function getTaskCycle(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCycleDetail(raw);
 }
@@ -108,7 +108,7 @@ export async function listTaskCycleStreamEvents(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCycleStreamResponse(raw);
 }
@@ -133,7 +133,7 @@ export async function getCycleVerdicts(
       signal: options?.signal,
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseCycleVerdictsResponse(raw);
 }
@@ -164,7 +164,7 @@ export async function startTaskCycle(
       body: JSON.stringify(body),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCycle(raw);
 }
@@ -187,7 +187,7 @@ export async function terminateTaskCycle(
       body: JSON.stringify(body),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCycle(raw);
 }
@@ -208,7 +208,7 @@ export async function startTaskCyclePhase(
       body: JSON.stringify({ phase: input.phase }),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCyclePhase(raw);
 }
@@ -234,7 +234,7 @@ export async function patchTaskCyclePhase(
       body: JSON.stringify(body),
     },
   );
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCyclePhase(raw);
 }

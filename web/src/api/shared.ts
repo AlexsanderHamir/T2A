@@ -122,23 +122,95 @@ export async function fetchWithTimeout(
   }
 }
 
-export async function readError(res: Response): Promise<string> {
+/**
+ * Typed error thrown by API helpers when a response is not ok.
+ *
+ * Carries the HTTP status, the server-provided `error` message, an
+ * optional machine-readable `code` and the `request_id` (when the
+ * backend includes one) so call sites can branch on status without
+ * regex-matching the message:
+ *
+ *     try { await getTask(id); }
+ *     catch (err) {
+ *       if (err instanceof ApiError && err.status === 404) {
+ *         // Show "not found" empty state.
+ *       }
+ *       throw err;
+ *     }
+ *
+ * `ApiError extends Error`, so all existing `instanceof Error` checks
+ * and React Query error surfaces keep working without changes.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly requestId?: string;
+
+  constructor(
+    message: string,
+    init: { status: number; code?: string; requestId?: string },
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = init.status;
+    this.code = init.code;
+    this.requestId = init.requestId;
+  }
+}
+
+type ParsedErrorBody = {
+  message: string;
+  code?: string;
+  requestId?: string;
+};
+
+async function parseErrorBody(res: Response): Promise<ParsedErrorBody> {
   const t = res.body
     ? await readResponseTextLimited(res, maxErrorResponseBodyBytes)
     : await res.text();
   try {
-    const j = JSON.parse(t) as { error?: string; request_id?: string };
-    const msg = typeof j?.error === "string" && j.error.trim() ? j.error.trim() : "";
+    const j = JSON.parse(t) as {
+      error?: string;
+      code?: string;
+      request_id?: string;
+    };
+    const msg =
+      typeof j?.error === "string" && j.error.trim() ? j.error.trim() : "";
+    const code =
+      typeof j?.code === "string" && j.code.trim() ? j.code.trim() : undefined;
     const rid =
-      typeof j?.request_id === "string" && j.request_id.trim() ? j.request_id.trim() : "";
+      typeof j?.request_id === "string" && j.request_id.trim()
+        ? j.request_id.trim()
+        : undefined;
     if (msg) {
-      return rid ? `${msg} (request ${rid})` : msg;
+      return { message: msg, code, requestId: rid };
     }
     if (rid) {
-      return `Error (request ${rid})`;
+      return { message: "Error", code, requestId: rid };
     }
   } catch {
     /* plain text */
   }
-  return t.trim() || res.statusText;
+  return { message: t.trim() || res.statusText };
+}
+
+export async function readError(res: Response): Promise<string> {
+  const { message, requestId } = await parseErrorBody(res);
+  return requestId ? `${message} (request ${requestId})` : message;
+}
+
+/**
+ * Build a typed `ApiError` from a non-ok `Response`. The legacy string
+ * form (with the request id appended in parentheses) is preserved as
+ * `.message` so existing UI that renders `error.message` keeps the
+ * same output.
+ */
+export async function apiErrorFromResponse(res: Response): Promise<ApiError> {
+  const { message, code, requestId } = await parseErrorBody(res);
+  const display = requestId ? `${message} (request ${requestId})` : message;
+  return new ApiError(display, {
+    status: res.status,
+    code,
+    requestId,
+  });
 }

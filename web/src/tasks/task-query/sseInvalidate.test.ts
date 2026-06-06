@@ -154,4 +154,48 @@ describe("parseTaskChangeFrame", () => {
       kind: "resync",
     });
   });
+
+  // Enrichment: task_created / task_updated / task_cycle_changed may
+  // carry the full entity in `data` so the SPA applies it via
+  // setQueryData and skips the follow-up GET. The parser preserves
+  // `data` verbatim; deep validation happens at the consumer (parseTask
+  // / parseTaskCycleDetail) so a malformed payload falls back to the
+  // existing invalidate-and-refetch path instead of dropping the frame.
+  it("preserves enriched data on task frames", () => {
+    const sample = { id: "task-1", title: "fresh" };
+    expect(
+      parseTaskChangeFrame(
+        JSON.stringify({
+          type: "task_updated",
+          id: "task-1",
+          data: sample,
+        }),
+      ),
+    ).toEqual({ kind: "task", taskId: "task-1", data: sample });
+  });
+
+  it("preserves enriched data on task_cycle_changed frames", () => {
+    const sample = { id: "cyc-1", cycle_status: "running" };
+    expect(
+      parseTaskChangeFrame(
+        JSON.stringify({
+          type: "task_cycle_changed",
+          id: "task-1",
+          cycle_id: "cyc-1",
+          data: sample,
+        }),
+      ),
+    ).toEqual({
+      kind: "cycle",
+      taskId: "task-1",
+      cycleId: "cyc-1",
+      data: sample,
+    });
+  });
+
+  it("omits data field on frames without enrichment", () => {
+    expect(
+      parseTaskChangeFrame('{"type":"task_updated","id":"task-1"}'),
+    ).toEqual({ kind: "task", taskId: "task-1" });
+  });
 });

@@ -65,7 +65,10 @@ function renderPicker(props?: {
     offset: 0,
     has_more: false,
   };
-  queryClient.setQueryData(taskQueryKeys.listRoot(), list);
+  queryClient.setQueryData(
+    taskQueryKeys.list({ limit: 200, offset: 0 }),
+    list,
+  );
 
   const onChange = vi.fn();
 

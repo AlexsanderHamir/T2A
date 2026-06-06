@@ -127,7 +127,7 @@ func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, settingsResponseFrom(cfg))
+	writeJSONWithETag(w, r, op, http.StatusOK, settingsResponseFrom(cfg))
 }
 
 func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {

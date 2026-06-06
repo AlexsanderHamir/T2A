@@ -2,10 +2,23 @@ import { describe, expect, it } from "vitest";
 import { taskQueryKeys } from "./queryKeys";
 
 describe("taskQueryKeys", () => {
-  it("builds list root and per-page list keys", () => {
+  it("builds list root and per-page list keys with limit/offset params", () => {
     expect(taskQueryKeys.listRoot()).toEqual(["tasks", "list"]);
-    expect(taskQueryKeys.list(0)).toEqual(["tasks", "list", 0]);
-    expect(taskQueryKeys.list(3)).toEqual(["tasks", "list", 3]);
+    expect(taskQueryKeys.list({ limit: 20, offset: 0 })).toEqual([
+      "tasks",
+      "list",
+      { limit: 20, offset: 0 },
+    ]);
+    expect(taskQueryKeys.list({ limit: 200, offset: 0 })).toEqual([
+      "tasks",
+      "list",
+      { limit: 200, offset: 0 },
+    ]);
+    expect(taskQueryKeys.list({ limit: 20, offset: 60 })).toEqual([
+      "tasks",
+      "list",
+      { limit: 20, offset: 60 },
+    ]);
   });
 
   it("scopes detail, checklist, and event detail under the task id", () => {

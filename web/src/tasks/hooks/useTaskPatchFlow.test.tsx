@@ -321,7 +321,10 @@ describe("useTaskPatchFlow", () => {
       offset: 0,
       has_more: false,
     };
-    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+    queryClient.setQueryData<TaskListResponse>(
+      taskQueryKeys.list({ limit: 20, offset: 0 }),
+      list,
+    );
 
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
@@ -332,7 +335,9 @@ describe("useTaskPatchFlow", () => {
     await waitFor(() => {
       expect(result.current.patchPending).toBe(true);
     });
-    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    const cached = queryClient.getQueryData<TaskListResponse>(
+      taskQueryKeys.list({ limit: 20, offset: 0 }),
+    );
     expect(cached?.tasks[0]?.children?.[0]?.title).toBe("New title");
     act(() => {
       resolveFn?.();

@@ -92,7 +92,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyChange(TaskCreated, t.ID)
+	h.notifyTaskChanged(TaskCreated, t.ID, tree)
 	if t.Gate != nil {
 		h.notifyChange(TaskGateChanged, t.ID)
 	}
@@ -121,7 +121,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, t)
+	writeJSONWithETag(w, r, op, http.StatusOK, t)
 }
 
 // list serves GET /tasks — the hottest read path in taskapi (SPA initial load
@@ -174,7 +174,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
+	writeJSONWithETag(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +187,7 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, taskStatsResponseFromStore(stats))
+	writeJSONWithETag(w, r, op, http.StatusOK, taskStatsResponseFromStore(stats))
 }
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +251,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyChange(TaskUpdated, id)
+	h.notifyTaskChanged(TaskUpdated, id, tree)
 	if body.Gate.Defined {
 		h.notifyChange(TaskGateChanged, id)
 	}

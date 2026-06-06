@@ -49,7 +49,7 @@ func (h *Handler) listProjects(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, projectsListResponse{Projects: projects, Limit: limit})
+	writeJSONWithETag(w, r, op, http.StatusOK, projectsListResponse{Projects: projects, Limit: limit})
 }
 
 func (h *Handler) getProject(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +66,7 @@ func (h *Handler) getProject(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, project)
+	writeJSONWithETag(w, r, op, http.StatusOK, project)
 }
 
 func (h *Handler) patchProject(w http.ResponseWriter, r *http.Request) {
@@ -178,7 +178,7 @@ func (h *Handler) listProjectContext(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, projectContextListResponse{Items: items, Edges: edges, Limit: limit})
+	writeJSONWithETag(w, r, op, http.StatusOK, projectContextListResponse{Items: items, Edges: edges, Limit: limit})
 }
 
 func (h *Handler) createProjectContextEdge(w http.ResponseWriter, r *http.Request) {

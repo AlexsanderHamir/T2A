@@ -373,7 +373,7 @@ describe("useTaskDeleteFlow", () => {
       offset: 0,
       has_more: false,
     };
-    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }), list);
 
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
@@ -387,7 +387,7 @@ describe("useTaskDeleteFlow", () => {
     await waitFor(() => {
       expect(result.current.deletePending).toBe(true);
     });
-    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }));
     expect(cached?.tasks.map((t) => t.id)).toEqual(["t2"]);
     act(() => {
       resolveFn?.();
@@ -419,7 +419,7 @@ describe("useTaskDeleteFlow", () => {
       offset: 0,
       has_more: false,
     };
-    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }), list);
 
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
@@ -433,7 +433,7 @@ describe("useTaskDeleteFlow", () => {
     await waitFor(() => {
       expect(result.current.deletePending).toBe(true);
     });
-    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }));
     expect(cached?.tasks[0]?.id).toBe("parent");
     expect(cached?.tasks[0]?.children).toEqual([]);
     act(() => {
@@ -457,7 +457,7 @@ describe("useTaskDeleteFlow", () => {
       offset: 0,
       has_more: false,
     };
-    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list(0), list);
+    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }), list);
 
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
@@ -471,7 +471,7 @@ describe("useTaskDeleteFlow", () => {
     await waitFor(() => {
       expect(result.current.deleteError).toBe("perm denied");
     });
-    const restored = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list(0));
+    const restored = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }));
     expect(restored?.tasks.map((t) => t.id)).toEqual(["t1", "t2"]);
   });
 

@@ -130,6 +130,73 @@ func writeJSONError(w http.ResponseWriter, r *http.Request, op string, code int,
 	apijson.WriteJSONError(w, r, op, code, msg, calltrace.Path)
 }
 
+// writeJSONWithETag encodes v as JSON, attaches a strong ETag derived from the
+// body, and serves 304 Not Modified when the request's If-None-Match header
+// matches. It replaces the baseline Cache-Control: no-store with
+// "private, no-cache, must-revalidate" so the browser keeps the cached body
+// and revalidates with a conditional request — the network saves the body
+// payload when the resource has not changed.
+//
+// The trade-off is honest: the server still encodes and hashes the body on
+// every request. The win is bandwidth + browser parse cost + downstream
+// React Query revalidation. Endpoints where computing the body is the
+// expensive step (e.g. /tasks/stats) should keep writeJSON for now and
+// migrate later if profiling justifies a pre-read ETag derived from
+// updated_at.
+func writeJSONWithETag(w http.ResponseWriter, r *http.Request, op string, code int, v any) {
+	apijson.ApplyRevalidatableHeaders(w)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	ctx := requestCtx(r)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		if r != nil {
+			rid := logctx.RequestIDFromContext(ctx)
+			route := requestRouteLabel(r)
+			slog.Log(ctx, slog.LevelError, "response encode failed",
+				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route, "err", err)
+		} else {
+			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
+		}
+		writeJSONError(w, r, op, http.StatusInternalServerError, "internal server error")
+		return
+	}
+	payload := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	etag := apijson.ComputeETag(payload)
+	w.Header().Set("ETag", etag)
+
+	if r != nil && apijson.IfNoneMatchMatches(r.Header.Get("If-None-Match"), etag) {
+		if slog.Default().Enabled(ctx, slog.LevelDebug) {
+			slog.Log(ctx, slog.LevelDebug, "http.io",
+				"cmd", calltrace.LogCmd, "obs_category", "http_io", "operation", op,
+				"call_path", calltrace.Path(ctx), "phase", "out",
+				"http_status", http.StatusNotModified, "etag", etag, "conditional", true)
+		}
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	if r != nil && slog.Default().Enabled(ctx, slog.LevelDebug) {
+		preview := apijson.TruncateUTF8ByBytes(string(payload), maxHTTPLogJSONPreviewBytes)
+		slog.Log(ctx, slog.LevelDebug, "http.io",
+			"cmd", calltrace.LogCmd, "obs_category", "http_io", "operation", op,
+			"call_path", calltrace.Path(ctx), "phase", "out",
+			"http_status", code, "etag", etag,
+			"response_json_bytes", len(payload), "response_body", preview)
+	}
+	w.WriteHeader(code)
+	if _, err := w.Write(payload); err != nil {
+		logResponseWriteFailure(ctx, r, op, err, "body")
+		return
+	}
+	if _, err := w.Write([]byte("\n")); err != nil {
+		logResponseWriteFailure(ctx, r, op, err, "newline")
+		return
+	}
+}
+
 func userFacingJSONError(err error) string {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.userFacingJSONError")
 	s := err.Error()

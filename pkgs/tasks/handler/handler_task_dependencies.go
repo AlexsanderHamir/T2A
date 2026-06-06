@@ -31,7 +31,7 @@ func (h *Handler) listTaskDependencies(w http.ResponseWriter, r *http.Request) {
 	if deps == nil {
 		deps = []string{}
 	}
-	writeJSON(w, r, op, http.StatusOK, taskDependenciesListResponse{DependsOn: deps})
+	writeJSONWithETag(w, r, op, http.StatusOK, taskDependenciesListResponse{DependsOn: deps})
 }
 
 func (h *Handler) addTaskDependency(w http.ResponseWriter, r *http.Request) {

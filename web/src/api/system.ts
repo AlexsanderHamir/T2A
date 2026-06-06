@@ -1,6 +1,6 @@
 import type { SystemHealthResponse } from "@/types";
 import { parseSystemHealthResponse } from "./parseSystemHealth";
-import { fetchWithTimeout, readError } from "./shared";
+import { fetchWithTimeout, apiErrorFromResponse } from "./shared";
 
 /**
  * Operator-facing snapshot of the running taskapi process. Aggregated
@@ -14,7 +14,7 @@ export async function getSystemHealth(
     headers: { Accept: "application/json" },
     signal: options?.signal,
   });
-  if (!res.ok) throw new Error(await readError(res));
+  if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseSystemHealthResponse(raw);
 }

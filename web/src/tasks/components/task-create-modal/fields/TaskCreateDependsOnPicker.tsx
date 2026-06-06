@@ -56,7 +56,7 @@ export function TaskCreateDependsOnPicker({
   }, []);
 
   const tasksQuery = useQuery({
-    queryKey: taskQueryKeys.listRoot(),
+    queryKey: taskQueryKeys.list({ limit: 200, offset: 0 }),
     queryFn: ({ signal }) => listTasks(200, 0, { signal }),
     enabled: hasProject,
     staleTime: 30_000,

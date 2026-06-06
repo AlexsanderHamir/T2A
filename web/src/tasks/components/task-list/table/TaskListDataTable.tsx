@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { CSSProperties } from "react";
+import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
@@ -91,6 +92,11 @@ export function TaskListDataTable({
   projectNameById = {},
 }: Props) {
   const navigate = useNavigate();
+  // Prefetch task detail (chunk + GET /tasks/{id}) on hover/focus so
+  // the click → render path has zero wait for the common case. Both
+  // operations are idempotent: chunks are cached after first import
+  // and React Query dedups in-flight queries.
+  const prefetchTaskDetail = useTaskDetailPrefetcher();
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   // Drive the header checkbox's `indeterminate` flag — it isn't a
@@ -395,12 +401,17 @@ export function TaskListDataTable({
                 .filter(Boolean)
                 .join(" ");
               const taskHref = `/tasks/${t.id}`;
+              const onIntent = isExiting
+                ? undefined
+                : () => prefetchTaskDetail(t.id);
               return (
                 <tr
                   key={t.id}
                   className={rowClass}
                   data-selected={rowSelected ? "true" : undefined}
                   aria-hidden={isExiting ? "true" : undefined}
+                  onPointerEnter={onIntent}
+                  onFocus={onIntent}
                   onClick={
                     isExiting
                       ? undefined

@@ -43,7 +43,7 @@ func (h *Handler) getChecklist(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, checklistListResponse{Items: items})
+	writeJSONWithETag(w, r, op, http.StatusOK, checklistListResponse{Items: items})
 }
 
 func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {

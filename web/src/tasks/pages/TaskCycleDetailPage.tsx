@@ -129,7 +129,10 @@ export function TaskCycleDetailPage() {
   }
 
   const cycle = cycleQuery.data;
-  const streamEvents = [...(streamQuery.data?.events ?? [])].sort(
+  // The infinite-query variant exposes `events` flattened across all
+  // loaded pages; the spread + sort below produces a stable newest-
+  // first view independent of fetch order.
+  const streamEvents = [...streamQuery.events].sort(
     (a, b) => b.stream_seq - a.stream_seq,
   );
   const visibleStreamEvents = streamEvents.slice(0, visibleStreamCount);

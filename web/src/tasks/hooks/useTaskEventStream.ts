@@ -5,6 +5,8 @@ import { projectQueryKeys } from "@/projects/queryKeys";
 import { rumSSEReconnected, rumSSEResyncReceived } from "@/observability";
 import { pushAgentRunProgress } from "./useAgentRunProgress";
 import { shouldSuppressSSEFor } from "./optimisticVersion";
+import { parseTask, parseTaskCycleDetail } from "@/api/parseTaskApi";
+import { setSseLiveForQueries } from "@/lib/queryClient";
 
 /**
  * Coalesce window for trailing-debounced SSE invalidations. The agent
@@ -51,18 +53,46 @@ const SSE_DISCONNECT_UI_MS = 900;
  */
 type PendingInvalidations = {
   tasks: Set<string>;
+  /**
+   * Subset of `tasks` whose SSE frame carried an enriched `data`
+   * payload that we already applied via setQueryData. If a flush batch
+   * contains only enriched task ids (and no hint-only ids), we skip
+   * the broad `["tasks","detail"]` prefix invalidation because every
+   * affected detail cache is already up to date. When the batch is
+   * mixed, we still run the broad invalidation — a hint-only frame
+   * may have changed a parent's nested children we cannot reach with
+   * setQueryData on the child key alone.
+   */
+  enrichedTasks: Set<string>;
   cycles: Map<string, Set<string>>;
+  /**
+   * Subset of `cycles` (keyed by `${taskId}\u0000${cycleId}`) whose
+   * frame carried enriched cycle detail. Same skip semantics as
+   * `enrichedTasks` but scoped to the per-cycle detail cache.
+   */
+  enrichedCycles: Set<string>;
 };
 
 type PendingProgressStreams = Map<string, { taskId: string; cycleId: string }>;
 
 function emptyPending(): PendingInvalidations {
-  return { tasks: new Set(), cycles: new Map() };
+  return {
+    tasks: new Set(),
+    enrichedTasks: new Set(),
+    cycles: new Map(),
+    enrichedCycles: new Set(),
+  };
 }
 
 function clearPending(p: PendingInvalidations): void {
   p.tasks.clear();
+  p.enrichedTasks.clear();
   p.cycles.clear();
+  p.enrichedCycles.clear();
+}
+
+function cycleEnrichmentKey(taskId: string, cycleId: string): string {
+  return `${taskId}\u0000${cycleId}`;
 }
 
 export function useTaskEventStream(): boolean {
@@ -87,7 +117,9 @@ export function useTaskEventStream(): boolean {
   const flushStreamInvalidation = useCallback(() => {
     firstQueuedAtRef.current = null;
     const taskIds = [...pendingRef.current.tasks];
+    const enrichedTaskIds = new Set(pendingRef.current.enrichedTasks);
     const cycleEntries = [...pendingRef.current.cycles.entries()];
+    const enrichedCycles = new Set(pendingRef.current.enrichedCycles);
     clearPending(pendingRef.current);
     if (taskIds.length === 0 && cycleEntries.length === 0) {
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
@@ -111,18 +143,42 @@ export function useTaskEventStream(): boolean {
       // hard reload — the Subtasks list on the parent task page. Prefix-
       // match every `["tasks","detail", …]` subtree so open ancestor pages
       // refetch too (checklist/events/cycle queries share the same prefix).
-      void queryClient.invalidateQueries({
-        queryKey: [...taskQueryKeys.all, "detail"],
-      });
+      //
+      // Enrichment fast path: when EVERY pending task frame carried a
+      // `data` payload we already applied directly to the detail
+      // cache via setQueryData. Skipping the broad prefix invalidation
+      // is the whole point of the enrichment — it eliminates the
+      // follow-up GET tree. If even one frame in the batch was
+      // hint-only, we fall back to invalidating the prefix because
+      // that frame may have changed a parent's nested children we
+      // cannot reach with setQueryData on the child key.
+      const allTasksEnriched = taskIds.every((id) => enrichedTaskIds.has(id));
+      if (!allTasksEnriched) {
+        void queryClient.invalidateQueries({
+          queryKey: [...taskQueryKeys.all, "detail"],
+        });
+      }
     }
-    for (const [taskId] of cycleEntries) {
+    for (const [taskId, cycleSet] of cycleEntries) {
       if (taskIds.includes(taskId)) {
-        // Already covered by the broad detail invalidation above.
+        // Already covered by the broad detail invalidation above
+        // (or no invalidation needed when the task was enriched).
         continue;
       }
-      void queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.cycles(taskId),
-      });
+      // If every cycle frame for this task was enriched, the per-cycle
+      // detail cache is already current via setQueryData. The parent
+      // cycle list (`taskQueryKeys.cycles(taskId)`) still needs a
+      // refresh so the listing reflects any newly-added phases —
+      // enrichment carries one cycle, not the full list — so we keep
+      // the list-scoped invalidation.
+      const allCyclesEnriched = [...cycleSet].every((cycleId) =>
+        enrichedCycles.has(cycleEnrichmentKey(taskId, cycleId)),
+      );
+      if (!allCyclesEnriched) {
+        void queryClient.invalidateQueries({
+          queryKey: taskQueryKeys.cycles(taskId),
+        });
+      }
     }
     // Any task/cycle frame can flip a status (running → done), change
     // priority, or add/remove a task — all of which feed the home-page
@@ -193,6 +249,24 @@ export function useTaskEventStream(): boolean {
             return;
           }
           pendingRef.current.tasks.add(frame.taskId);
+          // Enriched-payload fast path: when the server embedded the
+          // full task tree we can apply it directly to the detail
+          // cache and short-circuit the follow-up GET /tasks/{id}.
+          // Validate via parseTask before writing; a malformed
+          // payload silently falls back to the invalidate-and-refetch
+          // path so a server contract drift never poisons the cache.
+          if (frame.data !== undefined) {
+            try {
+              const parsed = parseTask(frame.data);
+              queryClient.setQueryData(
+                taskQueryKeys.detail(frame.taskId),
+                parsed,
+              );
+              pendingRef.current.enrichedTasks.add(frame.taskId);
+            } catch {
+              /* fall back to invalidate-and-refetch */
+            }
+          }
         } else if (frame.kind === "project") {
           void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
           void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
@@ -217,6 +291,28 @@ export function useTaskEventStream(): boolean {
             pendingRef.current.cycles.set(frame.taskId, bucket);
           }
           bucket.add(frame.cycleId);
+          // Enriched cycle frames carry the same shape as
+          // `GET /tasks/{id}/cycles/{cycleId}` (cycle + phases). Apply
+          // directly so the open cycle detail page reflects the new
+          // phase status without a refetch round trip. The task's
+          // broader detail/list invalidations still fire (the worker
+          // also touches task.status / events) — that's the right
+          // behaviour because cycle enrichment only refreshes the
+          // per-cycle slot, not the rest of the task tree.
+          if (frame.data !== undefined) {
+            try {
+              const parsedCycle = parseTaskCycleDetail(frame.data);
+              queryClient.setQueryData(
+                taskQueryKeys.cycle(frame.taskId, frame.cycleId),
+                parsedCycle,
+              );
+              pendingRef.current.enrichedCycles.add(
+                cycleEnrichmentKey(frame.taskId, frame.cycleId),
+              );
+            } catch {
+              /* fall back to invalidate-and-refetch */
+            }
+          }
         } else if (frame.kind === "resync") {
           // The server's ring buffer either evicted us as a slow
           // consumer or we reconnected past the retained window.
@@ -377,6 +473,19 @@ export function useTaskEventStream(): boolean {
       setSseLive(false);
     };
   }, [scheduleInvalidateFromStream]);
+
+  // Mirror the connection state into the module-level flag that
+  // `createAppQueryClient` reads from its `refetchOnWindowFocus`
+  // predicate. We keep this as a separate effect (rather than inlining
+  // it next to each `setSseLive` call) so the React state and the
+  // out-of-tree flag cannot diverge — `useState` + `useEffect` is the
+  // only ordering React promises us here.
+  useEffect(() => {
+    setSseLiveForQueries(sseLive);
+    return () => {
+      setSseLiveForQueries(false);
+    };
+  }, [sseLive]);
 
   return sseLive;
 }

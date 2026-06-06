@@ -1,40 +1,91 @@
+import { Suspense, lazy } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import {
   DeleteConfirmDialog,
   TaskChangeModelModal,
-  TaskCycleDetailPage,
   TaskEditForm,
-  TaskDetailPage,
   TaskDraftsPage,
-  TaskEventDetailPage,
-  TaskGraphPage,
   TaskCreateModalsLayer,
   TaskHome,
   useTasksApp,
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { useStickyShellElevation } from "@/lib/useStickyShellElevation";
-import { SettingsPage } from "@/settings";
 import {
-  ProjectDetailPage,
-  ProjectContextPage,
   ProjectContextPicker,
-  ProjectListPage,
   ProjectSelect,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
+
+// Route-level code splitting. Each lazy() call becomes its own chunk
+// so the initial bundle covers only the home/drafts paths a freshly
+// landing user actually needs. Vite resolves the deep module paths to
+// individual chunks; the barrel re-exports remain but tree-shake out
+// of the main chunk because no synchronous consumer imports them.
+const TaskDetailPage = lazy(() =>
+  import("@/tasks/pages/TaskDetailPage").then((m) => ({
+    default: m.TaskDetailPage,
+  })),
+);
+const TaskCycleDetailPage = lazy(() =>
+  import("@/tasks/pages/TaskCycleDetailPage").then((m) => ({
+    default: m.TaskCycleDetailPage,
+  })),
+);
+const TaskEventDetailPage = lazy(() =>
+  import("@/tasks/pages/TaskEventDetailPage").then((m) => ({
+    default: m.TaskEventDetailPage,
+  })),
+);
+const TaskGraphPage = lazy(() =>
+  import("@/tasks/pages/TaskGraphPage").then((m) => ({
+    default: m.TaskGraphPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("@/settings/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
+const ProjectListPage = lazy(() =>
+  import("@/projects/ProjectListPage").then((m) => ({
+    default: m.ProjectListPage,
+  })),
+);
+const ProjectDetailPage = lazy(() =>
+  import("@/projects/ProjectDetailPage").then((m) => ({
+    default: m.ProjectDetailPage,
+  })),
+);
+const ProjectContextPage = lazy(() =>
+  import("@/projects/ProjectContextPage").then((m) => ({
+    default: m.ProjectContextPage,
+  })),
+);
 import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
 import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import { RoutedMainOutlet } from "./RoutedMainOutlet";
+import { useBootstrap } from "./hooks/useBootstrap";
+import { useSettingsRoutePrefetch } from "./hooks/usePrefetchOnIntent";
 import "./App.css";
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
-  const projects = useProjects({ includeArchived: false, limit: 100 });
+  // The shell-level project list is consumed only by the edit modal's
+  // ProjectSelect. Until the user opens that modal there is no need to
+  // hit the network here — TaskHome and the project pages own their
+  // own copies for their own surfaces. The bootstrap aggregate seeds
+  // this cache key on cold start, so when the edit modal opens the
+  // first render hits warm data even before the lazy fetch returns.
+  const projects = useProjects({
+    includeArchived: false,
+    limit: 100,
+    enabled: app.editing !== null,
+  });
   const editPromptProjectContext = useProjectContextPromptBinding({
     projectId: app.editing ? app.editProjectID : "",
     selectedIds: app.editProjectContextItemIDs,
@@ -44,6 +95,9 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
   const headerElevated = useStickyShellElevation();
+  // Settings chunk is small but the icon is the most prominent
+  // header affordance; prefetching on hover is a free win.
+  const settingsIntent = useSettingsRoutePrefetch();
 
   return (
     <ModalStackProvider>
@@ -104,6 +158,8 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 className="app-header-settings-link"
                 aria-label="Open settings"
                 title="Settings"
+                onPointerEnter={settingsIntent.onPointerEnter}
+                onFocus={settingsIntent.onFocus}
                 {...(location.pathname.startsWith("/settings")
                   ? { "aria-current": "page" as const }
                   : {})}
@@ -224,31 +280,66 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   );
 }
 
-export default function App() {
-  const sseLive = useTaskEventStream();
-  const app = useTasksApp({ sseLive });
+/**
+ * Routes that actually consume `app.tasks` / `app.taskStats`. When the
+ * user navigates to any other route (settings, project pages, the
+ * standalone task detail subroutes), we suspend the home-list / stats
+ * queries so they stop firing GET requests for views nobody is
+ * rendering. The matcher is path-prefix-based to stay zero-cost and to
+ * handle nested deep-link URLs without an explicit allowlist per
+ * sub-route.
+ */
+function routeNeedsHomeListData(pathname: string): boolean {
+  if (pathname === "/" || pathname === "") return true;
+  if (pathname.startsWith("/drafts")) return true;
+  // The task detail / cycle / event / graph routes embed the same
+  // shell modals (edit/delete/change-model) that read from the home
+  // list cache on close. Keeping data enabled here avoids a flash of
+  // empty list state when the user navigates back to "/".
+  if (pathname.startsWith("/tasks/")) return true;
+  return false;
+}
 
+export default function App() {
+  // Aggregate bootstrap seeds the TanStack Query cache for settings,
+  // root tasks page, stats, projects, and drafts in one round trip so
+  // the per-page hooks below skip their cold-start GETs. Silent fallback
+  // when /v1/bootstrap is unavailable (older server, stripped build).
+  useBootstrap();
+  const sseLive = useTaskEventStream();
+  const location = useLocation();
+  const dataEnabled = routeNeedsHomeListData(location.pathname);
+  const app = useTasksApp({ sseLive, dataEnabled });
+
+  // Lazy routes need a Suspense boundary above them. The fallback is
+  // intentionally empty: the chunks are small (each page module + its
+  // local components) and ship gzipped over a same-origin connection,
+  // so a visible loader would flash for ~50ms on most navigations and
+  // do more visual harm than good. Pages render their own skeletons
+  // for data loading once the chunk arrives.
   return (
-    <Routes>
-      <Route path="/" element={<AppShell app={app} />}>
-        <Route index element={<TaskHome app={app} />} />
-        <Route path="drafts" element={<TaskDraftsPage app={app} />} />
-        <Route path="projects" element={<ProjectListPage />} />
-        <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
-        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route
-          path="tasks/:taskId/events/:eventSeq"
-          element={<TaskEventDetailPage />}
-        />
-        <Route
-          path="tasks/:taskId/cycles/:cycleId"
-          element={<TaskCycleDetailPage />}
-        />
-        <Route path="tasks/:taskId/graph" element={<TaskGraphPage />} />
-        <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+    <Suspense fallback={null}>
+      <Routes>
+        <Route path="/" element={<AppShell app={app} />}>
+          <Route index element={<TaskHome app={app} />} />
+          <Route path="drafts" element={<TaskDraftsPage app={app} />} />
+          <Route path="projects" element={<ProjectListPage />} />
+          <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="tasks/:taskId/events/:eventSeq"
+            element={<TaskEventDetailPage />}
+          />
+          <Route
+            path="tasks/:taskId/cycles/:cycleId"
+            element={<TaskCycleDetailPage />}
+          />
+          <Route path="tasks/:taskId/graph" element={<TaskGraphPage />} />
+          <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

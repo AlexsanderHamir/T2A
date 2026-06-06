@@ -89,7 +89,7 @@ func (h *Handler) postTaskCycle(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyCycleChange(taskID, cycle.ID)
+	h.notifyCycleChangedFromStore(r.Context(), taskID, cycle.ID)
 	writeJSON(w, r, op, http.StatusCreated, taskCycleResponseFromDomain(cycle))
 }
 
@@ -143,7 +143,7 @@ func (h *Handler) getTaskCycles(w http.ResponseWriter, r *http.Request) {
 		next := out[len(out)-1].AttemptSeq
 		resp.NextBeforeAttemptSeq = &next
 	}
-	writeJSON(w, r, op, http.StatusOK, resp)
+	writeJSONWithETag(w, r, op, http.StatusOK, resp)
 }
 
 // getTaskCycle handles GET /tasks/{id}/cycles/{cycleId}.
@@ -171,7 +171,7 @@ func (h *Handler) getTaskCycle(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, taskCycleDetailFromDomain(cycle, phases))
+	writeJSONWithETag(w, r, op, http.StatusOK, taskCycleDetailFromDomain(cycle, phases))
 }
 
 // getTaskCycleStream handles GET /tasks/{id}/cycles/{cycleId}/stream.
@@ -310,7 +310,7 @@ func (h *Handler) patchTaskCycle(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyCycleChange(taskID, cycleID)
+	h.notifyCycleChangedFromStore(r.Context(), taskID, cycleID)
 	writeJSON(w, r, op, http.StatusOK, taskCycleResponseFromDomain(cycle))
 }
 
@@ -342,7 +342,7 @@ func (h *Handler) postTaskCyclePhase(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyCycleChange(taskID, cycleID)
+	h.notifyCycleChangedFromStore(r.Context(), taskID, cycleID)
 	writeJSON(w, r, op, http.StatusCreated, taskCyclePhaseResponseFromDomain(phase))
 }
 
@@ -388,7 +388,7 @@ func (h *Handler) patchTaskCyclePhase(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyCycleChange(taskID, cycleID)
+	h.notifyCycleChangedFromStore(r.Context(), taskID, cycleID)
 	writeJSON(w, r, op, http.StatusOK, taskCyclePhaseResponseFromDomain(ph))
 }
 
