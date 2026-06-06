@@ -38,6 +38,10 @@ type Props = {
   listboxName?: string;
   /** Tighter width for filter toolbar. */
   compact?: boolean;
+  /** Minimum portal listbox width in px (defaults by compact flag). */
+  dropdownMinWidth?: number;
+  /** Toolbar filter styling — wider menu, sentence-case group labels. */
+  dropdownVariant?: "default" | "toolbar";
   /** Shown next to the field label (default: no badge). */
   requirement?: FieldRequirement;
   disabled?: boolean;
@@ -52,6 +56,8 @@ export function CustomSelect({
   className,
   listboxName,
   compact = false,
+  dropdownMinWidth,
+  dropdownVariant = "default",
   requirement = "none",
   disabled = false,
 }: Props) {
@@ -236,6 +242,8 @@ export function CustomSelect({
         options={options}
         highlight={highlight}
         compact={compact}
+        dropdownMinWidth={dropdownMinWidth}
+        dropdownVariant={dropdownVariant}
         ariaActivedescendant={
           highlightedOption ? optionId(highlightedOption.value) : undefined
         }

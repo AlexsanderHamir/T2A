@@ -89,23 +89,24 @@ export function TaskListStatsStrip({ stats }: Props) {
       aria-live="polite"
       data-testid="task-list-stats-strip"
     >
-      <ul className="task-list-stats-strip__list">
-        {pills.map((pill) => (
-          <li
+      <dl className="task-list-stats-strip__list">
+        {pills.map((pill, index) => (
+          <div
             key={pill.key}
-            className="task-list-stats-strip__pill"
+            className="task-list-stats-strip__metric"
             data-tone={pill.tone}
+            data-first={index === 0 ? "true" : undefined}
           >
-            <span
+            <dd
               className="task-list-stats-strip__value"
               data-testid={`task-list-stats-${pill.key}`}
             >
               {pill.value}
-            </span>
-            <span className="task-list-stats-strip__label">{pill.label}</span>
-          </li>
+            </dd>
+            <dt className="task-list-stats-strip__label">{pill.label}</dt>
+          </div>
         ))}
-      </ul>
+      </dl>
     </div>
   );
 }

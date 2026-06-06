@@ -20,7 +20,7 @@ describe("taskListFilterSelectOptions", () => {
   describe("TASK_LIST_STATUS_FILTER_OPTIONS", () => {
     it("starts with All then the synthetic Scheduled bucket then section headers", () => {
       const o = TASK_LIST_STATUS_FILTER_OPTIONS;
-      expect(o[0]).toEqual({ value: "all", label: "All" });
+      expect(o[0]).toEqual({ value: "all", label: "All statuses" });
       expect(o[1]).toEqual({ value: "scheduled", label: "Scheduled (deferred)" });
       expect(isCustomSelectHeader(o[2])).toBe(true);
       if (isCustomSelectHeader(o[2])) {
@@ -51,6 +51,10 @@ describe("taskListFilterSelectOptions", () => {
         );
         expect(idx).toBeGreaterThan(0);
         expect(idx).toBeLessThan(otherHeaderIdx);
+        const opt = o[idx] as { pillClass?: string };
+        expect(opt.pillClass).toBe(
+          `cell-pill cell-pill--status cell-pill--status-${s}`,
+        );
       }
     });
   });
@@ -59,7 +63,7 @@ describe("taskListFilterSelectOptions", () => {
     it("starts with All then priorities in order", () => {
       expect(TASK_LIST_PRIORITY_FILTER_OPTIONS[0]).toEqual({
         value: "all",
-        label: "All",
+        label: "All priorities",
       });
       const rest = TASK_LIST_PRIORITY_FILTER_OPTIONS.slice(1);
       expect(rest).toHaveLength(PRIORITIES.length);
@@ -67,7 +71,12 @@ describe("taskListFilterSelectOptions", () => {
         expect(isCustomSelectHeader(opt)).toBe(false);
         const p = PRIORITIES[i] as Priority;
         expect((opt as { value: string }).value).toBe(p);
-        expect((opt as { pillClass?: string }).pillClass).toBeTruthy();
+        expect((opt as { label: string }).label).toBe(
+          p.charAt(0).toUpperCase() + p.slice(1),
+        );
+        expect((opt as { pillClass?: string }).pillClass).toBe(
+          `cell-pill cell-pill--priority cell-pill--priority-${p}`,
+        );
       });
     });
 

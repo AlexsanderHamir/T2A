@@ -16,6 +16,8 @@ type Props = {
   options: CustomSelectOption[];
   highlight: number;
   compact: boolean;
+  dropdownMinWidth?: number;
+  dropdownVariant?: "default" | "toolbar";
   ariaActivedescendant?: string;
   optionId: (v: string) => string;
   pos: CustomSelectDropdownPosition;
@@ -34,6 +36,8 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
       options,
       highlight,
       compact,
+      dropdownMinWidth,
+      dropdownVariant = "default",
       ariaActivedescendant,
       optionId,
       pos,
@@ -44,6 +48,9 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
     },
     ref,
   ) {
+    const minWidthPx =
+      dropdownMinWidth ?? (compact ? 13 * 16 : 12 * 16);
+
     return (
       <ul
         ref={ref}
@@ -52,12 +59,19 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
         tabIndex={-1}
         aria-label={listboxAriaLabel}
         aria-activedescendant={ariaActivedescendant}
-        className="custom-select-dropdown"
+        className={[
+          "custom-select-dropdown",
+          dropdownVariant === "toolbar"
+            ? "custom-select-dropdown--toolbar"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={{
           position: "fixed",
           top: pos.top,
           left: pos.left,
-          width: Math.max(pos.width, compact ? 10 * 16 : 12 * 16),
+          width: Math.max(pos.width, minWidthPx),
           /* Above modals — matches --z-portal-popover in app-design-tokens.css */
           zIndex: "var(--z-portal-popover)",
         }}

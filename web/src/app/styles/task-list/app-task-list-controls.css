@@ -5,23 +5,36 @@
 
 .task-list-section-panel.panel {
   background: var(--bg-elevated);
+  padding: var(--space-5) var(--space-6);
+  box-shadow: none;
+}
+
+/* Unified chrome: heading, scoreboard, and filters read as one surface. */
+.task-list-toolbar {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  overflow: hidden;
 }
 
 .task-list-section-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1rem;
-  margin-bottom: var(--space-4);
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 80%, transparent);
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: 0;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .task-list-section-head__text {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
   min-width: 0;
 }
 
@@ -30,10 +43,10 @@
 }
 
 .task-list-section-title {
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--text-primary);
 }
 
@@ -41,105 +54,148 @@
   flex-shrink: 0;
 }
 
-/* —— Quiet inline scoreboard (TaskListStatsStrip). Sentence-case labels;
-   tones use pill / semantic tokens (no brand purple on this row). —— */
+.task-list-section-actions .task-home-new-task-btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.85rem;
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: 1px solid var(--brand-border-cta);
+}
+
+.task-list-section-actions .task-home-new-task-btn:not(:disabled):hover {
+  background: var(--brand-hover);
+}
+
+/* —— Inline scoreboard (TaskListStatsStrip). Single scan line: value + label. —— */
 
 .task-list-stats-strip {
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
+  background: transparent;
+}
+
+.task-list-toolbar:not(:has(.task-list-stats-strip)) .task-list-section-head {
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .task-list-stats-strip__list {
-  list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 0;
   margin: 0;
   padding: 0;
 }
 
-.task-list-stats-strip__pill {
+.task-list-stats-strip__metric {
   display: inline-flex;
   align-items: baseline;
   gap: 0.35rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-hairline);
-  background: var(--surface-1);
-  font-size: var(--text-xs);
-  letter-spacing: 0.01em;
-  color: var(--text-secondary);
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.task-list-stats-strip__metric:not([data-first="true"])::before {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 0.85rem;
+  margin: 0 var(--space-3);
+  background: var(--border-hairline);
+  align-self: center;
 }
 
 .task-list-stats-strip__value {
-  font-family: var(--font-mono);
+  margin: 0;
   font-variant-numeric: tabular-nums;
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.01em;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 
 .task-list-stats-strip__label {
-  font-weight: 500;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--text-secondary);
 }
 
-.task-list-stats-strip__pill[data-tone="ready"] {
-  background: var(--pill-ready-bg);
-  border-color: var(--pill-ready-border);
+.task-list-stats-strip__metric[data-tone="ready"] .task-list-stats-strip__value {
   color: var(--pill-ready-text);
 }
 
-.task-list-stats-strip__pill[data-tone="ready"] .task-list-stats-strip__value {
-  color: var(--pill-ready-text);
-}
-
-.task-list-stats-strip__pill[data-tone="warn"] {
-  background: var(--warning-soft);
-  border-color: var(--warning-border);
+.task-list-stats-strip__metric[data-tone="warn"] .task-list-stats-strip__value {
   color: var(--warning-ink);
 }
 
-.task-list-stats-strip__pill[data-tone="warn"] .task-list-stats-strip__value {
-  color: var(--warning-ink);
-}
-
-.task-list-stats-strip__pill[data-tone="schedule"] {
-  background: var(--pill-priority-medium-bg);
-  border-color: var(--pill-priority-medium-border);
+.task-list-stats-strip__metric[data-tone="schedule"] .task-list-stats-strip__value {
   color: var(--pill-priority-medium-text);
 }
 
-.task-list-stats-strip__pill[data-tone="schedule"] .task-list-stats-strip__value {
-  color: var(--pill-priority-medium-text);
-}
-
-.task-list-stats-strip__pill[data-tone="review"] {
-  background: var(--pill-priority-high-bg);
-  border-color: var(--pill-priority-high-border);
-  color: var(--pill-priority-high-text);
-}
-
-.task-list-stats-strip__pill[data-tone="review"] .task-list-stats-strip__value {
+.task-list-stats-strip__metric[data-tone="review"] .task-list-stats-strip__value {
   color: var(--pill-priority-high-text);
 }
 
 .task-list-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-  align-items: flex-end;
-  margin-bottom: var(--space-4);
-  padding: 0 0 var(--space-3);
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: 0;
+  padding: var(--space-3) var(--space-5);
   border: none;
-  border-bottom: 1px solid var(--border-hairline);
   border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  background: var(--bg-subtle);
+}
+
+.task-list-filters__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: min(100%, 20rem);
+}
+
+.task-list-filters .field-label-with-req {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .task-list-filter-field {
-  flex: 0 1 10.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.task-list-filter-field--status {
+  flex: 1 1 11rem;
+  min-width: 10.5rem;
+  max-width: 14rem;
+}
+
+.task-list-filter-field--project {
+  flex: 1 1 10rem;
   min-width: 9.5rem;
+  max-width: 13rem;
+}
+
+.task-list-filter-field:not(.task-list-filter-field--status):not(.task-list-filter-field--project) {
+  flex: 0 1 9rem;
+  min-width: 8.5rem;
+  max-width: 11rem;
 }
 
 .task-list-filter-field .field--custom-select--compact {
@@ -148,12 +204,35 @@
 }
 
 .task-list-search-field {
-  flex: 1 1 18rem;
-  min-width: min(100%, 16rem);
+  flex: 1 1 14rem;
+  min-width: min(100%, 12rem);
+  max-width: 22rem;
+  margin-left: auto;
 }
 
 .task-list-search-field input[type="search"] {
   width: 100%;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.75rem;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-chrome-surface);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-inset-lip);
+  transition:
+    border-color var(--duration-short) var(--ease-out),
+    box-shadow var(--duration-short) var(--ease-out);
+}
+
+.task-list-search-field input[type="search"]:hover {
+  border-color: var(--border-strong);
+}
+
+.task-list-search-field input[type="search"]:focus {
+  outline: none;
+  border-color: var(--brand-border-emphasis);
+  box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
 /* Borderless table — the surrounding panel is already the card chrome.
@@ -239,16 +318,17 @@
    `--ease-ui` curve and `--duration-ui-phase` budget the create modal
    uses so both surfaces feel like they were composed by the same hand.
    Disabled under reduced-motion. */
-.task-list-section-panel > * {
+.task-list-section-panel > .task-list-toolbar,
+.task-list-section-panel > .task-list-content,
+.task-list-section-panel > .sync-hint {
   animation: task-list-section-enter var(--duration-ui-phase)
     var(--ease-ui) both;
 }
 
-.task-list-section-panel > *:nth-child(1) { animation-delay: 0ms; }
-.task-list-section-panel > *:nth-child(2) { animation-delay: 30ms; }
-.task-list-section-panel > *:nth-child(3) { animation-delay: 60ms; }
-.task-list-section-panel > *:nth-child(4) { animation-delay: 90ms; }
-.task-list-section-panel > *:nth-child(n+5) { animation-delay: 120ms; }
+.task-list-section-panel > .task-list-toolbar { animation-delay: 0ms; }
+.task-list-section-panel > .sync-hint { animation-delay: 30ms; }
+.task-list-section-panel > .task-list-content { animation-delay: 60ms; }
+.task-list-section-panel > .task-list-bulk-bar { animation-delay: 90ms; }
 
 @keyframes task-list-section-enter {
   from {
@@ -262,7 +342,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .task-list-section-panel > * {
+  .task-list-section-panel > .task-list-toolbar,
+  .task-list-section-panel > .task-list-content,
+  .task-list-section-panel > .sync-hint {
     animation: none;
   }
 }

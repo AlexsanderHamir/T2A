@@ -305,18 +305,10 @@ export const TaskListSection = memo(function TaskListSection({
       className="panel task-list-section-panel"
       aria-labelledby="task-list-heading"
     >
-      <TaskListSectionHeading actions={actions} />
-      <TaskListStatsStrip stats={taskStats} />
-      {refreshing && !loading && !hideBackgroundRefreshHint ? (
-        <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
-          Syncing with server…
-        </p>
-      ) : null}
-      {loading && showLoadingLine ? (
-        <TaskListTableSkeleton caption={TASK_LIST_TABLE_CAPTION} />
-      ) : null}
-      {!loading ? (
-        <div className="task-list-content task-list-content--enter">
+      <div className="task-list-toolbar">
+        <TaskListSectionHeading actions={actions} />
+        <TaskListStatsStrip stats={taskStats} />
+        {!loading ? (
           <TaskListFilters
             statusFilter={statusFilter}
             onStatusFilterChange={(v) =>
@@ -332,6 +324,18 @@ export const TaskListSection = memo(function TaskListSection({
             titleSearch={titleSearch}
             onTitleSearchChange={setTitleSearch}
           />
+        ) : null}
+      </div>
+      {refreshing && !loading && !hideBackgroundRefreshHint ? (
+        <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
+          Syncing with server…
+        </p>
+      ) : null}
+      {loading && showLoadingLine ? (
+        <TaskListTableSkeleton caption={TASK_LIST_TABLE_CAPTION} />
+      ) : null}
+      {!loading ? (
+        <div className="task-list-content task-list-content--enter">
           <TaskListDataTable
             caption={TASK_LIST_TABLE_CAPTION}
             refreshing={refreshing}

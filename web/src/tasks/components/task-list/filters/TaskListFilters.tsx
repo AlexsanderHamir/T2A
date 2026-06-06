@@ -41,43 +41,53 @@ export function TaskListFilters({
       role="search"
       aria-label="Filter tasks"
     >
-      <div className="task-list-filter-field">
-        <CustomSelect
-          id="task-list-filter-status"
-          label="Status"
-          compact
-          listboxName="Filter by status"
-          value={statusFilter}
-          options={TASK_LIST_STATUS_FILTER_OPTIONS}
-          onChange={onStatusFilterChange}
-        />
-      </div>
-      <div className="task-list-filter-field">
-        <CustomSelect
-          id="task-list-filter-priority"
-          label="Priority"
-          compact
-          listboxName="Filter by priority"
-          value={priorityFilter}
-          options={TASK_LIST_PRIORITY_FILTER_OPTIONS}
-          onChange={onPriorityFilterChange}
-        />
-      </div>
-      {onProjectFilterChange ? (
-        <div className="task-list-filter-field">
+      <div className="task-list-filters__controls">
+        <div className="task-list-filter-field task-list-filter-field--status">
           <CustomSelect
-            id="task-list-filter-project"
-            label="Project"
+            id="task-list-filter-status"
+            label="Status"
             compact
-            listboxName="Filter by project"
-            value={projectFilter}
-            options={projectFilterOptions}
-            onChange={onProjectFilterChange}
+            dropdownVariant="toolbar"
+            dropdownMinWidth={240}
+            listboxName="Filter by status"
+            value={statusFilter}
+            options={TASK_LIST_STATUS_FILTER_OPTIONS}
+            onChange={onStatusFilterChange}
           />
         </div>
-      ) : null}
+        <div className="task-list-filter-field">
+          <CustomSelect
+            id="task-list-filter-priority"
+            label="Priority"
+            compact
+            dropdownVariant="toolbar"
+            dropdownMinWidth={200}
+            listboxName="Filter by priority"
+            value={priorityFilter}
+            options={TASK_LIST_PRIORITY_FILTER_OPTIONS}
+            onChange={onPriorityFilterChange}
+          />
+        </div>
+        {onProjectFilterChange ? (
+          <div className="task-list-filter-field task-list-filter-field--project">
+            <CustomSelect
+              id="task-list-filter-project"
+              label="Project"
+              compact
+              dropdownVariant="toolbar"
+              dropdownMinWidth={220}
+              listboxName="Filter by project"
+              value={projectFilter}
+              options={projectFilterOptions}
+              onChange={onProjectFilterChange}
+            />
+          </div>
+        ) : null}
+      </div>
       <div className="field grow task-list-search-field">
-        <label htmlFor="task-list-search-title">Search titles</label>
+        <label htmlFor="task-list-search-title" className="visually-hidden">
+          Search titles
+        </label>
         <input
           id="task-list-search-title"
           type="search"

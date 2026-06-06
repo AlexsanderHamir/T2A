@@ -248,13 +248,23 @@ describe("TaskListSection", () => {
     await user.click(screen.getByRole("combobox", { name: /^status$/i }));
     await user.click(screen.getByRole("option", { name: /^ready$/i }));
     expect(screen.getByText("Low ready")).toBeInTheDocument();
-    expect(screen.queryByText("High done")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByText("High done")).not.toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
 
     await user.click(screen.getByRole("combobox", { name: /^status$/i }));
-    await user.click(screen.getByRole("option", { name: /^all$/i }));
+    await user.click(screen.getByRole("option", { name: /^all statuses$/i }));
     await user.click(screen.getByRole("combobox", { name: /^priority$/i }));
     await user.click(screen.getByRole("option", { name: /^high$/i }));
-    expect(screen.queryByText("Low ready")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Low ready")).not.toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
     expect(screen.getByText("High done")).toBeInTheDocument();
   });
 
@@ -319,10 +329,17 @@ describe("TaskListSection", () => {
     const search = screen.getByLabelText(/^search titles$/i);
     await user.type(search, "alp");
     expect(screen.getByText("Alpha task")).toBeInTheDocument();
-    expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
 
     await user.clear(search);
-    expect(screen.getByText("Beta")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Beta")).toBeInTheDocument();
+    });
   });
 
   it("filters rows by project membership", async () => {
@@ -353,7 +370,12 @@ describe("TaskListSection", () => {
     await user.click(screen.getByRole("combobox", { name: /^project$/i }));
     await user.click(screen.getByRole("option", { name: /^context moat$/i }));
     expect(screen.getByText("Moat task")).toBeInTheDocument();
-    expect(screen.queryByText("Unassigned task")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Unassigned task")).not.toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
 
     await user.click(screen.getByRole("combobox", { name: /^project$/i }));
     expect(screen.queryByRole("option", { name: /^no project$/i })).not.toBeInTheDocument();
@@ -389,7 +411,12 @@ describe("TaskListSection", () => {
     );
     await user.click(screen.getByRole("combobox", { name: /^status$/i }));
     await user.click(screen.getByRole("option", { name: /^failed$/i }));
-    expect(screen.getByText(/no matching tasks/i)).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.getByText(/no matching tasks/i)).toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
   });
 
   describe("bulk reschedule", () => {
@@ -735,8 +762,13 @@ describe("TaskListSection", () => {
         screen.getByRole("option", { name: /scheduled \(deferred\)/i }),
       );
       expect(screen.getByText("Future ready")).toBeInTheDocument();
-      expect(screen.queryByText("Past ready")).not.toBeInTheDocument();
-      expect(screen.queryByText("Plain ready")).not.toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.queryByText("Past ready")).not.toBeInTheDocument();
+          expect(screen.queryByText("Plain ready")).not.toBeInTheDocument();
+        },
+        { timeout: 500 },
+      );
     });
   });
 
