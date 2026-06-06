@@ -155,10 +155,9 @@ export function TaskCycleDetailPage() {
   const endcapLabel = attemptEndcapLabel(cycle.status);
   const showEndcap = endcapLabel !== null && cycle.phases.length > 0;
   const endcapTime = showEndcap ? formatAttemptEndedTime(cycle.ended_at) : null;
-  // Neutral top bookend: pairs with the terminal endcap so the rail
-  // reads as "Attempt started → phases → Attempt {completed/failed/aborted}".
-  // Intentionally muted (text-tertiary) — a start is an entry marker,
-  // not an outcome. See AttemptStartCap below.
+  // Top bookend: pairs with the terminal endcap so the rail reads
+  // "Attempt started → phases → Attempt {completed/failed/aborted}".
+  // See AttemptStartCap below.
   const showStartCap = cycle.phases.length > 0;
   const startCapTime = showStartCap
     ? formatAttemptEndedTime(cycle.started_at)
@@ -224,11 +223,13 @@ export function TaskCycleDetailPage() {
             />
           ) : null}
           <ol
-            className={
-              showPhaseBadge
-                ? "task-attempt-phase-track task-attempt-phase-track--numbered"
-                : "task-attempt-phase-track"
-            }
+            className={[
+              "task-attempt-phase-track",
+              showPhaseBadge && "task-attempt-phase-track--numbered",
+              showEndcap && "task-attempt-phase-track--with-endcap",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             {cycle.phases.map((phase, index) => (
               <li
@@ -576,13 +577,9 @@ function AttemptTerminalEndcap({
 }
 
 /**
- * Opens the phase rail with a neutral entry marker so the timeline
- * reads as a complete arc: "Attempt started → phases → Attempt
- * {completed/failed/aborted}". Always rendered (regardless of the
- * cycle's status) when at least one phase exists, because the start
- * is a fact, not an outcome. Intentionally muted-neutral — a start is
- * not a completion or a failure, so it does not borrow the success or
- * danger palettes.
+ * Opens the phase rail so the timeline reads as a complete arc:
+ * "Attempt started → phases → Attempt {completed/failed/aborted}".
+ * Always rendered when the cycle has phases.
  */
 function AttemptStartCap({
   startedAt,

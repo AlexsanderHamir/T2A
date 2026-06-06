@@ -237,6 +237,16 @@ time.task-attempt-meta-inline-item {
   padding-bottom: 0;
 }
 
+/* When a terminal endcap follows, flush the last phase connector to the
+   <ol> bottom so it meets the endcap's incoming leg without a seam. Keep
+   the row's bottom padding — that is what sets inter-marker rhythm. */
+.task-attempt-phase-track--with-endcap
+  .task-attempt-phase-step:last-child:not([data-last="true"])::before {
+  bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .task-attempt-phase-step-marker {
   position: absolute;
   left: 0;
@@ -288,14 +298,10 @@ time.task-attempt-meta-inline-item {
   border-radius: var(--phase-connector-width);
 }
 
-/* Top bookend — opens the phase rail with a neutral "Attempt started"
-   marker so the timeline reads as a complete arc: start → phases →
-   terminal endcap. Always rendered when the cycle has phases (the
-   start is a fact, not an outcome). Intentionally muted-neutral: a
-   start is not a completion or a failure, so it borrows the tertiary
-   text colour instead of the success or danger palette. Geometry
-   mirrors a phase row's marker + outgoing connector so the rail flows
-   continuously into the first phase below. */
+/* Top bookend — opens the phase rail with an "Attempt started" marker so
+   the timeline reads as a complete arc: start → phases → terminal endcap.
+   Geometry mirrors a phase row's marker + outgoing connector so the rail
+   flows continuously into the first phase below. */
 .task-attempt-phase-startcap {
   position: relative;
   display: grid;
@@ -327,14 +333,17 @@ time.task-attempt-meta-inline-item {
   width: var(--phase-marker-size);
   height: var(--phase-marker-size);
   border-radius: var(--radius-full);
-  border: 2px solid var(--border-chrome-strong, var(--border-chrome-hairline));
+  border: 2px solid var(--border-chrome-hairline);
   background: var(--surface-1);
+  transition:
+    background-color var(--duration-moderate) var(--ease-default),
+    border-color var(--duration-moderate) var(--ease-default);
 }
 
 .task-attempt-phase-startcap-name {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   letter-spacing: -0.005em;
   min-width: 0;
   overflow: hidden;
@@ -367,18 +376,19 @@ time.task-attempt-meta-inline-item {
   min-height: calc(var(--phase-marker-size) + 0.5rem);
 }
 
-/* Incoming connector — bridges from the last phase row's outgoing
-   connector (which ends at row-bottom - 2px) down to the top of the
-   endcap's own marker. Sits in the small geometric gap between the
-   phase <ol>'s bottom edge and the marker's `top: 0.45rem`. */
+/* Incoming connector — one continuous leg from the last phase row's
+   outgoing connector down to the endcap marker. Flush with the <ol>
+   bottom (no 2px offset) so the rail does not break into dashed stubs. */
 .task-attempt-phase-endcap::before {
   content: "";
   position: absolute;
   left: calc(var(--phase-rail-x) - (var(--phase-connector-width) / 2));
   top: 0;
-  height: calc(0.45rem - 2px);
+  height: 0.45rem;
   width: var(--phase-connector-width);
   background: var(--border-chrome-hairline);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .task-attempt-phase-endcap-marker {
