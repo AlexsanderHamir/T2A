@@ -389,10 +389,17 @@ export function VerificationSettingsSection({
    * `w.runner` (the execute runner) — without surfacing that here
    * the operator has to read backend code to find out what
    * "Same as execute runner" actually means.
+   *
+   * Phrased as "Same as execute runner: <value>" rather than
+   * "<value> (same as execute runner)" so it reads as a live
+   * pointer to the Agent worker section above, not a hardcoded
+   * default that happens to be Cursor.
    */
-  const executeRunnerEntry = RUNNERS.find((r) => r.id === form.runner.trim());
+  const executeRunnerTrim = form.runner.trim();
+  const executeRunnerEntry = RUNNERS.find((r) => r.id === executeRunnerTrim);
   const executeRunnerLabel =
-    executeRunnerEntry?.label ?? form.runner.trim() ?? "execute runner";
+    executeRunnerEntry?.label ??
+    (executeRunnerTrim || "(none configured)");
   return (
     <SectionCard id={SECTION_IDS.verification} title="Verification">
       <label className="settings-verify-toggle">
@@ -492,7 +499,7 @@ export function VerificationSettingsSection({
                 onChange={(e) => onField("verifyRunnerName", e.target.value)}
               >
                 <option value="">
-                  {executeRunnerLabel} (same as execute runner)
+                  Same as execute runner: {executeRunnerLabel}
                 </option>
                 {RUNNERS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -508,7 +515,7 @@ export function VerificationSettingsSection({
             </label>
             <p className="settings-field-help">
               {verifyRunnerSaved === ""
-                ? "Verify will reuse the runner you chose above."
+                ? "Reads the runner you set in Agent worker above. Pick a runner here to override for verify only."
                 : "Override active — verify uses this runner instead of the execute runner."}
             </p>
 
