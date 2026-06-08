@@ -152,20 +152,27 @@ UPDATE task_checklist_completions
 // migrateChecklistCheckToText merges legacy shell-check commands into criterion
 // text, then drops the check column and app_settings.check_command_timeout_seconds.
 // Postgres only; SQLite test DBs rely on AutoMigrate after the domain field removal.
+// Idempotent: skips the merge when the column was already dropped on a prior boot.
 func migrateChecklistCheckToText(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.migrateChecklistCheckToText")
 	if db.Dialector == nil || db.Dialector.Name() != "postgres" {
 		return nil
 	}
-	if err := db.WithContext(ctx).Exec(`
+	hasCheck, err := postgresTableHasColumn(ctx, db, "task_checklist_items", "check")
+	if err != nil {
+		return fmt.Errorf("probe task_checklist_items.check: %w", err)
+	}
+	if hasCheck {
+		if err := db.WithContext(ctx).Exec(`
 UPDATE task_checklist_items
    SET text = text || ' (verification: ' || trim("check") || ')'
  WHERE trim("check") != ''
    AND text NOT LIKE '%(verification:%'`).Error; err != nil {
-		return fmt.Errorf("merge checklist check into text: %w", err)
-	}
-	if err := db.WithContext(ctx).Exec(`ALTER TABLE task_checklist_items DROP COLUMN IF EXISTS "check"`).Error; err != nil {
-		return fmt.Errorf("drop task_checklist_items.check: %w", err)
+			return fmt.Errorf("merge checklist check into text: %w", err)
+		}
+		if err := db.WithContext(ctx).Exec(`ALTER TABLE task_checklist_items DROP COLUMN IF EXISTS "check"`).Error; err != nil {
+			return fmt.Errorf("drop task_checklist_items.check: %w", err)
+		}
 	}
 	if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings DROP CONSTRAINT IF EXISTS chk_app_settings_check_timeout`).Error; err != nil {
 		return fmt.Errorf("drop app_settings check timeout constraint: %w", err)
@@ -174,6 +181,20 @@ UPDATE task_checklist_items
 		return fmt.Errorf("drop app_settings.check_command_timeout_seconds: %w", err)
 	}
 	return nil
+}
+
+func postgresTableHasColumn(ctx context.Context, db *gorm.DB, table, column string) (bool, error) {
+	slog.Debug("trace", "operation", "postgres.postgresTableHasColumn", "table", table, "column", column)
+	var n int64
+	err := db.WithContext(ctx).Raw(`
+SELECT COUNT(*) FROM information_schema.columns
+ WHERE table_schema = CURRENT_SCHEMA()
+   AND table_name = ?
+   AND column_name = ?`, table, column).Scan(&n).Error
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 var errEmptyDSN = errors.New("database DSN is empty")
