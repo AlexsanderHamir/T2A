@@ -44,10 +44,11 @@ type Patch struct {
 	// config map. When non-nil, it replaces the entire runner_configs
 	// column. The handler is responsible for merging deltas before
 	// passing the blob here.
-	RunnerConfigs     *json.RawMessage
-	VerifyMaxRetries  *int
-	VerifyRunnerName  *string
-	VerifyRunnerModel *string
+	RunnerConfigs          *json.RawMessage
+	VerifyMaxRetries       *int
+	VerifyRunnerName       *string
+	VerifyRunnerModel      *string
+	AgentCommitExecuteWork *bool
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -69,7 +70,8 @@ func (p Patch) IsEmpty() bool {
 		p.RunnerConfigs == nil &&
 		p.VerifyMaxRetries == nil &&
 		p.VerifyRunnerName == nil &&
-		p.VerifyRunnerModel == nil
+		p.VerifyRunnerModel == nil &&
+		p.AgentCommitExecuteWork == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -263,6 +265,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.VerifyRunnerModel != nil {
 		row.VerifyRunnerModel = strings.TrimSpace(*patch.VerifyRunnerModel)
+	}
+	if patch.AgentCommitExecuteWork != nil {
+		row.AgentCommitExecuteWork = *patch.AgentCommitExecuteWork
 	}
 
 	dualWriteCursorToRunnerConfigs(row)

@@ -341,8 +341,14 @@ func TestWorker_HappyPath_writesOnePhaseAndFourMirrors(t *testing.T) {
 		}
 	}
 	runnerCalls := r.Calls()
-	if len(runnerCalls) != 1 || runnerCalls[0].Prompt != "do the thing" {
-		t.Fatalf("runner prompt for projectless task = %#v", runnerCalls)
+	if len(runnerCalls) != 1 {
+		t.Fatalf("runner call count = %d, want 1 (%#v)", len(runnerCalls), runnerCalls)
+	}
+	if !strings.Contains(runnerCalls[0].Prompt, "do the thing") {
+		t.Fatalf("runner prompt missing task text: %#v", runnerCalls)
+	}
+	if !strings.Contains(runnerCalls[0].Prompt, "Git commits (required)") {
+		t.Fatalf("runner prompt missing commit policy: %#v", runnerCalls)
 	}
 	if _, err := h.store.GetTaskContextSnapshotForCycle(bg, cycle.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("projectless snapshot err = %v, want ErrNotFound", err)

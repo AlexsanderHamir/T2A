@@ -68,15 +68,15 @@ type ProgressNotifier interface {
 // defaults so cmd/taskapi can construct a Harness without filling in
 // every field.
 type Options struct {
-	RunTimeout             time.Duration
-	ShutdownAbortTimeout   time.Duration
-	WorkingDir             string
-	ReportDir              string
-	Notifier               CycleChangeNotifier
-	ProgressNotifier       ProgressNotifier
-	VerifyRunner           runner.Runner
-	Metrics                RunMetrics
-	Clock                  func() time.Time
+	RunTimeout           time.Duration
+	ShutdownAbortTimeout time.Duration
+	WorkingDir           string
+	ReportDir            string
+	Notifier             CycleChangeNotifier
+	ProgressNotifier     ProgressNotifier
+	VerifyRunner         runner.Runner
+	Metrics              RunMetrics
+	Clock                func() time.Time
 }
 
 // Harness drives one task end-to-end through the execute/verify substrate.

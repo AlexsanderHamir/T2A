@@ -192,3 +192,19 @@ func TestEventTypeAcceptsUserResponse_excludesCycleAndPhaseEvents(t *testing.T) 
 		})
 	}
 }
+
+func TestValidInterruptResumeTransition(t *testing.T) {
+	t.Parallel()
+	reason := PhaseInterruptReason
+	last := TaskCyclePhase{
+		Phase:   PhaseExecute,
+		Status:  PhaseStatusFailed,
+		Summary: &reason,
+	}
+	if !ValidInterruptResumeTransition(&last, PhaseExecute) {
+		t.Fatal("execute→execute after process_restart should be allowed")
+	}
+	if ValidInterruptResumeTransition(&last, PhaseVerify) {
+		t.Fatal("execute→verify after process_restart should be rejected")
+	}
+}

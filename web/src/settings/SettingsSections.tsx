@@ -578,6 +578,26 @@ export function PhasesSettingsSection({
                 Must be between 0 and 604800 (7 days).
               </p>
             ) : null}
+            <label className="settings-field settings-field-row">
+              <input
+                type="checkbox"
+                checked={form.agentCommitExecuteWork === "true"}
+                onChange={(e) =>
+                  onField(
+                    "agentCommitExecuteWork",
+                    e.target.checked ? "true" : "false",
+                  )
+                }
+              />
+              <span className="settings-field-label">
+                Require execute-phase git commits
+              </span>
+            </label>
+            <p className="settings-field-help">
+              When enabled, the agent must commit work with a{" "}
+              <code>t2a:cycle=&lt;cycle_id&gt;</code> marker before finishing
+              execute. Helps resume after a server restart.
+            </p>
           </PhaseFieldGroup>
 
           <PhaseFieldGroup title="Runner">

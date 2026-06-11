@@ -557,10 +557,9 @@ func (s *agentWorkerSupervisor) runStartupSweep(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("agent worker startup sweep ok", "cmd", cmdName,
-		"operation", "taskapi.agent_worker.sweep_ok",
-		"cycles_aborted", res.CyclesAborted, "phases_failed", res.PhasesFailed,
-		"tasks_failed", res.TasksFailed)
+	slog.Info("agent worker startup finalize ok", "cmd", cmdName,
+		"operation", "taskapi.agent_worker.finalize_ok",
+		"phases_finalized", res.PhasesFailed)
 	return nil
 }
 

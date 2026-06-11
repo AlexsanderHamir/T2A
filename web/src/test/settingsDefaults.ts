@@ -19,4 +19,5 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   verify_max_retries: DEFAULT_VERIFY_MAX_RETRIES,
   verify_runner_name: "",
   verify_runner_model: "",
+  agent_commit_execute_work: true,
 };

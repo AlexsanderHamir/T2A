@@ -76,8 +76,11 @@ type AppSettings struct {
 	// VerifyRunnerName empty means use the execute runner id.
 	VerifyRunnerName string `gorm:"not null;default:''"`
 	// VerifyRunnerModel empty means use the verify runner's default model.
-	VerifyRunnerModel string    `gorm:"not null;default:''"`
-	UpdatedAt         time.Time `gorm:"not null"`
+	VerifyRunnerModel string `gorm:"not null;default:''"`
+	// AgentCommitExecuteWork instructs the execute agent to commit work
+	// with a cycle marker before finishing the phase (resume enabler).
+	AgentCommitExecuteWork bool      `gorm:"not null;default:true"`
+	UpdatedAt              time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -127,6 +130,7 @@ func DefaultAppSettings() AppSettings {
 		VerifyMaxRetries:           DefaultVerifyMaxRetries,
 		VerifyRunnerName:           "",
 		VerifyRunnerModel:          "",
+		AgentCommitExecuteWork:     true,
 	}
 }
 

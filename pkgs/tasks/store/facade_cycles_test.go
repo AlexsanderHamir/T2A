@@ -415,6 +415,43 @@ func TestStore_StartPhase_enforces_state_machine(t *testing.T) {
 	}
 }
 
+func TestStore_StartPhase_interruptResumeTransition(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	c, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+	restart := domain.PhaseInterruptReason
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: c.ID, PhaseSeq: e.PhaseSeq,
+		Status: domain.PhaseStatusFailed, Summary: &restart, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	e2, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("execute after process_restart: %v", err)
+	}
+	if e2.PhaseSeq != 2 {
+		t.Fatalf("resume execute phase_seq = %d, want 2", e2.PhaseSeq)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: c.ID, PhaseSeq: e2.PhaseSeq,
+		Status: domain.PhaseStatusFailed, Summary: strPtr("runner_timeout"), By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("execute after non-restart failure err = %v, want ErrInvalidInput", err)
+	}
+}
+
 func TestStore_StartPhase_rejects_on_terminal_cycle(t *testing.T) {
 	s, ctx := newCycleStore(t)
 	tsk := mustCreateTask(t, s, ctx)

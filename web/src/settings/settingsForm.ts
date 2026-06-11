@@ -35,6 +35,7 @@ export type SettingsFormState = {
   verifyMaxRetries: string;
   verifyRunnerName: string;
   verifyRunnerModel: string;
+  agentCommitExecuteWork: string;
 };
 
 export type SettingsStatus =
@@ -57,6 +58,7 @@ export function toFormState(s: AppSettings): SettingsFormState {
     verifyMaxRetries: String(s.verify_max_retries),
     verifyRunnerName: s.verify_runner_name,
     verifyRunnerModel: s.verify_runner_model,
+    agentCommitExecuteWork: s.agent_commit_execute_work ? "true" : "false",
   };
 }
 
@@ -109,6 +111,10 @@ export function diffPatch(
   const verifyModel = form.verifyRunnerModel.trim();
   if (verifyModel !== initial.verify_runner_model) {
     out.verify_runner_model = verifyModel;
+  }
+  const commitExecute = form.agentCommitExecuteWork.trim().toLowerCase() === "true";
+  if (commitExecute !== initial.agent_commit_execute_work) {
+    out.agent_commit_execute_work = commitExecute;
   }
   return out;
 }

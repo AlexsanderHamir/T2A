@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -79,6 +80,53 @@ func ReconcileReadyTasksNotQueued(ctx context.Context, st *store.Store, q *Memor
 	return res, nil
 }
 
+// ReconcileRunningTasksNotQueued enqueues running tasks whose open cycle
+// was interrupted by a process restart. The queue may hold running tasks
+// with open cycles while Harness.Resume continues the same attempt.
+func ReconcileRunningTasksNotQueued(ctx context.Context, st *store.Store, q *MemoryQueue) (ReconcileResult, error) {
+	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.ReconcileRunningTasksNotQueued")
+	var res ReconcileResult
+	if st == nil {
+		return res, errors.New("agents: nil store")
+	}
+	if q == nil {
+		return res, errors.New("agents: nil MemoryQueue")
+	}
+	cycles, err := st.ListRunningCycles(ctx)
+	if err != nil {
+		return res, fmt.Errorf("agents running reconcile: %w", err)
+	}
+	for _, cycle := range cycles {
+		if ctx.Err() != nil {
+			return res, ctx.Err()
+		}
+		res.Scanned++
+		task, err := st.Get(ctx, cycle.TaskID)
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				continue
+			}
+			return res, fmt.Errorf("agents running reconcile get task %q: %w", cycle.TaskID, err)
+		}
+		if task.Status != domain.StatusRunning {
+			continue
+		}
+		err = q.NotifyReadyTask(ctx, *task)
+		switch {
+		case err == nil:
+			res.Enqueued++
+		case errors.Is(err, ErrAlreadyQueued):
+			res.SkippedAlreadyQueued++
+		case errors.Is(err, ErrQueueFull):
+			res.StoppedOnQueueFull = true
+			return res, nil
+		default:
+			return res, err
+		}
+	}
+	return res, nil
+}
+
 // RunReconcileLoop invokes ReconcileReadyTasksNotQueued once immediately, then every tickInterval
 // while ctx is active. When tickInterval <= 0, only the initial run executes.
 // When afterEach is non-nil it runs after every successful reconcile pass (including the initial run);
@@ -94,6 +142,15 @@ func RunReconcileLoop(ctx context.Context, st *store.Store, q *MemoryQueue, tick
 		slog.Info("ready task agent reconcile done", "cmd", agentsLogCmd, "operation", "agents.reconcile_once",
 			"scanned", res.Scanned, "enqueued", res.Enqueued, "skipped_already_queued", res.SkippedAlreadyQueued,
 			"stopped_on_queue_full", res.StoppedOnQueueFull)
+		runningRes, err := ReconcileRunningTasksNotQueued(ctx, st, q)
+		if err != nil {
+			slog.Warn("running task agent reconcile failed", "cmd", agentsLogCmd, "operation", "agents.running_reconcile_once", "err", err)
+		} else if runningRes.Scanned > 0 {
+			slog.Info("running task agent reconcile done", "cmd", agentsLogCmd, "operation", "agents.running_reconcile_once",
+				"scanned", runningRes.Scanned, "enqueued", runningRes.Enqueued,
+				"skipped_already_queued", runningRes.SkippedAlreadyQueued,
+				"stopped_on_queue_full", runningRes.StoppedOnQueueFull)
+		}
 		if afterEach != nil {
 			if err := afterEach(ctx, st); err != nil {
 				slog.Warn("reconcile after-hook failed", "cmd", agentsLogCmd, "operation", "agents.reconcile_after_hook", "err", err)

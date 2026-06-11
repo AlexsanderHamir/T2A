@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -46,6 +47,15 @@ func (h *Harness) selectedProjectContext(ctx context.Context, task *domain.Task,
 	})
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("marshal context snapshot: %w", err)
+	}
+	if existing, err := h.store.GetTaskContextSnapshotForCycle(ctx, cycle.ID); err == nil {
+		return renderedProjectContext{
+			Text:          existing.RenderedContext,
+			TokenEstimate: existing.TokenEstimate,
+			SnapshotJSON:  json.RawMessage(existing.ContextJSON),
+		}, nil
+	} else if !errors.Is(err, domain.ErrNotFound) {
+		return renderedProjectContext{}, fmt.Errorf("get context snapshot: %w", err)
 	}
 	_, err = h.store.CreateTaskContextSnapshot(ctx, store.CreateTaskContextSnapshotInput{
 		TaskID:          task.ID,

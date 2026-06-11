@@ -59,11 +59,15 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 		if err := assertNoRunningPhaseForCycleInTx(tx, cycle.ID); err != nil {
 			return err
 		}
-		prev, err := lastPhaseKindForCycleInTx(tx, cycle.ID)
+		last, err := lastPhaseForCycleInTx(tx, cycle.ID)
 		if err != nil {
 			return err
 		}
-		if !domain.ValidPhaseTransition(prev, phase) {
+		var prev domain.Phase
+		if last != nil {
+			prev = last.Phase
+		}
+		if !domain.ValidPhaseTransition(prev, phase) && !domain.ValidInterruptResumeTransition(last, phase) {
 			return fmt.Errorf("%w: phase transition %q -> %q not allowed", domain.ErrInvalidInput, prev, phase)
 		}
 		nextSeq, err := nextPhaseSeqInTx(tx, cycle.ID)
@@ -254,21 +258,19 @@ func nextPhaseSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
 	return max + 1, nil
 }
 
-// lastPhaseKindForCycleInTx returns the Phase value of the highest-seq
-// phase row in this cycle, or "" when none exist. Used to decide
-// whether the next requested phase satisfies
-// domain.ValidPhaseTransition.
-func lastPhaseKindForCycleInTx(tx *gorm.DB, cycleID string) (domain.Phase, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.lastPhaseKindForCycleInTx")
+// lastPhaseForCycleInTx returns the highest-seq phase row in this cycle,
+// or nil when none exist.
+func lastPhaseForCycleInTx(tx *gorm.DB, cycleID string) (*domain.TaskCyclePhase, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.lastPhaseForCycleInTx")
 	var p domain.TaskCyclePhase
 	err := tx.Where("cycle_id = ?", cycleID).Order("phase_seq DESC").Limit(1).First(&p).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", nil
+			return nil, nil
 		}
-		return "", fmt.Errorf("last phase lookup: %w", err)
+		return nil, fmt.Errorf("last phase lookup: %w", err)
 	}
-	return p.Phase, nil
+	return &p, nil
 }
 
 // phaseStartedPayload builds the data_json payload for the

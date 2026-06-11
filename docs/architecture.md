@@ -218,13 +218,16 @@ V1 ships exactly one adapter (`pkgs/agents/runner/cursor`). Adding Claude Code /
 - Live progress: `stream-json` lines are read line-by-line and normalized into `runner.ProgressEvent`, published as ephemeral `agent_run_progress` SSE frames (not persisted in `task_events`).
 - Startup probe: `cursor --version` runs once per supervisor reload. Probe failure logs an error and exits the worker (fail-loud per the engineering bar). The worker is not started without a successful probe.
 
-### Process-restart orphan sweep
+### Process-restart phase finalization and resume
 
-`worker.SweepOrphanRunningCycles` runs once at startup before `Worker.Run` begins, only when the supervisor decides the worker can run.
+`worker.FinalizeInterruptedPhases` (also exposed as deprecated `SweepOrphanRunningCycles`) runs once at startup before `Worker.Run` begins, only when the supervisor decides the worker can run.
 
-1. Every `task_cycle_phases.status='running'` → `CompletePhase(failed, "process_restart")` (phase-first so `TerminateCycle` does not reject).
-2. Every `task_cycles.status='running'` → `TerminateCycle(aborted, "process_restart")`.
-3. For each cycle aborted by step 2 whose task is still `StatusRunning` → `Update(task, failed)`.
+1. Every `task_cycle_phases.status='running'` → `CompletePhase(failed, "process_restart")`.
+2. Cycles and tasks are **not** aborted or failed — open cycles stay `running` so `Harness.Resume` can continue the same attempt.
+
+After finalization, `agents.ReconcileRunningTasksNotQueued` (startup + every reconcile tick) enqueues running tasks whose cycle is still open. Worker admission routes them to `Harness.Resume` instead of `Harness.Run`.
+
+Resume reconstructs a logical checkpoint from the phase ledger, verify/criteria report tables, context snapshots, and git state (see [ADR-0006](adr/ADR-0006-phase-boundary-resume.md)). The checkpoint is encoded in composed `runner.Request.Prompt`, not new runner fields.
 
 Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 
@@ -234,11 +237,13 @@ Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 
 - After a successful commit that leaves a task `ready`, `Store.notifyReadyTask` enqueues a snapshot. If the queue is full, the mutation still succeeds (the notify failure is `Warn`-logged).
 - `PickupWakeScheduler` defers enqueue when `pickup_not_before` is in the future. Startup `Hydrate` reloads deferred rows.
-- `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` once at startup and every 2 minutes (fixed in code, `ReconcileTickInterval`). It pages `store.ListReadyTaskQueueCandidates` in oldest-first order so backlog is not starved.
+- `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` and `ReconcileRunningTasksNotQueued` once at startup and every 2 minutes (fixed in code, `ReconcileTickInterval`). Ready reconcile pages `store.ListReadyTaskQueueCandidates` in oldest-first order so backlog is not starved. Running reconcile pages open cycles and enqueues tasks still `status='running'` when not already pending.
 
-**Invariant:** the queue never contains a task the SQL filter `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` would reject.
+**Invariant (ready queue):** the queue never contains a task the SQL filter `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` would reject.
 
-The queue is single-process: multiple `taskapi` replicas with the worker enabled are **not supported** (the orphan sweep would race in-flight cycles).
+**Invariant (running resume):** the queue may contain `status='running'` tasks with an open cycle after process restart — admission calls `Harness.Resume` instead of starting a new cycle.
+
+The queue is single-process: multiple `taskapi` replicas with the worker enabled are **not supported** (startup finalization and in-memory queue would race in-flight cycles).
 
 ## Limitations
 

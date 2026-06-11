@@ -1,5 +1,10 @@
 package domain
 
+// PhaseInterruptReason is written into task_cycle_phases.summary when the
+// agent worker finalizes a running phase after process interruption. Resume
+// logic treats this as permission to re-enter the same phase enum.
+const PhaseInterruptReason = "process_restart"
+
 // ValidPhaseTransition reports whether a cycle may move from prev to next within
 // the same cycle. Empty prev means "no prior phase" (cycle just started); empty
 // next is rejected (callers always know what they want to enter).
@@ -30,6 +35,26 @@ func ValidPhaseTransition(prev, next Phase) bool {
 	default:
 		return false
 	}
+}
+
+// ValidInterruptResumeTransition reports whether the cycle may open another
+// row with the same phase enum immediately after process-interrupt finalization.
+// last must be the highest-seq phase row: terminal failed with summary
+// PhaseInterruptReason and the same phase kind as next.
+func ValidInterruptResumeTransition(last *TaskCyclePhase, next Phase) bool {
+	if last == nil || next == "" {
+		return false
+	}
+	if last.Phase != next {
+		return false
+	}
+	if !TerminalPhaseStatus(last.Status) || last.Status != PhaseStatusFailed {
+		return false
+	}
+	if last.Summary == nil || *last.Summary != PhaseInterruptReason {
+		return false
+	}
+	return true
 }
 
 // TerminalCycleStatus reports whether s is a final, immutable cycle status.

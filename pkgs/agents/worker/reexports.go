@@ -8,16 +8,16 @@ import (
 // churn. See docs/adr/ADR-0005-extract-agent-harness.md.
 
 type (
-	Options              = harness.Options
-	RunMetrics           = harness.RunMetrics
-	CycleChangeNotifier  = harness.CycleChangeNotifier
-	ProgressNotifier     = harness.ProgressNotifier
+	Options             = harness.Options
+	RunMetrics          = harness.RunMetrics
+	CycleChangeNotifier = harness.CycleChangeNotifier
+	ProgressNotifier    = harness.ProgressNotifier
 )
 
 const (
-	CancelledByOperatorReason = harness.CancelledByOperatorReason
+	CancelledByOperatorReason   = harness.CancelledByOperatorReason
 	DefaultShutdownAbortTimeout = harness.DefaultShutdownAbortTimeout
-	PanicReason               = harness.PanicReason
-	DefaultReportDirSubdir    = harness.DefaultReportDirSubdir
-	ShutdownReason            = harness.ShutdownReason
+	PanicReason                 = harness.PanicReason
+	DefaultReportDirSubdir      = harness.DefaultReportDirSubdir
+	ShutdownReason              = harness.ShutdownReason
 )

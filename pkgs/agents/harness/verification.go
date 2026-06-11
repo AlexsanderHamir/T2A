@@ -284,7 +284,7 @@ func (h *Harness) runVerifyChecks(
 		expected[it.ID] = struct{}{}
 	}
 
-	selfReport, err := parseCriteriaReport(h.opts.ReportDir, cycle.ID, expected)
+	selfReport, err := h.loadCriteriaSelfReport(parentCtx, cycle.ID, attemptSeq, expected)
 	if err != nil {
 		return nil, "", err
 	}
@@ -416,10 +416,8 @@ func (h *Harness) runLLMVerifyAgent(
 ) error {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
-	diff, err := gitDiff(h.opts.WorkingDir, "HEAD")
-	if err != nil {
-		diff = "(diff unavailable: " + err.Error() + ")"
-	}
+	commitOn := h.agentCommitExecuteWork(ctx)
+	diff := verifyDiffSection(h.opts.WorkingDir, cycle.ID, commitOn)
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
 	// Render the absolute, worker-managed verify-report path so the
@@ -452,7 +450,7 @@ func (h *Harness) runLLMVerifyAgent(
 	if feedback != "" {
 		prompt = appendVerifyFeedback(prompt, feedback)
 	}
-	_, err = snap.verifyRunner.Run(ctx, runner.Request{
+	_, err := snap.verifyRunner.Run(ctx, runner.Request{
 		TaskID:      task.ID,
 		AttemptSeq:  cycle.AttemptSeq,
 		Phase:       domain.PhaseVerify,
@@ -470,6 +468,42 @@ func (h *Harness) runLLMVerifyAgent(
 		},
 	})
 	return err
+}
+
+func (h *Harness) loadCriteriaSelfReport(ctx context.Context, cycleID string, attemptSeq int64, expected map[string]struct{}) (map[string]criteriaReportEntry, error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.loadCriteriaSelfReport",
+		"cycle_id", cycleID, "attempt_seq", attemptSeq, "expected", len(expected))
+	selfReport, err := parseCriteriaReport(h.opts.ReportDir, cycleID, expected)
+	if err == nil {
+		return selfReport, nil
+	}
+	if !errors.Is(err, ErrCriteriaReportMissing) {
+		return nil, err
+	}
+	rows, err := h.store.ListCriteriaReportsForCycle(ctx, cycleID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]criteriaReportEntry, len(expected))
+	for _, row := range rows {
+		if row.AttemptSeq != attemptSeq {
+			continue
+		}
+		if _, want := expected[row.CriterionID]; !want {
+			continue
+		}
+		out[row.CriterionID] = criteriaReportEntry{
+			ID:          row.CriterionID,
+			ClaimedDone: row.ClaimedDone,
+			Evidence:    row.Evidence,
+		}
+	}
+	for id := range expected {
+		if _, ok := out[id]; !ok {
+			return nil, fmt.Errorf("%w: criterion %q missing from DB fallback", ErrCriteriaReportMissing, id)
+		}
+	}
+	return out, nil
 }
 
 func gitDiff(dir, rev string) (string, error) {

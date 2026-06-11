@@ -58,6 +58,25 @@ func (w *Worker) transitionTaskToRunning(ctx context.Context, taskID string) boo
 	return true
 }
 
+func (w *Worker) openRunningCycle(ctx context.Context, taskID string) (*domain.TaskCycle, bool) {
+	cycles, err := w.store.ListCyclesForTask(ctx, taskID, 0)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, false
+		}
+		slog.Warn("agent worker list cycles failed", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.openRunningCycle.err", "task_id", taskID, "err", err)
+		return nil, false
+	}
+	for i := len(cycles) - 1; i >= 0; i-- {
+		if cycles[i].Status == domain.CycleStatusRunning {
+			cycle := cycles[i]
+			return &cycle, true
+		}
+	}
+	return nil, false
+}
+
 // processOne runs queue admission then delegates the cycle body to the harness.
 func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.processOne",
@@ -69,12 +88,26 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	if !ok {
 		return
 	}
-	if fresh.Status != domain.StatusReady {
+
+	switch fresh.Status {
+	case domain.StatusRunning:
+		cycle, ok := w.openRunningCycle(parentCtx, fresh.ID)
+		if !ok {
+			slog.Warn("running task without open cycle at dequeue", "cmd", workerLogCmd,
+				"operation", "agent.worker.Worker.processOne.no_open_cycle", "task_id", task.ID)
+			return
+		}
+		w.harness.Resume(parentCtx, fresh, cycle)
+		return
+	case domain.StatusReady:
+		// continue below
+	default:
 		slog.Warn("stale task at dequeue", "cmd", workerLogCmd,
 			"operation", "agent.worker.Worker.processOne.stale", "task_id", task.ID,
 			"status", string(fresh.Status))
 		return
 	}
+
 	now := w.clock()
 	ready, err := w.store.ReadyForAgentPickup(parentCtx, fresh, now)
 	if err != nil {
