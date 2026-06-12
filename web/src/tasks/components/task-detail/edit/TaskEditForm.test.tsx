@@ -37,6 +37,8 @@ function renderForm(props?: Partial<ComponentProps<typeof TaskEditForm>>) {
     canInheritChecklist: true,
     tagsCsv: "",
     milestone: "",
+    pickupSchedule: null,
+    onPickupScheduleChange: vi.fn(),
     onTagsCsvChange: vi.fn(),
     onMilestoneChange: vi.fn(),
     saving: false,
@@ -127,5 +129,23 @@ describe("TaskEditForm", () => {
         screen.getByRole("button", { name: /^cancel$/i }),
       ).not.toBeDisabled();
     });
+  });
+
+  it("shows SchedulePicker for ready tasks", () => {
+    renderForm({ status: "ready", pickupSchedule: null });
+    expect(screen.getByTestId("schedule-picker-input")).toBeInTheDocument();
+  });
+
+  it("shows read-only pickup copy for running tasks", () => {
+    renderForm({
+      status: "running",
+      pickupSchedule: "2026-04-22T13:00:00Z",
+    });
+    expect(
+      screen.queryByTestId("schedule-picker-input"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/pickup time cannot be changed while the task is running/i),
+    ).toBeInTheDocument();
   });
 });

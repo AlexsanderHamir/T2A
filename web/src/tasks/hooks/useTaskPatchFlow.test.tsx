@@ -117,6 +117,33 @@ describe("useTaskPatchFlow", () => {
     });
   });
 
+  it("forwards pickup_not_before when provided on the patch input", async () => {
+    mockedPatch.mockResolvedValueOnce(undefined as unknown as never);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskPatchFlow(), {
+      wrapper: Wrapper,
+    });
+    act(() => {
+      result.current.patchTask({
+        ...baseInput,
+        pickup_not_before: "2026-04-22T13:00:00.000Z",
+      });
+    });
+    await waitFor(() => {
+      expect(mockedPatch).toHaveBeenCalledTimes(1);
+    });
+    expect(mockedPatch).toHaveBeenCalledWith("t1", {
+      title: "New title",
+      initial_prompt: "<p>hi</p>",
+      status: "ready",
+      priority: "medium",
+      task_type: "general",
+      checklist_inherit: false,
+      cursor_model: "",
+      pickup_not_before: "2026-04-22T13:00:00.000Z",
+    });
+  });
+
   it("flips patchPending while in flight and back to false on success", async () => {
     let resolveFn: (() => void) | undefined;
     mockedPatch.mockImplementationOnce(

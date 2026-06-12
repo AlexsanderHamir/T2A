@@ -10,6 +10,9 @@ import {
 } from "../../rich-prompt";
 import { TaskCreateModalAgentSection } from "../../task-create-modal/fields/TaskCreateModalAgentSection";
 import { TaskCreateModalSchedulingFields } from "../../task-create-modal/fields/TaskCreateModalSchedulingFields";
+import { SchedulePicker } from "@/shared/time/SchedulePicker";
+import { useAppTimezone, formatInAppTimezone } from "@/shared/time/appTimezone";
+import { canEditTaskPickupSchedule } from "../../../task-pickup/canEditTaskPickupSchedule";
 
 // Module-scoped sentinel passed to <TaskCreateModalSchedulingFields> when
 // `showDependsOn={false}` so the no-op props keep stable identity across
@@ -42,6 +45,8 @@ type Props = {
   canInheritChecklist: boolean;
   tagsCsv: string;
   milestone: string;
+  pickupSchedule: string | null;
+  onPickupScheduleChange: (v: string | null) => void;
   onTagsCsvChange: (v: string) => void;
   onMilestoneChange: (v: string) => void;
   saving: boolean;
@@ -85,6 +90,8 @@ export function TaskEditForm({
   canInheritChecklist,
   tagsCsv,
   milestone,
+  pickupSchedule,
+  onPickupScheduleChange,
   onTagsCsvChange,
   onMilestoneChange,
   saving,
@@ -99,6 +106,11 @@ export function TaskEditForm({
   onSubmit,
   onCancel,
 }: Props) {
+  const tz = useAppTimezone();
+  const scheduleEditable = canEditTaskPickupSchedule(status);
+  const formattedPickup =
+    pickupSchedule != null ? formatInAppTimezone(pickupSchedule, tz) : null;
+
   return (
     <Modal
       onClose={onCancel}
@@ -198,6 +210,32 @@ export function TaskEditForm({
             onRunnerChange={() => {}}
             onCursorModelChange={onCursorModelChange}
           />
+          <div className="field grow stack-tight">
+            <FieldLabel htmlFor="task-edit-pickup-schedule">
+              Agent pickup
+            </FieldLabel>
+            {scheduleEditable ? (
+              <>
+                <SchedulePicker
+                  value={pickupSchedule}
+                  onChange={onPickupScheduleChange}
+                  appTimezone={tz}
+                  disabled={saving}
+                  idPrefix="task-edit"
+                />
+                <p className="hint muted stack-tight-zero">
+                  Leave empty for immediate pickup when the worker is free.
+                  Times are shown in <strong>{tz}</strong>.
+                </p>
+              </>
+            ) : (
+              <p className="muted stack-tight-zero" id="task-edit-pickup-schedule">
+                {formattedPickup
+                  ? `Scheduled for ${formattedPickup}. Pickup time cannot be changed while the task is ${status}.`
+                  : `Pickup schedule cannot be changed while the task is ${status}.`}
+              </p>
+            )}
+          </div>
           {projectAssignment}
           <TaskCreateModalSchedulingFields
             disabled={saving}

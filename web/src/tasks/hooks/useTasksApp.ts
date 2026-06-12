@@ -20,6 +20,7 @@ import { TASK_TIMINGS } from "@/constants/tasks";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { useTaskPatchFlow } from "./useTaskPatchFlow";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
+import { canEditTaskPickupSchedule } from "../task-pickup/canEditTaskPickupSchedule";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
 const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
@@ -57,6 +58,9 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   const [editTagsCsv, setEditTagsCsv] = useState("");
   const [editMilestone, setEditMilestone] = useState("");
   const [editCursorModel, setEditCursorModel] = useState("");
+  const [editPickupSchedule, setEditPickupSchedule] = useState<string | null>(
+    null,
+  );
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
   const [changeModelTask, setChangeModelTask] = useState<Task | null>(null);
   const [changeModelDraft, setChangeModelDraft] = useState("");
@@ -214,6 +218,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     setEditTagsCsv((t.tags ?? []).join(", "));
     setEditMilestone(t.milestone ?? "");
     setEditCursorModel(t.cursor_model ?? "");
+    setEditPickupSchedule(t.pickup_not_before ?? null);
     setEditTitleRequiredError(null);
   }
 
@@ -275,6 +280,9 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
         .filter(Boolean),
       milestone: editMilestone.trim() || null,
       cursor_model: editCursorModel.trim(),
+      ...(canEditTaskPickupSchedule(editStatus)
+        ? { pickup_not_before: editPickupSchedule }
+        : {}),
     });
   }
 
@@ -331,6 +339,8 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     setEditMilestone,
     editCursorModel,
     setEditCursorModel,
+    editPickupSchedule,
+    setEditPickupSchedule,
     changeModelTask,
     changeModelDraft,
     setChangeModelDraft,

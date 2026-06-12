@@ -245,6 +245,8 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               canInheritChecklist={Boolean(app.editing.parent_id)}
               tagsCsv={app.editTagsCsv}
               milestone={app.editMilestone}
+              pickupSchedule={app.editPickupSchedule}
+              onPickupScheduleChange={app.setEditPickupSchedule}
               onTagsCsvChange={app.setEditTagsCsv}
               onMilestoneChange={app.setEditMilestone}
               saving={app.saving}

@@ -31,6 +31,8 @@ export type TaskPatchInput = {
   milestone?: string | null;
   /** Per-task `cursor-agent --model` override; empty string clears override. */
   cursor_model: string;
+  /** When set, included in PATCH body; omit when schedule is not editable. */
+  pickup_not_before?: string | null;
 };
 
 export type UseTaskPatchFlowResult = {
@@ -95,6 +97,10 @@ function patchTaskInList(
           milestone:
             patch.milestone === undefined ? t.milestone : patch.milestone ?? undefined,
           cursor_model: patch.cursor_model,
+          pickup_not_before:
+            patch.pickup_not_before === undefined
+              ? t.pickup_not_before
+              : patch.pickup_not_before ?? undefined,
         };
       }
       if (t.children?.length) {
@@ -146,6 +152,9 @@ export function useTaskPatchFlow(opts: {
         tags: input.tags,
         milestone: input.milestone,
         cursor_model: input.cursor_model,
+        ...(input.pickup_not_before !== undefined
+          ? { pickup_not_before: input.pickup_not_before }
+          : {}),
       }),
     onMutate: async (input) => {
       const startedAtMs = performance.now();
@@ -190,6 +199,10 @@ export function useTaskPatchFlow(opts: {
               ? detailPrev.milestone
               : input.milestone ?? undefined,
           cursor_model: input.cursor_model,
+          pickup_not_before:
+            input.pickup_not_before === undefined
+              ? detailPrev.pickup_not_before
+              : input.pickup_not_before ?? undefined,
         });
       }
 
