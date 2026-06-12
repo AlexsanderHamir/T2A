@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 )
 
 func TestAddDependency_rejectsSelfAndCycle(t *testing.T) {
@@ -48,6 +49,9 @@ func TestCreateTask_rejectsSubtaskOfSubtask(t *testing.T) {
 
 	root, err := Create(ctx, db, CreateInput{Title: "root", Priority: domain.PriorityMedium}, domain.ActorUser)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := checklist.Add(ctx, db, root.ID, "parent criterion", domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	child, err := Create(ctx, db, CreateInput{Title: "child", Priority: domain.PriorityMedium, ParentID: &root.ID}, domain.ActorUser)

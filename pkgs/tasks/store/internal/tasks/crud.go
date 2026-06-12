@@ -259,6 +259,9 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		if err := validateParentIsRootTask(tx, *parentID); err != nil {
 			return err
 		}
+		if err := checklist.ValidateParentCanHaveSubtasksInTx(tx, *parentID); err != nil {
+			return err
+		}
 	}
 	if t.ProjectID != nil {
 		var n int64

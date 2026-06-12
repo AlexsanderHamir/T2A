@@ -78,6 +78,7 @@ export function TaskDetailPage({ app }: Props) {
     updateSubtaskChecklistRow,
     createSubtaskMutation,
     submitNewSubtask,
+    subtaskFormError,
   } = useTaskDetailSubtasks(taskId);
   const {
     checklistModalOpen,
@@ -473,7 +474,7 @@ export function TaskDetailPage({ app }: Props) {
             onRemoveChecklistRow={removeSubtaskChecklistRow}
             onChecklistInheritChange={setSubtaskInherit}
             onSubmit={submitNewSubtask}
-            error={createSubtaskMutation.error}
+            error={subtaskFormError ?? createSubtaskMutation.error}
           />
         ) : null}
       </div>

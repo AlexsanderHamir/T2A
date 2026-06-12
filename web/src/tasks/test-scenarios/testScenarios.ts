@@ -190,7 +190,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
     checklist: [
       "Parent probe file exists under `.agent/subtask-probes/`.",
       "Both subtasks were created with depends_on including the parent id.",
-      "Worker did not dequeue either subtask until the parent reached `done`.",
     ],
   },
   {

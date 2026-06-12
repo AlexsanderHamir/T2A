@@ -20,6 +20,8 @@ export type TaskComposeFieldsProps = {
   checklistItems: string[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
   hideChecklist?: boolean;
+  /** When `required`, done criteria must be defined (parent tasks with subtasks). */
+  checklistRequirement?: "optional" | "required";
   disabled: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
@@ -47,6 +49,7 @@ export function TaskComposeFields({
   taskType,
   checklistItems,
   hideChecklist = false,
+  checklistRequirement = "optional",
   disabled,
   onTitleChange,
   onPromptChange,
@@ -159,6 +162,7 @@ export function TaskComposeFields({
         <TaskComposeChecklistFields
           checklistHeadingId={checklistHeadingId}
           checklistItems={checklistItems}
+          checklistRequirement={checklistRequirement}
           disabled={disabled}
           onOpenNewCriterion={openCriterionModal}
           onOpenEditCriterion={openEditCriterionModal}

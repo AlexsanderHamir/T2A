@@ -107,6 +107,17 @@ func mustCreateTask(t *testing.T, baseURL, jsonBody string) string {
 	return task.ID
 }
 
+func postTask(t *testing.T, baseURL, jsonBody string) (*http.Response, []byte) {
+	t.Helper()
+	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(jsonBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(res.Body)
+	_ = res.Body.Close()
+	return res, raw
+}
+
 // TestHTTP_patchTask_400ErrorStrings pins every documented PATCH /tasks/{id}
 // 400 string from docs/api.md against the live handler. Each subtest
 // drives a distinct rejection path so a future refactor that changes the
@@ -158,8 +169,7 @@ func TestHTTP_patchTask_clearParentWithNull(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateTask(t, srv.URL,
-		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	child := mustCreateSubtask(t, srv.URL, parent)
 
 	res, raw := patchTask(t, srv.URL, child, `{"parent_id":null}`)
 	if res.StatusCode != http.StatusOK {
@@ -204,8 +214,7 @@ func TestHTTP_patchTask_parentCycle(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateTask(t, srv.URL,
-		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	child := mustCreateSubtask(t, srv.URL, parent)
 
 	res, raw := patchTask(t, srv.URL, parent, `{"parent_id":"`+child+`"}`)
 	if res.StatusCode != http.StatusBadRequest {
@@ -243,18 +252,47 @@ func TestHTTP_patchTask_checklistInheritRequiresParent(t *testing.T) {
 	}
 }
 
-// TestHTTP_patchTask_doneBlockedByOpenSubtask pins the descendants-must-be-done
-// precondition string. Builds parent→child both `ready`, asks the parent to go
-// `done`, and asserts the documented bare 400 phrase.
-func TestHTTP_patchTask_doneBlockedByOpenSubtask(t *testing.T) {
+// TestHTTP_patchTask_doneWithOpenSubtask allows a parent to reach done
+// while subtasks remain open. Parent completion is criteria-driven;
+// subtasks that depend on the parent unblock via depends_on once the
+// parent status is done.
+func TestHTTP_patchTask_doneWithOpenSubtask(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+
+	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
+	ensureParentHasCriterion(t, st, parent)
+	cl, err := st.ListChecklistForSubject(context.Background(), parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetChecklistItemDone(context.Background(), parent, cl[0].ID, true, domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+	_ = mustCreateSubtask(t, srv.URL, parent)
+
+	res, raw := patchTask(t, srv.URL, parent, `{"status":"done"}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d (want 200) body=%s", res.StatusCode, raw)
+	}
+	var got domain.Task
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != domain.StatusDone {
+		t.Fatalf("status=%q want done", got.Status)
+	}
+}
+
+// TestHTTP_createSubtask_requiresParentDoneCriteria pins the guard that root
+// parents with subtasks must define at least one done criterion.
+func TestHTTP_createSubtask_requiresParentDoneCriteria(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	_ = mustCreateTask(t, srv.URL,
+	res, raw := postTask(t, srv.URL,
 		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
-
-	res, raw := patchTask(t, srv.URL, parent, `{"status":"done"}`)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
 	}
@@ -262,9 +300,9 @@ func TestHTTP_patchTask_doneBlockedByOpenSubtask(t *testing.T) {
 	if err := json.Unmarshal(raw, &errBody); err != nil {
 		t.Fatal(err)
 	}
-	const want = "all subtasks must be done before marking this task done"
+	const want = "parent task with subtasks requires at least one done criterion"
 	if errBody.Error != want {
-		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, want)
+		t.Fatalf("error=%q want %q", errBody.Error, want)
 	}
 }
 

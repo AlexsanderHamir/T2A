@@ -22,6 +22,7 @@ type Props = {
   prompt: string;
   checklistItems: string[];
   hideComposeChecklist: boolean;
+  checklistRequirement?: "optional" | "required";
   onPromptChange: (value: string) => void;
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
@@ -48,6 +49,7 @@ export function TaskCreateModalPrimaryFields({
   prompt,
   checklistItems,
   hideComposeChecklist,
+  checklistRequirement = "optional",
   onPromptChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
@@ -89,6 +91,7 @@ export function TaskCreateModalPrimaryFields({
       taskType={taskType}
       checklistItems={checklistItems}
       hideChecklist={hideComposeChecklist}
+      checklistRequirement={checklistRequirement}
       disabled={disabled}
       onTitleChange={onTitleChange}
       onPromptChange={onPromptChange}

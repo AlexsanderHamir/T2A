@@ -116,6 +116,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		srv, _, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		parent := postTaskJSON(t, srv, `{"title":"parent","priority":"medium"}`, http.StatusCreated)
+		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
 		ch, cancel := hub.Subscribe()
 		defer cancel()
 
@@ -219,6 +220,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		srv, _, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		parent := postTaskJSON(t, srv, `{"title":"parent","priority":"medium"}`, http.StatusCreated)
+		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
 		child := postTaskJSON(t, srv, `{"title":"child","priority":"medium","parent_id":"`+parent.ID+`"}`, http.StatusCreated)
 		ch, cancel := hub.Subscribe()
 		defer cancel()

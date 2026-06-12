@@ -81,7 +81,7 @@ func TestHTTP_getTask_subtaskHasParentID(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateTask(t, srv.URL, `{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	child := mustCreateSubtask(t, srv.URL, parent)
 
 	res, raw := getTask(t, srv.URL, child)
 	if res.StatusCode != http.StatusOK {
@@ -109,7 +109,7 @@ func TestHTTP_getTask_treeRecursive(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateTask(t, srv.URL, `{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	child := mustCreateSubtask(t, srv.URL, parent)
 
 	res, raw := getTask(t, srv.URL, parent)
 	if res.StatusCode != http.StatusOK {
@@ -237,7 +237,7 @@ func TestHTTP_getTask_neverPublishesOnSSE(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	_ = mustCreateTask(t, srv.URL, `{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	_ = mustCreateSubtask(t, srv.URL, parent)
 
 	// Subscribe AFTER the seed creates so we don't drain task_created events.
 	ch, unsub := hub.Subscribe()

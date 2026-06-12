@@ -55,6 +55,10 @@ The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live
 
 Both default **off** (subtasks are independent ready tasks, FIFO among eligible work). Behaviors compose: a subtask may depend on the parent and multiple siblings in one `depends_on` list.
 
+**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria** are satisfied (verify pipeline or operator PATCH with checklist complete). Open subtasks do **not** block parent completion. Use `depends_on` when subtasks should wait for the parent (or siblings) to finish first.
+
+**Parent criteria requirement:** A root task (`parent_id` null) with one or more subtasks must define **at least one** owned done criterion before subtasks can be linked. This gives the parent an explicit, verify-backed completion signal for dependents. API error: `parent task with subtasks requires at least one done criterion` (`400` on `POST /tasks` with `parent_id`, or when deleting the parent's last criterion while subtasks exist).
+
 Create flow (parent + pending subtasks): the web client POSTs each subtask with a parent dependency when the batch toggle is on, then PATCHes sibling dependencies once all subtask ids exist. Detail-page add-subtask: a single POST with the composed `depends_on`.
 
 Predecessors must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies. No special worker rules for subtasks vs other tasks.
@@ -213,6 +217,8 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators may describe verification commands in criterion text; the worker does not execute them.
 
 **Inheritance:** When `checklist_inherit` is true on a task, definitions live on the nearest ancestor that does not inherit. `done` is tracked per subject task.
+
+**Parent vs subtask completion:** Marking a task `done` requires its inherited checklist to be complete when criteria exist; it does **not** require subtasks to be `done`. Subtask ordering is expressed only via `depends_on` (see Dependencies — Subtask scheduling).
 
 | `verified_by` value | Meaning |
 |---|---|

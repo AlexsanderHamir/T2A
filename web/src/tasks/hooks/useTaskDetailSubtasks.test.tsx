@@ -72,6 +72,19 @@ function newQueryClient() {
   return qc;
 }
 
+function seedParentChecklist(qc: QueryClient, taskId = PARENT_ID) {
+  qc.setQueryData(taskQueryKeys.checklist(taskId), {
+    items: [
+      {
+        id: "parent-chk-1",
+        sort_order: 1,
+        text: "Parent deliverable",
+        done: false,
+      },
+    ],
+  });
+}
+
 describe("useTaskDetailSubtasks", () => {
   beforeEach(() => {
     __resetOptimisticVersionsForTests();
@@ -225,6 +238,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("submitNewSubtask creates child, optional checklist items, invalidates, closes modal", async () => {
     const qc = newQueryClient();
+    seedParentChecklist(qc);
     const inv = vi.spyOn(qc, "invalidateQueries");
     const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
@@ -274,6 +288,7 @@ describe("useTaskDetailSubtasks", () => {
       // late `onSuccess` MUST NOT closeSubtaskModal()/resetSubtaskForm()
       // — that would slam shut B's form and erase what the user typed.
       const qc = newQueryClient();
+      seedParentChecklist(qc);
       const inv = vi.spyOn(qc, "invalidateQueries");
       const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
@@ -343,6 +358,7 @@ describe("useTaskDetailSubtasks", () => {
 
     it("happy path: in-flight resolution closes the modal and resets the form", async () => {
       const qc = newQueryClient();
+      seedParentChecklist(qc);
       const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
         wrapper: createWrapper(qc),
       });
@@ -369,6 +385,7 @@ describe("useTaskDetailSubtasks", () => {
 
   it("submitNewSubtask skips addChecklistItem when inheriting checklist", async () => {
     const qc = newQueryClient();
+    seedParentChecklist(qc);
     const { result } = renderHook(() => useTaskDetailSubtasks(PARENT_ID), {
       wrapper: createWrapper(qc),
     });
@@ -407,6 +424,7 @@ describe("useTaskDetailSubtasks", () => {
 
     it("inserts a synthetic subtask into the parent's children immediately", async () => {
       const qc = newQueryClient();
+      seedParentChecklist(qc);
       qc.setQueryData(taskQueryKeys.detail(PARENT_ID), makeTask());
 
       let resolveCreate: ((value: Task) => void) | undefined;
@@ -460,6 +478,7 @@ describe("useTaskDetailSubtasks", () => {
 
     it("rolls back the synthetic subtask when the server rejects", async () => {
       const qc = newQueryClient();
+      seedParentChecklist(qc);
       qc.setQueryData(taskQueryKeys.detail(PARENT_ID), makeTask());
 
       mockCreateTask.mockRejectedValueOnce(new Error("boom"));

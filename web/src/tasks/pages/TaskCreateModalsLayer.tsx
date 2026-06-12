@@ -128,6 +128,7 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}
           onSubmit={(e) => void app.submitCreate(e)}
           createError={app.createError}
+          createFormError={app.createFormError}
           evaluateError={app.evaluateError}
           onApplyTestScenario={app.applyTestScenario}
         />

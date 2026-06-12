@@ -270,6 +270,7 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 	t.Run("populatedRootAndSubtask", func(t *testing.T) {
 		const root = "40000000-0000-4000-8000-000000000001"
 		mustCreateTaskBody(t, srv.URL, `{"id":"`+root+`","title":"r","priority":"medium"}`)
+		ensureParentHasCriterionHTTP(t, srv.URL, root)
 		mustCreateTaskBody(t, srv.URL,
 			`{"title":"c","priority":"medium","parent_id":"`+root+`"}`)
 
@@ -294,6 +295,7 @@ func TestHTTP_statsArithmeticInvariant(t *testing.T) {
 	mustCreateTaskBody(t, srv.URL, `{"id":"`+root+`","title":"ready-low","priority":"low","status":"ready"}`)
 	mustCreateTaskBody(t, srv.URL, `{"title":"running-medium","priority":"medium","status":"running"}`)
 	mustCreateTaskBody(t, srv.URL, `{"title":"running-critical","priority":"critical","status":"running"}`)
+	ensureParentHasCriterionHTTP(t, srv.URL, root)
 	mustCreateTaskBody(t, srv.URL,
 		`{"title":"sub-ready-medium","priority":"medium","status":"ready","parent_id":"`+root+`"}`)
 

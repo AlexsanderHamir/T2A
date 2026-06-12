@@ -21,6 +21,20 @@ import (
 // is the largest consumer; other tests in this package can reuse it.
 func strPtr(s string) *string { return &s }
 
+func ensureParentHasCriterion(t *testing.T, ctx context.Context, s *Store, parentID string) {
+	t.Helper()
+	items, err := s.ListChecklistForSubject(ctx, parentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) > 0 {
+		return
+	}
+	if _, err := s.AddChecklistItem(ctx, parentID, "test criterion", domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // --- Create / Get / Update / Delete validation ----------------------------
 
 func TestStore_Create_rejects_empty_title(t *testing.T) {
@@ -214,7 +228,7 @@ func TestStore_Update_rejects_invalid_status_value(t *testing.T) {
 	}
 }
 
-func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
+func TestStore_Update_done_allowedWhenChildNotDone(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
@@ -223,14 +237,21 @@ func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
+	items, err := s.ListChecklistForSubject(ctx, pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetChecklistItemDone(ctx, pid, items[0].ID, true, domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
 	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := domain.StatusDone
-	_, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
+	if _, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser); err != nil {
+		t.Fatalf("parent with open subtask should reach done: %v", err)
 	}
 }
 
@@ -264,6 +285,7 @@ func TestStore_Delete_cascadesSubtree(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -320,6 +342,7 @@ func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -360,6 +383,7 @@ func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -375,7 +399,7 @@ func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(pEv) != 2 || pEv[0].Type != domain.EventTaskCreated || pEv[1].Type != domain.EventSubtaskAdded {
+	if len(pEv) != 3 || pEv[0].Type != domain.EventTaskCreated || pEv[1].Type != domain.EventChecklistItemAdded || pEv[2].Type != domain.EventSubtaskAdded {
 		t.Fatalf("parent events: %+v", pEv)
 	}
 }
@@ -462,6 +486,7 @@ func TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent(t *testing.
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -520,6 +545,7 @@ func TestStore_Update_changeParent_emits_remove_on_old_and_add_on_new(t *testing
 		t.Fatal(err)
 	}
 	opid := oldParent.ID
+	ensureParentHasCriterion(t, ctx, s, opid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &opid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -562,6 +588,7 @@ func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := parent.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid, ChecklistInherit: false}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -670,6 +697,7 @@ func TestStore_ListRootForest_nested(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := p.ID
+	ensureParentHasCriterion(t, ctx, s, pid)
 	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -769,6 +797,7 @@ func TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	ensureParentHasCriterion(t, ctx, s, parent.ID)
 	child, err := s.Create(ctx, CreateTaskInput{Title: "c", Priority: domain.PriorityMedium, ParentID: &parent.ID}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)

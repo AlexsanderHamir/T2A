@@ -122,6 +122,8 @@ type Props = {
    * as `Error | null` per react-query v5).
    */
   createError?: Error | null;
+  /** Client-side validation (e.g. parent criteria required when subtasks exist). */
+  createFormError?: string | null;
   /**
    * Error from the most recent `evaluateDraftMutation`. Same gap as
    * `createError`: the global banner is hidden behind the modal,
@@ -195,11 +197,13 @@ export function TaskCreateModal({
   onEvaluate,
   onSubmit,
   createError = null,
+  createFormError = null,
   evaluateError = null,
   onApplyTestScenario,
 }: Props) {
   const disabled = pending || saving;
   const dmapMode = taskType === "dmap";
+  const hasPendingSubtasks = pendingSubtasks.some((st) => Boolean(st.title.trim()));
   const dmapReady = taskCreateModalDmapReady(
     dmapMode,
     dmapCommitLimit,
@@ -304,6 +308,7 @@ export function TaskCreateModal({
               prompt={prompt}
               checklistItems={checklistItems}
               hideComposeChecklist={false}
+              checklistRequirement={hasPendingSubtasks ? "required" : "optional"}
               onPromptChange={onPromptChange}
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
@@ -388,6 +393,11 @@ export function TaskCreateModal({
               error={evaluateError}
               fallback="Could not evaluate draft."
               className="task-create-modal-err task-create-modal-err--evaluate"
+            />
+
+            <MutationErrorBanner
+              error={createFormError}
+              className="task-create-modal-err task-create-modal-err--create"
             />
 
             <MutationErrorBanner

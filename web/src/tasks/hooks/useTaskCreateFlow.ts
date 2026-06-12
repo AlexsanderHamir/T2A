@@ -184,6 +184,7 @@ export function useTaskCreateFlow() {
   const [newMilestone, setNewMilestone] = useState("");
   const [newDependsOn, setNewDependsOn] = useState<string[]>([]);
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
+  const [createFormError, setCreateFormError] = useState<string | null>(null);
   // Drop the staged dependency picks whenever the operator switches the
   // task's project. The picker scopes its lookup to a single project, so
   // a chip carried over from project A would refer to a task the picker
@@ -306,6 +307,7 @@ export function useTaskCreateFlow() {
     setNewMilestone("");
     setNewDependsOn([]);
     setNewChecklistItems([]);
+    setCreateFormError(null);
     setPendingSubtasks([]);
     setSubtasksWaitForParent(false);
     setLatestDraftEvaluation(null);
@@ -833,6 +835,19 @@ export function useTaskCreateFlow() {
     if (!newTitle.trim() || !newPriority) return;
     const dmapDomain = newDmapDomain.trim();
     if (newTaskType === "dmap" && !dmapDomain) return;
+    const hasPendingSubtasks = pendingSubtasks.some((st) =>
+      Boolean(st.title.trim()),
+    );
+    const hasParentCriteria = newChecklistItems.some((text) =>
+      Boolean(text.trim()),
+    );
+    if (hasPendingSubtasks && !hasParentCriteria) {
+      setCreateFormError(
+        "Add at least one done criterion on the parent task before creating subtasks.",
+      );
+      return;
+    }
+    setCreateFormError(null);
     // Autonomy off => create the task in on_hold so the agent worker
     // skips it on dequeue (ReadyForAgentPickup gates on Status==Ready,
     // see pkgs/tasks/store/internal/tasks/readiness.go). The operator
@@ -1155,6 +1170,7 @@ export function useTaskCreateFlow() {
      * have to call reset themselves.
      */
     createError: createMutation.error,
+    createFormError,
     /**
      * Same as `createError` but for the AI evaluation step that
      * runs from the same modal. Surfaced separately because the

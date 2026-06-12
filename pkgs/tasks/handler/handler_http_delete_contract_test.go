@@ -153,8 +153,7 @@ func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 	defer srv.Close()
 
 	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateTask(t, srv.URL,
-		`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+	child := mustCreateSubtask(t, srv.URL, parent)
 	res, raw := deleteTask(t, srv.URL, parent)
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("status %d (want 204 — cascade) body=%s", res.StatusCode, raw)
@@ -198,8 +197,7 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 
 	t.Run("withParent_emitsTaskDeletedPlusParentTaskUpdated", func(t *testing.T) {
 		parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-		child := mustCreateTask(t, srv.URL,
-			`{"title":"c","priority":"medium","parent_id":"`+parent+`"}`)
+		child := mustCreateSubtask(t, srv.URL, parent)
 		ch, unsub := hub.Subscribe()
 		defer unsub()
 
@@ -218,8 +216,8 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 	// both rows plus task_updated for the surviving root parent.
 	t.Run("cascade_emitsOneTaskDeletedPerRowPlusParentUpdated", func(t *testing.T) {
 		root := mustCreateTask(t, srv.URL, `{"title":"gp","priority":"medium"}`)
-		parent := mustCreateTask(t, srv.URL,
-			`{"title":"p","priority":"medium","parent_id":"`+root+`"}`)
+		ensureParentHasCriterionHTTP(t, srv.URL, root)
+		parent := mustCreateSubtask(t, srv.URL, root)
 		ch, unsub := hub.Subscribe()
 		defer unsub()
 

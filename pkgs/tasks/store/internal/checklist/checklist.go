@@ -252,6 +252,9 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		if doneCount > 0 {
 			return fmt.Errorf("%w: cannot remove a criterion that has already been marked done", domain.ErrInvalidInput)
 		}
+		if err := ValidateParentCanRemoveLastCriterionInTx(tx, taskID); err != nil {
+			return err
+		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err

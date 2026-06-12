@@ -317,6 +317,7 @@ describe("useTaskCreateFlow", () => {
       result.current.openCreateModal();
       result.current.setNewTitle("Parent");
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Parent deliverable");
       result.current.setSubtasksWaitForParent(true);
       result.current.addPendingSubtask({
         title: "A",
@@ -401,6 +402,7 @@ describe("useTaskCreateFlow", () => {
       result.current.openCreateModal();
       result.current.setNewTitle("Parent");
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Parent deliverable");
       result.current.addPendingSubtask({
         title: "A",
         initial_prompt: "",
@@ -462,6 +464,7 @@ describe("useTaskCreateFlow", () => {
       result.current.openCreateModal();
       result.current.setNewTitle("Parent");
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Parent deliverable");
       result.current.addPendingSubtask({
         title: "A",
         initial_prompt: "",

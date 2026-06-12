@@ -1396,6 +1396,9 @@ describe("App", () => {
           { status: 201, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (url === "/tasks/parent/checklist/items" && init?.method === "POST") {
+        return new Response(null, { status: 204 });
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -1405,6 +1408,21 @@ describe("App", () => {
     const outer = await openNewTaskModal(user);
     await user.type(within(outer).getByLabelText(/^title$/i), "Epic");
     await choosePriorityInDialog(user, outer);
+    await user.click(
+      within(outer).getByRole("button", { name: /new criterion/i }),
+    );
+    const parentCriterionDialog = await screen.findByRole("dialog", {
+      name: /new criterion/i,
+    });
+    await user.type(
+      within(parentCriterionDialog).getByLabelText(/^criterion$/i),
+      "Epic deliverable",
+    );
+    await user.click(
+      within(parentCriterionDialog).getByRole("button", {
+        name: /^add criterion$/i,
+      }),
+    );
 
     await user.click(
       within(outer).getByRole("button", { name: /open form to add a subtask/i }),

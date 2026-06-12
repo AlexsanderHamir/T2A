@@ -18,6 +18,7 @@ import {
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
+import type { TaskChecklistResponse } from "@/types";
 import { bumpOptimisticVersion, clearOptimisticVersion } from "./optimisticVersion";
 
 let optimisticSubtaskCounter = 0;
@@ -50,6 +51,14 @@ export function useTaskDetailSubtasks(taskId: string) {
     string[]
   >([]);
   const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
+  const [subtaskFormError, setSubtaskFormError] = useState<string | null>(null);
+
+  const parentHasDoneCriteria = useCallback(() => {
+    const checklist = queryClient.getQueryData<TaskChecklistResponse>(
+      taskQueryKeys.checklist(taskId),
+    );
+    return (checklist?.items?.length ?? 0) > 0;
+  }, [queryClient, taskId]);
 
   /**
    * Monotonically-increasing token used to defend `createSubtaskMutation`
@@ -73,6 +82,7 @@ export function useTaskDetailSubtasks(taskId: string) {
 
   const resetSubtaskForm = useCallback(() => {
     submissionTokenRef.current += 1;
+    setSubtaskFormError(null);
     setSubtaskTitle("");
     setSubtaskPrompt("");
     setSubtaskPriority("");
@@ -270,6 +280,13 @@ export function useTaskDetailSubtasks(taskId: string) {
       ) {
         return;
       }
+      if (!parentHasDoneCriteria()) {
+        setSubtaskFormError(
+          "Add at least one done criterion on the parent task before creating subtasks.",
+        );
+        return;
+      }
+      setSubtaskFormError(null);
       const submissionToken = ++submissionTokenRef.current;
       createSubtaskMutation.mutate({
         title: subtaskTitle.trim(),
@@ -293,10 +310,12 @@ export function useTaskDetailSubtasks(taskId: string) {
       subtaskWaitForParent,
       subtaskDependsOnSiblingIds,
       createSubtaskMutation,
+      parentHasDoneCriteria,
     ],
   );
 
   return {
+    subtaskFormError,
     subtaskModalOpen,
     subtaskTitle,
     setSubtaskTitle,

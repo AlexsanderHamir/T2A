@@ -198,7 +198,16 @@ function mockTaskDetailFetchForSubtaskCreate(taskId: string) {
       });
     }
     if (url === `/tasks/${taskId}/checklist`) {
-      return Response.json({ items: [] });
+      return Response.json({
+        items: [
+          {
+            id: "parent-criterion",
+            sort_order: 1,
+            text: "Parent deliverable",
+            done: false,
+          },
+        ],
+      });
     }
     if (url.startsWith(`/tasks/${taskId}/events`)) {
       return Response.json(emptyEventsPayload(taskId));

@@ -706,6 +706,7 @@ func mustCreateChecklistTask(t *testing.T, srv *httptest.Server, title string) s
 
 func mustCreateChildInheriting(t *testing.T, srv *httptest.Server, parentID, title string) string {
 	t.Helper()
+	ensureParentHasCriterionHTTP(t, srv.URL, parentID)
 	body := `{"title":"` + title + `","priority":"medium","parent_id":"` + parentID + `","checklist_inherit":true}`
 	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
 	if err != nil {

@@ -247,6 +247,7 @@ func TestHTTP_createTask_201ResponseShape(t *testing.T) {
 		if err := json.Unmarshal(parentRaw, &parent); err != nil {
 			t.Fatal(err)
 		}
+		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
 		childRes, childRaw := postCreate(t, srv.URL,
 			`{"title":"child","priority":"medium","parent_id":"`+parent.ID+`"}`)
 		if childRes.StatusCode != http.StatusCreated {
@@ -413,6 +414,7 @@ func TestHTTP_createTask_publishesTaskCreatedAndParentTaskUpdated(t *testing.T) 
 	defer srv.Close()
 
 	parentID := mustCreateTask(t, srv.URL, `{"title":"parent","priority":"medium"}`)
+	ensureParentHasCriterionHTTP(t, srv.URL, parentID)
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
