@@ -1,7 +1,7 @@
 # ADR-0007: Parent Completion via Done Criteria (Not Subtask Rollup)
 
 **Date:** 2026-06-12
-**Status:** Accepted
+**Status:** Superseded by [ADR-0008](ADR-0008-dependency-satisfies-epic-scheduling.md)
 **Deciders:** T2A maintainers
 
 ## Context

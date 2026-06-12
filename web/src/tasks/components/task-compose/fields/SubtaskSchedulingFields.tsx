@@ -52,7 +52,7 @@ export function SubtaskSchedulingFields({
             disabled={disabled}
           />
           <span className="checkbox-label-body">
-            Start after parent completes
+            Start after parent criteria pass
           </span>
         </label>
       ) : null}

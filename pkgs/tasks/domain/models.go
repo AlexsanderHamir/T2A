@@ -22,7 +22,7 @@ type Task struct {
 	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
 	ChecklistInherit      bool      `json:"checklist_inherit" gorm:"not null;default:false"`
 	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
-	DependsOn []string `json:"depends_on,omitempty" gorm:"-"`
+	DependsOn []DependencyEdge `json:"depends_on,omitempty" gorm:"-"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
 	// create time from the request or app defaults; must match the worker's
 	// configured runner when the task runs.
@@ -37,6 +37,10 @@ type Task struct {
 	// PickupNotBefore defers agent dequeue until this instant (UTC). NULL means
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
 	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
+	// CriteriaSatisfiedAt is set when every inherited checklist item has a
+	// verified completion row; cleared when any item becomes unchecked.
+	// Maintained in checklist completion TX for SQL queue parity.
+	CriteriaSatisfiedAt *time.Time `json:"criteria_satisfied_at,omitempty" gorm:"index"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
@@ -118,9 +122,10 @@ func (TaskContextSnapshot) TableName() string { return "task_context_snapshots" 
 
 // TaskDependency is a directed edge: task_id depends on depends_on_task_id completing first.
 type TaskDependency struct {
-	TaskID          string    `json:"task_id" gorm:"primaryKey"`
-	DependsOnTaskID string    `json:"depends_on_task_id" gorm:"primaryKey;index"`
-	CreatedAt       time.Time `json:"created_at" gorm:"not null;index"`
+	TaskID          string              `json:"task_id" gorm:"primaryKey"`
+	DependsOnTaskID string              `json:"depends_on_task_id" gorm:"primaryKey;index"`
+	Satisfies       DependencySatisfies `json:"satisfies" gorm:"not null;default:done;check:chk_task_dependencies_satisfies,satisfies IN ('done','criteria_complete')"`
+	CreatedAt       time.Time           `json:"created_at" gorm:"not null;index"`
 
 	Task          *Task `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 	DependsOnTask *Task `json:"-" gorm:"foreignKey:DependsOnTaskID;references:ID;constraint:OnDelete:CASCADE"`

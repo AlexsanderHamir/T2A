@@ -33,6 +33,7 @@ import {
   type Priority,
   type PriorityChoice,
   type Status,
+  type TaskDependencyEdge,
   type TaskType,
 } from "@/types";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
@@ -56,7 +57,7 @@ type CreateTaskMutationInput = {
   project_context_item_ids: string[];
   tags: string[];
   milestone?: string;
-  depends_on: string[];
+  depends_on: TaskDependencyEdge[];
 };
 
 async function addChecklistItems(taskId: string, items: string[]) {
@@ -86,8 +87,10 @@ async function finishTaskCreateExtras(
   }> = [];
   for (const { st, draftIndex } of entries) {
     const childInherit = st.checklist_inherit === true;
-    const postDepends =
-      input.subtasks_wait_for_parent && task.id ? [task.id] : undefined;
+    const postDepends = materializeSubtaskDependsOn({
+      waitForParent: input.subtasks_wait_for_parent,
+      parentId: task.id,
+    });
     const child = await apiCreate({
       title: st.title.trim(),
       initial_prompt: st.initial_prompt,
@@ -99,7 +102,7 @@ async function finishTaskCreateExtras(
       runner: input.runner,
       cursor_model: input.cursor_model,
       ...(childInherit ? { checklist_inherit: true } : {}),
-      ...(postDepends ? { depends_on: postDepends } : {}),
+      ...(postDepends.length > 0 ? { depends_on: postDepends } : {}),
     });
     if (!childInherit) {
       await addChecklistItems(child.id, st.checklistItems);
@@ -230,7 +233,7 @@ export function useTaskCreateFlow() {
   const [pendingSubtasks, setPendingSubtasks] = useState<PendingSubtaskDraft[]>(
     [],
   );
-  /** When true, every pending subtask gets `depends_on: [parent.id]` on create. */
+  /** When true, every pending subtask gets a criteria_complete parent edge on create. */
   const [subtasksWaitForParent, setSubtasksWaitForParent] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
@@ -884,7 +887,7 @@ export function useTaskCreateFlow() {
         .map((t) => t.trim())
         .filter(Boolean),
       milestone: newMilestone.trim() || undefined,
-      depends_on: newDependsOn,
+      depends_on: newDependsOn.map((task_id) => ({ task_id, satisfies: "done" as const })),
     });
   }
 

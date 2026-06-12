@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/version"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"gorm.io/gorm"
 )
 
@@ -91,6 +92,9 @@ func migrateIfRequested(db *gorm.DB, want bool) error {
 	defer migrateCancel()
 	if err := postgres.Migrate(migrateCtx, db); err != nil {
 		return fmt.Errorf("postgres.Migrate: %w", err)
+	}
+	if err := store.BackfillCriteriaSatisfiedAt(migrateCtx, db); err != nil {
+		return fmt.Errorf("backfill criteria_satisfied_at: %w", err)
 	}
 	return nil
 }

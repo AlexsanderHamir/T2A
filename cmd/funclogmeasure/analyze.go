@@ -486,6 +486,22 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tprojectContextPatchJSON.isEmpty":     {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tprojectContextEdgePatchJSON.isEmpty": {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tprojectFieldPatchToStore":            {},
+
+	// Epic scheduling (ADR-0008): pure dependency predicates, JSON wire parsers,
+	// and thin store facades whose callers already trace (notifyUnblockedDependents,
+	// checklist backfill, ListDependencyEdges).
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidDependencySatisfies":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tNormalizeDependencySatisfies":          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tListDependencies":        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tDependencyEdgeIDs":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tEdgeSatisfied":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tlistDependencyEdgesInTx": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store\tBackfillCriteriaSatisfiedAt":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store\t*Store.NotifyUnblockedDependents":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store\t*Store.HasIncompleteSubtasks":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseDependsOnWire":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*dependsOnWire.UnmarshalJSON":         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*dependsOnPatchWire.UnmarshalJSON":    {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

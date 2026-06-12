@@ -10,9 +10,10 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
 )
 
-// TestUpdate_parentDoneUnblocksDependsOnSubtask verifies parent completion
-// is criteria-driven, not blocked by open subtasks, and satisfies depends_on.
-func TestUpdate_parentDoneUnblocksDependsOnSubtask(t *testing.T) {
+// TestEpicLifecycle_criteriaUnlockSubtasksThenParentAutoDone verifies the
+// full epic scheduling model: subtasks dequeue on parent criteria_complete,
+// parent stays not-done until all subtasks finish, then auto-completes.
+func TestEpicLifecycle_criteriaUnlockSubtasksThenParentAutoDone(t *testing.T) {
 	t.Parallel()
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
@@ -31,19 +32,14 @@ func TestUpdate_parentDoneUnblocksDependsOnSubtask(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 1 {
-		t.Fatalf("checklist items = %d want 1", len(items))
-	}
-	if err := st.SetChecklistItemDone(ctx, parent.ID, items[0].ID, true, domain.ActorAgent); err != nil {
-		t.Fatal(err)
-	}
+	parentDep := domain.DependencyEdge{TaskID: parent.ID, Satisfies: domain.DependencySatisfiesCriteriaComplete}
 	child, err := st.Create(ctx, store.CreateTaskInput{
 		Title:         "child",
 		InitialPrompt: "c",
 		Status:        domain.StatusReady,
 		Priority:      domain.PriorityMedium,
 		ParentID:      &parent.ID,
-		DependsOn:     []string{parent.ID},
+		DependsOn:     []domain.DependencyEdge{parentDep},
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
@@ -54,12 +50,11 @@ func TestUpdate_parentDoneUnblocksDependsOnSubtask(t *testing.T) {
 		t.Fatal(err)
 	}
 	if satisfied {
-		t.Fatal("child should be blocked until parent is done")
+		t.Fatal("child should be blocked until parent criteria complete")
 	}
 
-	done := domain.StatusDone
-	if _, err := st.Update(ctx, parent.ID, store.UpdateTaskInput{Status: &done}, domain.ActorUser); err != nil {
-		t.Fatalf("parent with open subtask should reach done: %v", err)
+	if err := st.SetChecklistItemDone(ctx, parent.ID, items[0].ID, true, domain.ActorAgent); err != nil {
+		t.Fatal(err)
 	}
 
 	satisfied, err = tasks.DependenciesSatisfied(ctx, db, child.ID)
@@ -67,6 +62,34 @@ func TestUpdate_parentDoneUnblocksDependsOnSubtask(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !satisfied {
-		t.Fatal("child depends_on should be satisfied after parent is done")
+		t.Fatal("child should be unblocked after parent criteria complete")
+	}
+
+	parentAfter, err := st.Get(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parentAfter.Status == domain.StatusDone {
+		t.Fatal("parent must not be done while subtask is open")
+	}
+	if parentAfter.CriteriaSatisfiedAt == nil {
+		t.Fatal("parent criteria_satisfied_at should be set")
+	}
+
+	done := domain.StatusDone
+	if _, err := st.Update(ctx, parent.ID, store.UpdateTaskInput{Status: &done}, domain.ActorUser); err == nil {
+		t.Fatal("parent should not reach done while subtask open")
+	}
+
+	if _, err := st.Update(ctx, child.ID, store.UpdateTaskInput{Status: &done}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+
+	parentFinal, err := st.Get(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parentFinal.Status != domain.StatusDone {
+		t.Fatalf("parent should auto-complete when last subtask done, got %s", parentFinal.Status)
 	}
 }

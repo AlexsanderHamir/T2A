@@ -22,6 +22,13 @@ export type TaskType =
 /** Empty string means no selection yet (create / draft forms). */
 export type PriorityChoice = Priority | "";
 
+export type TaskDependencySatisfies = "done" | "criteria_complete";
+
+export type TaskDependencyEdge = {
+  task_id: string;
+  satisfies?: TaskDependencySatisfies;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -51,7 +58,8 @@ export type Task = {
   checklist_inherit: boolean;
   tags?: string[];
   milestone?: string | null;
-  depends_on?: string[];
+  depends_on?: TaskDependencyEdge[];
+  criteria_satisfied_at?: string;
   gate?: TaskGate | null;
   /** Nested subtasks from GET /tasks or GET /tasks/{id} (tree). */
   children?: Task[];

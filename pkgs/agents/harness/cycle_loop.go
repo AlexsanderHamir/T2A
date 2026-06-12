@@ -161,6 +161,17 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
 			return
 		}
+		if taskStatus == domain.StatusDone {
+			openSubtasks, err := h.store.HasIncompleteSubtasks(parentCtx, task.ID)
+			if err != nil {
+				slog.Warn("agent harness subtask check failed",
+					"cmd", harnessLogCmd,
+					"operation", "agent.harness.Harness.runCycleLoop.subtask_check_err",
+					"task_id", task.ID, "err", err)
+			} else if openSubtasks {
+				taskStatus = domain.StatusReady
+			}
+		}
 		if !h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
 			return
 		}

@@ -91,6 +91,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}
+	if err := backfillDependencySatisfies(ctx, db); err != nil {
+		return fmt.Errorf("backfill dependency satisfies: %w", err)
+	}
 	defaultProject := domain.DefaultProject(time.Now().UTC())
 	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&defaultProject).Error; err != nil {
 		return fmt.Errorf("seed default project: %w", err)

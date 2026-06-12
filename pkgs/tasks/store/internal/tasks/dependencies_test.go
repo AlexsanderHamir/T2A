@@ -28,16 +28,16 @@ func TestAddDependency_rejectsSelfAndCycle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := AddDependency(ctx, db, a.ID, a.ID); err == nil || !errors.Is(err, domain.ErrInvalidInput) {
+	if err := AddDependency(ctx, db, a.ID, a.ID, domain.DependencySatisfiesDone); err == nil || !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("self dep: %v", err)
 	}
-	if err := AddDependency(ctx, db, b.ID, a.ID); err != nil {
+	if err := AddDependency(ctx, db, b.ID, a.ID, domain.DependencySatisfiesDone); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddDependency(ctx, db, c.ID, b.ID); err != nil {
+	if err := AddDependency(ctx, db, c.ID, b.ID, domain.DependencySatisfiesDone); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddDependency(ctx, db, a.ID, c.ID); err == nil || !errors.Is(err, domain.ErrInvalidInput) {
+	if err := AddDependency(ctx, db, a.ID, c.ID, domain.DependencySatisfiesDone); err == nil || !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("cycle dep: %v", err)
 	}
 }
@@ -77,14 +77,14 @@ func TestGet_hydratesDependsOn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := AddDependency(ctx, db, b.ID, a.ID); err != nil {
+	if err := AddDependency(ctx, db, b.ID, a.ID, domain.DependencySatisfiesDone); err != nil {
 		t.Fatal(err)
 	}
 	got, err := Get(ctx, db, b.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.DependsOn) != 1 || got.DependsOn[0] != a.ID {
+	if len(got.DependsOn) != 1 || got.DependsOn[0].TaskID != a.ID {
 		t.Fatalf("depends_on: %#v", got.DependsOn)
 	}
 }

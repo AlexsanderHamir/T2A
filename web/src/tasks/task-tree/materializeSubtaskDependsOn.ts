@@ -1,3 +1,5 @@
+import type { TaskDependencyEdge } from "@/types";
+
 export class SubtaskDependsOnError extends Error {
   constructor(message: string) {
     super(message);
@@ -23,15 +25,18 @@ export type MaterializeSubtaskDependsOnInput = {
  */
 export function materializeSubtaskDependsOn(
   input: MaterializeSubtaskDependsOnInput,
-): string[] {
-  const out: string[] = [];
+): TaskDependencyEdge[] {
+  const out: TaskDependencyEdge[] = [];
   const seen = new Set<string>();
 
-  const push = (id: string) => {
-    const trimmed = id.trim();
+  const push = (edge: TaskDependencyEdge) => {
+    const trimmed = edge.task_id.trim();
     if (!trimmed || seen.has(trimmed)) return;
     seen.add(trimmed);
-    out.push(trimmed);
+    out.push({
+      task_id: trimmed,
+      satisfies: edge.satisfies ?? "done",
+    });
   };
 
   if (input.waitForParent) {
@@ -39,12 +44,12 @@ export function materializeSubtaskDependsOn(
     if (!parentId) {
       throw new SubtaskDependsOnError("wait for parent requires a parent task id");
     }
-    push(parentId);
+    push({ task_id: parentId, satisfies: "criteria_complete" });
   }
 
   if (input.siblingIds !== undefined) {
     for (const id of input.siblingIds) {
-      push(id);
+      push({ task_id: id, satisfies: "done" });
     }
     return out;
   }
@@ -70,7 +75,7 @@ export function materializeSubtaskDependsOn(
     if (!resolved?.trim()) {
       throw new SubtaskDependsOnError(`unknown sibling index: ${raw}`);
     }
-    push(resolved);
+    push({ task_id: resolved, satisfies: "done" });
   }
 
   return out;

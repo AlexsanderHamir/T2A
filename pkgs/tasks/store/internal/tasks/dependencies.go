@@ -13,8 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// AddDependency records that taskID cannot run until dependsOnTaskID is done.
-func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID string) error {
+// AddDependency records that taskID cannot run until dependsOnTaskID satisfies satisfies.
+func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {
 	defer kernel.DeferLatency(kernel.OpUpdateTask)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.AddDependency")
 	taskID = strings.TrimSpace(taskID)
@@ -24,6 +24,10 @@ func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID str
 	}
 	if taskID == dependsOnTaskID {
 		return fmt.Errorf("%w: task cannot depend on itself", domain.ErrInvalidInput)
+	}
+	satisfies = domain.NormalizeDependencySatisfies(satisfies)
+	if !domain.ValidDependencySatisfies(satisfies) {
+		return fmt.Errorf("%w: invalid dependency satisfies", domain.ErrInvalidInput)
 	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := ensureTaskExists(tx, taskID); err != nil {
@@ -42,6 +46,7 @@ func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID str
 		row := domain.TaskDependency{
 			TaskID:          taskID,
 			DependsOnTaskID: dependsOnTaskID,
+			Satisfies:       satisfies,
 			CreatedAt:       time.Now().UTC(),
 		}
 		if err := tx.Create(&row).Error; err != nil {
@@ -74,25 +79,35 @@ func RemoveDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID 
 	return nil
 }
 
-// ListDependencies returns predecessor task ids for taskID.
-func ListDependencies(ctx context.Context, db *gorm.DB, taskID string) ([]string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListDependencies")
+// ListDependencyEdges returns predecessor edges for taskID.
+func ListDependencyEdges(ctx context.Context, db *gorm.DB, taskID string) ([]domain.DependencyEdge, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListDependencyEdges")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	var ids []string
-	err := db.WithContext(ctx).Model(&domain.TaskDependency{}).
-		Where("task_id = ?", taskID).
-		Order("created_at ASC").
-		Pluck("depends_on_task_id", &ids).Error
+	var rows []domain.TaskDependency
+	err := db.WithContext(ctx).Where("task_id = ?", taskID).Order("created_at ASC").Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("list dependencies: %w", err)
 	}
-	if ids == nil {
-		ids = []string{}
+	out := make([]domain.DependencyEdge, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, domain.DependencyEdge{
+			TaskID:    r.DependsOnTaskID,
+			Satisfies: domain.NormalizeDependencySatisfies(r.Satisfies),
+		})
 	}
-	return ids, nil
+	return out, nil
+}
+
+// ListDependencies returns predecessor task ids for taskID.
+func ListDependencies(ctx context.Context, db *gorm.DB, taskID string) ([]string, error) {
+	edges, err := ListDependencyEdges(ctx, db, taskID)
+	if err != nil {
+		return nil, err
+	}
+	return DependencyEdgeIDs(edges), nil
 }
 
 // ListDependents returns task ids that depend on dependsOnTaskID.
@@ -117,37 +132,25 @@ func ListDependents(ctx context.Context, db *gorm.DB, dependsOnTaskID string) ([
 }
 
 // SetDependencies replaces the full depends_on set for taskID.
-func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn []string) error {
+func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn []domain.DependencyEdge) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.SetDependencies")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	normalized := make([]string, 0, len(dependsOn))
-	seen := make(map[string]struct{})
-	for _, id := range dependsOn {
-		id = strings.TrimSpace(id)
-		if id == "" {
-			continue
-		}
-		if id == taskID {
-			return fmt.Errorf("%w: task cannot depend on itself", domain.ErrInvalidInput)
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		normalized = append(normalized, id)
+	normalized, err := normalizeDependencyEdges(taskID, dependsOn)
+	if err != nil {
+		return err
 	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := ensureTaskExists(tx, taskID); err != nil {
 			return err
 		}
-		for _, depID := range normalized {
-			if err := ensureTaskExists(tx, depID); err != nil {
+		for _, e := range normalized {
+			if err := ensureTaskExists(tx, e.TaskID); err != nil {
 				return err
 			}
-			cycle, err := wouldCreateDependencyCycle(tx, taskID, depID)
+			cycle, err := wouldCreateDependencyCycle(tx, taskID, e.TaskID)
 			if err != nil {
 				return err
 			}
@@ -159,10 +162,11 @@ func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn 
 			return fmt.Errorf("clear dependencies: %w", err)
 		}
 		now := time.Now().UTC()
-		for _, depID := range normalized {
+		for _, e := range normalized {
 			row := domain.TaskDependency{
 				TaskID:          taskID,
-				DependsOnTaskID: depID,
+				DependsOnTaskID: e.TaskID,
+				Satisfies:       e.Satisfies,
 				CreatedAt:       now,
 			}
 			if err := tx.Create(&row).Error; err != nil {
@@ -174,11 +178,11 @@ func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn 
 }
 
 func hydrateDependsOn(ctx context.Context, db *gorm.DB, t *domain.Task) error {
-	ids, err := ListDependencies(ctx, db, t.ID)
+	edges, err := ListDependencyEdges(ctx, db, t.ID)
 	if err != nil {
 		return err
 	}
-	t.DependsOn = ids
+	t.DependsOn = edges
 	return nil
 }
 

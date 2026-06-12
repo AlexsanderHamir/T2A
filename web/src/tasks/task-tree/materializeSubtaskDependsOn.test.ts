@@ -15,13 +15,13 @@ describe("materializeSubtaskDependsOn", () => {
     ).toEqual([]);
   });
 
-  it("includes parent when waitForParent is true", () => {
+  it("includes parent with criteria_complete when waitForParent is true", () => {
     expect(
       materializeSubtaskDependsOn({
         waitForParent: true,
         parentId: "p1",
       }),
-    ).toEqual(["p1"]);
+    ).toEqual([{ task_id: "p1", satisfies: "criteria_complete" }]);
   });
 
   it("dedupes parent when also listed as explicit sibling id", () => {
@@ -31,7 +31,10 @@ describe("materializeSubtaskDependsOn", () => {
         parentId: "p1",
         siblingIds: ["p1", "s2"],
       }),
-    ).toEqual(["p1", "s2"]);
+    ).toEqual([
+      { task_id: "p1", satisfies: "criteria_complete" },
+      { task_id: "s2", satisfies: "done" },
+    ]);
   });
 
   it("resolves sibling indices via map", () => {
@@ -47,7 +50,11 @@ describe("materializeSubtaskDependsOn", () => {
         siblingIdsByIndex: map,
         selfIndex: 2,
       }),
-    ).toEqual(["parent", "a", "b"]);
+    ).toEqual([
+      { task_id: "parent", satisfies: "criteria_complete" },
+      { task_id: "a", satisfies: "done" },
+      { task_id: "b", satisfies: "done" },
+    ]);
   });
 
   it("rejects self-index", () => {

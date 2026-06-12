@@ -50,7 +50,7 @@ Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worke
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `parent_id`, `task_type`, `checklist_inherit`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on`. Subtasks may set `depends_on` to `[parent_id]` and/or sibling ids for opt-in execution order (see [data-model.md](./data-model.md) — Subtask scheduling). Returns full task tree. `409` on duplicate `id`. `400` with `parent task with subtasks requires at least one done criterion` when `parent_id` is set and the root parent has no owned checklist items. Publishes `task_created` (and `task_updated` for the parent when `parent_id` is set). |
+| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `parent_id`, `task_type`, `checklist_inherit`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]`). Subtasks may set parent edge with `satisfies: criteria_complete` and sibling edges with `satisfies: done` (see [data-model.md](./data-model.md) — Subtask scheduling). Returns full task tree. `409` on duplicate `id`. `400` with `parent task with subtasks requires at least one done criterion` when `parent_id` is set and the root parent has no owned checklist items. Publishes `task_created` (and `task_updated` for the parent when `parent_id` is set). |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List root tasks. Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `by_scope`, `cycles`, `phases`, `runner`, `recent_failures`. |
@@ -61,8 +61,8 @@ Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worke
 | GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |
 | PATCH | `/tasks/{id}/events/{seq}` | Append a user-response message (max 10 000 bytes after trim, thread cap 200). Only for `approval_requested` and `task_failed`. Publishes `task_updated`. |
-| GET | `/tasks/{id}/dependencies` | `{ depends_on: [...] }`. |
-| POST | `/tasks/{id}/dependencies` | Body `{ depends_on_task_id }`. Cycles / self-deps rejected. Publishes `task_dependency_changed`. |
+| GET | `/tasks/{id}/dependencies` | `{ depends_on: [{ task_id, satisfies }] }`. |
+| POST | `/tasks/{id}/dependencies` | Body `{ depends_on_task_id, satisfies? }` (default `done`). Cycles / self-deps rejected. Publishes `task_dependency_changed`. |
 | DELETE | `/tasks/{id}/dependencies/{depId}` | `204`. Publishes `task_dependency_changed`. |
 | PATCH | `/tasks/{id}/gate` | Body `{ action: release | hold | clear_hold }`. Publishes `task_gate_changed` and `task_updated`. |
 

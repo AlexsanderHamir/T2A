@@ -60,7 +60,14 @@ func (s *Store) SetChecklistItemDoneWithEvidence(
 	by domain.Actor,
 ) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDoneWithEvidence")
-	return checklist.SetDoneWithEvidence(ctx, s.db, subjectTaskID, itemID, evidence, verifier, reasoning, cycleID, by)
+	flag, err := checklist.SetDoneWithEvidence(ctx, s.db, subjectTaskID, itemID, evidence, verifier, reasoning, cycleID, by)
+	if err != nil {
+		return err
+	}
+	if flag.BecameComplete {
+		s.notifyUnblockedDependents(ctx, subjectTaskID)
+	}
+	return nil
 }
 
 // DeleteChecklistItem removes a definition row owned by taskID.
@@ -81,5 +88,13 @@ func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, tex
 // change completion.
 func (s *Store) SetChecklistItemDone(ctx context.Context, subjectTaskID, itemID string, done bool, by domain.Actor) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDone")
-	return checklist.SetDone(ctx, s.db, subjectTaskID, itemID, done, by)
+	before, _ := s.Get(ctx, subjectTaskID)
+	if err := checklist.SetDone(ctx, s.db, subjectTaskID, itemID, done, by); err != nil {
+		return err
+	}
+	after, _ := s.Get(ctx, subjectTaskID)
+	if before != nil && after != nil && before.CriteriaSatisfiedAt == nil && after.CriteriaSatisfiedAt != nil {
+		s.notifyUnblockedDependents(ctx, subjectTaskID)
+	}
+	return nil
 }

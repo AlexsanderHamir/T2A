@@ -167,7 +167,7 @@ func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create dependent: %v", err)
 	}
-	if err := st.AddTaskDependency(rootCtx, dependent.ID, upstream.ID); err != nil {
+	if err := st.AddTaskDependency(rootCtx, dependent.ID, upstream.ID, domain.DependencySatisfiesDone); err != nil {
 		t.Fatalf("add dependency: %v", err)
 	}
 

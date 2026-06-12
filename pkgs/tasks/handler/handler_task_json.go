@@ -34,7 +34,7 @@ type taskCreateJSON struct {
 	Tags            []string         `json:"tags,omitempty"`
 	Milestone       *string          `json:"milestone,omitempty"`
 	Gate            *domain.TaskGate `json:"gate,omitempty"`
-	DependsOn       []string         `json:"depends_on,omitempty"`
+	DependsOn       dependsOnWire    `json:"depends_on,omitempty"`
 }
 
 type taskEvaluateJSON struct {
@@ -69,11 +69,11 @@ type taskPatchJSON struct {
 	// CursorModel sets tasks.cursor_model when the key is present (including
 	// the empty string, which clears per-task override). JSON null is decoded
 	// as nil and means "no change", same as omitting the key.
-	CursorModel *string        `json:"cursor_model"`
-	Tags        *[]string      `json:"tags,omitempty"`
-	Milestone   *string        `json:"milestone,omitempty"`
-	Gate        patchGateField `json:"gate"`
-	DependsOn   *[]string      `json:"depends_on,omitempty"`
+	CursorModel *string             `json:"cursor_model"`
+	Tags        *[]string           `json:"tags,omitempty"`
+	Milestone   *string             `json:"milestone,omitempty"`
+	Gate        patchGateField      `json:"gate"`
+	DependsOn   *dependsOnPatchWire `json:"depends_on,omitempty"`
 }
 
 type taskGateActionJSON struct {
@@ -81,11 +81,12 @@ type taskGateActionJSON struct {
 }
 
 type taskDependenciesListResponse struct {
-	DependsOn []string `json:"depends_on"`
+	DependsOn []domain.DependencyEdge `json:"depends_on"`
 }
 
 type taskDependencyCreateJSON struct {
-	DependsOnTaskID string `json:"depends_on_task_id"`
+	DependsOnTaskID string                     `json:"depends_on_task_id"`
+	Satisfies       domain.DependencySatisfies `json:"satisfies,omitempty"`
 }
 
 type listResponse struct {

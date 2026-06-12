@@ -51,7 +51,7 @@ export function TaskCreateModalPendingSubtasksField({
               disabled={disabled}
             />
             <span className="checkbox-label-body">
-              Start subtasks after parent completes
+            Start subtasks after parent criteria pass
             </span>
           </label>
           <ul className="task-checklist-list" aria-labelledby={SUBTASKS_HEADING_ID}>

@@ -3,6 +3,7 @@ package checklist
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -40,7 +41,7 @@ func TestValidateParentCanHaveSubtasksInTx_requiresCriterionOnRootParent(t *test
 	}
 }
 
-func TestValidateCanMarkDone_allowsDoneWithOpenSubtask(t *testing.T) {
+func TestValidateCanMarkDone_blocksDoneWithOpenSubtaskWhenChecklistComplete(t *testing.T) {
 	t.Parallel()
 	db := tasktestdb.OpenSQLite(t)
 	ctx := t.Context()
@@ -52,17 +53,28 @@ func TestValidateCanMarkDone_allowsDoneWithOpenSubtask(t *testing.T) {
 		ID: "child-1", Title: "c", InitialPrompt: "c", Status: domain.StatusReady, Priority: domain.PriorityMedium,
 		ParentID: &parent.ID,
 	}
+	it := &domain.TaskChecklistItem{ID: "item-1", TaskID: parent.ID, SortOrder: 1, Text: "criterion"}
+	comp := &domain.TaskChecklistCompletion{
+		TaskID: parent.ID, ItemID: it.ID, At: time.Now().UTC(), By: domain.ActorAgent,
+		VerifiedBy: domain.VerifierLegacy,
+	}
 	if err := db.WithContext(ctx).Create(parent).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := db.WithContext(ctx).Create(child).Error; err != nil {
 		t.Fatal(err)
 	}
+	if err := db.WithContext(ctx).Create(it).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.WithContext(ctx).Create(comp).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return ValidateCanMarkDoneInTx(tx, parent.ID)
 	})
-	if err != nil {
-		t.Fatalf("empty checklist parent with open subtask should pass: %v", err)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v, want ErrInvalidInput for open subtask", err)
 	}
 }

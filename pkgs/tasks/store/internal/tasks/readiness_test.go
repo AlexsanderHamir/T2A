@@ -22,7 +22,7 @@ func TestListQueueCandidates_excludesOpenDependency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := AddDependency(ctx, db, blocked.ID, dep.ID); err != nil {
+	if err := AddDependency(ctx, db, blocked.ID, dep.ID, domain.DependencySatisfiesDone); err != nil {
 		t.Fatal(err)
 	}
 

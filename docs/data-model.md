@@ -28,7 +28,8 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `project_context_item_ids` | string[] | Explicit allowlist of project context items for runner snapshots. Cleared on `project_id` change. |
 | `tags` | string[] | Free-form, `^[a-z0-9][a-z0-9._-]{0,31}$`. |
 | `milestone` | string \| null | Single anchor per task, `^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$` when set. |
-| `depends_on` | string[] | Hydrated from `task_dependencies` (FK cascade). |
+| `depends_on` | object[] | Hydrated from `task_dependencies`: `{ task_id, satisfies }` where `satisfies` is `done` (default) or `criteria_complete`. |
+| `criteria_satisfied_at` | RFC3339 UTC \| null | Set when all inherited checklist items are verified complete; cache for queue predicates. |
 | `gate` | object \| null | Per-task dequeue pause (see below). |
 | `pickup_not_before` | RFC3339 UTC \| null | Defer when the worker may dequeue. |
 | `cursor_model` | string | Optional model override at runtime. |
@@ -38,9 +39,9 @@ The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live
 
 ## Dependencies
 
-- Storage: `task_dependencies(task_id, depends_on_task_id)` with FK cascade.
-- A task in `ready` is worker-eligible only when every predecessor has `status = done`.
-- Completing a task notifies dependents whose deps are now satisfied.
+- Storage: `task_dependencies(task_id, depends_on_task_id, satisfies)` with FK cascade. `satisfies` ∈ `done` | `criteria_complete` (default `done`).
+- A task in `ready` is worker-eligible only when every predecessor satisfies its edge predicate (`done` → predecessor `status = done`; `criteria_complete` → predecessor `criteria_satisfied_at` set).
+- Unblocking a predecessor (reach `done`, or criteria become complete) notifies dependents whose edges are now satisfied.
 - Self-deps and cycles return `400 invalid input`.
 - API: incremental via `GET/POST/DELETE /tasks/{id}/dependencies`; full replace via `depends_on` on `PATCH /tasks/{id}`.
 
@@ -50,18 +51,18 @@ The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live
 
 | UI opt-in | Materialized as | Worker behavior |
 |---|---|---|
-| Start subtasks after parent completes | `depends_on` includes `parent_id` | Subtask runs only after parent `status = done` |
-| Start after selected sibling subtasks | `depends_on` includes sibling task ids | Subtask runs only after **all** selected siblings are `done` (AND) |
+| Start subtasks after parent criteria pass | `depends_on` includes `{ task_id: parent_id, satisfies: criteria_complete }` | Subtask runs after parent checklist is verified complete |
+| Start after selected sibling subtasks | `depends_on` includes `{ task_id, satisfies: done }` for each sibling | Subtask runs only after **all** selected siblings are `done` (AND) |
 
 Both default **off** (subtasks are independent ready tasks, FIFO among eligible work). Behaviors compose: a subtask may depend on the parent and multiple siblings in one `depends_on` list.
 
-**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria** are satisfied (verify pipeline or operator PATCH with checklist complete). Open subtasks do **not** block parent completion. Use `depends_on` when subtasks should wait for the parent (or siblings) to finish first.
+**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria are complete and every subtask is `done`**. After criteria pass with open subtasks, the parent transitions to `ready` but is **not** re-dequeued (`ParentAwaitingSubtasks` guard) until subtasks finish. When the last subtask reaches `done`, the parent auto-completes.
 
-**Parent criteria requirement:** A root task (`parent_id` null) with one or more subtasks must define **at least one** owned done criterion before subtasks can be linked. This gives the parent an explicit, verify-backed completion signal for dependents. API error: `parent task with subtasks requires at least one done criterion` (`400` on `POST /tasks` with `parent_id`, or when deleting the parent's last criterion while subtasks exist).
+**Parent criteria requirement:** A root task (`parent_id` null) with one or more subtasks must define **at least one** owned done criterion before subtasks can be linked. API error: `parent task with subtasks requires at least one done criterion` (`400` on `POST /tasks` with `parent_id`, or when deleting the parent's last criterion while subtasks exist).
 
-Create flow (parent + pending subtasks): the web client POSTs each subtask with a parent dependency when the batch toggle is on, then PATCHes sibling dependencies once all subtask ids exist. Detail-page add-subtask: a single POST with the composed `depends_on`.
+Create flow (parent + pending subtasks): the web client POSTs each subtask with a `criteria_complete` parent edge when the batch toggle is on, then PATCHes sibling dependencies once all subtask ids exist. Detail-page add-subtask: a single POST with the composed `depends_on`.
 
-Predecessors must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies. No special worker rules for subtasks vs other tasks.
+Predecessors for `satisfies: done` edges must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies.
 
 ## Gate
 
@@ -83,8 +84,9 @@ Predecessors must reach `status = done`. A predecessor in `failed` or `on_hold` 
 
 1. `status = ready`
 2. `pickup_not_before` is null or `<= now()`
-3. All `depends_on` predecessors have `status = done`
+3. All `depends_on` edge predicates satisfied (`done` or `criteria_complete` per edge)
 4. `gate` is null or `gate.status = released`
+5. Not `ParentAwaitingSubtasks` (criteria complete but open subtasks remain)
 
 If a task is dequeued but fails (3) or (4) on reload, the worker sets `pickup_not_before` ~60s ahead and skips the run.
 
@@ -218,7 +220,7 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 **Inheritance:** When `checklist_inherit` is true on a task, definitions live on the nearest ancestor that does not inherit. `done` is tracked per subject task.
 
-**Parent vs subtask completion:** Marking a task `done` requires its inherited checklist to be complete when criteria exist; it does **not** require subtasks to be `done`. Subtask ordering is expressed only via `depends_on` (see Dependencies — Subtask scheduling).
+**Parent vs subtask completion:** Marking a task `done` requires its inherited checklist to be complete when criteria exist **and** every direct subtask to be `done`. Subtask ordering uses per-edge `satisfies` on `depends_on` (see Dependencies — Subtask scheduling).
 
 | `verified_by` value | Meaning |
 |---|---|

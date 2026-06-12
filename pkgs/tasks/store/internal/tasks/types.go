@@ -29,7 +29,7 @@ type CreateInput struct {
 	Tags            []string
 	Milestone       *string
 	Gate            *domain.TaskGate
-	DependsOn       []string
+	DependsOn       []domain.DependencyEdge
 }
 
 // ParentFieldPatch updates parent_id when non-nil. Clear true means
@@ -74,7 +74,7 @@ type UpdateInput struct {
 	Tags        *[]string
 	Milestone   *string
 	Gate        **domain.TaskGate
-	DependsOn   *[]string
+	DependsOn   *[]domain.DependencyEdge
 }
 
 // ListFilter optionally restricts flat task listing.

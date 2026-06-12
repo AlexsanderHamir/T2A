@@ -63,6 +63,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	dependsOn, err := parseDependsOnWire(body.DependsOn)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:                    body.ID,
 		DraftID:               body.DraftID,
@@ -81,7 +86,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Tags:                  body.Tags,
 		Milestone:             body.Milestone,
 		Gate:                  body.Gate,
-		DependsOn:             body.DependsOn,
+		DependsOn:             dependsOn,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -206,6 +211,10 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	debugHTTPRequest(r, op, append(append([]any{}, "task_id", id), taskPatchInputFields(&body)...)...)
+	var dependsOnPatch *[]domain.DependencyEdge
+	if body.DependsOn != nil && body.DependsOn.set {
+		dependsOnPatch = &body.DependsOn.value
+	}
 	in := store.UpdateTaskInput{
 		Title:                 body.Title,
 		InitialPrompt:         body.InitialPrompt,
@@ -220,7 +229,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Tags:                  body.Tags,
 		Milestone:             body.Milestone,
 		Gate:                  gateFieldPatchToStore(body.Gate),
-		DependsOn:             body.DependsOn,
+		DependsOn:             dependsOnPatch,
 	}
 	if body.ParentID.Defined {
 		if body.ParentID.Clear {
@@ -255,7 +264,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	if body.Gate.Defined {
 		h.notifyChange(TaskGateChanged, id)
 	}
-	if body.DependsOn != nil {
+	if body.DependsOn != nil && body.DependsOn.set {
 		h.notifyChange(TaskDependencyChanged, id)
 	}
 	taskapiDomainTasksUpdatedTotal.Inc()

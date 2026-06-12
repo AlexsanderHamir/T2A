@@ -73,7 +73,7 @@ describe("SubtaskCreateModal scheduling", () => {
     renderModal({ onWaitForParentChange, onDependsOnSiblingIdsChange });
 
     await user.click(
-      screen.getByRole("checkbox", { name: /start after parent completes/i }),
+      screen.getByRole("checkbox", { name: /start after parent criteria pass/i }),
     );
     expect(onWaitForParentChange).toHaveBeenCalledWith(true);
 

@@ -37,7 +37,7 @@ func TestHTTP_createTask_tagsMilestoneDependsOn(t *testing.T) {
 	if len(node.Tags) != 2 || node.Milestone == nil || *node.Milestone != "launch-v1" {
 		t.Fatalf("tags/milestone: tags=%v milestone=%v", node.Tags, node.Milestone)
 	}
-	if len(node.DependsOn) != 1 || node.DependsOn[0] != dep {
+	if len(node.DependsOn) != 1 || node.DependsOn[0].TaskID != dep {
 		t.Fatalf("depends_on=%v", node.DependsOn)
 	}
 	if node.Gate == nil || node.Gate.Status != domain.GateStatusActive {
@@ -83,7 +83,7 @@ func TestHTTP_taskDependencies_endpoints(t *testing.T) {
 	if err := json.Unmarshal(raw, &listed); err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.DependsOn) != 1 || listed.DependsOn[0] != b {
+	if len(listed.DependsOn) != 1 || listed.DependsOn[0].TaskID != b {
 		t.Fatalf("listed=%v", listed.DependsOn)
 	}
 	res, _ = httpDelete(t, srv.URL+"/tasks/"+a+"/dependencies/"+b)

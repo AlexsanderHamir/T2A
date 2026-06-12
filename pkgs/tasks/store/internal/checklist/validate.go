@@ -135,17 +135,18 @@ func ValidateParentCanRemoveLastCriterionInTx(tx *gorm.DB, parentID string) erro
 
 // ValidateCanMarkDoneInTx is the cross-domain guard that the task
 // CRUD/update/devmirror code calls before transitioning a task to
-// status=done. Parent completion is criteria-driven: every checklist
-// item inherited by the task must have a matching completion row.
-// Subtask completion is independent unless explicitly linked via depends_on.
+// status=done. Requires checklist complete and every descendant done.
 //
 // Exported so subpackages outside the checklist domain can compose
 // the "mark done" transaction without reaching into private helpers.
-// Returns ErrInvalidInput when checklist is incomplete so handlers
+// Returns ErrInvalidInput when checklist or subtasks are incomplete so handlers
 // can surface a 400.
 func ValidateCanMarkDoneInTx(tx *gorm.DB, taskID string) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ValidateCanMarkDoneInTx")
-	return validateChecklistCompleteInTx(tx, taskID)
+	if err := validateChecklistCompleteInTx(tx, taskID); err != nil {
+		return err
+	}
+	return validateDescendantsDoneInTx(tx, taskID)
 }
 
 // DeleteOwnedItemsInTx removes every checklist definition row owned

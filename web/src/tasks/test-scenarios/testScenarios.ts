@@ -79,7 +79,7 @@ export type TestScenario = {
   /** Done criteria written into the form's checklist on apply. */
   checklist: string[];
   /**
-   * When set, toggles “Start subtasks after parent completes” on the create
+   * When set, toggles “Start subtasks after parent criteria pass” on the create
    * modal. Omit to leave the operator's current toggle unchanged.
    */
   subtasksWaitForParent?: boolean;
@@ -160,11 +160,11 @@ export const TEST_SCENARIOS: TestScenario[] = [
     difficulty: "trivial",
     title: "Probe: parent gates subtasks",
     description:
-      "Parent plus two subtasks with “wait for parent” enabled — subtasks should not run until the parent is done.",
+      "Parent plus two subtasks with “wait for parent” enabled — subtasks should not run until the parent’s done criteria are verified.",
     prompt: [
       "This is a T2A scheduling probe, not a codebase audit.",
       "Complete this parent task as quickly as possible: create or update a file at `.agent/subtask-probes/parent-gate-parent.txt` containing a single line `parent done`.",
-      "After submit, watch the task list / detail page: the two subtasks must stay blocked (not picked up by the worker) until this parent task reaches status `done`.",
+      "After submit, watch the task list / detail page: the two subtasks must stay blocked (not picked up by the worker) until this parent’s checklist criteria pass — they do not wait for parent status `done`.",
     ].join("\n\n"),
     taskType: "general",
     priority: "medium",

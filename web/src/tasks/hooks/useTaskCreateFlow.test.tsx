@@ -357,18 +357,21 @@ describe("useTaskCreateFlow", () => {
       2,
       expect.objectContaining({
         parent_id: "parent-1",
-        depends_on: ["parent-1"],
+        depends_on: [{ task_id: "parent-1", satisfies: "criteria_complete" }],
       }),
     );
     expect(mockedCreateTask).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
         parent_id: "parent-1",
-        depends_on: ["parent-1"],
+        depends_on: [{ task_id: "parent-1", satisfies: "criteria_complete" }],
       }),
     );
     expect(mockedPatchTask).toHaveBeenCalledWith("child-b", {
-      depends_on: ["parent-1", "child-a"],
+      depends_on: [
+        { task_id: "parent-1", satisfies: "criteria_complete" },
+        { task_id: "child-a", satisfies: "done" },
+      ],
     });
   });
 

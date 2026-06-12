@@ -10,18 +10,24 @@ import (
 	"gorm.io/gorm"
 )
 
-// DependenciesSatisfied reports whether every task_dependencies predecessor is done.
+// DependenciesSatisfied reports whether every task_dependencies predecessor
+// meets its edge predicate (done or criteria_complete).
 func DependenciesSatisfied(ctx context.Context, db *gorm.DB, taskID string) (bool, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.DependenciesSatisfied")
-	var n int64
-	err := db.WithContext(ctx).Model(&domain.TaskDependency{}).
-		Joins("INNER JOIN tasks dep ON dep.id = task_dependencies.depends_on_task_id").
-		Where("task_dependencies.task_id = ? AND dep.status <> ?", taskID, domain.StatusDone).
-		Count(&n).Error
+	edges, err := ListDependencyEdges(ctx, db, taskID)
 	if err != nil {
-		return false, fmt.Errorf("count open dependencies: %w", err)
+		return false, err
 	}
-	return n == 0, nil
+	for _, e := range edges {
+		var dep domain.Task
+		if err := db.WithContext(ctx).Where("id = ?", e.TaskID).First(&dep).Error; err != nil {
+			return false, fmt.Errorf("load dependency predecessor: %w", err)
+		}
+		if !EdgeSatisfied(&dep, e.Satisfies) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // ReadyForAgentPickup applies the same predicates as ListQueueCandidates for one task row.
@@ -34,6 +40,13 @@ func ReadyForAgentPickup(ctx context.Context, db *gorm.DB, t *domain.Task, now t
 		return false, nil
 	}
 	if t.Gate != nil && t.Gate.GateBlocksWorker() {
+		return false, nil
+	}
+	awaiting, err := ParentAwaitingSubtasks(ctx, db, t)
+	if err != nil {
+		return false, err
+	}
+	if awaiting {
 		return false, nil
 	}
 	return DependenciesSatisfied(ctx, db, t.ID)

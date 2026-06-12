@@ -27,7 +27,7 @@ const validTask = {
   task_type: "general",
   checklist_inherit: false,
   tags: [] as string[],
-  depends_on: [] as string[],
+  depends_on: [] as { task_id: string; satisfies?: string }[],
   ...TASK_TEST_DEFAULTS,
 };
 
@@ -95,7 +95,7 @@ describe("parseTask", () => {
     });
     expect(parsed.tags).toEqual(["backend", "api"]);
     expect(parsed.milestone).toBe("M1");
-    expect(parsed.depends_on).toEqual(["dep-1"]);
+    expect(parsed.depends_on).toEqual([{ task_id: "dep-1", satisfies: "done" }]);
     expect(parsed.gate).toEqual({
       kind: "manual_approval",
       status: "pending_release",

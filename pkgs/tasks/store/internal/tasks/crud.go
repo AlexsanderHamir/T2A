@@ -295,7 +295,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		if err := setDependenciesInTx(tx, t.ID, in.DependsOn); err != nil {
 			return err
 		}
-		t.DependsOn = append([]string(nil), in.DependsOn...)
+		t.DependsOn = append([]domain.DependencyEdge(nil), in.DependsOn...)
 	}
 	seq := int64(1)
 	if err := eval.AttachDraftEvaluationsInTx(tx, in.DraftID, t.ID); err != nil {

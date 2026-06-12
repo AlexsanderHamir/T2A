@@ -23,7 +23,7 @@ func TestSetDoneWithEvidence_rejectsEmptyEvidence(t *testing.T) {
 	if err := db.WithContext(ctx).Create(it).Error; err != nil {
 		t.Fatal(err)
 	}
-	err := SetDoneWithEvidence(ctx, db, tsk.ID, it.ID, "", domain.VerifierAgentSelf, "", "", domain.ActorAgent)
+	_, err := SetDoneWithEvidence(ctx, db, tsk.ID, it.ID, "", domain.VerifierAgentSelf, "", "", domain.ActorAgent)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v, want ErrInvalidInput", err)
 	}

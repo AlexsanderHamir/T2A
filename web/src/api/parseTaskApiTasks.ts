@@ -14,6 +14,8 @@ import {
   type Task,
   type TaskChecklistItemView,
   type TaskChecklistResponse,
+  type TaskDependencyEdge,
+  type TaskDependencySatisfies,
   type TaskListResponse,
   type TaskStatsCycles,
   type TaskStatsPhases,
@@ -343,6 +345,33 @@ function parseOptionalParentId(
 
 export const maxTaskParseDepth = 64;
 
+function parseDependencySatisfies(
+  value: unknown,
+  field: string,
+): TaskDependencySatisfies {
+  if (value === undefined || value === null || value === "") {
+    return "done";
+  }
+  const s = parseString(value, field);
+  if (s === "done" || s === "criteria_complete") {
+    return s;
+  }
+  throw new Error(`Invalid API response: ${field} must be done or criteria_complete`);
+}
+
+function parseDependsOnEdge(raw: unknown, path: string): TaskDependencyEdge {
+  if (typeof raw === "string") {
+    return { task_id: parseNonEmptyString(raw, path), satisfies: "done" };
+  }
+  if (!isRecord(raw)) {
+    throw new Error(`Invalid API response: ${path} must be a string or object`);
+  }
+  return {
+    task_id: parseNonEmptyString(raw.task_id, `${path}.task_id`),
+    satisfies: parseDependencySatisfies(raw.satisfies, `${path}.satisfies`),
+  };
+}
+
 /** Validates a single task object from POST/PATCH responses (recursive `children`). */
 export function parseTask(value: unknown): Task {
   return parseTaskAtDepth(value, 0);
@@ -413,10 +442,16 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   }
   if (Array.isArray(value.depends_on)) {
     base.depends_on = value.depends_on.map((raw, i) =>
-      parseNonEmptyString(raw, `depends_on[${i}]`),
+      parseDependsOnEdge(raw, `depends_on[${i}]`),
     );
   } else if (value.depends_on === undefined) {
     base.depends_on = [];
+  }
+  if (value.criteria_satisfied_at !== undefined && value.criteria_satisfied_at !== null) {
+    base.criteria_satisfied_at = parseString(
+      value.criteria_satisfied_at,
+      "criteria_satisfied_at",
+    );
   }
   if (value.gate !== undefined && value.gate !== null) {
     base.gate = parseTaskGate(value.gate);

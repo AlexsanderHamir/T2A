@@ -228,7 +228,7 @@ func TestStore_Update_rejects_invalid_status_value(t *testing.T) {
 	}
 }
 
-func TestStore_Update_done_allowedWhenChildNotDone(t *testing.T) {
+func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
@@ -250,8 +250,8 @@ func TestStore_Update_done_allowedWhenChildNotDone(t *testing.T) {
 		t.Fatal(err)
 	}
 	done := domain.StatusDone
-	if _, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser); err != nil {
-		t.Fatalf("parent with open subtask should reach done: %v", err)
+	if _, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("parent with open subtask should be blocked: %v", err)
 	}
 }
 

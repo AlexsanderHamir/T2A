@@ -252,10 +252,8 @@ func TestHTTP_patchTask_checklistInheritRequiresParent(t *testing.T) {
 	}
 }
 
-// TestHTTP_patchTask_doneWithOpenSubtask allows a parent to reach done
-// while subtasks remain open. Parent completion is criteria-driven;
-// subtasks that depend on the parent unblock via depends_on once the
-// parent status is done.
+// TestHTTP_patchTask_doneWithOpenSubtask blocks a parent from reaching done
+// while subtasks remain open (rollup restored in ADR-0008).
 func TestHTTP_patchTask_doneWithOpenSubtask(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
@@ -272,15 +270,16 @@ func TestHTTP_patchTask_doneWithOpenSubtask(t *testing.T) {
 	_ = mustCreateSubtask(t, srv.URL, parent)
 
 	res, raw := patchTask(t, srv.URL, parent, `{"status":"done"}`)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status %d (want 200) body=%s", res.StatusCode, raw)
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
 	}
-	var got domain.Task
-	if err := json.Unmarshal(raw, &got); err != nil {
+	var errBody jsonErrorBody
+	if err := json.Unmarshal(raw, &errBody); err != nil {
 		t.Fatal(err)
 	}
-	if got.Status != domain.StatusDone {
-		t.Fatalf("status=%q want done", got.Status)
+	const want = "all subtasks must be done before marking this task done"
+	if errBody.Error != want {
+		t.Fatalf("error=%q want %q", errBody.Error, want)
 	}
 }
 

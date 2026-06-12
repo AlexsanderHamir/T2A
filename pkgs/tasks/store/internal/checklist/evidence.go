@@ -27,35 +27,35 @@ func SetDoneWithEvidenceInTx(
 	verifier domain.VerifierKind,
 	reasoning, cycleID string,
 	by domain.Actor,
-) error {
+) (CriteriaFlagChange, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDoneWithEvidenceInTx")
 	if err := kernel.ValidateActor(by); err != nil {
-		return err
+		return CriteriaFlagChange{}, err
 	}
 	if by != domain.ActorAgent {
-		return fmt.Errorf("%w: only the agent may mark checklist items done or undone", domain.ErrInvalidInput)
+		return CriteriaFlagChange{}, fmt.Errorf("%w: only the agent may mark checklist items done or undone", domain.ErrInvalidInput)
 	}
 	if err := validateEvidencePayload(evidence, verifier, reasoning); err != nil {
-		return err
+		return CriteriaFlagChange{}, err
 	}
 	subjectTaskID = strings.TrimSpace(subjectTaskID)
 	itemID = strings.TrimSpace(itemID)
 	if subjectTaskID == "" || itemID == "" {
-		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
+		return CriteriaFlagChange{}, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	if _, err := kernel.LoadTask(tx, subjectTaskID); err != nil {
-		return err
+		return CriteriaFlagChange{}, err
 	}
 	defOwner, err := DefinitionSourceTaskIDInTx(tx, subjectTaskID)
 	if err != nil {
-		return err
+		return CriteriaFlagChange{}, err
 	}
 	var it domain.TaskChecklistItem
 	if err := tx.Where("id = ? AND task_id = ?", itemID, defOwner).First(&it).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.ErrNotFound
+			return CriteriaFlagChange{}, domain.ErrNotFound
 		}
-		return fmt.Errorf("load checklist item: %w", err)
+		return CriteriaFlagChange{}, fmt.Errorf("load checklist item: %w", err)
 	}
 	row := domain.TaskChecklistCompletion{
 		TaskID:            subjectTaskID,
@@ -73,17 +73,20 @@ func SetDoneWithEvidenceInTx(
 			"at", "done_by", "evidence", "verified_by", "verifier_reasoning", "cycle_id",
 		}),
 	}).Create(&row).Error; err != nil {
-		return fmt.Errorf("save completion: %w", err)
+		return CriteriaFlagChange{}, fmt.Errorf("save completion: %w", err)
 	}
 	seq, err := kernel.NextEventSeq(tx, subjectTaskID)
 	if err != nil {
-		return err
+		return CriteriaFlagChange{}, err
 	}
 	b, _ := json.Marshal(map[string]any{
 		"item_id": itemID, "done": true,
 		"verified_by": string(verifier), "cycle_id": row.CycleID,
 	})
-	return kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b)
+	if err := kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
+		return CriteriaFlagChange{}, err
+	}
+	return syncCriteriaSatisfiedAtInTx(tx, subjectTaskID)
 }
 
 func validateEvidencePayload(evidence string, verifier domain.VerifierKind, reasoning string) error {
@@ -113,10 +116,14 @@ func SetDoneWithEvidence(
 	verifier domain.VerifierKind,
 	reasoning, cycleID string,
 	by domain.Actor,
-) error {
+) (CriteriaFlagChange, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDoneWithEvidence")
 	defer kernel.DeferLatency(kernel.OpSetChecklistItemDone)()
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return SetDoneWithEvidenceInTx(tx, subjectTaskID, itemID, evidence, verifier, reasoning, cycleID, by)
+	var flag CriteriaFlagChange
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		flag, err = SetDoneWithEvidenceInTx(tx, subjectTaskID, itemID, evidence, verifier, reasoning, cycleID, by)
+		return err
 	})
+	return flag, err
 }

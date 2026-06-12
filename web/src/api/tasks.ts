@@ -16,6 +16,7 @@ import {
   type TaskListResponse,
   type TaskStatsResponse,
   type CycleFailuresListResponse,
+  type TaskDependencyEdge,
   type TaskGate,
 } from "@/types";
 import { parseNonEmptyString } from "./parseTaskApiCore";
@@ -250,7 +251,7 @@ export async function createTask(input: {
   tags?: string[];
   milestone?: string;
   gate?: TaskGate;
-  depends_on?: string[];
+  depends_on?: TaskDependencyEdge[];
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -436,7 +437,7 @@ export async function patchTask(
     tags?: string[];
     milestone?: string | null;
     gate?: TaskGate | null;
-    depends_on?: string[];
+    depends_on?: TaskDependencyEdge[];
   },
 ): Promise<Task> {
   const tid = assertTaskPathId(id);
@@ -492,10 +493,31 @@ export async function patchTask(
   return parseTask(raw);
 }
 
+function parseDependsOnList(raw: unknown): TaskDependencyEdge[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((edge, i) => {
+    if (typeof edge === "string") {
+      return { task_id: parseNonEmptyString(edge, `depends_on[${i}]`), satisfies: "done" as const };
+    }
+    if (edge !== null && typeof edge === "object" && !Array.isArray(edge)) {
+      const obj = edge as Record<string, unknown>;
+      const satisfies =
+        obj.satisfies === "criteria_complete" ? ("criteria_complete" as const) : ("done" as const);
+      return {
+        task_id: parseNonEmptyString(obj.task_id, `depends_on[${i}].task_id`),
+        satisfies,
+      };
+    }
+    throw new Error(`Invalid API response: depends_on[${i}] must be string or object`);
+  });
+}
+
 export async function listTaskDependencies(
   taskId: string,
   options?: { signal?: AbortSignal },
-): Promise<string[]> {
+): Promise<TaskDependencyEdge[]> {
   const tid = assertTaskPathId(taskId);
   const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(tid)}/dependencies`,
@@ -503,16 +525,14 @@ export async function listTaskDependencies(
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
   const raw = (await res.json()) as { depends_on?: unknown };
-  if (!Array.isArray(raw.depends_on)) {
-    return [];
-  }
-  return raw.depends_on.map((id, i) => parseNonEmptyString(id, `depends_on[${i}]`));
+  return parseDependsOnList(raw.depends_on);
 }
 
 export async function addTaskDependency(
   taskId: string,
   dependsOnTaskId: string,
-): Promise<string[]> {
+  satisfies: TaskDependencyEdge["satisfies"] = "done",
+): Promise<TaskDependencyEdge[]> {
   const tid = assertTaskPathId(taskId);
   const dep = assertTaskPathId(dependsOnTaskId, "depends_on_task_id");
   const res = await fetchWithTimeout(
@@ -520,15 +540,12 @@ export async function addTaskDependency(
     {
       method: "POST",
       headers: jsonHeaders,
-      body: JSON.stringify({ depends_on_task_id: dep }),
+      body: JSON.stringify({ depends_on_task_id: dep, satisfies: satisfies ?? "done" }),
     },
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
   const raw = (await res.json()) as { depends_on?: unknown };
-  if (!Array.isArray(raw.depends_on)) {
-    return [];
-  }
-  return raw.depends_on.map((id, i) => parseNonEmptyString(id, `depends_on[${i}]`));
+  return parseDependsOnList(raw.depends_on);
 }
 
 export async function removeTaskDependency(

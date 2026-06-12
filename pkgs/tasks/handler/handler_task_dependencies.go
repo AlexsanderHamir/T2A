@@ -29,7 +29,7 @@ func (h *Handler) listTaskDependencies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if deps == nil {
-		deps = []string{}
+		deps = []domain.DependencyEdge{}
 	}
 	writeJSONWithETag(w, r, op, http.StatusOK, taskDependenciesListResponse{DependsOn: deps})
 }
@@ -53,7 +53,12 @@ func (h *Handler) addTaskDependency(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, fmt.Errorf("%w: depends_on_task_id required", domain.ErrInvalidInput))
 		return
 	}
-	if err := h.store.AddTaskDependency(r.Context(), id, depID); err != nil {
+	if !domain.ValidDependencySatisfies(body.Satisfies) && body.Satisfies != "" {
+		writeStoreError(w, r, op, fmt.Errorf("%w: invalid satisfies", domain.ErrInvalidInput))
+		return
+	}
+	satisfies := domain.NormalizeDependencySatisfies(body.Satisfies)
+	if err := h.store.AddTaskDependency(r.Context(), id, depID, satisfies); err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
@@ -64,7 +69,7 @@ func (h *Handler) addTaskDependency(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if deps == nil {
-		deps = []string{}
+		deps = []domain.DependencyEdge{}
 	}
 	writeJSON(w, r, op, http.StatusCreated, taskDependenciesListResponse{DependsOn: deps})
 }

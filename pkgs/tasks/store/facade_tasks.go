@@ -55,8 +55,8 @@ type ProjectFieldPatch = tasks.ProjectFieldPatch
 // See docs/data-model.md.
 type PickupNotBeforePatch = tasks.PickupNotBeforePatch
 
-// TaskNode is a task row plus nested children for API tree
-// responses. Re-exported from internal/tasks.
+// TaskNode is a task row plus nested children for API tree responses. It
+// re-exports internal/tasks.Node.
 type TaskNode = tasks.Node
 
 // MaxTaskTreeDepth bounds the nesting depth for tree responses. It
@@ -107,12 +107,24 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if err != nil {
 		return nil, err
 	}
-	if updated == nil || updated.Status != domain.StatusReady {
-		if updated != nil {
-			s.cancelPickupWake(updated.ID)
+	if updated == nil {
+		return nil, nil
+	}
+
+	if updated.Status == domain.StatusDone && prev != domain.StatusDone {
+		s.notifyUnblockedDependents(ctx, updated.ID)
+		if parentID, autoErr := tasks.TryAutoCompleteParent(ctx, s.db, updated.ID, by); autoErr != nil {
+			slog.Warn("auto-complete parent after subtask done", "task_id", updated.ID, "err", autoErr)
+		} else if parentID != "" {
+			s.notifyUnblockedDependents(ctx, parentID)
 		}
+	}
+
+	if updated.Status != domain.StatusReady {
+		s.cancelPickupWake(updated.ID)
 		return updated, nil
 	}
+
 	now := time.Now().UTC()
 	if updated.PickupNotBefore != nil && updated.PickupNotBefore.After(now) {
 		s.schedulePickupWake(ctx, updated.ID, *updated.PickupNotBefore)
@@ -124,17 +136,14 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 	if transitionedToReady || pickupTouched {
 		s.notifyReadyTask(ctx, *updated)
 	}
-	if updated.Status == domain.StatusDone && prev != domain.StatusDone {
-		s.notifyReadyDependents(ctx, updated.ID)
-	}
 	return updated, nil
 }
 
-func (s *Store) notifyReadyDependents(ctx context.Context, completedTaskID string) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.notifyReadyDependents", "completed_task_id", completedTaskID)
-	dependents, err := tasks.ListDependents(ctx, s.db, completedTaskID)
+func (s *Store) notifyUnblockedDependents(ctx context.Context, predecessorID string) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.notifyUnblockedDependents", "predecessor_id", predecessorID)
+	dependents, err := tasks.ListDependents(ctx, s.db, predecessorID)
 	if err != nil {
-		slog.Warn("list dependents after task done", "task_id", completedTaskID, "err", err)
+		slog.Warn("list dependents after predecessor unblock", "task_id", predecessorID, "err", err)
 		return
 	}
 	now := time.Now().UTC()
@@ -149,6 +158,17 @@ func (s *Store) notifyReadyDependents(ctx context.Context, completedTaskID strin
 		}
 		s.notifyReadyTask(ctx, *t)
 	}
+}
+
+// NotifyUnblockedDependents wakes dependents whose dependency edges are
+// now satisfied. Used after checklist criteria become complete.
+func (s *Store) NotifyUnblockedDependents(ctx context.Context, predecessorID string) {
+	s.notifyUnblockedDependents(ctx, predecessorID)
+}
+
+// HasIncompleteSubtasks reports whether taskID has direct children not done.
+func (s *Store) HasIncompleteSubtasks(ctx context.Context, taskID string) (bool, error) {
+	return tasks.HasIncompleteSubtasks(ctx, s.db, taskID)
 }
 
 // Delete removes the task at id and every descendant in one
@@ -205,9 +225,9 @@ func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
 	return tasks.GetTree(ctx, s.db, id)
 }
 
-func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string) error {
+func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddTaskDependency")
-	return tasks.AddDependency(ctx, s.db, taskID, dependsOnTaskID)
+	return tasks.AddDependency(ctx, s.db, taskID, dependsOnTaskID, satisfies)
 }
 
 func (s *Store) RemoveTaskDependency(ctx context.Context, taskID, dependsOnTaskID string) error {
@@ -215,12 +235,12 @@ func (s *Store) RemoveTaskDependency(ctx context.Context, taskID, dependsOnTaskI
 	return tasks.RemoveDependency(ctx, s.db, taskID, dependsOnTaskID)
 }
 
-func (s *Store) ListTaskDependencies(ctx context.Context, taskID string) ([]string, error) {
+func (s *Store) ListTaskDependencies(ctx context.Context, taskID string) ([]domain.DependencyEdge, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskDependencies")
-	return tasks.ListDependencies(ctx, s.db, taskID)
+	return tasks.ListDependencyEdges(ctx, s.db, taskID)
 }
 
-func (s *Store) SetTaskDependencies(ctx context.Context, taskID string, dependsOn []string) error {
+func (s *Store) SetTaskDependencies(ctx context.Context, taskID string, dependsOn []domain.DependencyEdge) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetTaskDependencies")
 	return tasks.SetDependencies(ctx, s.db, taskID, dependsOn)
 }

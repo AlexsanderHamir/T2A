@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { Status, Task, TaskListResponse } from "@/types";
+import type { Status, Task, TaskDependencyEdge, TaskListResponse } from "@/types";
 import { taskQueryKeys } from "./queryKeys";
 
 export type TaskDependencySummary = {
@@ -25,10 +25,10 @@ function indexFromListResponse(data: TaskListResponse, into: Map<string, TaskDep
   }
 }
 
-/** Resolves dependency ids to titles/statuses using cached task list/detail queries. */
+/** Resolves dependency edges to titles/statuses using cached task list/detail queries. */
 export function resolveTaskDependencySummaries(
   queryClient: QueryClient,
-  dependsOnIds: string[],
+  dependsOn: TaskDependencyEdge[],
 ): TaskDependencySummary[] {
   const index = new Map<string, TaskDependencySummary>();
   const queries = queryClient.getQueriesData<TaskListResponse | Task>({
@@ -42,7 +42,8 @@ export function resolveTaskDependencySummaries(
       indexTask(data, index);
     }
   }
-  return dependsOnIds.map((id) => {
+  return dependsOn.map((edge) => {
+    const id = edge.task_id;
     const hit = index.get(id);
     if (hit) return hit;
     return { id, title: id, status: "ready" as Status };

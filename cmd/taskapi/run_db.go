@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/internal/envload"
 	"github.com/AlexsanderHamir/T2A/internal/taskapi"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +31,9 @@ func migrateDBAndRegisterMetrics(db *gorm.DB) error {
 			int(postgres.DefaultMigrateTimeout/time.Second),
 			errors.Is(err, context.DeadlineExceeded),
 			err)
+	}
+	if err := store.BackfillCriteriaSatisfiedAt(migrateCtx, db); err != nil {
+		return fmt.Errorf("backfill criteria_satisfied_at: %w", err)
 	}
 	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate",
 		"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
