@@ -32,15 +32,30 @@ export function TaskComposeChecklistFields({
         </div>
         <button
           type="button"
-          className="task-detail-add-checklist-btn"
+          className="task-detail-add-checklist-btn task-create-checklist-add-btn"
           disabled={disabled}
           onClick={onOpenNewCriterion}
         >
+          <span className="task-create-checklist-add-btn__icon" aria-hidden="true">
+            +
+          </span>
           New criterion
         </button>
       </div>
       {checklistRequirement === "required" && checklistItems.length === 0 ? (
-        <p className="task-create-checklist-helper">{CREATE_CHECKLIST_REQUIRED_MSG}</p>
+        <button
+          type="button"
+          className="task-create-checklist-dropzone"
+          disabled={disabled}
+          onClick={onOpenNewCriterion}
+        >
+          <span className="task-create-checklist-dropzone__icon" aria-hidden="true">
+            +
+          </span>
+          <span className="task-create-checklist-dropzone__label">
+            {CREATE_CHECKLIST_REQUIRED_MSG}
+          </span>
+        </button>
       ) : null}
       {checklistItems.length > 0 ? (
         <div className="task-checklist-surface">

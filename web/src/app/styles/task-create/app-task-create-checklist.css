@@ -46,42 +46,23 @@
 .task-create-modal-sheet button.task-detail-add-checklist-btn,
 .task-create-modal-sheet button.task-detail-add-subtask-btn {
   min-height: 2rem;
-  /*
-   * 8.5rem (~119px) instead of the previous 7.5rem (~105px). The
-   * longer label "New criterion" (13 monospace chars) was sitting
-   * essentially flush against the interior padding at 7.5rem while
-   * "New subtask" (11 chars) had ~10px of visible whitespace on
-   * either side. Two buttons at the same font-size *look* like they
-   * have different text sizes when one is cramped against its
-   * border and the other is comfortably centered — the eye reads
-   * "denser" as "smaller". The extra rem gives both labels matching
-   * breathing room, which is the only thing that makes them read as
-   * uniform; the explicit `font-size` / `font-weight` /
-   * `letter-spacing` / `line-height` below already pin the actual
-   * type metrics, this rule fixes the *perceived* size mismatch the
-   * user reported.
-   */
-  min-width: 8.5rem;
-  padding: 0.3rem 0.85rem;
+  min-width: auto;
+  padding: 0.3rem 0.75rem;
   font-size: var(--text-xs);
   font-weight: 500;
-  /* Pin line-height explicitly so neither button can drift if a
-   * future ancestor rule touches the inherited line-height — the
-   * inline-flex container would otherwise let inherited values
-   * shift the vertical centering and that, too, reads as a size
-   * difference between two buttons stacked one above the other. */
   line-height: 1.25;
   letter-spacing: 0;
-  color: var(--brand-deep);
+  color: var(--text-primary);
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   box-shadow: none;
 }
 
 .task-create-modal-sheet button.task-detail-add-checklist-btn:not(:disabled):hover,
 .task-create-modal-sheet button.task-detail-add-subtask-btn:not(:disabled):hover {
-  background: var(--brand-muted);
-  border-color: transparent;
+  background: var(--bg-subtle);
+  border-color: var(--border-interactive-hover);
   box-shadow: none;
 }
 
@@ -110,6 +91,92 @@
   font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--text-secondary);
+}
+
+/* Dashed drop zone shown when create flow requires at least one criterion. */
+.task-create-checklist-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  border: 1.5px dashed color-mix(in srgb, var(--border-strong) 85%, var(--brand) 15%);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--brand-surface-faint));
+  color: var(--text-secondary);
+  transition:
+    background-color var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.task-create-checklist-dropzone:not(:disabled):hover {
+  border-color: var(--brand-border-soft);
+  background: var(--brand-surface-faint);
+  color: var(--text-primary);
+}
+
+.task-create-checklist-dropzone:not(:disabled):active {
+  transform: scale(0.995);
+}
+
+.task-create-checklist-dropzone:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-color: var(--brand-border-focus);
+}
+
+.task-create-checklist-dropzone:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.task-create-checklist-dropzone__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--brand-text-strong);
+  background: var(--brand-surface-subtle);
+  border: 1px solid var(--brand-border-faint);
+}
+
+.task-create-checklist-dropzone__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  max-width: 22rem;
+}
+
+/* Small outlined "+ New criterion" in the section header (create modal). */
+.task-create-checklist-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.task-create-checklist-add-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--brand-text-strong);
 }
 
 .task-create-checklist .task-checklist-surface {
