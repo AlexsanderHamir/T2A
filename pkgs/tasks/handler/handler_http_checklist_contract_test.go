@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // TestHTTP_postChecklistItem_201ResponseShape pins the documented POST 201
@@ -110,6 +111,47 @@ func TestHTTP_postChecklistItem_textRequired(t *testing.T) {
 			}
 			if errBody.Error != "checklist text required" {
 				t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, "checklist text required")
+			}
+		})
+	}
+}
+
+// TestHTTP_postChecklistItem_rejectsRunningOrDoneTask pins 409 when the task
+// is already running or done — criteria are locked after agent pickup.
+func TestHTTP_postChecklistItem_rejectsRunningOrDoneTask(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name   string
+		status domain.Status
+	}{
+		{"running", domain.StatusRunning},
+		{"done", domain.StatusDone},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tsk, err := st.Create(ctx, store.CreateTaskInput{
+				Title: tc.name, Priority: domain.PriorityMedium, Status: tc.status,
+			}, domain.ActorUser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := http.Post(srv.URL+"/tasks/"+tsk.ID+"/checklist/items", "application/json",
+				strings.NewReader(`{"text":"late criterion"}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer res.Body.Close()
+			raw, _ := io.ReadAll(res.Body)
+			if res.StatusCode != http.StatusConflict {
+				t.Fatalf("status %d (want 409) body=%s", res.StatusCode, raw)
+			}
+			var errBody jsonErrorBody
+			if err := json.Unmarshal(raw, &errBody); err != nil {
+				t.Fatalf("decode: %v body=%s", err, raw)
+			}
+			if !strings.Contains(errBody.Error, "cannot add criteria while task is "+string(tc.status)) {
+				t.Fatalf("error=%q want substring %q", errBody.Error, "cannot add criteria while task is "+string(tc.status))
 			}
 		})
 	}

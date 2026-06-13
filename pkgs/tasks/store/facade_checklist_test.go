@@ -9,6 +9,25 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+func TestStore_AddChecklistItem_rejects_running_and_done(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	for _, status := range []domain.Status{domain.StatusRunning, domain.StatusDone} {
+		t.Run(string(status), func(t *testing.T) {
+			tsk, err := s.Create(ctx, CreateTaskInput{
+				Title: "t", Priority: domain.PriorityMedium, Status: status,
+			}, domain.ActorUser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+			if !errors.Is(err, domain.ErrConflict) {
+				t.Fatalf("status=%s got %v want ErrConflict", status, err)
+			}
+		})
+	}
+}
+
 func TestStore_SetChecklistItemDone_rejects_user_actor(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()

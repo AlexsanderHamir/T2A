@@ -42,6 +42,8 @@ export type TaskDetailChecklistSectionProps = {
   addCriterionError?: unknown;
   editCriterionError?: unknown;
   removeItemError?: unknown;
+  /** False when the task is running or done — criteria are locked after agent pickup. */
+  canAddCriterion?: boolean;
 };
 
 export function TaskDetailChecklistSection({
@@ -69,6 +71,7 @@ export function TaskDetailChecklistSection({
   addCriterionError = null,
   editCriterionError = null,
   removeItemError = null,
+  canAddCriterion = true,
 }: TaskDetailChecklistSectionProps) {
   const showProgress =
     !checklistQuery.isPending &&
@@ -96,7 +99,12 @@ export function TaskDetailChecklistSection({
           type="button"
           className="task-detail-add-checklist-btn"
           onClick={onOpenAddModal}
-          disabled={saving}
+          disabled={saving || !canAddCriterion}
+          title={
+            canAddCriterion
+              ? undefined
+              : "Criteria cannot be added while the agent is working on this task or after it is done."
+          }
         >
           Add criterion
         </button>

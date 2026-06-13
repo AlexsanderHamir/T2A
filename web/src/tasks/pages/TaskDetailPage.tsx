@@ -375,6 +375,9 @@ export function TaskDetailPage({ app }: Props) {
 
       <TaskDetailChecklistSection
         saving={app.saving}
+        canAddCriterion={
+          task.status !== "running" && task.status !== "done"
+        }
         checklistQuery={checklistQuery}
         doneCount={checklistDoneCount}
         totalCount={checklistTotal}

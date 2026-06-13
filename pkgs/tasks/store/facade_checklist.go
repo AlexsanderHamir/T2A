@@ -38,8 +38,7 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 	return checklist.List(ctx, s.db, taskID)
 }
 
-// AddChecklistItem appends a definition row; the task must exist and
-// not use checklist_inherit.
+// AddChecklistItem appends a definition row when the task is not running or done.
 func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
 	return checklist.Add(ctx, s.db, taskID, text, by)

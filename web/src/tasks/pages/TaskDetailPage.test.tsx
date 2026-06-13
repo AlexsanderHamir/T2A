@@ -458,6 +458,19 @@ describe("TaskDetailPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true });
   });
 
+  it("disables Add criterion when the task is running or done", async () => {
+    mockTaskDetailFetch(taskDetail("tr", "Running task", { status: "running" }));
+
+    renderDetail("/tasks/tr", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^running task$/i }),
+    ).toBeInTheDocument();
+
+    const addBtn = screen.getByRole("button", { name: /^add criterion$/i });
+    expect(addBtn).toBeDisabled();
+  });
+
   it("edits a checklist criterion via PATCH text", async () => {
     const user = userEvent.setup();
     const api = mockTaskDetailFetchWithChecklistPatch(

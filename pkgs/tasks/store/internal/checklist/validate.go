@@ -67,6 +67,21 @@ func ValidateCanMarkDoneInTx(tx *gorm.DB, taskID string) error {
 	return validateChecklistCompleteInTx(tx, taskID)
 }
 
+// ValidateCanAddCriterionInTx rejects appending definition rows once the
+// agent has picked up the task or it has reached a terminal done state.
+func ValidateCanAddCriterionInTx(tx *gorm.DB, t *domain.Task) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ValidateCanAddCriterionInTx")
+	if t == nil {
+		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	switch t.Status {
+	case domain.StatusRunning, domain.StatusDone:
+		return fmt.Errorf("%w: cannot add criteria while task is %s", domain.ErrConflict, t.Status)
+	default:
+		return nil
+	}
+}
+
 // DeleteOwnedItemsInTx removes every checklist definition row owned
 // by taskID and the per-subject completion rows that point at those
 // items. Exported so the task update/delete paths can drop a task's

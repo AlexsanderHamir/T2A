@@ -125,8 +125,8 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 	return out, nil
 }
 
-// Add appends a definition row; the task must exist and not use
-// ChecklistInherit. Appends EventChecklistItemAdded in the same TX.
+// Add appends a definition row; the task must exist and not be running
+// or done. Appends EventChecklistItemAdded in the same TX.
 func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
@@ -147,7 +147,9 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor)
 		if err != nil {
 			return err
 		}
-		_ = t
+		if err := ValidateCanAddCriterionInTx(tx, t); err != nil {
+			return err
+		}
 		var maxOrder int
 		row := tx.Model(&domain.TaskChecklistItem{}).Select("COALESCE(MAX(sort_order), 0)").Where("task_id = ?", taskID)
 		if err := row.Scan(&maxOrder).Error; err != nil {

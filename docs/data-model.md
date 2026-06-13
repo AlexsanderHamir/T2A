@@ -199,6 +199,8 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 **Completion:** Marking a task `done` requires its checklist to be complete when criteria exist. Execution order among related tasks is expressed only via `depends_on` (see Dependencies).
 
+**Definition edits:** Operators may add checklist definition rows only while the task is not `running` or `done`. Once the agent has picked up the task, criteria are locked; edit and delete remain subject to the existing cycle-running and verified-item guards documented in [api.md](./api.md).
+
 | `verified_by` value | Meaning |
 |---|---|
 | `agent_self` | Failure-only: execute did not claim done in the criteria report. Never written on success. |
