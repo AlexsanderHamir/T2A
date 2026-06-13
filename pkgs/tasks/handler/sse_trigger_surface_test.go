@@ -175,14 +175,11 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		srv, st, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
-		// Append an approval_requested event so seq=2 is patchable with a user response.
-		if err := st.AppendTaskEvent(context.Background(), task.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
-			t.Fatal(err)
-		}
+		approvalSeq := appendApprovalRequestedEvent(t, st, context.Background(), task.ID)
 		ch, cancel := hub.Subscribe()
 		defer cancel()
 
-		mustDoJSON(t, http.MethodPatch, srv.URL+"/tasks/"+task.ID+"/events/2",
+		mustDoJSON(t, http.MethodPatch, srv.URL+"/tasks/"+task.ID+"/events/"+formatEventSeq(approvalSeq),
 			`{"user_response":"ok"}`, "agent", http.StatusOK)
 		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
 		mustEqualEvents(t, "PATCH /tasks/{id}/events/{seq}", got, []string{"task_updated:" + task.ID})
@@ -512,7 +509,7 @@ func postCycleJSON(t *testing.T, srv *httptest.Server, taskID, body string, want
 
 func postTaskJSON(t *testing.T, srv *httptest.Server, body string, wantStatus int) domain.Task {
 	t.Helper()
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(body)))
 	if err != nil {
 		t.Fatal(err)
 	}

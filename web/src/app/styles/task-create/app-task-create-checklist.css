@@ -105,6 +105,13 @@
   color: var(--text-secondary);
 }
 
+.task-create-checklist-helper {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
 .task-create-checklist .task-checklist-surface {
   margin-top: 0.15rem;
 }

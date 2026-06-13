@@ -76,7 +76,7 @@ func mustGetJSON(t *testing.T, baseURL, path string) ([]byte, *http.Response) {
 
 func mustCreateTaskBody(t *testing.T, baseURL, body string) {
 	t.Helper()
-	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(body))
+	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(body)))
 	if err != nil {
 		t.Fatal(err)
 	}

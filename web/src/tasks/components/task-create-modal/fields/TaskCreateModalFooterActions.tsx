@@ -1,10 +1,12 @@
 import type { PriorityChoice } from "@/types";
+import { nonEmptyChecklistCount } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
   disabled: boolean;
   draftSaving: boolean;
   title: string;
   priority: PriorityChoice;
+  checklistItems: string[];
   evaluatePending: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
@@ -16,12 +18,17 @@ export function TaskCreateModalFooterActions({
   draftSaving,
   title,
   priority,
+  checklistItems,
   evaluatePending,
   onClose,
   onSaveDraft,
   onEvaluate,
 }: Props) {
-  const evalAndSubmitDisabled = !title.trim() || !priority || disabled;
+  const evalAndSubmitDisabled =
+    !title.trim() ||
+    !priority ||
+    nonEmptyChecklistCount(checklistItems) < 1 ||
+    disabled;
 
   return (
     <div className="task-create-modal-actions">

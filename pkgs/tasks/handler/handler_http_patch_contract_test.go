@@ -91,7 +91,7 @@ func patchTask(t *testing.T, baseURL, id, body string) (*http.Response, []byte) 
 // single helper can drive parent/child/done permutations.
 func mustCreateTask(t *testing.T, baseURL, jsonBody string) string {
 	t.Helper()
-	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(jsonBody))
+	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(jsonBody)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func mustCreateTask(t *testing.T, baseURL, jsonBody string) string {
 
 func postTask(t *testing.T, baseURL, jsonBody string) (*http.Response, []byte) {
 	t.Helper()
-	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(jsonBody))
+	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(jsonBody)))
 	if err != nil {
 		t.Fatal(err)
 	}

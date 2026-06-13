@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // TestHTTP_getChecklist_envelopeShape pins the documented GET 200 envelope:
@@ -44,18 +45,18 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 	if err := json.Unmarshal(top["items"], &items); err != nil {
 		t.Fatalf("items not a JSON array: %v body=%s", err, raw)
 	}
-	if len(items) != 1 {
-		t.Fatalf("items len=%d want 1", len(items))
+	if len(items) != 2 {
+		t.Fatalf("items len=%d want 2", len(items))
 	}
 	wantKeys := map[string]struct{}{"id": {}, "sort_order": {}, "text": {}, "done": {}}
 	for k := range wantKeys {
-		if _, ok := items[0][k]; !ok {
-			t.Errorf("item missing key %q (docs/api.md): %s", k, items[0])
+		if _, ok := items[1][k]; !ok {
+			t.Errorf("item missing key %q (docs/api.md): %s", k, items[1])
 		}
 	}
-	for k := range items[0] {
+	for k := range items[1] {
 		if _, ok := wantKeys[k]; !ok {
-			t.Errorf("item has unexpected key %q (docs/api.md): %s", k, items[0])
+			t.Errorf("item has unexpected key %q (docs/api.md): %s", k, items[1])
 		}
 	}
 
@@ -70,7 +71,22 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 	if err := json.Unmarshal(raw, &typed); err != nil {
 		t.Fatalf("decode typed: %v body=%s", err, raw)
 	}
-	if got := typed.Items[0]; got.ID == "" || got.Text != "alpha" || got.SortOrder < 1 || got.Done {
+	var alphaItem *struct {
+		ID        string `json:"id"`
+		SortOrder int    `json:"sort_order"`
+		Text      string `json:"text"`
+		Done      bool   `json:"done"`
+	}
+	for i := range typed.Items {
+		if typed.Items[i].Text == "alpha" {
+			alphaItem = &typed.Items[i]
+			break
+		}
+	}
+	if alphaItem == nil {
+		t.Fatalf("alpha item missing: %+v", typed.Items)
+	}
+	if got := *alphaItem; got.ID == "" || got.SortOrder < 1 || got.Done {
 		t.Fatalf("item=%+v want non-empty id, text=alpha, sort_order>=1, done=false", got)
 	}
 }
@@ -80,9 +96,18 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 // We assert directly on the raw JSON so a future change to `var items []…` (which
 // marshals to `null`) would fail loudly.
 func TestHTTP_getChecklist_emptyItemsIsArrayNotNull(t *testing.T) {
-	srv := newTaskTestServer(t)
+	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
-	taskID := mustCreateChecklistTask(t, srv, "chk-empty-get")
+	ctx := context.Background()
+	created, err := st.Create(ctx, store.CreateTaskInput{
+		Title:    "chk-empty-get",
+		Priority: domain.PriorityMedium,
+		Status:   domain.StatusReady,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	taskID := created.ID
 
 	res, err := http.Get(srv.URL + "/tasks/" + taskID + "/checklist")
 	if err != nil {
@@ -117,7 +142,7 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 	taskID := mustCreateChecklistTask(t, srv, "chk-order")
 	ctx := context.Background()
 	wantTexts := []string{"first", "second", "third"}
-	wantIDs := make([]string, 0, 3)
+	wantIDs := make([]string, 0, len(wantTexts))
 	for _, txt := range wantTexts {
 		it, err := st.AddChecklistItem(ctx, taskID, txt, domain.ActorUser)
 		if err != nil {
@@ -125,6 +150,7 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 		}
 		wantIDs = append(wantIDs, it.ID)
 	}
+	expectedTexts := append([]string{testCriterionText}, wantTexts...)
 
 	res, err := http.Get(srv.URL + "/tasks/" + taskID + "/checklist")
 	if err != nil {
@@ -144,8 +170,8 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != len(wantTexts) {
-		t.Fatalf("items len=%d want %d", len(got.Items), len(wantTexts))
+	if len(got.Items) != len(expectedTexts) {
+		t.Fatalf("items len=%d want %d", len(got.Items), len(expectedTexts))
 	}
 	if !sort.SliceIsSorted(got.Items, func(i, j int) bool {
 		if got.Items[i].SortOrder != got.Items[j].SortOrder {
@@ -156,8 +182,8 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 		t.Fatalf("items not sorted by sort_order ASC, id ASC: %+v", got.Items)
 	}
 	for i, it := range got.Items {
-		if it.Text != wantTexts[i] {
-			t.Errorf("items[%d].text=%q want %q (sort order should follow insertion order)", i, it.Text, wantTexts[i])
+		if it.Text != expectedTexts[i] {
+			t.Errorf("items[%d].text=%q want %q (sort order should follow insertion order)", i, it.Text, expectedTexts[i])
 		}
 	}
 }

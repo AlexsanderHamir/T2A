@@ -56,6 +56,19 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	if strings.TrimSpace(body.Title) == "" {
+		writeStoreError(w, r, op, fmt.Errorf("%w: title required", domain.ErrInvalidInput))
+		return
+	}
+	if body.Priority == "" {
+		writeStoreError(w, r, op, fmt.Errorf("%w: priority required", domain.ErrInvalidInput))
+		return
+	}
+	checklistItems, err := parseCreateChecklistItems(body.ChecklistItems)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:                    body.ID,
 		DraftID:               body.DraftID,
@@ -72,6 +85,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Milestone:             body.Milestone,
 		Gate:                  body.Gate,
 		DependsOn:             dependsOn,
+		ChecklistItems:        checklistItems,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)

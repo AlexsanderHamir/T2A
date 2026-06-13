@@ -33,7 +33,7 @@ func TestUserCreatedTaskEnqueuesForAgents(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"from-user","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"from-user","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestAgentActorCreateEnqueuesWhenReady(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(`{"title":"from-agent","priority":"medium"}`))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(withCreateChecklist(`{"title":"from-agent","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

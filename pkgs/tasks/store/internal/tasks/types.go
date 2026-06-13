@@ -27,6 +27,7 @@ type CreateInput struct {
 	Milestone       *string
 	Gate            *domain.TaskGate
 	DependsOn       []domain.DependencyEdge
+	ChecklistItems  []string
 }
 
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means

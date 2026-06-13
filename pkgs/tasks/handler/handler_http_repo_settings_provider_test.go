@@ -119,7 +119,7 @@ func TestHTTP_createTask_skipsMentionValidationWhenRepoNotConfigured(t *testing.
 	defer srv.Close()
 
 	res, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"title":"t","initial_prompt":"@nope.txt","priority":"medium"}`))
+		strings.NewReader(withCreateChecklist(`{"title":"t","initial_prompt":"@nope.txt","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

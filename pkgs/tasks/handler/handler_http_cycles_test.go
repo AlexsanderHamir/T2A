@@ -18,7 +18,7 @@ import (
 // cycles tests can stay focused on the cycle/phase round-trip.
 func mustCreateTaskForCycles(t *testing.T, baseURL string) string {
 	t.Helper()
-	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(`{"title":"cycles-task","priority":"medium"}`))
+	res, err := http.Post(baseURL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"cycles-task","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,6 +441,7 @@ func TestHTTP_cycle_routes_appendMirrorEvents_into_audit_log(t *testing.T) {
 	}
 	wantTypes := []domain.EventType{
 		domain.EventTaskCreated,
+		domain.EventChecklistItemAdded,
 		domain.EventCycleStarted,
 		domain.EventPhaseStarted,
 		domain.EventPhaseCompleted,

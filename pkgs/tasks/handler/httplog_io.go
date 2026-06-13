@@ -112,6 +112,7 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	} else {
 		out = append(out, "body_pickup_not_before_set", false)
 	}
+	out = append(out, "body_checklist_items_count", len(body.ChecklistItems))
 	return out
 }
 

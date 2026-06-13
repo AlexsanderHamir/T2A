@@ -247,6 +247,7 @@ export async function createTask(input: {
   milestone?: string;
   gate?: TaskGate;
   depends_on?: TaskDependencyEdge[];
+  checklist_items: Array<{ text: string }>;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -290,6 +291,7 @@ export async function createTask(input: {
   if (input.depends_on !== undefined) {
     body.depends_on = input.depends_on;
   }
+  body.checklist_items = input.checklist_items;
   const res = await fetchWithTimeout("/tasks", {
     method: "POST",
     headers: jsonHeaders,

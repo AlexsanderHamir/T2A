@@ -15,7 +15,7 @@ func TestHTTP_get_task_events(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"hello","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestHTTP_get_task_events_paged_cursor(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"paged","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"paged","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestHTTP_get_task_events_paged_cursor(t *testing.T) {
 	if err := json.NewDecoder(res2.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload.TaskID != created.ID || payload.Limit != 1 || payload.Total != 2 {
+	if payload.TaskID != created.ID || payload.Limit != 1 || payload.Total != 3 {
 		t.Fatalf("payload %#v", payload)
 	}
 	if len(payload.Events) != 1 || !payload.HasMoreOlder || payload.HasMoreNewer {
@@ -161,10 +161,10 @@ func TestHTTP_get_task_events_paged_cursor(t *testing.T) {
 	if err := json.NewDecoder(res3.Body).Decode(&payload2); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload2.Events) != 1 || payload2.HasMoreOlder || !payload2.HasMoreNewer {
+	if len(payload2.Events) != 2 || payload2.HasMoreOlder || !payload2.HasMoreNewer {
 		t.Fatalf("older page: %#v", payload2)
 	}
-	if payload2.RangeStart != 2 || payload2.RangeEnd != 2 {
+	if payload2.RangeStart != 2 || payload2.RangeEnd != 3 {
 		t.Fatalf("range %d-%d", payload2.RangeStart, payload2.RangeEnd)
 	}
 }

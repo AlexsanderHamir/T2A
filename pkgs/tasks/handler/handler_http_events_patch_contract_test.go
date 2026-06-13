@@ -43,16 +43,13 @@ func patchEventUserResponse(t *testing.T, baseURL, taskID, seq, body, actor stri
 	return res, raw
 }
 
-// seedApprovalRequested creates a task and appends an `approval_requested`
-// event at seq=2 (seq=1 is the task_created mirror). Returns the task id; the
-// patchable seq is always 2.
-func seedApprovalRequested(t *testing.T, srv *httptest.Server, st *store.Store) string {
+// seedApprovalRequested creates a task with checklist_items and appends
+// approval_requested. Returns the task id and the approval event seq.
+func seedApprovalRequested(t *testing.T, srv *httptest.Server, st *store.Store) (string, int64) {
 	t.Helper()
 	task := postTaskJSON(t, srv, `{"title":"e","priority":"medium"}`, http.StatusCreated)
-	if err := st.AppendTaskEvent(context.Background(), task.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-	return task.ID
+	approvalSeq := appendApprovalRequestedEvent(t, st, context.Background(), task.ID)
+	return task.ID, approvalSeq
 }
 
 // TestHTTP_patchEvent_successEnvelope pins the documented 200 envelope. After
@@ -63,9 +60,10 @@ func seedApprovalRequested(t *testing.T, srv *httptest.Server, st *store.Store) 
 func TestHTTP_patchEvent_successEnvelope(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
+	approvalSeqStr := formatEventSeq(approvalSeq)
 
-	res, raw := patchEventUserResponse(t, srv.URL, id, "2", `{"user_response":"approved"}`, "")
+	res, raw := patchEventUserResponse(t, srv.URL, id, approvalSeqStr, `{"user_response":"approved"}`, "")
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status %d (want 200) body=%s", res.StatusCode, raw)
 	}
@@ -117,7 +115,7 @@ func TestHTTP_patchEvent_successEnvelope(t *testing.T) {
 func TestHTTP_patchEvent_pathSegmentGuard(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, _ := seedApprovalRequested(t, srv, st)
 
 	cases := []struct {
 		name   string
@@ -156,7 +154,8 @@ func TestHTTP_patchEvent_pathSegmentGuard(t *testing.T) {
 func TestHTTP_patchEvent_bodyValidation400Strings(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
+	approvalSeqStr := formatEventSeq(approvalSeq)
 	tooLong := `{"user_response":"` + strings.Repeat("a", 10_001) + `"}`
 
 	cases := []struct {
@@ -165,12 +164,12 @@ func TestHTTP_patchEvent_bodyValidation400Strings(t *testing.T) {
 		body string
 		want string
 	}{
-		{"emptyBodyObject", "2", `{}`, "message cannot be empty"},
-		{"emptyUserResponse", "2", `{"user_response":""}`, "message cannot be empty"},
-		{"whitespaceUserResponse", "2", `{"user_response":"   "}`, "message cannot be empty"},
-		{"tooLong", "2", tooLong, "message too long (max 10000 bytes)"},
-		{"unknownField", "2", `{"text":"hi"}`, `json: unknown field "text"`},
-		{"trailingData", "2", `{"user_response":"x"}{}`, "request body must contain a single JSON value"},
+		{"emptyBodyObject", approvalSeqStr, `{}`, "message cannot be empty"},
+		{"emptyUserResponse", approvalSeqStr, `{"user_response":""}`, "message cannot be empty"},
+		{"whitespaceUserResponse", approvalSeqStr, `{"user_response":"   "}`, "message cannot be empty"},
+		{"tooLong", approvalSeqStr, tooLong, "message too long (max 10000 bytes)"},
+		{"unknownField", approvalSeqStr, `{"text":"hi"}`, `json: unknown field "text"`},
+		{"trailingData", approvalSeqStr, `{"user_response":"x"}{}`, "request body must contain a single JSON value"},
 		{"nonAcceptingType", "1", `{"user_response":"x"}`, "this event type does not accept thread messages"},
 	}
 	for _, tc := range cases {
@@ -222,7 +221,7 @@ func TestHTTP_patchEvent_unknownTaskIs404(t *testing.T) {
 func TestHTTP_patchEvent_unknownSeqIs404(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, _ := seedApprovalRequested(t, srv, st)
 
 	res, raw := patchEventUserResponse(t, srv.URL, id, "999", `{"user_response":"hello"}`, "")
 	if res.StatusCode != http.StatusNotFound {
@@ -244,7 +243,7 @@ func TestHTTP_patchEvent_unknownSeqIs404(t *testing.T) {
 func TestHTTP_patchEvent_threadFullIs400(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
 
 	ctx := context.Background()
 	// 200 = maxResponseThreadEntries (private const in store package).
@@ -253,12 +252,12 @@ func TestHTTP_patchEvent_threadFullIs400(t *testing.T) {
 		if i%2 == 1 {
 			actor = domain.ActorAgent
 		}
-		if err := st.AppendTaskEventResponseMessage(ctx, id, 2, "msg", actor); err != nil {
+		if err := st.AppendTaskEventResponseMessage(ctx, id, approvalSeq, "msg", actor); err != nil {
 			t.Fatalf("seed thread entry %d: %v", i, err)
 		}
 	}
 
-	res, raw := patchEventUserResponse(t, srv.URL, id, "2", `{"user_response":"one too many"}`, "")
+	res, raw := patchEventUserResponse(t, srv.URL, id, formatEventSeq(approvalSeq), `{"user_response":"one too many"}`, "")
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
 	}
@@ -280,12 +279,12 @@ func TestHTTP_patchEvent_threadFullIs400(t *testing.T) {
 func TestHTTP_patchEvent_publishesTaskUpdated(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
 
-	res, raw := patchEventUserResponse(t, srv.URL, id, "2", `{"user_response":"go"}`, "")
+	res, raw := patchEventUserResponse(t, srv.URL, id, formatEventSeq(approvalSeq), `{"user_response":"go"}`, "")
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}
@@ -302,7 +301,8 @@ func TestHTTP_patchEvent_publishesTaskUpdated(t *testing.T) {
 func TestHTTP_patchEvent_errorPathsNeverPublish(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
+	approvalSeqStr := formatEventSeq(approvalSeq)
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
@@ -317,7 +317,7 @@ func TestHTTP_patchEvent_errorPathsNeverPublish(t *testing.T) {
 		wantError  string
 	}{
 		{"whitespaceID", "%20", "2", `{"user_response":"x"}`, http.StatusBadRequest, "id"},
-		{"whitespaceUserResponse", id, "2", `{"user_response":"   "}`, http.StatusBadRequest, "message cannot be empty"},
+		{"whitespaceUserResponse", id, approvalSeqStr, `{"user_response":"   "}`, http.StatusBadRequest, "message cannot be empty"},
 		{"nonAcceptingType", id, "1", `{"user_response":"x"}`, http.StatusBadRequest, "this event type does not accept thread messages"},
 		{"unknownTask", unknownTask, "2", `{"user_response":"x"}`, http.StatusNotFound, "not found"},
 		{"missingSeq", id, "999", `{"user_response":"x"}`, http.StatusNotFound, "not found"},

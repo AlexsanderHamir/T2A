@@ -89,9 +89,24 @@ describe("TaskCreateModal", () => {
   it("shows Evaluate action and calls onEvaluate", async () => {
     const user = userEvent.setup();
     const onEvaluate = vi.fn();
-    renderModal({ onEvaluate });
+    renderModal({ onEvaluate, checklistItems: ["Ship it"] });
     await user.click(screen.getByRole("button", { name: /^evaluate$/i }));
     expect(onEvaluate).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables Create and Evaluate until at least one done criterion exists", () => {
+    renderModal({ checklistItems: [] });
+    expect(screen.getByRole("button", { name: /^create task$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^evaluate$/i })).toBeDisabled();
+    expect(screen.getByText(/add at least one done criterion/i)).toBeInTheDocument();
+  });
+
+  it("marks Done criteria as required", () => {
+    renderModal({ checklistItems: [] });
+    const heading = screen.getByRole("heading", { name: /done criteria/i });
+    const row = heading.closest(".task-create-checklist-title-row");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText("*")).toBeInTheDocument();
   });
 
   it("renders evaluation summary when available", () => {
@@ -244,6 +259,7 @@ describe("TaskCreateModal", () => {
   it("keeps Create / Evaluate buttons reachable while an error is showing", () => {
     renderModal({
       title: "Reproduce me",
+      checklistItems: ["Ship it"],
       createError: new Error("boom"),
     });
     expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();

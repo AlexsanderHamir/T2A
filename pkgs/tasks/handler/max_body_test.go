@@ -102,7 +102,7 @@ func TestHTTP_max_body_allows_under_limit(t *testing.T) {
 	srv := httptest.NewServer(WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	body := `{"title":"ok","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"ok","priority":"medium"}`)
 	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestHTTP_max_body_unknown_content_length_still_bounded(t *testing.T) {
 	h := WithMaxRequestBody(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
 	// Valid create JSON > 48 bytes; ContentLength -1 so middleware cannot pre-reject on length.
-	body := `{"title":"` + strings.Repeat("x", 40) + `","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"` + strings.Repeat("x", 40) + `","priority":"medium"}`)
 	if len(body) <= 48 {
 		t.Fatalf("body len %d need >48", len(body))
 	}

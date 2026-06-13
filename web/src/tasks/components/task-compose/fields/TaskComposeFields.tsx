@@ -18,7 +18,7 @@ export type TaskComposeFieldsProps = {
   checklistItems: string[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
   hideChecklist?: boolean;
-  /** When `required`, done criteria must be defined (parent tasks with subtasks). */
+  /** When `required`, at least one done criterion is required on create. */
   checklistRequirement?: "optional" | "required";
   disabled: boolean;
   onTitleChange: (v: string) => void;

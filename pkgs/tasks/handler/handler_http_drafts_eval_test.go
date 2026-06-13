@@ -109,12 +109,12 @@ func TestHTTP_create_task_attaches_previous_draft_evaluations(t *testing.T) {
 		}
 	}
 
-	resCreate, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{
+	resCreate, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{
 		"title":"Finalized task",
 		"initial_prompt":"from evaluated draft",
 		"priority":"high",
 		"draft_id":"draft-link-http"
-	}`))
+	}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
 	defer srv.Close()
 	id := "30000000-0000-4000-8000-000000000099"
 	res1, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"id":"`+id+`","title":"first","priority":"medium"}`))
+		strings.NewReader(withCreateChecklist(`{"id":"`+id+`","title":"first","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TestHTTP_create_duplicate_client_id_returns_409(t *testing.T) {
 		t.Fatalf("first create status %d", res1.StatusCode)
 	}
 	res2, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"id":"`+id+`","title":"second","priority":"medium"}`))
+		strings.NewReader(withCreateChecklist(`{"id":"`+id+`","title":"second","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

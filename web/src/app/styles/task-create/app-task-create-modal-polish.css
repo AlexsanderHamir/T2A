@@ -19,19 +19,22 @@
 }
 
 .task-create-modal-header__top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  column-gap: var(--space-4);
+  width: 100%;
   min-width: 0;
 }
 
-.task-create-modal-header__heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-3);
+.task-create-modal-header__top .task-create-modal-title {
+  grid-column: 1;
   min-width: 0;
+}
+
+.task-create-modal-header__top .test-scenarios-trigger {
+  grid-column: 2;
+  justify-self: end;
 }
 
 .task-create-modal-title {
@@ -41,14 +44,6 @@
   letter-spacing: -0.025em;
   line-height: 1.15;
   color: var(--text-primary);
-}
-
-.task-create-modal-subtitle {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: var(--text-tertiary);
-  max-width: 36rem;
 }
 
 .task-create-modal-sheet .task-create-draft-status {
@@ -114,17 +109,83 @@
 
 /* —— Form rhythm —— */
 .task-create-modal-form.task-create-form {
-  gap: var(--space-8);
+  gap: var(--space-5);
 }
 
-.task-create-modal-section {
+.task-create-modal-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 
-.task-create-modal-section--execution {
+.task-create-modal-panel {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.task-create-modal-panel__head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 75%, transparent);
+  background: var(--bg-subtle);
+}
+
+.task-create-modal-panel__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.task-create-modal-panel__lede {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  max-width: 42rem;
+}
+
+.task-create-modal-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+
+.task-create-modal-panel--essentials .task-create-modal-panel__body > * + * {
+  padding-top: var(--space-5);
+  border-top: 1px solid color-mix(in srgb, var(--border-hairline) 58%, transparent);
+}
+
+.task-create-modal-panel--context .task-create-project {
+  margin: 0;
+  padding: 0;
   gap: var(--space-4);
+}
+
+.task-create-modal-panel--execution .task-create-modal-panel__body {
+  gap: 0;
+  padding: 0;
+}
+
+.task-create-modal-panel--execution .task-create-advanced {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-top: 1px solid color-mix(in srgb, var(--border-hairline) 75%, transparent);
+}
+
+.task-create-modal-panel--execution .task-create-advanced[open] {
+  border-color: color-mix(in srgb, var(--border-hairline) 75%, transparent);
+  box-shadow: none;
+}
+
+.task-create-modal-panel--execution .task-create-advanced__body {
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  background: color-mix(in srgb, var(--bg-subtle) 45%, var(--bg-elevated));
 }
 
 /* Sentence-case labels — uppercase read as shouty on a dense form */
@@ -135,10 +196,6 @@
   letter-spacing: -0.01em;
   text-transform: none;
   color: var(--text-secondary);
-}
-
-.task-create-modal-sheet .field-req--required {
-  color: var(--text-tertiary);
 }
 
 /* Shared field stack inside the modal */
@@ -337,11 +394,17 @@
   background: var(--bg-subtle);
 }
 
-/* Autonomy — inline row with switch, no card chrome */
+/* Autonomy — first row inside the execution panel */
 .task-create-modal-sheet .task-create-autonomy {
   border: none;
   background: transparent;
-  padding: var(--space-1) 0;
+  margin: 0;
+}
+
+.task-create-modal-sheet
+  .task-create-modal-panel--execution
+  .task-create-autonomy {
+  padding: var(--space-4);
 }
 
 .task-create-modal-sheet .task-create-autonomy__row {
@@ -429,11 +492,11 @@
   cursor: not-allowed;
 }
 
-/* More options — soft well */
+/* More options — nested disclosure inside the execution panel */
 .task-create-modal-sheet .task-create-advanced {
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
-  background: var(--bg-subtle);
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
 }
 

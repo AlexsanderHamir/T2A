@@ -166,6 +166,7 @@ describe("useTasksApp evaluateDraftMutation race", () => {
     });
     act(() => {
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Criterion");
     });
 
     act(() => {
@@ -221,6 +222,7 @@ describe("useTasksApp evaluateDraftMutation race", () => {
     });
     act(() => {
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Criterion");
     });
 
     act(() => {
@@ -539,6 +541,7 @@ describe("useTasksApp createMutation race", () => {
     });
     act(() => {
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Criterion");
     });
 
     act(() => {
@@ -600,6 +603,7 @@ describe("useTasksApp createMutation race", () => {
     });
     act(() => {
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Criterion");
     });
     expect(result.current.createModalOpen).toBe(true);
 

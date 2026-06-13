@@ -17,7 +17,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"hello","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,9 +35,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.AppendTaskEvent(ctx, created.ID, domain.EventApprovalRequested, domain.ActorAgent, []byte(`{}`)); err != nil {
-		t.Fatal(err)
-	}
+	approvalSeq := appendApprovalRequestedEvent(t, st, ctx, created.ID)
 
 	reqBadType, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/1", strings.NewReader(`{"user_response":"x"}`))
 	if err != nil {
@@ -55,7 +53,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 		t.Fatalf("wrong event type want 400, got %d", resBadType.StatusCode)
 	}
 
-	reqAgent, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/2", strings.NewReader(`{"user_response":"Please confirm"}`))
+	reqAgent, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/"+formatEventSeq(approvalSeq), strings.NewReader(`{"user_response":"Please confirm"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +86,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 		t.Fatalf("agent thread %#v", agentOut.ResponseThread)
 	}
 
-	reqOK, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/2", strings.NewReader(`{"user_response":"LGTM"}`))
+	reqOK, err := http.NewRequest(http.MethodPatch, srv.URL+"/tasks/"+created.ID+"/events/"+formatEventSeq(approvalSeq), strings.NewReader(`{"user_response":"LGTM"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +112,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	if err := json.NewDecoder(resOK.Body).Decode(&one); err != nil {
 		t.Fatal(err)
 	}
-	if one.Seq != 2 || one.UserResponse == nil || *one.UserResponse != "LGTM" {
+	if one.Seq != approvalSeq || one.UserResponse == nil || *one.UserResponse != "LGTM" {
 		t.Fatalf("payload %#v", one)
 	}
 	if one.UserResponseAt == nil {
@@ -144,7 +142,7 @@ func TestHTTP_patch_task_event_user_response(t *testing.T) {
 	}
 	found := false
 	for _, e := range listPayload.Events {
-		if e.Seq == 2 && e.UserResponse != nil && *e.UserResponse == "LGTM" && len(e.ResponseThread) == 2 {
+		if e.Seq == approvalSeq && e.UserResponse != nil && *e.UserResponse == "LGTM" && len(e.ResponseThread) == 2 {
 			found = true
 			break
 		}
@@ -158,7 +156,7 @@ func TestHTTP_get_task_event(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"hello","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +239,7 @@ func TestHTTP_task_events_query_validation_error_messages(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"e","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"e","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +324,7 @@ func TestHTTP_patch_task_event_rejects_overlong_seq(t *testing.T) {
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"hello","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

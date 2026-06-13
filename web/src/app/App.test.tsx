@@ -38,6 +38,26 @@ async function choosePriorityInDialog(
   );
 }
 
+async function addCriterionInDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  text: string,
+) {
+  await user.click(
+    within(dialog).getByRole("button", { name: /new criterion/i }),
+  );
+  const criterionDialog = await screen.findByRole("dialog", {
+    name: /new criterion/i,
+  });
+  await user.type(
+    within(criterionDialog).getByLabelText(/^criterion$/i),
+    text,
+  );
+  await user.click(
+    within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
+  );
+}
+
 function renderApp() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -270,6 +290,7 @@ describe("App", () => {
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "Evaluate me");
     await choosePriorityInDialog(user, dialog);
+    await addCriterionInDialog(user, dialog, "Evaluate criterion");
     await user.click(within(dialog).getByRole("button", { name: /^evaluate$/i }));
 
     // The error now surfaces both globally (in the page-level
@@ -340,6 +361,7 @@ describe("App", () => {
     const dialog = await openNewTaskModal(user);
     await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
     await choosePriorityInDialog(user, dialog);
+    await addCriterionInDialog(user, dialog, "Ship criterion");
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );
@@ -1059,10 +1081,10 @@ describe("App", () => {
     expect(within(secondRow).getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
   });
 
-  it("creates a top-level task with checklist criteria added after create", async () => {
+  it("creates a top-level task with checklist criteria in the create POST", async () => {
     const user = userEvent.setup();
     let created = false;
-    const checklistPosts: string[] = [];
+    const createBodies: string[] = [];
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
@@ -1093,6 +1115,7 @@ describe("App", () => {
       }
       if (url === "/tasks" && init?.method === "POST") {
         created = true;
+        createBodies.push(init?.body != null ? String(init.body) : "");
         return new Response(
           JSON.stringify({
             id: "t1",
@@ -1104,11 +1127,6 @@ describe("App", () => {
           }),
           { status: 201, headers: { "Content-Type": "application/json" } },
         );
-      }
-      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
-        const body = init?.body != null ? String(init.body) : "";
-        checklistPosts.push(body);
-        return new Response(null, { status: 204 });
       }
       return new Response("not found", { status: 404 });
     });
@@ -1140,14 +1158,15 @@ describe("App", () => {
     expect(
       await screen.findByRole("link", { name: /with criteria/i }),
     ).toBeInTheDocument();
-    expect(checklistPosts).toHaveLength(1);
-    expect(checklistPosts[0]).toContain("Tests pass");
+    expect(createBodies).toHaveLength(1);
+    expect(createBodies[0]).toContain("Tests pass");
+    expect(createBodies[0]).toContain("checklist_items");
   });
 
   it("creates a top-level task using edited checklist criterion text", async () => {
     const user = userEvent.setup();
     let created = false;
-    const checklistPosts: string[] = [];
+    const createBodies: string[] = [];
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
@@ -1178,6 +1197,7 @@ describe("App", () => {
       }
       if (url === "/tasks" && init?.method === "POST") {
         created = true;
+        createBodies.push(init?.body != null ? String(init.body) : "");
         return new Response(
           JSON.stringify({
             id: "t1",
@@ -1189,11 +1209,6 @@ describe("App", () => {
           }),
           { status: 201, headers: { "Content-Type": "application/json" } },
         );
-      }
-      if (url === "/tasks/t1/checklist/items" && init?.method === "POST") {
-        const body = init?.body != null ? String(init.body) : "";
-        checklistPosts.push(body);
-        return new Response(null, { status: 204 });
       }
       return new Response("not found", { status: 404 });
     });
@@ -1241,8 +1256,9 @@ describe("App", () => {
     expect(
       await screen.findByRole("link", { name: /with edited criteria/i }),
     ).toBeInTheDocument();
-    expect(checklistPosts).toHaveLength(1);
-    expect(checklistPosts[0]).toContain("Updated wording");
+    expect(createBodies).toHaveLength(1);
+    expect(createBodies[0]).toContain("Updated wording");
+    expect(createBodies[0]).toContain("checklist_items");
   });
 
   it("does not expose a parent picker on the home create-task modal", async () => {
@@ -1357,6 +1373,7 @@ describe("App", () => {
       "Standalone task",
     );
     await choosePriorityInDialog(user, dialog);
+    await addCriterionInDialog(user, dialog, "Standalone criterion");
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );

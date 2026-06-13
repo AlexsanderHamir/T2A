@@ -15,7 +15,7 @@ func TestHTTP_createTask_tagsMilestoneDependsOn(t *testing.T) {
 	defer srv.Close()
 
 	dep := mustCreateTask(t, srv.URL, `{"title":"dep","priority":"medium","status":"ready"}`)
-	res, raw := postCreate(t, srv.URL, `{
+	res, raw := postCreate(t, srv.URL, withCreateChecklist(`{
 		"title":"blocked",
 		"priority":"medium",
 		"status":"ready",
@@ -23,7 +23,7 @@ func TestHTTP_createTask_tagsMilestoneDependsOn(t *testing.T) {
 		"milestone":"launch-v1",
 		"depends_on":["`+dep+`"],
 		"gate":{"kind":"manual_approval","status":"active","hold":false}
-	}`)
+	}`))
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}

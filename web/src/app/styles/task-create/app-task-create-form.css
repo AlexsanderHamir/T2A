@@ -281,13 +281,21 @@
     var(--ease-ui) both;
 }
 
+.task-create-modal-body > * {
+  animation: task-create-section-enter var(--duration-ui-phase)
+    var(--ease-ui) both;
+}
+
 .task-create-modal-form > *:nth-child(1) { animation-delay: 0ms; }
-.task-create-modal-form > *:nth-child(2) { animation-delay: 30ms; }
-.task-create-modal-form > *:nth-child(3) { animation-delay: 60ms; }
-.task-create-modal-form > *:nth-child(4) { animation-delay: 90ms; }
-.task-create-modal-form > *:nth-child(5) { animation-delay: 120ms; }
-.task-create-modal-form > *:nth-child(6) { animation-delay: 150ms; }
-.task-create-modal-form > *:nth-child(n+7) { animation-delay: 180ms; }
+.task-create-modal-body > *:nth-child(1) { animation-delay: 30ms; }
+.task-create-modal-body > *:nth-child(2) { animation-delay: 60ms; }
+.task-create-modal-body > *:nth-child(3) { animation-delay: 90ms; }
+.task-create-modal-form > *:nth-child(2) { animation-delay: 120ms; }
+.task-create-modal-form > *:nth-child(3) { animation-delay: 150ms; }
+.task-create-modal-form > *:nth-child(4) { animation-delay: 180ms; }
+.task-create-modal-form > *:nth-child(5) { animation-delay: 210ms; }
+.task-create-modal-form > *:nth-child(6) { animation-delay: 240ms; }
+.task-create-modal-form > *:nth-child(n+7) { animation-delay: 270ms; }
 
 @keyframes task-create-section-enter {
   from {
@@ -301,7 +309,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .task-create-modal-form > * {
+  .task-create-modal-form > *,
+  .task-create-modal-body > * {
     animation: none;
   }
 }

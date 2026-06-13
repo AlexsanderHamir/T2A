@@ -196,6 +196,8 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 
 Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators may describe verification commands in criterion text; the worker does not execute them.
 
+**Create:** `POST /tasks` requires at least one non-empty done criterion in `checklist_items`; definition rows are inserted in the same transaction as the task row.
+
 **Completion:** Marking a task `done` requires its checklist to be complete when criteria exist. Execution order among related tasks is expressed only via `depends_on` (see Dependencies).
 
 **Definition edits:** Operators may add checklist definition rows only while the task is not `running` or `done`. Once the agent has picked up the task, criteria are locked; edit and delete remain subject to the existing cycle-running and verified-item guards documented in [api.md](./api.md).
@@ -220,7 +222,7 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 ### Worker verification loop
 
-Verify runs after every successful execute **only when the task has at least one criterion**. Tasks with **zero criteria** skip verify and write no checklist completion rows — a successful execute alone marks the task `done`.
+Verify runs after every successful execute **only when the task has at least one criterion**. Tasks with **zero criteria** (legacy rows created before the create-time requirement) skip verify and write no checklist completion rows — a successful execute alone marks the task `done`.
 
 1. **Execute** — prompt prepends all criteria with stable ids and the **absolute** worker-managed path the agent must write its report to (`<worker-managed dir>/<cycle_id>/criteria-report.json`, see "Report file contracts" below). `claimed_done` in the report is an assertion only — not final acceptance.
 2. **Gate** — criteria with `claimed_done: false` fail immediately (`verified_by=agent_self`); no verify pass for those ids.

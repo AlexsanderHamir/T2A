@@ -89,14 +89,15 @@ func TestHTTP_getEvent_envelopeMandatoryKeys(t *testing.T) {
 func TestHTTP_getEvent_envelopeOptionalFieldsWhenSet(t *testing.T) {
 	srv, st, _ := newSSETriggerServer(t)
 	defer srv.Close()
-	id := seedApprovalRequested(t, srv, st)
+	id, approvalSeq := seedApprovalRequested(t, srv, st)
+	approvalSeqStr := formatEventSeq(approvalSeq)
 
-	patchRes, _ := patchEventUserResponse(t, srv.URL, id, "2", `{"user_response":"approved"}`, "")
+	patchRes, _ := patchEventUserResponse(t, srv.URL, id, approvalSeqStr, `{"user_response":"approved"}`, "")
 	if patchRes.StatusCode != http.StatusOK {
 		t.Fatalf("seed PATCH status %d (want 200)", patchRes.StatusCode)
 	}
 
-	res, raw := getEvent(t, srv.URL, id, "2")
+	res, raw := getEvent(t, srv.URL, id, approvalSeqStr)
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("GET status %d (want 200) body=%s", res.StatusCode, raw)
 	}

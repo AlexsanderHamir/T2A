@@ -28,7 +28,7 @@ func TestHTTP_idempotency_post_second_replays_from_cache(t *testing.T) {
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	const body = `{"title":"idem-cache","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"idem-cache","priority":"medium"}`)
 	key := "idem-" + uuid.NewString()
 
 	do := func() *http.Response {
@@ -102,7 +102,7 @@ func TestHTTP_idempotency_disabled_allows_duplicate_post(t *testing.T) {
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	const body = `{"title":"idem-off","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"idem-off","priority":"medium"}`)
 	key := "idem-off-" + uuid.NewString()
 
 	do := func() int {
@@ -158,7 +158,7 @@ func TestHTTP_idempotency_different_body_same_key_creates_two(t *testing.T) {
 
 	post := func(title string) {
 		t.Helper()
-		body := `{"title":"` + title + `","priority":"medium"}`
+		body := withCreateChecklist(`{"title":"` + title + `","priority":"medium"}`)
 		req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
@@ -201,7 +201,7 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 	srv := httptest.NewServer(WithIdempotency(NewHandler(st, NewSSEHub(), nil)))
 	t.Cleanup(srv.Close)
 
-	const body = `{"title":"idem-concurrent","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"idem-concurrent","priority":"medium"}`)
 	key := "idem-conc-" + uuid.NewString()
 
 	var wg sync.WaitGroup
@@ -263,7 +263,7 @@ func TestWithAccessLog_idempotencyKeyTooLong_logIncludesRequestID(t *testing.T) 
 	h := WithAccessLog(WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil)))
 
 	longKey := strings.Repeat("k", 128+1)
-	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"x","priority":"medium"}`))
+	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(withCreateChecklist(`{"title":"x","priority":"medium"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", longKey)
 	req.Header.Set("X-Request-ID", "rid-idem-key-long")
@@ -304,7 +304,7 @@ func TestHTTP_idempotency_rejects_overlength_key(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	longKey := strings.Repeat("k", 128+1)
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(`{"title":"idem-long","priority":"medium"}`))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(withCreateChecklist(`{"title":"idem-long","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestHTTP_idempotency_accepts_boundary_key_length(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	key := strings.Repeat("k", 128)
-	body := `{"title":"idem-boundary","priority":"medium"}`
+	body := withCreateChecklist(`{"title":"idem-boundary","priority":"medium"}`)
 
 	do := func() (int, string) {
 		req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(body))
@@ -376,7 +376,7 @@ func TestHTTP_idempotency_rejects_unknown_content_length(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
-	req := httptest.NewRequest(http.MethodPost, "/tasks", io.NopCloser(strings.NewReader(`{"title":"idem-unknown","priority":"medium"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/tasks", io.NopCloser(strings.NewReader(withCreateChecklist(`{"title":"idem-unknown","priority":"medium"}`))))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", "idem-unknown-len")
 	req.ContentLength = -1
@@ -402,7 +402,7 @@ func TestHTTP_idempotency_rejects_large_content_length(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	h := WithIdempotency(NewHandler(store.NewStore(db), NewSSEHub(), nil))
 
-	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(`{"title":"idem-large","priority":"medium"}`))
+	req := httptest.NewRequest(http.MethodPost, "/tasks", strings.NewReader(withCreateChecklist(`{"title":"idem-large","priority":"medium"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", "idem-large-len")
 	req.ContentLength = (1 << 20) + 1

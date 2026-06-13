@@ -17,7 +17,7 @@ func TestHTTP_create_and_list(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"hello","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"hello","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestHTTP_patch_and_delete(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"t","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestHTTP_patch_json_null_leaves_field_unchanged(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"t","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"t","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestHTTP_patch_rejects_empty_patch(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"x","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"x","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +344,7 @@ func TestHTTP_domain_tasks_created_and_updated_counters(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"metric-t","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"metric-t","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func TestHTTP_domain_tasks_deleted_counter(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"to-delete","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"to-delete","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

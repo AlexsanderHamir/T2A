@@ -20,7 +20,7 @@ func TestHTTP_createTask_onHoldStatusAllowed(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	res, raw := postCreate(t, srv.URL, `{"title":"hold","priority":"medium","status":"on_hold"}`)
+	res, raw := postCreate(t, srv.URL, withCreateChecklist(`{"title":"hold","priority":"medium","status":"on_hold"}`))
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("status %d (want 201; on_hold is a valid create-time status) body=%s", res.StatusCode, raw)
 	}

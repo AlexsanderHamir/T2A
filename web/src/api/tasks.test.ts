@@ -261,6 +261,7 @@ describe("createTask", () => {
       priority: "medium",
       draft_id: "draft-xyz",
       project_context_item_ids: ["ctx-1", "ctx-2"],
+      checklist_items: [{ text: "Criterion A" }],
     });
 
     expect(spy).toHaveBeenCalledWith(
@@ -281,6 +282,33 @@ describe("createTask", () => {
       priority: "medium",
       draft_id: "draft-xyz",
       project_context_item_ids: ["ctx-1", "ctx-2"],
+      checklist_items: [{ text: "Criterion A" }],
+    });
+  });
+
+  it("always sends checklist_items on POST /tasks", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "x",
+          title: "A",
+          initial_prompt: "",
+          status: "ready",
+          priority: "medium",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await createTask({
+      title: "A",
+      priority: "high",
+      checklist_items: [{ text: "Add endpoint row" }],
+    });
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      checklist_items: [{ text: "Add endpoint row" }],
     });
   });
 
@@ -298,7 +326,11 @@ describe("createTask", () => {
       ),
     );
 
-    await createTask({ title: "A", priority: "high" });
+    await createTask({
+      title: "A",
+      priority: "high",
+      checklist_items: [{ text: "Done" }],
+    });
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toMatchObject({

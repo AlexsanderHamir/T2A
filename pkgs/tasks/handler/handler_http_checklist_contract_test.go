@@ -208,11 +208,27 @@ func TestHTTP_patchChecklistItem_doneAgentReturnsItemsView(t *testing.T) {
 	if err := json.Unmarshal(raw, &out); err != nil {
 		t.Fatalf("decode items: %v", err)
 	}
-	if len(out.Items) != 1 {
-		t.Fatalf("items len=%d want 1", len(out.Items))
+	if len(out.Items) != 2 {
+		t.Fatalf("items len=%d want 2", len(out.Items))
 	}
-	got := out.Items[0]
-	if got.ID != it.ID || got.Text != "review" || !got.Done {
+	var got *struct {
+		ID         string `json:"id"`
+		SortOrder  int    `json:"sort_order"`
+		Text       string `json:"text"`
+		Done       bool   `json:"done"`
+		Evidence   string `json:"evidence"`
+		VerifiedBy string `json:"verified_by"`
+	}
+	for i := range out.Items {
+		if out.Items[i].ID == it.ID {
+			got = &out.Items[i]
+			break
+		}
+	}
+	if got == nil {
+		t.Fatalf("patched item missing from %#v", out.Items)
+	}
+	if got.Text != "review" || !got.Done {
 		t.Fatalf("item=%+v want id=%s text=review done=true", got, it.ID)
 	}
 }
@@ -654,7 +670,7 @@ func TestHTTP_deleteChecklistItem_errorPathsNeverPublish(t *testing.T) {
 func mustCreateChecklistTask(t *testing.T, srv *httptest.Server, title string) string {
 	t.Helper()
 	res, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"title":"`+title+`","priority":"medium"}`))
+		strings.NewReader(withCreateChecklist(`{"title":"`+title+`","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -50,7 +50,7 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
+| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |

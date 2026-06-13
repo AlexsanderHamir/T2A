@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AppSettings } from "@/api/settings";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  addChecklistItem,
   createTask as apiCreate,
   deleteTaskDraft as apiDeleteDraft,
   evaluateDraftTask as apiEvaluateDraft,
@@ -16,7 +15,6 @@ import {
   draftAutosaveSignature,
 } from "../task-drafts";
 import { errorMessage } from "@/lib/errorMessage";
-import { useOptionalToast } from "@/shared/toast";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_PROJECT_ID,
@@ -26,6 +24,11 @@ import {
   type TaskDependencyEdge,
 } from "@/types";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
+import {
+  CREATE_CHECKLIST_REQUIRED_MSG,
+  nonEmptyChecklistCount,
+  normalizeChecklistItems,
+} from "../task-compose/checklistRequirement";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -46,26 +49,12 @@ type CreateTaskMutationInput = {
   depends_on: TaskDependencyEdge[];
 };
 
-async function addChecklistItems(taskId: string, items: string[]) {
-  const rows = items.map((raw) => raw.trim()).filter(Boolean);
-  await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
-}
-
-/** Checklist rows after the task row exists. */
-async function finishTaskCreateExtras(
-  task: { id: string },
-  input: CreateTaskMutationInput,
-) {
-  await addChecklistItems(task.id, input.checklistItems);
-}
-
 /**
  * Create-task modal, draft autosave, draft picker, and related mutations.
  * Composed by `useTasksApp`.
  */
 export function useTaskCreateFlow() {
   const queryClient = useQueryClient();
-  const toast = useOptionalToast();
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
@@ -328,33 +317,18 @@ export function useTaskCreateFlow() {
         ...(input.tags.length > 0 ? { tags: input.tags } : {}),
         ...(input.milestone ? { milestone: input.milestone } : {}),
         ...(input.depends_on.length > 0 ? { depends_on: input.depends_on } : {}),
+        checklist_items: normalizeChecklistItems(input.checklistItems),
       });
       return { task, input };
     },
-    onSuccess: ({ task, input }, variables) => {
-      // Close as soon as the task row exists — checklist rows may take an
-      // extra round-trip. SSE already puts the task in the list behind the
-      // modal; keeping the sheet open until every checklist POST finishes
-      // felt broken even though the task was already live.
+    onSuccess: (_result, variables) => {
+      // Close as soon as the task row exists (checklist_items are created atomically).
       if (newDraftIDRef.current === variables.draft_id) {
         closeCreateModal();
       }
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       void queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
-
-      void finishTaskCreateExtras(task, input)
-        .then(() => {
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-        })
-        .catch((err: unknown) => {
-          toast.error(
-            `Task created, but some follow-up steps failed: ${errorMessage(err)}`,
-          );
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-        });
     },
   });
 
@@ -655,6 +629,11 @@ export function useTaskCreateFlow() {
 
   function evaluateDraftBeforeCreate() {
     if (!newTitle.trim() || !newPriority) return;
+    if (nonEmptyChecklistCount(newChecklistItems) < 1) {
+      setCreateFormError(CREATE_CHECKLIST_REQUIRED_MSG);
+      return;
+    }
+    setCreateFormError(null);
     evaluateDraftMutation.mutate({
       id: newDraftID,
       title: newTitle.trim(),
@@ -668,6 +647,10 @@ export function useTaskCreateFlow() {
   async function submitCreate(e: FormEvent) {
     e.preventDefault();
     if (!newTitle.trim() || !newPriority) return;
+    if (nonEmptyChecklistCount(newChecklistItems) < 1) {
+      setCreateFormError(CREATE_CHECKLIST_REQUIRED_MSG);
+      return;
+    }
     setCreateFormError(null);
     // Autonomy off => create the task in on_hold so the agent worker
     // skips it on dequeue (ReadyForAgentPickup gates on Status==Ready,
@@ -833,7 +816,13 @@ export function useTaskCreateFlow() {
   const appendNewChecklistCriterion = useCallback((raw: string) => {
     const t = raw.trim();
     if (!t) return;
-    setNewChecklistItems((prev) => [...prev, t]);
+    setNewChecklistItems((prev) => {
+      const next = [...prev, t];
+      if (nonEmptyChecklistCount(next) >= 1) {
+        setCreateFormError(null);
+      }
+      return next;
+    });
   }, []);
 
   const removeNewChecklistRow = useCallback((index: number) => {

@@ -137,7 +137,7 @@
 }
 
 /*
- * Required-field marker: a single brand-tinted asterisk next to the label.
+ * Required-field marker: a single red asterisk next to the label.
  * Optional fields render nothing (DS §7 — "Required fields: mark with *").
  */
 .field-req {
@@ -149,7 +149,7 @@
 }
 
 .field-req--required {
-  color: var(--brand);
+  color: var(--danger);
 }
 
 .checkbox-label-body {

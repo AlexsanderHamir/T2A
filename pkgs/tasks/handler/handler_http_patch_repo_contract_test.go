@@ -29,7 +29,7 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string)
 	t.Cleanup(srv.Close)
 
 	res, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(`{"title":"seed","priority":"medium"}`))
+		strings.NewReader(withCreateChecklist(`{"title":"seed","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

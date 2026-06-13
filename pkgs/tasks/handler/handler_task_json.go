@@ -32,6 +32,7 @@ type taskCreateJSON struct {
 	Milestone       *string          `json:"milestone,omitempty"`
 	Gate            *domain.TaskGate `json:"gate,omitempty"`
 	DependsOn       dependsOnWire    `json:"depends_on,omitempty"`
+	ChecklistItems  []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
 }
 
 type taskEvaluateJSON struct {

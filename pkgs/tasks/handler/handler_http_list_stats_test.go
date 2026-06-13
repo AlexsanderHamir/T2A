@@ -19,7 +19,7 @@ func TestHTTP_list_keyset_after_id(t *testing.T) {
 	id3 := "20000000-0000-4000-8000-000000000003"
 	for _, id := range []string{id1, id2, id3} {
 		res, err := http.Post(srv.URL+"/tasks", "application/json",
-			strings.NewReader(`{"id":"`+id+`","title":"x","priority":"medium"}`))
+			strings.NewReader(withCreateChecklist(`{"id":"`+id+`","title":"x","priority":"medium"}`)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +74,7 @@ func TestHTTP_tasks_stats_global_counts(t *testing.T) {
 		`{"title":"critical one","priority":"critical","status":"running"}`,
 		`{"title":"critical ready","priority":"critical","status":"ready"}`,
 	} {
-		res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+		res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(body)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -159,7 +159,7 @@ func TestHTTP_tasks_stats_scheduled_count(t *testing.T) {
 		`{"title":"ready future schedule","priority":"medium","status":"ready","pickup_not_before":"` + futureISO + `"}`,
 		`{"title":"running future schedule","priority":"medium","status":"running","pickup_not_before":"` + futureISO + `"}`,
 	} {
-		res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+		res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(body)))
 		if err != nil {
 			t.Fatalf("create task: %v body=%s", err, body)
 		}

@@ -16,7 +16,7 @@ func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) 
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"chk","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) 
 	if err := json.Unmarshal(patchBody, &out); err != nil {
 		t.Fatal(err)
 	}
-	if len(out.Items) != 1 || out.Items[0].Text != "beta" {
+	if len(out.Items) != 2 || out.Items[1].Text != "beta" {
 		t.Fatalf("items %#v", out.Items)
 	}
 }
@@ -79,7 +79,7 @@ func TestHTTP_patch_checklist_item_done_rejects_default_user_actor(t *testing.T)
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"chk","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestHTTP_patch_checklist_item_rejects_text_and_done_together(t *testing.T) 
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"chk","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestHTTP_patch_checklist_item_rejects_empty_trimmed_text(t *testing.T) {
 	defer srv.Close()
 	ctx := context.Background()
 
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(`{"title":"chk","priority":"medium"}`))
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(withCreateChecklist(`{"title":"chk","priority":"medium"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -83,7 +83,7 @@ func TestWithAccessLog_idempotencyCacheEviction_logIncludesRequestID(t *testing.
 	const rid = "rid-idem-cache-evict"
 	post := func(key, title string) {
 		t.Helper()
-		body := `{"title":"` + title + `","priority":"medium"}`
+		body := withCreateChecklist(`{"title":"` + title + `","priority":"medium"}`)
 		req, err := http.NewRequest(http.MethodPost, srv.URL+"/tasks", strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)

@@ -8,7 +8,6 @@ import { settingsQueryKeys } from "../task-query";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
 
 vi.mock("../../api", () => ({
-  addChecklistItem: vi.fn(),
   createTask: vi.fn(),
   deleteTaskDraft: vi.fn(),
   evaluateDraftTask: vi.fn(),
@@ -95,6 +94,7 @@ describe("useTaskCreateFlow", () => {
       result.current.openCreateModal();
       result.current.setNewTitle("Fresh task");
       result.current.setNewPriority("medium");
+      result.current.appendNewChecklistCriterion("Ship with tests");
     });
 
     act(() => {
@@ -107,8 +107,35 @@ describe("useTaskCreateFlow", () => {
       expect(mockedCreateTask).toHaveBeenCalledTimes(1);
     });
     expect(mockedCreateTask).toHaveBeenCalledWith(
-      expect.objectContaining({ project_id: DEFAULT_PROJECT_ID }),
+      expect.objectContaining({
+        project_id: DEFAULT_PROJECT_ID,
+        checklist_items: [{ text: "Ship with tests" }],
+      }),
     );
+  });
+
+  it("does not call createTask when done criteria are empty", async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+      result.current.setNewTitle("No criteria");
+      result.current.setNewPriority("medium");
+    });
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent);
+    });
+
+    expect(mockedCreateTask).not.toHaveBeenCalled();
+    expect(result.current.createFormError).toMatch(/done criterion/i);
   });
 
   it("forwards the operator's project_context_item_ids on create", async () => {
@@ -127,6 +154,7 @@ describe("useTaskCreateFlow", () => {
       result.current.setNewPriority("medium");
       result.current.setNewProjectID("project-7");
       result.current.setNewProjectContextItemIDs(["ctx-a", "ctx-b"]);
+      result.current.appendNewChecklistCriterion("Attach context docs");
     });
 
     act(() => {

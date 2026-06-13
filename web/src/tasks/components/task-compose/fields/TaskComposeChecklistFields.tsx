@@ -1,9 +1,10 @@
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import { CREATE_CHECKLIST_REQUIRED_MSG } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
   checklistHeadingId: string;
   checklistItems: string[];
-  /** When `required`, shows the required badge (e.g. parent tasks with subtasks). */
+  /** When `required`, shows the required badge and create-time helper copy. */
   checklistRequirement?: "optional" | "required";
   disabled: boolean;
   onOpenNewCriterion: () => void;
@@ -38,6 +39,9 @@ export function TaskComposeChecklistFields({
           New criterion
         </button>
       </div>
+      {checklistRequirement === "required" && checklistItems.length === 0 ? (
+        <p className="task-create-checklist-helper">{CREATE_CHECKLIST_REQUIRED_MSG}</p>
+      ) : null}
       {checklistItems.length > 0 ? (
         <div className="task-checklist-surface">
           <ul

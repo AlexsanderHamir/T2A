@@ -251,6 +251,11 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 	if err := kernel.AppendEvent(tx, t.ID, seq, domain.EventTaskCreated, by, nil); err != nil {
 		return err
 	}
+	if len(in.ChecklistItems) > 0 {
+		if err := checklist.SeedDefinitionItemsAtCreateInTx(tx, t.ID, in.ChecklistItems, by); err != nil {
+			return err
+		}
+	}
 	if st == domain.StatusDone {
 		if err := checklist.ValidateCanMarkDoneInTx(tx, t.ID); err != nil {
 			return err
