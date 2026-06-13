@@ -6,10 +6,6 @@
 .task-create-modal-sheet.task-create {
   padding: var(--space-6);
   background: var(--bg-elevated);
-  display: flex;
-  flex-direction: column;
-  max-height: min(88vh, 52rem);
-  min-height: 0;
 }
 
 /* —— Header —— */
@@ -20,7 +16,6 @@
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-5);
   border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 72%, transparent);
-  flex-shrink: 0;
 }
 
 .task-create-modal-header__top {
@@ -114,22 +109,7 @@
 
 /* —— Form rhythm —— */
 .task-create-modal-form.task-create-form {
-  gap: 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.task-create-modal-form__scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
   gap: var(--space-5);
-  padding-bottom: var(--space-2);
-  scrollbar-gutter: stable;
 }
 
 .task-create-modal-body {
@@ -333,25 +313,17 @@
   gap: var(--space-2);
 }
 
-.task-create-modal-sheet .task-create-checklist-dropzone {
-  margin-top: var(--space-3);
-}
-
 .task-create-modal-sheet button.task-detail-add-checklist-btn {
   min-width: auto;
-  padding: 0.35rem 0.65rem;
-  font-size: var(--text-xs);
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: transparent;
 }
 
 .task-create-modal-sheet button.task-detail-add-checklist-btn:hover:not(:disabled) {
   color: var(--text-primary);
   background: var(--bg-subtle);
-  border-color: var(--border-interactive-hover);
 }
 
 /* Prompt editor — monospace well on subtle surface */
@@ -481,12 +453,8 @@
 }
 
 .task-create-modal-sheet .task-create-autonomy__switch[data-checked="true"] {
-  background: var(--brand);
-  border-color: var(--brand);
-}
-
-.task-create-modal-sheet .task-create-autonomy__row:focus-within .task-create-autonomy__switch {
-  box-shadow: 0 0 0 3px var(--brand-focus);
+  background: var(--control-primary-bg);
+  border-color: var(--control-primary-bg);
 }
 
 .task-create-modal-sheet .task-create-autonomy__switch-thumb {
@@ -508,6 +476,10 @@
   transform: translate(1.25rem, -50%);
 }
 
+.task-create-modal-sheet .task-create-autonomy__row:focus-within .task-create-autonomy__switch {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
 .task-create-modal-sheet
   .task-create-autonomy__row:has(.task-create-autonomy__input:disabled)
   .task-create-autonomy__switch {
@@ -526,50 +498,6 @@
   border-radius: 0;
   background: transparent;
   overflow: hidden;
-}
-
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker-well {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-inset-field);
-}
-
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker-field {
-  padding-inline: var(--space-3);
-  border: none;
-  box-shadow: none;
-  background: transparent;
-}
-
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker-field-icon {
-  color: var(--text-tertiary);
-}
-
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker-field:focus-within
-  .schedule-picker-field-icon,
-.task-create-modal-sheet
-  .task-create-advanced__body
-  .schedule-picker-well[data-scheduled="true"]
-  .schedule-picker-field-icon {
-  color: var(--brand-text-strong);
 }
 
 .task-create-modal-sheet .task-create-advanced[open] {
@@ -656,117 +584,19 @@
   color: var(--text-tertiary);
 }
 
-/* Footer — pinned action bar */
+/* Footer — near-black primary CTA per redesign */
 .task-create-modal-sheet .task-create-modal-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--space-2) var(--space-3);
-  flex-shrink: 0;
-  margin-top: auto;
-  padding: var(--space-4) 0 0;
+  margin-top: var(--space-2);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--border-hairline);
-  background: var(--bg-elevated);
 }
 
-.task-create-modal-sheet .task-create-cancel-btn {
+.task-create-modal-sheet .task-create-modal-actions__start {
   margin-right: auto;
-  padding: 0.5rem 0.25rem;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  cursor: pointer;
-  transition:
-    color var(--duration-normal) var(--ease-default),
-    background-color var(--duration-normal) var(--ease-default);
-}
-
-.task-create-modal-sheet .task-create-cancel-btn:not(:disabled):hover {
-  color: var(--text-primary);
-  background: transparent;
-}
-
-.task-create-modal-sheet .task-create-cancel-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: var(--radius-sm);
-}
-
-.task-create-modal-sheet .task-create-save-draft-btn {
-  min-height: 2.25rem;
-  padding: 0.45rem 0.85rem;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: none;
-  cursor: pointer;
-  transition:
-    background-color var(--duration-normal) var(--ease-default),
-    border-color var(--duration-normal) var(--ease-default),
-    color var(--duration-normal) var(--ease-default);
-}
-
-.task-create-modal-sheet .task-create-save-draft-btn:not(:disabled):hover {
-  background: var(--bg-subtle);
-  border-color: var(--border-interactive-hover);
-}
-
-.task-create-modal-sheet .task-create-save-draft-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
-.task-create-modal-sheet .task-create-save-draft-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.task-create-modal-sheet .task-create-evaluate-btn {
-  min-height: 2.25rem;
-  min-width: 7.5rem;
-  padding: 0.45rem 0.85rem;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: none;
-  cursor: pointer;
-  transition:
-    background-color var(--duration-normal) var(--ease-default),
-    border-color var(--duration-normal) var(--ease-default),
-    color var(--duration-normal) var(--ease-default),
-    opacity var(--duration-normal) var(--ease-default);
-}
-
-.task-create-modal-sheet .task-create-evaluate-btn:not(:disabled):hover {
-  background: var(--bg-subtle);
-  border-color: var(--border-interactive-hover);
-}
-
-.task-create-modal-sheet .task-create-evaluate-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
-.task-create-modal-sheet .task-create-evaluate-btn:disabled,
-.task-create-modal-sheet .task-create-evaluate-btn[data-criteria-met="false"]:disabled {
-  color: var(--text-disabled);
-  background: var(--bg-subtle);
-  border-color: color-mix(in srgb, var(--border-hairline) 88%, transparent);
-  opacity: 1;
-  cursor: not-allowed;
 }
 
 .task-create-modal-sheet .task-create-modal-actions__end {
@@ -777,34 +607,15 @@
   gap: var(--space-2);
 }
 
-.task-create-modal-sheet .task-create-submit {
-  min-height: 2.25rem;
-  padding: 0.45rem 1rem;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  letter-spacing: var(--text-button-tracking);
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  transition:
-    background-color var(--duration-normal) var(--ease-default),
-    transform var(--duration-fast) var(--ease-default),
-    box-shadow var(--duration-normal) var(--ease-default);
-}
-
 .task-create-modal-sheet .task-create-submit:not(:disabled) {
-  color: var(--text-on-brand);
-  background: var(--brand);
+  color: var(--control-primary-fg);
+  background: var(--control-primary-bg);
+  border: none;
 }
 
 .task-create-modal-sheet .task-create-submit:not(:disabled):hover {
-  background: var(--brand-hover);
+  background: var(--control-primary-hover-bg);
   filter: none;
-}
-
-.task-create-modal-sheet .task-create-submit:not(:disabled):active {
-  transform: scale(0.98);
 }
 
 .task-create-modal-sheet .task-create-submit:not(:disabled):focus-visible {

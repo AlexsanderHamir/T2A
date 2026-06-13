@@ -171,7 +171,6 @@ export function TaskCreateModal({
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <div className="task-create-modal-form__scroll">
             <div className="task-create-modal-body">
               <TaskCreateModalSection
                 variant="essentials"
@@ -291,7 +290,6 @@ export function TaskCreateModal({
               fallback="Could not create task."
               className="task-create-modal-err task-create-modal-err--create"
             />
-            </div>
 
             <TaskCreateModalFooterActions
               disabled={disabled}

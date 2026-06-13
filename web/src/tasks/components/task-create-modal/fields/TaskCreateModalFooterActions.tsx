@@ -30,22 +30,22 @@ export function TaskCreateModalFooterActions({
     nonEmptyChecklistCount(checklistItems) < 1 ||
     disabled;
 
-  const criteriaMet = nonEmptyChecklistCount(checklistItems) >= 1;
-
   return (
-    <footer className="task-create-modal-actions">
-      <button
-        type="button"
-        className="task-create-cancel-btn"
-        disabled={disabled}
-        onClick={onClose}
-      >
-        Cancel
-      </button>
+    <div className="task-create-modal-actions">
+      <div className="task-create-modal-actions__start">
+        <button
+          type="button"
+          className="secondary task-create-cancel-btn"
+          disabled={disabled}
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+      </div>
       <div className="task-create-modal-actions__end">
         <button
           type="button"
-          className="task-create-save-draft-btn"
+          className="secondary"
           disabled={disabled || draftSaving}
           onClick={onSaveDraft}
         >
@@ -53,9 +53,8 @@ export function TaskCreateModalFooterActions({
         </button>
         <button
           type="button"
-          className="task-create-evaluate-btn"
+          className="secondary task-create-evaluate-btn"
           disabled={evalAndSubmitDisabled}
-          data-criteria-met={criteriaMet ? "true" : "false"}
           onClick={onEvaluate}
         >
           {evaluatePending ? "Evaluating…" : "Evaluate"}
@@ -68,6 +67,6 @@ export function TaskCreateModalFooterActions({
           Create task
         </button>
       </div>
-    </footer>
+    </div>
   );
 }
