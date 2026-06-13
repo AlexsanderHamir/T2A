@@ -26,14 +26,6 @@ func EvaluateDraftTask(ctx context.Context, db *gorm.DB, in DraftTaskInput, by d
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
-	tt := in.TaskType
-	if tt == "" {
-		tt = domain.TaskTypeGeneral
-	}
-	if !kernel.ValidTaskType(tt) {
-		return nil, fmt.Errorf("%w: invalid task_type", domain.ErrInvalidInput)
-	}
-	in.TaskType = tt
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	out := buildResult(in, rng)
 	if err := persistRow(ctx, db, in, by, out); err != nil {

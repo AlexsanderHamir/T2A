@@ -134,11 +134,10 @@ func TestHTTP_patchTask_400ErrorStrings(t *testing.T) {
 		want string
 	}{
 		{"noFields_emptyObject", `{}`, "no fields to update"},
-		{"noFields_allNulls", `{"status":null,"priority":null,"title":null,"task_type":null,"initial_prompt":null}`, "no fields to update"},
+		{"noFields_allNulls", `{"status":null,"priority":null,"title":null,"initial_prompt":null}`, "no fields to update"},
 		{"emptyTitle", `{"title":"   "}`, "title"},
 		{"invalidPriority", `{"priority":"nope"}`, "priority"},
 		{"invalidStatus", `{"status":"nope"}`, "status"},
-		{"invalidTaskType", `{"task_type":"nope"}`, "task_type"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

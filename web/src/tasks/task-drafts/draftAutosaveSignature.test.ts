@@ -13,14 +13,12 @@ function baseInput(): DraftAutosaveSignatureInput {
     title: "Hello",
     prompt: "<p>body</p>",
     priority: "medium",
-    taskType: "general",
     runner: TASK_TEST_DEFAULTS.runner,
     cursorModel: TASK_TEST_DEFAULTS.cursor_model,
     projectId: "",
     projectContextItemIds: [],
     checklistItems: [],
     latestEvaluation: null,
-    dmapConfig: { commitLimit: "1", domain: "", description: "" },
   };
 }
 
@@ -86,14 +84,12 @@ describe("draftAutosaveSignature", () => {
         title: "Hello",
         initial_prompt: "<p>Body</p>",
         priority: "medium",
-        task_type: "general",
         runner: TASK_TEST_DEFAULTS.runner,
         cursor_model: TASK_TEST_DEFAULTS.cursor_model,
         project_id: "",
         project_context_item_ids: [],
         checklist_items: [],
         latest_evaluation: null,
-        dmap_config: { commitLimit: "1", domain: "", description: "" },
       },
     });
   });

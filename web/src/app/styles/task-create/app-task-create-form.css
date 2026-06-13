@@ -488,17 +488,6 @@
   min-width: min(100%, 12rem);
 }
 
-/* Task type should read as supportive metadata, not a primary emphasis token. */
-.task-create .task-type-select .custom-select-value-neutral {
-  color: var(--text-secondary);
-  font-weight: 450;
-}
-
-.task-create .task-type-select .custom-select-trigger:hover:not(:disabled) .custom-select-value-neutral,
-.task-create .task-type-select .custom-select-trigger:focus-visible .custom-select-value-neutral {
-  color: var(--text-primary);
-}
-
 .task-create button.custom-select-trigger {
   border-radius: var(--radius-md);
   background: var(--bg-elevated);

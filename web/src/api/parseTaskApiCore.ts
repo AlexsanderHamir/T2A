@@ -6,14 +6,12 @@ import {
   PRIORITIES,
   STATUSES,
   TASK_EVENT_TYPES,
-  TASK_TYPES,
   type CycleStatus,
   type Phase,
   type PhaseStatus,
   type Priority,
   type Status,
   type TaskEventType,
-  type TaskType,
 } from "@/types";
 
 export function isRecord(v: unknown): v is Record<string, unknown> {
@@ -51,13 +49,6 @@ export function parsePriority(v: unknown): Priority {
 export function parsePriorityChoice(v: unknown): Priority | "" {
   if (v === undefined || v === null || v === "") return "";
   return parsePriority(v);
-}
-
-export function parseTaskType(v: unknown): TaskType {
-  if (typeof v !== "string" || !(TASK_TYPES as readonly string[]).includes(v)) {
-    throw new Error("Invalid API response: task_type must be a known task type");
-  }
-  return v as TaskType;
 }
 
 export function parseFiniteNumber(v: unknown, field: string): number {

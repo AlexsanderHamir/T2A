@@ -37,7 +37,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     initial_prompt: "",
     status: "ready",
     priority: "medium",
-    task_type: "general",
     runner: "cursor",
     cursor_model: "",
     project_id: DEFAULT_PROJECT_ID,
@@ -203,7 +202,6 @@ describe("useTaskCreateFlow", () => {
 
     expect(result.current.newTitle).toBe(scenario.title);
     expect(result.current.newPriority).toBe(scenario.priority);
-    expect(result.current.newTaskType).toBe(scenario.taskType);
     expect(result.current.newChecklistItems).toEqual(scenario.checklist);
     // Prompt is wrapped in <p> blocks by plainTextToInitialHtml; assert the
     // first paragraph contains the scenario's first line so we know the
@@ -222,7 +220,6 @@ describe("useTaskCreateFlow", () => {
         title: "Resumed",
         initial_prompt: "<p>Body</p>",
         priority: "high",
-        task_type: "general",
         runner: "cursor",
         cursor_model: "",
         project_id: "project-resume",

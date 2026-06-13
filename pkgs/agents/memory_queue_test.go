@@ -12,7 +12,7 @@ func TestMemoryQueue_NotifyReadyTask_rejectsCancelledContext(t *testing.T) {
 	q := NewMemoryQueue(2)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium}
 	err := q.NotifyReadyTask(ctx, t1)
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v want context.Canceled", err)
@@ -21,7 +21,7 @@ func TestMemoryQueue_NotifyReadyTask_rejectsCancelledContext(t *testing.T) {
 
 func TestMemoryQueue_deliversTask(t *testing.T) {
 	q := NewMemoryQueue(2)
-	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium}
 	if err := q.NotifyReadyTask(context.Background(), t1); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestMemoryQueue_deliversTask(t *testing.T) {
 
 func TestMemoryQueue_ErrAlreadyQueued(t *testing.T) {
 	q := NewMemoryQueue(2)
-	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium}
 	if err := q.NotifyReadyTask(context.Background(), t1); err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestMemoryQueue_BufferCap_and_BufferDepth(t *testing.T) {
 	if q.BufferDepth() != 0 {
 		t.Fatalf("empty depth: got %d", q.BufferDepth())
 	}
-	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium}
 	if err := q.NotifyReadyTask(context.Background(), t1); err != nil {
 		t.Fatal(err)
 	}
@@ -67,8 +67,8 @@ func TestMemoryQueue_BufferCap_and_BufferDepth(t *testing.T) {
 
 func TestMemoryQueue_fullReturnsErrQueueFull(t *testing.T) {
 	q := NewMemoryQueue(1)
-	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
-	t2 := domain.Task{ID: "22222222-2222-4222-8222-222222222222", Title: "b", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}
+	t1 := domain.Task{ID: "11111111-1111-4111-8111-111111111111", Title: "a", Priority: domain.PriorityMedium}
+	t2 := domain.Task{ID: "22222222-2222-4222-8222-222222222222", Title: "b", Priority: domain.PriorityMedium}
 	if err := q.NotifyReadyTask(context.Background(), t1); err != nil {
 		t.Fatal(err)
 	}

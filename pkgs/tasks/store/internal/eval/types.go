@@ -22,7 +22,6 @@ type DraftTaskInput struct {
 	InitialPrompt  string
 	Status         domain.Status
 	Priority       domain.Priority
-	TaskType       domain.TaskType
 	ChecklistItems []ChecklistItemInput
 }
 

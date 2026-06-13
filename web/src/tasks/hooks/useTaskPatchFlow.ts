@@ -11,7 +11,7 @@ import {
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
-import type { Priority, Status, Task, TaskListResponse, TaskType } from "@/types";
+import type { Priority, Status, Task, TaskListResponse } from "@/types";
 import {
   bumpOptimisticVersion,
   clearOptimisticVersion,
@@ -23,7 +23,6 @@ export type TaskPatchInput = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
-  task_type: TaskType;
   project_id?: string | null;
   project_context_item_ids?: string[];
   tags?: string[];
@@ -81,7 +80,6 @@ function patchTaskInList(
           initial_prompt: patch.initial_prompt,
           status: patch.status,
           priority: patch.priority,
-          task_type: patch.task_type,
           project_id:
             patch.project_id === undefined
               ? t.project_id
@@ -136,7 +134,6 @@ export function useTaskPatchFlow(opts: {
         initial_prompt: input.initial_prompt,
         status: input.status,
         priority: input.priority,
-        task_type: input.task_type,
         project_id: input.project_id,
         project_context_item_ids: input.project_context_item_ids,
         tags: input.tags,
@@ -173,7 +170,6 @@ export function useTaskPatchFlow(opts: {
           initial_prompt: input.initial_prompt,
           status: input.status,
           priority: input.priority,
-          task_type: input.task_type,
           project_id:
             input.project_id === undefined
               ? detailPrev.project_id

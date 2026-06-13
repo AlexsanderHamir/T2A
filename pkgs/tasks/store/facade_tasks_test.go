@@ -70,26 +70,6 @@ func TestStore_Create_rejects_invalid_priority(t *testing.T) {
 	}
 }
 
-func TestStore_Create_defaults_task_type_to_general(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	got, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.TaskType != domain.TaskTypeGeneral {
-		t.Fatalf("task type %q", got.TaskType)
-	}
-}
-
-func TestStore_Create_rejects_invalid_task_type(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	tt := domain.TaskType("nope")
-	_, err := s.Create(context.Background(), CreateTaskInput{Title: "ok", Priority: domain.PriorityMedium, TaskType: tt}, domain.ActorUser)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
-	}
-}
-
 func TestStore_Create_rejects_invalid_actor(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	_, err := s.Create(context.Background(), CreateTaskInput{Priority: domain.PriorityMedium, Title: "ok"}, domain.Actor("system"))

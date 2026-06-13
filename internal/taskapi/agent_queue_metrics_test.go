@@ -19,7 +19,7 @@ func TestRegisterAgentQueueMetricsOn_depthAndCapacity(t *testing.T) {
 	ctx := t.Context()
 	t1 := domain.Task{
 		ID: "a1", Title: "t", InitialPrompt: "",
-		Status: domain.StatusReady, Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral,
+		Status: domain.StatusReady, Priority: domain.PriorityMedium,
 	}
 	if err := q.NotifyReadyTask(ctx, t1); err != nil {
 		t.Fatal(err)

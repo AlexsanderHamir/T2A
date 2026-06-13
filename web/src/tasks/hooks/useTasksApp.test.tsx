@@ -281,7 +281,6 @@ describe("useTasksApp saveDraftMutation race", () => {
         title: "Draft B title",
         initial_prompt: "Draft B prompt",
         priority: "high",
-        task_type: "general",
         checklist_items: [],
       },
     });
@@ -521,7 +520,6 @@ describe("useTasksApp createMutation race", () => {
         title: "Draft B title",
         initial_prompt: "Draft B prompt",
         priority: "high",
-        task_type: "general",
         checklist_items: [],
       },
     });
@@ -646,7 +644,6 @@ describe("useTasksApp resumeDraftMutation race", () => {
         title,
         initial_prompt: `${title} prompt`,
         priority: "medium",
-        task_type: "general",
         checklist_items: [],
       },
     } as TaskDraftDetail;

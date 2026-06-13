@@ -22,6 +22,10 @@ func seedInterruptedExecute(t *testing.T, st *store.Store, ctx context.Context) 
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
+	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add checklist: %v", err)
+	}
 	running := domain.StatusRunning
 	if _, err := st.Update(ctx, tsk.ID, store.UpdateTaskInput{Status: &running}, domain.ActorAgent); err != nil {
 		t.Fatalf("update running: %v", err)
@@ -40,10 +44,6 @@ func seedInterruptedExecute(t *testing.T, st *store.Store, ctx context.Context) 
 		Status: domain.PhaseStatusFailed, Summary: &summary, By: domain.ActorAgent,
 	}); err != nil {
 		t.Fatalf("complete execute interrupt: %v", err)
-	}
-	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
-	if err != nil {
-		t.Fatalf("add checklist: %v", err)
 	}
 	if err := st.UpsertVerifyReports(ctx, cycle.ID, 1, []store.VerifyReportEntry{
 		{CriterionID: item.ID, Verified: true, VerifierKind: domain.VerifierAgentSelf, Reasoning: "locked"},

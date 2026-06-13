@@ -23,7 +23,6 @@ const validTask = {
   initial_prompt: "",
   status: "ready",
   priority: "medium",
-  task_type: "general",
   tags: [] as string[],
   depends_on: [] as { task_id: string; satisfies?: string }[],
   ...TASK_TEST_DEFAULTS,
@@ -1103,7 +1102,6 @@ describe("parseTaskDraftDetail (payload.priority validation)", () => {
       title: "t",
       initial_prompt: "p",
       priority: "medium",
-      task_type: "general",
       checklist_items: [],
     },
   };

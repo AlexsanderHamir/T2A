@@ -21,7 +21,6 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `initial_prompt` | string (HTML) | TipTap rich text; validated for `@`-mentions when `app_settings.repo_root` is set. |
 | `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
-| `task_type` | enum | `general` / `bug_fix` / `feature` / `refactor` / `docs`. Default `general`. |
 | `project_id` | string \| null | Optional project membership. |
 | `project_context_item_ids` | string[] | Explicit allowlist of project context items for runner snapshots. Cleared on `project_id` change. |
 | `tags` | string[] | Free-form, `^[a-z0-9][a-z0-9._-]{0,31}$`. |

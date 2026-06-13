@@ -24,7 +24,6 @@ func TestHTTP_evaluateDraft_envelopeShape(t *testing.T) {
 		"initial_prompt":"Handle nested mentions and malformed ranges with clear errors.",
 		"priority":"high",
 		"status":"ready",
-		"task_type":"feature",
 		"checklist_items":[{"text":"Add parser tests"},{"text":"Document edge cases"}]
 	}`
 	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(body))
@@ -161,25 +160,6 @@ func TestHTTP_evaluateDraft_emptyBody(t *testing.T) {
 	}
 	if len(env.Sections) != 4 {
 		t.Fatalf("sections len=%d want 4", len(env.Sections))
-	}
-}
-
-// TestHTTP_evaluateDraft_invalidTaskTypeReturns400 pins the documented 400
-// for invalid `task_type` (the only required-shape validation the store
-// performs after task_type defaulting in EvaluateDraftTask).
-func TestHTTP_evaluateDraft_invalidTaskTypeReturns400(t *testing.T) {
-	srv := newTaskTestServer(t)
-	defer srv.Close()
-
-	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json",
-		strings.NewReader(`{"title":"x","task_type":"not-a-real-type"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, body)
 	}
 }
 

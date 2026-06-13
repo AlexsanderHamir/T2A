@@ -35,17 +35,6 @@ func ValidPriority(p domain.Priority) bool {
 	}
 }
 
-// ValidTaskType reports whether t is a writable domain.TaskType enum.
-func ValidTaskType(t domain.TaskType) bool {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidTaskType")
-	switch t {
-	case domain.TaskTypeGeneral, domain.TaskTypeBugFix, domain.TaskTypeFeature, domain.TaskTypeRefactor, domain.TaskTypeDocs:
-		return true
-	default:
-		return false
-	}
-}
-
 // ValidateActor returns domain.ErrInvalidInput when a is not a known actor enum.
 func ValidateActor(a domain.Actor) error {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidateActor")

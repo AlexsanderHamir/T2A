@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
-import type { PriorityChoice, TaskType } from "@/types";
+import type { PriorityChoice } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
-import { TaskTypeSelect } from "./TaskTypeSelect";
 import {
   RichPromptEditor,
   type RichPromptEditorProjectContextProps,
@@ -16,7 +15,6 @@ export type TaskComposeFieldsProps = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  taskType: TaskType;
   checklistItems: string[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
   hideChecklist?: boolean;
@@ -26,7 +24,6 @@ export type TaskComposeFieldsProps = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onTaskTypeChange: (t: TaskType) => void;
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
@@ -46,7 +43,6 @@ export function TaskComposeFields({
   title,
   prompt,
   priority,
-  taskType,
   checklistItems,
   hideChecklist = false,
   checklistRequirement = "optional",
@@ -54,7 +50,6 @@ export function TaskComposeFields({
   onTitleChange,
   onPromptChange,
   onPriorityChange,
-  onTaskTypeChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
@@ -64,7 +59,6 @@ export function TaskComposeFields({
   const titleId = `${idsPrefix}-title`;
   const promptId = `${idsPrefix}-prompt`;
   const priorityId = `${idsPrefix}-priority`;
-  const taskTypeId = `${idsPrefix}-task-type`;
   const checklistHeadingId = `${idsPrefix}-checklist-heading`;
 
   const [criterionModalOpen, setCriterionModalOpen] = useState(false);
@@ -111,6 +105,7 @@ export function TaskComposeFields({
           </FieldLabel>
           <input
             id={titleId}
+            className="task-create-title-input"
             value={title}
             onChange={(ev) => onTitleChange(ev.target.value)}
             placeholder="What should get done?"
@@ -124,12 +119,6 @@ export function TaskComposeFields({
           value={priority}
           compact
           onChange={onPriorityChange}
-        />
-        <TaskTypeSelect
-          id={taskTypeId}
-          value={taskType}
-          onChange={onTaskTypeChange}
-          disabled={disabled}
         />
       </div>
 

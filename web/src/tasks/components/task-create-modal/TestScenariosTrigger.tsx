@@ -29,14 +29,31 @@ export const TestScenariosTrigger = forwardRef<HTMLButtonElement, Props>(
         onClick={onToggle}
       >
         <SparkleGlyph />
-        <span>Test scenarios</span>
-        <span className="test-scenarios-trigger-chevron" aria-hidden="true">
-          ▾
-        </span>
+        <span className="test-scenarios-trigger__label">Test scenarios</span>
+        <ChevronGlyph />
       </button>
     );
   },
 );
+
+function ChevronGlyph() {
+  return (
+    <svg
+      className="test-scenarios-trigger-chevron"
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 4.5L6 7.5L9 4.5" />
+    </svg>
+  );
+}
 
 function SparkleGlyph() {
   // 4-point sparkle — same shorthand for "AI / preset / suggested" used by

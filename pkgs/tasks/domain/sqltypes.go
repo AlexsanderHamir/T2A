@@ -48,8 +48,6 @@ func (s *Status) Scan(value any) error          { return scanStringEnum(s, value
 func (s Status) Value() (driver.Value, error)   { return valueStringEnum(s) }
 func (p *Priority) Scan(value any) error        { return scanStringEnum(p, value) }
 func (p Priority) Value() (driver.Value, error) { return valueStringEnum(p) }
-func (t *TaskType) Scan(value any) error        { return scanStringEnum(t, value) }
-func (t TaskType) Value() (driver.Value, error) { return valueStringEnum(t) }
 func (e *EventType) Scan(value any) error       { return scanStringEnum(e, value) }
 func (e EventType) Value() (driver.Value, error) {
 	return valueStringEnum(e)

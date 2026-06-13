@@ -8,12 +8,10 @@ import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import { errorMessage } from "@/lib/errorMessage";
 import {
   DEFAULT_NEW_TASK_STATUS,
-  DEFAULT_NEW_TASK_TYPE,
   DEFAULT_PROJECT_ID,
   type Priority,
   type Status,
   type Task,
-  type TaskType,
 } from "@/types";
 import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
 import { TASK_TIMINGS } from "@/constants/tasks";
@@ -50,7 +48,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   const [editTitle, setEditTitle] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [editPriority, setEditPriority] = useState<Priority>("medium");
-  const [editTaskType, setEditTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
   const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
@@ -209,7 +206,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     setEditTitle(t.title);
     setEditPrompt(t.initial_prompt);
     setEditPriority(t.priority);
-    setEditTaskType(t.task_type ?? DEFAULT_NEW_TASK_TYPE);
     setEditStatus(t.status);
     setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
@@ -246,7 +242,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
       initial_prompt: t.initial_prompt,
       status: t.status,
       priority: t.priority,
-      task_type: t.task_type ?? DEFAULT_NEW_TASK_TYPE,
       project_id: t.project_id ?? null,
       project_context_item_ids: t.project_context_item_ids ?? [],
       cursor_model: changeModelDraft.trim(),
@@ -267,7 +262,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
       initial_prompt: editPrompt,
       status: editStatus,
       priority: editPriority,
-      task_type: editTaskType,
       project_id: editProjectID.trim() || null,
       project_context_item_ids: editProjectContextItemIDs,
       tags: editTagsCsv
@@ -318,9 +312,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     editPrompt,
     setEditPrompt,
     editPriority,
-    editTaskType,
     setEditPriority,
-    setEditTaskType,
     editStatus,
     setEditStatus,
     editProjectID,

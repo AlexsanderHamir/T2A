@@ -17,7 +17,6 @@ type taskCreateJSON struct {
 	InitialPrompt         string          `json:"initial_prompt"`
 	Status                domain.Status   `json:"status"`
 	Priority              domain.Priority `json:"priority"`
-	TaskType              domain.TaskType `json:"task_type"`
 	ProjectID             *string         `json:"project_id"`
 	ProjectContextItemIDs []string        `json:"project_context_item_ids"`
 	Runner                *string         `json:"runner"`
@@ -41,7 +40,6 @@ type taskEvaluateJSON struct {
 	InitialPrompt  string                                  `json:"initial_prompt"`
 	Status         domain.Status                           `json:"status"`
 	Priority       domain.Priority                         `json:"priority"`
-	TaskType       domain.TaskType                         `json:"task_type"`
 	ChecklistItems []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
 }
 
@@ -56,7 +54,6 @@ type taskPatchJSON struct {
 	InitialPrompt         *string                   `json:"initial_prompt"`
 	Status                *domain.Status            `json:"status"`
 	Priority              *domain.Priority          `json:"priority"`
-	TaskType              *domain.TaskType          `json:"task_type"`
 	ProjectID             patchProjectField         `json:"project_id"`
 	ProjectContextItemIDs *[]string                 `json:"project_context_item_ids"`
 	PickupNotBefore       patchPickupNotBeforeField `json:"pickup_not_before"`

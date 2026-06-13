@@ -205,7 +205,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               title={app.editTitle}
               prompt={app.editPrompt}
               priority={app.editPriority}
-              taskType={app.editTaskType}
               status={app.editStatus}
               taskRunner={app.editing.runner}
               cursorModel={app.editCursorModel}
@@ -247,7 +246,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               onTitleChange={app.setEditTitle}
               onPromptChange={app.setEditPrompt}
               onPriorityChange={app.setEditPriority}
-              onTaskTypeChange={app.setEditTaskType}
               onStatusChange={app.setEditStatus}
               onSubmit={(e) => void app.submitEdit(e)}
               onCancel={app.closeEdit}

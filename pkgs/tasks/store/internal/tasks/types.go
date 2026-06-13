@@ -16,7 +16,6 @@ type CreateInput struct {
 	InitialPrompt         string
 	Status                domain.Status
 	Priority              domain.Priority
-	TaskType              domain.TaskType
 	ProjectID             *string
 	ProjectContextItemIDs []string
 	Runner                string
@@ -46,7 +45,6 @@ type UpdateInput struct {
 	InitialPrompt         *string
 	Status                *domain.Status
 	Priority              *domain.Priority
-	TaskType              *domain.TaskType
 	Project               *ProjectFieldPatch
 	ProjectContextItemIDs *[]string
 	PickupNotBefore       *PickupNotBeforePatch

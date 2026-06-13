@@ -7,13 +7,11 @@ export const TASK_TIMINGS = {
 } as const;
 
 export const TASK_DRAFTS: {
-  initialDmapCommitLimit: string;
   untitledDraftName: string;
   createModalDraftListLimit: number;
   draftsPageDefaultLimit: number;
   resumeModalPerPage: number;
 } = {
-  initialDmapCommitLimit: "5",
   untitledDraftName: "Untitled draft",
   createModalDraftListLimit: 100,
   draftsPageDefaultLimit: 50,

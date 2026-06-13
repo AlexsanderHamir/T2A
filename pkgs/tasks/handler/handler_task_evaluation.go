@@ -34,7 +34,6 @@ func (h *Handler) evaluateDraft(w http.ResponseWriter, r *http.Request) {
 		InitialPrompt:  body.InitialPrompt,
 		Status:         body.Status,
 		Priority:       body.Priority,
-		TaskType:       body.TaskType,
 		ChecklistItems: body.ChecklistItems,
 	}, actorFromRequest(r))
 	if err != nil {

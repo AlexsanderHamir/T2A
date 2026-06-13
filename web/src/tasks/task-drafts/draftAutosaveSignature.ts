@@ -1,4 +1,4 @@
-import type { PriorityChoice, TaskType } from "@/types";
+import type { PriorityChoice } from "@/types";
 
 /**
  * Treat editor-empty TipTap markup as the empty string when computing the
@@ -26,7 +26,6 @@ export type DraftAutosaveSignatureInput = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  taskType: TaskType;
   runner: string;
   cursorModel: string;
   /**
@@ -44,11 +43,6 @@ export type DraftAutosaveSignatureInput = {
     overallSummary: string;
     sections: Array<{ key: string; score: number }>;
   } | null;
-  dmapConfig: {
-    commitLimit: string;
-    domain: string;
-    description: string;
-  };
 };
 
 /**
@@ -57,8 +51,7 @@ export type DraftAutosaveSignatureInput = {
  * signature equals the last-saved baseline, the debounce timer skips POST.
  *
  * The shape mirrors `TaskDraftPayload` so the baseline reflects exactly what
- * the server would persist (modulo `dmap_config`, which the hook adds when
- * `task_type === "dmap"` because the wire field is conditional).
+ * the server would persist.
  */
 export function draftAutosaveSignature(
   input: DraftAutosaveSignatureInput,
@@ -70,14 +63,12 @@ export function draftAutosaveSignature(
       title: input.title,
       initial_prompt: normalizeDraftPromptForDirty(input.prompt),
       priority: input.priority,
-      task_type: input.taskType,
       runner: input.runner,
       cursor_model: input.cursorModel,
       project_id: input.projectId,
       project_context_item_ids: input.projectContextItemIds,
       checklist_items: input.checklistItems,
       latest_evaluation: input.latestEvaluation,
-      dmap_config: input.dmapConfig,
     },
   });
 }

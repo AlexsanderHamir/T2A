@@ -1,6 +1,5 @@
 import {
   DEFAULT_NEW_TASK_STATUS,
-  DEFAULT_NEW_TASK_TYPE,
   type Priority,
   type DraftTaskEvaluation,
   type DraftTaskEvaluationInput,
@@ -9,7 +8,6 @@ import {
   type TaskDraftDetail,
   type TaskDraftPayload,
   type TaskDraftSummary,
-  type TaskType,
   type TaskChecklistResponse,
   type TaskEventDetail,
   type TaskEventsResponse,
@@ -231,7 +229,6 @@ export async function createTask(input: {
   initial_prompt?: string;
   status?: Status;
   priority: Priority;
-  task_type?: TaskType;
   id?: string;
   draft_id?: string;
   project_id?: string;
@@ -256,7 +253,6 @@ export async function createTask(input: {
     initial_prompt: input.initial_prompt ?? "",
     status: input.status ?? DEFAULT_NEW_TASK_STATUS,
     priority: input.priority,
-    task_type: input.task_type ?? DEFAULT_NEW_TASK_TYPE,
   };
   if (input.runner !== undefined) {
     body.runner = input.runner;
@@ -320,9 +316,6 @@ export async function evaluateDraftTask(
   }
   if (input.priority) {
     payload.priority = input.priority;
-  }
-  if (input.task_type) {
-    payload.task_type = input.task_type;
   }
   if (input.checklist_items) {
     payload.checklist_items = input.checklist_items;
@@ -401,7 +394,6 @@ export async function patchTask(
     initial_prompt?: string;
     status?: Status;
     priority?: Priority;
-    task_type?: TaskType;
     project_id?: string | null;
     project_context_item_ids?: string[];
     /**
@@ -428,7 +420,6 @@ export async function patchTask(
   if (patch.initial_prompt !== undefined) body.initial_prompt = patch.initial_prompt;
   if (patch.status !== undefined) body.status = patch.status;
   if (patch.priority !== undefined) body.priority = patch.priority;
-  if (patch.task_type !== undefined) body.task_type = patch.task_type;
   if (patch.project_id !== undefined) {
     body.project_id =
       patch.project_id === null

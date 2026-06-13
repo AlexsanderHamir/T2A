@@ -32,7 +32,6 @@ import {
   parsePriority,
   parseStatus,
   parseString,
-  parseTaskType,
 } from "./parseTaskApiCore";
 import { parseTaskGate } from "./parseGate";
 
@@ -374,11 +373,6 @@ export function parseTask(value: unknown): Task {
       value.pickup_not_before,
       "pickup_not_before",
     );
-  }
-  if ("task_type" in value && value.task_type !== undefined) {
-    base.task_type = parseTaskType(value.task_type);
-  } else {
-    base.task_type = "general";
   }
   if (value.project_id !== undefined && value.project_id !== null) {
     const projectID = parseString(value.project_id, "project_id").trim();

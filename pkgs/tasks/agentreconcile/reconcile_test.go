@@ -74,7 +74,7 @@ func TestReconcileReadyTasksNotQueued_stopsOnFull(t *testing.T) {
 	if _, err := st.Create(ctx, store.CreateTaskInput{Title: "b", Priority: domain.PriorityMedium}, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
-	if err := q.NotifyReadyTask(ctx, domain.Task{ID: "00000000-0000-4000-8000-000000000001", Title: "stub", Priority: domain.PriorityMedium, TaskType: domain.TaskTypeGeneral}); err != nil {
+	if err := q.NotifyReadyTask(ctx, domain.Task{ID: "00000000-0000-4000-8000-000000000001", Title: "stub", Priority: domain.PriorityMedium}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -11,36 +11,44 @@
 /* —— Header —— */
 .task-create-modal-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-2);
   margin-bottom: var(--space-6);
-  padding-bottom: 0;
-  border-bottom: none;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 72%, transparent);
 }
 
-.task-create-modal-header__title-row {
+.task-create-modal-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.task-create-modal-header__heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2) var(--space-3);
+  min-width: 0;
 }
 
 .task-create-modal-title {
   margin: 0;
   font-size: var(--text-xl);
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 
 .task-create-modal-subtitle {
-  margin: var(--space-1) 0 0;
+  margin: 0;
   font-size: var(--text-sm);
   line-height: 1.5;
-  color: var(--text-secondary);
-  max-width: 34rem;
+  color: var(--text-tertiary);
+  max-width: 36rem;
 }
 
 .task-create-modal-sheet .task-create-draft-status {
@@ -52,6 +60,56 @@
 
 .task-create-modal-sheet .task-create-draft-status--error {
   color: var(--danger-deep);
+}
+
+/* Test scenarios — quiet secondary action in the modal chrome */
+.task-create-modal-sheet .test-scenarios-trigger {
+  flex-shrink: 0;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem 0.35rem 0.55rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--border-hairline) 88%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.task-create-modal-sheet .test-scenarios-trigger:not(:disabled):hover {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+.task-create-modal-sheet .test-scenarios-trigger:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.task-create-modal-sheet .test-scenarios-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-color: var(--brand-border-focus);
+}
+
+.task-create-modal-sheet .test-scenarios-trigger[data-active="true"] {
+  color: var(--brand-text-strong);
+  background: var(--brand-surface-faint);
+  border-color: var(--brand-border-soft);
+}
+
+.task-create-modal-sheet .test-scenarios-trigger-chevron {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-normal) var(--ease-default);
+}
+
+.task-create-modal-sheet
+  .test-scenarios-trigger[data-active="true"]
+  .test-scenarios-trigger-chevron {
+  transform: rotate(180deg);
+  color: var(--brand-text-strong);
 }
 
 /* —— Form rhythm —— */
@@ -69,12 +127,13 @@
   gap: var(--space-4);
 }
 
-/* Uppercase field labels inside the modal only */
-.task-create-modal-sheet .field-label-with-req label {
-  font-size: var(--text-xs);
+/* Sentence-case labels — uppercase read as shouty on a dense form */
+.task-create-modal-sheet .field-label-with-req label,
+.task-create-modal-sheet .task-create-agent-field > label {
+  font-size: var(--text-sm);
   font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--text-secondary);
 }
 
@@ -82,7 +141,16 @@
   color: var(--text-tertiary);
 }
 
-/* Title row: full-width title, metadata side-by-side below */
+/* Shared field stack inside the modal */
+.task-create-modal-sheet .field,
+.task-create-modal-sheet .field--custom-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--field-label-to-control-gap);
+  min-width: 0;
+}
+
+/* Essentials row: title + priority share one row at ≥560px */
 .task-create-modal-sheet .task-create-title-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -90,27 +158,41 @@
   align-items: end;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 560px) {
   .task-create-modal-sheet .task-create-title-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .task-create-modal-sheet .task-create-title-row .field.grow:first-child {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(10.5rem, 12.5rem);
   }
 }
 
-.task-create-modal-sheet .task-create-title-row .field.grow {
+.task-create-modal-sheet .task-create-title-row > .field,
+.task-create-modal-sheet .task-create-title-row > .field--custom-select {
+  width: 100%;
   min-width: 0;
+  max-width: none;
 }
 
-/* Inputs — flat hairline, no inset shadow stack */
+.task-create-modal-sheet .task-create-title-row .field--custom-select--compact {
+  flex: initial;
+}
+
+/* Full-width controls with matched height + radius (no pill inputs) */
+.task-create-modal-sheet .field input,
+.task-create-modal-sheet .field textarea,
+.task-create-modal-sheet .field .input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-base);
+}
+
 .task-create-modal-sheet input[type="text"],
 .task-create-modal-sheet input:not([type]) {
-  border: 1px solid var(--border-hairline);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: none;
+  box-shadow: var(--shadow-inset-field);
   transition:
     border-color var(--duration-normal) var(--ease-default),
     box-shadow var(--duration-normal) var(--ease-default);
@@ -118,20 +200,22 @@
 
 .task-create-modal-sheet input[type="text"]:hover,
 .task-create-modal-sheet input:not([type]):hover {
-  border-color: color-mix(in srgb, var(--border-hairline) 60%, var(--text-primary) 40%);
+  border-color: var(--border-interactive-hover);
 }
 
 .task-create-modal-sheet input[type="text"]:focus,
 .task-create-modal-sheet input:not([type]):focus {
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-focus);
 }
 
 .task-create-modal-sheet button.custom-select-trigger {
-  border: 1px solid var(--border-hairline);
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  box-shadow: none;
+  box-shadow: var(--shadow-inset-field);
 }
 
 /* Section headings — sentence case, one weight */
@@ -187,15 +271,15 @@
 
 /* Prompt editor — monospace well on subtle surface */
 .task-create-modal-sheet .task-create-editor-shell {
-  border: 1px solid var(--border-hairline);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
   overflow: hidden;
 }
 
 .task-create-modal-sheet .task-create-editor-shell:focus-within {
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-focus);
 }
 
 .task-create-modal-sheet .task-create-editor-shell .rich-prompt-toolbar {
@@ -318,7 +402,7 @@
   height: 1.125rem;
   border-radius: var(--radius-full);
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 12%);
+  box-shadow: var(--shadow-xs);
   transform: translateY(-50%);
   transition: transform var(--duration-normal) var(--ease-default);
 }

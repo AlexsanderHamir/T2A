@@ -97,7 +97,6 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 		"body_draft_id", strings.TrimSpace(body.DraftID),
 		"body_status", string(body.Status),
 		"body_priority", string(body.Priority),
-		"body_task_type", string(body.TaskType),
 		"body_title_len", len(body.Title),
 		"body_title_preview", truncateRunes(body.Title, maxHTTPLogTitleRunes),
 		"body_initial_prompt_len", len(body.InitialPrompt),
@@ -136,9 +135,6 @@ func taskPatchInputFields(body *taskPatchJSON) []any {
 	}
 	if body.Priority != nil {
 		out = append(out, "patch_priority", string(*body.Priority))
-	}
-	if body.TaskType != nil {
-		out = append(out, "patch_task_type", string(*body.TaskType))
 	}
 	if body.ProjectID.Defined {
 		if body.ProjectID.Clear {

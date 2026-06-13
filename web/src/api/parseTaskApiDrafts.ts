@@ -10,7 +10,6 @@ import {
   parseNonEmptyString,
   parsePriorityChoice,
   parseString,
-  parseTaskType,
 } from "./parseTaskApiCore";
 
 /** Validates POST /tasks/evaluate JSON. */
@@ -76,7 +75,6 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
     title: parseString(value.title, "payload.title"),
     initial_prompt: parseString(value.initial_prompt, "payload.initial_prompt"),
     priority: parsePriorityChoice(value.priority),
-    task_type: parseTaskType(value.task_type ?? "general"),
     checklist_items: checklistRaw.map((s, i) => parseString(s, `payload.checklist_items[${i}]`)),
     ...(isRecord(value.latest_evaluation)
       ? {
@@ -100,21 +98,6 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
                     ),
                   }))
               : [],
-          },
-        }
-      : {}),
-    ...(isRecord(value.dmap_config)
-      ? {
-          dmap_config: {
-            commit_limit: parseFiniteNumber(
-              value.dmap_config.commit_limit,
-              "payload.dmap_config.commit_limit",
-            ),
-            domain: parseString(value.dmap_config.domain, "payload.dmap_config.domain"),
-            description: parseString(
-              value.dmap_config.description,
-              "payload.dmap_config.description",
-            ),
           },
         }
       : {}),

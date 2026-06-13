@@ -11,13 +11,6 @@ export type { GateCriterion, GateStatus, TaskGate } from "./gate";
 import type { TaskGate } from "./gate";
 
 export type Priority = "low" | "medium" | "high" | "critical";
-export type TaskType =
-  | "general"
-  | "bug_fix"
-  | "feature"
-  | "refactor"
-  | "docs"
-  | "dmap";
 
 /** Empty string means no selection yet (create / draft forms). */
 export type PriorityChoice = Priority | "";
@@ -35,7 +28,6 @@ export type Task = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
-  task_type?: TaskType;
   /** Agent runner id for this task (e.g. `cursor`); chosen at create time. */
   runner: string;
   /**
@@ -349,20 +341,8 @@ export type DraftTaskEvaluationInput = {
   initial_prompt?: string;
   status?: Status;
   priority?: Priority;
-  task_type?: TaskType;
   checklist_items?: Array<{ text: string }>;
 };
-
-export const TASK_TYPES: TaskType[] = [
-  "general",
-  "bug_fix",
-  "feature",
-  "refactor",
-  "docs",
-  "dmap",
-];
-
-export const DEFAULT_NEW_TASK_TYPE: TaskType = "general";
 
 export type DraftTaskEvaluationSection = {
   key: string;
@@ -387,7 +367,6 @@ export type TaskDraftPayload = {
   title: string;
   initial_prompt: string;
   priority: PriorityChoice;
-  task_type: TaskType;
   /** Omitted in older drafts; defaults from app settings when missing. */
   runner?: string;
   cursor_model?: string;
@@ -408,11 +387,6 @@ export type TaskDraftPayload = {
     overall_score: number;
     overall_summary: string;
     sections: Array<{ key: string; score: number }>;
-  };
-  dmap_config?: {
-    commit_limit: number;
-    domain: string;
-    description: string;
   };
 };
 

@@ -516,7 +516,6 @@ describe("App", () => {
             title: "Prefilled title",
             initial_prompt: "Prefilled prompt",
             priority: "high",
-            task_type: "feature",
             checklist_items: ["Do step A"],
             latest_evaluation: {
               overall_score: 87,

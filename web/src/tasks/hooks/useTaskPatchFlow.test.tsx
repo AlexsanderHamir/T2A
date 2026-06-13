@@ -56,7 +56,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     initial_prompt: "<p>orig</p>",
     status: "ready",
     priority: "low",
-    task_type: "general",
     runner: "cursor",
     cursor_model: "",
     ...overrides,
@@ -69,7 +68,6 @@ const baseInput: TaskPatchInput = {
   initial_prompt: "<p>hi</p>",
   status: "ready",
   priority: "medium",
-  task_type: "general",
   cursor_model: "",
 };
 
@@ -109,7 +107,6 @@ describe("useTaskPatchFlow", () => {
       initial_prompt: "<p>hi</p>",
       status: "ready",
       priority: "medium",
-      task_type: "general",
       cursor_model: "",
     });
   });
@@ -134,7 +131,6 @@ describe("useTaskPatchFlow", () => {
       initial_prompt: "<p>hi</p>",
       status: "ready",
       priority: "medium",
-      task_type: "general",
       cursor_model: "",
       pickup_not_before: "2026-04-22T13:00:00.000Z",
     });

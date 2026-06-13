@@ -13,22 +13,17 @@ import {
 import { plainTextToInitialHtml } from "../task-prompt";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import {
-  buildDmapPrompt,
   draftAutosaveSignature,
-  normalizeDmapCommitLimit,
-  toApiTaskType,
 } from "../task-drafts";
 import { errorMessage } from "@/lib/errorMessage";
 import { useOptionalToast } from "@/shared/toast";
 import {
   DEFAULT_NEW_TASK_STATUS,
-  DEFAULT_NEW_TASK_TYPE,
   DEFAULT_PROJECT_ID,
   type Priority,
   type PriorityChoice,
   type Status,
   type TaskDependencyEdge,
-  type TaskType,
 } from "@/types";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 
@@ -39,7 +34,6 @@ type CreateTaskMutationInput = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
-  task_type: TaskType;
   checklistItems: string[];
   draft_id: string;
   runner: string;
@@ -76,12 +70,6 @@ export function useTaskCreateFlow() {
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
   const [newPriority, setNewPriority] = useState<PriorityChoice>("");
-  const [newTaskType, setNewTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
-  const [newDmapCommitLimit, setNewDmapCommitLimit] = useState<string>(
-    TASK_DRAFTS.initialDmapCommitLimit,
-  );
-  const [newDmapDomain, setNewDmapDomain] = useState("");
-  const [newDmapDescription, setNewDmapDescription] = useState("");
   const [newTaskRunner, setNewTaskRunner] = useState("cursor");
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
@@ -227,10 +215,6 @@ export function useTaskCreateFlow() {
     setNewTitle("");
     setNewPrompt("");
     setNewPriority("");
-    setNewTaskType(DEFAULT_NEW_TASK_TYPE);
-    setNewDmapCommitLimit(TASK_DRAFTS.initialDmapCommitLimit);
-    setNewDmapDomain("");
-    setNewDmapDescription("");
     const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
     setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
     setNewTaskCursorModel(s?.cursor_model ?? "");
@@ -253,18 +237,12 @@ export function useTaskCreateFlow() {
         title: "",
         prompt: "",
         priority: "",
-        taskType: DEFAULT_NEW_TASK_TYPE,
         runner: (s?.runner ?? "cursor").trim() || "cursor",
         cursorModel: s?.cursor_model ?? "",
         projectId: DEFAULT_PROJECT_ID,
         projectContextItemIds: [],
         checklistItems: [],
         latestEvaluation: null,
-        dmapConfig: {
-          commitLimit: TASK_DRAFTS.initialDmapCommitLimit,
-          domain: "",
-          description: "",
-        },
       }),
     );
     setDraftAutosaveBaselineID(generatedID);
@@ -337,7 +315,6 @@ export function useTaskCreateFlow() {
         initial_prompt: input.initial_prompt,
         status: input.status,
         priority: input.priority,
-        task_type: input.task_type,
         draft_id: input.draft_id,
         runner: input.runner,
         cursor_model: input.cursor_model,
@@ -388,7 +365,6 @@ export function useTaskCreateFlow() {
       initial_prompt: string;
       status: Status;
       priority: Priority;
-      task_type: TaskType;
       checklistItems: string[];
     }) => {
       return apiEvaluateDraft({
@@ -397,7 +373,6 @@ export function useTaskCreateFlow() {
         initial_prompt: input.initial_prompt,
         status: input.status,
         priority: input.priority,
-        task_type: input.task_type,
         checklist_items: input.checklistItems
           .map((text) => text.trim())
           .filter(Boolean)
@@ -436,7 +411,6 @@ export function useTaskCreateFlow() {
         title: string;
         initial_prompt: string;
         priority: PriorityChoice;
-        task_type: TaskType;
         runner: string;
         cursor_model: string;
         project_id: string;
@@ -554,29 +528,19 @@ export function useTaskCreateFlow() {
         title: newTitle,
         prompt: newPrompt,
         priority: newPriority,
-        taskType: newTaskType,
         projectId: newProjectID,
         projectContextItemIds: newProjectContextItemIDs,
         checklistItems: newChecklistItems,
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
         cursorModel: newTaskCursorModel,
-        dmapConfig: {
-          commitLimit: newDmapCommitLimit,
-          domain: newDmapDomain,
-          description: newDmapDescription,
-        },
       }),
     [
       latestDraftEvaluation,
-      newDmapCommitLimit,
-      newDmapDescription,
-      newDmapDomain,
       newChecklistItems,
       newDraftID,
       newPriority,
       newPrompt,
-      newTaskType,
       newTitle,
       newTaskRunner,
       newTaskCursorModel,
@@ -593,7 +557,6 @@ export function useTaskCreateFlow() {
         title: newTitle,
         initial_prompt: newPrompt,
         priority: newPriority,
-        task_type: newTaskType,
         runner: newTaskRunner,
         cursor_model: newTaskCursorModel,
         // Persist the operator's project + context selection on the draft
@@ -611,27 +574,14 @@ export function useTaskCreateFlow() {
               },
             }
           : {}),
-        ...(newTaskType === "dmap"
-          ? {
-              dmap_config: {
-                commit_limit: normalizeDmapCommitLimit(newDmapCommitLimit),
-                domain: newDmapDomain.trim(),
-                description: newDmapDescription.trim(),
-              },
-            }
-          : {}),
       },
     };
   }, [
     latestDraftEvaluation,
-    newDmapCommitLimit,
-    newDmapDescription,
-    newDmapDomain,
     newChecklistItems,
     newDraftID,
     newPriority,
     newPrompt,
-    newTaskType,
     newTitle,
     newTaskRunner,
     newTaskCursorModel,
@@ -705,22 +655,12 @@ export function useTaskCreateFlow() {
 
   function evaluateDraftBeforeCreate() {
     if (!newTitle.trim() || !newPriority) return;
-    const dmapDomain = newDmapDomain.trim();
-    if (newTaskType === "dmap" && !dmapDomain) return;
     evaluateDraftMutation.mutate({
       id: newDraftID,
       title: newTitle.trim(),
-      initial_prompt:
-        newTaskType === "dmap"
-          ? buildDmapPrompt({
-              commitLimit: newDmapCommitLimit,
-              domain: dmapDomain,
-              description: newDmapDescription,
-            })
-          : newPrompt,
+      initial_prompt: newPrompt,
       status: DEFAULT_NEW_TASK_STATUS,
       priority: newPriority,
-      task_type: toApiTaskType(newTaskType),
       checklistItems: newChecklistItems,
     });
   }
@@ -728,8 +668,6 @@ export function useTaskCreateFlow() {
   async function submitCreate(e: FormEvent) {
     e.preventDefault();
     if (!newTitle.trim() || !newPriority) return;
-    const dmapDomain = newDmapDomain.trim();
-    if (newTaskType === "dmap" && !dmapDomain) return;
     setCreateFormError(null);
     // Autonomy off => create the task in on_hold so the agent worker
     // skips it on dequeue (ReadyForAgentPickup gates on Status==Ready,
@@ -742,17 +680,9 @@ export function useTaskCreateFlow() {
       : "on_hold";
     createMutation.mutate({
       title: newTitle.trim(),
-      initial_prompt:
-        newTaskType === "dmap"
-          ? buildDmapPrompt({
-              commitLimit: newDmapCommitLimit,
-              domain: dmapDomain,
-              description: newDmapDescription,
-            })
-          : newPrompt,
+      initial_prompt: newPrompt,
       status: submitStatus,
       priority: newPriority,
-      task_type: toApiTaskType(newTaskType),
       draft_id: newDraftID,
       checklistItems: newChecklistItems,
       runner: newTaskRunner.trim() || "cursor",
@@ -824,15 +754,6 @@ export function useTaskCreateFlow() {
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
-    setNewTaskType(draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE);
-    setNewDmapCommitLimit(
-      String(
-        draft.payload.dmap_config?.commit_limit ??
-          Number(TASK_DRAFTS.initialDmapCommitLimit),
-      ),
-    );
-    setNewDmapDomain(draft.payload.dmap_config?.domain ?? "");
-    setNewDmapDescription(draft.payload.dmap_config?.description ?? "");
     setNewChecklistItems(draft.payload.checklist_items ?? []);
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
@@ -865,21 +786,12 @@ export function useTaskCreateFlow() {
         title: resumedTitle,
         prompt: draft.payload.initial_prompt ?? "",
         priority: draft.payload.priority ?? "",
-        taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
         runner: resumedRunner,
         cursorModel: resumedModel,
         projectId: resumedProjectID,
         projectContextItemIds: resumedProjectContextIds,
         checklistItems: draft.payload.checklist_items ?? [],
         latestEvaluation,
-        dmapConfig: {
-          commitLimit: String(
-            draft.payload.dmap_config?.commit_limit ??
-              Number(TASK_DRAFTS.initialDmapCommitLimit),
-          ),
-          domain: draft.payload.dmap_config?.domain ?? "",
-          description: draft.payload.dmap_config?.description ?? "",
-        },
       }),
     );
     setDraftAutosaveBaselineID(draft.id);
@@ -893,7 +805,7 @@ export function useTaskCreateFlow() {
 
   /**
    * Apply a `TestScenario` from `web/src/tasks/test-scenarios` to the open
-   * create-modal form. Overwrites title / prompt / priority / task type /
+   * create-modal form. Overwrites title / prompt / priority /
    * checklist with the scenario's pre-canned content so the operator can
    * dispatch a real agent run with zero typing — the whole point of the
    * test-scenarios affordance.
@@ -909,14 +821,11 @@ export function useTaskCreateFlow() {
       setNewTitle(scenario.title);
       setNewPrompt(plainTextToInitialHtml(scenario.prompt));
       setNewPriority(scenario.priority);
-      setNewTaskType(scenario.taskType);
       setNewChecklistItems(
         scenario.checklist
           .map((item) => item.trim())
           .filter((item) => item.length > 0),
       );
-      // DMAP fields stay at their defaults; scenarios don't target the
-      // DMAP runner today (they're all general / refactor / docs / etc.).
     },
     [],
   );
@@ -1006,15 +915,7 @@ export function useTaskCreateFlow() {
     newPrompt,
     setNewPrompt,
     newPriority,
-    newTaskType,
-    newDmapCommitLimit,
-    setNewDmapCommitLimit,
-    newDmapDomain,
-    setNewDmapDomain,
-    newDmapDescription,
-    setNewDmapDescription,
     setNewPriority,
-    setNewTaskType,
     newTaskRunner,
     setNewTaskRunner,
     newTaskCursorModel,

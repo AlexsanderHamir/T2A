@@ -46,7 +46,6 @@ func TestHTTP_createTask_400ErrorStrings(t *testing.T) {
 		{"priorityEmpty", `{"title":"ok","priority":""}`, "priority required"},
 		{"priorityInvalid", `{"title":"ok","priority":"nope"}`, "priority"},
 		{"statusInvalid", `{"title":"ok","priority":"medium","status":"nope"}`, "status"},
-		{"taskTypeInvalid", `{"title":"ok","priority":"medium","task_type":"nope"}`, "task_type"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,10 +93,8 @@ func TestHTTP_createTask_409DuplicateID(t *testing.T) {
 	}
 }
 
-// TestHTTP_createTask_defaults pins the documented defaults: omitted/empty
-// `status` falls back to `ready`; omitted/empty `task_type` falls back to
-// `general`. Both are covered indirectly by happy-path tests but neither is
-// pinned to the bare enum value in a contract-style test today.
+// TestHTTP_createTask_defaults pins the documented default: omitted/empty
+// `status` falls back to `ready`.
 func TestHTTP_createTask_defaults(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
@@ -113,34 +110,6 @@ func TestHTTP_createTask_defaults(t *testing.T) {
 		}
 		if got.Status != domain.StatusReady {
 			t.Fatalf("status=%q want %q (docs/api.md default)", got.Status, domain.StatusReady)
-		}
-	})
-
-	t.Run("taskTypeOmittedDefaultsToGeneral", func(t *testing.T) {
-		res, raw := postCreate(t, srv.URL, `{"title":"d2","priority":"medium"}`)
-		if res.StatusCode != http.StatusCreated {
-			t.Fatalf("status %d body=%s", res.StatusCode, raw)
-		}
-		var got domain.Task
-		if err := json.Unmarshal(raw, &got); err != nil {
-			t.Fatal(err)
-		}
-		if got.TaskType != domain.TaskTypeGeneral {
-			t.Fatalf("task_type=%q want %q (docs/api.md default)", got.TaskType, domain.TaskTypeGeneral)
-		}
-	})
-
-	t.Run("taskTypeEmptyStringDefaultsToGeneral", func(t *testing.T) {
-		res, raw := postCreate(t, srv.URL, `{"title":"d3","priority":"medium","task_type":""}`)
-		if res.StatusCode != http.StatusCreated {
-			t.Fatalf("status %d body=%s", res.StatusCode, raw)
-		}
-		var got domain.Task
-		if err := json.Unmarshal(raw, &got); err != nil {
-			t.Fatal(err)
-		}
-		if got.TaskType != domain.TaskTypeGeneral {
-			t.Fatalf("task_type=%q want %q (empty string falls through to default)", got.TaskType, domain.TaskTypeGeneral)
 		}
 	})
 }
@@ -185,7 +154,7 @@ func TestHTTP_createTask_201ResponseShape(t *testing.T) {
 	if _, ok := top["children"]; ok {
 		t.Fatalf("flat task row should not serialize \"children\": %s", raw)
 	}
-	for _, k := range []string{"id", "title", "status", "priority", "task_type"} {
+	for _, k := range []string{"id", "title", "status", "priority"} {
 		if _, ok := top[k]; !ok {
 			t.Fatalf("missing top-level %q: %s", k, raw)
 		}

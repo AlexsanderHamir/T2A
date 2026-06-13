@@ -50,13 +50,13 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `task_type`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
+| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
 | GET | `/tasks/cycle-failures` | Paginated terminal cycle failures. `?limit`, `?offset`, `?sort ∈ at_desc | at_asc | reason_asc | reason_desc`. |
 | GET | `/tasks/{id}` | Single flat `domain.Task`. |
-| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `task_type`, `project_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
+| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
 | DELETE | `/tasks/{id}` | `204` empty body. Publishes `task_deleted`. |
 | GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |

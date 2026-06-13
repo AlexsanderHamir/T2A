@@ -33,23 +33,15 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     title: "Draft title",
     prompt: "Draft prompt",
     priority: "medium",
-    taskType: "general",
     checklistItems: [],
     onTitleChange: vi.fn(),
     onPromptChange: vi.fn(),
     onPriorityChange: vi.fn(),
-    onTaskTypeChange: vi.fn(),
     onAppendChecklistCriterion: vi.fn(),
     onUpdateChecklistRow: vi.fn(),
     onRemoveChecklistRow: vi.fn(),
     evaluatePending: false,
     evaluation: null,
-    dmapCommitLimit: "5",
-    dmapDomain: "",
-    dmapDescription: "",
-    onDmapCommitLimitChange: vi.fn(),
-    onDmapDomainChange: vi.fn(),
-    onDmapDescriptionChange: vi.fn(),
     taskRunner: TASK_TEST_DEFAULTS.runner,
     taskCursorModel: TASK_TEST_DEFAULTS.cursor_model,
     onTaskRunnerChange: vi.fn(),
@@ -279,18 +271,6 @@ describe("TaskCreateModal", () => {
     expect(
       screen.getByRole("option", { name: /^auto$/i }),
     ).toBeInTheDocument();
-  });
-
-  it("shows DMAP-specific fields when task type is DMAP", () => {
-    renderModal({ taskType: "dmap" });
-    expect(screen.getByText(/dmap configuration/i)).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/commits until stoppage/i),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText(/dmap domain/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/direction notes/i)).toBeInTheDocument();
-    expect(screen.queryByText(/done criteria/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/subtasks/i)).not.toBeInTheDocument();
   });
 
   it("renders the test-scenarios trigger only when onApplyTestScenario is wired", () => {

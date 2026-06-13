@@ -1,24 +1,12 @@
-import type { PriorityChoice, TaskType } from "@/types";
-import { TaskComposeFields } from "../../task-compose";
 import type { RichPromptEditorProjectContextProps } from "../../rich-prompt";
-import { TaskCreateModalDmapSection } from "../dmap/TaskCreateModalDmapSection";
-import { TaskCreateModalDmapTitleRow } from "../dmap/TaskCreateModalDmapTitleRow";
+import { TaskComposeFields } from "../../task-compose";
 
 type Props = {
-  dmapMode: boolean;
   disabled: boolean;
   title: string;
   onTitleChange: (value: string) => void;
-  priority: PriorityChoice;
-  onPriorityChange: (value: PriorityChoice) => void;
-  taskType: TaskType;
-  onTaskTypeChange: (value: TaskType) => void;
-  dmapCommitLimit: string;
-  dmapDomain: string;
-  dmapDescription: string;
-  onDmapCommitLimitChange: (value: string) => void;
-  onDmapDomainChange: (value: string) => void;
-  onDmapDescriptionChange: (value: string) => void;
+  priority: import("@/types").PriorityChoice;
+  onPriorityChange: (value: import("@/types").PriorityChoice) => void;
   prompt: string;
   checklistItems: string[];
   hideComposeChecklist: boolean;
@@ -32,20 +20,11 @@ type Props = {
 };
 
 export function TaskCreateModalPrimaryFields({
-  dmapMode,
   disabled,
   title,
   onTitleChange,
   priority,
   onPriorityChange,
-  taskType,
-  onTaskTypeChange,
-  dmapCommitLimit,
-  dmapDomain,
-  dmapDescription,
-  onDmapCommitLimitChange,
-  onDmapDomainChange,
-  onDmapDescriptionChange,
   prompt,
   checklistItems,
   hideComposeChecklist,
@@ -56,31 +35,6 @@ export function TaskCreateModalPrimaryFields({
   onRemoveChecklistRow,
   projectContext,
 }: Props) {
-  if (dmapMode) {
-    return (
-      <>
-        <TaskCreateModalDmapTitleRow
-          title={title}
-          onTitleChange={onTitleChange}
-          priority={priority}
-          onPriorityChange={onPriorityChange}
-          taskType={taskType}
-          onTaskTypeChange={onTaskTypeChange}
-          disabled={disabled}
-        />
-        <TaskCreateModalDmapSection
-          dmapCommitLimit={dmapCommitLimit}
-          dmapDomain={dmapDomain}
-          dmapDescription={dmapDescription}
-          onDmapCommitLimitChange={onDmapCommitLimitChange}
-          onDmapDomainChange={onDmapDomainChange}
-          onDmapDescriptionChange={onDmapDescriptionChange}
-          disabled={disabled}
-        />
-      </>
-    );
-  }
-
   return (
     <TaskComposeFields
       idsPrefix="task-new"
@@ -88,7 +42,6 @@ export function TaskCreateModalPrimaryFields({
       title={title}
       prompt={prompt}
       priority={priority}
-      taskType={taskType}
       checklistItems={checklistItems}
       hideChecklist={hideComposeChecklist}
       checklistRequirement={checklistRequirement}
@@ -96,7 +49,6 @@ export function TaskCreateModalPrimaryFields({
       onTitleChange={onTitleChange}
       onPromptChange={onPromptChange}
       onPriorityChange={onPriorityChange}
-      onTaskTypeChange={onTaskTypeChange}
       onAppendChecklistCriterion={onAppendChecklistCriterion}
       onUpdateChecklistRow={onUpdateChecklistRow}
       onRemoveChecklistRow={onRemoveChecklistRow}

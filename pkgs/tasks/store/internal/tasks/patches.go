@@ -23,9 +23,6 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyPriorityPatch(tx, taskID, cur, in.Priority, by, &seqPtr); err != nil {
 		return err
 	}
-	if err := applyTaskTypePatch(cur, in.TaskType); err != nil {
-		return err
-	}
 	if err := applyProjectPatch(tx, cur, in.Project); err != nil {
 		return err
 	}
@@ -196,18 +193,6 @@ func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain
 	}
 	*seq++
 	cur.Priority = *pr
-	return nil
-}
-
-func applyTaskTypePatch(cur *domain.Task, tt *domain.TaskType) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTaskTypePatch")
-	if tt == nil {
-		return nil
-	}
-	if !kernel.ValidTaskType(*tt) {
-		return fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
-	}
-	cur.TaskType = *tt
 	return nil
 }
 

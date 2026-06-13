@@ -6,8 +6,7 @@
 }
 
 .task-create-checklist::before,
-.task-create-subtasks::before,
-.task-create-dmap::before {
+.task-create-subtasks::before {
   content: "";
   position: absolute;
   top: 0;

@@ -1,9 +1,9 @@
 import type { FormEvent, ReactNode } from "react";
-import { CLIENT_WRITABLE_STATUSES, type Priority, type Status, type TaskType } from "@/types";
+import { CLIENT_WRITABLE_STATUSES, type Priority, type Status } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
-import { PrioritySelect, TaskTypeSelect } from "../../task-compose";
+import { PrioritySelect } from "../../task-compose";
 import {
   RichPromptEditor,
   type RichPromptEditorProjectContextProps,
@@ -28,7 +28,6 @@ type Props = {
   title: string;
   prompt: string;
   priority: Priority;
-  taskType: TaskType;
   status: Status;
   /** Runner id stored on the task (model list is loaded for this runner). */
   taskRunner: string;
@@ -64,7 +63,6 @@ type Props = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: Priority) => void;
-  onTaskTypeChange: (t: TaskType) => void;
   onStatusChange: (s: Status) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -75,7 +73,6 @@ export function TaskEditForm({
   title,
   prompt,
   priority,
-  taskType,
   status,
   taskRunner,
   cursorModel,
@@ -94,7 +91,6 @@ export function TaskEditForm({
   onTitleChange,
   onPromptChange,
   onPriorityChange,
-  onTaskTypeChange,
   onStatusChange,
   onSubmit,
   onCancel,
@@ -151,12 +147,6 @@ export function TaskEditForm({
               onChange={(p) => {
                 if (p !== "") onPriorityChange(p);
               }}
-            />
-            <TaskTypeSelect
-              id="task-edit-task-type"
-              value={taskType}
-              onChange={onTaskTypeChange}
-              disabled={saving}
             />
           </div>
           <div className="field grow">

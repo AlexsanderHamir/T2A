@@ -5,7 +5,6 @@ type Props = {
   draftSaving: boolean;
   title: string;
   priority: PriorityChoice;
-  dmapReady: boolean;
   evaluatePending: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
@@ -17,13 +16,12 @@ export function TaskCreateModalFooterActions({
   draftSaving,
   title,
   priority,
-  dmapReady,
   evaluatePending,
   onClose,
   onSaveDraft,
   onEvaluate,
 }: Props) {
-  const evalAndSubmitDisabled = !title.trim() || !priority || !dmapReady || disabled;
+  const evalAndSubmitDisabled = !title.trim() || !priority || disabled;
 
   return (
     <div className="task-create-modal-actions">

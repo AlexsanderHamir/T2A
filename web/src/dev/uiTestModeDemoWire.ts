@@ -28,7 +28,6 @@ function task(
     initial_prompt: `Operator context for “${title}”. Includes acceptance notes and links.`,
     status,
     priority,
-    task_type: "feature",
     runner: "cursor",
     cursor_model: "",
     checklist_inherit: true,

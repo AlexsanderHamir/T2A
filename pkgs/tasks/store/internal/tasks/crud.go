@@ -80,7 +80,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.TaskType == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.PickupNotBefore == nil && in.CursorModel == nil && in.Tags == nil && in.Milestone == nil && in.Gate == nil && in.DependsOn == nil {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.PickupNotBefore == nil && in.CursorModel == nil && in.Tags == nil && in.Milestone == nil && in.Gate == nil && in.DependsOn == nil {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
@@ -170,13 +170,6 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 	if !kernel.ValidPriority(pr) {
 		return nil, "", "", fmt.Errorf("%w: priority", domain.ErrInvalidInput)
 	}
-	tt := in.TaskType
-	if tt == "" {
-		tt = domain.TaskTypeGeneral
-	}
-	if !kernel.ValidTaskType(tt) {
-		return nil, "", "", fmt.Errorf("%w: task_type", domain.ErrInvalidInput)
-	}
 	id := strings.TrimSpace(in.ID)
 	if id == "" {
 		id = uuid.NewString()
@@ -200,7 +193,6 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		InitialPrompt:         in.InitialPrompt,
 		Status:                st,
 		Priority:              pr,
-		TaskType:              tt,
 		ProjectID:             projectID,
 		ProjectContextItemIDs: nil,
 		Runner:                runner,

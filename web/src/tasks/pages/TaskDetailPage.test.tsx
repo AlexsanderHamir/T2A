@@ -82,7 +82,6 @@ type MockTaskDetailData = {
   initial_prompt: string;
   status: string;
   priority: string;
-  task_type?: string;
   runner?: string;
   cursor_model?: string;
 };
@@ -98,7 +97,6 @@ function taskDetail(
     initial_prompt: "",
     status: "ready",
     priority: "medium",
-    task_type: "general",
     runner: "cursor",
     cursor_model: "",
     ...overrides,

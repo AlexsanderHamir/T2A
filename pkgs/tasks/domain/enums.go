@@ -26,16 +26,6 @@ const (
 	PriorityCritical Priority = "critical"
 )
 
-type TaskType string
-
-const (
-	TaskTypeGeneral  TaskType = "general"
-	TaskTypeBugFix   TaskType = "bug_fix"
-	TaskTypeFeature  TaskType = "feature"
-	TaskTypeRefactor TaskType = "refactor"
-	TaskTypeDocs     TaskType = "docs"
-)
-
 // ProjectStatus is the lifecycle state of a long-lived project context.
 type ProjectStatus string
 

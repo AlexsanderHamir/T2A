@@ -52,7 +52,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     initial_prompt: "<p>do it</p>",
     status: "ready",
     priority: "low",
-    task_type: "general",
     runner: "cursor",
     cursor_model: "",
     ...overrides,

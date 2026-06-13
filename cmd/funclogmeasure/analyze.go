@@ -170,8 +170,6 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStatus.Value":      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Priority.Scan":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tPriority.Value":    {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*TaskType.Scan":    {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskType.Value":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*EventType.Scan":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tEventType.Value":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*Actor.Scan":       {},

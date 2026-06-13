@@ -1,4 +1,4 @@
-import type { Priority, TaskType } from "@/types";
+import type { Priority } from "@/types";
 
 /**
  * Difficulty buckets ordered by expected agent effort. Used to group
@@ -72,8 +72,6 @@ export type TestScenario = {
    * paragraphs instead of one mega-line.
    */
   prompt: string;
-  /** Best-fit production task type — the operator can override before submit. */
-  taskType: TaskType;
   /** Default priority for the auto-fill — almost always "medium". */
   priority: Priority;
   /** Done criteria written into the form's checklist on apply. */
@@ -104,7 +102,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Write a one-paragraph summary that answers: what does this codebase do, what is the primary language and runtime, and what is the main entry point?",
       "Save the summary as a markdown file at the repository root named CODEBASE_TOUR.md. Do not modify any other files.",
     ].join("\n\n"),
-    taskType: "docs",
     priority: "medium",
     checklist: [
       "CODEBASE_TOUR.md exists at the repository root with the summary.",
@@ -123,7 +120,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Produce a markdown report grouped by file with one bullet per occurrence. Each bullet shows the line number and a one-line summary of the comment in your own words.",
       "Save the report at the repository root as TODO_REPORT.md. Do not modify any source files.",
     ].join("\n\n"),
-    taskType: "docs",
     priority: "low",
     checklist: [
       "TODO_REPORT.md exists at the repository root.",
@@ -144,7 +140,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "For every public/exported function, method, class, or type in that file that has no docstring or doc comment, add a concise paragraph that says: what it does, what arguments it takes, and what it returns or yields.",
       "Do not change any function bodies or signatures. Match the docstring/comment style already used elsewhere in the codebase. If the language has no convention, use the most idiomatic form (e.g. JSDoc for TypeScript, godoc comments for Go, docstrings for Python).",
     ].join("\n\n"),
-    taskType: "docs",
     priority: "medium",
     checklist: [
       "The chosen file is named in the task report.",
@@ -165,7 +160,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "If the README has no `## Quick start` section, add one with the exact minimum commands needed to install dependencies and run the project locally, derived from the actual config files in the repo.",
       "Do not duplicate sections that already exist; merge intelligently if a similar section is already present.",
     ].join("\n\n"),
-    taskType: "docs",
     priority: "medium",
     checklist: [
       "README has a `Repository tour` section listing real top-level directories.",
@@ -187,7 +181,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Preserve the public signature and observable behavior exactly. Do not rename the original function or change its return type.",
       "If the original function is covered by tests, run them and confirm they still pass. If not, add at least one test that exercises the happy path of the refactored function.",
     ].join("\n\n"),
-    taskType: "refactor",
     priority: "medium",
     checklist: [
       "The chosen function is named in the task report along with its original line count.",
@@ -208,7 +201,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Add at least one unit test per new validation branch, asserting both the rejection and the error message shape.",
       "Document the new validation rules in the function's doc comment.",
     ].join("\n\n"),
-    taskType: "feature",
     priority: "medium",
     checklist: [
       "The chosen entry point is named with a justification for why it was picked.",
@@ -232,7 +224,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Add tests that exercise each new error branch (mock or fake the underlying dependency where needed).",
       "Document the new failure-handling contract in the function's doc comment or in the relevant operator-facing doc.",
     ].join("\n\n"),
-    taskType: "bug_fix",
     priority: "high",
     checklist: [
       "The chosen path is named with a one-paragraph justification.",
@@ -254,7 +245,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Propagate a request / correlation ID through every log line in the flow, generating one at the entry point if no upstream ID is present.",
       "Document the new instrumentation in the project's observability doc (or create OBSERVABILITY.md if none exists).",
     ].join("\n\n"),
-    taskType: "feature",
     priority: "high",
     checklist: [
       "The chosen flow is named with a one-line justification.",
@@ -277,7 +267,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Add at least one test that exercises the refactored module against an in-memory implementation of the new interface, covering the happy path and one error path.",
       "Document the new seam in the module's doc comment, including a one-line note on how to inject a fake in tests.",
     ].join("\n\n"),
-    taskType: "refactor",
     priority: "high",
     checklist: [
       "The chosen module is named with a one-paragraph justification of the coupling.",
@@ -298,7 +287,6 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Add tests covering: the existing caller behavior (regression), the new feature on the happy path, and at least one error / edge case for the new feature.",
       "Update the API docs / endpoint documentation describing the new parameter or field, including the default value and a usage example.",
     ].join("\n\n"),
-    taskType: "feature",
     priority: "high",
     checklist: [
       "The chosen API is named with a justification for the enhancement.",

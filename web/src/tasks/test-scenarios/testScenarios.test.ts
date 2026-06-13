@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TASK_TYPES, PRIORITIES } from "@/types";
+import { PRIORITIES } from "@/types";
 import {
   TEST_SCENARIO_DIFFICULTY_ORDER,
   TEST_SCENARIOS,
@@ -21,9 +21,8 @@ describe("TEST_SCENARIOS catalog", () => {
     expect(unique.size).toBe(ids.length);
   });
 
-  it("every scenario picks a known TaskType and Priority", () => {
+  it("every scenario picks a known Priority", () => {
     for (const scenario of TEST_SCENARIOS) {
-      expect(TASK_TYPES).toContain(scenario.taskType);
       expect(PRIORITIES).toContain(scenario.priority);
     }
   });

@@ -1,12 +1,11 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { PriorityChoice, TaskType } from "@/types";
+import type { PriorityChoice } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
 import type { TestScenario } from "@/tasks/test-scenarios";
 import { Modal } from "../../../shared/Modal";
 import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
-import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
 import { TaskCreateModalAutonomyToggle } from "./fields/TaskCreateModalAutonomyToggle";
@@ -30,23 +29,15 @@ type Props = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  taskType: TaskType;
   checklistItems: string[];
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onTaskTypeChange: (t: TaskType) => void;
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   evaluatePending: boolean;
   evaluation: TaskCreateModalEvaluation | null;
-  dmapCommitLimit: string;
-  dmapDomain: string;
-  dmapDescription: string;
-  onDmapCommitLimitChange: (value: string) => void;
-  onDmapDomainChange: (value: string) => void;
-  onDmapDescriptionChange: (value: string) => void;
   taskRunner: string;
   taskCursorModel: string;
   onTaskRunnerChange: (runner: string) => void;
@@ -84,23 +75,15 @@ export function TaskCreateModal({
   title,
   prompt,
   priority,
-  taskType,
   checklistItems,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
-  onTaskTypeChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
   evaluatePending,
   evaluation,
-  dmapCommitLimit,
-  dmapDomain,
-  dmapDescription,
-  onDmapCommitLimitChange,
-  onDmapDomainChange,
-  onDmapDescriptionChange,
   taskRunner,
   taskCursorModel,
   onTaskRunnerChange,
@@ -128,12 +111,6 @@ export function TaskCreateModal({
   onApplyTestScenario,
 }: Props) {
   const disabled = pending || saving;
-  const dmapMode = taskType === "dmap";
-  const dmapReady = taskCreateModalDmapReady(
-    dmapMode,
-    dmapCommitLimit,
-    dmapDomain,
-  );
 
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const scenariosTriggerRef = useRef<HTMLButtonElement>(null);
@@ -158,8 +135,8 @@ export function TaskCreateModal({
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
           <header className="task-create-modal-header">
-            <div className="task-create-modal-header__text">
-              <div className="task-create-modal-header__title-row">
+            <div className="task-create-modal-header__top">
+              <div className="task-create-modal-header__heading">
                 <h2
                   id="task-create-modal-title"
                   className="task-create-modal-title"
@@ -180,19 +157,18 @@ export function TaskCreateModal({
                   </p>
                 ) : null}
               </div>
-              <p className="task-create-modal-subtitle">
-                Title and prompt are enough to start. Everything else is
-                optional.
-              </p>
+              {onApplyTestScenario ? (
+                <TestScenariosTrigger
+                  ref={scenariosTriggerRef}
+                  open={scenariosOpen}
+                  disabled={disabled}
+                  onToggle={() => setScenariosOpen((open) => !open)}
+                />
+              ) : null}
             </div>
-            {onApplyTestScenario ? (
-              <TestScenariosTrigger
-                ref={scenariosTriggerRef}
-                open={scenariosOpen}
-                disabled={disabled}
-                onToggle={() => setScenariosOpen((open) => !open)}
-              />
-            ) : null}
+            <p className="task-create-modal-subtitle">
+              Title and prompt are enough to start. Everything else is optional.
+            </p>
           </header>
 
           <form
@@ -201,20 +177,11 @@ export function TaskCreateModal({
           >
             <div className="task-create-modal-section task-create-modal-section--essentials">
               <TaskCreateModalPrimaryFields
-                dmapMode={dmapMode}
                 disabled={disabled}
                 title={title}
                 onTitleChange={onTitleChange}
                 priority={priority}
                 onPriorityChange={onPriorityChange}
-                taskType={taskType}
-                onTaskTypeChange={onTaskTypeChange}
-                dmapCommitLimit={dmapCommitLimit}
-                dmapDomain={dmapDomain}
-                dmapDescription={dmapDescription}
-                onDmapCommitLimitChange={onDmapCommitLimitChange}
-                onDmapDomainChange={onDmapDomainChange}
-                onDmapDescriptionChange={onDmapDescriptionChange}
                 prompt={prompt}
                 checklistItems={checklistItems}
                 hideComposeChecklist={false}
@@ -313,7 +280,6 @@ export function TaskCreateModal({
               draftSaving={draftSaving}
               title={title}
               priority={priority}
-              dmapReady={dmapReady}
               evaluatePending={evaluatePending}
               onClose={onClose}
               onSaveDraft={onSaveDraft}

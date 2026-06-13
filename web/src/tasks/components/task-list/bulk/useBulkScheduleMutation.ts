@@ -41,7 +41,7 @@ export type BulkScheduleResult = {
  *
  * The hook deliberately does NOT route through `useTaskPatchFlow`:
  * the latter requires a full TaskPatchInput shape (title, prompt,
- * status, priority, task_type, checklist_inherit) per task and
+ * status, priority, checklist_inherit) per task and
  * runs an optimistic-update path that mutates each row's cache
  * entry. For bulk operations with a single shared field
  * (`pickup_not_before`) the optimistic-per-row machinery is
