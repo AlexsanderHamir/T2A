@@ -101,6 +101,7 @@ export function TaskCreateModalsLayer({ app }: Props) {
                 projectId={app.newProjectID}
                 selectedIds={app.newProjectContextItemIDs}
                 disabled={app.saving}
+                compact
                 onChange={app.setNewProjectContextItemIDs}
               />
             </section>

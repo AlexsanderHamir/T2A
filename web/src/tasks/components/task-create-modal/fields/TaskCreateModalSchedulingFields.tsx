@@ -32,36 +32,41 @@ export function TaskCreateModalSchedulingFields({
 }: Props) {
   return (
     <fieldset className="task-create-scheduling" disabled={disabled}>
-      <legend className="task-create-scheduling__legend">Scheduling</legend>
-      <div className="task-create-scheduling__field">
-        <FieldLabel htmlFor="create-tags">Tags</FieldLabel>
-        <input
-          id="create-tags"
-          className="input"
-          value={tagsCsv}
-          onChange={(e) => onTagsCsvChange(e.target.value)}
-          placeholder="e.g. backend, api"
-        />
-        <p className="hint">Comma-separated labels (max 32 tags).</p>
+      <legend className="task-create-scheduling__legend">
+        Tags & dependencies
+      </legend>
+      <div className="task-create-scheduling__grid">
+        <div className="task-create-scheduling__field">
+          <FieldLabel htmlFor="create-tags">Tags</FieldLabel>
+          <input
+            id="create-tags"
+            className="input"
+            value={tagsCsv}
+            onChange={(e) => onTagsCsvChange(e.target.value)}
+            placeholder="e.g. backend, api"
+          />
+        </div>
+        <div className="task-create-scheduling__field">
+          <FieldLabel htmlFor="create-milestone">Milestone</FieldLabel>
+          <input
+            id="create-milestone"
+            className="input"
+            value={milestone}
+            onChange={(e) => onMilestoneChange(e.target.value)}
+            placeholder="e.g. M1 — auth"
+          />
+        </div>
+        {showDependsOn ? (
+          <div className="task-create-scheduling__field task-create-scheduling__field--full">
+            <TaskCreateDependsOnPicker
+              projectId={projectId}
+              selected={dependsOn}
+              onChange={onDependsOnChange}
+              disabled={disabled}
+            />
+          </div>
+        ) : null}
       </div>
-      <div className="task-create-scheduling__field">
-        <FieldLabel htmlFor="create-milestone">Milestone</FieldLabel>
-        <input
-          id="create-milestone"
-          className="input"
-          value={milestone}
-          onChange={(e) => onMilestoneChange(e.target.value)}
-          placeholder="e.g. M1 — auth"
-        />
-      </div>
-      {showDependsOn ? (
-        <TaskCreateDependsOnPicker
-          projectId={projectId}
-          selected={dependsOn}
-          onChange={onDependsOnChange}
-          disabled={disabled}
-        />
-      ) : null}
     </fieldset>
   );
 }

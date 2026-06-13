@@ -17,6 +17,8 @@ interface ProjectContextPickerProps {
   projectId: string;
   selectedIds: string[];
   disabled?: boolean;
+  /** Shorter copy for the create-task modal. */
+  compact?: boolean;
   onChange: (ids: string[]) => void;
 }
 
@@ -40,6 +42,7 @@ export function ProjectContextPicker({
   projectId,
   selectedIds,
   disabled,
+  compact = false,
   onChange,
 }: ProjectContextPickerProps) {
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -108,17 +111,30 @@ export function ProjectContextPicker({
 
   return (
     <section
-      className="project-context-picker"
+      className={[
+        "project-context-picker",
+        compact ? "project-context-picker--compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-labelledby="task-context-picker-title"
     >
       <div className="project-context-picker__head">
         <div>
-          <h3 id="task-context-picker-title">Context for this task</h3>
-          <p>
-            Reference project memory the agent may use. Add from the prompt
-            with <kbd>#</kbd> or open the chooser. Backend resolves the full
-            node memory at run time — chips here are display labels only.
-          </p>
+          <h3 id="task-context-picker-title">
+            {compact ? "Project context" : "Context for this task"}
+          </h3>
+          {compact ? (
+            <p className="project-context-picker__lede">
+              Type <kbd>#</kbd> in the prompt or choose nodes below.
+            </p>
+          ) : (
+            <p>
+              Reference project memory the agent may use. Add from the prompt
+              with <kbd>#</kbd> or open the chooser. Backend resolves the full
+              node memory at run time — chips here are display labels only.
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -126,7 +142,7 @@ export function ProjectContextPicker({
           disabled={disabled}
           onClick={() => setChooserOpen(true)}
         >
-          Choose context
+          {compact ? "Choose" : "Choose context"}
         </button>
       </div>
 
@@ -191,7 +207,11 @@ export function ProjectContextPicker({
             })}
           </ul>
         ) : (
-          <span>Open the chooser to search the list or inspect the tree.</span>
+          <span>
+            {compact
+              ? "None selected"
+              : "Open the chooser to search the list or inspect the tree."}
+          </span>
         )}
       </div>
 

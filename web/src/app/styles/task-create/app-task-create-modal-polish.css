@@ -1,0 +1,499 @@
+/*
+ * Create-task modal — Stripe / Linear flat hierarchy.
+ * Scoped to .task-create-modal-sheet so edit surfaces keep their own chrome.
+ */
+
+.task-create-modal-sheet.task-create {
+  padding: var(--space-6);
+  background: var(--bg-elevated);
+}
+
+/* —— Header —— */
+.task-create-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.task-create-modal-header__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.task-create-modal-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.task-create-modal-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 34rem;
+}
+
+.task-create-modal-sheet .task-create-draft-status {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.task-create-modal-sheet .task-create-draft-status--error {
+  color: var(--danger-deep);
+}
+
+/* —— Form rhythm —— */
+.task-create-modal-form.task-create-form {
+  gap: var(--space-8);
+}
+
+.task-create-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.task-create-modal-section--execution {
+  gap: var(--space-4);
+}
+
+/* Uppercase field labels inside the modal only */
+.task-create-modal-sheet .field-label-with-req label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.task-create-modal-sheet .field-req--required {
+  color: var(--text-tertiary);
+}
+
+/* Title row: full-width title, metadata side-by-side below */
+.task-create-modal-sheet .task-create-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: end;
+}
+
+@media (min-width: 480px) {
+  .task-create-modal-sheet .task-create-title-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .task-create-modal-sheet .task-create-title-row .field.grow:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.task-create-modal-sheet .task-create-title-row .field.grow {
+  min-width: 0;
+}
+
+/* Inputs — flat hairline, no inset shadow stack */
+.task-create-modal-sheet input[type="text"],
+.task-create-modal-sheet input:not([type]) {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: none;
+  transition:
+    border-color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.task-create-modal-sheet input[type="text"]:hover,
+.task-create-modal-sheet input:not([type]):hover {
+  border-color: color-mix(in srgb, var(--border-hairline) 60%, var(--text-primary) 40%);
+}
+
+.task-create-modal-sheet input[type="text"]:focus,
+.task-create-modal-sheet input:not([type]):focus {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.task-create-modal-sheet button.custom-select-trigger {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: none;
+}
+
+/* Section headings — sentence case, one weight */
+.task-create-modal-sheet .task-create-checklist-heading,
+.task-create-modal-sheet .task-create-subtasks-heading,
+.task-create-modal-sheet .task-create-agent .task-create-subtasks-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet .task-create-checklist::before,
+.task-create-modal-sheet .task-create-checklist {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.task-create-modal-sheet .task-create-checklist-head,
+.task-create-modal-sheet .task-create-subtasks-head {
+  padding-bottom: var(--space-2);
+  border-bottom: none;
+}
+
+.task-create-modal-sheet .task-create-checklist .task-checklist-surface,
+.task-create-modal-sheet .task-create-subtasks .task-checklist-list,
+.task-create-modal-sheet .task-create-subtasks-empty {
+  margin-top: var(--space-2);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-create-modal-sheet .task-create-checklist .task-checklist-list {
+  gap: var(--space-2);
+}
+
+.task-create-modal-sheet button.task-detail-add-checklist-btn {
+  min-width: auto;
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet button.task-detail-add-checklist-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+/* Prompt editor — monospace well on subtle surface */
+.task-create-modal-sheet .task-create-editor-shell {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.task-create-modal-sheet .task-create-editor-shell:focus-within {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.task-create-modal-sheet .task-create-editor-shell .rich-prompt-toolbar {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+}
+
+.task-create-modal-sheet .task-create-editor-shell .toolbar-btn {
+  min-height: 1.75rem;
+  padding: 0.15rem 0.45rem;
+  font-size: var(--text-xs);
+}
+
+.task-create-modal-sheet .task-create-editor-shell .rich-prompt-wrap .tiptap {
+  min-height: 9.5rem;
+  font-family: var(--font-mono);
+  background: var(--bg-subtle);
+}
+
+/* Project block */
+.task-create-modal-sheet .task-create-project {
+  margin-top: 0;
+  padding-top: 0;
+  gap: var(--space-4);
+}
+
+.task-create-modal-sheet .task-create-project::before {
+  display: none;
+}
+
+.task-create-modal-sheet .project-context-picker--compact .project-context-picker__head {
+  align-items: center;
+}
+
+.task-create-modal-sheet .project-context-picker--compact h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet .project-context-picker--compact .project-context-picker__lede {
+  margin: 0.2rem 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+.task-create-modal-sheet .project-context-picker--compact .project-context-picker__summary {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+/* Autonomy — inline row with switch, no card chrome */
+.task-create-modal-sheet .task-create-autonomy {
+  border: none;
+  background: transparent;
+  padding: var(--space-1) 0;
+}
+
+.task-create-modal-sheet .task-create-autonomy__row {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  gap: var(--space-4);
+  cursor: pointer;
+}
+
+.task-create-modal-sheet .task-create-autonomy__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet .task-create-autonomy__hint {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.task-create-modal-sheet .task-create-autonomy__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.task-create-modal-sheet .task-create-autonomy__switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  transition:
+    background var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default);
+}
+
+.task-create-modal-sheet .task-create-autonomy__switch[data-checked="true"] {
+  background: var(--control-primary-bg);
+  border-color: var(--control-primary-bg);
+}
+
+.task-create-modal-sheet .task-create-autonomy__switch-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.125rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgb(var(--slate-shadow) / 12%);
+  transform: translateY(-50%);
+  transition: transform var(--duration-normal) var(--ease-default);
+}
+
+.task-create-modal-sheet
+  .task-create-autonomy__switch[data-checked="true"]
+  .task-create-autonomy__switch-thumb {
+  transform: translate(1.25rem, -50%);
+}
+
+.task-create-modal-sheet .task-create-autonomy__row:focus-within .task-create-autonomy__switch {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.task-create-modal-sheet
+  .task-create-autonomy__row:has(.task-create-autonomy__input:disabled)
+  .task-create-autonomy__switch {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.task-create-modal-sheet
+  .task-create-autonomy__row:has(.task-create-autonomy__input:disabled) {
+  cursor: not-allowed;
+}
+
+/* More options — soft well */
+.task-create-modal-sheet .task-create-advanced {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.task-create-modal-sheet .task-create-advanced[open] {
+  border-color: var(--border-hairline);
+  box-shadow: none;
+}
+
+.task-create-modal-sheet .task-create-advanced__summary {
+  padding: var(--space-3) var(--space-4);
+}
+
+.task-create-modal-sheet .task-create-advanced__summary:hover {
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+}
+
+.task-create-modal-sheet .task-create-advanced__label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet .task-create-advanced__hint {
+  color: var(--text-tertiary);
+}
+
+.task-create-modal-sheet .task-create-advanced__body {
+  padding: 0 var(--space-4) var(--space-4);
+  gap: var(--space-6);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-create-modal-sheet .task-create-agent {
+  margin-top: var(--space-4);
+  padding-top: 0;
+}
+
+.task-create-modal-sheet .task-create-agent::before {
+  display: none;
+}
+
+.task-create-modal-sheet .task-create-agent-panel {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-create-modal-sheet .task-create-agent--create-modal .task-create-subtasks-heading {
+  margin-bottom: var(--space-3);
+}
+
+.task-create-modal-sheet .task-create-scheduling {
+  gap: var(--space-4);
+}
+
+.task-create-modal-sheet .task-create-scheduling__legend {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-create-modal-sheet .task-create-scheduling__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 560px) {
+  .task-create-modal-sheet .task-create-scheduling__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.task-create-modal-sheet .task-create-scheduling__field--full {
+  grid-column: 1 / -1;
+}
+
+.task-create-modal-sheet .task-create-scheduling__field .hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Footer — near-black primary CTA per redesign */
+.task-create-modal-sheet .task-create-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-create-modal-sheet .task-create-modal-actions__start {
+  margin-right: auto;
+}
+
+.task-create-modal-sheet .task-create-modal-actions__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.task-create-modal-sheet .task-create-submit:not(:disabled) {
+  color: var(--control-primary-fg);
+  background: var(--control-primary-bg);
+  border: none;
+}
+
+.task-create-modal-sheet .task-create-submit:not(:disabled):hover {
+  background: var(--control-primary-hover-bg);
+  filter: none;
+}
+
+.task-create-modal-sheet .task-create-submit:not(:disabled):focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+.task-create-modal-sheet .task-create-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .task-create-modal-sheet .task-create-modal-actions__end {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .task-create-modal-sheet .task-create-modal-actions__end .task-create-submit {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-create-modal-sheet .task-create-autonomy__switch,
+  .task-create-modal-sheet .task-create-autonomy__switch-thumb {
+    transition: none;
+  }
+}

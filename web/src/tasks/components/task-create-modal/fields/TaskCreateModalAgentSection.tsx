@@ -25,8 +25,9 @@ type Props = {
   /**
    * "Change model" dialog only: skip the lock banner (the dialog already explains scope)
    * and use shorter helper copy with roomier layout via `.task-create-agent--model-dialog`.
+   * `createModal` trims helper copy in the new-task sheet.
    */
-  variant?: "default" | "modelDialog";
+  variant?: "default" | "modelDialog" | "createModal";
   runner: string;
   cursorModel: string;
   onRunnerChange: (runner: string) => void;
@@ -117,14 +118,25 @@ export function TaskCreateModalAgentSection({
       : null;
 
   const isModelDialog = variant === "modelDialog";
+  const isCreateModal = variant === "createModal";
+  const showRunnerHelp = !isCreateModal || lockRunner;
+  const showModelHelp =
+    !isCreateModal ||
+    modelSelectBusy ||
+    lockRunner ||
+    Boolean(modelFetchError) ||
+    Boolean(modelServerError);
 
   return (
     <section
-      className={
+      className={[
         isModelDialog
           ? "task-create-agent task-create-agent--model-dialog"
-          : "task-create-agent"
-      }
+          : "task-create-agent",
+        isCreateModal ? "task-create-agent--create-modal" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-labelledby={AGENT_HEADING_ID}
     >
       <h3 id={AGENT_HEADING_ID} className="task-create-subtasks-heading">
@@ -170,11 +182,15 @@ export function TaskCreateModalAgentSection({
                 ))}
               </select>
             </div>
-            <p className="task-create-agent-help">
-              {lockRunner
-                ? "Set when this task was created; the runner can’t be changed for an existing task."
-                : "Pick the runtime for this task. It’s saved when the task is created and can’t be changed later."}
-            </p>
+            {showRunnerHelp ? (
+              <p className="task-create-agent-help">
+                {lockRunner
+                  ? "Set when this task was created; the runner can’t be changed for an existing task."
+                  : isCreateModal
+                    ? "Saved with the task and fixed after creation."
+                    : "Pick the runtime for this task. It’s saved when the task is created and can’t be changed later."}
+              </p>
+            ) : null}
           </div>
           <div className="field task-create-agent-field">
             <label htmlFor={modelId}>Model</label>
@@ -217,15 +233,19 @@ export function TaskCreateModalAgentSection({
                     aria-hidden="true"
                   />
                 </div>
-                <p className="task-create-agent-help">
-                  {modelSelectBusy
-                    ? "Loading available models…"
-                    : lockRunner
-                      ? isModelDialog
-                        ? "Pick a model or Auto. This overrides the workspace default for this task only."
-                        : "Per-task: pick a model or Auto. Auto lets cursor-agent choose for this task only."
-                      : "Auto uses Cursor's current default unless overridden."}
-                </p>
+                {showModelHelp ? (
+                  <p className="task-create-agent-help">
+                    {modelSelectBusy
+                      ? "Loading available models…"
+                      : lockRunner
+                        ? isModelDialog
+                          ? "Pick a model or Auto. This overrides the workspace default for this task only."
+                          : "Per-task: pick a model or Auto. Auto lets cursor-agent choose for this task only."
+                        : isCreateModal
+                          ? "Auto uses the workspace default."
+                          : "Auto uses Cursor's current default unless overridden."}
+                  </p>
+                ) : null}
                 {modelFetchError ? (
                   <div
                     role="alert"

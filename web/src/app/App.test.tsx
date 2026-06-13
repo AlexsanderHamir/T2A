@@ -341,7 +341,7 @@ describe("App", () => {
     await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
     await choosePriorityInDialog(user, dialog);
     await user.click(
-      within(dialog).getByRole("button", { name: /^create$/i }),
+      within(dialog).getByRole("button", { name: /^create task$/i }),
     );
 
     expect(
@@ -1135,7 +1135,7 @@ describe("App", () => {
     );
 
     await user.click(
-      within(dialog).getByRole("button", { name: /^create$/i }),
+      within(dialog).getByRole("button", { name: /^create task$/i }),
     );
 
     expect(
@@ -1236,7 +1236,7 @@ describe("App", () => {
     );
 
     await user.click(
-      within(dialog).getByRole("button", { name: /^create$/i }),
+      within(dialog).getByRole("button", { name: /^create task$/i }),
     );
 
     expect(
@@ -1292,7 +1292,7 @@ describe("App", () => {
       within(dialog).queryByText(/inherit parent's checklist criteria/i),
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: /^create$/i }),
+      within(dialog).getByRole("button", { name: /^create task$/i }),
     ).toBeInTheDocument();
     expect(
       within(dialog).queryByRole("button", { name: /^add subtask$/i }),
@@ -1359,7 +1359,7 @@ describe("App", () => {
     );
     await choosePriorityInDialog(user, dialog);
     await user.click(
-      within(dialog).getByRole("button", { name: /^create$/i }),
+      within(dialog).getByRole("button", { name: /^create task$/i }),
     );
 
     await waitFor(() => {

@@ -40,14 +40,23 @@ export function TaskCreateModalAutonomyToggle({
           </span>
           <span className="task-create-autonomy__hint">
             {enabled
-              ? "The agent will pick this task up when its scheduling and dependencies allow."
-              : "The task will be created on hold. The agent will not pick it up until you resume it from the task detail page."}
+              ? "Agent picks this up when scheduling and dependencies allow."
+              : "Created on hold until you resume from the task page."}
           </span>
+        </span>
+        <span
+          className="task-create-autonomy__switch"
+          data-checked={enabled ? "true" : "false"}
+          aria-hidden="true"
+        >
+          <span className="task-create-autonomy__switch-thumb" />
         </span>
         <input
           id="task-create-autonomy-toggle"
           type="checkbox"
           className="task-create-autonomy__input"
+          role="switch"
+          aria-checked={enabled}
           checked={enabled}
           disabled={disabled}
           onChange={handle}

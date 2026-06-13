@@ -159,9 +159,31 @@ export function TaskCreateModal({
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
           <header className="task-create-modal-header">
             <div className="task-create-modal-header__text">
-              <h2 id="task-create-modal-title" className="task-create-modal-title">
-                New task
-              </h2>
+              <div className="task-create-modal-header__title-row">
+                <h2
+                  id="task-create-modal-title"
+                  className="task-create-modal-title"
+                >
+                  New task
+                </h2>
+                {draftSaveLabel ? (
+                  <p
+                    className={[
+                      "task-create-draft-status",
+                      draftSaveError ? "task-create-draft-status--error" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-live={draftSaveError ? "assertive" : "polite"}
+                  >
+                    {draftSaveLabel}
+                  </p>
+                ) : null}
+              </div>
+              <p className="task-create-modal-subtitle">
+                Title and prompt are enough to start. Everything else is
+                optional.
+              </p>
             </div>
             {onApplyTestScenario ? (
               <TestScenariosTrigger
@@ -172,107 +194,100 @@ export function TaskCreateModal({
               />
             ) : null}
           </header>
-          {draftSaveLabel ? (
-            <p
-              className={[
-                "task-create-draft-status",
-                draftSaveError ? "task-create-draft-status--error" : "muted",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-live={draftSaveError ? "assertive" : "polite"}
-            >
-              {draftSaveLabel}
-            </p>
-          ) : null}
+
           <form
             className="task-create-modal-form task-create-form"
             onSubmit={onSubmit}
           >
-            <TaskCreateModalPrimaryFields
-              dmapMode={dmapMode}
-              disabled={disabled}
-              title={title}
-              onTitleChange={onTitleChange}
-              priority={priority}
-              onPriorityChange={onPriorityChange}
-              taskType={taskType}
-              onTaskTypeChange={onTaskTypeChange}
-              dmapCommitLimit={dmapCommitLimit}
-              dmapDomain={dmapDomain}
-              dmapDescription={dmapDescription}
-              onDmapCommitLimitChange={onDmapCommitLimitChange}
-              onDmapDomainChange={onDmapDomainChange}
-              onDmapDescriptionChange={onDmapDescriptionChange}
-              prompt={prompt}
-              checklistItems={checklistItems}
-              hideComposeChecklist={false}
-              checklistRequirement="optional"
-              onPromptChange={onPromptChange}
-              onAppendChecklistCriterion={onAppendChecklistCriterion}
-              onUpdateChecklistRow={onUpdateChecklistRow}
-              onRemoveChecklistRow={onRemoveChecklistRow}
-              projectContext={promptProjectContext}
-            />
+            <div className="task-create-modal-section task-create-modal-section--essentials">
+              <TaskCreateModalPrimaryFields
+                dmapMode={dmapMode}
+                disabled={disabled}
+                title={title}
+                onTitleChange={onTitleChange}
+                priority={priority}
+                onPriorityChange={onPriorityChange}
+                taskType={taskType}
+                onTaskTypeChange={onTaskTypeChange}
+                dmapCommitLimit={dmapCommitLimit}
+                dmapDomain={dmapDomain}
+                dmapDescription={dmapDescription}
+                onDmapCommitLimitChange={onDmapCommitLimitChange}
+                onDmapDomainChange={onDmapDomainChange}
+                onDmapDescriptionChange={onDmapDescriptionChange}
+                prompt={prompt}
+                checklistItems={checklistItems}
+                hideComposeChecklist={false}
+                checklistRequirement="optional"
+                onPromptChange={onPromptChange}
+                onAppendChecklistCriterion={onAppendChecklistCriterion}
+                onUpdateChecklistRow={onUpdateChecklistRow}
+                onRemoveChecklistRow={onRemoveChecklistRow}
+                projectContext={promptProjectContext}
+              />
 
-            {projectAssignment}
+              {projectAssignment}
+            </div>
 
-            <TaskCreateModalAutonomyToggle
-              enabled={autonomyEnabled}
-              disabled={disabled}
-              onChange={onAutonomyChange}
-            />
+            <div className="task-create-modal-section task-create-modal-section--execution">
+              <TaskCreateModalAutonomyToggle
+                enabled={autonomyEnabled}
+                disabled={disabled}
+                onChange={onAutonomyChange}
+              />
 
-            <details className="task-create-advanced">
-              <summary
-                className="task-create-advanced__summary"
-                data-testid="task-create-more-options-toggle"
-              >
-                <span
-                  className="task-create-advanced__chevron"
-                  aria-hidden="true"
-                />
-                <span className="task-create-advanced__label">More options</span>
-                <span className="task-create-advanced__hint">
-                  {advancedSummaryLine({
-                    runner: taskRunner,
-                    cursorModel: taskCursorModel,
-                    schedule,
-                    tagsCsv,
-                    milestone,
-                    dependsOn,
-                  })}
-                </span>
-              </summary>
-              <div className="task-create-advanced__body">
-                <TaskCreateModalAgentSection
-                  disabled={disabled}
-                  runner={taskRunner}
-                  cursorModel={taskCursorModel}
-                  onRunnerChange={onTaskRunnerChange}
-                  onCursorModelChange={onTaskCursorModelChange}
-                />
+              <details className="task-create-advanced">
+                <summary
+                  className="task-create-advanced__summary"
+                  data-testid="task-create-more-options-toggle"
+                >
+                  <span
+                    className="task-create-advanced__chevron"
+                    aria-hidden="true"
+                  />
+                  <span className="task-create-advanced__label">More options</span>
+                  <span className="task-create-advanced__hint">
+                    {advancedSummaryLine({
+                      runner: taskRunner,
+                      cursorModel: taskCursorModel,
+                      schedule,
+                      tagsCsv,
+                      milestone,
+                      dependsOn,
+                    })}
+                  </span>
+                </summary>
+                <div className="task-create-advanced__body">
+                  <TaskCreateModalAgentSection
+                    disabled={disabled}
+                    variant="createModal"
+                    runner={taskRunner}
+                    cursorModel={taskCursorModel}
+                    onRunnerChange={onTaskRunnerChange}
+                    onCursorModelChange={onTaskCursorModelChange}
+                  />
 
-                <SchedulePicker
-                  value={schedule}
-                  onChange={onScheduleChange}
-                  appTimezone={appTimezone}
-                  disabled={disabled}
-                  idPrefix="task-create-modal"
-                />
+                  <SchedulePicker
+                    value={schedule}
+                    onChange={onScheduleChange}
+                    appTimezone={appTimezone}
+                    disabled={disabled}
+                    idPrefix="task-create-modal"
+                  />
 
-                <TaskCreateModalSchedulingFields
-                  disabled={disabled}
-                  tagsCsv={tagsCsv}
-                  milestone={milestone}
-                  projectId={projectId}
-                  dependsOn={dependsOn}
-                  onTagsCsvChange={onTagsCsvChange}
-                  onMilestoneChange={onMilestoneChange}
-                  onDependsOnChange={onDependsOnChange}
-                />
-              </div>
-            </details>
+                  <TaskCreateModalSchedulingFields
+                    disabled={disabled}
+                    tagsCsv={tagsCsv}
+                    milestone={milestone}
+                    projectId={projectId}
+                    dependsOn={dependsOn}
+                    onTagsCsvChange={onTagsCsvChange}
+                    onMilestoneChange={onMilestoneChange}
+                    onDependsOnChange={onDependsOnChange}
+                  />
+                </div>
+              </details>
+            </div>
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
 

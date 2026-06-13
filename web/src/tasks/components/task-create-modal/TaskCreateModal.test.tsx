@@ -173,7 +173,7 @@ describe("TaskCreateModal", () => {
       screen.queryByRole("heading", { name: /^new subtask$/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /^create$/i }),
+      screen.getByRole("button", { name: /^create task$/i }),
     ).toBeInTheDocument();
   });
 
@@ -255,7 +255,7 @@ describe("TaskCreateModal", () => {
       createError: new Error("boom"),
     });
     expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: /^create$/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /^create task$/i })).not.toBeDisabled();
   });
 
   it("does not render a separate draft name field (title doubles as the draft name)", () => {
@@ -358,7 +358,7 @@ describe("TaskCreateModal", () => {
       expect(toggle).toBeChecked();
       expect(
         screen.getByText(
-          /agent will pick this task up when its scheduling and dependencies allow/i,
+          /agent picks this up when scheduling and dependencies allow/i,
         ),
       ).toBeInTheDocument();
     });
@@ -368,7 +368,7 @@ describe("TaskCreateModal", () => {
       const toggle = getAutonomyCheckbox();
       expect(toggle).not.toBeChecked();
       expect(
-        screen.getByText(/will be created on hold/i),
+        screen.getByText(/created on hold until you resume/i),
       ).toBeInTheDocument();
     });
 
