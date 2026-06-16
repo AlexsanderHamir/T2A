@@ -1,16 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAppSettings } from "@/api/settings";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { getTaskStats, listTasks } from "../../api";
 import { flattenTaskTreeRoots } from "../task-tree";
 import { TASK_LIST_PAGE_SIZE } from "../task-paging";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import { errorMessage } from "@/lib/errorMessage";
 import {
-  DEFAULT_NEW_TASK_STATUS,
-  DEFAULT_PROJECT_ID,
   type Priority,
-  type Status,
   type Task,
 } from "@/types";
 import { useHysteresisBoolean } from "@/lib/useHysteresisBoolean";
@@ -41,22 +38,24 @@ export type UseTasksAppOptions = {
 export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions) {
   const {
     createFlowError,
+    editingTaskId,
+    closeCreateModal,
+    newTitle,
+    newPrompt,
+    newPriority,
+    newProjectID,
+    newProjectContextItemIDs,
+    newTagsCsv,
+    newMilestone,
+    newTaskCursorModel,
+    newSchedule,
+    composeStatus,
     ...createFlow
   } = useTaskCreateFlow();
 
-  const [editing, setEditing] = useState<Task | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editPrompt, setEditPrompt] = useState("");
-  const [editPriority, setEditPriority] = useState<Priority>("medium");
-  const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
-  const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
-  const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
-  const [editTagsCsv, setEditTagsCsv] = useState("");
-  const [editMilestone, setEditMilestone] = useState("");
-  const [editCursorModel, setEditCursorModel] = useState("");
-  const [editPickupSchedule, setEditPickupSchedule] = useState<string | null>(
-    null,
-  );
+  const editingTaskIdRef = useRef<string | null>(null);
+  editingTaskIdRef.current = editingTaskId;
+
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
   const [changeModelTask, setChangeModelTask] = useState<Task | null>(null);
   const [changeModelDraft, setChangeModelDraft] = useState("");
@@ -73,11 +72,13 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     resetError: resetDeleteError,
   } = useTaskDeleteFlow({
     onDeleted: (deletedId) => {
-      setEditing((prev) => (prev?.id === deletedId ? null : prev));
+      if (editingTaskIdRef.current === deletedId) {
+        closeCreateModal();
+      }
     },
   });
 
-  /** Client-side validation (shown after server errors when applicable). */
+  /** Client-side validation for edit save (shown after server errors when applicable). */
   const [editTitleRequiredError, setEditTitleRequiredError] = useState<
     string | null
   >(null);
@@ -100,18 +101,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
         taskListPage * TASK_LIST_PAGE_SIZE,
         { signal },
       ),
-    // When the active route does not consume the task list (e.g. the
-    // user navigated to /settings), suspend the query so SSE
-    // invalidations and window-focus refetches stop firing GET /tasks
-    // for a view nobody is rendering. The cache stays populated; the
-    // next time the home route mounts, React Query will revalidate
-    // through its normal stale-while-revalidate path.
     enabled: dataEnabled,
-    // SSE keeps this cache fresh in real time and bootstrap seeds it
-    // on cold start. The default 15s staleTime forced unnecessary
-    // background refetches whenever a component remounted (e.g.
-    // returning from the task detail page); 60s matches the freshness
-    // budget that SSE already enforces.
     staleTime: 60_000,
   });
   const taskStatsQuery = useQuery({
@@ -156,18 +146,16 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     resetError: resetPatchError,
   } = useTaskPatchFlow({
     onPatched: (patchedId) => {
-      setEditing((prev) => (prev?.id === patchedId ? null : prev));
+      if (editingTaskIdRef.current === patchedId) {
+        closeCreateModal();
+      }
       setChangeModelTask((prev) => (prev?.id === patchedId ? null : prev));
     },
   });
 
-  // Wipe stale errors when their hosting modals close so the next open
-  // doesn't render an old `.err role="alert"` callout before the user has
-  // interacted. Mirrors the `createMutation.reset()` / `evaluateDraftMutation.reset()`
-  // lifecycle wired in session #33; pinned by the per-component error tests.
   useEffect(() => {
-    if (!editing && !changeModelTask) resetPatchError();
-  }, [editing, changeModelTask, resetPatchError]);
+    if (!createFlow.createModalOpen && !changeModelTask) resetPatchError();
+  }, [createFlow.createModalOpen, changeModelTask, resetPatchError]);
 
   useEffect(() => {
     if (!deleteTarget) resetDeleteError();
@@ -195,34 +183,26 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   ]);
 
   useEffect(() => {
-    if (editTitleRequiredError && editTitle.trim()) {
+    if (editTitleRequiredError && newTitle.trim()) {
       setEditTitleRequiredError(null);
     }
-  }, [editTitle, editTitleRequiredError]);
+  }, [newTitle, editTitleRequiredError]);
 
   function openEdit(t: Task) {
     setChangeModelTask(null);
-    setEditing(t);
-    setEditTitle(t.title);
-    setEditPrompt(t.initial_prompt);
-    setEditPriority(t.priority);
-    setEditStatus(t.status);
-    setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
-    setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
-    setEditTagsCsv((t.tags ?? []).join(", "));
-    setEditMilestone(t.milestone ?? "");
-    setEditCursorModel(t.cursor_model ?? "");
-    setEditPickupSchedule(t.pickup_not_before ?? null);
     setEditTitleRequiredError(null);
+    void createFlow.beginEditSession(t);
   }
 
   function closeEdit() {
-    setEditing(null);
+    closeCreateModal();
     setEditTitleRequiredError(null);
   }
 
   function openChangeModel(t: Task) {
-    setEditing(null);
+    if (editingTaskId) {
+      closeCreateModal();
+    }
     setEditTitleRequiredError(null);
     setChangeModelTask(t);
     setChangeModelDraft(t.cursor_model ?? "");
@@ -250,30 +230,38 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
 
   function submitEdit(e: FormEvent) {
     e.preventDefault();
-    if (!editing) return;
-    if (!editTitle.trim()) {
+    if (!editingTaskId || !newPriority) return;
+    if (!newTitle.trim()) {
       setEditTitleRequiredError("Title is required.");
       return;
     }
     setEditTitleRequiredError(null);
     runPatch({
-      id: editing.id,
-      title: editTitle.trim(),
-      initial_prompt: editPrompt,
-      status: editStatus,
-      priority: editPriority,
-      project_id: editProjectID.trim() || null,
-      project_context_item_ids: editProjectContextItemIDs,
-      tags: editTagsCsv
+      id: editingTaskId,
+      title: newTitle.trim(),
+      initial_prompt: newPrompt,
+      status: composeStatus,
+      priority: newPriority as Priority,
+      project_id: newProjectID.trim() || null,
+      project_context_item_ids: newProjectContextItemIDs,
+      tags: newTagsCsv
         .split(/[,;\n]+/)
         .map((t) => t.trim())
         .filter(Boolean),
-      milestone: editMilestone.trim() || null,
-      cursor_model: editCursorModel.trim(),
-      ...(canEditTaskPickupSchedule(editStatus)
-        ? { pickup_not_before: editPickupSchedule }
+      milestone: newMilestone.trim() || null,
+      cursor_model: newTaskCursorModel.trim(),
+      ...(canEditTaskPickupSchedule(composeStatus)
+        ? { pickup_not_before: newSchedule }
         : {}),
     });
+  }
+
+  function submitComposeModal(e: FormEvent) {
+    if (editingTaskId) {
+      submitEdit(e);
+      return;
+    }
+    void createFlow.submitCreate(e);
   }
 
   useEffect(() => {
@@ -287,6 +275,18 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
 
   return {
     ...createFlow,
+    closeCreateModal,
+    editingTaskId,
+    composeStatus,
+    newTitle,
+    newPrompt,
+    newPriority,
+    newProjectID,
+    newProjectContextItemIDs,
+    newTagsCsv,
+    newMilestone,
+    newTaskCursorModel,
+    newSchedule,
     tasks,
     rootTasksOnPage: rootTaskTrees.length,
     loading,
@@ -300,33 +300,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     error,
     sseLive,
     taskStats: taskStatsQuery.data,
-    /**
-     * True only on the first stats query resolution (before any settle). Stays false
-     * during background refetch so consumers can keep showing the previous
-     * values instead of replacing them with a skeleton on every refresh.
-     */
     taskStatsLoading: taskStatsQuery.isPending,
-    editing,
-    editTitle,
-    setEditTitle,
-    editPrompt,
-    setEditPrompt,
-    editPriority,
-    setEditPriority,
-    editStatus,
-    setEditStatus,
-    editProjectID,
-    setEditProjectID,
-    editProjectContextItemIDs,
-    setEditProjectContextItemIDs,
-    editTagsCsv,
-    setEditTagsCsv,
-    editMilestone,
-    setEditMilestone,
-    editCursorModel,
-    setEditCursorModel,
-    editPickupSchedule,
-    setEditPickupSchedule,
     changeModelTask,
     changeModelDraft,
     setChangeModelDraft,
@@ -336,6 +310,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     openEdit,
     closeEdit,
     submitEdit,
+    submitComposeModal,
     editFormError: editTitleRequiredError,
     deleteTarget,
     requestDelete,

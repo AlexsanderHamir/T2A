@@ -14,6 +14,7 @@ type Props = {
   checklistItems: ChecklistItemDraft[];
   hideComposeChecklist: boolean;
   checklistRequirement?: "optional" | "required";
+  checklistDisabled?: boolean;
   onPromptChange: (value: string) => void;
   onAppendChecklistCriterion: (item: ChecklistItemDraft | string) => void;
   onUpdateChecklistRow: (index: number, item: ChecklistItemDraft) => void;
@@ -34,6 +35,7 @@ export function TaskCreateModalPrimaryFields({
   checklistItems,
   hideComposeChecklist,
   checklistRequirement = "optional",
+  checklistDisabled = false,
   onPromptChange,
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
@@ -50,6 +52,7 @@ export function TaskCreateModalPrimaryFields({
       checklistItems={checklistItems}
       hideChecklist={hideComposeChecklist}
       checklistRequirement={checklistRequirement}
+      checklistDisabled={checklistDisabled}
       disabled={disabled}
       onTitleChange={onTitleChange}
       onPromptChange={onPromptChange}

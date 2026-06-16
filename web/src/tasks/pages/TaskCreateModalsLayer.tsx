@@ -14,33 +14,22 @@ type Props = {
   app: ReturnType<typeof useTasksApp>;
 };
 
-const noopChecklistAppend = (): void => {};
-const noopChecklistUpdate = (): void => {};
-const noopChecklistRemove = (): void => {};
-const noopSaveDraft = (): void => {};
-const noopEvaluate = (): void => {};
-
 export function TaskCreateModalsLayer({ app }: Props) {
   const appTimezone = useAppTimezone();
-  const projectsEnabled = app.createModalOpen || app.editing !== null;
   const projects = useProjects({
     includeArchived: false,
     limit: 100,
-    enabled: projectsEnabled,
+    enabled: app.createModalOpen,
   });
-  const newPromptProjectContext = useProjectContextPromptBinding({
+  const promptProjectContext = useProjectContextPromptBinding({
     projectId: app.createModalOpen ? app.newProjectID : "",
     selectedIds: app.newProjectContextItemIDs,
     onSelectedIdsChange: app.setNewProjectContextItemIDs,
   });
-  const editPromptProjectContext = useProjectContextPromptBinding({
-    projectId: app.editing ? app.editProjectID : "",
-    selectedIds: app.editProjectContextItemIDs,
-    onSelectedIdsChange: app.setEditProjectContextItemIDs,
-  });
 
   const assignmentControlsDisabled =
     app.saving || app.createModalAssignmentLocked;
+  const isEditing = app.editingTaskId != null;
 
   const handleResumeDraft = (id: string) => {
     void app.resumeDraftByID(id).catch(() => {
@@ -68,12 +57,19 @@ export function TaskCreateModalsLayer({ app }: Props) {
       ) : null}
       {app.createModalOpen ? (
         <TaskCreateModal
+          editingTaskId={app.editingTaskId}
+          editingTaskRunner={app.editingTaskRunner}
+          composeStatus={app.composeStatus}
+          onComposeStatusChange={app.setComposeStatus}
+          patchPending={app.patchPending}
+          patchError={app.patchError}
+          formError={app.editFormError}
           pending={app.createPending}
           saving={app.saving}
-          draftSaving={app.draftSavePending}
-          draftSaveLabel={app.draftSaveLabel}
-          draftSaveError={app.draftSaveError}
-          onClose={app.closeCreateModal}
+          draftSaving={isEditing ? false : app.draftSavePending}
+          draftSaveLabel={isEditing ? null : app.draftSaveLabel}
+          draftSaveError={isEditing ? false : app.draftSaveError}
+          onClose={app.closeEdit}
           title={app.newTitle}
           prompt={app.newPrompt}
           priority={app.newPriority}
@@ -84,9 +80,9 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
           onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}
-          evaluatePending={app.evaluatePending}
-          evaluation={app.latestDraftEvaluation}
-          taskRunner={app.newTaskRunner}
+          evaluatePending={isEditing ? false : app.evaluatePending}
+          evaluation={isEditing ? null : app.latestDraftEvaluation}
+          taskRunner={isEditing ? app.editingTaskRunner : app.newTaskRunner}
           taskCursorModel={app.newTaskCursorModel}
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
@@ -96,7 +92,7 @@ export function TaskCreateModalsLayer({ app }: Props) {
               aria-label="Project assignment"
             >
               <ProjectSelect
-                id="task-create-project"
+                id={isEditing ? "task-edit-project" : "task-create-project"}
                 value={app.newProjectID}
                 projects={projects.data?.projects ?? []}
                 loading={projects.isLoading}
@@ -110,7 +106,7 @@ export function TaskCreateModalsLayer({ app }: Props) {
                 projectId={app.newProjectID}
                 selectedIds={app.newProjectContextItemIDs}
                 disabled={app.saving}
-                compact
+                compact={!isEditing}
                 onChange={app.setNewProjectContextItemIDs}
               />
             </section>
@@ -118,16 +114,19 @@ export function TaskCreateModalsLayer({ app }: Props) {
           automationAssignment={
             <AutomationPicker
               selections={app.newAutomationSelections}
-              disabled={app.saving}
+              disabled={app.saving || isEditing}
               compact
               onChange={app.setNewAutomationSelections}
             />
           }
-          promptProjectContext={newPromptProjectContext ?? undefined}
+          promptProjectContext={promptProjectContext ?? undefined}
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
-          autonomyEnabled={app.newAutonomyEnabled}
+          autonomyEnabled={
+            isEditing ? app.composeStatus === "ready" : app.newAutonomyEnabled
+          }
           onAutonomyChange={app.setNewAutonomyEnabled}
+          autonomyDisabled={isEditing}
           tagsCsv={app.newTagsCsv}
           milestone={app.newMilestone}
           projectId={app.newProjectID}
@@ -136,86 +135,17 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onMilestoneChange={app.setNewMilestone}
           onDependsOnChange={app.setNewDependsOn}
           appTimezone={appTimezone}
-          onSaveDraft={() => void app.saveDraftNow()}
-          onEvaluate={() => void app.evaluateDraftBeforeCreate()}
-          onSubmit={(e) => void app.submitCreate(e)}
-          createError={app.createError}
-          createFormError={app.createFormError}
-          evaluateError={app.evaluateError}
-          onApplyTestScenario={app.applyTestScenario}
-        />
-      ) : null}
-      {app.editing ? (
-        <TaskCreateModal
-          mode="edit"
-          taskId={app.editing.id}
-          status={app.editStatus}
-          onStatusChange={app.setEditStatus}
-          patchPending={app.patchPending}
-          patchError={app.patchError}
-          formError={app.editFormError}
-          pending={false}
-          saving={app.saving}
-          draftSaving={false}
-          draftSaveLabel={null}
-          draftSaveError={false}
-          onClose={app.closeEdit}
-          title={app.editTitle}
-          prompt={app.editPrompt}
-          priority={app.editPriority}
-          checklistItems={[]}
-          onTitleChange={app.setEditTitle}
-          onPromptChange={app.setEditPrompt}
-          onPriorityChange={app.setEditPriority}
-          onAppendChecklistCriterion={noopChecklistAppend}
-          onUpdateChecklistRow={noopChecklistUpdate}
-          onRemoveChecklistRow={noopChecklistRemove}
-          evaluatePending={false}
-          evaluation={null}
-          taskRunner={app.editing.runner}
-          taskCursorModel={app.editCursorModel}
-          onTaskRunnerChange={() => {}}
-          onTaskCursorModelChange={app.setEditCursorModel}
-          projectAssignment={
-            <section
-              className="task-create-project"
-              aria-label="Project assignment"
-            >
-              <ProjectSelect
-                id="task-edit-project"
-                value={app.editProjectID}
-                projects={projects.data?.projects ?? []}
-                loading={projects.isLoading}
-                disabled={app.saving}
-                onChange={(projectId) => {
-                  app.setEditProjectID(projectId);
-                  app.setEditProjectContextItemIDs([]);
-                }}
-              />
-              <ProjectContextPicker
-                projectId={app.editProjectID}
-                selectedIds={app.editProjectContextItemIDs}
-                disabled={app.saving}
-                onChange={app.setEditProjectContextItemIDs}
-              />
-            </section>
-          }
-          promptProjectContext={editPromptProjectContext ?? undefined}
-          schedule={app.editPickupSchedule}
-          onScheduleChange={app.setEditPickupSchedule}
-          autonomyEnabled={false}
-          onAutonomyChange={() => {}}
-          tagsCsv={app.editTagsCsv}
-          milestone={app.editMilestone}
-          projectId={app.editProjectID}
-          dependsOn={[]}
-          onTagsCsvChange={app.setEditTagsCsv}
-          onMilestoneChange={app.setEditMilestone}
-          onDependsOnChange={() => {}}
-          appTimezone={appTimezone}
-          onSaveDraft={noopSaveDraft}
-          onEvaluate={noopEvaluate}
-          onSubmit={(e) => void app.submitEdit(e)}
+          onSaveDraft={() => {
+            if (!isEditing) void app.saveDraftNow();
+          }}
+          onEvaluate={() => {
+            if (!isEditing) void app.evaluateDraftBeforeCreate();
+          }}
+          onSubmit={(e) => void app.submitComposeModal(e)}
+          createError={isEditing ? null : app.createError}
+          createFormError={isEditing ? null : app.createFormError}
+          evaluateError={isEditing ? null : app.evaluateError}
+          onApplyTestScenario={isEditing ? undefined : app.applyTestScenario}
         />
       ) : null}
       {app.draftPickerOpen ? (

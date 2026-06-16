@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
@@ -73,9 +74,11 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     testCursorModelsEmpty,
   );
   return render(
-    <QueryClientProvider client={client}>
-      <TaskCreateModal {...base} {...props} />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <TaskCreateModal {...base} {...props} />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -402,10 +405,10 @@ describe("TaskCreateModal", () => {
       props?: Partial<ComponentProps<typeof TaskCreateModal>>,
     ) {
       return renderModal({
-        mode: "edit",
-        taskId: "task-123",
-        status: "ready",
-        onStatusChange: vi.fn(),
+        editingTaskId: "task-123",
+        editingTaskRunner: "cursor",
+        composeStatus: "ready",
+        onComposeStatusChange: vi.fn(),
         patchPending: false,
         patchError: null,
         formError: null,
@@ -463,7 +466,7 @@ describe("TaskCreateModal", () => {
 
     it("shows SchedulePicker for ready tasks inside More options", async () => {
       const user = userEvent.setup();
-      renderEditModal({ status: "ready", schedule: null });
+      renderEditModal({ composeStatus: "ready", schedule: null });
       await expandMoreOptions(user);
       expect(screen.getByTestId("schedule-picker-input")).toBeInTheDocument();
     });
@@ -471,7 +474,7 @@ describe("TaskCreateModal", () => {
     it("shows read-only pickup copy for running tasks inside More options", async () => {
       const user = userEvent.setup();
       renderEditModal({
-        status: "running",
+        composeStatus: "running",
         schedule: "2026-04-22T13:00:00Z",
       });
       await expandMoreOptions(user);

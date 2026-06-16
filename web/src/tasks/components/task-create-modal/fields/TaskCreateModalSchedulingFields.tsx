@@ -17,6 +17,8 @@ type Props = {
   onDependsOnChange: (value: string[]) => void;
   /** When false, hides the depends-on field (detail page owns dependency edits). */
   showDependsOn?: boolean;
+  /** When true, depends-on picker is read-only while tags/milestone stay editable. */
+  dependsOnDisabled?: boolean;
 };
 
 export function TaskCreateModalSchedulingFields({
@@ -29,6 +31,7 @@ export function TaskCreateModalSchedulingFields({
   onMilestoneChange,
   onDependsOnChange,
   showDependsOn = true,
+  dependsOnDisabled = false,
 }: Props) {
   return (
     <fieldset className="task-create-scheduling" disabled={disabled}>
@@ -62,7 +65,7 @@ export function TaskCreateModalSchedulingFields({
               projectId={projectId}
               selected={dependsOn}
               onChange={onDependsOnChange}
-              disabled={disabled}
+              disabled={disabled || dependsOnDisabled}
             />
           </div>
         ) : null}

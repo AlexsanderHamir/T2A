@@ -6,6 +6,7 @@ import {
   deleteTaskDraft as apiDeleteDraft,
   evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
+  listChecklist,
   listTaskDrafts as apiListDrafts,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
@@ -31,7 +32,7 @@ import {
   normalizeChecklistItems,
   normalizeVerifyCommands,
 } from "../task-compose/checklistRequirement";
-import type { ChecklistItemDraft, TaskDraftChecklistItem } from "@/types";
+import type { ChecklistItemDraft, Task, TaskDraftChecklistItem } from "@/types";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -152,6 +153,12 @@ export function useTaskCreateFlow() {
     sections: Array<{ key: string; score: number }>;
   } | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  /** When set, the create modal is editing an existing task (same UI as create). */
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  /** Runner on the task being edited; locked in the agent section. */
+  const [editingTaskRunner, setEditingTaskRunner] = useState("");
+  /** Writable status for PATCH while `editingTaskId` is set. */
+  const [composeStatus, setComposeStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
@@ -245,7 +252,54 @@ export function useTaskCreateFlow() {
     );
     setDraftAutosaveBaselineID(generatedID);
     setCreateModalAssignmentLocked(false);
+    setEditingTaskId(null);
+    setEditingTaskRunner("");
+    setComposeStatus(DEFAULT_NEW_TASK_STATUS);
   }, [queryClient, setNewDraftID]);
+
+  const populateFromTask = useCallback((t: Task) => {
+    requestedResumeRef.current = null;
+    setNewTitle(t.title);
+    setNewPrompt(t.initial_prompt);
+    setNewPriority(t.priority);
+    setNewTaskRunner(t.runner);
+    setEditingTaskRunner(t.runner);
+    setNewTaskCursorModel(t.cursor_model ?? "");
+    setNewProjectID(t.project_id || DEFAULT_PROJECT_ID);
+    setNewProjectContextItemIDs(t.project_context_item_ids ?? []);
+    setNewAutomationSelections(t.automation_selections ?? []);
+    setNewSchedule(t.pickup_not_before ?? null);
+    setNewAutonomyEnabled(t.status === "ready");
+    setComposeStatus(t.status);
+    setNewTagsCsv((t.tags ?? []).join(", "));
+    setNewMilestone(t.milestone ?? "");
+    setNewDependsOn((t.depends_on ?? []).map((edge) => edge.task_id));
+    setLatestDraftEvaluation(null);
+    setCreateFormError(null);
+  }, []);
+
+  const beginEditSession = useCallback(
+    async (t: Task) => {
+      populateFromTask(t);
+      setEditingTaskId(t.id);
+      setNewChecklistItems([]);
+      setCreateModalOpen(true);
+      setDraftPickerOpen(false);
+      setCreateEntryDraftErrorHint(null);
+      try {
+        const { items } = await listChecklist(t.id);
+        setNewChecklistItems(
+          items.map((item) => ({
+            text: item.text,
+            verify_commands: item.verify_commands,
+          })),
+        );
+      } catch {
+        // Checklist is display-only in edit; leave empty on fetch failure.
+      }
+    },
+    [populateFromTask],
+  );
 
   const applyCreateModalPrefill = useCallback(() => {
     const p = createModalPrefillRef.current;
@@ -577,7 +631,7 @@ export function useTaskCreateFlow() {
   ]);
 
   const saveDraftNow = useCallback(() => {
-    if (!createModalOpen || !newDraftID) return;
+    if (editingTaskId || !createModalOpen || !newDraftID) return;
     if (draftAutosaveBaselineID !== newDraftID) return;
     if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
     if (autosaveTimerRef.current) {
@@ -594,12 +648,13 @@ export function useTaskCreateFlow() {
     currentDraftAutosaveSignature,
     draftAutosaveBaseline,
     draftAutosaveBaselineID,
+    editingTaskId,
     newDraftID,
     saveDraftMutation,
   ]);
 
   useEffect(() => {
-    if (!createModalOpen || !newDraftID) return;
+    if (editingTaskId || !createModalOpen || !newDraftID) return;
     if (draftAutosaveBaselineID !== newDraftID) return;
     if (currentDraftAutosaveSignature === draftAutosaveBaseline) return;
     const sigAtSchedule = currentDraftAutosaveSignature;
@@ -622,18 +677,20 @@ export function useTaskCreateFlow() {
     currentDraftAutosaveSignature,
     draftAutosaveBaseline,
     draftAutosaveBaselineID,
+    editingTaskId,
     newDraftID,
     saveDraftMutation,
   ]);
 
   const draftSaveLabel = useMemo(() => {
-    if (!createModalOpen) return null;
+    if (editingTaskId || !createModalOpen) return null;
     if (saveDraftMutation.isPending) return "Saving draft…";
     if (saveDraftMutation.isError) return "Draft autosave failed. You can still create the task.";
     if (lastDraftSavedAt == null) return null;
     return "Draft saved";
   }, [
     createModalOpen,
+    editingTaskId,
     lastDraftSavedAt,
     saveDraftMutation.isError,
     saveDraftMutation.isPending,
@@ -984,5 +1041,10 @@ export function useTaskCreateFlow() {
     createModalAssignmentLocked,
     openCreateModal,
     closeCreateModal,
+    editingTaskId,
+    editingTaskRunner,
+    composeStatus,
+    setComposeStatus,
+    beginEditSession,
   };
 }

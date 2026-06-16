@@ -23,18 +23,14 @@ import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
 import { advancedSummaryLine } from "./advancedSummaryLine";
 
-// Stable no-op props for edit mode where depends-on is not surfaced.
-const EMPTY_DEPENDS_ON: string[] = [];
 const noopOnDependsOnChange = (): void => {};
 
 type Props = {
-  /** When `"edit"`, renders the same sheet as create with task-loaded data. */
-  mode?: "create" | "edit";
-  /** Required in edit mode — shown under the dialog title. */
-  taskId?: string;
-  /** Required in edit mode. */
-  status?: Status;
-  onStatusChange?: (status: Status) => void;
+  /** When set, the modal edits an existing task using the same layout as create. */
+  editingTaskId?: string | null;
+  editingTaskRunner?: string;
+  composeStatus?: Status;
+  onComposeStatusChange?: (status: Status) => void;
   /** Edit-mode PATCH in flight (maps to modal `busy`). */
   patchPending?: boolean;
   patchError?: string | null;
@@ -69,6 +65,7 @@ type Props = {
   onScheduleChange: (next: string | null) => void;
   autonomyEnabled: boolean;
   onAutonomyChange: (enabled: boolean) => void;
+  autonomyDisabled?: boolean;
   tagsCsv: string;
   milestone: string;
   projectId: string;
@@ -87,10 +84,10 @@ type Props = {
 };
 
 export function TaskCreateModal({
-  mode = "create",
-  taskId,
-  status,
-  onStatusChange,
+  editingTaskId = null,
+  editingTaskRunner = "",
+  composeStatus,
+  onComposeStatusChange,
   patchPending = false,
   patchError = null,
   formError = null,
@@ -123,6 +120,7 @@ export function TaskCreateModal({
   onScheduleChange,
   autonomyEnabled,
   onAutonomyChange,
+  autonomyDisabled = false,
   tagsCsv,
   milestone,
   projectId,
@@ -139,12 +137,14 @@ export function TaskCreateModal({
   evaluateError = null,
   onApplyTestScenario,
 }: Props) {
-  const isEdit = mode === "edit";
+  const isEdit = editingTaskId != null;
   const disabled = pending || saving;
   const modalBusy = isEdit ? patchPending : pending;
   const modalTitle = isEdit ? "Edit task" : "New task";
   const modalTitleId = isEdit ? "task-edit-modal-title" : "task-create-modal-title";
   const modalDescribedBy = isEdit ? "task-edit-modal-description" : undefined;
+  const idsPrefix = isEdit ? "task-edit" : "task-new";
+  const status = composeStatus ?? "ready";
 
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const scenariosTriggerRef = useRef<HTMLButtonElement>(null);
@@ -156,10 +156,6 @@ export function TaskCreateModal({
   };
 
   const busyLabel = taskCreateModalBusyLabel();
-
-  const essentialsLede = isEdit
-    ? "Title, urgency, and the initial prompt the agent receives."
-    : "What to do, how urgent it is, and how success is judged.";
 
   return (
     <>
@@ -187,12 +183,12 @@ export function TaskCreateModal({
                 />
               ) : null}
             </div>
-            {isEdit && taskId ? (
+            {isEdit && editingTaskId ? (
               <p
                 className="muted stack-tight-zero task-create-modal-task-id"
                 id="task-edit-modal-description"
               >
-                <code>{taskId}</code>
+                <code>{editingTaskId}</code>
               </p>
             ) : null}
             {!isEdit && draftSaveLabel ? (
@@ -218,11 +214,13 @@ export function TaskCreateModal({
               <TaskCreateModalSection
                 variant="essentials"
                 title="Essentials"
-                lede={essentialsLede}
+                lede="What to do, how urgent it is, and how success is judged."
               >
                 <TaskCreateModalPrimaryFields
-                  idsPrefix={isEdit ? "task-edit" : "task-new"}
-                  editorKey={isEdit ? taskId ?? "edit-prompt-modal" : "create-prompt-modal"}
+                  idsPrefix={idsPrefix}
+                  editorKey={
+                    isEdit ? editingTaskId ?? "edit-prompt-modal" : "create-prompt-modal"
+                  }
                   disabled={disabled}
                   title={title}
                   onTitleChange={onTitleChange}
@@ -230,8 +228,9 @@ export function TaskCreateModal({
                   onPriorityChange={onPriorityChange}
                   prompt={prompt}
                   checklistItems={checklistItems}
-                  hideComposeChecklist={isEdit}
+                  hideComposeChecklist={false}
                   checklistRequirement={isEdit ? "optional" : "required"}
+                  checklistDisabled={isEdit}
                   onPromptChange={onPromptChange}
                   onAppendChecklistCriterion={onAppendChecklistCriterion}
                   onUpdateChecklistRow={onUpdateChecklistRow}
@@ -250,7 +249,7 @@ export function TaskCreateModal({
                 </TaskCreateModalSection>
               ) : null}
 
-              {automationAssignment && !isEdit ? (
+              {automationAssignment ? (
                 <TaskCreateModalSection
                   variant="context"
                   title="Behaviors"
@@ -263,27 +262,13 @@ export function TaskCreateModal({
               <TaskCreateModalSection
                 variant="execution"
                 title="Execution"
-                lede={
-                  isEdit
-                    ? "Task status, agent runtime, and pickup scheduling."
-                    : "Whether the agent may pick this up and how it runs."
-                }
+                lede="Whether the agent may pick this up and how it runs."
               >
-                {isEdit && status != null && onStatusChange ? (
-                  <TaskCreateModalStatusField
-                    status={status}
-                    disabled={disabled}
-                    onChange={onStatusChange}
-                  />
-                ) : null}
-
-                {!isEdit ? (
-                  <TaskCreateModalAutonomyToggle
-                    enabled={autonomyEnabled}
-                    disabled={disabled}
-                    onChange={onAutonomyChange}
-                  />
-                ) : null}
+                <TaskCreateModalAutonomyToggle
+                  enabled={autonomyEnabled}
+                  disabled={disabled || autonomyDisabled}
+                  onChange={onAutonomyChange}
+                />
 
                 <details className="task-create-advanced">
                   <summary
@@ -299,21 +284,30 @@ export function TaskCreateModal({
                     </span>
                     <span className="task-create-advanced__hint">
                       {advancedSummaryLine({
-                        runner: taskRunner,
+                        runner: isEdit ? editingTaskRunner : taskRunner,
                         cursorModel: taskCursorModel,
                         schedule,
                         tagsCsv,
                         milestone,
-                        dependsOn: isEdit ? EMPTY_DEPENDS_ON : dependsOn,
+                        dependsOn,
                       })}
                     </span>
                   </summary>
                   <div className="task-create-advanced__body">
+                    {isEdit && onComposeStatusChange ? (
+                      <TaskCreateModalStatusField
+                        id={`${idsPrefix}-status`}
+                        status={status}
+                        disabled={disabled}
+                        onChange={onComposeStatusChange}
+                      />
+                    ) : null}
+
                     <TaskCreateModalAgentSection
                       disabled={disabled}
-                      variant={isEdit ? "default" : "createModal"}
+                      variant="createModal"
                       lockRunner={isEdit}
-                      runner={taskRunner}
+                      runner={isEdit ? editingTaskRunner : taskRunner}
                       cursorModel={taskCursorModel}
                       onRunnerChange={isEdit ? () => {} : onTaskRunnerChange}
                       onCursorModelChange={onTaskCursorModelChange}
@@ -321,12 +315,12 @@ export function TaskCreateModal({
 
                     {isEdit ? (
                       <TaskCreateModalPickupScheduleField
-                        status={status ?? "ready"}
+                        status={status}
                         value={schedule}
                         onChange={onScheduleChange}
                         appTimezone={appTimezone}
                         disabled={disabled}
-                        idPrefix="task-edit-modal"
+                        idPrefix={`${idsPrefix}-modal`}
                       />
                     ) : (
                       <SchedulePicker
@@ -343,8 +337,9 @@ export function TaskCreateModal({
                       tagsCsv={tagsCsv}
                       milestone={milestone}
                       projectId={projectId}
-                      dependsOn={isEdit ? EMPTY_DEPENDS_ON : dependsOn}
-                      showDependsOn={!isEdit}
+                      dependsOn={dependsOn}
+                      showDependsOn
+                      dependsOnDisabled={isEdit}
                       onTagsCsvChange={onTagsCsvChange}
                       onMilestoneChange={onMilestoneChange}
                       onDependsOnChange={

@@ -21,6 +21,8 @@ export type TaskComposeFieldsProps = {
   hideChecklist?: boolean;
   /** When `required`, at least one done criterion is required on create. */
   checklistRequirement?: "optional" | "required";
+  /** When true, checklist add/edit/remove controls are disabled. */
+  checklistDisabled?: boolean;
   disabled: boolean;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
@@ -47,6 +49,7 @@ export function TaskComposeFields({
   checklistItems,
   hideChecklist = false,
   checklistRequirement = "optional",
+  checklistDisabled = false,
   disabled,
   onTitleChange,
   onPromptChange,
@@ -163,7 +166,7 @@ export function TaskComposeFields({
           checklistHeadingId={checklistHeadingId}
           checklistItems={checklistItems}
           checklistRequirement={checklistRequirement}
-          disabled={disabled}
+          disabled={disabled || checklistDisabled}
           onOpenNewCriterion={openCriterionModal}
           onOpenEditCriterion={openEditCriterionModal}
           onRemoveRow={onRemoveChecklistRow}
