@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import type { TaskEvent } from "@/types";
+import { VerificationCriteriaList } from "../../shared/VerificationCriteriaList";
 import {
   awaitingUserReply,
   eventDisplayLabel,
   eventTypeNeedsUserInput,
+  parsePhaseEventOverview,
   resolveAttemptAuditRightColumn,
   type AttemptAuditRightColumn,
 } from "../../../task-events";
@@ -54,6 +56,7 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
       >
         <AttemptAuditRowHead ev={ev} label={label} rightColumn={rightColumn} />
       </Link>
+      <AttemptAuditVerificationDetail ev={ev} />
       <AttemptAuditThread ev={ev} />
     </li>
   );
@@ -104,6 +107,36 @@ function attemptAuditRightColumnClassName(
     return `attempt-audit-preview attempt-audit-preview--scope attempt-audit-preview--scope-${column.tone ?? "neutral"}`;
   }
   return "attempt-audit-preview attempt-audit-preview--detail";
+}
+
+function AttemptAuditVerificationDetail({ ev }: { ev: TaskEvent }) {
+  const overview = parsePhaseEventOverview(ev.type, ev.data);
+  const verification = overview?.verification;
+  if (!verification || overview?.phase !== "verify") {
+    return null;
+  }
+  const failedOnly =
+    ev.type === "phase_failed"
+      ? verification.criteria.filter((row) => !row.verified)
+      : verification.criteria;
+  if (failedOnly.length === 0 && ev.type === "phase_failed") {
+    return null;
+  }
+  const criteria =
+    ev.type === "phase_completed" ? verification.criteria : failedOnly;
+  const heading =
+    ev.type === "phase_completed"
+      ? `${verification.passedCount} criteria verified`
+      : `${verification.failedCount} of ${verification.passedCount + verification.failedCount} criteria failed`;
+  return (
+    <div className="attempt-audit-verification">
+      <VerificationCriteriaList
+        criteria={criteria}
+        heading={heading}
+        attemptSeq={verification.attemptSeq}
+      />
+    </div>
+  );
 }
 
 function AttemptAuditThread({ ev }: { ev: TaskEvent }) {

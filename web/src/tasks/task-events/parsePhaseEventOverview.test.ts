@@ -93,4 +93,35 @@ describe("parsePhaseEventOverview", () => {
     expect(m?.standardizedMessage).toBe("Switch model.");
     expect(m?.stderrTail).toBe("limit\n");
   });
+
+  it("parses verify phase_failed with embedded verification snapshot", () => {
+    const m = parsePhaseEventOverview("phase_failed", {
+      phase: "verify",
+      status: "failed",
+      phase_seq: 2,
+      summary: "1 of 2 criteria failed",
+      details: {
+        verification: {
+          attempt_seq: 1,
+          passed_count: 1,
+          failed_count: 1,
+          criteria: [
+            {
+              criterion_id: "c1",
+              text: "Ship tests",
+              verified: false,
+              reasoning: "No upper-bound test",
+            },
+            {
+              criterion_id: "c2",
+              text: "Docs updated",
+              verified: true,
+            },
+          ],
+        },
+      },
+    });
+    expect(m?.verification?.failedCount).toBe(1);
+    expect(m?.verification?.criteria).toHaveLength(2);
+  });
 });

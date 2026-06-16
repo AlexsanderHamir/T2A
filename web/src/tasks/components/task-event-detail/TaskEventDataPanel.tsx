@@ -12,6 +12,7 @@ import {
   type PhaseEventOverviewModel,
 } from "../../task-events/parsePhaseEventOverview";
 import { GenericEventDataOverview } from "./GenericEventDataOverview";
+import { VerificationCriteriaList } from "../shared/VerificationCriteriaList";
 
 function formatDurationMs(ms: number | undefined): string | undefined {
   if (ms === undefined) return undefined;
@@ -228,7 +229,17 @@ function PhaseEventOverviewBody({ model }: { model: PhaseEventOverviewModel }) {
         </div>
       )}
 
-      {summaryText ? (
+      {model.verification ? (
+        <VerificationCriteriaList
+          criteria={model.verification.criteria}
+          heading={
+            model.status.toLowerCase() === "failed"
+              ? `${model.verification.failedCount} of ${model.verification.passedCount + model.verification.failedCount} criteria failed`
+              : `All ${model.verification.passedCount} criteria verified`
+          }
+          attemptSeq={model.verification.attemptSeq}
+        />
+      ) : summaryText ? (
         <div className="task-event-summary-block">
           <h4 className="task-event-summary-heading">Summary</h4>
           <div className="task-event-markdown">

@@ -1,4 +1,8 @@
 import type { TaskEventType } from "@/types/task";
+import {
+  parseVerificationSnapshot,
+  type VerificationSnapshot,
+} from "./parseVerificationSnapshot";
 
 /** Structured view for agent phase / cycle audit events (optional Raw JSON tab). */
 export type PhaseEventOverviewModel = {
@@ -7,6 +11,7 @@ export type PhaseEventOverviewModel = {
   summary?: string;
   cycleId?: string;
   phaseSeq?: number;
+  verification?: VerificationSnapshot;
   durationMs?: number;
   durationApiMs?: number;
   requestId?: string;
@@ -152,12 +157,15 @@ export function parsePhaseEventOverview(
   const phaseSeq = num(data.phase_seq);
 
   const det = readDetailsBlob(data.details);
+  const verification =
+    phase === "verify" ? parseVerificationSnapshot(data.details) : null;
   return {
     phase,
     status,
     summary,
     cycleId,
     phaseSeq,
+    verification: verification ?? undefined,
     durationMs: det.durationMs,
     durationApiMs: det.durationApiMs,
     requestId: det.requestId,

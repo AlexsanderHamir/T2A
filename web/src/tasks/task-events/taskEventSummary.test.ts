@@ -117,6 +117,22 @@ describe("formatAttemptAuditPreview", () => {
     ).toBe("PHASE 2");
   });
 
+  it("shows phase sequence for verify failures instead of generic summary", () => {
+    expect(
+      formatAttemptAuditPreview(
+        ev({
+          type: "phase_failed",
+          data: {
+            phase: "verify",
+            phase_seq: 2,
+            status: "failed",
+            summary: "verification failed",
+          },
+        }),
+      ),
+    ).toBe("PHASE 2");
+  });
+
   it("keeps transition summaries for non-phase events", () => {
     expect(
       formatAttemptAuditPreview(

@@ -54,6 +54,41 @@ describe("TaskEventDataPanel", () => {
     expect(screen.getByRole("columnheader", { name: "A" })).toBeInTheDocument();
   });
 
+  it("renders verify phase overview with criterion reasoning", () => {
+    render(
+      <TaskEventDataPanel
+        eventType="phase_failed"
+        data={{
+          phase: "verify",
+          status: "failed",
+          phase_seq: 2,
+          summary: "1 of 1 criteria failed",
+          details: {
+            verification: {
+              attempt_seq: 1,
+              passed_count: 0,
+              failed_count: 1,
+              criteria: [
+                {
+                  criterion_id: "c1",
+                  text: "Each branch has a test",
+                  verified: false,
+                  verifier_kind: "verify_agent",
+                  reasoning: "Missing limit=201 coverage",
+                },
+              ],
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("1 of 1 criteria failed")).toBeInTheDocument();
+    expect(screen.getByText("Each branch has a test")).toBeInTheDocument();
+    expect(
+      screen.getByText("Missing limit=201 coverage"),
+    ).toBeInTheDocument();
+  });
+
   it("moves tab selection with arrow, home, and end keys", async () => {
     const user = userEvent.setup();
     render(

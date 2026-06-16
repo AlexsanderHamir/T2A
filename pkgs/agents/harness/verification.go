@@ -193,7 +193,8 @@ func (h *Harness) runVerificationPipeline(
 	tampered, tamperReason := h.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
 
 	phaseStatus := domain.PhaseStatusSucceeded
-	summary := "verify complete"
+	summary := formatVerifyPhaseSummary(snap.criteria, verdicts, true)
+	var details []byte
 	if tampered {
 		phaseStatus = domain.PhaseStatusFailed
 		summary = tamperReason
@@ -203,13 +204,17 @@ func (h *Harness) runVerificationPipeline(
 		verifyErr = &verifyTamperedError{reason: tamperReason}
 	} else if verifyErr != nil {
 		phaseStatus = domain.PhaseStatusFailed
-		summary = verifyErr.Error()
+		summary = formatVerifyPhaseSummary(snap.criteria, verdicts, false)
+		details = encodeVerifyPhaseDetails(attemptSeq, snap.criteria, verdicts)
+	} else {
+		details = encodeVerifyPhaseDetails(attemptSeq, snap.criteria, verdicts)
 	}
 	if _, err := h.store.CompletePhase(parentCtx, store.CompletePhaseInput{
 		CycleID:  cycle.ID,
 		PhaseSeq: phase.PhaseSeq,
 		Status:   phaseStatus,
 		Summary:  &summary,
+		Details:  details,
 		By:       domain.ActorAgent,
 	}); err != nil {
 		slog.Warn("agent harness CompletePhase(verify) failed",

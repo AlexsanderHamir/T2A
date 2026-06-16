@@ -108,13 +108,33 @@ export function formatEventSummaryCompact(ev: TaskEvent): string | null {
  * rather than a code that requires the user to learn the legend.
  */
 export function formatAttemptAuditPreview(ev: TaskEvent): string | null {
+  if (PHASE_LIFECYCLE_TYPES.has(ev.type)) {
+    const phase = ev.data.phase;
+    if (phase === "verify") {
+      const seq = ev.data.phase_seq;
+      if (typeof seq === "number" && Number.isFinite(seq)) {
+        return `PHASE ${seq}`;
+      }
+    }
+  }
+
   if (ev.type === "phase_failed") {
     const phaseOverview = parsePhaseEventOverview(ev.type, ev.data);
+    if (phaseOverview?.verification) {
+      const { failedCount, passedCount } = phaseOverview.verification;
+      const total = failedCount + passedCount;
+      if (failedCount > 0 && total > 0) {
+        return `${failedCount} of ${total} failed`;
+      }
+    }
     if (phaseOverview?.standardizedMessage) {
       return truncate(phaseOverview.standardizedMessage, 140);
     }
     if (phaseOverview?.summary) {
-      return formatPhaseSummaryCompact(phaseOverview.summary, 140);
+      const compact = formatPhaseSummaryCompact(phaseOverview.summary, 140);
+      if (compact && compact !== "verification failed") {
+        return compact;
+      }
     }
   }
 
