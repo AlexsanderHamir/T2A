@@ -581,8 +581,8 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
-      await screen.findByRole("button", {
-        name: /^open draft draft from list in create form$/i,
+      await screen.findByRole("listitem", {
+        name: /^resume draft: draft from list$/i,
       }),
     );
 
@@ -720,8 +720,8 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
     await user.click(screen.getByRole("button", { name: /^try again$/i }));
     expect(
-      await screen.findByRole("button", {
-        name: /open draft recovered in create form/i,
+      await screen.findByRole("listitem", {
+        name: /^resume draft: recovered$/i,
       }),
     ).toBeInTheDocument();
   });
@@ -922,8 +922,8 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
-      await screen.findByRole("button", {
-        name: /open draft broken draft in create form/i,
+      await screen.findByRole("listitem", {
+        name: /^resume draft: broken draft$/i,
       }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(/resume failed/i);
@@ -975,7 +975,11 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
-    await user.click(await screen.findByRole("button", { name: /^delete$/i }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: /^delete draft "delete me"$/i,
+      }),
+    );
     expect(await screen.findByRole("alert")).toHaveTextContent(/delete failed/i);
   });
 
@@ -1066,19 +1070,29 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
-    const firstResume = await screen.findByRole("button", {
-      name: /open draft first draft in create form/i,
+    const firstRow = await screen.findByRole("listitem", {
+      name: /^resume draft: first draft$/i,
     });
-    const secondResume = await screen.findByRole("button", {
-      name: /open draft second draft in create form/i,
+    const secondRow = await screen.findByRole("listitem", {
+      name: /^resume draft: second draft$/i,
     });
-    const firstRow = firstResume.parentElement as HTMLElement;
-    const secondRow = secondResume.parentElement as HTMLElement;
 
-    await user.click(within(firstRow).getByRole("button", { name: /^delete$/i }));
+    await user.click(
+      within(firstRow).getByRole("button", {
+        name: /^delete draft "first draft"$/i,
+      }),
+    );
 
-    expect(within(firstRow).getByRole("button", { name: /^deleting…$/i })).toBeInTheDocument();
-    expect(within(secondRow).getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+    expect(
+      within(firstRow).getByRole("button", {
+        name: /^deleting draft "first draft"$/i,
+      }),
+    ).toBeDisabled();
+    expect(
+      within(secondRow).getByRole("button", {
+        name: /^delete draft "second draft"$/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("creates a top-level task with checklist criteria in the create POST", async () => {

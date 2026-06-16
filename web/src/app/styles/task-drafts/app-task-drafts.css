@@ -40,8 +40,8 @@
    "card-style row" treatment (border + shadow + brand left-rail) layered a
    second card chrome on top of the panel, which read as panel-in-panel.
    Per redesign.mdc: "Rows separated by a hairline border. No card shadows."
-   The Resume/Delete actions stay siblings inside `.draft-row__actions` so
-   the existing test selectors (App.test.tsx batch-delete) keep resolving. */
+   The row itself resumes on click; delete uses the task-list icon button in
+   `.task-list-row-actions`, revealed on row hover/focus. */
 .draft-row-list {
   display: flex;
   flex-direction: column;
@@ -49,6 +49,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  margin-bottom: var(--space-4);
 }
 
 .draft-row {
@@ -69,6 +70,15 @@
   transition:
     opacity var(--duration-moderate) var(--ease-out),
     max-height var(--duration-moderate) var(--ease-out);
+}
+
+.draft-row--interactive {
+  cursor: pointer;
+}
+
+.draft-row--interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 /* Hover/focus wash is painted on a pseudo so it can carry border-radius.
@@ -126,8 +136,8 @@
   color: var(--text-primary);
   letter-spacing: -0.005em;
   /* Long draft names truncate cleanly so the row never reflows
-     when titles get long; full name still surfaces via aria-label
-     on the Resume button. */
+     when titles get long; full name still surfaces via the row
+     aria-label and the title attribute. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -144,14 +154,19 @@
 .draft-row__actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
   flex-shrink: 0;
 }
 
-/* Drafts list takes a generous bottom margin so the next page
-   section (or the empty space below) doesn't crowd the last row. */
-.draft-row-list {
-  margin-bottom: var(--space-4);
+@media (hover: hover) {
+  .draft-row .task-list-row-actions {
+    opacity: 0.55;
+    transition: opacity var(--duration-normal) var(--ease-out);
+  }
+
+  .draft-row:hover .task-list-row-actions,
+  .draft-row:focus-within .task-list-row-actions {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -159,6 +174,10 @@
     transition: none;
   }
   .draft-row::before {
+    transition: none;
+  }
+  .draft-row .task-list-row-actions {
+    opacity: 1 !important;
     transition: none;
   }
 }

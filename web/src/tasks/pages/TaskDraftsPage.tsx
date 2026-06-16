@@ -5,12 +5,18 @@ import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
+import { TaskListDeleteGlyph } from "../components/task-list/table/TaskListRowActionIcons";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
 import { useTasksApp } from "../hooks/useTasksApp";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
 };
+
+function isDraftRowActionExcluded(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return true;
+  return Boolean(target.closest("button"));
+}
 
 export function TaskDraftsPage({ app }: Props) {
   useDocumentTitle("Task drafts");
@@ -146,15 +152,39 @@ export function TaskDraftsPage({ app }: Props) {
                 {drafts.map((d) => {
                   const lastEdited = d.updated_at || d.created_at;
                   const relative = formatRelativeTime(lastEdited, renderNow);
+                  const isDeleting = deletingDraftId === d.id;
+                  const rowDisabled =
+                    resumePending ||
+                    deletePending ||
+                    exitingDraftIds.includes(d.id);
                   return (
                     <li
                       key={d.id}
                       className={[
                         "draft-row",
+                        rowDisabled ? "" : "draft-row--interactive",
                         exitingDraftIds.includes(d.id) ? "draft-row--exit" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
+                      onClick={(e) => {
+                        if (rowDisabled || isDraftRowActionExcluded(e.target)) {
+                          return;
+                        }
+                        void openDraftInCreateForm(d.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (rowDisabled || isDraftRowActionExcluded(e.target)) {
+                          return;
+                        }
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          void openDraftInCreateForm(d.id);
+                        }
+                      }}
+                      tabIndex={rowDisabled ? undefined : 0}
+                      aria-label={`Resume draft: ${d.name}`}
+                      aria-busy={resumePending || undefined}
                     >
                       <div className="draft-row__meta">
                         <span className="draft-row__name" title={d.name}>
@@ -171,31 +201,22 @@ export function TaskDraftsPage({ app }: Props) {
                         ) : null}
                       </div>
                       <div className="draft-row__actions">
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => void openDraftInCreateForm(d.id)}
-                          aria-label={`Open draft ${d.name} in create form`}
-                          disabled={
-                            resumePending ||
-                            deletePending ||
-                            exitingDraftIds.includes(d.id)
-                          }
-                        >
-                          {resumePending ? "Opening draft…" : "Resume"}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => void deleteDraft(d.id)}
-                          disabled={
-                            resumePending ||
-                            deletePending ||
-                            exitingDraftIds.includes(d.id)
-                          }
-                        >
-                          {deletingDraftId === d.id ? "Deleting…" : "Delete"}
-                        </button>
+                        <div className="task-list-row-actions">
+                          <button
+                            type="button"
+                            className="task-list-icon-btn task-list-icon-btn--delete"
+                            aria-label={
+                              isDeleting
+                                ? `Deleting draft "${d.name}"`
+                                : `Delete draft "${d.name}"`
+                            }
+                            onClick={() => void deleteDraft(d.id)}
+                            disabled={rowDisabled}
+                            aria-busy={isDeleting || undefined}
+                          >
+                            <TaskListDeleteGlyph />
+                          </button>
+                        </div>
                       </div>
                     </li>
                   );
