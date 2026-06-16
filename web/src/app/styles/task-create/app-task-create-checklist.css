@@ -112,6 +112,23 @@
   color: var(--text-secondary);
 }
 
+.task-create-checklist-empty {
+  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  min-height: 3.25rem;
+  border: 1px dashed var(--border-hairline);
+  border-radius: var(--radius-md);
+  /* Dashed chrome signals a passive placeholder — not an editable surface. */
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-subtle));
+}
+
+.task-create-checklist-empty__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
 .task-create-checklist .task-checklist-surface {
   margin-top: 0.15rem;
 }

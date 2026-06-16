@@ -22,6 +22,8 @@ export function TaskComposeChecklistFields({
   onOpenEditCriterion,
   onRemoveRow,
 }: Props) {
+  const isEmpty = checklistItems.length === 0;
+
   return (
     <div className="task-create-checklist">
       <div className="task-create-checklist-head">
@@ -40,49 +42,61 @@ export function TaskComposeChecklistFields({
           New criterion
         </button>
       </div>
-      {checklistRequirement === "required" && checklistItems.length === 0 ? (
-        <p className="task-create-checklist-helper">{CREATE_CHECKLIST_REQUIRED_MSG}</p>
-      ) : null}
-      {checklistItems.length > 0 ? (
+
+      {isEmpty ? (
+        <div
+          className="task-create-checklist-empty"
+          aria-labelledby={checklistHeadingId}
+        >
+          <p className="task-create-checklist-empty__text">
+            {checklistRequirement === "required"
+              ? CREATE_CHECKLIST_REQUIRED_MSG
+              : "No criteria yet."}
+          </p>
+        </div>
+      ) : (
         <div className="task-checklist-surface">
           <ul
             className="task-checklist-list task-checklist-list--grouped"
             aria-labelledby={checklistHeadingId}
           >
-            {checklistItems.map((item, index) => (
-              <li key={`${index}-${item.text}`} className="task-checklist-row">
-                <div className="task-checklist-row-main">
-                  <span className="task-checklist-text">{item.text}</span>
-                  {(item.verify_commands?.length ?? 0) > 0 ? (
-                    <span className="cell-pill task-checklist-verify-badge">
-                      {item.verify_commands!.length} verify cmd
-                      {item.verify_commands!.length === 1 ? "" : "s"}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="task-checklist-row-actions">
-                  <button
-                    type="button"
-                    className="task-detail-checklist-edit"
-                    disabled={disabled}
-                    onClick={() => onOpenEditCriterion(index, item)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="task-detail-checklist-remove"
-                    disabled={disabled}
-                    onClick={() => onRemoveRow(index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
+            {checklistItems.map((item, index) => {
+              const commandCount = item.verify_commands?.length ?? 0;
+              return (
+                <li key={`${index}-${item.text}`} className="task-checklist-row">
+                  <div className="task-checklist-row-main">
+                    <span className="task-checklist-text">{item.text}</span>
+                    {commandCount > 0 ? (
+                      <span className="task-checklist-verify-badge">
+                        {commandCount} verify
+                        {commandCount === 1 ? "" : " cmds"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="task-checklist-row-actions">
+                    <button
+                      type="button"
+                      className="task-detail-checklist-edit"
+                      disabled={disabled}
+                      onClick={() => onOpenEditCriterion(index, item)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="task-detail-checklist-remove"
+                      disabled={disabled}
+                      onClick={() => onRemoveRow(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

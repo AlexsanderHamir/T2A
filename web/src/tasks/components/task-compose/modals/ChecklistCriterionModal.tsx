@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { ChecklistVerifyCommandInput } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
@@ -25,6 +25,12 @@ type Props = {
   errorFallback?: string;
 };
 
+function verifyCommandsHint(count: number): string {
+  if (count === 0) return "Optional";
+  if (count === 1) return "1 command";
+  return `${count} commands`;
+}
+
 export function ChecklistCriterionModal({
   mode,
   pending,
@@ -48,7 +54,9 @@ export function ChecklistCriterionModal({
       : "checklist-criterion-edit-modal-title";
   const busyLabel =
     mode === "add" ? "Adding criterion…" : "Saving changes…";
-  const commandsOpen = verifyCommands.length > 0;
+  const [verifySectionOpen, setVerifySectionOpen] = useState(
+    () => verifyCommands.length > 0,
+  );
 
   const updateCommand = (
     index: number,
@@ -61,6 +69,7 @@ export function ChecklistCriterionModal({
 
   const addCommandRow = () => {
     if (verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM) return;
+    setVerifySectionOpen(true);
     onVerifyCommandsChange([...verifyCommands, emptyVerifyCommandRow()]);
   };
 
@@ -87,14 +96,9 @@ export function ChecklistCriterionModal({
           className="muted task-checklist-criterion-modal-lead"
           id="checklist-criterion-modal-description"
         >
-          {mode === "add" ? (
-            <>
-              Add one clear, testable requirement. Optional shell checks run
-              during verify and feed the verifier as evidence.
-            </>
-          ) : (
-            <>Update the wording or verification commands for this requirement.</>
-          )}
+          {mode === "add"
+            ? "One clear, testable requirement for done."
+            : "Update the wording or verification commands."}
         </p>
         <form
           className="task-checklist-criterion-modal-form task-create-form"
@@ -107,8 +111,9 @@ export function ChecklistCriterionModal({
             <FieldLabel htmlFor="checklist-criterion-text" requirement="required">
               Criterion
             </FieldLabel>
-            <input
+            <textarea
               id="checklist-criterion-text"
+              className="task-checklist-criterion-text-input"
               value={text}
               onChange={(ev) => onTextChange(ev.target.value)}
               placeholder="e.g. All subtasks marked done"
@@ -116,76 +121,114 @@ export function ChecklistCriterionModal({
               autoFocus
               required
               aria-required="true"
+              rows={3}
             />
           </div>
 
           <details
-            className="task-checklist-verify-commands"
-            open={commandsOpen}
+            className="task-create-advanced task-checklist-verify-commands"
+            open={verifySectionOpen}
+            onToggle={(e) =>
+              setVerifySectionOpen((e.currentTarget as HTMLDetailsElement).open)
+            }
           >
-            <summary className="task-checklist-verify-commands-summary">
-              Verification commands (optional)
-            </summary>
-            <p className="muted task-checklist-verify-commands-lead">
-              The worker runs these in the repo during verify. Output is saved
-              to temp files for the verifier — exit code alone does not auto-pass.
-            </p>
-            {verifyCommands.length > 0 ? (
-              <ul className="task-checklist-verify-commands-list">
-                {verifyCommands.map((row, index) => (
-                  <li key={index} className="task-checklist-verify-command-row">
-                    <div className="field">
-                      <FieldLabel htmlFor={`checklist-verify-cmd-${index}`}>
-                        Command
-                      </FieldLabel>
-                      <input
-                        id={`checklist-verify-cmd-${index}`}
-                        value={row.command}
-                        onChange={(ev) =>
-                          updateCommand(index, { command: ev.target.value })
-                        }
-                        placeholder="e.g. go test ./..."
-                        disabled={disabled}
-                      />
-                    </div>
-                    <div className="field">
-                      <FieldLabel htmlFor={`checklist-verify-outcome-${index}`}>
-                        Expected outcome
-                      </FieldLabel>
-                      <input
-                        id={`checklist-verify-outcome-${index}`}
-                        value={row.expected_outcome ?? ""}
-                        onChange={(ev) =>
-                          updateCommand(index, {
-                            expected_outcome: ev.target.value,
-                          })
-                        }
-                        placeholder="e.g. all tests pass"
-                        disabled={disabled}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="secondary task-checklist-verify-command-remove"
-                      disabled={disabled}
-                      onClick={() => removeCommandRow(index)}
-                    >
-                      Remove command
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <button
-              type="button"
-              className="secondary task-checklist-verify-command-add"
-              disabled={
-                disabled || verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM
-              }
-              onClick={addCommandRow}
+            <summary
+              className="task-create-advanced__summary"
+              data-testid="checklist-verify-commands-toggle"
             >
-              Add command
-            </button>
+              <span
+                className="task-create-advanced__chevron"
+                aria-hidden="true"
+              />
+              <span className="task-create-advanced__label">
+                Verify commands
+              </span>
+              <span className="task-create-advanced__hint">
+                {verifyCommandsHint(verifyCommands.length)}
+              </span>
+            </summary>
+            <div className="task-checklist-verify-commands__body">
+              <p className="task-checklist-verify-commands__note">
+                Shell checks run in the repo during verify. Output is saved for
+                the verifier — exit code alone does not pass the criterion.
+              </p>
+              {verifyCommands.length > 0 ? (
+                <div
+                  className="task-checklist-verify-commands__list"
+                  role="list"
+                >
+                  {verifyCommands.map((row, index) => (
+                    <div
+                      key={index}
+                      className="task-checklist-verify-command-card"
+                      role="listitem"
+                    >
+                      <div className="task-checklist-verify-command-card__head">
+                        <span className="task-checklist-verify-command-card__index">
+                          Command {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          className="task-checklist-verify-command-card__remove"
+                          disabled={disabled}
+                          onClick={() => removeCommandRow(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="task-checklist-verify-command-card__fields">
+                        <div className="field">
+                          <FieldLabel htmlFor={`checklist-verify-cmd-${index}`}>
+                            Shell command
+                          </FieldLabel>
+                          <input
+                            id={`checklist-verify-cmd-${index}`}
+                            className="task-checklist-verify-command-input"
+                            value={row.command}
+                            onChange={(ev) =>
+                              updateCommand(index, { command: ev.target.value })
+                            }
+                            placeholder="go test ./pkgs/foo/..."
+                            disabled={disabled}
+                            spellCheck={false}
+                            autoComplete="off"
+                          />
+                        </div>
+                        <div className="field">
+                          <FieldLabel
+                            htmlFor={`checklist-verify-outcome-${index}`}
+                          >
+                            Expected outcome
+                          </FieldLabel>
+                          <input
+                            id={`checklist-verify-outcome-${index}`}
+                            value={row.expected_outcome ?? ""}
+                            onChange={(ev) =>
+                              updateCommand(index, {
+                                expected_outcome: ev.target.value,
+                              })
+                            }
+                            placeholder="All tests pass"
+                            disabled={disabled}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="secondary task-checklist-verify-command-add"
+                disabled={
+                  disabled ||
+                  verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM
+                }
+                onClick={addCommandRow}
+              >
+                Add command
+              </button>
+            </div>
           </details>
 
           <MutationErrorBanner
