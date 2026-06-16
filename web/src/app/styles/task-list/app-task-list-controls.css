@@ -368,6 +368,10 @@
 }
 
 .stack-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
   margin-top: 1rem;
 }
 
@@ -442,3 +446,16 @@
   color: var(--text-secondary);
 }
 
+/* Footer actions — right-aligned with breathing room between Cancel and
+   destructive/primary confirm (redesign modal footer pattern). */
+.confirm-dialog .stack-row-actions {
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.confirm-dialog__err {
+  margin-top: var(--space-3);
+}
