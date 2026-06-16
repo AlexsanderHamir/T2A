@@ -10,6 +10,8 @@ import {
 
 type Props = {
   mode: "add" | "edit";
+  /** Satisfied criteria open in read-only view — no edits or saves. */
+  readOnly?: boolean;
   pending: boolean;
   saving: boolean;
   onClose: () => void;
@@ -33,6 +35,7 @@ function verifyCommandsHint(count: number): string {
 
 export function ChecklistCriterionModal({
   mode,
+  readOnly = false,
   pending,
   saving,
   onClose,
@@ -47,15 +50,17 @@ export function ChecklistCriterionModal({
   error = null,
   errorFallback,
 }: Props) {
-  const disabled = pending || saving;
+  const controlsDisabled = pending || saving;
   const titleId =
-    mode === "add"
-      ? "checklist-criterion-modal-title"
-      : "checklist-criterion-edit-modal-title";
+    readOnly
+      ? "checklist-criterion-view-modal-title"
+      : mode === "add"
+        ? "checklist-criterion-modal-title"
+        : "checklist-criterion-edit-modal-title";
   const busyLabel =
     mode === "add" ? "Adding criterion…" : "Saving changes…";
   const [verifySectionOpen, setVerifySectionOpen] = useState(
-    () => verifyCommands.length > 0,
+    () => readOnly || verifyCommands.length > 0,
   );
 
   const updateCommand = (
@@ -95,27 +100,46 @@ export function ChecklistCriterionModal({
       lockBodyScroll={lockBodyScroll}
       dismissibleWhileBusy={dismissibleWhileBusy}
     >
-      <section className="panel modal-sheet task-checklist-criterion-modal-sheet">
+      <section
+        className={
+          readOnly
+            ? "panel modal-sheet task-checklist-criterion-modal-sheet task-checklist-criterion-modal-sheet--read-only"
+            : "panel modal-sheet task-checklist-criterion-modal-sheet"
+        }
+      >
         <h2 id={titleId}>
-          {mode === "add" ? "New criterion" : "Edit criterion"}
+          {readOnly
+            ? "View criterion"
+            : mode === "add"
+              ? "New criterion"
+              : "Edit criterion"}
         </h2>
         <p
           className="muted task-checklist-criterion-modal-lead"
           id="checklist-criterion-modal-description"
         >
-          {mode === "add"
-            ? "One clear, testable requirement for done."
-            : "Update the wording or verification commands."}
+          {readOnly
+            ? "This criterion is satisfied and locked. You can review the wording and verify commands, but not change them."
+            : mode === "add"
+              ? "One clear, testable requirement for done."
+              : "Update the wording or verification commands."}
         </p>
         <form
           className="task-checklist-criterion-modal-form task-create-form"
           onSubmit={(e) => {
             e.stopPropagation();
+            if (readOnly) {
+              e.preventDefault();
+              return;
+            }
             onSubmit(e);
           }}
         >
           <div className="field">
-            <FieldLabel htmlFor="checklist-criterion-text" requirement="required">
+            <FieldLabel
+              htmlFor="checklist-criterion-text"
+              requirement={readOnly ? undefined : "required"}
+            >
               Criterion
             </FieldLabel>
             <textarea
@@ -124,10 +148,11 @@ export function ChecklistCriterionModal({
               value={text}
               onChange={(ev) => onTextChange(ev.target.value)}
               placeholder="e.g. All subtasks marked done"
-              disabled={disabled}
-              autoFocus
-              required
-              aria-required="true"
+              disabled={controlsDisabled}
+              readOnly={readOnly}
+              autoFocus={!readOnly}
+              required={!readOnly}
+              aria-required={readOnly ? undefined : "true"}
               rows={3}
             />
           </div>
@@ -135,11 +160,14 @@ export function ChecklistCriterionModal({
           <details
             className="task-create-advanced task-checklist-verify-commands"
             open={verifySectionOpen}
-            onToggle={(e) =>
-              ensureVerifySectionReady(
-                (e.currentTarget as HTMLDetailsElement).open,
-              )
-            }
+            onToggle={(e) => {
+              const open = (e.currentTarget as HTMLDetailsElement).open;
+              if (readOnly) {
+                setVerifySectionOpen(open);
+                return;
+              }
+              ensureVerifySectionReady(open);
+            }}
           >
             <summary
               className="task-create-advanced__summary"
@@ -217,7 +245,8 @@ export function ChecklistCriterionModal({
                             })
                           }
                           placeholder="go test ./pkgs/foo/..."
-                          disabled={disabled}
+                          disabled={controlsDisabled}
+                          readOnly={readOnly}
                           spellCheck={false}
                           autoComplete="off"
                         />
@@ -242,9 +271,11 @@ export function ChecklistCriterionModal({
                             })
                           }
                           placeholder="All tests pass"
-                          disabled={disabled}
+                          disabled={controlsDisabled}
+                          readOnly={readOnly}
                         />
                       </div>
+                      {!readOnly ? (
                       <div
                         className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--action"
                         role="cell"
@@ -252,28 +283,31 @@ export function ChecklistCriterionModal({
                         <button
                           type="button"
                           className="task-checklist-verify-command-card__remove"
-                          disabled={disabled}
+                          disabled={controlsDisabled}
                           aria-label={`Remove command ${index + 1}`}
                           onClick={() => removeCommandRow(index)}
                         >
                           Remove
                         </button>
                       </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
               ) : null}
+              {!readOnly ? (
               <button
                 type="button"
                 className="secondary task-checklist-verify-command-add"
                 disabled={
-                  disabled ||
+                  controlsDisabled ||
                   verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM
                 }
                 onClick={addCommandRow}
               >
                 Add command
               </button>
+              ) : null}
             </div>
           </details>
 
@@ -288,21 +322,29 @@ export function ChecklistCriterionModal({
             className="task-checklist-criterion-modal-err"
           />
           <div className="row stack-row-actions task-checklist-criterion-modal-actions">
-            <button
-              type="button"
-              className="secondary"
-              disabled={disabled}
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="task-create-submit"
-              disabled={!text.trim() || disabled}
-            >
-              {mode === "add" ? "Add criterion" : "Save changes"}
-            </button>
+            {readOnly ? (
+              <button type="button" className="secondary" onClick={onClose}>
+                Close
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={controlsDisabled}
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="task-create-submit"
+                  disabled={!text.trim() || controlsDisabled}
+                >
+                  {mode === "add" ? "Add criterion" : "Save changes"}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </section>

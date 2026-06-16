@@ -94,3 +94,29 @@ describe("ChecklistCriterionModal verify commands", () => {
     expect(onVerifyCommandsChange).not.toHaveBeenCalled();
   });
 });
+
+describe("ChecklistCriterionModal read-only view", () => {
+  it("shows satisfied criterion in view mode without save actions", () => {
+    renderModal({
+      mode: "edit",
+      readOnly: true,
+      text: "The full test suite still passes.",
+      verifyCommands: [{ command: "go test ./...", expected_outcome: "pass" }],
+    });
+
+    expect(
+      screen.getByRole("heading", { name: /view criterion/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/^criterion$/i),
+    ).toHaveAttribute("readonly");
+    expect(screen.getByLabelText(/^criterion$/i)).not.toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /save changes/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /add command/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^close$/i })).toBeInTheDocument();
+  });
+});

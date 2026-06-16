@@ -656,6 +656,34 @@ button.task-checklist-verification-trigger:focus-visible {
   box-shadow: var(--shadow-focus);
 }
 
+/* View mode: readable text, no edit affordances — readOnly not disabled so
+   contrast stays at body level instead of browser disabled gray. */
+.task-checklist-criterion-modal-sheet--read-only .field textarea[readonly],
+.task-checklist-criterion-modal-sheet--read-only .task-checklist-verify-command-input[readonly],
+.task-checklist-criterion-modal-sheet--read-only
+  .task-checklist-verify-command-outcome-input[readonly] {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: var(--text-primary);
+}
+
+.task-checklist-criterion-modal-sheet--read-only .field textarea[readonly]:hover,
+.task-checklist-criterion-modal-sheet--read-only
+  .task-checklist-verify-command-input[readonly]:hover,
+.task-checklist-criterion-modal-sheet--read-only
+  .task-checklist-verify-command-outcome-input[readonly]:hover,
+.task-checklist-criterion-modal-sheet--read-only .field textarea[readonly]:focus,
+.task-checklist-criterion-modal-sheet--read-only
+  .task-checklist-verify-command-input[readonly]:focus,
+.task-checklist-criterion-modal-sheet--read-only
+  .task-checklist-verify-command-outcome-input[readonly]:focus {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-inset-field);
+  outline: none;
+}
+
 .task-checklist-criterion-modal-actions {
   display: flex;
   flex-wrap: wrap;

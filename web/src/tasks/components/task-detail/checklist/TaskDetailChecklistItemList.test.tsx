@@ -207,11 +207,27 @@ describe("TaskDetailChecklistItemList", () => {
     );
   });
 
-  it("does not call onOpenEditCriterionModal when a done criterion row is clicked", async () => {
+  it("opens view when anywhere on a done criterion row is clicked", async () => {
     const user = userEvent.setup();
     const { onOpenEditCriterionModal } = renderList([DONE]);
 
     await user.click(screen.getByText("123.md file created"));
+
+    expect(onOpenEditCriterionModal).toHaveBeenCalledWith(
+      DONE.id,
+      DONE.text,
+      undefined,
+    );
+  });
+
+  it("does not call onOpenEditCriterionModal when View verification is clicked on a done row", async () => {
+    const user = userEvent.setup();
+    const { onOpenEditCriterionModal } = renderList([DONE_VERIFIED]);
+
+    await user.click(
+      screen.getByRole("button", { name: /view verification details for:/i }),
+    );
+
     expect(onOpenEditCriterionModal).not.toHaveBeenCalled();
   });
 

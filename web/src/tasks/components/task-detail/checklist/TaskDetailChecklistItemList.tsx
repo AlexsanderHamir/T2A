@@ -53,18 +53,26 @@ export function TaskDetailChecklistItemList({
             !editCriterionPending &&
             !removeItemPending &&
             !addCriterionPending;
+          const canViewRow =
+            item.done &&
+            !editCriterionPending &&
+            !removeItemPending &&
+            !addCriterionPending;
+          const canOpenRow = canEditRow || canViewRow;
           return (
             <li
               key={item.id}
               className={
                 item.done
-                  ? "task-checklist-row task-checklist-row--done"
+                  ? canViewRow
+                    ? "task-checklist-row task-checklist-row--done task-checklist-row--interactive"
+                    : "task-checklist-row task-checklist-row--done"
                   : canEditRow
                     ? "task-checklist-row task-checklist-row--pending task-checklist-row--interactive"
                     : "task-checklist-row task-checklist-row--pending"
               }
               onClick={(event) => {
-                if (!canEditRow) return;
+                if (!canOpenRow) return;
                 if ((event.target as HTMLElement).closest("button")) return;
                 onOpenEditCriterionModal(
                   item.id,

@@ -94,6 +94,10 @@ export function TaskDetailChecklistSection({
     showProgress && totalCount > 0
       ? Math.round((doneCount / totalCount) * 100)
       : 0;
+  const editingItem = editingItemId
+    ? checklistQuery.data?.items.find((item) => item.id === editingItemId)
+    : null;
+  const editModalReadOnly = editingItem?.done === true;
 
   return (
     <div className="task-detail-section" id="task-detail-checklist">
@@ -241,6 +245,7 @@ export function TaskDetailChecklistSection({
       {editModalOpen && editingItemId ? (
         <ChecklistCriterionModal
           mode="edit"
+          readOnly={editModalReadOnly}
           pending={editCriterionPending}
           saving={saving}
           onClose={onCloseEditCriterionModal}
