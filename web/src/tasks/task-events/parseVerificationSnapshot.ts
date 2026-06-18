@@ -1,4 +1,4 @@
-import type { VerifierKind } from "@/types/task";
+import type { VerifierKind } from "@/types/cycle";
 
 export type VerificationCriterion = {
   criterionId: string;

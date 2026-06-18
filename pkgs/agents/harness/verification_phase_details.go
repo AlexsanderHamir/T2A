@@ -3,6 +3,7 @@ package harness
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -29,6 +30,7 @@ type verifyPhaseDetailsPayload struct {
 }
 
 func criterionTextIndex(items []store.ChecklistVerifyItem) map[string]string {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.criterionTextIndex", "items", len(items))
 	out := make(map[string]string, len(items))
 	for _, it := range items {
 		out[it.ID] = it.Text
@@ -37,6 +39,7 @@ func criterionTextIndex(items []store.ChecklistVerifyItem) map[string]string {
 }
 
 func countVerdictOutcome(verdicts []criterionVerdict) (passed, failed int) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.countVerdictOutcome", "verdicts", len(verdicts))
 	for _, v := range verdicts {
 		if v.passed {
 			passed++
@@ -57,6 +60,8 @@ func formatVerifyPhaseSummary(
 	verdicts []criterionVerdict,
 	succeeded bool,
 ) string {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.formatVerifyPhaseSummary",
+		"criteria", len(criteria), "verdicts", len(verdicts), "succeeded", succeeded)
 	textByID := criterionTextIndex(criteria)
 	n := len(verdicts)
 	if n == 0 {
@@ -94,6 +99,8 @@ func encodeVerifyPhaseDetails(
 	criteria []store.ChecklistVerifyItem,
 	verdicts []criterionVerdict,
 ) []byte {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.encodeVerifyPhaseDetails",
+		"attempt_seq", attemptSeq, "criteria", len(criteria), "verdicts", len(verdicts))
 	textByID := criterionTextIndex(criteria)
 	passed, failed := countVerdictOutcome(verdicts)
 	rows := make([]verifyCriterionPayload, 0, len(verdicts))
