@@ -1,6 +1,6 @@
 # Verify agent
 
-How the verify phase judges done criteria after execute succeeds. Schema and table definitions live in [data-model.md](../data-model.md) (§ Checklist). HTTP surfaces are in [api.md](../api.md). Operator knobs are in [configuration.md](../configuration.md).
+How the verify phase judges done criteria after execute succeeds. For the full criteria lifecycle (definition, edit locks, completion ledger), see [done-criteria.md](./done-criteria.md). Schema and table definitions live in [data-model.md](../data-model.md) (§ Checklist). HTTP surfaces are in [api.md](../api.md). Operator knobs are in [configuration.md](../configuration.md).
 
 ## Purpose and scope
 

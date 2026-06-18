@@ -29,4 +29,5 @@ Each file under `docs/domain/` should follow this outline:
 
 | Doc | Topic |
 | --- | --- |
+| [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completions |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |
