@@ -1,8 +1,29 @@
 # Domain documentation
 
-Deep-dives on how specific subsystems behave — actors, flows, wire contracts, strengths, and limitations. Use these when you need to understand *why* something works the way it does, not just what tables or routes exist.
+Behavioral deep-dives for T2A subsystems: actors, workflows, wire contracts, design rationale, and known limits. Use these articles when you need to understand *why* production code behaves a certain way—not when you need table schemas or HTTP routes.
 
-Reference docs stay authoritative for contracts:
+## About this series
+
+Domain articles sit between reference docs and ADRs:
+
+| Layer | Location | Answers |
+| --- | --- | --- |
+| Reference | [data-model.md](../data-model.md), [api.md](../api.md), [configuration.md](../configuration.md) | What is stored, exposed, and configurable |
+| **Domain (this folder)** | `docs/domain/*.md` | How subsystems behave end-to-end in production |
+| Architecture | [architecture.md](../architecture.md) | How components connect across the product |
+| ADR | [adr/](../adr/) | Why a specific design was chosen at a point in time |
+
+Schema, routes, and env vars remain authoritative in reference docs. Domain articles link to them and must not contradict them.
+
+## How to use these docs
+
+1. Start from the article index below when you are working on a bounded subsystem (checklist, verify phase, …).
+2. Read **Overview** and **Key concepts** for vocabulary and scope.
+3. Use **Workflow** sections for step-by-step behavior that matches code paths.
+4. Use **Wire contracts** and **Configuration** for implementation details at boundaries.
+5. Check **Limitations** before changing behavior—you may be hitting an intentional trade-off documented in an ADR.
+
+## Authoritative references
 
 | Doc | Use for |
 | --- | --- |
@@ -12,22 +33,36 @@ Reference docs stay authoritative for contracts:
 | [architecture.md](../architecture.md) | System overview and component map |
 | [adr/](../adr/) | Historical design decisions |
 
-## Template for new domain docs
+## Article template
 
-Each file under `docs/domain/` should follow this outline:
+New articles under `docs/domain/` should follow this outline so the series stays consistent:
 
-1. **Purpose and scope** — What the subsystem does and what it explicitly does not cover.
-2. **Actors and trust boundaries** — Who does what; what is trusted vs asserted.
-3. **End-to-end flow** — Numbered steps matching production code paths.
-4. **Inputs / outputs** — Prompts, report files, DB rows, API surfaces.
-5. **Configuration** — Operator knobs (link to [configuration.md](../configuration.md) for full reference).
-6. **Strengths** — Deliberate design wins.
-7. **Limitations and known trade-offs** — Where the system stops; tie each item to code or an ADR.
-8. **Related docs and code map** — Pointers for contributors.
+1. **Title and one-line description** — What the article covers in one sentence.
+2. **Applies to / Audience** — Optional metadata table (roles, packages, or features affected).
+3. **In this article** — Anchor-linked table of contents.
+4. **Overview** — Purpose, scope, and explicit out-of-scope items.
+5. **Key concepts** — Terminology and trust boundaries (tables preferred).
+6. **How it works** — Architecture diagram and high-level flow.
+7. **Workflow** — Numbered procedural steps aligned with production code.
+8. **Wire contracts** — Prompts, report files, DB rows, API surfaces.
+9. **Configuration** — Operator knobs (link to [configuration.md](../configuration.md) for full reference).
+10. **Best practices** — Deliberate design wins and recommended operator usage.
+11. **Limitations** — Known trade-offs; tie each item to code or an ADR.
+12. **See also** — Related docs and code map.
 
-## Index
+Use Microsoft-style callouts where they add clarity:
 
-| Doc | Topic |
+```markdown
+> **Note** — Supplementary context that is easy to miss.
+
+> **Important** — Contract or safety detail that affects correctness.
+
+> **Warning** — Operator or contributor action that can cause failure.
+```
+
+## Articles
+
+| Article | Description |
 | --- | --- |
-| [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completions |
+| [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |

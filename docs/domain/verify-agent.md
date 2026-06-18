@@ -1,22 +1,55 @@
 # Verify agent
 
-How the verify phase judges done criteria after execute succeeds. For the full criteria lifecycle (definition, edit locks, completion ledger), see [done-criteria.md](./done-criteria.md). Schema and table definitions live in [data-model.md](../data-model.md) (§ Checklist). HTTP surfaces are in [api.md](../api.md). Operator knobs are in [configuration.md](../configuration.md).
+How the verify phase judges done criteria after execute succeeds: LLM verdict, criterion shell checks, git integrity, and retry behavior.
 
-## Purpose and scope
+| | |
+| --- | --- |
+| **Applies to** | Agent worker harness, verify runner configuration, cycle verdict API |
+| **Audience** | Contributors touching `pkgs/agents/harness`, verify settings, or verdict UI |
+| **Prerequisite** | [done-criteria.md](./done-criteria.md) — full criteria lifecycle and completion ledger |
+
+## In this article
+
+- [Overview](#overview)
+- [Key concepts](#key-concepts)
+- [How it works](#how-it-works)
+- [Verification workflow](#verification-workflow)
+- [Verify prompt contract](#verify-prompt-contract)
+- [Criterion commands](#criterion-commands)
+- [Outputs and durability](#outputs-and-durability)
+- [Integrity enforcement](#integrity-enforcement)
+- [Configuration](#configuration)
+- [Best practices](#best-practices)
+- [Limitations](#limitations)
+- [See also](#see-also)
+
+## Overview
 
 The **verify agent** is an LLM pass that runs after execute when a task has at least one done criterion. It is the **sole authority** for marking criteria complete with `verified_by=verify_agent`.
 
 Three roles participate in verification:
 
-- **Execute agent** — Does the work and writes a self-report (`claimed_done` + evidence). This is an assertion only; execute cannot mark criteria done in the completion ledger.
-- **Worker (harness)** — Gates on `claimed_done`, runs optional shell checks, assembles the verify prompt, invokes the verify runner, parses `verify-report.json`, enforces git integrity, and decides pass / retry / fail.
-- **Verify agent** — Reads evidence and returns per-criterion `verified` + `reasoning`.
+| Role | Responsibility |
+| --- | --- |
+| **Execute agent** | Does the work and writes a self-report (`claimed_done` + evidence). Assertion only — cannot mark criteria done in the completion ledger. |
+| **Worker (harness)** | Gates on `claimed_done`, runs optional shell checks, assembles the verify prompt, invokes the verify runner, parses `verify-report.json`, enforces git integrity, and decides pass / retry / fail. |
+| **Verify agent** | Reads evidence and returns per-criterion `verified` + `reasoning`. |
 
-Tasks with **zero criteria** (legacy rows) skip verify entirely; a successful execute alone marks the task `done`. See [data-model.md](../data-model.md).
+> **Note** — Tasks with **zero criteria** (legacy rows) skip verify entirely; a successful execute alone marks the task `done`. See [data-model.md](../data-model.md).
 
-This doc does not cover execute-side criteria injection (see [criteria_prompt.go](../../pkgs/agents/harness/criteria_prompt.go); a future execute-agent domain doc may cover it).
+This article does not cover execute-side criteria injection ([`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go)). Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTTP surfaces: [api.md](../api.md).
 
-## Actors and trust boundaries
+## Key concepts
+
+| Term | Definition |
+| --- | --- |
+| **Self-claim gate** | Worker check that `claimed_done` is true before sending a criterion to LLM verify. |
+| **Command evidence** | Worker-captured stdout/stderr/meta from shell verify commands; input to the verify prompt. |
+| **Locked pass** | Criterion verified on an earlier attempt; carried in `previouslyPassed` and omitted from re-verify. |
+| **Verify tampered** | Terminal cycle outcome when git integrity detects working-tree or HEAD changes during verify. |
+| **Adversarial separation** | Optional different runner/model for verify vs execute ([ADR-0003](../adr/ADR-0003-verify-component-upgrade.md)). |
+
+### Actors and trust
 
 | Actor | Responsibility | Trust level |
 | --- | --- | --- |
@@ -24,11 +57,11 @@ This doc does not cover execute-side criteria injection (see [criteria_prompt.go
 | Worker | Gate, shell commands, prompt assembly, parse reports, git snapshots | Trusted orchestrator |
 | Verify agent | Per-criterion pass/fail + reasoning | Trusted verdict (when integrity holds) |
 
-The worker does **not** auto-pass a criterion when a verify command exits 0. Shell output is evidence for the verify agent to interpret. See [ADR-0012](../adr/ADR-0012-structured-verify-commands.md).
+> **Important** — The worker does **not** auto-pass a criterion when a verify command exits 0. Shell output is evidence for the verify agent to interpret. See [ADR-0012](../adr/ADR-0012-structured-verify-commands.md).
 
-When `app_settings.verify_runner_name` is set to a different runner than execute, verify is **adversarially separated** — a different adapter and optionally a different model. Build/probe failure demotes verify to reuse the execute runner with a loud log; the worker keeps running. See [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md).
+When `app_settings.verify_runner_name` is set to a different runner than execute, verify is **adversarially separated**. Build/probe failure demotes verify to reuse the execute runner with a loud log; the worker keeps running. See [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md).
 
-## End-to-end flow
+## How it works
 
 ```mermaid
 flowchart TD
@@ -57,11 +90,15 @@ flowchart TD
   Decision -->|tampered| Terminal[verify_tampered terminal]
 ```
 
-1. **Execute** — The execute agent finishes work and writes `criteria-report.json` to the worker-managed report dir (outside `repo_root`). The prompt prepends all active criteria with stable ids. See [criteria_prompt.go](../../pkgs/agents/harness/criteria_prompt.go).
+Report files live under `T2A_WORKER_REPORT_DIR` (outside `repo_root`). The verify runner receives `WorkingDir` set to `repo_root` so it can inspect uncommitted changes via diff and file tools.
 
-2. **Gate** — For each criterion, if `claimed_done` is false, the worker records an immediate failure (`verified_by=agent_self`, reasoning: execute did not claim done). Those ids are **not** sent to the verify LLM. See `runVerifyChecks` in [verification.go](../../pkgs/agents/harness/verification.go).
+## Verification workflow
 
-3. **Worker commands** — For criteria with `claimed_done: true` and attached `verify_commands`, the worker runs each command sequentially via shell (`sh -c` / `cmd /C`) in `WorkingDir` (`app_settings.repo_root`). stdout, stderr, and meta JSON are written under `<report_dir>/<cycle_id>/checks/<criterion_id>/<seq>.*`. See [verify_commands.go](../../pkgs/agents/harness/verify_commands.go).
+1. **Execute** — The execute agent finishes work and writes `criteria-report.json` to the worker-managed report dir. The prompt prepends all active criteria with stable ids. See [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go).
+
+2. **Gate** — For each criterion, if `claimed_done` is false, the worker records an immediate failure (`verified_by=agent_self`, reasoning: execute did not claim done). Those ids are **not** sent to the verify LLM. See `runVerifyChecks` in [`verification.go`](../../pkgs/agents/harness/verification.go).
+
+3. **Worker commands** — For criteria with `claimed_done: true` and attached `verify_commands`, the worker runs each command sequentially via shell (`sh -c` / `cmd /C`) in `WorkingDir` (`app_settings.repo_root`). stdout, stderr, and meta JSON are written under `<report_dir>/<cycle_id>/checks/<criterion_id>/<seq>.*`. See [`verify_commands.go`](../../pkgs/agents/harness/verify_commands.go).
 
 4. **Verify LLM** — The harness builds the verify prompt (below), then calls `verifyRunner.Run` with `WorkingDir` set to the repo root. Progress streams on the verify phase's `phase_seq`.
 
@@ -71,16 +108,16 @@ flowchart TD
 
 ## Verify prompt contract
 
-The prompt is assembled in `runLLMVerifyAgent` ([verification.go](../../pkgs/agents/harness/verification.go)). Section order:
+The prompt is assembled in `runLLMVerifyAgent` ([`verification.go`](../../pkgs/agents/harness/verification.go)). Section order:
 
 1. Role line: verification agent; do not modify source files.
 2. Output path: write only the absolute path to `verify-report.json` (under `T2A_WORKER_REPORT_DIR`, not under `repo_root`).
 3. JSON schema: `{"criteria":[{"id":"...","verified":true|false,"reasoning":"..."}]}`.
 4. **Locked passes** (retry only) — ids already verified; do not include in the report.
 5. **Active criteria** — For each non-locked criterion with `claimed_done: true`: `[id] text`, execute evidence string.
-6. **Command evidence** (when commands ran) — Per command: command string, expected outcome, exit code, duration, paths to stdout/stderr/meta, optional stdout preview. No stderr preview. See `formatCommandEvidenceSection` in [verify_commands.go](../../pkgs/agents/harness/verify_commands.go).
-7. **`Diff:`** — Output of `git diff HEAD` (truncated at 200 KiB), or a clean-tree hint when commit policy is on and the tree is clean. See [resume_prompt.go](../../pkgs/agents/harness/resume_prompt.go).
-8. **Previous verification feedback** (retry only) — Appended when a prior verify attempt failed. See `appendVerifyFeedback` in [criteria_prompt.go](../../pkgs/agents/harness/criteria_prompt.go).
+6. **Command evidence** (when commands ran) — Per command: command string, expected outcome, exit code, duration, paths to stdout/stderr/meta, optional stdout preview. No stderr preview. See `formatCommandEvidenceSection` in [`verify_commands.go`](../../pkgs/agents/harness/verify_commands.go).
+7. **`Diff:`** — Output of `git diff HEAD` (truncated at 200 KiB), or a clean-tree hint when commit policy is on and the tree is clean. See [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go).
+8. **Previous verification feedback** (retry only) — Appended when a prior verify attempt failed. See `appendVerifyFeedback` in [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go).
 
 `WorkingDir` (repo root) is passed on `runner.Request`, not repeated in the prompt text. The verify runner can use its normal tools to read files in the repo if the diff and previews are insufficient.
 
@@ -141,11 +178,11 @@ On retry, locked-pass and feedback blocks appear as described above.
 }
 ```
 
-Parser rules ([criteria_parse.go](../../pkgs/agents/harness/criteria_parse.go)): report file ≤ 256 KiB; `reasoning` ≤ 16 KiB; when `verified=true`, `reasoning` must be ≥ 40 characters; no duplicate ids; symlinks rejected.
+Parser rules ([`criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go)): report file ≤ 256 KiB; `reasoning` ≤ 16 KiB; when `verified=true`, `reasoning` must be ≥ 40 characters; no duplicate ids; symlinks rejected.
 
 ## Criterion commands
 
-Operators attach optional shell checks per criterion via `verify_commands` on task create or checklist API. Limits: 5 commands per criterion; command ≤ 512 chars; `expected_outcome` ≤ 2048 chars ([domain/verify_commands.go](../../pkgs/tasks/domain/verify_commands.go)).
+Operators attach optional shell checks per criterion via `verify_commands` on task create or checklist API. Limits: 5 commands per criterion; command ≤ 512 chars; `expected_outcome` ≤ 2048 chars ([`verify_commands.go`](../../pkgs/tasks/domain/verify_commands.go)).
 
 | Property | Behavior |
 | --- | --- |
@@ -159,7 +196,7 @@ Operators attach optional shell checks per criterion via `verify_commands` on ta
 
 Command failures (non-zero exit, timeout, start error) are included in the evidence bundle; the verify LLM still runs and decides.
 
-**Warning:** Commands that mutate the working tree can trigger `verify_tampered` on the post-verify git snapshot. Prefer read-only checks (tests, lint, grep).
+> **Warning** — Commands that mutate the working tree can trigger `verify_tampered` on the post-verify git snapshot. Prefer read-only checks (tests, lint, grep).
 
 Evidence file layout:
 
@@ -189,9 +226,9 @@ Report dir root: `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`). 
 
 Before `StartPhase(verify)`, the worker captures `git status --porcelain` and `git rev-parse HEAD`. After verify completes, it captures again. Any working-tree change, HEAD movement, or snapshot error → terminal `verify_tampered` (no retries, no completion rows). Report files live outside the repo, so the whitelist is empty — any porcelain diff during verify is tampering.
 
-When the working dir is not a git repo, the check is bypassed (logged once at startup). Non-git fixtures therefore have no tamper enforcement. See [verify_integrity.go](../../pkgs/agents/harness/verify_integrity.go) and [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md).
+When the working dir is not a git repo, the check is bypassed (logged once at startup). Non-git fixtures therefore have no tamper enforcement. See [`verify_integrity.go`](../../pkgs/agents/harness/verify_integrity.go) and [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md).
 
-The verify agent runs in the **same working dir as execute** (where uncommitted changes live) so it can inspect actual file contents via diff and runner tools. A fresh git worktree at HEAD would be empty and unusable for verifying execute's edits — see ADR-0003 alternatives.
+> **Note** — The verify agent runs in the **same working dir as execute** (where uncommitted changes live) so it can inspect actual file contents via diff and runner tools. A fresh git worktree at HEAD would be empty and unusable for verifying execute's edits — see ADR-0003 alternatives.
 
 ## Configuration
 
@@ -207,42 +244,52 @@ The verify agent runs in the **same working dir as execute** (where uncommitted 
 
 Full reference: [configuration.md](../configuration.md).
 
-## Strengths
+## Best practices
 
 - **Adversarial separation** — Optional different runner/model for verify vs execute reduces self-grading.
 - **Execute self-report not trusted** — Gate rejects unclaimed criteria; verify LLM must affirm claimed ones.
 - **Independent command evidence** — Worker runs shell checks without relying on execute honesty.
 - **Git tamper detection** — Fail-safe: snapshot errors and any working-tree mutation during verify terminate the cycle.
-- **Retry efficiency** — Locked passes skip re-verification of settled criteria while preserving atomic completion (all rows written on terminal success only).
+- **Retry efficiency** — Locked passes skip re-verification of settled criteria while preserving atomic completion.
 - **Observable** — Metrics (`t2a_verify_verdict_total`, phase duration, retries per cycle); DB verdict mirror; `verification_failed:<ids>` terminate reason.
 - **Inspects real changes** — Same repo root as execute; diff reflects uncommitted work execute produced.
 
-## Limitations and known trade-offs
+## Limitations
 
-- **Non-deterministic LLM verdicts** — No multi-judge ensemble; flaky re-evaluation is possible though locked passes mitigate retries.
-- **No deterministic auto-pass** — Exit code 0 on verify commands does not mark a criterion done by design ([ADR-0012](../adr/ADR-0012-structured-verify-commands.md)).
-- **`previouslyPassed` is in-memory only** — Worker restart re-runs verify for all criteria in the cycle ([ADR-0003](../adr/ADR-0003-verify-component-upgrade.md)).
-- **Integrity requires git** — Non-git working dirs skip tamper checks silently per cycle.
-- **Prompt is partial** — Diff + stdout preview only; full stderr and arbitrary files require the verify runner to read paths/tools on its own.
-- **Truncation** — Command output (256 KiB), diff (200 KiB), and stdout preview can hide tail failures.
-- **Ephemeral report files** — Post-cycle debugging relies on DB verdict rows, logs, or metrics — not the JSON files on disk.
-- **Mutating verify commands** — Can cause `verify_tampered` if they change the working tree.
-- **Zero-criteria legacy tasks** — Skip verify entirely; execute success alone completes the task.
-- **Same working dir** — Verify agent *could* modify source; only post-hoc git check catches it (not prevention).
-
-## Related docs and code map
-
-| Resource | Content |
+| Limitation | Detail |
 | --- | --- |
-| [data-model.md](../data-model.md) § Checklist | Schema, worker loop summary, report contracts |
+| Non-deterministic LLM verdicts | No multi-judge ensemble; flaky re-evaluation possible though locked passes mitigate retries. |
+| No deterministic auto-pass | Exit code 0 on verify commands does not mark a criterion done by design ([ADR-0012](../adr/ADR-0012-structured-verify-commands.md)). |
+| `previouslyPassed` is in-memory only | Worker restart re-runs verify for all criteria in the cycle ([ADR-0003](../adr/ADR-0003-verify-component-upgrade.md)). |
+| Integrity requires git | Non-git working dirs skip tamper checks silently per cycle. |
+| Prompt is partial | Diff + stdout preview only; full stderr and arbitrary files require the verify runner to read paths/tools. |
+| Truncation | Command output (256 KiB), diff (200 KiB), and stdout preview can hide tail failures. |
+| Ephemeral report files | Post-cycle debugging relies on DB verdict rows, logs, or metrics — not JSON files on disk. |
+| Mutating verify commands | Can cause `verify_tampered` if they change the working tree. |
+| Zero-criteria legacy tasks | Skip verify entirely; execute success alone completes the task. |
+| Same working dir | Verify agent *could* modify source; only post-hoc git check catches it (not prevention). |
+
+## See also
+
+### Documentation
+
+| Doc | Content |
+| --- | --- |
+| [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |
+| [data-model.md](../data-model.md) (Checklist) | Schema, worker loop summary, report contracts |
 | [api.md](../api.md) | Checklist CRUD, `GET .../verdicts` |
 | [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md) | Adversarial verify, integrity, locked passes |
 | [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Criterion shell checks |
 | [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md) | Durable verdict tables |
 | [ADR-0005](../adr/ADR-0005-extract-agent-harness.md) | Harness extraction |
-| [pkgs/agents/harness/verification.go](../../pkgs/agents/harness/verification.go) | Verify pipeline and prompt assembly |
-| [pkgs/agents/harness/verify_commands.go](../../pkgs/agents/harness/verify_commands.go) | Shell execution and evidence formatting |
-| [pkgs/agents/harness/verify_integrity.go](../../pkgs/agents/harness/verify_integrity.go) | Pre/post git snapshots |
-| [pkgs/agents/harness/criteria_parse.go](../../pkgs/agents/harness/criteria_parse.go) | Report paths and parsing |
-| [pkgs/agents/harness/criteria_prompt.go](../../pkgs/agents/harness/criteria_prompt.go) | Execute criteria injection and verify feedback |
-| [pkgs/agents/harness/README.md](../../pkgs/agents/harness/README.md) | Harness file map |
+
+### Code
+
+| File | Content |
+| --- | --- |
+| [`pkgs/agents/harness/verification.go`](../../pkgs/agents/harness/verification.go) | Verify pipeline and prompt assembly |
+| [`pkgs/agents/harness/verify_commands.go`](../../pkgs/agents/harness/verify_commands.go) | Shell execution and evidence formatting |
+| [`pkgs/agents/harness/verify_integrity.go`](../../pkgs/agents/harness/verify_integrity.go) | Pre/post git snapshots |
+| [`pkgs/agents/harness/criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go) | Report paths and parsing |
+| [`pkgs/agents/harness/criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go) | Execute criteria injection and verify feedback |
+| [`pkgs/agents/harness/README.md`](../../pkgs/agents/harness/README.md) | Harness file map |

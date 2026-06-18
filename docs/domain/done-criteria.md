@@ -1,32 +1,62 @@
 # Done criteria
 
-Deep-dive for per-task acceptance requirements: how operators define them, how the agent worker verifies them, and what gets persisted. Schema tables and HTTP contracts remain authoritative in [data-model.md](../data-model.md) and [api.md](../api.md).
+Per-task acceptance requirements: how operators define them, how the agent worker verifies them, and what gets persisted when a cycle succeeds.
 
-**Related domain doc:** [verify-agent.md](./verify-agent.md) — adversarial LLM judge that marks criteria `verified_by=verify_agent`. This doc covers the full criteria lifecycle; that doc focuses on the verify pass alone.
+| | |
+| --- | --- |
+| **Applies to** | Checklist API, task create flow, agent worker harness, checklist UI |
+| **Audience** | Contributors touching store, harness, handlers, or SPA checklist surfaces |
+| **Companion article** | [verify-agent.md](./verify-agent.md) — verify-phase LLM judge in isolation |
 
-**Not covered here:** gate criteria on `task.gate.criteria[]` (operator checklist before dequeue release). See [data-model.md](../data-model.md) § Gate.
+## In this article
 
----
+- [Overview](#overview)
+- [Key concepts](#key-concepts)
+- [How it works](#how-it-works)
+- [Operator workflow](#operator-workflow)
+- [Verification workflow](#verification-workflow)
+- [Wire contracts](#wire-contracts)
+- [Configuration](#configuration)
+- [Best practices](#best-practices)
+- [Limitations](#limitations)
+- [See also](#see-also)
 
-## Purpose and scope
+## Overview
 
-**Done criteria** (also called checklist items) are the operator-authored acceptance requirements attached to a task. Each criterion has stable `id`, human-readable `text`, and optional ordered **verify commands** (shell checks the worker runs during verify).
+**Done criteria** (checklist items) are operator-authored acceptance requirements attached to a task. Each criterion has a stable `id`, human-readable `text`, and optional ordered **verify commands** (shell checks the worker runs during verify).
 
 They answer: *what must be true before this task is allowed to reach `status=done`?*
 
-| In scope | Out of scope |
+### In scope
+
+- Definition CRUD, edit locks, and the completion ledger
+- Execute → self-claim gate → verify → decision loop
+- Ephemeral agent report files and durable verdict tables
+
+### Out of scope
+
+- **Gate criteria** on `task.gate.criteria[]` (operator checklist before dequeue release). See [data-model.md](../data-model.md) (Gate).
+- Draft-task eval rubric (advisory scoring at create time)
+- Full verify-agent prompt engineering — see [verify-agent.md](./verify-agent.md)
+
+> **Important** — `POST /tasks` requires at least one non-empty criterion in `checklist_items`. Legacy rows with zero criteria still exist; those tasks skip the entire verify pipeline.
+
+> **Note** — After [ADR-0010](../adr/ADR-0010-remove-subtasks.md), each task owns its own definitions. There is no checklist inheritance across a parent/child tree.
+
+Schema tables and HTTP contracts remain authoritative in [data-model.md](../data-model.md) and [api.md](../api.md).
+
+## Key concepts
+
+| Term | Definition |
 | --- | --- |
-| Definition CRUD, edit locks, completion ledger | Gate criteria (manual-approval dequeue pause) |
-| Execute → self-claim gate → verify → decision loop | Draft-task eval rubric (advisory scoring at create time) |
-| Ephemeral agent report files and durable verdict tables | Full verify-agent prompt engineering (see verify-agent doc) |
+| **Done criterion** | A row in `task_checklist_items` with stable `id` and `text`. |
+| **Verify command** | Optional shell check in `task_checklist_item_commands`, run by the worker before LLM verify. |
+| **Self-claim** | Execute agent assertion (`claimed_done`) in `criteria-report.json`. Not final acceptance. |
+| **Verify verdict** | Verify agent judgment (`verified`) in `verify-report.json`. Sole authority for `verified_by=verify_agent`. |
+| **Completion ledger** | `task_checklist_completions` rows written only when the execution cycle terminates successfully. |
+| **Locked pass** | Criterion verified on an earlier attempt in the same cycle; carried in `previouslyPassed` and omitted from re-verify. |
 
-**Create-time rule:** `POST /tasks` requires at least one non-empty criterion in `checklist_items`. Legacy rows with zero criteria still exist; those tasks skip the entire verify pipeline (see below).
-
-**Flat tasks only:** After [ADR-0010](../adr/ADR-0010-remove-subtasks.md), each task owns its own definitions. There is no checklist inheritance across a parent/child tree.
-
----
-
-## Actors and trust boundaries
+### Actors and trust
 
 ```mermaid
 flowchart LR
@@ -57,36 +87,42 @@ flowchart LR
 
 | Actor | Role | Trust |
 | --- | --- | --- |
-| **Operator** | Authors criterion text and optional verify commands via REST/SPA. Cannot directly mark criteria done (completion writes are `ActorAgent` only). | Trusted to define intent; verify commands are a trusted-operator surface (shell injection risk bounded by timeout and output caps). |
+| **Operator** | Authors criterion text and optional verify commands via REST/SPA. Cannot directly mark criteria done (completion writes are `ActorAgent` only). | Trusted to define intent. Verify commands are a trusted-operator surface (shell injection risk bounded by timeout and output caps). |
 | **Execute agent** | Does the work; writes `criteria-report.json` with `claimed_done` and `evidence`. | **Not trusted** for final acceptance. `claimed_done` is an assertion only. |
-| **Worker shell** | Runs `task_checklist_item_commands` in `app_settings.repo_root` before LLM verify. | Trusted executor of operator-defined commands; output is evidence input, not a pass/fail verdict. |
-| **Verify agent** | Reads work + evidence; writes `verify-report.json`. Sole writer of `verified_by=verify_agent` on success. | Adversarial judge — may use a different runner/model than execute. Must not modify the working tree (enforced by git integrity check). |
+| **Worker shell** | Runs `task_checklist_item_commands` in `app_settings.repo_root` before LLM verify. | Trusted executor of operator-defined commands. Output is evidence input, not a pass/fail verdict. |
+| **Verify agent** | Reads work and evidence; writes `verify-report.json`. Sole writer of `verified_by=verify_agent` on success. | Adversarial judge — may use a different runner/model than execute. Must not modify the working tree (enforced by git integrity check). |
 | **Store** | Persists definitions, per-attempt verdict mirrors, and — only after cycle success — `task_checklist_completions`. | Source of truth for task-level "criterion is done." |
 
-**Key boundary:** Nothing is written to `task_checklist_completions` until the execution cycle terminates successfully. Criteria that passed on attempt 1 but failed the overall cycle on attempt 2 leave **no** completion rows — the atomic-decision contract.
+> **Important** — Nothing is written to `task_checklist_completions` until the execution cycle terminates successfully. Criteria that passed on attempt 1 but failed the overall cycle on attempt 2 leave **no** completion rows.
 
----
+## How it works
 
-## End-to-end flow
+Three persistence layers cooperate:
 
-### Operator lifecycle
+| Layer | Storage | Lifetime | Purpose |
+| --- | --- | --- | --- |
+| **Definitions** | `task_checklist_items`, `task_checklist_item_commands` | Until operator deletes | What "done" means |
+| **Ephemeral reports** | `<T2A_WORKER_REPORT_DIR>/<cycle_id>/` | GC at cycle terminate | Agent ↔ worker wire format |
+| **Durable ledger** | `task_checklist_completions`, `task_cycle_*_reports`, `task_cycle_command_runs` | Until task/cycle deleted | UI, audit, support |
 
-1. **Create** — criteria inserted atomically with the task row (`task_checklist_items`, optional `task_checklist_item_commands`).
-2. **Edit while open** — add, edit text, or delete definitions while the task is not `running` or `done`. Verified items lock text/delete (409).
-3. **Running** — definitions frozen (409 on add/edit/delete). The agent may still receive updated completion state via the worker.
-4. **Done** — all criteria must have completion rows before `status=done` ([`ValidateCanMarkDoneInTx`](../../pkgs/tasks/store/internal/checklist/validate.go)).
+The worker runs verify inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go) after a successful execute phase, **only when the task has ≥1 criterion** (`verificationSnapshot.enabled`). Zero-criteria legacy tasks skip verify; a successful execute alone completes the task via [`completeChecklistLegacy`](../../pkgs/agents/harness/verification.go).
+
+## Operator workflow
+
+1. **Create** — Criteria inserted atomically with the task row (`task_checklist_items`, optional `task_checklist_item_commands`).
+2. **Edit while open** — Add, edit text, or delete definitions while the task is not `running` or `done`. Verified items lock text/delete (409).
+3. **Running** — Definitions frozen (409 on add/edit/delete). The agent may still receive updated completion state via the worker.
+4. **Done** — All criteria must have completion rows before `status=done` ([`ValidateCanMarkDoneInTx`](../../pkgs/tasks/store/internal/checklist/validate.go)).
 
 | State | Add | Edit text | Delete |
 | --- | --- | --- | --- |
-| Open (not running) | yes | yes | yes* |
-| Cycle running | no (409) | no (409) | no (409) |
-| Verified (completion exists) | yes | no (409) | no (409) |
+| Open (not running) | Yes | Yes | Yes* |
+| Cycle running | No (409) | No (409) | No (409) |
+| Verified (completion exists) | Yes | No (409) | No (409) |
 
 \*Delete blocked if any completion exists for the item.
 
-### Worker verification loop
-
-Runs inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go) after a successful execute phase, **only when the task has ≥1 criterion** (`verificationSnapshot.enabled`).
+## Verification workflow
 
 ```mermaid
 sequenceDiagram
@@ -116,28 +152,14 @@ sequenceDiagram
   end
 ```
 
-**Steps:**
-
 1. **Execute** — [`injectCriteria`](../../pkgs/agents/harness/criteria_prompt.go) prepends active criteria and the absolute path to `criteria-report.json`. Criteria already passed in earlier attempts appear under "Already verified (do not re-do)" and are omitted from the report's expected ID set.
-2. **Self-claim gate** — For each non-locked criterion, `claimed_done: false` in the report fails immediately with `verified_by=agent_self`. No LLM verify runs for those IDs.
+2. **Self-claim gate** — For each non-locked criterion, `claimed_done: false` fails immediately with `verified_by=agent_self`. No LLM verify runs for those IDs.
 3. **Shell checks** (optional) — For criteria with `verify_commands`, the worker runs commands sequentially in `repo_root`, writing artifacts under `<report_dir>/<cycle_id>/checks/<criterion_id>/`. Failures do not skip LLM verify ([ADR-0012](../adr/ADR-0012-structured-verify-commands.md)).
-4. **Verify agent** — LLM pass for every criterion that passed the self-claim gate. Optional separate runner/model via `app_settings.verify_runner_name`.
+4. **Verify agent** — LLM pass for every criterion that passed the self-claim gate. Optional separate runner/model via `app_settings.verify_runner_name`. See [verify-agent.md](./verify-agent.md).
 5. **Integrity check** — Pre/post `git status --porcelain` + `git rev-parse HEAD` on the working dir. Any working-tree change or HEAD movement → `verify_tampered` (terminal, no retries, no completions). Non-git repos: check bypassed (logged once at startup).
 6. **Decision** — All pass → [`applyVerifiedCompletions`](../../pkgs/agents/harness/verification.go) + task `done`. Any fail → retry execute up to `verify_max_retries`, carrying passed verdicts in `previouslyPassed`. Exhausted retries → cycle fails with `verification_failed:<id>,…` (prefix-stable; truncated at 256 chars).
 
-**Zero-criteria legacy:** When `len(criteria)==0`, verify is disabled. A successful execute alone completes the task via [`completeChecklistLegacy`](../../pkgs/agents/harness/verification.go) (marks any unchecked items done — typically a no-op when the checklist is empty).
-
----
-
-## Inputs / outputs (wire contracts)
-
-### Three persistence layers
-
-| Layer | Storage | Lifetime | Purpose |
-| --- | --- | --- | --- |
-| **Definitions** | `task_checklist_items`, `task_checklist_item_commands` | Until operator deletes | What "done" means |
-| **Ephemeral reports** | `<T2A_WORKER_REPORT_DIR>/<cycle_id>/` | GC at cycle terminate | Agent ↔ worker wire format |
-| **Durable ledger** | `task_checklist_completions`, `task_cycle_*_reports`, `task_cycle_command_runs` | Until task/cycle deleted | UI, audit, support |
+## Wire contracts
 
 ### Definition shape (REST)
 
@@ -174,6 +196,8 @@ Path: `<report_dir>/<cycle_id>/criteria-report.json`. Injected into execute prom
 | `criteria[].id` | Verify agent | One entry per criterion evaluated this attempt |
 | `criteria[].verified` | Verify agent | `true` only if criterion satisfied |
 | `criteria[].reasoning` | Verify agent | ≤ 16 KB; ≥ 40 chars when `verified=true` |
+
+Full prompt contract: [verify-agent.md](./verify-agent.md).
 
 ### Completion ledger — `task_checklist_completions`
 
@@ -213,8 +237,6 @@ The worker upserts rows keyed by `(cycle_id, attempt_seq, criterion_id)`:
 
 Exposed on `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Pre-verdict cycles return empty arrays.
 
----
-
 ## Configuration
 
 | Setting | Source | Default | Effect on criteria |
@@ -228,52 +250,49 @@ Exposed on `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Pre-verdict cycles retur
 
 See [configuration.md](../configuration.md) for validation rules and supervisor hot-reload behavior.
 
----
-
-## Strengths
+## Best practices
 
 - **Explicit acceptance contract** — Stable criterion IDs survive retries; operators and agents share the same checklist.
-- **Separation of claim vs proof** — Execute asserts `claimed_done`; verify independently judges. Reduces "agent said it was done" as a single point of failure.
+- **Separation of claim vs proof** — Execute asserts `claimed_done`; verify independently judges.
 - **Adversarial verify option** — Different runner/model from execute ([ADR-0003](../adr/ADR-0003-verify-component-upgrade.md)).
-- **Atomic completion honesty** — No partial completion rows on failed cycles; UI never shows criteria done when the cycle failed.
+- **Atomic completion honesty** — No partial completion rows on failed cycles.
 - **Retry efficiency** — Passed criteria carried in `previouslyPassed`; execute prompts and verify short-circuit settled items.
 - **Deterministic evidence channel** — Optional shell commands produce inspectable artifacts without bypassing LLM judgment ([ADR-0012](../adr/ADR-0012-structured-verify-commands.md)).
-- **Rich audit trail** — Per-attempt verdict tables + `details.verification` on verify phase events for SPA timeline without extra round-trips.
+- **Rich audit trail** — Per-attempt verdict tables + `details.verification` on verify phase events for SPA timeline.
 - **Tamper detection** — Post-verify git snapshot catches a verifier modifying source (when working dir is a git repo).
-- **Clean working tree** — Report files live outside `repo_root`; execute is instructed to write reports to worker-managed paths.
+- **Clean working tree** — Report files live outside `repo_root`.
 
----
+> **Warning** — Use read-only verify commands (tests, lint, grep). Commands that mutate the working tree can trigger `verify_tampered`.
 
-## Limitations and known trade-offs
+## Limitations
 
-- **LLM is the sole pass authority** — Exit code 0 on verify commands does not mark a criterion done. Verify quality and consistency remain operational risks.
-- **Legacy zero-criteria tasks** — Pre-create-requirement rows skip verify entirely; execute success alone marks the task done.
-- **Definitions locked after pickup** — Operators cannot refine acceptance text mid-flight once status is `running`.
-- **Non-git working dirs** — Integrity check is bypassed; tamper detection is degraded.
-- **Mutating verify commands** — Commands that change the working tree can trigger `verify_tampered` (terminal, no retry). Operators should use read-only checks.
-- **Ephemeral agent reports** — `criteria-report.json` and `verify-report.json` are GC'd at cycle end; long-term forensics rely on verdict tables and events.
-- **Truncated failure reasons** — `verification_failed:<ids>` on the cycle row is capped at 256 characters.
-- **`human_override` unused** — Schema supports operator override of verify verdicts; no handler/worker path writes it today.
-- **Draft eval is advisory** — [`pkgs/tasks/store/internal/eval/`](../../pkgs/tasks/store/internal/eval/) scores criterion quality at compose time; it does not affect runtime verification.
-- **Verdict upsert errors are non-gating** — Failure to mirror reports to DB is logged but verify continues (observability-only today).
-- **Stale package comments** — [`checklist/doc.go`](../../pkgs/tasks/store/internal/checklist/doc.go) still references removed subtask inheritance; runtime behavior is flat per ADR-0010.
+| Limitation | Detail |
+| --- | --- |
+| LLM is sole pass authority | Exit code 0 on verify commands does not mark a criterion done. |
+| Legacy zero-criteria tasks | Pre-create-requirement rows skip verify; execute success alone marks the task done. |
+| Definitions locked after pickup | Operators cannot refine acceptance text mid-flight once status is `running`. |
+| Non-git working dirs | Integrity check bypassed; tamper detection degraded. |
+| Ephemeral agent reports | Report JSON files GC'd at cycle end; forensics rely on verdict tables and events. |
+| Truncated failure reasons | `verification_failed:<ids>` capped at 256 characters. |
+| `human_override` unused | Schema supports operator override; no handler/worker path writes it today. |
+| Draft eval is advisory | [`pkgs/tasks/store/internal/eval/`](../../pkgs/tasks/store/internal/eval/) scores criterion quality at compose time only. |
+| Verdict upsert errors are non-gating | Failure to mirror reports to DB is logged but verify continues. |
+| Stale package comments | [`checklist/doc.go`](../../pkgs/tasks/store/internal/checklist/doc.go) still references removed subtask inheritance; runtime is flat per ADR-0010. |
 
----
+## See also
 
-## Related docs and code map
-
-### Docs
+### Documentation
 
 | Doc | Why read it |
 | --- | --- |
-| [data-model.md](../data-model.md) § Checklist | Schema, edit locks, verdict tables |
+| [verify-agent.md](./verify-agent.md) | Verify pass deep-dive (companion article) |
+| [data-model.md](../data-model.md) (Checklist) | Schema, edit locks, verdict tables |
 | [api.md](../api.md) | Checklist routes, create validation, verdicts endpoint |
 | [architecture.md](../architecture.md) | Worker + harness placement in `taskapi` |
 | [configuration.md](../configuration.md) | Verify settings and report dir |
 | [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md) | Adversarial verify, integrity check, retry efficiency |
 | [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Shell checks and evidence layout |
 | [ADR-0010](../adr/ADR-0010-remove-subtasks.md) | Flat tasks; no checklist inheritance |
-| [verify-agent.md](./verify-agent.md) | Verify pass deep-dive (companion doc) |
 
 ### Code
 
