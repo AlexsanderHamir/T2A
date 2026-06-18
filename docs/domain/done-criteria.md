@@ -6,7 +6,7 @@ Per-task acceptance requirements: how operators define them, how the agent worke
 | --- | --- |
 | **Applies to** | Checklist API, task create flow, agent worker harness, checklist UI |
 | **Audience** | Contributors touching store, harness, handlers, or SPA checklist surfaces |
-| **Companion article** | [verify-agent.md](./verify-agent.md) — verify-phase LLM judge in isolation |
+| **Companion article** | [verify-agent.md](./verify-agent.md) — verify-phase LLM judge; [execute-agent.md](./execute-agent.md) — execute-phase prompt composition |
 
 ## In this article
 
@@ -38,6 +38,7 @@ They answer: *what must be true before this task is allowed to reach `status=don
 - **Gate criteria** on `task.gate.criteria[]` (operator checklist before dequeue release). See [data-model.md](../data-model.md) (Gate).
 - Draft-task eval rubric (advisory scoring at create time)
 - Full verify-agent prompt engineering — see [verify-agent.md](./verify-agent.md)
+- Execute prompt composition and criteria injection — see [execute-agent.md](./execute-agent.md)
 
 > **Important** — `POST /tasks` requires at least one non-empty criterion in `checklist_items`. Legacy rows with zero criteria still exist; those tasks skip the entire verify pipeline.
 
@@ -152,7 +153,7 @@ sequenceDiagram
   end
 ```
 
-1. **Execute** — [`injectCriteria`](../../pkgs/agents/harness/criteria_prompt.go) prepends active criteria and the absolute path to `criteria-report.json`. Criteria already passed in earlier attempts appear under "Already verified (do not re-do)" and are omitted from the report's expected ID set.
+1. **Execute** — [`injectCriteria`](../../pkgs/agents/harness/criteria_prompt.go) prepends active criteria and the absolute path to `criteria-report.json`. Criteria already passed in earlier attempts appear under "Already verified (do not re-do)" and are omitted from the report's expected ID set. Full prompt contract: [execute-agent.md](./execute-agent.md).
 2. **Self-claim gate** — For each non-locked criterion, `claimed_done: false` fails immediately with `verified_by=agent_self`. No LLM verify runs for those IDs.
 3. **Shell checks** (optional) — For criteria with `verify_commands`, the worker runs commands sequentially in `repo_root`, writing artifacts under `<report_dir>/<cycle_id>/checks/<criterion_id>/`. Failures do not skip LLM verify ([ADR-0012](../adr/ADR-0012-structured-verify-commands.md)).
 4. **Verify agent** — LLM pass for every criterion that passed the self-claim gate. Optional separate runner/model via `app_settings.verify_runner_name`. See [verify-agent.md](./verify-agent.md).
@@ -285,6 +286,7 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 
 | Doc | Why read it |
 | --- | --- |
+| [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [verify-agent.md](./verify-agent.md) | Verify pass deep-dive (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, edit locks, verdict tables |
 | [api.md](../api.md) | Checklist routes, create validation, verdicts endpoint |

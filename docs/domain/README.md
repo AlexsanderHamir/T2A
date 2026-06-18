@@ -17,7 +17,7 @@ Schema, routes, and env vars remain authoritative in reference docs. Domain arti
 
 ## How to use these docs
 
-1. Start from the article index below when you are working on a bounded subsystem (checklist, verify phase, …).
+1. Start from the article index below when you are working on a bounded subsystem (checklist, execute phase, verify phase, …).
 2. Read **Overview** and **Key concepts** for vocabulary and scope.
 3. Use **Workflow** sections for step-by-step behavior that matches code paths.
 4. Use **Wire contracts** and **Configuration** for implementation details at boundaries.
@@ -65,4 +65,5 @@ Use Microsoft-style callouts where they add clarity:
 | Article | Description |
 | --- | --- |
 | [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
+| [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |

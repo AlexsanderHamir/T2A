@@ -37,7 +37,7 @@ Verify everything before pushing:
 ## Docs
 
 - [docs/architecture.md](docs/architecture.md) — how `taskapi`, the store, the worker, and SSE fit together
-- [docs/domain/](docs/domain/) — subsystem deep-dives (verify agent, …)
+- [docs/domain/](docs/domain/) — subsystem deep-dives (execute agent, verify agent, …)
 - [docs/api.md](docs/api.md) — REST + SSE surface
 - [docs/web.md](docs/web.md) — web UI architecture
 - [AGENTS.md](AGENTS.md) — repo map and conventions

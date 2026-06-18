@@ -7,6 +7,7 @@ How the verify phase judges done criteria after execute succeeds: LLM verdict, c
 | **Applies to** | Agent worker harness, verify runner configuration, cycle verdict API |
 | **Audience** | Contributors touching `pkgs/agents/harness`, verify settings, or verdict UI |
 | **Prerequisite** | [done-criteria.md](./done-criteria.md) — full criteria lifecycle and completion ledger |
+| **Companion article** | [execute-agent.md](./execute-agent.md) — execute phase prompt composition and criteria self-report |
 
 ## In this article
 
@@ -37,7 +38,7 @@ Three roles participate in verification:
 
 > **Note** — Tasks with **zero criteria** (legacy rows) skip verify entirely; a successful execute alone marks the task `done`. See [data-model.md](../data-model.md).
 
-This article does not cover execute-side criteria injection ([`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go)). Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTTP surfaces: [api.md](../api.md).
+Execute-side prompt composition and criteria self-report: [execute-agent.md](./execute-agent.md). Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTTP surfaces: [api.md](../api.md).
 
 ## Key concepts
 
@@ -275,6 +276,7 @@ Full reference: [configuration.md](../configuration.md).
 
 | Doc | Content |
 | --- | --- |
+| [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, worker loop summary, report contracts |
 | [api.md](../api.md) | Checklist CRUD, `GET .../verdicts` |

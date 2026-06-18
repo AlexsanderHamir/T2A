@@ -195,7 +195,7 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 
 ## Checklist (done criteria)
 
-Behavioral deep-dives: [domain/done-criteria.md](./domain/done-criteria.md) (full lifecycle), [domain/verify-agent.md](./domain/verify-agent.md) (verify phase).
+Behavioral deep-dives: [domain/done-criteria.md](./domain/done-criteria.md) (full lifecycle), [domain/execute-agent.md](./domain/execute-agent.md) (execute phase), [domain/verify-agent.md](./domain/verify-agent.md) (verify phase).
 
 Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and optional `task_checklist_item_commands` (per-criterion shell checks: `item_id`, `sort_order`, `command`, `expected_outcome`, `ON DELETE CASCADE`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators attach zero or more verification commands per criterion; during verify the worker runs them in `app_settings.repo_root`, writes stdout/stderr/meta under the worker-managed report dir, and feeds those artifacts to the verify agent. The LLM remains the sole authority for marking criteria done — exit code 0 does not auto-pass.
 
