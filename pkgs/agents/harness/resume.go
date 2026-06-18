@@ -36,7 +36,7 @@ func (h *Harness) Resume(parentCtx context.Context, task *domain.Task, cycle *do
 
 	defer h.recoverFromPanic(&state, *task)
 
-	opts := cycleLoopOpts{}
+	opts := cycleLoopOpts{knownCommits: cp.knownCommits}
 	switch cp.entry {
 	case resumeEntryExecute:
 		opts.resumeNotice = true

@@ -1,7 +1,7 @@
 # ADR-0006: Phase-Boundary Cycle Resume
 
 **Date:** 2026-06-11
-**Status:** Accepted
+**Status:** Accepted (execute commit **marker** policy superseded by [ADR-0014](ADR-0014-cycle-commit-tracking.md); phase-boundary resume model unchanged)
 **Deciders:** Engineering
 
 ## Context
@@ -50,4 +50,4 @@ Mid-CLI session resume, worker leases, and a dedicated checkpoint table are out 
 
 - Supersedes the fail-all behavior described under "Process-restart orphan sweep" in prior `docs/architecture.md` (cycles aborted, tasks failed).
 - Builds on ADR-0005 (`pkgs/agents/harness`) as the resume entry point.
-- Execute commit policy addresses the ADR-0003 deferral in service of resume durability.
+- Execute commit **marker** policy (`t2a:cycle=`, `agent_commit_execute_work`) superseded by [ADR-0014](ADR-0014-cycle-commit-tracking.md); phase-boundary resume mechanics unchanged.

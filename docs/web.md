@@ -32,3 +32,7 @@ Draft autosave persists `automation_selections` in `TaskDraftPayload` via `draft
 Task detail edit UI for automations is not in V1; PATCH `/tasks/{id}` accepts `automation_selections` for follow-up work.
 
 See [ADR-0013](./adr/ADR-0013-prompt-automations.md).
+
+## Task detail — execution cycles
+
+Expanded cycle rows in `TaskCyclesPanel` load `GET /tasks/{id}/cycles/{cycleId}/verdicts`. When the worker indexed git commits for the cycle, the panel shows a repo → branch breadcrumb and commit rows (`git_context`, `commits[]`) above the per-criterion verdict list. Parsers: `web/src/api/parseTaskApiCycles.ts`; types: `web/src/types/cycle.ts`. See [domain/cycle-commits.md](./domain/cycle-commits.md).

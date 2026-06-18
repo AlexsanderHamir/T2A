@@ -432,8 +432,7 @@ func (h *Harness) runLLMVerifyAgent(
 ) error {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
-	commitOn := h.agentCommitExecuteWork(ctx)
-	diff := verifyDiffSection(h.opts.WorkingDir, cycle.ID, commitOn)
+	commits, _ := h.store.ListCommitsForCycle(ctx, cycle.ID)
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
 	// Render the absolute, worker-managed verify-report path so the
@@ -461,8 +460,11 @@ func (h *Harness) runLLMVerifyAgent(
 		b.WriteString(fmt.Sprintf("- [%s] %s\n  execute claimed_done: true (assertion only)\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
 	}
 	b.WriteString(formatCommandEvidenceSection(cmdEvidence))
+	if gitBlock := formatGitContextForPrompt(commits); gitBlock != "" {
+		b.WriteString(gitBlock)
+	}
 	b.WriteString("\nDiff:\n")
-	b.WriteString(diff)
+	b.WriteString(verifyDiffSection(h.opts.WorkingDir))
 	prompt := b.String()
 	if feedback != "" {
 		prompt = appendVerifyFeedback(prompt, feedback)

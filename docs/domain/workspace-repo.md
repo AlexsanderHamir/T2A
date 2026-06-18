@@ -256,6 +256,7 @@ Properties:
 - **Sequential** — single worker goroutine; one cycle at a time per process. No per-task working directory isolation in V1.
 - **Hot reload** — changing `repo_root` in Settings triggers supervisor reload and a new worker instance with the updated `WorkingDir` ([configuration.md](../configuration.md) lifecycle diagram).
 - **Not the report scratch dir** — `T2A_WORKER_REPORT_DIR` holds JSON side-channel files agents write by absolute path in the prompt, keeping `repo_root` clean for git integrity checks.
+- **Commit hierarchy** — when `repo_root` is a git worktree, execute ingest records repo → worktree → branch → SHA rows in `task_cycle_commits` ([cycle-commits.md](./cycle-commits.md)).
 
 Tasks cannot run until `repo_root` is configured and valid — see [task-scheduling.md](./task-scheduling.md) for how ready tasks wait behind the supervisor gate and [agent-queue.md](./agent-queue.md) for queue behavior once the worker is running.
 

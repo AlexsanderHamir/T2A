@@ -41,6 +41,6 @@ No dedicated checkpoint table. `reconstructCheckpoint` reads:
 - `task_cycle_verify_reports` → locked passes, verify attempt, retry feedback
 - Task row → base prompt
 - `task_context_snapshots` for `cycle_id` → project context block
-- Git working tree / `t2a:cycle=<cycle_id>` commits when commit policy is on
+- `task_cycle_commits` → worker-indexed SHAs for resume/verify prompts (see [cycle-commits.md](../../docs/domain/cycle-commits.md))
 
 The composed prompt is what the runner sees; `WorkingDir` remains `app_settings.repo_root`.

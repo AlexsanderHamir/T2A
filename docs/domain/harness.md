@@ -220,7 +220,7 @@ Phase-specific behavior:
 | `task_cycle_verify_reports` | Locked passes, verify attempt, retry feedback |
 | Task row | Base prompt |
 | `task_context_snapshots` | Project context block |
-| Git log (`t2a:cycle=<id>`) | Fallback when working tree clean and commit policy on |
+| `task_cycle_commits` | Worker-indexed SHAs for resume/verify prompts |
 
 | Branch | Harness behavior |
 | --- | --- |
@@ -319,7 +319,7 @@ Read at runtime from store inside harness methods:
 | Setting | Effect |
 | --- | --- |
 | `verify_max_retries` | Max execute↔verify loops per cycle |
-| `agent_commit_execute_work` | Commit-required vs forbidden execute prompt block |
+| `verify_command_timeout_seconds` | Per-command wall clock during verify |
 | `verify_command_timeout_seconds` | Per shell verify command |
 
 Task-level fields consumed in the loop: `cursor_model`, `automation_selections`, `project_id`, `project_context_item_ids`.

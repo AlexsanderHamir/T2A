@@ -77,3 +77,4 @@ Use Microsoft-style callouts where they add clarity:
 | [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
 | [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |
+| [cycle-commits.md](./cycle-commits.md) | Cycle commit tracking: ancestry ingest, execute gates, verify/resume/API consumption |

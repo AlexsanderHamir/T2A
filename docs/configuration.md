@@ -80,8 +80,9 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `verify_runner_name` | string | `""` | Adversarial verify runner id. Empty = reuse execute runner. When set to a different id (e.g. `claudecode`), the supervisor builds and probes that runner separately at startup and on every `PATCH /settings`; build/probe failure logs `verify_runner_probe_failed` / `verify_runner_build_failed` and demotes verify to "reuse execute runner" so the worker keeps running. Setting it equal to `runner` is equivalent to leaving it empty. |
 | `verify_runner_model` | string | `""` | Optional model for the verify runner. Changing this triggers a worker restart on `PATCH /settings`. |
 | `verify_command_timeout_seconds` | int (>0) | `120` | Wall-clock cap per optional criterion shell check during verify. |
-| `agent_commit_execute_work` | bool | `true` | When true, execute-phase prompts require the agent to commit work with a `t2a:cycle=<cycle_id>` marker before finishing execute (aids phase-boundary resume after restart). Toggle in Settings → Execute phase. |
 | `updated_at` | RFC3339 (response only) | server clock | Last successful upsert. SPA shows "last changed N ago". |
+
+> **Note** — Execute-phase git commits are **always required** when `repo_root` is a git worktree (clean tree + indexed ancestry before verify). The former `agent_commit_execute_work` toggle and `t2a:cycle=` message markers were removed in [ADR-0014](adr/ADR-0014-cycle-commit-tracking.md). See [domain/cycle-commits.md](domain/cycle-commits.md).
 
 ### Validation
 

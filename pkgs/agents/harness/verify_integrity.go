@@ -196,6 +196,7 @@ func itoa(n int) string {
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.runGit",
 		"dir", dir, "args", args)
+	dir = filepath.Clean(dir)
 	all := append([]string{"-C", dir}, args...)
 	cmd := exec.CommandContext(ctx, "git", all...)
 	var stdout, stderr bytes.Buffer

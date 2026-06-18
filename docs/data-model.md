@@ -241,7 +241,7 @@ Paths live under a **worker-managed scratch directory** (`<worker-managed dir>/<
 
 | File | Writer | Schema |
 |---|---|---|
-| `<worker-managed dir>/<cycle_id>/criteria-report.json` | Execute agent | `{ "criteria": [{ "id", "claimed_done", "evidence" }] }` |
+| `<worker-managed dir>/<cycle_id>/criteria-report.json` | Execute agent | `{ "criteria": [{ "id", "claimed_done", "evidence" }], "commits": [{ "sha", "branch" }] }` — `commits` optional; worker validates SHAs against git ancestry at execute ingest ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md), [domain/cycle-commits.md](domain/cycle-commits.md)) |
 | `<worker-managed dir>/<cycle_id>/verify-report.json` | Verify agent | `{ "criteria": [{ "id", "verified", "reasoning" }] }` |
 
 Limits: 256 KB per report file; `evidence` and `reasoning` ≤ 16 KB each; verify `reasoning` ≥ 40 chars when `verified=true`. Duplicate ids in a report → invalid. Symlinks rejected.
@@ -274,6 +274,27 @@ The two report files above are the agent ↔ worker wire format. They are GC'd a
 | `verifier_kind` | string | one of `domain.VerifierKind` (`agent_self` / `verify_agent` / `deterministic_check` / `human_override` / `legacy`); same enum as `task_checklist_completions.verified_by` so the SPA can render the same chip in both surfaces. |
 | `reasoning` | text (≤ 16 KB) | verifier rationale. |
 | `written_at` | timestamptz | indexed. |
+
+`task_cycle_commits`
+
+Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md)). Upserted after a successful execute run (before `CompletePhase(execute)`) from ancestry `cycle_base_sha..HEAD`. Not dual-written to `task_events`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | server-assigned at upsert. |
+| `task_id` | string fk → `tasks.id` (`ON DELETE CASCADE`) | denormalized for list-by-task. |
+| `cycle_id` | string fk → `task_cycles.id` (`ON DELETE CASCADE`) | indexed. |
+| `phase_seq` | int (>0) | execute phase that last ingested this SHA. |
+| `seq` | int (>0) | order within cycle ancestry (`1..N`); unique index with `cycle_id` for ordering. |
+| `repo` | text | `app_settings.repo_root` at snapshot. |
+| `worktree` | text | `git rev-parse --show-toplevel`. |
+| `branch` | string | from agent report, `git branch --contains`, or snapshot `base_branch`. |
+| `sha` | string | full commit hash; unique with `cycle_id`. |
+| `committed_at` | timestamptz | from `git log -1`. |
+| `message` | text | subject line from `git log -1`. |
+| `recorded_at` | timestamptz | worker upsert time. |
+
+Unique index: `(cycle_id, sha)`. List order: `seq ASC`. Pre-ADR-0014 cycles return zero rows.
 
 `task_cycle_command_runs`
 

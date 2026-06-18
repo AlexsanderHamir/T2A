@@ -136,21 +136,27 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 	t.Parallel()
 	started := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	cycle := &domain.TaskCycle{ID: "cycle-1", StartedAt: started}
-	prompt := appendResumeNotice("base", cycle, domain.PhaseExecute, true)
-	for _, frag := range []string{"Worker resume notice", "cycle-1", "t2a:cycle=cycle-1", "base"} {
+	known := []domain.TaskCycleCommit{
+		{Seq: 1, SHA: "abc123def456", Message: "feat: add health check"},
+	}
+	prompt := appendResumeNotice("base", cycle, domain.PhaseExecute, known)
+	for _, frag := range []string{"Worker resume notice", "cycle-1", "abc123def456", "base"} {
 		if !containsSubstr(prompt, frag) {
 			t.Fatalf("resume notice missing %q in %q", frag, prompt)
 		}
 	}
-	withCommit := appendGitCommitPolicy("", cycle.ID, true)
-	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "t2a:cycle=cycle-1") {
-		t.Fatalf("commit policy missing marker: %q", withCommit)
+	withCommit := appendGitCommitPolicy("")
+	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "criteria-report.json") {
+		t.Fatalf("commit policy missing required block: %q", withCommit)
+	}
+	if containsSubstr(withCommit, "t2a:cycle") {
+		t.Fatalf("commit policy must not mention t2a markers: %q", withCommit)
 	}
 	dir := t.TempDir()
 	initGitRepoForDiffTest(t, dir)
-	diff := verifyDiffSection(dir, cycle.ID, true)
-	if !containsSubstr(diff, "Working tree is clean") || !containsSubstr(diff, "t2a:cycle=cycle-1") {
-		t.Fatalf("verify diff hint missing: %q", diff)
+	diff := verifyDiffSection(dir)
+	if containsSubstr(diff, "(diff unavailable") {
+		t.Fatalf("verify diff unavailable for git repo: %q", diff)
 	}
 }
 

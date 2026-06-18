@@ -102,7 +102,7 @@ func TestHarness_Resume_afterInterruptedExecute_composesResumePrompt(t *testing.
 		t.Fatal("timeout waiting for runner phase")
 	}
 
-	for _, frag := range []string{"Worker resume notice", cycle.ID, "t2a:cycle=" + cycle.ID, "Already verified", criterionID, "do the thing"} {
+	for _, frag := range []string{"Worker resume notice", cycle.ID, "Already verified", criterionID, "do the thing"} {
 		if !strings.Contains(prompt, frag) {
 			t.Fatalf("resume prompt missing %q\nprompt=%q", frag, prompt)
 		}

@@ -371,3 +371,30 @@ type TaskCycleCommandRun struct {
 
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.
 func (TaskCycleCommandRun) TableName() string { return "task_cycle_command_runs" }
+
+// TaskCycleCommit is the durable worker-indexed record of one git commit
+// belonging to an execution cycle. Rows are upserted after a successful
+// execute phase (before CompletePhase) from git ancestry
+// cycle_base_sha..HEAD. See ADR-0014 and docs/domain/cycle-commits.md.
+//
+// Unique (cycle_id, sha) provides idempotent re-ingest across verify retries.
+// cycle_id cascades on delete; task_id is denormalized for list-by-task queries.
+type TaskCycleCommit struct {
+	ID          string     `gorm:"primaryKey"`
+	TaskID      string     `gorm:"not null;index"`
+	CycleID     string     `gorm:"not null;index;uniqueIndex:idx_cycle_commit_sha,priority:1"`
+	PhaseSeq    int64      `gorm:"not null;check:chk_task_cycle_commits_phase_seq,phase_seq > 0"`
+	Seq         int64      `gorm:"not null;check:chk_task_cycle_commits_seq,seq > 0;index:idx_cycle_commit_order,priority:2"`
+	Repo        string     `gorm:"not null;default:'';type:text"`
+	Worktree    string     `gorm:"not null;default:'';type:text"`
+	Branch      string     `gorm:"not null;default:''"`
+	SHA         string     `gorm:"not null;uniqueIndex:idx_cycle_commit_sha,priority:2"`
+	CommittedAt time.Time  `gorm:"not null;index"`
+	Message     string     `gorm:"type:text;not null;default:''"`
+	RecordedAt  time.Time  `gorm:"not null;index"`
+	Cycle       *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Task        *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCycleCommit) TableName() string { return "task_cycle_commits" }

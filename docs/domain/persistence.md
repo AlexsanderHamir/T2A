@@ -80,6 +80,7 @@ Package overview: [`doc.go`](../../pkgs/tasks/store/doc.go). File map: [`README.
 | Full task timeline (audit, status changes, mirrors)? | `task_events` via `GET /tasks/{id}/events` |
 | Per-criterion execute self-claim for attempt N? | `task_cycle_criteria_reports` (not the JSON file after GC) |
 | Per-criterion verify verdict for attempt N? | `task_cycle_verify_reports` |
+| Commits indexed for a cycle (repo → branch → SHA)? | `task_cycle_commits` — see [cycle-commits.md](./cycle-commits.md) |
 | Checklist items marked done on task? | `task_checklist_completions` (written only on terminal cycle success — [done-criteria.md](./done-criteria.md)) |
 | Live runner token stream for one attempt? | `task_cycle_stream_events` |
 
@@ -286,6 +287,17 @@ flowchart TB
 `internal/reports` keys idempotency on `(cycle_id, attempt_seq, criterion_id)` — worker retries after transient DB errors rewrite the same row rather than duplicating. Bulk upsert keeps one round-trip per report parse. Rationale: [`internal/reports/reports.go`](../../pkgs/tasks/store/internal/reports/reports.go).
 
 HTTP read surface: `GET /tasks/{id}/cycles/{cycleId}/verdicts` ([api.md](../api.md)). Pre-verdict-table cycles return empty arrays, never 404.
+
+## Cycle commit table
+
+Execute-phase git commits are indexed in **`task_cycle_commits`** after successful ingest ([cycle-commits.md](./cycle-commits.md)). Unlike verdict report files, commits are discovered via `git rev-list` ancestry and upserted by the harness — not parsed from a durable wire file.
+
+| Method | Package | Notes |
+| --- | --- | --- |
+| `UpsertCycleCommits` | `internal/commits` via `facade_commits.go` | Idempotent on `(cycle_id, sha)`; append-only semantics |
+| `ListCommitsForCycle` | same | Ordered by `seq`; consumed by verify/resume prompts and verdicts API |
+
+Rows carry the full **repo → worktree → branch → commit** chain. Phase `details_json.git` on execute start holds the snapshot anchor (`base_sha`, `cycle_base_sha`); commit count is written back on execute complete.
 
 ## Facade-only side effects
 

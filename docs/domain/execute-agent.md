@@ -130,7 +130,7 @@ Each execute attempt follows this sequence in [`cycle_loop.go`](../../pkgs/agent
 
 | Order | Section | Source | When present |
 | --- | --- | --- | --- |
-| 1 | Git commits (required or forbidden) | [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go) | Always — policy from `agent_commit_execute_work` |
+| 1 | Git commits (required) | [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go) | Git worktree only — skipped when `WorkingDir` is empty or not a git repo |
 | 2 | Worker resume notice | `appendResumeNotice` | Resume after `process_restart` during execute |
 | 3 | Done criteria + Already verified | [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go) | Task has checklist items |
 | 4 | Agent behaviors | [`automation_prompt.go`](../../pkgs/agents/harness/automation_prompt.go) | Task has resolved `automation_selections` |
@@ -155,12 +155,19 @@ If the task has no project context selection, the wrapper is omitted and only th
 
 ### Git commit policy
 
-Controlled by `app_settings.agent_commit_execute_work` ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)):
+Always required in git worktrees ([ADR-0014](../adr/ADR-0014-cycle-commit-tracking.md); supersedes [ADR-0006](../adr/ADR-0006-phase-boundary-resume.md) marker policy):
 
-- **Required (default):** Prompt includes `## Git commits (required)`. The agent must commit all work that satisfies claimed criteria before finishing execute. Every commit message must include the marker `t2a:cycle=<cycle_id>`. Incremental commits during the run use the same marker. Do not push.
-- **Forbidden:** Prompt includes `## Git commits (forbidden)`. The agent must leave changes uncommitted.
+- Prompt includes `## Git commits (required)` when the execute worktree is a git repo.
+- The agent must commit all work that satisfies claimed criteria before finishing execute.
+- List every commit SHA and branch in `criteria-report.json` under `commits` — **no** `t2a:` markers in commit messages.
+- Create **new commits only**; never amend, rebase, or rewrite SHAs from this cycle.
+- Do not push.
 
-On resume, the resume notice instructs the agent to inspect `git status` and, when commit policy is on, search `git log --grep='t2a:cycle=<cycle_id>'` if the working tree is clean. A clean tree does **not** mean the task succeeded — the agent must still complete remaining criteria and write the criteria report.
+When `WorkingDir` is empty or not a git repo, snapshot/ingest/gates are skipped.
+
+On resume, the resume notice lists **known commits from the DB** (`ListCommitsForCycle`) rather than grepping git log. A clean tree does **not** mean the task succeeded.
+
+See [cycle-commits.md](./cycle-commits.md) for worker ingest, gates, and schema.
 
 ### Automation injection
 
@@ -186,18 +193,16 @@ On retry, only **active** (non-locked) criterion ids must appear in the report.
 ## Git commits (required)
 
 Before you finish this execute phase, commit all work that satisfies criteria you are claiming.
-Every commit message MUST include the marker:
-  t2a:cycle=cycle-abc123
-
-You may commit incrementally during the run using the same marker.
-Do not push. Do not amend unrelated history.
+List every commit SHA and branch in `criteria-report.json` under `commits`.
+Use normal descriptive commit messages only — do not embed task IDs or `t2a:` markers.
+Create new commits only; do not push.
 
 ## Done criteria (required)
 
 You must satisfy every criterion below. When finished, write a JSON report at:
 `/tmp/t2a-worker/cycle-abc123/criteria-report.json`
 
-Schema: {"criteria":[{"id":"<id>","claimed_done":true,"evidence":"..."}]}
+Schema: {"criteria":[{"id":"<id>","claimed_done":true,"evidence":"..."}],"commits":[{"sha":"...","branch":"main"}]}
 
 claimed_done is your assertion that you completed the work; the verification agent independently decides whether each criterion is satisfied.
 
@@ -282,7 +287,6 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 | `cursor_model` | `app_settings` | Default model when task has no override |
 | Task `cursor_model` | task row | Per-run model override forwarded to runner |
 | `max_run_duration_seconds` | `app_settings` | Wall-clock cap on execute (and verify LLM) runs; `0` = no limit |
-| `agent_commit_execute_work` | `app_settings` | Commit-required vs commit-forbidden prompt block |
 | `T2A_WORKER_REPORT_DIR` | env | Scratch root for `criteria-report.json` |
 | `automation_selections` | task row | Yes/No toggles resolved into Agent behaviors block |
 | `project_id` + `project_context_item_ids` | task row | Project context snapshot for the cycle |

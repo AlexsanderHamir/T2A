@@ -49,8 +49,7 @@ export type AppSettings = {
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
-  /** When true, execute agent must commit with t2a:cycle=<cycle_id> marker. Default true. */
-  agent_commit_execute_work: boolean;
+  verify_command_timeout_seconds: number;
   updated_at?: string;
 };
 
@@ -81,7 +80,7 @@ export type AppSettingsPatch = Partial<{
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
-  agent_commit_execute_work: boolean;
+  verify_command_timeout_seconds: number;
 }>;
 
 export type ProbeCursorResult = {
@@ -153,10 +152,10 @@ function assertSettings(raw: unknown): AppSettings {
     typeof o.verify_runner_name === "string" ? o.verify_runner_name : "";
   const verifyRunnerModel =
     typeof o.verify_runner_model === "string" ? o.verify_runner_model : "";
-  const agentCommitExecuteWork =
-    typeof o.agent_commit_execute_work === "boolean"
-      ? o.agent_commit_execute_work
-      : true;
+  const verifyCommandTimeoutSeconds =
+    typeof o.verify_command_timeout_seconds === "number"
+      ? o.verify_command_timeout_seconds
+      : 120;
   if (
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
@@ -181,7 +180,7 @@ function assertSettings(raw: unknown): AppSettings {
     verify_max_retries: verifyMaxRetries,
     verify_runner_name: verifyRunnerName,
     verify_runner_model: verifyRunnerModel,
-    agent_commit_execute_work: agentCommitExecuteWork,
+    verify_command_timeout_seconds: verifyCommandTimeoutSeconds,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

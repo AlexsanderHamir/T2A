@@ -171,6 +171,7 @@ describe("TaskCyclesPanel", () => {
           criteria_reports: [],
           verify_reports: [],
           command_runs: [],
+          commits: [],
         });
       }
       if (url.startsWith("/tasks/task-1/cycles/")) {
@@ -607,6 +608,7 @@ describe("TaskCyclesPanel", () => {
             },
           ],
           command_runs: [],
+          commits: [],
         });
       }
       return new Response("not found", { status: 404 });
@@ -668,6 +670,7 @@ describe("TaskCyclesPanel", () => {
           criteria_reports: [],
           verify_reports: [],
           command_runs: [],
+          commits: [],
         });
       }
       return new Response("not found", { status: 404 });

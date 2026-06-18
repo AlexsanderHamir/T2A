@@ -223,12 +223,37 @@ export type CycleCommandRun = {
 };
 
 /**
+ * Git context summary for indexed commits on one cycle.
+ */
+export type CycleGitContext = {
+  repo: string;
+  worktree: string;
+  branch: string;
+};
+
+/**
+ * One row from `GET /tasks/{id}/cycles/{cycleId}/verdicts.commits`.
+ */
+export type CycleCommit = {
+  seq: number;
+  repo: string;
+  worktree: string;
+  branch: string;
+  sha: string;
+  /** ISO 8601 from API. */
+  committed_at: string;
+  message: string;
+};
+
+/**
  * Envelope for `GET /tasks/{id}/cycles/{cycleId}/verdicts`. All arrays
  * are always present (`[]` when no rows mirrored, never null).
  */
 export type CycleVerdictsResponse = {
   task_id: string;
   cycle_id: string;
+  git_context?: CycleGitContext;
+  commits: CycleCommit[];
   criteria_reports: CycleCriteriaReport[];
   verify_reports: CycleVerifyReport[];
   command_runs: CycleCommandRun[];

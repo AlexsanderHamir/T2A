@@ -4,6 +4,7 @@ import {
   EmptyState,
   EmptyStateTimelineGlyph,
 } from "@/shared/EmptyState";
+import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
 import {
   cycleStatusLabel,
@@ -17,7 +18,9 @@ import {
 } from "@/observability";
 import type {
   CycleCommandRun,
+  CycleCommit,
   CycleCriteriaReport,
+  CycleGitContext,
   CycleVerifyReport,
   Phase,
   PhaseStatus,
@@ -498,7 +501,8 @@ function CycleRowVerdicts({
   if (
     data.criteria_reports.length === 0 &&
     data.verify_reports.length === 0 &&
-    data.command_runs.length === 0
+    data.command_runs.length === 0 &&
+    data.commits.length === 0
   ) {
     return (
       <p
@@ -518,6 +522,10 @@ function CycleRowVerdicts({
       className="task-cycle-row-verdicts"
       data-testid="task-cycle-verdicts"
     >
+      <CycleCommitsSummary
+        gitContext={data.git_context}
+        commits={data.commits}
+      />
       <h4 className="task-cycle-row-verdicts-heading">Verdicts</h4>
       {groups.map((group) => (
         <section
@@ -600,6 +608,76 @@ function commandRunAttemptSeqs(runs: ReadonlyArray<CycleCommandRun>): number[] {
     seen.add(r.attempt_seq);
   }
   return Array.from(seen).sort((a, b) => a - b);
+}
+
+function CycleCommitsSummary({
+  gitContext,
+  commits,
+}: {
+  gitContext?: CycleGitContext;
+  commits: ReadonlyArray<CycleCommit>;
+}) {
+  const now = useNow();
+  if (commits.length === 0) {
+    return null;
+  }
+  const ctx = gitContext ?? {
+    repo: commits[0]?.repo ?? "",
+    worktree: commits[0]?.worktree ?? "",
+    branch: commits[commits.length - 1]?.branch ?? commits[0]?.branch ?? "",
+  };
+  return (
+    <section
+      className="task-cycle-commits"
+      data-testid="task-cycle-commits"
+      aria-label="Git commits"
+    >
+      <h4 className="task-cycle-row-verdicts-heading">Commits</h4>
+      <p className="task-cycle-commits-breadcrumb muted">
+        {formatGitBreadcrumb(ctx)}
+      </p>
+      <ul className="task-cycle-commits-list">
+        {commits.map((commit) => (
+          <li key={commit.sha} className="task-cycle-commit-row">
+            <span className="task-cycle-commit-sha">{shortSha(commit.sha)}</span>
+            <span className="task-cycle-commit-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="task-cycle-commit-message">{commit.message}</span>
+            <span className="task-cycle-commit-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="task-cycle-commit-time muted">
+              {formatRelativeTime(commit.committed_at, new Date(now))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function shortSha(sha: string): string {
+  const trimmed = sha.trim();
+  return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
+}
+
+function pathTail(path: string): string {
+  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "");
+  const parts = normalized.split("/").filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : path;
+}
+
+function formatGitBreadcrumb(ctx: CycleGitContext): string {
+  const repo = ctx.repo.trim();
+  const worktree = ctx.worktree.trim();
+  const branch = ctx.branch.trim() || "detached";
+  const segments = [pathTail(repo || "repo")];
+  if (worktree !== "" && worktree !== repo) {
+    segments.push(pathTail(worktree));
+  }
+  segments.push(branch);
+  return segments.join(" › ");
 }
 
 function CycleCommandRunsSummary({

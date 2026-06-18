@@ -1,0 +1,24 @@
+package store
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/commits"
+)
+
+// CycleCommitEntry is the public re-export of a commit upsert payload.
+type CycleCommitEntry = commits.Entry
+
+// UpsertCycleCommits persists worker-indexed git commits for one cycle.
+func (s *Store) UpsertCycleCommits(ctx context.Context, taskID, cycleID string, entries []CycleCommitEntry) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpsertCycleCommits")
+	return commits.UpsertCycleCommits(ctx, s.db, taskID, cycleID, entries)
+}
+
+// ListCommitsForCycle returns commits for a cycle ordered by ancestry seq.
+func (s *Store) ListCommitsForCycle(ctx context.Context, cycleID string) ([]domain.TaskCycleCommit, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCommitsForCycle")
+	return commits.ListCommitsForCycle(ctx, s.db, cycleID)
+}

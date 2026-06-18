@@ -23,7 +23,7 @@ type resumeCheckpoint struct {
 	previouslyPassed map[string]criterionVerdict
 	verifyAttempt    int
 	verifyFeedback   string
-	commitPolicyOn   bool
+	knownCommits     []domain.TaskCycleCommit
 }
 
 func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskCycle) (resumeCheckpoint, error) {
@@ -37,12 +37,6 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 	if cycle.Status != domain.CycleStatusRunning {
 		return cp, fmt.Errorf("resume: cycle status %q is not running", cycle.Status)
 	}
-
-	settings, err := h.store.GetSettings(ctx)
-	if err != nil {
-		return cp, err
-	}
-	cp.commitPolicyOn = settings.AgentCommitExecuteWork
 
 	phases, err := h.store.ListPhasesForCycle(ctx, cycle.ID)
 	if err != nil {
@@ -105,6 +99,12 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 		cp.verifyFeedback = buildVerifyFeedbackFromRows(verifyRows, maxAttempt)
 	}
 
+	commits, err := h.store.ListCommitsForCycle(ctx, cycle.ID)
+	if err != nil {
+		return cp, err
+	}
+	cp.knownCommits = commits
+
 	return cp, nil
 }
 
@@ -131,13 +131,4 @@ func buildVerifyFeedbackFromRows(rows []domain.TaskCycleVerifyReport, attemptSeq
 		failures = append(failures, fmt.Sprintf("%s: %s", row.CriterionID, row.Reasoning))
 	}
 	return strings.Join(failures, "; ")
-}
-
-func (h *Harness) agentCommitExecuteWork(ctx context.Context) bool {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.agentCommitExecuteWork")
-	settings, err := h.store.GetSettings(ctx)
-	if err != nil {
-		return true
-	}
-	return settings.AgentCommitExecuteWork
 }

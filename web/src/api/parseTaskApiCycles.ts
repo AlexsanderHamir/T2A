@@ -1,7 +1,9 @@
 import { errorMessage } from "@/lib/errorMessage";
 import {
   type CycleCommandRun,
+  type CycleCommit,
   type CycleCriteriaReport,
+  type CycleGitContext,
   type CycleMeta,
   type CycleVerdictsResponse,
   type CycleVerifyReport,
@@ -236,6 +238,32 @@ export function parseCycleCommandRun(value: unknown): CycleCommandRun {
   };
 }
 
+function parseCycleGitContext(value: unknown): CycleGitContext | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return {
+    repo: typeof value.repo === "string" ? value.repo : "",
+    worktree: typeof value.worktree === "string" ? value.worktree : "",
+    branch: typeof value.branch === "string" ? value.branch : "",
+  };
+}
+
+export function parseCycleCommit(value: unknown): CycleCommit {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: commit must be an object");
+  }
+  return {
+    seq: parseFiniteNumber(value.seq, "seq"),
+    repo: typeof value.repo === "string" ? value.repo : "",
+    worktree: typeof value.worktree === "string" ? value.worktree : "",
+    branch: typeof value.branch === "string" ? value.branch : "",
+    sha: parseNonEmptyString(value.sha, "sha"),
+    committed_at: parseISO8601Required(value.committed_at, "committed_at"),
+    message: typeof value.message === "string" ? value.message : "",
+  };
+}
+
 /**
  * Validates `GET /tasks/{id}/cycles/{cycleId}/verdicts`. All arrays
  * are mandatory but may be empty (pre-PR2 cycles produce no rows).
@@ -258,6 +286,10 @@ export function parseCycleVerdictsResponse(
   if (!Array.isArray(rawCommands)) {
     throw new Error("Invalid API response: command_runs must be an array");
   }
+  const rawCommits = value.commits;
+  if (!Array.isArray(rawCommits)) {
+    throw new Error("Invalid API response: commits must be an array");
+  }
   const criteriaReports = rawCriteria.map((item, i) => {
     try {
       return parseCycleCriteriaReport(item);
@@ -279,9 +311,19 @@ export function parseCycleVerdictsResponse(
       throw new Error(`Invalid API response: command_runs[${i}]: ${errorMessage(e)}`);
     }
   });
+  const commits = rawCommits.map((item, i) => {
+    try {
+      return parseCycleCommit(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: commits[${i}]: ${errorMessage(e)}`);
+    }
+  });
+  const gitContext = parseCycleGitContext(value.git_context);
   return {
     task_id: parseNonEmptyString(value.task_id, "task_id"),
     cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    ...(gitContext !== undefined ? { git_context: gitContext } : {}),
+    commits,
     criteria_reports: criteriaReports,
     verify_reports: verifyReports,
     command_runs: commandRuns,

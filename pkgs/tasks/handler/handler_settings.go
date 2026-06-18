@@ -35,7 +35,6 @@ type settingsResponse struct {
 	VerifyMaxRetries            int    `json:"verify_max_retries"`
 	VerifyRunnerName            string `json:"verify_runner_name"`
 	VerifyRunnerModel           string `json:"verify_runner_model"`
-	AgentCommitExecuteWork      bool   `json:"agent_commit_execute_work"`
 	VerifyCommandTimeoutSeconds int    `json:"verify_command_timeout_seconds"`
 	UpdatedAt                   string `json:"updated_at,omitempty"`
 }
@@ -60,7 +59,6 @@ type settingsPatchBody struct {
 	VerifyMaxRetries            *int    `json:"verify_max_retries,omitempty"`
 	VerifyRunnerName            *string `json:"verify_runner_name,omitempty"`
 	VerifyRunnerModel           *string `json:"verify_runner_model,omitempty"`
-	AgentCommitExecuteWork      *bool   `json:"agent_commit_execute_work,omitempty"`
 	VerifyCommandTimeoutSeconds *int    `json:"verify_command_timeout_seconds,omitempty"`
 }
 
@@ -160,7 +158,6 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		VerifyMaxRetries:            body.VerifyMaxRetries,
 		VerifyRunnerName:            body.VerifyRunnerName,
 		VerifyRunnerModel:           body.VerifyRunnerModel,
-		AgentCommitExecuteWork:      body.AgentCommitExecuteWork,
 		VerifyCommandTimeoutSeconds: body.VerifyCommandTimeoutSeconds,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
@@ -332,7 +329,6 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		VerifyMaxRetries:            cfg.VerifyMaxRetries,
 		VerifyRunnerName:            cfg.VerifyRunnerName,
 		VerifyRunnerModel:           cfg.VerifyRunnerModel,
-		AgentCommitExecuteWork:      cfg.AgentCommitExecuteWork,
 		VerifyCommandTimeoutSeconds: cfg.VerifyCommandTimeoutSeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {

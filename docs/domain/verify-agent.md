@@ -241,7 +241,8 @@ When the working dir is not a git repo, the check is bypassed (logged once at st
 | `verify_command_timeout_seconds` | Per-command wall clock (default 120s) |
 | `max_run_duration_seconds` | LLM verify call wall clock (`0` = no limit) |
 | `T2A_WORKER_REPORT_DIR` | Scratch root for report files and command evidence |
-| `agent_commit_execute_work` | When on, clean-tree verify prompt hints to inspect cycle-tagged commits |
+
+Verify prompts include a worker-indexed git context block from `task_cycle_commits` plus live `git diff HEAD`. See [cycle-commits.md](./cycle-commits.md).
 
 Full reference: [configuration.md](../configuration.md).
 

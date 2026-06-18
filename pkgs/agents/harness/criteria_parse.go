@@ -23,6 +23,12 @@ const minVerifyReasoning = 40
 
 type criteriaReport struct {
 	Criteria []criteriaReportEntry `json:"criteria"`
+	// Commits is worker-ingested at execute complete; ignored here so
+	// parseCriteriaReport stays compatible with ADR-0014 reports.
+	Commits []struct {
+		SHA    string `json:"sha"`
+		Branch string `json:"branch"`
+	} `json:"commits,omitempty"`
 }
 
 type criteriaReportEntry struct {

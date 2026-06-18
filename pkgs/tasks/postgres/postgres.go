@@ -86,6 +86,7 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.TaskCycleCriteriaReport{},
 		&domain.TaskCycleVerifyReport{},
 		&domain.TaskCycleCommandRun{},
+		&domain.TaskCycleCommit{},
 		&domain.ProjectContextItem{},
 		&domain.ProjectContextEdge{},
 		&domain.TaskContextSnapshot{},

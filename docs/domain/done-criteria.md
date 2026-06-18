@@ -187,6 +187,8 @@ sequenceDiagram
 | `criteria[].id` | Execute agent | Must match definition ids (active set only on retry) |
 | `criteria[].claimed_done` | Execute agent | Assertion; not final acceptance |
 | `criteria[].evidence` | Execute agent | ≤ 16 KB |
+| `commits[].sha` | Execute agent | Optional self-report; worker validates against `git rev-list` ancestry |
+| `commits[].branch` | Execute agent | Optional; stored on `task_cycle_commits` when present |
 
 Path: `<report_dir>/<cycle_id>/criteria-report.json`. Injected into execute prompt as an **absolute** path outside `repo_root`.
 

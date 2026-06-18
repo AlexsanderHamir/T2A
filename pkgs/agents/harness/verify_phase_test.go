@@ -3,6 +3,7 @@ package harness_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,6 +45,13 @@ func (h *hookRunner) Run(ctx context.Context, req runner.Request) (runner.Result
 // `.t2a/` segment after PR1 — files live outside the operator's
 // RepoRoot, so the path is just <reportDir>/<cycleID>/...
 func writeCriteriaReport(t *testing.T, reportDir, cycleID string, ids []string) {
+	writeCriteriaReportWithCommits(t, reportDir, cycleID, ids, nil)
+}
+
+func writeCriteriaReportWithCommits(t *testing.T, reportDir, cycleID string, ids []string, commits []struct {
+	SHA    string `json:"sha"`
+	Branch string `json:"branch"`
+}) {
 	t.Helper()
 	cdir := filepath.Join(reportDir, cycleID)
 	if err := os.MkdirAll(cdir, 0o755); err != nil {
@@ -56,7 +64,11 @@ func writeCriteriaReport(t *testing.T, reportDir, cycleID string, ids []string) 
 	}
 	rep := struct {
 		Criteria []entry `json:"criteria"`
-	}{}
+		Commits  []struct {
+			SHA    string `json:"sha"`
+			Branch string `json:"branch"`
+		} `json:"commits,omitempty"`
+	}{Commits: commits}
 	for _, id := range ids {
 		rep.Criteria = append(rep.Criteria, entry{ID: id, ClaimedDone: true, Evidence: "execute did the thing"})
 	}
@@ -64,6 +76,42 @@ func writeCriteriaReport(t *testing.T, reportDir, cycleID string, ids []string) 
 	if err := os.WriteFile(filepath.Join(cdir, "criteria-report.json"), b, 0o644); err != nil {
 		t.Fatalf("write criteria: %v", err)
 	}
+}
+
+func gitCommitWorkfile(t *testing.T, dir string) (sha, branch string) {
+	t.Helper()
+	name := fmt.Sprintf("work-%d.txt", time.Now().UnixNano())
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("work"), 0o644); err != nil {
+		t.Fatalf("write work file: %v", err)
+	}
+	for _, args := range [][]string{
+		{"add", name},
+		{"-c", "user.email=t@e.local", "-c", "user.name=t", "commit", "-m", "test work"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	headOut, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git rev-parse HEAD: %v\n%s", err, headOut)
+	}
+	branchOut, err := exec.Command("git", "-C", dir, "branch", "--show-current").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git branch --show-current: %v\n%s", err, branchOut)
+	}
+	return strings.TrimSpace(string(headOut)), strings.TrimSpace(string(branchOut))
+}
+
+func writeCriteriaReportWithGitWork(t *testing.T, reportDir, cycleID, workDir string, ids []string) {
+	t.Helper()
+	sha, branch := gitCommitWorkfile(t, workDir)
+	writeCriteriaReportWithCommits(t, reportDir, cycleID, ids, []struct {
+		SHA    string `json:"sha"`
+		Branch string `json:"branch"`
+	}{{SHA: sha, Branch: branch}})
 }
 
 func writeVerifyReport(t *testing.T, reportDir, cycleID string, ids []string) {
@@ -328,7 +376,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -985,7 +1033,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -1127,7 +1175,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 		}
 		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
-			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
+			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
 	}}
 	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(

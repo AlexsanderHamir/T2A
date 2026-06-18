@@ -270,12 +270,24 @@ func (h *Handler) getTaskCycleVerdicts(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	commitRows, err := h.store.ListCommitsForCycle(r.Context(), cycleID)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	resp := cycleVerdictsResponse{
 		TaskID:          taskID,
 		CycleID:         cycleID,
+		Commits:         make([]cycleCommitEntry, 0, len(commitRows)),
 		CriteriaReports: make([]cycleCriteriaReportEntry, 0, len(criteriaRows)),
 		VerifyReports:   make([]cycleVerifyReportEntry, 0, len(verifyRows)),
 		CommandRuns:     make([]cycleCommandRunEntry, 0, len(commandRows)),
+	}
+	for i := range commitRows {
+		resp.Commits = append(resp.Commits, cycleCommitFromDomain(&commitRows[i]))
+	}
+	if len(commitRows) > 0 {
+		resp.GitContext = cycleGitContextFromCommits(commitRows)
 	}
 	for i := range criteriaRows {
 		resp.CriteriaReports = append(resp.CriteriaReports, cycleCriteriaReportFromDomain(&criteriaRows[i]))
@@ -662,6 +674,35 @@ func cycleCommandRunFromDomain(r *domain.TaskCycleCommandRun) cycleCommandRunEnt
 		ExitCode:    r.ExitCode,
 		MetaPath:    r.MetaPath,
 		WrittenAt:   r.WrittenAt,
+	}
+}
+
+func cycleCommitFromDomain(r *domain.TaskCycleCommit) cycleCommitEntry {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.cycleCommitFromDomain")
+	return cycleCommitEntry{
+		Seq:         r.Seq,
+		Repo:        r.Repo,
+		Worktree:    r.Worktree,
+		Branch:      r.Branch,
+		SHA:         r.SHA,
+		CommittedAt: r.CommittedAt,
+		Message:     r.Message,
+	}
+}
+
+func cycleGitContextFromCommits(rows []domain.TaskCycleCommit) *cycleGitContextResponse {
+	if len(rows) == 0 {
+		return nil
+	}
+	first := rows[0]
+	branch := first.Branch
+	if last := rows[len(rows)-1]; last.Branch != "" {
+		branch = last.Branch
+	}
+	return &cycleGitContextResponse{
+		Repo:     first.Repo,
+		Worktree: first.Worktree,
+		Branch:   branch,
 	}
 }
 

@@ -129,6 +129,7 @@ GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migrati
 | `tasks` | Tasks (optional `project_id`, flat tags + milestone, gate JSON, `depends_on` via `task_dependencies`). |
 | `task_events` | Append-only audit log. Every cycle/phase mutation appends a mirror row in the same SQL transaction. Deep dive: [domain/task-events.md](domain/task-events.md). |
 | `task_cycles` / `task_cycle_phases` | Typed execution-cycle substrate (see [data-model.md](./data-model.md)). |
+| `task_cycle_commits` | Worker-indexed git commits per cycle (ancestry ingest after execute). See [domain/cycle-commits.md](./domain/cycle-commits.md). |
 | `task_cycle_stream_events` | Durable normalized Cursor `stream-json` progress for one attempt. |
 | `task_checklist_items` / `task_checklist_completions` | Per-task done criteria. See [domain/done-criteria.md](./domain/done-criteria.md). |
 | `task_dependencies` | Directed acyclic graph between tasks. |

@@ -185,9 +185,31 @@ type cycleVerifyReportEntry struct {
 // GET /tasks/{id}/cycles/{cycleId}/verdicts. All arrays are always
 // non-null (defaulted to []) so the SPA can iterate without a
 // presence check; pre-PR2 cycles return empty arrays.
+//
+// cycleGitContextResponse summarizes repo/worktree/branch for one cycle's
+// indexed commits. Omitted from JSON when no commits were persisted.
+type cycleGitContextResponse struct {
+	Repo     string `json:"repo"`
+	Worktree string `json:"worktree"`
+	Branch   string `json:"branch"`
+}
+
+// cycleCommitEntry is one row from task_cycle_commits.
+type cycleCommitEntry struct {
+	Seq         int64     `json:"seq"`
+	Repo        string    `json:"repo"`
+	Worktree    string    `json:"worktree"`
+	Branch      string    `json:"branch"`
+	SHA         string    `json:"sha"`
+	CommittedAt time.Time `json:"committed_at"`
+	Message     string    `json:"message"`
+}
+
 type cycleVerdictsResponse struct {
 	TaskID          string                     `json:"task_id"`
 	CycleID         string                     `json:"cycle_id"`
+	GitContext      *cycleGitContextResponse   `json:"git_context,omitempty"`
+	Commits         []cycleCommitEntry         `json:"commits"`
 	CriteriaReports []cycleCriteriaReportEntry `json:"criteria_reports"`
 	VerifyReports   []cycleVerifyReportEntry   `json:"verify_reports"`
 	CommandRuns     []cycleCommandRunEntry     `json:"command_runs"`

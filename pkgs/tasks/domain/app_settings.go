@@ -77,9 +77,6 @@ type AppSettings struct {
 	VerifyRunnerName string `gorm:"not null;default:''"`
 	// VerifyRunnerModel empty means use the verify runner's default model.
 	VerifyRunnerModel string `gorm:"not null;default:''"`
-	// AgentCommitExecuteWork instructs the execute agent to commit work
-	// with a cycle marker before finishing the phase (resume enabler).
-	AgentCommitExecuteWork bool `gorm:"not null;default:true"`
 	// VerifyCommandTimeoutSeconds caps each optional criterion shell check during verify.
 	VerifyCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_verify_command_timeout_seconds,verify_command_timeout_seconds > 0"`
 	UpdatedAt                   time.Time `gorm:"not null"`
@@ -135,7 +132,6 @@ func DefaultAppSettings() AppSettings {
 		VerifyMaxRetries:            DefaultVerifyMaxRetries,
 		VerifyRunnerName:            "",
 		VerifyRunnerModel:           "",
-		AgentCommitExecuteWork:      true,
 		VerifyCommandTimeoutSeconds: DefaultVerifyCommandTimeoutSeconds,
 	}
 }

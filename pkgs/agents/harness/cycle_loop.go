@@ -13,12 +13,12 @@ type cycleLoopOpts struct {
 	resumeNotice     bool
 	interruptedPhase domain.Phase
 	skipFirstExecute bool
+	knownCommits     []domain.TaskCycleCommit
 }
 
 func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) string {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.composeExecutePrompt",
 		"task_id", task.ID, "cycle_id", cycle.ID, "resume_notice", opts.resumeNotice)
-	commitOn := h.agentCommitExecuteWork(ctx)
 	prompt := task.InitialPrompt
 	if len(task.AutomationSelections) > 0 {
 		resolved, err := h.store.ResolveAutomationsForTask(ctx, task.AutomationSelections)
@@ -45,14 +45,23 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 	)
 	prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
 	if opts.resumeNotice {
-		prompt = appendResumeNotice(prompt, cycle, opts.interruptedPhase, commitOn)
+		prompt = appendResumeNotice(prompt, cycle, opts.interruptedPhase, opts.knownCommits)
 	}
-	if commitOn {
-		prompt = appendGitCommitPolicy(prompt, cycle.ID, true)
-	} else {
-		prompt = appendGitNoCommitPolicy(prompt)
+	if !state.gitSnap.Skipped {
+		prompt = appendGitCommitPolicy(prompt)
 	}
 	return prompt
+}
+
+func (h *Harness) repoRootForGit(ctx context.Context) string {
+	settings, err := h.store.GetSettings(ctx)
+	if err != nil {
+		return strings.TrimSpace(h.opts.WorkingDir)
+	}
+	if v := strings.TrimSpace(settings.RepoRoot); v != "" {
+		return v
+	}
+	return strings.TrimSpace(h.opts.WorkingDir)
 }
 
 func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) {
@@ -68,6 +77,22 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 				h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
 				return
 			}
+			priorBase, err := h.priorCycleBaseSHA(parentCtx, cycle.ID, execPhase.PhaseSeq)
+			if err != nil {
+				slog.Warn("agent harness prior cycle base lookup failed", "cmd", harnessLogCmd,
+					"operation", "agent.harness.Harness.runCycleLoop.prior_cycle_base",
+					"cycle_id", cycle.ID, "err", err)
+			}
+			snap, err := captureExecuteGitSnapshot(parentCtx, h.repoRootForGit(parentCtx), h.opts.WorkingDir, priorBase)
+			if err != nil {
+				slog.Warn("agent harness git snapshot failed", "cmd", harnessLogCmd,
+					"operation", "agent.harness.Harness.runCycleLoop.git_snapshot",
+					"cycle_id", cycle.ID, "err", err)
+				h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, "execute_git_snapshot_failed")
+				return
+			}
+			state.gitSnap = snap
+
 			_ = scrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
 			_ = ensureReportCycleDir(h.opts.ReportDir, cycle.ID)
 			prompt := h.composeExecutePrompt(parentCtx, task, cycle, state, opts)
@@ -93,12 +118,37 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 				}
 			}
 
-			if !h.completeExecutePhase(parentCtx, state, cycle, execPhase, phaseStatus, result) {
+			commitCount := 0
+			var phaseDetails []byte
+			if runErr == nil && !operatorCancelled && !snap.Skipped {
+				outcome, ingestErr := h.ingestExecuteCommits(parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap)
+				if ingestErr != nil {
+					slog.Warn("agent harness commit ingest error", "cmd", harnessLogCmd,
+						"operation", "agent.harness.Harness.runCycleLoop.commit_ingest_err",
+						"cycle_id", cycle.ID, "err", ingestErr)
+					phaseStatus = domain.PhaseStatusFailed
+					cycleStatus = domain.CycleStatusFailed
+					taskStatus = domain.StatusFailed
+					reason = executeInvalidCommitReason
+					result.Summary = executeInvalidCommitReason
+				} else if outcome.FailReason != "" {
+					phaseStatus = domain.PhaseStatusFailed
+					cycleStatus = domain.CycleStatusFailed
+					taskStatus = domain.StatusFailed
+					reason = outcome.FailReason
+					result.Summary = outcome.FailReason
+				} else {
+					commitCount = outcome.CommitCount
+				}
+			}
+			phaseDetails = mergeRunnerDetailsWithGit(detailsBytes(result), snap, commitCount)
+
+			if !h.completeExecutePhase(parentCtx, state, cycle, execPhase, phaseStatus, result, phaseDetails) {
 				h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
 				return
 			}
 
-			if runErr != nil || operatorCancelled {
+			if runErr != nil || operatorCancelled || phaseStatus == domain.PhaseStatusFailed {
 				if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
 					return
 				}

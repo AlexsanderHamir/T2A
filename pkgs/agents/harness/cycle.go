@@ -49,6 +49,8 @@ type processState struct {
 	// the by-model Prometheus series — even if the operator edited
 	// task.CursorModel between StartCycle and TerminateCycle.
 	effectiveModel string
+	// gitSnap holds execute-start anchors for commit ingest on success.
+	gitSnap gitPhaseSnapshot
 }
 
 // Run drives the harness cycle body for one task already in StatusRunning.
@@ -249,14 +251,18 @@ func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Co
 // phase row. Errors from the store are logged and reported back so the
 // caller can stop the pipeline (a missing row usually means the task
 // was deleted mid-cycle).
-func (h *Harness) completeExecutePhase(ctx context.Context, state *processState, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase, status domain.PhaseStatus, result runner.Result) bool {
+func (h *Harness) completeExecutePhase(ctx context.Context, state *processState, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase, status domain.PhaseStatus, result runner.Result, phaseDetails []byte) bool {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeExecutePhase",
 		"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "status", string(status))
+	details := phaseDetails
+	if details == nil {
+		details = detailsBytes(result)
+	}
 	in := store.CompletePhaseInput{
 		CycleID:  cycle.ID,
 		PhaseSeq: exec.PhaseSeq,
 		Status:   status,
-		Details:  detailsBytes(result),
+		Details:  details,
 		By:       domain.ActorAgent,
 	}
 	if result.Summary != "" {

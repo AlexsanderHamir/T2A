@@ -48,7 +48,6 @@ type Patch struct {
 	VerifyMaxRetries            *int
 	VerifyRunnerName            *string
 	VerifyRunnerModel           *string
-	AgentCommitExecuteWork      *bool
 	VerifyCommandTimeoutSeconds *int
 }
 
@@ -72,7 +71,6 @@ func (p Patch) IsEmpty() bool {
 		p.VerifyMaxRetries == nil &&
 		p.VerifyRunnerName == nil &&
 		p.VerifyRunnerModel == nil &&
-		p.AgentCommitExecuteWork == nil &&
 		p.VerifyCommandTimeoutSeconds == nil
 }
 
@@ -270,9 +268,6 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.VerifyRunnerModel != nil {
 		row.VerifyRunnerModel = strings.TrimSpace(*patch.VerifyRunnerModel)
-	}
-	if patch.AgentCommitExecuteWork != nil {
-		row.AgentCommitExecuteWork = *patch.AgentCommitExecuteWork
 	}
 	if patch.VerifyCommandTimeoutSeconds != nil {
 		row.VerifyCommandTimeoutSeconds = *patch.VerifyCommandTimeoutSeconds

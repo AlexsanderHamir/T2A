@@ -59,6 +59,8 @@ const (
 	OpListCommandRunsForCycle     = "list_command_runs_for_cycle"
 	OpListCriteriaReportsForCycle = "list_criteria_reports_for_cycle"
 	OpListVerifyReportsForCycle   = "list_verify_reports_for_cycle"
+	OpUpsertCycleCommits          = "upsert_cycle_commits"
+	OpListCommitsForCycle         = "list_commits_for_cycle"
 	OpGetAppSettings              = "get_app_settings"
 	OpUpdateAppSettings           = "update_app_settings"
 	OpCreateProject               = "create_project"
