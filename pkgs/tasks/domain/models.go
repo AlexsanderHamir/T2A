@@ -40,6 +40,9 @@ type Task struct {
 	// verified completion row; cleared when any item becomes unchecked.
 	// Maintained in checklist completion TX for SQL queue parity.
 	CriteriaSatisfiedAt *time.Time `json:"criteria_satisfied_at,omitempty" gorm:"index"`
+	// PendingRetry holds operator retry intent between POST /retry and worker
+	// pickup. Not exposed on the public task API (json:"-").
+	PendingRetry *PendingRetry `json:"-" gorm:"column:pending_retry;serializer:json;type:jsonb"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }

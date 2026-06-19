@@ -44,10 +44,20 @@ type ProjectFieldPatch = tasks.ProjectFieldPatch
 // PickupNotBeforePatch is the public re-export of the pickup_not_before patch helper.
 type PickupNotBeforePatch = tasks.PickupNotBeforePatch
 
+// AgentPickupResult is the public re-export of the worker pickup payload.
+type AgentPickupResult = tasks.AgentPickupResult
+
 // Get loads a task by id. See tasks.Get for the full contract.
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Get")
 	return tasks.Get(ctx, s.db, id)
+}
+
+// AgentPickup transitions ready→running and consumes pending_retry. Used by
+// the agent worker at dequeue time instead of a bare status patch.
+func (s *Store) AgentPickup(ctx context.Context, taskID string, by domain.Actor) (*AgentPickupResult, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AgentPickup", "task_id", taskID)
+	return tasks.AgentPickup(ctx, s.db, taskID, by)
 }
 
 // Create inserts a new task row, links draft evaluations, removes the

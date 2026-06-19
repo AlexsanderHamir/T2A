@@ -41,21 +41,22 @@ func (w *Worker) deferTaskPickup(ctx context.Context, taskID string, delay time.
 }
 
 // transitionTaskToRunning flips the task to running before the harness runs.
-func (w *Worker) transitionTaskToRunning(ctx context.Context, taskID string) bool {
+// Returns the post-pickup task row and any consumed retry intent.
+func (w *Worker) transitionTaskToRunning(ctx context.Context, taskID string) (*domain.Task, *domain.PendingRetry, bool) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.transitionTaskToRunning",
 		"task_id", taskID)
-	running := domain.StatusRunning
-	if _, err := w.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &running}, domain.ActorAgent); err != nil {
+	res, err := w.store.AgentPickup(ctx, taskID, domain.ActorAgent)
+	if err != nil {
 		level := slog.LevelWarn
 		if errors.Is(err, domain.ErrNotFound) {
 			level = slog.LevelInfo
 		}
-		slog.Log(ctx, level, "agent worker task transition failed",
+		slog.Log(ctx, level, "agent worker task pickup failed",
 			"cmd", workerLogCmd, "operation", "agent.worker.Worker.transitionTaskToRunning.err",
 			"task_id", taskID, "err", err)
-		return false
+		return nil, nil, false
 	}
-	return true
+	return res.Task, res.ConsumedRetry, true
 }
 
 func (w *Worker) openRunningCycle(ctx context.Context, taskID string) (*domain.TaskCycle, bool) {
@@ -119,11 +120,13 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
 		return
 	}
-	if !w.transitionTaskToRunning(parentCtx, task.ID) {
+	picked, consumedRetry, ok := w.transitionTaskToRunning(parentCtx, task.ID)
+	if !ok {
 		return
 	}
+	_ = consumedRetry // harness dispatch uses this in RunWithRetry (wired in worker admission cycle)
 
-	w.harness.Run(parentCtx, fresh)
+	w.harness.Run(parentCtx, picked)
 }
 
 func (w *Worker) recoverAdmissionPanic(taskID string) {

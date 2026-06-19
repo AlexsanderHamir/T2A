@@ -57,6 +57,10 @@ type UpdateInput struct {
 	Milestone             *string
 	Gate                  **domain.TaskGate
 	DependsOn             *[]domain.DependencyEdge
+	// PendingRetry sets operator retry intent (validated). Mutually exclusive with ClearPendingRetry.
+	PendingRetry *domain.PendingRetry
+	// ClearPendingRetry removes pending_retry from the row.
+	ClearPendingRetry bool
 }
 
 // ListFilter optionally restricts flat task listing.

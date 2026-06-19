@@ -53,6 +53,29 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyDependsOnPatch(tx, taskID, cur, in.DependsOn); err != nil {
 		return err
 	}
+	if err := applyPendingRetryPatch(cur, in.PendingRetry, in.ClearPendingRetry); err != nil {
+		return err
+	}
+	return nil
+}
+
+func applyPendingRetryPatch(cur *domain.Task, set *domain.PendingRetry, clear bool) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPendingRetryPatch")
+	if set != nil && clear {
+		return fmt.Errorf("%w: pending_retry set and clear", domain.ErrInvalidInput)
+	}
+	if clear {
+		cur.PendingRetry = nil
+		return nil
+	}
+	if set == nil {
+		return nil
+	}
+	cp := *set
+	if err := cp.Validate(); err != nil {
+		return err
+	}
+	cur.PendingRetry = &cp
 	return nil
 }
 
