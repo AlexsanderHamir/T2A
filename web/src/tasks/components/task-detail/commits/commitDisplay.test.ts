@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   buildGitContextItems,
-  commitStatusDescription,
-  commitStatusTooltip,
-  gateReasonLabel,
   normalizeGitPath,
   shortSha,
   taskCommitDiffPath,
@@ -49,30 +46,5 @@ describe("commitDisplay", () => {
     expect(taskCommitDiffPath("task 1", "abc1234")).toBe(
       "/tasks/task%201/commits/abc1234",
     );
-  });
-
-  it("commitStatusDescription returns operator copy for each status", () => {
-    expect(commitStatusDescription("eligible")).toMatch(/verify/i);
-    expect(commitStatusDescription("observed")).toMatch(/excluded/i);
-    expect(commitStatusDescription("inherited")).toMatch(/prior attempt/i);
-    expect(commitStatusDescription("superseded")).toMatch(/git history/i);
-  });
-
-  it("gateReasonLabel maps harness codes to plain English", () => {
-    expect(gateReasonLabel("execute_uncommitted_work")).toBe(
-      "Uncommitted changes remained in the worktree",
-    );
-    expect(gateReasonLabel("unknown_custom_reason")).toBe("unknown_custom_reason");
-    expect(gateReasonLabel("  ")).toBeUndefined();
-  });
-
-  it("commitStatusTooltip combines description and translated gate reason", () => {
-    const tooltip = commitStatusTooltip({
-      status: "observed",
-      gateReason: "execute_uncommitted_work",
-    });
-    expect(tooltip).toMatch(/excluded from verify/i);
-    expect(tooltip).toMatch(/Uncommitted changes remained in the worktree/);
-    expect(tooltip).not.toMatch(/execute_uncommitted_work/);
   });
 });

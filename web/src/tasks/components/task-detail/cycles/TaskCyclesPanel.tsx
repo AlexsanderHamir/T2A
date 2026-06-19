@@ -39,7 +39,6 @@ import {
 } from "../../../hooks/useTaskCycles";
 import { formatCycleLineageLabel } from "../../../cycleDisplay/cycleLineage";
 import { CommitList } from "../commits/CommitList";
-import { CommitStatusLegend } from "../commits/CommitStatusLegend";
 import { GitContextMeta } from "../commits/GitContextMeta";
 
 type Props = {
@@ -663,7 +662,6 @@ function CycleCommitsSummary({
       aria-label="Git commits"
     >
       <h4 className="task-cycle-row-verdicts-heading">Commits</h4>
-      <CommitStatusLegend />
       <GitContextMeta context={ctx} />
       <CommitList taskId={taskId} commits={commits} />
     </section>

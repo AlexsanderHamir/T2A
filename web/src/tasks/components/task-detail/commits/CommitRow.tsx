@@ -34,7 +34,6 @@ export function CommitRow({ taskId, commit, showAttempt = false }: Props) {
           <CommitStatusBadge
             status={commit.status}
             gateReason={commit.gate_reason}
-            sourceCycleId={commit.source_cycle_id}
           />
           <code className="task-commit-sha" title={commit.sha}>
             {shortSha(commit.sha)}

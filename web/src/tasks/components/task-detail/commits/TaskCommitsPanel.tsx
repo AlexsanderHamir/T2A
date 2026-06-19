@@ -6,7 +6,6 @@ import {
 } from "@/shared/EmptyState";
 import { useTaskCommits } from "@/tasks/hooks/useTaskCommits";
 import { CommitList } from "./CommitList";
-import { CommitStatusLegend } from "./CommitStatusLegend";
 import { GitContextMeta } from "./GitContextMeta";
 
 type Props = {
@@ -74,7 +73,6 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
         />
       ) : (
         <>
-          <CommitStatusLegend />
           {gitContext ? <GitContextMeta context={gitContext} /> : null}
           <CommitList taskId={taskId} commits={commits} showAttempt />
         </>

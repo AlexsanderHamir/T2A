@@ -101,24 +101,6 @@ describe("CommitList", () => {
     );
   });
 
-  it("observed commit badge exposes operator tooltip instead of raw gate code", () => {
-    const observed: CycleCommit = {
-      ...sampleCommits[0],
-      status: "observed",
-      gate_reason: "execute_uncommitted_work",
-    };
-    const Wrapper = createWrapper();
-    render(
-      <Wrapper>
-        <CommitList taskId={taskId} commits={[observed]} />
-      </Wrapper>,
-    );
-    const badge = screen.getByTestId("task-commit-status");
-    const label = badge.getAttribute("aria-label") ?? "";
-    expect(label).toMatch(/Uncommitted changes remained in the worktree/i);
-    expect(label).not.toContain("execute_uncommitted_work");
-  });
-
   it("navigates to the commit diff page and loads the patch", async () => {
     const diffCalls: string[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

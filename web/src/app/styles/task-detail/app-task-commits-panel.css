@@ -9,23 +9,6 @@
   gap: 0.75rem;
 }
 
-.task-commits-legend {
-  margin: -0.25rem 0 0;
-  max-width: 52ch;
-  font-size: var(--text-sm);
-  line-height: 1.45;
-}
-
-.task-commits-legend-em {
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.task-cycle-commits .task-commits-legend {
-  margin-top: 0.15rem;
-  margin-bottom: 0.35rem;
-}
-
 .task-commits-context {
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--border-soft);

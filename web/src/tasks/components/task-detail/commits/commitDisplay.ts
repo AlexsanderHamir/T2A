@@ -86,55 +86,6 @@ export function commitStatusLabel(status: CommitStatus): string {
   }
 }
 
-const GATE_REASON_LABELS: Record<string, string> = {
-  execute_uncommitted_work: "Uncommitted changes remained in the worktree",
-  execute_no_commits: "No new commits were recorded in this attempt",
-  execute_invalid_commit: "Commit is not valid for this cycle's history",
-  execute_rewritten_history: "Git history was rewritten during the run",
-};
-
-export function commitStatusDescription(status: CommitStatus): string {
-  switch (status) {
-    case "eligible":
-      return "Passed execute checks and counts toward verify.";
-    case "observed":
-      return "Recorded from the agent run but excluded from verify.";
-    case "inherited":
-      return "Carried over from a prior attempt; promoted when execute gates pass.";
-    case "superseded":
-      return "No longer part of this attempt's git history.";
-    default:
-      return "";
-  }
-}
-
-export function gateReasonLabel(reason: string | undefined): string | undefined {
-  const trimmed = reason?.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  return GATE_REASON_LABELS[trimmed] ?? trimmed;
-}
-
-export type CommitStatusTooltipInput = {
-  status: CommitStatus;
-  gateReason?: string;
-  sourceCycleId?: string;
-};
-
-export function commitStatusTooltip(input: CommitStatusTooltipInput): string {
-  const parts: string[] = [commitStatusDescription(input.status)];
-  const reason = gateReasonLabel(input.gateReason);
-  if (reason && input.status === "observed") {
-    parts.push(`Reason: ${reason}`);
-  }
-  const source = input.sourceCycleId?.trim();
-  if (source && input.status === "inherited") {
-    parts.push(`From cycle ${source}`);
-  }
-  return parts.filter(Boolean).join(" ");
-}
-
 export function commitStatusPillClass(status: CommitStatus): string {
   switch (status) {
     case "eligible":
