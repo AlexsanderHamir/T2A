@@ -4,6 +4,14 @@ import { apiErrorFromResponse } from "./shared";
 export const maxRepoPathQueryBytes = 4096;
 export const maxRepoSearchQueryBytes = 512;
 export const maxRepoLineQueryParamBytes = 32;
+export const maxRepoShaQueryBytes = 64;
+
+const repoShaPattern = /^[0-9a-fA-F]{7,40}$/;
+
+export const repoQueryKeys = {
+  all: ["repo"] as const,
+  diff: (sha: string) => [...repoQueryKeys.all, "diff", sha] as const,
+};
 
 /**
  * Hard ceiling on every `/repo/*` and `/health/ready` fetch in this module
@@ -266,4 +274,69 @@ export async function fetchRepoFile(
     out.warning = o.warning;
   }
   return out;
+}
+
+export type RepoDiffResult = {
+  sha: string;
+  patch: string;
+  truncated: boolean;
+  size_bytes: number;
+};
+
+function assertRepoSha(sha: string): string {
+  const t = sha.trim();
+  if (t.length === 0) {
+    throw new Error("sha is required");
+  }
+  if (t.length > maxRepoShaQueryBytes) {
+    throw new Error("sha is too long");
+  }
+  if (!repoShaPattern.test(t)) {
+    throw new Error("invalid sha");
+  }
+  return t;
+}
+
+export function parseRepoDiffResponse(raw: unknown): RepoDiffResult {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("unexpected diff response");
+  }
+  const o = raw as Record<string, unknown>;
+  const shaVal = o.sha;
+  const patchVal = o.patch;
+  const truncatedVal = o.truncated;
+  const sizeVal = o.size_bytes;
+  if (
+    typeof shaVal !== "string" ||
+    typeof patchVal !== "string" ||
+    typeof truncatedVal !== "boolean" ||
+    typeof sizeVal !== "number"
+  ) {
+    throw new Error("unexpected diff response shape");
+  }
+  return {
+    sha: shaVal,
+    patch: patchVal,
+    truncated: truncatedVal,
+    size_bytes: sizeVal,
+  };
+}
+
+/** Unified diff for one commit, or null if repo is not configured (409/503). */
+export async function fetchRepoCommitDiff(
+  sha: string,
+  options?: { signal?: AbortSignal },
+): Promise<RepoDiffResult | null> {
+  const s = assertRepoSha(sha);
+  const params = new URLSearchParams({ sha: s });
+  const res = await fetch(`/repo/diff?${params}`, {
+    headers: { Accept: "application/json" },
+    signal: repoFetchCombinedSignal(options?.signal),
+  });
+  if (res.status === 503 || res.status === 409) {
+    return null;
+  }
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  const raw: unknown = await res.json();
+  return parseRepoDiffResponse(raw);
 }

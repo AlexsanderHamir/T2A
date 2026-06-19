@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchRepoCommitDiff,
   fetchRepoFile,
   maxRepoPathQueryBytes,
   maxRepoSearchQueryBytes,
+  maxRepoShaQueryBytes,
+  parseRepoDiffResponse,
   probeRepoWorkspace,
   searchRepoFiles,
   validateRepoRange,
@@ -219,5 +222,61 @@ describe("validateRepoRange", () => {
     const longPath = "p".repeat(maxRepoPathQueryBytes + 1);
     await expect(validateRepoRange(longPath, 1, 2)).rejects.toThrow(/too long/);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchRepoCommitDiff", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null on 409", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response("", { status: 409 }));
+    await expect(
+      fetchRepoCommitDiff("abc1234"),
+    ).resolves.toBeNull();
+  });
+
+  it("parses ok JSON", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          sha: "abc1234",
+          patch: "diff --git a/x b/x",
+          truncated: false,
+          size_bytes: 18,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await expect(fetchRepoCommitDiff("abc1234")).resolves.toEqual({
+      sha: "abc1234",
+      patch: "diff --git a/x b/x",
+      truncated: false,
+      size_bytes: 18,
+    });
+  });
+
+  it("rejects invalid sha before fetch", async () => {
+    await expect(fetchRepoCommitDiff("not-valid")).rejects.toThrow(/invalid sha/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects sha longer than max before fetch", async () => {
+    const longSha = "a".repeat(maxRepoShaQueryBytes + 1);
+    await expect(fetchRepoCommitDiff(longSha)).rejects.toThrow(/too long/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("parseRepoDiffResponse", () => {
+  it("rejects malformed payload", () => {
+    expect(() => parseRepoDiffResponse({ patch: "x" })).toThrow(
+      /unexpected diff response shape/,
+    );
   });
 });

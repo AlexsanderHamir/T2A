@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -308,5 +309,106 @@ func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func initHTTPTestGitRepo(t *testing.T, dir string) string {
+	t.Helper()
+	run := func(args ...string) string {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	run("init")
+	run("config", "user.email", "t@example.com")
+	run("config", "user.name", "Test")
+	if err := os.WriteFile(filepath.Join(dir, "note.txt"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", "note.txt")
+	run("commit", "-m", "initial")
+	return run("rev-parse", "HEAD")
+}
+
+func TestHTTP_repo_diff_ok(t *testing.T) {
+	dir := t.TempDir()
+	sha := initHTTPTestGitRepo(t, dir)
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/diff?sha=" + sha)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d %s", res.StatusCode, b)
+	}
+	var payload struct {
+		SHA       string `json:"sha"`
+		Patch     string `json:"patch"`
+		Truncated bool   `json:"truncated"`
+		SizeBytes int    `json:"size_bytes"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.SHA != sha || payload.Truncated || payload.SizeBytes <= 0 {
+		t.Fatalf("payload %#v", payload)
+	}
+	if !strings.Contains(payload.Patch, "diff --git") {
+		t.Fatalf("patch %#v", payload.Patch)
+	}
+}
+
+func TestHTTP_repo_diff_not_found(t *testing.T) {
+	dir := t.TempDir()
+	initHTTPTestGitRepo(t, dir)
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/diff?sha=deadbeef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNotFound {
+		t.Fatalf("status %d want 404", res.StatusCode)
+	}
+}
+
+func TestHTTP_repo_diff_invalid_sha(t *testing.T) {
+	dir := t.TempDir()
+	initHTTPTestGitRepo(t, dir)
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/diff?sha=not-a-sha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d want 400", res.StatusCode)
+	}
+}
+
+func TestHTTP_repo_diff_missing_sha(t *testing.T) {
+	dir := t.TempDir()
+	initHTTPTestGitRepo(t, dir)
+	srv := newTaskTestServerWithRepo(t, dir)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/repo/diff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d want 400", res.StatusCode)
 	}
 }

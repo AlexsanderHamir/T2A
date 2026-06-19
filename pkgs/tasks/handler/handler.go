@@ -123,6 +123,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /repo/search", http.HandlerFunc(h.repoSearch))
 	m.Handle("GET /repo/file", http.HandlerFunc(h.repoFile))
 	m.Handle("GET /repo/validate-range", http.HandlerFunc(h.repoValidateRange))
+	m.Handle("GET /repo/diff", http.HandlerFunc(h.repoDiff))
 	m.Handle("GET /settings", http.HandlerFunc(h.getSettings))
 	m.Handle("PATCH /settings", http.HandlerFunc(h.patchSettings))
 	m.Handle("POST /settings/probe-cursor", http.HandlerFunc(h.probeCursor))

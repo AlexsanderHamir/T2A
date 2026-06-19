@@ -453,6 +453,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 			{http.MethodGet, srv.URL + "/repo/search?q=foo"},
 			{http.MethodGet, srv.URL + "/repo/file?path=README.md"},
 			{http.MethodGet, srv.URL + "/repo/validate-range?path=README.md&start=1&end=1"},
+			{http.MethodGet, srv.URL + "/repo/diff?sha=abc1234"},
 		}
 		for _, r := range readOnly {
 			req, err := http.NewRequest(r.method, r.url, nil)

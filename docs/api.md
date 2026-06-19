@@ -150,6 +150,7 @@ Deep dive: [domain/workspace-repo.md](./domain/workspace-repo.md). Wired only wh
 | GET | `/repo/search?q=` | Capped list of repo-relative paths; `q` ≤ 512 bytes. |
 | GET | `/repo/file?path=` | `{ path, content, binary, truncated, size_bytes, line_count, warning? }`. Binary or invalid UTF-8 returns `binary: true` with empty `content`. Files over 32 MiB are truncated. |
 | GET | `/repo/validate-range?path=&start=&end=` | `{ ok, line_count?, warning? }`. Used by the SPA to warn about invalid `@`-mentions inline. |
+| GET | `/repo/diff?sha=` | `{ sha, patch, truncated, size_bytes }`. Unified diff for one commit via `git show` in the configured `repo_root`; `sha` is 7–40 hex chars (≤ 64 bytes query). Patch capped at 512 KiB (`truncated: true` when clipped). **404** when SHA is absent from the repo. |
 
 `POST /tasks` and `PATCH /tasks/{id}` validate `@`-mentions in `initial_prompt` against the configured repo. Failures return `400` with the offending mention in the error message (`@<path>` or `@<path> (<start>-<end>)`). Validation is skipped when `repo_root` is unset, `initial_prompt` is omitted, or `initial_prompt = ""`.
 

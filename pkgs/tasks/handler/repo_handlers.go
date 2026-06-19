@@ -5,10 +5,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/gitexec"
 	"github.com/AlexsanderHamir/T2A/pkgs/repo"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 )
@@ -41,6 +43,18 @@ const maxRepoRelPathQueryBytes = 4096
 
 // Line numbers fit in a small decimal string; huge query values waste CPU in strconv and slog fields.
 const maxRepoLineQueryParamBytes = 32
+
+// Commit SHAs are short hex strings; cap query length to reject abuse.
+const maxRepoShaQueryBytes = 64
+
+var repoShaQueryPattern = regexp.MustCompile(`^[0-9a-fA-F]{7,40}$`)
+
+type repoDiffResponse struct {
+	SHA       string `json:"sha"`
+	Patch     string `json:"patch"`
+	Truncated bool   `json:"truncated"`
+	SizeBytes int    `json:"size_bytes"`
+}
 
 // repoUnavailableErrorBody is the JSON envelope the SPA expects when
 // a /repo/* call can't reach a workspace. The reason field lets the
@@ -250,4 +264,52 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 		resp.Warning = "Preview truncated to the first 32 MiB of the file. Line selection applies only to the visible text."
 	}
 	writeJSON(w, r, op, http.StatusOK, resp)
+}
+
+func (h *Handler) repoDiff(w http.ResponseWriter, r *http.Request) {
+	const op = "repo.diff"
+	r = calltrace.WithRequestRoot(r, op)
+	sha := strings.TrimSpace(r.URL.Query().Get("sha"))
+	debugHTTPRequest(r, op, "diff_sha", truncateRunes(sha, maxHTTPLogTitleRunes))
+	if r.Method != http.MethodGet {
+		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+	root, ok := h.requireRepo(w, r, op)
+	if !ok {
+		return
+	}
+	if sha == "" {
+		writeJSONError(w, r, op, http.StatusBadRequest, "sha query parameter is required")
+		return
+	}
+	if len(sha) > maxRepoShaQueryBytes {
+		writeJSONError(w, r, op, http.StatusBadRequest, "sha too long")
+		return
+	}
+	if !repoShaQueryPattern.MatchString(sha) {
+		writeJSONError(w, r, op, http.StatusBadRequest, "invalid sha")
+		return
+	}
+	t0 := time.Now()
+	patch, truncated, err := gitexec.ShowCommitPatch(r.Context(), root.Abs(), sha, gitexec.DefaultMaxPatchBytes)
+	dur := time.Since(t0)
+	if err != nil {
+		if errors.Is(err, gitexec.ErrNotFound) {
+			writeJSONError(w, r, op, http.StatusNotFound, "commit not found")
+			return
+		}
+		slog.Log(r.Context(), slog.LevelError, "repo diff failed",
+			"cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", err)
+		writeJSONError(w, r, op, http.StatusInternalServerError, "diff failed")
+		return
+	}
+	slog.Info("repo diff completed", "cmd", calltrace.LogCmd, "operation", op,
+		"duration_ms", dur.Milliseconds(), "truncated", truncated, "size_bytes", len(patch))
+	writeJSON(w, r, op, http.StatusOK, repoDiffResponse{
+		SHA:       sha,
+		Patch:     patch,
+		Truncated: truncated,
+		SizeBytes: len(patch),
+	})
 }

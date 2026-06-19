@@ -37,6 +37,7 @@ func TestHTTP_repoRoutes_returnsConflictWhenNotConfigured(t *testing.T) {
 		"/repo/search?q=anything",
 		"/repo/file?path=note.txt",
 		"/repo/validate-range?path=note.txt&start=1&end=2",
+		"/repo/diff?sha=abc1234",
 	}
 	for _, path := range cases {
 		t.Run(path, func(t *testing.T) {
