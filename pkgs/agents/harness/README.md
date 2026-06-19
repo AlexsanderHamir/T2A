@@ -2,7 +2,7 @@
 
 Cycle choreography around `runner.Run`. The worker (`pkgs/agents/worker`) handles queue admission; the harness drives one task from `StartCycle` through terminal `TerminateCycle`, or resumes an open cycle after process restart.
 
-**Behavioral reference:** [docs/domain/harness.md](../../docs/domain/harness.md). See also [docs/architecture.md](../../docs/architecture.md), [docs/domain/execute-agent.md](../../docs/domain/execute-agent.md), [docs/domain/verify-agent.md](../../docs/domain/verify-agent.md), [ADR-0005](../../docs/adr/ADR-0005-extract-agent-harness.md), [ADR-0006](../../docs/adr/ADR-0006-phase-boundary-resume.md), [ADR-0017](../../docs/adr/ADR-0017-harness-internal-domains.md), and [ADR-0018](../../docs/adr/ADR-0018-harness-orchestration-fsm.md).
+**Behavioral reference:** [docs/domain/harness.md](../../docs/domain/harness.md). See also [docs/architecture.md](../../docs/architecture.md), [docs/domain/execute-agent.md](../../docs/domain/execute-agent.md), [docs/domain/verify-agent.md](../../docs/domain/verify-agent.md), [ADR-0005](../../docs/adr/ADR-0005-extract-agent-harness.md), [ADR-0006](../../docs/adr/ADR-0006-phase-boundary-resume.md), [ADR-0017](../../docs/adr/ADR-0017-harness-internal-domains.md), [ADR-0018](../../docs/adr/ADR-0018-harness-orchestration-fsm.md), and [ADR-0021](../../docs/adr/ADR-0021-harness-execute-orchestration.md).
 
 ## Internal layout
 
@@ -15,9 +15,9 @@ Domain logic lives under `internal/` (importable only from `harness` and sibling
 | [`internal/prompt/`](internal/prompt/) | Execute/verify prompt assembly |
 | [`internal/verify/`](internal/verify/) | Verification pipeline stages |
 | [`internal/resume/`](internal/resume/) | Checkpoint load, retry routing, continuation bundles |
-| [`internal/orchestration/`](internal/orchestration/) | Pure verify retry state machine (`DecideVerifyRetry`) |
+| [`internal/orchestration/`](internal/orchestration/) | Pure cycle Decide functions (`DecideVerifyRetry`, `DecideExecutePostRun`, loop-level finalize/legacy) |
 
-Root `harness` owns `Harness`, cycle entrypoints, effect application, recovery, and metrics.
+Root `harness` owns `Harness`, cycle entrypoints, effect application (`cycle_effects.go`), recovery, and metrics.
 
 ## File map (root package)
 
@@ -25,7 +25,9 @@ Root `harness` owns `Harness`, cycle entrypoints, effect application, recovery, 
 |------|----------------|
 | `harness.go` | `Harness`, `New`, `Options`, `CancelCurrentRun`, SSE notifiers, metrics interface |
 | `cycle.go` | `Run` entry — starts a new cycle then delegates to the shared loop |
-| `cycle_loop.go` | Shared execute/verify loop; delegates verify retry to `internal/orchestration` |
+| `cycle_loop.go` | Shared execute/verify loop coordinator; I/O then orchestration Decide |
+| `cycle_effects.go` | Applies orchestration effects (store writes, publish, metrics) |
+| `cycle_execute_adapter.go` | Maps runner/git facts to orchestration DTOs at the I/O boundary |
 | `resume.go` | `Resume` — continue an open cycle after `process_restart` finalization |
 | `retry_run.go` | `RunWithRetry` — operator fresh/resume retry modes |
 | `verification.go` | Thin delegators to `internal/verify` |

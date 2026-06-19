@@ -24,7 +24,7 @@ Introduce `pkgs/agents/harness/internal/orchestration` as a **pure state machine
 
 The harness **root applies effects**: increment `verifyAttempt`, call `terminateCycle`, run `completeChecklistLegacy`, etc. Orchestration imports **domain types only** — no store, runner, or filesystem.
 
-Initial scope covers verify retry/tamper decisions wired from `runCycleLoopVerify`. Execute-phase transitions remain in `cycle_loop.go` until a follow-on change expands the machine.
+Initial scope covers verify retry/tamper decisions wired from `runCycleLoopVerify`. Execute-phase and loop-level finalize/legacy decisions were added in [ADR-0021](ADR-0021-harness-execute-orchestration.md).
 
 ## Consequences
 

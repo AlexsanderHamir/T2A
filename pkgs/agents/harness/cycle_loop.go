@@ -6,12 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -69,60 +67,6 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 	return promptText
 }
 
-func (h *Harness) repoRootForGit(ctx context.Context) string {
-	settings, err := h.store.GetSettings(ctx)
-	if err != nil {
-		return strings.TrimSpace(h.opts.WorkingDir)
-	}
-	if v := strings.TrimSpace(settings.RepoRoot); v != "" {
-		return v
-	}
-	return strings.TrimSpace(h.opts.WorkingDir)
-}
-
-func applyOperatorCancelToRunResult(result runner.Result, operatorCancelled bool, reason string) (runner.Result, string) {
-	if !operatorCancelled {
-		return result, reason
-	}
-	reason = CancelledByOperatorReason
-	if result.Summary == "" || strings.HasPrefix(result.Summary, "cursor: timeout") {
-		result.Summary = "cancelled by operator"
-	}
-	return result, reason
-}
-
-func applyExecuteCommitIngestOutcome(
-	runErr error,
-	operatorCancelled bool,
-	snap git.PhaseSnapshot,
-	cycleID string,
-	ingestErr error,
-	outcome executeCommitIngestOutcome,
-	phaseStatus domain.PhaseStatus,
-	cycleStatus domain.CycleStatus,
-	taskStatus domain.Status,
-	reason string,
-	result runner.Result,
-) (domain.PhaseStatus, domain.CycleStatus, domain.Status, string, runner.Result, int) {
-	if runErr != nil || operatorCancelled || snap.Skipped {
-		return phaseStatus, cycleStatus, taskStatus, reason, result, 0
-	}
-	if ingestErr != nil {
-		slog.Warn("agent harness commit ingest error", "cmd", harnessLogCmd,
-			"operation", "agent.harness.Harness.runCycleLoop.commit_ingest_err",
-			"cycle_id", cycleID, "err", ingestErr)
-		result.Summary = executeInvalidCommitReason
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed,
-			executeInvalidCommitReason, result, 0
-	}
-	if outcome.FailReason != "" {
-		result.Summary = outcome.FailReason
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed,
-			outcome.FailReason, result, 0
-	}
-	return phaseStatus, cycleStatus, taskStatus, reason, result, outcome.CommitCount
-}
-
 func recordPassedCriterionVerdicts(state *processState, verdicts []criterionVerdict) {
 	for _, v := range verdicts {
 		if !v.Passed {
@@ -174,53 +118,44 @@ func (h *Harness) runCycleLoopExecute(
 
 	_ = reports.ScrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
 	_ = reports.EnsureReportCycleDir(h.opts.ReportDir, cycle.ID)
-	prompt := h.composeExecutePrompt(parentCtx, task, cycle, state, opts)
+	promptText := h.composeExecutePrompt(parentCtx, task, cycle, state, opts)
 	execTask := *task
-	execTask.InitialPrompt = prompt
+	execTask.InitialPrompt = promptText
 
 	result, runErr := h.invokeRunnerWithTask(parentCtx, &execTask, cycle, execPhase)
 	operatorCancelled := h.consumeOperatorCancel()
 
 	if parentCtx.Err() != nil {
-		h.handleShutdownAfterRun(state, task.ID)
-		return false
+		effects := orchestration.DecideExecutePostRun(orchestration.ExecutePostRunInput{
+			ContextCancelled: true,
+		})
+		return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, 0, snap, operatorCancelled)
 	}
-
-	phaseStatus, cycleStatus, taskStatus, reason := classifyRunOutcome(runErr)
-	result, reason = applyOperatorCancelToRunResult(result, operatorCancelled, reason)
 
 	var ingestOutcome executeCommitIngestOutcome
 	var ingestErr error
+	ingestAttempted := false
 	if runErr == nil && !operatorCancelled && !snap.Skipped {
+		ingestAttempted = true
 		ingestOutcome, ingestErr = h.ingestExecuteCommits(
 			parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap,
 			opts.knownCommits, retryModeFromCycleMeta(cycle),
 		)
-	}
-	phaseStatus, cycleStatus, taskStatus, reason, result, commitCount := applyExecuteCommitIngestOutcome(
-		runErr, operatorCancelled, snap, cycle.ID, ingestErr, ingestOutcome,
-		phaseStatus, cycleStatus, taskStatus, reason, result,
-	)
-	if runErr == nil && !operatorCancelled {
-		h.bestEffortMirrorExecuteCriteria(parentCtx, cycle.ID, state)
-	}
-	phaseDetails := mergeRunnerDetailsWithGit(detailsBytes(result), snap, commitCount)
-
-	if !h.completeExecutePhase(parentCtx, state, cycle, execPhase, phaseStatus, result, phaseDetails) {
-		h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
-		return false
+		if ingestErr != nil {
+			slog.Warn("agent harness commit ingest error", "cmd", harnessLogCmd,
+				"operation", "agent.harness.Harness.runCycleLoop.commit_ingest_err",
+				"cycle_id", cycle.ID, "err", ingestErr)
+		}
 	}
 
-	if runErr != nil || operatorCancelled || phaseStatus == domain.PhaseStatusFailed {
-		if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
-			return false
-		}
-		if taskStatus == domain.StatusFailed {
-			_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
-		}
-		return false
+	commitCount := 0
+	if ingestAttempted && ingestErr == nil && ingestOutcome.FailReason == "" {
+		commitCount = ingestOutcome.CommitCount
 	}
-	return true
+
+	postRunIn := buildExecutePostRunInput(parentCtx, runErr, operatorCancelled, snap, ingestAttempted, ingestOutcome, ingestErr)
+	effects := orchestration.DecideExecutePostRun(postRunIn)
+	return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled)
 }
 
 // runCycleLoopVerify runs verification for one loop iteration. retryLoop is
@@ -233,21 +168,15 @@ func (h *Harness) runCycleLoopVerify(
 	state *processState,
 ) (retryLoop bool, terminalFailure bool) {
 	if orchestration.VerifyDisabled(state.verifySnap.Enabled) {
-		if err := h.completeChecklistLegacy(parentCtx, task.ID); err != nil {
+		checklistErr := h.completeChecklistLegacy(parentCtx, task.ID)
+		if checklistErr != nil {
 			slog.Warn("agent harness checklist completion failed",
 				"cmd", harnessLogCmd,
 				"operation", "agent.harness.Harness.runCycleLoop.checklist_err",
-				"task_id", task.ID, "err", err)
-			cycleStatus := domain.CycleStatusFailed
-			taskStatus := domain.StatusFailed
-			reason := checklistCompletionFailedReason
-			if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
-				return false, true
-			}
-			_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
-			return false, true
+				"task_id", task.ID, "err", checklistErr)
 		}
-		return false, false
+		effects := orchestration.DecideVerifyDisabledLegacy(checklistErr)
+		return h.applyVerifyDisabledLegacyEffects(parentCtx, task, cycle, state, effects)
 	}
 
 	verdicts, feedback, verifyErr := h.runVerificationPipeline(parentCtx, task, cycle, state, state.verifySnap, state.verifyFeedback)
@@ -268,28 +197,8 @@ func (h *Harness) runCycleLoopVerify(
 	}
 
 	effects := orchestration.DecideVerifyRetry(state.verifyAttempt, state.verifySnap.MaxRetries, result)
-	if effects.Tampered {
-		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
-			return false, true
-		}
-		_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
-		return false, true
-	}
-	if effects.RetryLoop {
-		state.verifyAttempt++
-		return true, false
-	}
-	if effects.TerminalFailure {
-		cycleStatus := domain.CycleStatusFailed
-		taskStatus := domain.StatusFailed
-		reason := formatVerificationFailedReason(verdicts, state.previouslyPassed)
-		if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
-			return false, true
-		}
-		_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
-		return false, true
-	}
-	return false, false
+	terminalReason := formatVerificationFailedReason(verdicts, state.previouslyPassed)
+	return h.applyVerifyEffects(parentCtx, task, cycle, state, effects, terminalReason)
 }
 
 func (h *Harness) runCycleLoopFinalizeSuccess(
@@ -297,48 +206,28 @@ func (h *Harness) runCycleLoopFinalizeSuccess(
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	state *processState,
-	cycleStatus domain.CycleStatus,
-	taskStatus domain.Status,
-	reason string,
 ) {
 	unionVerdicts := unionPreviouslyPassedVerdicts(state)
-	if err := h.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, unionVerdicts); err != nil {
-		cycleStatus = domain.CycleStatusFailed
-		taskStatus = domain.StatusFailed
-		reason = checklistCompletionFailedReason
+	completionErr := h.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, unionVerdicts)
+	effects := orchestration.DecideFinalizeSuccess(completionErr)
+	if completionErr != nil {
+		slog.Warn("agent harness checklist completion failed",
+			"cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.runCycleLoop.finalize_err",
+			"task_id", task.ID, "err", completionErr)
 	}
-	if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
-		return
-	}
-	if !h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
-		return
-	}
-	h.publish(task.ID, cycle.ID)
-	slog.Info("agent harness run complete", "cmd", harnessLogCmd,
-		"operation", "agent.harness.Harness.runCycleLoop.summary",
-		"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq,
-		"terminal_cycle_status", string(cycleStatus), "task_status", string(taskStatus),
-		"runner", h.runner.Name(), "runner_version", h.runner.Version(),
-		"duration_ms", h.opts.Clock().Sub(state.startedAt).Milliseconds())
+	_ = h.applyFinalizeEffects(parentCtx, task, cycle, state, effects)
 }
 
 func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) {
 	skipExecute := opts.skipFirstExecute
 	for {
-		var cycleStatus domain.CycleStatus
-		var taskStatus domain.Status
-		var reason string
-
 		if !skipExecute {
 			if !h.runCycleLoopExecute(parentCtx, task, cycle, state, opts) {
 				return
 			}
-			cycleStatus = domain.CycleStatusSucceeded
-			taskStatus = domain.StatusDone
 		} else {
 			skipExecute = false
-			cycleStatus = domain.CycleStatusSucceeded
-			taskStatus = domain.StatusDone
 		}
 
 		retryLoop, terminalFailure := h.runCycleLoopVerify(parentCtx, task, cycle, state)
@@ -349,7 +238,18 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 			return
 		}
 
-		h.runCycleLoopFinalizeSuccess(parentCtx, task, cycle, state, cycleStatus, taskStatus, reason)
+		h.runCycleLoopFinalizeSuccess(parentCtx, task, cycle, state)
 		return
 	}
+}
+
+func (h *Harness) repoRootForGit(ctx context.Context) string {
+	settings, err := h.store.GetSettings(ctx)
+	if err != nil {
+		return strings.TrimSpace(h.opts.WorkingDir)
+	}
+	if v := strings.TrimSpace(settings.RepoRoot); v != "" {
+		return v
+	}
+	return strings.TrimSpace(h.opts.WorkingDir)
 }

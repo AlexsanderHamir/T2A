@@ -166,27 +166,28 @@ Numbered path in [`cycle.go`](../../pkgs/agents/harness/cycle.go):
 
 ### runCycleLoop retry semantics
 
-Core loop in [`cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go):
+Core loop in [`cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go). **Decide vs Apply** (ADR-0018, ADR-0021): harness root runs I/O (runner, verify pipeline, store writes); `internal/orchestration` returns effects; [`cycle_effects.go`](../../pkgs/agents/harness/cycle_effects.go) applies them.
 
 ```mermaid
 flowchart TD
   loopStart[runCycleLoop iteration]
-  exec[Execute phase]
-  verify[runVerificationPipeline]
-  success[applyVerifiedCompletions + TerminateCycle succeeded]
+  execIO[Execute I/O: runner + ingest]
+  decideExec[DecideExecutePostRun]
+  applyExec[applyExecuteEffects]
+  verifyIO[Verify I/O: pipeline or legacy checklist]
+  decideVer[DecideVerifyRetry or DecideVerifyDisabledLegacy]
+  applyVer[applyVerifyEffects]
+  decideFin[DecideFinalizeSuccess]
+  applyFin[applyFinalizeEffects]
   retry[verifyAttempt++ continue loop]
-  fail[TerminateCycle failed]
-  tampered[verify_tampered terminal]
-  legacy[completeChecklistLegacy]
-  loopStart --> exec
-  exec -->|runErr or cancel| fail
-  exec -->|ok + criteria| verify
-  exec -->|ok + no criteria| legacy
-  verify -->|all pass| success
-  verify -->|tampered| tampered
-  verify -->|fail + retries left| retry
-  verify -->|fail + exhausted| fail
-  legacy --> success
+  loopStart --> execIO
+  execIO --> decideExec --> applyExec
+  applyExec -->|continue| verifyIO
+  applyExec -->|terminal| fail[TerminateCycle failed]
+  verifyIO --> decideVer --> applyVer
+  applyVer -->|pass| decideFin --> applyFin
+  applyVer -->|retry| retry
+  applyVer -->|terminal| fail
   retry --> loopStart
 ```
 

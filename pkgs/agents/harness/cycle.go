@@ -328,27 +328,3 @@ func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskI
 	}
 	return true
 }
-
-// classifyRunOutcome maps runner.Run's (Result, error) tuple to the
-// triplet of phase status, cycle status, task status, plus a reason
-// string that lands in the cycle's terminal mirror. Recoverable
-// adapter failures (timeout, non-zero exit, invalid output) all map to
-// failed; unexpected errors collapse to the same bucket so the worker
-// is conservative about silent successes.
-func classifyRunOutcome(err error) (domain.PhaseStatus, domain.CycleStatus, domain.Status, string) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.classifyRunOutcome",
-		"err", err)
-	if err == nil {
-		return domain.PhaseStatusSucceeded, domain.CycleStatusSucceeded, domain.StatusDone, ""
-	}
-	switch {
-	case errors.Is(err, runner.ErrTimeout):
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed, "runner_timeout"
-	case errors.Is(err, runner.ErrNonZeroExit):
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed, "runner_non_zero_exit"
-	case errors.Is(err, runner.ErrInvalidOutput):
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed, "runner_invalid_output"
-	default:
-		return domain.PhaseStatusFailed, domain.CycleStatusFailed, domain.StatusFailed, "runner_error"
-	}
-}
