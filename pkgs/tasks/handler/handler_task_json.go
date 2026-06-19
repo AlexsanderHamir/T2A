@@ -216,6 +216,7 @@ type cycleFailuresResponse struct {
 	Failures            []taskStatsFailureJSON `json:"failures"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // taskStatsResponseFromStore projects the store-level TaskStats onto
 // the wire envelope. The store guarantees every map is non-nil and
 // RecentFailures is a non-nil slice; this projector preserves both

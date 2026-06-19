@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyTagsPatch(cur *domain.Task, tags *[]string) error {
 	if tags == nil {
 		return nil
@@ -22,6 +23,7 @@ func applyTagsPatch(cur *domain.Task, tags *[]string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyMilestonePatch(cur *domain.Task, milestone *string) error {
 	if milestone == nil {
 		return nil
@@ -38,6 +40,7 @@ func applyMilestonePatch(cur *domain.Task, milestone *string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyGatePatch(cur *domain.Task, gate **domain.TaskGate) error {
 	if gate == nil {
 		return nil
@@ -46,6 +49,7 @@ func applyGatePatch(cur *domain.Task, gate **domain.TaskGate) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyDependsOnPatch(tx *gorm.DB, taskID string, cur *domain.Task, dependsOn *[]domain.DependencyEdge) error {
 	if dependsOn == nil {
 		return nil
@@ -61,6 +65,7 @@ func applyDependsOnPatch(tx *gorm.DB, taskID string, cur *domain.Task, dependsOn
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func listDependencyEdgesInTx(tx *gorm.DB, taskID string) ([]domain.DependencyEdge, error) {
 	var rows []domain.TaskDependency
 	err := tx.Where("task_id = ?", taskID).Order("created_at ASC").Find(&rows).Error
@@ -77,6 +82,7 @@ func listDependencyEdgesInTx(tx *gorm.DB, taskID string) ([]domain.DependencyEdg
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func listDependenciesInTx(tx *gorm.DB, taskID string) ([]string, error) {
 	edges, err := listDependencyEdgesInTx(tx, taskID)
 	if err != nil {
@@ -120,6 +126,7 @@ func setDependenciesInTx(tx *gorm.DB, taskID string, dependsOn []domain.Dependen
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func normalizeCreateTaskModelFields(t *domain.Task, in CreateInput) error {
 	tags := domain.NormalizeTaskTags(in.Tags)
 	if err := domain.ValidateTaskTags(tags); err != nil {

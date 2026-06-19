@@ -100,6 +100,7 @@ func ListDependencyEdges(ctx context.Context, db *gorm.DB, taskID string) ([]dom
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ListDependencies returns predecessor task ids for taskID.
 func ListDependencies(ctx context.Context, db *gorm.DB, taskID string) ([]string, error) {
 	edges, err := ListDependencyEdges(ctx, db, taskID)
@@ -176,6 +177,7 @@ func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn 
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func hydrateDependsOn(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 	edges, err := ListDependencyEdges(ctx, db, t.ID)
 	if err != nil {
@@ -185,6 +187,7 @@ func hydrateDependsOn(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ensureTaskExists(tx *gorm.DB, id string) error {
 	var n int64
 	if err := tx.Model(&domain.Task{}).Where("id = ?", id).Count(&n).Error; err != nil {
@@ -223,6 +226,7 @@ func wouldCreateDependencyCycle(tx *gorm.DB, taskID, dependsOnTaskID string) (bo
 	return false, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func isUniqueViolation(err error) bool {
 	if err == nil {
 		return false

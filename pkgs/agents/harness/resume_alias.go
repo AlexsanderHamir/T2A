@@ -27,6 +27,7 @@ const (
 	failureClassOperator       = resume.FailureClassOperator
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) resumeSvc() *resume.Service {
 	if h.resume == nil {
 		h.resume = resume.NewService(h.store, resume.Options{
@@ -37,6 +38,7 @@ func (h *Harness) resumeSvc() *resume.Service {
 	return h.resume
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func harnessVerdictsFromResume(m map[string]resume.CriterionVerdict) map[string]criterionVerdict {
 	if len(m) == 0 {
 		return map[string]criterionVerdict{}
@@ -58,6 +60,7 @@ func harnessVerdictsFromResume(m map[string]resume.CriterionVerdict) map[string]
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func reasonRemediation(reason string) string {
 	return git.ReasonRemediation(reason)
 }

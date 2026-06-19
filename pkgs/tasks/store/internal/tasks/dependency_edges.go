@@ -33,6 +33,7 @@ func normalizeDependencyEdges(taskID string, edges []domain.DependencyEdge) ([]d
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DependencyEdgeIDs returns predecessor task ids in edge order.
 func DependencyEdgeIDs(edges []domain.DependencyEdge) []string {
 	ids := make([]string, 0, len(edges))

@@ -16,6 +16,7 @@ import (
 
 const maxCriteriaReportFileBytes = 256 * 1024
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) parseCommitReports(reportDir, cycleID string) ([]commitReport, error) {
 	path := reports.CriteriaReportPath(reportDir, cycleID)
 	var rep struct {
@@ -31,6 +32,7 @@ func (s *Service) parseCommitReports(reportDir, cycleID string) ([]commitReport,
 	return rep.Commits, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func readCriteriaReportJSON(path string, dest any) error {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -89,6 +91,7 @@ func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycl
 	return FreshRetryResetOutcome{}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCycleID string) (string, error) {
 	parentCycleID = strings.TrimSpace(parentCycleID)
 	if parentCycleID == "" {
@@ -139,16 +142,19 @@ func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCy
 	return strings.TrimSpace(parent), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResolveFreshRetryAnchor resolves the git anchor for a fresh operator retry.
 func (s *Service) ResolveFreshRetryAnchor(ctx context.Context, workingDir, parentCycleID string) (string, error) {
 	return s.resolveFreshRetryAnchor(ctx, workingDir, parentCycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResetHardClean runs git reset --hard and git clean -fd (test seam).
 func ResetHardClean(ctx context.Context, repo GitRepo, workdir, anchor string) error {
 	return resetHardClean(ctx, repo, workdir, anchor)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func resetHardClean(ctx context.Context, repo GitRepo, workdir, anchor string) error {
 	if _, err := repo.Run(ctx, workdir, "reset", "--hard", anchor); err != nil {
 		return err

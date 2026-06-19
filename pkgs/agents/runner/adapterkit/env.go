@@ -15,6 +15,7 @@ type EnvPolicy struct {
 	Lookup            func(string) string
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BuildEnv assembles an os/exec-style env slice ("KEY=VALUE"). Parent env is
 // read only for explicitly allowed keys; reqEnv may add or override values
 // except for denied keys/prefixes.
@@ -57,6 +58,7 @@ func BuildEnv(reqEnv map[string]string, policy EnvPolicy) []string {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IsDeniedEnvKey reports whether key is blocked by policy.
 func IsDeniedEnvKey(key string, policy EnvPolicy) bool {
 	for _, denied := range policy.DeniedKeys {
@@ -72,6 +74,7 @@ func IsDeniedEnvKey(key string, policy EnvPolicy) bool {
 	return false
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // LiveHomePaths returns the absolute home paths usually worth scrubbing from
 // durable runner output.
 func LiveHomePaths() []string {

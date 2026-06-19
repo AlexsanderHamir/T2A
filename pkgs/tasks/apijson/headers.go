@@ -2,6 +2,7 @@ package apijson
 
 import "net/http"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ApplySecurityHeaders sets baseline hardening headers for browser-facing HTTP responses.
 // It does not log; callers that need a trace line should slog before or after calling this.
 func ApplySecurityHeaders(w http.ResponseWriter) {

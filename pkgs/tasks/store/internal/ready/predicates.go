@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // SQL dequeuable predicates MUST stay aligned with pkgs/tasks/scheduling.
 // Contract tests: store/scheduling_parity_test.go
 func applyDequeuableTaskPredicates(q *gorm.DB, db *gorm.DB) *gorm.DB {

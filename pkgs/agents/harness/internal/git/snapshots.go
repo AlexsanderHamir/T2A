@@ -68,6 +68,7 @@ func CaptureExecuteGitSnapshot(ctx context.Context, repo GitRepo, repoRoot, work
 	}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // CycleBaseFromPhaseDetails reads cycle_base_sha or base_sha from execute phase details.
 func CycleBaseFromPhaseDetails(details []byte) string {
 	if len(details) == 0 {
@@ -94,6 +95,7 @@ func CycleBaseFromPhaseDetails(details []byte) string {
 	return strings.TrimSpace(gitMeta.BaseSHA)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func snapshotToMap(s PhaseSnapshot, commitCount int) map[string]any {
 	m := map[string]any{
 		"repo":           s.Repo,
@@ -112,6 +114,7 @@ func snapshotToMap(s PhaseSnapshot, commitCount int) map[string]any {
 	return m
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // MergeRunnerDetailsWithGit attaches git snapshot metadata to execute phase details.
 func MergeRunnerDetailsWithGit(baseDetails []byte, snap PhaseSnapshot, commitCount int) []byte {
 	if snap.Skipped && commitCount == 0 {

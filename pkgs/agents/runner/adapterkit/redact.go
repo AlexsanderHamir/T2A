@@ -19,6 +19,7 @@ type RedactionPolicy struct {
 	EnvPrefixes []string
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultRedactionPolicy returns the repository's shared redaction floor.
 func DefaultRedactionPolicy(homePaths []string) RedactionPolicy {
 	return RedactionPolicy{
@@ -27,6 +28,7 @@ func DefaultRedactionPolicy(homePaths []string) RedactionPolicy {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Redact replaces secret-shaped substrings in s and rewrites configured home
 // paths to "~".
 func Redact(s string, policy RedactionPolicy) string {
@@ -50,6 +52,7 @@ func Redact(s string, policy RedactionPolicy) string {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func redactEnvAssignments(s, prefix string) string {
 	pattern := regexp.MustCompile(`(` + regexp.QuoteMeta(prefix) + `[A-Z0-9_]+)\s*=\s*\S+`)
 	return pattern.ReplaceAllString(s, "$1="+RedactedValue)

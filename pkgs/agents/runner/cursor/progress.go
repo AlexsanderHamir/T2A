@@ -33,6 +33,7 @@ type progressEventLine struct {
 	ToolCall json.RawMessage `json:"tool_call,omitempty"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func emitProgressFromLine(onProgress func(runner.ProgressEvent), raw []byte, homePaths []string) {
 	if onProgress == nil {
 		return
@@ -47,6 +48,7 @@ func emitProgressFromLine(onProgress func(runner.ProgressEvent), raw []byte, hom
 	onProgress(ev)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, bool) {
 	raw = bytes.TrimSpace(raw)
 	if len(raw) == 0 {
@@ -97,6 +99,7 @@ func progressPayload(raw []byte, homePaths []string) json.RawMessage {
 	return json.RawMessage(redacted)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func textContent(parts []progressContent) string {
 	var b strings.Builder
 	for _, part := range parts {
@@ -115,6 +118,7 @@ func textContent(parts []progressContent) string {
 	return b.String()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func firstNonEmpty(values ...string) string {
 	for _, v := range values {
 		if strings.TrimSpace(v) != "" {
@@ -124,6 +128,7 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func firstRawMessage(values ...json.RawMessage) json.RawMessage {
 	for _, v := range values {
 		if len(bytes.TrimSpace(v)) > 0 {
@@ -133,6 +138,7 @@ func firstRawMessage(values ...json.RawMessage) json.RawMessage {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toolCallDetails(raw json.RawMessage) (string, json.RawMessage) {
 	if len(raw) == 0 {
 		return "", nil
@@ -154,6 +160,7 @@ func toolCallDetails(raw json.RawMessage) (string, json.RawMessage) {
 	return toolCallBodyDetails(keys[0], calls[keys[0]])
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func preferredToolCallKeys() []string {
 	return []string{
 		"readToolCall",
@@ -168,6 +175,7 @@ func preferredToolCallKeys() []string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toolCallBodyDetails(key string, raw json.RawMessage) (string, json.RawMessage) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &body); err != nil {
@@ -181,6 +189,7 @@ func toolCallBodyDetails(key string, raw json.RawMessage) (string, json.RawMessa
 	return toolNameFromCallKey(key), body["args"]
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toolNameFromCallKey(key string) string {
 	switch strings.TrimSpace(key) {
 	case "readToolCall":
@@ -202,6 +211,7 @@ func toolNameFromCallKey(key string) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func functionArguments(raw json.RawMessage) json.RawMessage {
 	if len(raw) == 0 {
 		return nil
@@ -216,6 +226,7 @@ func functionArguments(raw json.RawMessage) json.RawMessage {
 	return raw
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func rawString(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
@@ -227,6 +238,7 @@ func rawString(raw json.RawMessage) string {
 	return strings.TrimSpace(s)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toolProgressMessage(tool, subtype string, input json.RawMessage) string {
 	if msg := toolInputSummary(tool, input); msg != "" {
 		return msg
@@ -247,6 +259,7 @@ func toolProgressMessage(tool, subtype string, input json.RawMessage) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toolInputSummary(tool string, input json.RawMessage) string {
 	if len(input) == 0 {
 		return ""
@@ -276,6 +289,7 @@ func toolInputSummary(tool string, input json.RawMessage) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func readFileSummary(fields map[string]any) string {
 	p := pathLabel(inputField(fields, "path", "file", "target_file", "targetFile"))
 	if p == "" {
@@ -287,6 +301,7 @@ func readFileSummary(fields map[string]any) string {
 	return clipProgressSummary("Reading " + p)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func searchFilesSummary(fields map[string]any) string {
 	pattern := inputField(fields, "glob_pattern", "globPattern", "pattern", "query", "q")
 	scope := scopeLabel(inputField(fields, "target_directory", "targetDirectory", "path", "directory", "dir"))
@@ -302,6 +317,7 @@ func searchFilesSummary(fields map[string]any) string {
 	return clipProgressSummary("Searching files")
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ripgrepSummary(fields map[string]any) string {
 	pattern := inputField(fields, "pattern", "query", "q", "glob")
 	scope := scopeLabel(inputField(fields, "path", "target_directory", "targetDirectory", "directory", "dir"))
@@ -314,6 +330,7 @@ func ripgrepSummary(fields map[string]any) string {
 	return clipProgressSummary("Searching " + pattern)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func editSummary(fields map[string]any) string {
 	p := pathLabel(inputField(fields, "target_file", "targetFile", "path", "file"))
 	if p == "" {
@@ -322,6 +339,7 @@ func editSummary(fields map[string]any) string {
 	return clipProgressSummary("Editing " + p)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func pathActionSummary(action string, fields map[string]any) string {
 	p := pathLabel(inputField(fields, "path", "target_file", "targetFile", "file"))
 	if p == "" {
@@ -330,6 +348,7 @@ func pathActionSummary(action string, fields map[string]any) string {
 	return clipProgressSummary(action + " " + p)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func shellSummary(fields map[string]any) string {
 	desc := strings.TrimSpace(stringField(fields, "description"))
 	if desc != "" {
@@ -342,6 +361,7 @@ func shellSummary(fields map[string]any) string {
 	return clipProgressSummary("Running " + shellCommandLabel(command))
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func genericInputSummary(fields map[string]any) string {
 	if inputField(fields, "glob_pattern", "globPattern") != "" {
 		return searchFilesSummary(fields)
@@ -358,6 +378,7 @@ func genericInputSummary(fields map[string]any) string {
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // inputField returns the first non-empty string value for any of the given
 // keys. Cursor stream-json uses camelCase in nested tool_call args while
 // older flat input blobs use snake_case — accept both so summaries stay stable.
@@ -370,6 +391,7 @@ func inputField(fields map[string]any, keys ...string) string {
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func stringField(fields map[string]any, key string) string {
 	v, ok := fields[key]
 	if !ok {
@@ -392,6 +414,7 @@ func stringField(fields map[string]any, key string) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func pathLabel(p string) string {
 	p = strings.TrimSpace(strings.ReplaceAll(p, "\\", "/"))
 	if p == "" {
@@ -404,6 +427,7 @@ func pathLabel(p string) string {
 	return base
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func scopeLabel(p string) string {
 	p = strings.TrimSpace(strings.ReplaceAll(p, "\\", "/"))
 	if p == "" {
@@ -416,6 +440,7 @@ func scopeLabel(p string) string {
 	return base
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func lineRange(fields map[string]any) string {
 	start, ok := numericField(fields, "offset")
 	if !ok {
@@ -433,6 +458,7 @@ func lineRange(fields map[string]any) string {
 	return "L" + intString(start)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func numericField(fields map[string]any, key string) (int64, bool) {
 	switch v := fields[key].(type) {
 	case float64:
@@ -446,10 +472,12 @@ func numericField(fields map[string]any, key string) (int64, bool) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func intString(n int64) string {
 	return strconv.FormatInt(n, 10)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func shellCommandLabel(command string) string {
 	command = strings.Join(strings.Fields(command), " ")
 	if command == "" {
@@ -462,6 +490,7 @@ func shellCommandLabel(command string) string {
 	return command
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func clipProgressSummary(s string) string {
 	return clipSummaryRunes(strings.Join(strings.Fields(s), " "), 80)
 }

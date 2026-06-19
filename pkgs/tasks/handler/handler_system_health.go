@@ -17,6 +17,7 @@ import (
 // override via WithSystemHealthGatherer.
 type systemHealthSnapshotter func(now time.Time) systemhealth.Snapshot
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func defaultSystemHealthSnapshotter() systemHealthSnapshotter {
 	return func(now time.Time) systemhealth.Snapshot {
 		return systemhealth.Read(prometheus.DefaultGatherer, now)
@@ -55,6 +56,7 @@ func (h *Handler) systemHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, snap)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Handler) snapshotSystemHealth(now time.Time) systemhealth.Snapshot {
 	if h.systemHealthFn != nil {
 		return h.systemHealthFn(now)

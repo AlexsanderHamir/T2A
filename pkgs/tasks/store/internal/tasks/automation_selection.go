@@ -33,6 +33,7 @@ func applyAutomationSelectionsPatch(tx *gorm.DB, cur *domain.Task, selections *[
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyAutomationSelectionsOnCreate(tx *gorm.DB, t *domain.Task, raw []domain.AutomationSelection) error {
 	normalized, err := normalizeAutomationSelections(raw)
 	if err != nil {

@@ -183,6 +183,7 @@ func cycleCommitFromDomain(r *domain.TaskCycleCommit) cycleCommitEntry {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func cycleGitContextFromCommits(rows []domain.TaskCycleCommit) *cycleGitContextResponse {
 	if len(rows) == 0 {
 		return nil

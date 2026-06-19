@@ -68,6 +68,7 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 	return promptText
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func recordPassedCriterionVerdicts(state *processState, verdicts []criterionVerdict) {
 	for _, v := range verdicts {
 		if !v.Passed {
@@ -79,6 +80,7 @@ func recordPassedCriterionVerdicts(state *processState, verdicts []criterionVerd
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func unionPreviouslyPassedVerdicts(state *processState) []criterionVerdict {
 	unionVerdicts := make([]criterionVerdict, 0, len(state.previouslyPassed))
 	for _, v := range state.previouslyPassed {
@@ -243,6 +245,7 @@ func (h *Harness) runCycleLoopFinalizeSuccess(
 	_ = h.applyFinalizeEffects(parentCtx, task, cycle, state, effects)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) {
 	skipExecute := opts.skipFirstExecute
 	for {
@@ -269,6 +272,7 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) repoRootForGit(ctx context.Context) string {
 	settings, err := h.store.GetSettings(ctx)
 	if err != nil {

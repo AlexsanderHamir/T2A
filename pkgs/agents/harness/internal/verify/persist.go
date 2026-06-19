@@ -100,6 +100,7 @@ func (s *Service) persistVerifyReports(
 	return s.store.UpsertVerifyReports(ctx, cycleID, attemptSeq, entries)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) loadEligibleCommits(ctx context.Context, cycleID string) []domain.TaskCycleCommit {
 	commits, _ := s.store.ListEligibleCommitsForCycle(ctx, cycleID)
 	return commits

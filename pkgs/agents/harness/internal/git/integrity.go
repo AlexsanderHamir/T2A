@@ -133,6 +133,7 @@ func summariseTamperedPaths(paths []string) string {
 	return "verifier modified " + head + " (+" + itoa(rest) + " more)"
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func itoa(n int) string {
 	if n == 0 {
 		return "0"
@@ -191,6 +192,7 @@ func parsePorcelainZ(out string) map[string]struct{} {
 	return result
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // WorkingTreeDirty reports whether the worktree has uncommitted changes.
 func WorkingTreeDirty(ctx context.Context, repo GitRepo, worktree string) (bool, error) {
 	snap, err := CaptureIntegritySnapshot(ctx, repo, worktree)
@@ -203,6 +205,7 @@ func WorkingTreeDirty(ctx context.Context, repo GitRepo, worktree string) (bool,
 	return len(snap.Changed) > 0, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // StatusPorcelain returns trimmed porcelain status, truncated for prompts.
 func StatusPorcelain(ctx context.Context, repo GitRepo, workdir string) (string, error) {
 	if repo == nil {
@@ -220,6 +223,7 @@ func StatusPorcelain(ctx context.Context, repo GitRepo, workdir string) (string,
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ScopeFilesFromPhaseDetails lists paths changed between cycle base and HEAD.
 func ScopeFilesFromPhaseDetails(ctx context.Context, repo GitRepo, workdir string, details []byte) []string {
 	if repo == nil {
@@ -247,5 +251,6 @@ func ScopeFilesFromPhaseDetails(ctx context.Context, repo GitRepo, workdir strin
 	return files
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Itoa is exported for tests that assert truncated integrity summaries.
 func Itoa(n int) string { return itoa(n) }

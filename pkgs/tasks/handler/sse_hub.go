@@ -69,6 +69,7 @@ type SSEHubOptions struct {
 	HeartbeatPeriod  time.Duration
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultSSEHubOptions are the production-grade defaults documented in
 // the architecture plan: 1024-event ring, 256-frame per-subscriber
 // buffer, 50ms coalescing window, 15s heartbeats.
@@ -96,6 +97,7 @@ func NewSSEHub() *SSEHub {
 	return NewSSEHubWith(opts)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewSSEHubWith builds a hub with caller-supplied tuning. Invalid values
 // (zero or negative) fall back to the matching DefaultSSEHubOptions
 // field so callers can override one knob at a time.
@@ -147,6 +149,7 @@ func (h *SSEHub) subscribe(sinceID uint64) (sub *subscriber, replay []bufferedEv
 	return sub, replay, hadGap, cancel
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *SSEHub) snapshotSinceLocked(sinceID uint64) (out []bufferedEvent, hadGap bool) {
 	if !h.ringFilled && h.ringHead == 0 {
 		return nil, false
@@ -175,6 +178,7 @@ func (h *SSEHub) snapshotSinceLocked(sinceID uint64) (out []bufferedEvent, hadGa
 	return out, hadGap
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *SSEHub) appendRingLocked(ev bufferedEvent) {
 	h.ring[h.ringHead] = ev
 	h.ringHead++
@@ -273,6 +277,7 @@ func (h *SSEHub) Publish(ev TaskChangeEvent) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *SSEHub) evictSubscriber(s *subscriber) {
 	h.mu.Lock()
 	if _, ok := h.subs[s]; ok {
@@ -284,6 +289,7 @@ func (h *SSEHub) evictSubscriber(s *subscriber) {
 	middleware.RecordSSESubscriberGauge(n)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // LastEventID returns the highest event id allocated by the hub.
 func (h *SSEHub) LastEventID() uint64 {
 	if h == nil {

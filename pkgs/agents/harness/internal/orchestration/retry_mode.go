@@ -45,6 +45,7 @@ type ClassifyInput struct {
 	ExecuteReachedVerify bool
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ClassifyFailureClass maps verify outcomes to infra vs implementation.
 func ClassifyFailureClass(verdicts []ClassifyVerdict, pipelineFailed bool) FailureClass {
 	for _, v := range verdicts {
@@ -62,6 +63,7 @@ func ClassifyFailureClass(verdicts []ClassifyVerdict, pipelineFailed bool) Failu
 	return FailureClassImplementation
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ClassifyVerifyRetryMode implements the ADR-0028 decision table.
 func ClassifyVerifyRetryMode(in ClassifyInput) (RetryMode, ReasonCode) {
 	if !in.ExecuteReachedVerify {

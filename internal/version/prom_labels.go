@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // PrometheusBuildInfoLabels returns (version, revision, go_version) for the
 // taskapi_build_info gauge. version matches String(); revision is the first 12
 // characters of vcs.revision when present, else "unknown"; go_version is runtime.Version().

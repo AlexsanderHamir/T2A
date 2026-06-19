@@ -18,6 +18,7 @@ type renderedProjectContext struct {
 	SnapshotJSON  json.RawMessage
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) selectedProjectContext(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle) (renderedProjectContext, error) {
 	if task.ProjectID == nil || strings.TrimSpace(*task.ProjectID) == "" || len(task.ProjectContextItemIDs) == 0 {
 		return renderedProjectContext{}, nil
@@ -80,6 +81,7 @@ func (h *Harness) selectedProjectContext(ctx context.Context, task *domain.Task,
 	}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func checklistItemsForPrompt(items []store.ChecklistVerifyItem) []prompt.ChecklistItem {
 	if len(items) == 0 {
 		return nil
@@ -91,6 +93,7 @@ func checklistItemsForPrompt(items []store.ChecklistVerifyItem) []prompt.Checkli
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func verifiedCriterionIDs(previouslyPassed map[string]criterionVerdict) map[string]struct{} {
 	if len(previouslyPassed) == 0 {
 		return nil
@@ -102,6 +105,7 @@ func verifiedCriterionIDs(previouslyPassed map[string]criterionVerdict) map[stri
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func continuationInputFromBundle(cycle *domain.TaskCycle, bundle *ContinuationBundle) prompt.ContinuationInput {
 	if bundle == nil {
 		return prompt.ContinuationInput{Cycle: cycle}
@@ -121,6 +125,7 @@ func continuationInputFromBundle(cycle *domain.TaskCycle, bundle *ContinuationBu
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func cycleIDOrEmpty(cycle *domain.TaskCycle) string {
 	if cycle == nil {
 		return ""

@@ -30,6 +30,7 @@ type VerifyCommandView struct {
 	ExpectedOutcome string `json:"expected_outcome,omitempty"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeVerifyCommandInputs trims, drops blank commands, and validates limits.
 func NormalizeVerifyCommandInputs(in []VerifyCommandInput) ([]VerifyCommandInput, error) {
 	if len(in) == 0 {
@@ -99,6 +100,7 @@ func commandsForItemsInTx(tx *gorm.DB, itemIDs []string) (map[string][]VerifyCom
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func commandsForItemInTx(tx *gorm.DB, itemID string) ([]VerifyCommandView, error) {
 	m, err := commandsForItemsInTx(tx, []string{itemID})
 	if err != nil {
@@ -130,6 +132,7 @@ func ReplaceVerifyCommands(ctx context.Context, db *gorm.DB, taskID, itemID stri
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func loadItemForCommandEdit(tx *gorm.DB, taskID, itemID string) (*domain.TaskChecklistItem, error) {
 	t, err := kernel.LoadTask(tx, taskID)
 	if err != nil {

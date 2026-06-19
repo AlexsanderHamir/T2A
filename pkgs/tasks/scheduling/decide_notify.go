@@ -6,6 +6,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideNotifyAfterReadyTransition chooses post-commit queue notify and pickup wake
 // after Create, Update, or RequestTaskRetry. It encodes I4 and I7: pickup deferral
 // vs immediate notify on transition or pickup patch — not full worker readiness.

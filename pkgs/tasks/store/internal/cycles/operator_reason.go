@@ -9,6 +9,7 @@ import (
 // mirrors and /tasks/stats recent_failures so payloads stay bounded.
 const MaxFailureSurfaceRunes = 800
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FailureSurfaceMessage returns the best human-facing explanation for a
 // failed terminal cycle, preferring execute-phase classification
 // (standardized_message, summary, failure_kind) over the cycle mirror
@@ -40,6 +41,7 @@ func FailureSurfaceMessage(hasPhase bool, cycleReason, phaseSummary string, phas
 	return cycleReason
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func standardizedMessageFromDetails(d map[string]any) string {
 	if d == nil {
 		return ""
@@ -51,6 +53,7 @@ func standardizedMessageFromDetails(d map[string]any) string {
 	return strings.TrimSpace(v)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func failureKindFromDetails(d map[string]any) string {
 	if d == nil {
 		return ""
@@ -62,6 +65,7 @@ func failureKindFromDetails(d map[string]any) string {
 	return strings.TrimSpace(v)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func humanizeFailureKind(kind string) string {
 	switch kind {
 	case "cursor_usage_limit":
@@ -71,6 +75,7 @@ func humanizeFailureKind(kind string) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func truncateReasonRunes(s string, max int) string {
 	if max <= 0 || utf8.RuneCountInString(s) <= max {
 		return s

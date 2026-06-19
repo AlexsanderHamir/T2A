@@ -54,6 +54,7 @@ func ListModels(ctx context.Context, binaryPath string, timeout time.Duration, r
 	return out, resolved, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseListModelsOutput(stdout []byte) []ModelInfo {
 	var out []ModelInfo
 	for _, line := range strings.Split(string(stdout), "\n") {

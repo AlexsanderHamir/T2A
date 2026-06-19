@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapRunnerOutcome(err error) orchestration.ExecuteRunnerOutcome {
 	if err == nil {
 		return orchestration.ExecuteRunnerOutcomeOK
@@ -29,6 +30,7 @@ func mapRunnerOutcome(err error) orchestration.ExecuteRunnerOutcome {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func buildExecutePostRunInput(
 	parentCtx context.Context,
 	runErr error,
@@ -59,6 +61,7 @@ func buildExecutePostRunInput(
 	return in
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func executePhaseStatusFromEffects(effects orchestration.ExecuteEffects) domain.PhaseStatus {
 	if effects.ContinueToVerify {
 		return domain.PhaseStatusSucceeded
@@ -66,6 +69,7 @@ func executePhaseStatusFromEffects(effects orchestration.ExecuteEffects) domain.
 	return domain.PhaseStatusFailed
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func overlayOperatorCancelOnResult(result runner.Result, operatorCancelled bool, effects orchestration.ExecuteEffects) runner.Result {
 	if !operatorCancelled {
 		return result

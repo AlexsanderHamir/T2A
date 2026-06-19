@@ -8,6 +8,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // resolveTaskRunnerModel merges optional JSON fields with app settings and
 // validates the runner id against the registry.
 func resolveTaskRunnerModel(body *taskCreateJSON, settings domain.AppSettings) (runner, cursorModel string, err error) {

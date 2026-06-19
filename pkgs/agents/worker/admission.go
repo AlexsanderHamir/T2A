@@ -148,6 +148,7 @@ func (w *Worker) recoverAdmissionPanic(taskID string) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *Worker) clock() time.Time {
 	if w.opts.Clock != nil {
 		return w.opts.Clock()

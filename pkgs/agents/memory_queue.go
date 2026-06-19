@@ -35,6 +35,7 @@ func NewMemoryQueue(cap int) *MemoryQueue {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BufferCap returns the configured channel buffer size (max tasks without blocking producers).
 func (q *MemoryQueue) BufferCap() int {
 	if q == nil {
@@ -43,6 +44,7 @@ func (q *MemoryQueue) BufferCap() int {
 	return q.bufCap
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BufferDepth returns how many tasks are currently queued (buffered channel length).
 func (q *MemoryQueue) BufferDepth() int {
 	if q == nil {

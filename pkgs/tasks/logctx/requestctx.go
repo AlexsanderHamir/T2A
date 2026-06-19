@@ -21,6 +21,7 @@ func ContextWithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, ctxKeyRequestID, id)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RequestIDFromContext returns the request id from ctx, or empty when unset.
 // Skip-listed in cmd/funclogmeasure/analyze.go: pure context-read helper
 // embedded into other trace lines (the access-log middleware reads it

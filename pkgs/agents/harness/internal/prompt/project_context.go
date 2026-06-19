@@ -15,6 +15,7 @@ type ProjectContextInput struct {
 	Edges   []domain.ProjectContextEdge
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BuildProjectContextSection renders the XML-tagged project context block.
 func BuildProjectContextSection(in ProjectContextInput) string {
 	var b strings.Builder
@@ -63,6 +64,7 @@ func BuildProjectContextSection(in ProjectContextInput) string {
 	return b.String()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // EstimateTokens returns a coarse token estimate for rendered context text.
 func EstimateTokens(s string) int {
 	if strings.TrimSpace(s) == "" {
@@ -71,6 +73,7 @@ func EstimateTokens(s string) int {
 	return (len([]rune(s)) + 3) / 4
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // WrapWithProjectContext wraps the task prompt in project context when present.
 func WrapWithProjectContext(prompt string, projectContext string) string {
 	if strings.TrimSpace(projectContext) == "" {

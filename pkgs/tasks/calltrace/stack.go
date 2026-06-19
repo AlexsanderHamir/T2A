@@ -8,6 +8,7 @@ import (
 
 type stackKey struct{}
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Push returns ctx with name appended to the call stack used for call_path /
 // helper.io logs. Use at handler entry (operation string) and at the start
 // of nested helpers.
@@ -41,6 +42,7 @@ func Push(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, stackKey{}, next)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Path returns "parent > child > ..." for the current ctx, or empty when
 // unset. Skip-listed: pure context-read helper consumed by callers that
 // embed the result into their own trace line.
@@ -55,6 +57,7 @@ func Path(ctx context.Context) string {
 	return strings.Join(s, " > ")
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // WithRequestRoot attaches the HTTP handler operation as the first stack
 // frame (after middleware context). Skip-listed: thin one-line wrapper
 // over Push; the per-request access log emitted by the access middleware

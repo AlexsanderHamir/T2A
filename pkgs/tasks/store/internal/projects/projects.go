@@ -407,6 +407,7 @@ func GetSnapshotForCycle(ctx context.Context, db *gorm.DB, cycleID string) (doma
 	return row, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateProjectPatch(input UpdateProjectInput) error {
 	if input.Name != nil && strings.TrimSpace(*input.Name) == "" {
 		return fmt.Errorf("%w: project name required", domain.ErrInvalidInput)
@@ -421,6 +422,7 @@ func validateProjectPatch(input UpdateProjectInput) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateDefaultProjectPatch(row domain.Project, input UpdateProjectInput) error {
 	if row.ID != domain.DefaultProjectID {
 		return nil
@@ -434,6 +436,7 @@ func validateDefaultProjectPatch(row domain.Project, input UpdateProjectInput) e
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyProjectPatch(row *domain.Project, input UpdateProjectInput) {
 	if input.Name != nil {
 		row.Name = strings.TrimSpace(*input.Name)
@@ -449,6 +452,7 @@ func applyProjectPatch(row *domain.Project, input UpdateProjectInput) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateContextPatch(input UpdateContextInput) error {
 	if input.Kind != nil {
 		if err := validateContextKind(*input.Kind); err != nil {
@@ -464,6 +468,7 @@ func validateContextPatch(input UpdateContextInput) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyContextPatch(row *domain.ProjectContextItem, input UpdateContextInput) {
 	if input.Kind != nil {
 		row.Kind = domain.ProjectContextKind(strings.TrimSpace(string(*input.Kind)))
@@ -479,6 +484,7 @@ func applyContextPatch(row *domain.ProjectContextItem, input UpdateContextInput)
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateContextKind(kind domain.ProjectContextKind) error {
 	trimmed := strings.TrimSpace(string(kind))
 	if trimmed == "" {
@@ -490,6 +496,7 @@ func validateContextKind(kind domain.ProjectContextKind) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func trimOptional(value *string) *string {
 	if value == nil {
 		return nil
@@ -501,6 +508,7 @@ func trimOptional(value *string) *string {
 	return &trimmed
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapNotFound(err error) error {
 	if err == nil {
 		return nil
@@ -511,6 +519,7 @@ func mapNotFound(err error) error {
 	return fmt.Errorf("db: %w", err)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapWriteError(err error) error {
 	if err == nil {
 		return nil

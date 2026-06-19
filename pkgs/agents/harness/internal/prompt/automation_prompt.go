@@ -7,6 +7,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // InjectAutomations prepends the agent-behavior toggle block before the
 // operator's initial prompt. Yes-state rows affirm the description; no-state
 // rows explicitly prohibit it.

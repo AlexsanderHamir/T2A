@@ -19,6 +19,7 @@ type Service struct {
 	opts  Options
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewService constructs a resume Service. GitRepo defaults to ExecRepo when nil.
 func NewService(st *store.Store, opts Options) *Service {
 	if opts.GitRepo == nil {
@@ -27,6 +28,7 @@ func NewService(st *store.Store, opts Options) *Service {
 	return &Service{store: st, opts: opts}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) gitRepo() git.GitRepo {
 	if s.opts.GitRepo == nil {
 		return git.DefaultRepo()

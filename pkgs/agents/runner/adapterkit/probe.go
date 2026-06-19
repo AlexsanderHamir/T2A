@@ -14,6 +14,7 @@ const DefaultProbeLogBytes = 256
 // ProbeFunc is the small command execution surface needed by bounded probes.
 type ProbeFunc func(ctx context.Context, name string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultProbeFunc runs a short command and captures stdout/stderr.
 func DefaultProbeFunc(ctx context.Context, name string, args ...string) ([]byte, []byte, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
@@ -32,6 +33,7 @@ func DefaultProbeFunc(ctx context.Context, name string, args ...string) ([]byte,
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), exitCode, err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RunProbe runs probe with a timeout. timeout <= 0 means no additional
 // deadline is applied.
 func RunProbe(ctx context.Context, timeout time.Duration, probe ProbeFunc, name string, args ...string) ([]byte, []byte, int, error) {
@@ -46,6 +48,7 @@ func RunProbe(ctx context.Context, timeout time.Duration, probe ProbeFunc, name 
 	return probe(probeCtx, name, args...)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResolveBinaryPath returns the path exec.Command would use after PATH lookup,
 // or the trimmed input when lookup fails.
 func ResolveBinaryPath(binaryPath string) string {
@@ -59,6 +62,7 @@ func ResolveBinaryPath(binaryPath string) string {
 	return p
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FirstNonEmptyLine returns the first non-empty trimmed line of b.
 func FirstNonEmptyLine(b []byte) string {
 	for _, line := range strings.Split(string(b), "\n") {
@@ -69,6 +73,7 @@ func FirstNonEmptyLine(b []byte) string {
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // TrimForLog trims a byte buffer for inclusion in an error string.
 func TrimForLog(b []byte, maxBytes int) string {
 	if maxBytes <= 0 {

@@ -65,6 +65,7 @@ func (s *Store) SetPickupWake(w PickupWake) {
 	s.pickupWake = w
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Store) schedulePickupWake(ctx context.Context, taskID string, notBefore time.Time) {
 	s.pickupWakeMu.RLock()
 	w := s.pickupWake
@@ -75,6 +76,7 @@ func (s *Store) schedulePickupWake(ctx context.Context, taskID string, notBefore
 	w.Schedule(ctx, taskID, notBefore)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Store) cancelPickupWake(taskID string) {
 	s.pickupWakeMu.RLock()
 	w := s.pickupWake

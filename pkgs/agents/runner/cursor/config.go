@@ -156,6 +156,7 @@ var defaultPassthroughEnvKeys = []string{
 	"NUMBER_OF_PROCESSORS",
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func envPolicy(extraKeys []string) adapterkit.EnvPolicy {
 	return adapterkit.EnvPolicy{
 		ParentAllowedKeys: defaultPassthroughEnvKeys,
@@ -165,6 +166,7 @@ func envPolicy(extraKeys []string) adapterkit.EnvPolicy {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func redactionPolicy(homePaths []string) adapterkit.RedactionPolicy {
 	return adapterkit.DefaultRedactionPolicy(homePaths)
 }

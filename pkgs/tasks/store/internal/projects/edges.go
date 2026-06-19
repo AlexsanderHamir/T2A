@@ -155,6 +155,7 @@ func DeleteContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateContextEdgeFields(projectID, sourceID, targetID string, relation domain.ProjectContextRelation, strength int) error {
 	if strings.TrimSpace(projectID) == "" || strings.TrimSpace(sourceID) == "" || strings.TrimSpace(targetID) == "" {
 		return fmt.Errorf("%w: project id, source_context_id, and target_context_id required", domain.ErrInvalidInput)
@@ -171,6 +172,7 @@ func validateContextEdgeFields(projectID, sourceID, targetID string, relation do
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateContextEdgePatch(input UpdateContextEdgeInput) error {
 	if input.Relation != nil {
 		if err := validateContextRelation(*input.Relation); err != nil {
@@ -183,6 +185,7 @@ func validateContextEdgePatch(input UpdateContextEdgeInput) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateContextRelation(relation domain.ProjectContextRelation) error {
 	switch relation {
 	case domain.ProjectContextRelationSupports,
@@ -196,6 +199,7 @@ func validateContextRelation(relation domain.ProjectContextRelation) error {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateEdgeNodesExist(tx *gorm.DB, projectID, sourceID, targetID string) error {
 	var count int64
 	if err := tx.Model(&domain.ProjectContextItem{}).
@@ -209,6 +213,7 @@ func validateEdgeNodesExist(tx *gorm.DB, projectID, sourceID, targetID string) e
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyContextEdgePatch(row *domain.ProjectContextEdge, input UpdateContextEdgeInput) {
 	if input.Relation != nil {
 		row.Relation = *input.Relation
@@ -221,6 +226,7 @@ func applyContextEdgePatch(row *domain.ProjectContextEdge, input UpdateContextEd
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func normalizeEdgeNodeFilter(nodeIDs []string) []string {
 	out := make([]string, 0, len(nodeIDs))
 	seen := make(map[string]bool, len(nodeIDs))

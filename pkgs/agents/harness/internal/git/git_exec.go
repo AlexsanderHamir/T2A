@@ -20,6 +20,7 @@ type GitRepo interface {
 // ExecRepo is the production GitRepo implementation.
 type ExecRepo struct{}
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewExecRepo returns an ExecRepo for harness git operations.
 func NewExecRepo() *ExecRepo {
 	return &ExecRepo{}
@@ -27,11 +28,13 @@ func NewExecRepo() *ExecRepo {
 
 var defaultRepo GitRepo = NewExecRepo()
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultRepo returns the production GitRepo used when none is injected.
 func DefaultRepo() GitRepo {
 	return defaultRepo
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Run invokes git via the default production GitRepo.
 func Run(ctx context.Context, dir string, args ...string) (string, error) {
 	return defaultRepo.Run(ctx, dir, args...)

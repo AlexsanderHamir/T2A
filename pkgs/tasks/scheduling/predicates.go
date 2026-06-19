@@ -6,6 +6,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // EvaluateWorkerReadiness applies the four worker predicates in fixed order.
 // dependenciesMet must reflect store-loaded edge satisfaction when predicate 4 applies.
 func EvaluateWorkerReadiness(task *domain.Task, now time.Time, dependenciesMet bool) ReadinessResult {

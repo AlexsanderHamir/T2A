@@ -313,6 +313,7 @@ func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, e
 	return b, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // phaseDetailsForEventPayload returns a deep-copied, size-clamped JSON object
 // suitable for task_events.data_json so the timeline can show stderr tails,
 // token usage, etc., without a separate cycle-phase fetch.
@@ -331,6 +332,7 @@ func phaseDetailsForEventPayload(detailsJSON datatypes.JSON) map[string]any {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func truncatePhaseEventDetailValue(v any, maxRunes int) any {
 	switch x := v.(type) {
 	case string:
@@ -350,6 +352,7 @@ func truncatePhaseEventDetailValue(v any, maxRunes int) any {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func truncateStringRunes(s string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""

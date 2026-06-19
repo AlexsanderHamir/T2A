@@ -15,6 +15,7 @@ type automationPatchJSON struct {
 	Description *string `json:"description"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p automationPatchJSON) isEmpty() bool {
 	return p.Title == nil && p.Description == nil
 }
@@ -29,6 +30,7 @@ type automationSelectionJSON struct {
 	State        domain.AutomationState `json:"state"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseAutomationSelectionsWire(raw []automationSelectionJSON) ([]domain.AutomationSelection, error) {
 	if len(raw) == 0 {
 		return nil, nil

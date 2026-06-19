@@ -8,6 +8,7 @@ import (
 
 const orchestrationLogCmd = "taskapi"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideExecutePostRun maps execute post-run facts to effects. The harness root
 // applies store writes; this function is pure policy only.
 func DecideExecutePostRun(in ExecutePostRunInput) ExecuteEffects {
@@ -96,6 +97,7 @@ func decideExecuteAfterEvidenceRecovery(in ExecutePostRunInput) ExecuteEffects {
 	return ExecuteEffects{ContinueToVerify: true}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func executeEffectsFromRunner(outcome ExecuteRunnerOutcome) ExecuteEffects {
 	switch outcome {
 	case ExecuteRunnerOutcomeOK:
@@ -111,6 +113,7 @@ func executeEffectsFromRunner(outcome ExecuteRunnerOutcome) ExecuteEffects {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func terminalExecute(taskStatus domain.Status, reason TerminationReason) ExecuteEffects {
 	return ExecuteEffects{
 		TerminateFailed: true,
@@ -119,6 +122,7 @@ func terminalExecute(taskStatus domain.Status, reason TerminationReason) Execute
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func overlayOperatorCancel(operatorCancelled bool, effects ExecuteEffects) ExecuteEffects {
 	if !operatorCancelled {
 		return effects

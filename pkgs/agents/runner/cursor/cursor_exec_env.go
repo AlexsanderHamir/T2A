@@ -73,6 +73,7 @@ func defaultStreamExecFn(ctx context.Context, dir string, env []string, stdin []
 	return adapterkit.DefaultStreamExec(ctx, dir, env, stdin, name, onStdoutLine, args...)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func scanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error {
 	return adapterkit.ScanStdoutLines(r, dst, onLine)
 }

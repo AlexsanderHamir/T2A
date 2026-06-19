@@ -5,6 +5,7 @@ package domain
 // logic treats this as permission to re-enter the same phase enum.
 const PhaseInterruptReason = "process_restart"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidPhaseTransition reports whether a cycle may move from prev to next within
 // the same cycle. Empty prev means "no prior phase" (cycle just started); empty
 // next is rejected (callers always know what they want to enter).
@@ -39,6 +40,7 @@ func ValidPhaseTransition(prev, next Phase) bool {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidInterruptResumeTransition reports whether the cycle may open another
 // row with the same phase enum immediately after process-interrupt finalization.
 // last must be the highest-seq phase row: terminal failed with summary
@@ -59,6 +61,7 @@ func ValidInterruptResumeTransition(last *TaskCyclePhase, next Phase) bool {
 	return true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidVerifyOnlyRetryTransition reports whether the cycle may open another
 // verify phase immediately after a terminal failed verify without an
 // intervening execute phase (ADR-0028 in-cycle verify-only retry). last must
@@ -73,6 +76,7 @@ func ValidVerifyOnlyRetryTransition(last *TaskCyclePhase, next Phase) bool {
 	return TerminalPhaseStatus(last.Status) && last.Status == PhaseStatusFailed
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // TerminalCycleStatus reports whether s is a final, immutable cycle status.
 // Callers must not mutate cycles whose status is terminal; new attempts get a
 // new TaskCycle row with a higher AttemptSeq. Skip-listed in
@@ -86,6 +90,7 @@ func TerminalCycleStatus(s CycleStatus) bool {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // TerminalPhaseStatus reports whether s is a final, immutable phase status.
 // Once a phase reaches a terminal status its row is read-only; corrective work
 // inside the same cycle creates a new TaskCyclePhase row with a higher

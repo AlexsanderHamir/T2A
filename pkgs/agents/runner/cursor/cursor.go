@@ -97,6 +97,7 @@ func New(opts Options) *Adapter {
 	return a
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (a *Adapter) argvFor(req runner.Request) []string {
 	if len(a.args) > 0 {
 		return a.args

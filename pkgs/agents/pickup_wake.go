@@ -96,6 +96,7 @@ func (w *PickupWakeScheduler) Hydrate(ctx context.Context) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Schedule implements store.PickupWake.
 func (w *PickupWakeScheduler) Schedule(ctx context.Context, taskID string, notBefore time.Time) {
 	if w == nil || taskID == "" {
@@ -117,6 +118,7 @@ func (w *PickupWakeScheduler) Schedule(ctx context.Context, taskID string, notBe
 	w.resetTimerLocked()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Cancel implements store.PickupWake.
 func (w *PickupWakeScheduler) Cancel(taskID string) {
 	if w == nil || taskID == "" {
@@ -136,6 +138,7 @@ func (w *PickupWakeScheduler) Cancel(taskID string) {
 	w.resetTimerLocked()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Stop implements store.PickupWake.
 func (w *PickupWakeScheduler) Stop() {
 	if w == nil {
@@ -152,6 +155,7 @@ func (w *PickupWakeScheduler) Stop() {
 	w.heap = nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *PickupWakeScheduler) resetTimerLocked() {
 	if w.timer != nil {
 		w.timer.Stop()
@@ -168,6 +172,7 @@ func (w *PickupWakeScheduler) resetTimerLocked() {
 	w.timer = time.AfterFunc(d, w.fire)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *PickupWakeScheduler) fire() {
 	w.mu.Lock()
 	if w.stopped {
@@ -196,6 +201,7 @@ func (w *PickupWakeScheduler) fire() {
 	w.mu.Unlock()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *PickupWakeScheduler) tryNotify(taskID string, now time.Time) {
 	if w.st == nil || w.q == nil {
 		return

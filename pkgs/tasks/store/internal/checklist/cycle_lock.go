@@ -16,6 +16,7 @@ func IsTaskCycleRunning(ctx context.Context, db *gorm.DB, taskID string) (bool, 
 	return isTaskCycleRunningInTx(db.WithContext(ctx), taskID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func isTaskCycleRunningInTx(tx *gorm.DB, taskID string) (bool, error) {
 	var n int64
 	if err := tx.Model(&domain.TaskCycle{}).

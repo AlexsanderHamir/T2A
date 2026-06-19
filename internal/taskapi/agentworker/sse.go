@@ -78,6 +78,7 @@ func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phase
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (a *runProgressSSEAdapter) shouldDrop(taskID, cycleID string, phaseSeq int64) bool {
 	if a.minInterval <= 0 {
 		return false

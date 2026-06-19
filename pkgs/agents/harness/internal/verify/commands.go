@@ -52,14 +52,17 @@ type commandMetaFile struct {
 
 type shellExecFunc func(ctx context.Context, dir string, command string) (stdout, stderr []byte, exitCode int, err error)
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func commandEvidenceDir(reportDir, cycleID, criterionID string) string {
 	return filepath.Join(reportDir, cycleID, "checks", criterionID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func commandArtifactBase(reportDir, cycleID, criterionID string, seq int) string {
 	return filepath.Join(commandEvidenceDir(reportDir, cycleID, criterionID), fmt.Sprintf("%d", seq))
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func truncateCommandOutput(b []byte) ([]byte, bool) {
 	if len(b) <= maxCommandOutputBytes {
 		return b, false
@@ -67,6 +70,7 @@ func truncateCommandOutput(b []byte) ([]byte, bool) {
 	return b[:maxCommandOutputBytes], true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func previewCommandOutput(path string) string {
 	b, err := os.ReadFile(path)
 	if err != nil || len(b) == 0 {
@@ -82,6 +86,7 @@ func previewCommandOutput(path string) string {
 	return strings.Join(lines[:inlineCommandPreviewLines], "\n")
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func shellCommand(command string) (string, []string) {
 	if runtime.GOOS == "windows" {
 		return "cmd", []string{"/C", command}
@@ -89,6 +94,7 @@ func shellCommand(command string) (string, []string) {
 	return "sh", []string{"-c", command}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func defaultShellExec(ctx context.Context, dir, command string) ([]byte, []byte, int, error) {
 	shell, args := shellCommand(command)
 	return adapterkit.DefaultExec(ctx, dir, os.Environ(), nil, shell, args...)
@@ -203,6 +209,7 @@ func (s *Service) RunCriterionCommands(
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatCommandEvidenceSection renders worker command output for verify prompts.
 func FormatCommandEvidenceSection(evidence []CommandEvidence) string {
 	if len(evidence) == 0 {

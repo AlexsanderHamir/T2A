@@ -209,6 +209,7 @@ SELECT COUNT(*) FROM information_schema.columns
 
 var errEmptyDSN = errors.New("database DSN is empty")
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ensureQueryExecModeSimpleProtocol appends pgx's default_query_exec_mode when
 // absent. Without this, ALTER TABLE / AutoMigrate can change the row type of
 // SELECT * while pooled connections still hold cached prepared statements,

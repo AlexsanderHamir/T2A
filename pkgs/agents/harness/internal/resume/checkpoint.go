@@ -98,6 +98,7 @@ func (s *Service) loadKnownCommitsForTask(ctx context.Context, taskID string) ([
 	return s.store.ListCommitsForTask(ctx, taskID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) loadVerifyCheckpointData(ctx context.Context, cycleID string) (map[string]CriterionVerdict, int64, string, error) {
 	previouslyPassed := map[string]CriterionVerdict{}
 	verifyRows, err := s.store.ListVerifyReportsForCycle(ctx, cycleID)
@@ -155,6 +156,7 @@ func buildVerifyFeedbackFromRows(rows []domain.TaskCycleVerifyReport, attemptSeq
 	return strings.Join(failures, "; ")
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func bundleToCheckpoint(bundle ContinuationBundle) Checkpoint {
 	return Checkpoint{
 		Entry:            bundle.Entry,

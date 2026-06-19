@@ -8,6 +8,7 @@ import (
 
 type logSeqKey struct{}
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ContextWithLogSeq attaches a per-request monotonic counter. Every slog record emitted with this
 // context gets a rising log_seq (via WrapSlogHandlerWithLogSequence), so JSON lines for one
 // request can be sorted by log_seq to recover call order.
@@ -22,6 +23,7 @@ func ContextWithLogSeq(ctx context.Context) context.Context {
 	return context.WithValue(ctx, logSeqKey{}, new(atomic.Uint64))
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // logSeqFromContext is a pure value-extraction helper used by Handle below;
 // see ContextWithLogSeq for the skip-list rationale. Funclogmeasure
 // skip-list entry mirrors the same pkg path.
@@ -33,6 +35,7 @@ func logSeqFromContext(ctx context.Context) *atomic.Uint64 {
 	return v
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // WrapSlogHandlerWithLogSequence adds log_seq (and log_seq_scope) to each record. When ctx carries
 // a counter from ContextWithLogSeq, scope is "request". Otherwise processFallback is incremented
 // and scope is "process" (startup / health / background) so non-request lines still have order.

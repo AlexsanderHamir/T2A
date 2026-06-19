@@ -145,6 +145,7 @@ func openToolCallCount(open map[string]struct{}, anonymous int) int {
 	return len(open) + anonymous
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func splitNDJSON(b []byte) [][]byte {
 	if len(b) == 0 {
 		return nil

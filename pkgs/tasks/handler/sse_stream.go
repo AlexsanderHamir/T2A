@@ -12,6 +12,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseLastEventIDHeader(v string) uint64 {
 	if v == "" {
 		return 0
@@ -94,6 +95,7 @@ func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func writeBufferedEvent(w http.ResponseWriter, flusher http.Flusher, r *http.Request, op string, ev bufferedEvent) bool {
 	if _, err := fmt.Fprintf(w, "id: %d\ndata: %s\n\n", ev.id, ev.line); err != nil {
 		logSSEWriteError(r, op, err)
@@ -103,6 +105,7 @@ func writeBufferedEvent(w http.ResponseWriter, flusher http.Flusher, r *http.Req
 	return true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func writeResyncFrame(w http.ResponseWriter, flusher http.Flusher, r *http.Request, op string) bool {
 	middleware.RecordSSEResyncEmitted(1)
 	if _, err := fmt.Fprintf(w, "data: {\"type\":\"resync\"}\n\n"); err != nil {

@@ -20,6 +20,7 @@ type PendingRetry struct {
 	ParentCycleID string    `json:"parent_cycle_id"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Validate normalizes and checks a pending retry payload.
 func (p *PendingRetry) Validate() error {
 	if p == nil {
@@ -38,6 +39,7 @@ func (p *PendingRetry) Validate() error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Clone returns a shallow copy for consumption after the row is cleared.
 func (p *PendingRetry) Clone() *PendingRetry {
 	if p == nil {
@@ -47,6 +49,7 @@ func (p *PendingRetry) Clone() *PendingRetry {
 	return &cp
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Equal reports whether two pending retry payloads match for idempotency.
 func (p *PendingRetry) Equal(other *PendingRetry) bool {
 	if p == nil || other == nil {

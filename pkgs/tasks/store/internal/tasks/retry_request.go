@@ -105,6 +105,7 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 	return updated, origStatus, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func resolveRetryParentCycleInTx(tx *gorm.DB, taskID, explicit string) (string, error) {
 	explicit = strings.TrimSpace(explicit)
 	if explicit != "" {

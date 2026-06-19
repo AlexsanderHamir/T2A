@@ -111,6 +111,7 @@ func (h *Handler) deleteAutomation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseAutomationListParams(q map[string][]string) (limit int, includeArchived bool, err error) {
 	limit = 100
 	if v := q["limit"]; len(v) > 0 && v[0] != "" {

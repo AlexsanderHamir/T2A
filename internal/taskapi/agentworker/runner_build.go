@@ -44,6 +44,7 @@ func (s *Supervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSetting
 	return r, "ok"
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) probeExecuteRunner(ctx context.Context, cfg store.AppSettings) (string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, s.probeBudge)
 	defer cancel()

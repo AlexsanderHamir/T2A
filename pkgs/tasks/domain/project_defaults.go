@@ -5,6 +5,7 @@ import "time"
 // DefaultProjectID is the built-in project available on every installation.
 const DefaultProjectID = "00000000-0000-4000-8000-000000000001"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultProject returns the non-deletable project every workspace starts with.
 func DefaultProject(now time.Time) Project {
 	return Project{

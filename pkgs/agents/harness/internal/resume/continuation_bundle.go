@@ -110,6 +110,7 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 	return bundle, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func classifyParentFailure(phases []domain.TaskCyclePhase, cycle *domain.TaskCycle, lastPhase domain.TaskCyclePhase) FailureClass {
 	reason := parentFailureReason(phases, cycle)
 	if reason == "" {
@@ -138,6 +139,7 @@ func classifyParentFailure(phases []domain.TaskCyclePhase, cycle *domain.TaskCyc
 	return FailureClassInfrastructure
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func routeResumeEntry(phases []domain.TaskCyclePhase, lastExecute *domain.TaskCyclePhase, lastPhase domain.TaskCyclePhase, cycle *domain.TaskCycle, hasEligible bool) Entry {
 	reason := parentFailureReason(phases, cycle)
 	if reason == "" {
@@ -153,6 +155,7 @@ func routeResumeEntry(phases []domain.TaskCyclePhase, lastExecute *domain.TaskCy
 	return EntryExecute
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parentFailureReason(phases []domain.TaskCyclePhase, cycle *domain.TaskCycle) string {
 	if len(phases) > 0 {
 		last := phases[len(phases)-1]
@@ -172,6 +175,7 @@ func parentFailureReason(phases []domain.TaskCyclePhase, cycle *domain.TaskCycle
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func continuationSufficient(bundle ContinuationBundle, cycle *domain.TaskCycle) bool {
 	if cycle == nil || cycle.ID == "" {
 		return false
@@ -185,6 +189,7 @@ func continuationSufficient(bundle ContinuationBundle, cycle *domain.TaskCycle) 
 	return domain.TerminalCycleStatus(cycle.Status)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func lastExecutePhase(phases []domain.TaskCyclePhase) *domain.TaskCyclePhase {
 	var last *domain.TaskCyclePhase
 	for i := range phases {
@@ -199,6 +204,7 @@ func lastExecutePhase(phases []domain.TaskCyclePhase) *domain.TaskCyclePhase {
 	return last
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func phaseSummary(p domain.TaskCyclePhase) string {
 	if p.Summary == nil {
 		return ""
@@ -206,6 +212,7 @@ func phaseSummary(p domain.TaskCyclePhase) string {
 	return strings.TrimSpace(*p.Summary)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func runnerFeedbackFromPhase(p *domain.TaskCyclePhase) string {
 	if p == nil {
 		return ""
@@ -220,6 +227,7 @@ func runnerFeedbackFromPhase(p *domain.TaskCyclePhase) string {
 	return summary
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func runnerDetailsExcerpt(details []byte) string {
 	if len(details) == 0 {
 		return ""

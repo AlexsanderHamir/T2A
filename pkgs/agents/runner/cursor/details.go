@@ -130,6 +130,7 @@ func invalidOutputSummary(err error, homePaths []string) string {
 	return "cursor: invalid output: " + msg
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func clipSummaryRunes(s string, maxRunes int) string {
 	return adapterkit.ClipRunes(s, maxRunes)
 }

@@ -102,6 +102,7 @@ var operationDurationSeconds = promauto.NewHistogramVec(
 	[]string{"op"},
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DeferLatency records wall time for one store API entrypoint on return.
 // Intentionally no slog (hot path; see cmd/funclogmeasure skip list).
 func DeferLatency(op string) func() {

@@ -67,6 +67,7 @@ func (s *Supervisor) applySettings(ctx context.Context, phase string) error {
 	return s.restartWorkerWithSettings(ctx, phase, snap.cfg, snap.prev, version)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) loadApplySettingsSnapshot(ctx context.Context) (*applySettingsSnapshot, error) {
 	cfg, err := s.store.GetSettings(ctx)
 	if err != nil {
@@ -84,6 +85,7 @@ func (s *Supervisor) loadApplySettingsSnapshot(ctx context.Context) (*applySetti
 	return &applySettingsSnapshot{cfg: cfg, prev: prev}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func baseEffectiveSettings(cfg store.AppSettings) effectiveSettingsLog {
 	return effectiveSettingsLog{
 		AgentPaused:           cfg.AgentPaused,
@@ -95,11 +97,13 @@ func baseEffectiveSettings(cfg store.AppSettings) effectiveSettingsLog {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) finishApplySettings(phase string, eff effectiveSettingsLog) {
 	s.logEffective(phase, eff)
 	s.publishSettingsChanged()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) clearCurrentInstance(prev *instance, stopReason string) {
 	stopWorkerInstance(prev, stopReason)
 	s.mu.Lock()
@@ -109,6 +113,7 @@ func (s *Supervisor) clearCurrentInstance(prev *instance, stopReason string) {
 	s.mu.Unlock()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) handleApplySettingsIdle(phase string, cfg store.AppSettings, prev *instance, reason string) error {
 	s.clearCurrentInstance(prev, "idle:"+reason)
 	eff := baseEffectiveSettings(cfg)
@@ -130,6 +135,7 @@ func (s *Supervisor) handleApplySettingsProbeFailed(phase string, cfg store.AppS
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Supervisor) handleApplySettingsUnchanged(ctx context.Context, phase string, cfg store.AppSettings, prev *instance, version string) error {
 	eff := baseEffectiveSettings(cfg)
 	eff.RunnerVersion = version

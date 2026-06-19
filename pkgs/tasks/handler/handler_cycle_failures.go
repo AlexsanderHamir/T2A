@@ -42,6 +42,7 @@ func (h *Handler) cycleFailures(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseCycleFailuresQuery(q url.Values) (limit, offset int, sort string, err error) {
 	limit = 50
 	offset = 0

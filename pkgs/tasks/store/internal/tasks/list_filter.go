@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyListFilter(q *gorm.DB, db *gorm.DB, filter *ListFilter) *gorm.DB {
 	if filter == nil {
 		return q

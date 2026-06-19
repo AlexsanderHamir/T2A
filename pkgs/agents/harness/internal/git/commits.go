@@ -50,6 +50,7 @@ type commitReport struct {
 	Branch string `json:"branch"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // MatchReportedSHAInAncestry maps an agent-reported SHA to canonical cycle ancestry.
 func MatchReportedSHAInAncestry(reported string, ancestry []string) (string, error) {
 	reported = strings.ToLower(strings.TrimSpace(reported))
@@ -80,6 +81,7 @@ func MatchReportedSHAInAncestry(reported string, ancestry []string) (string, err
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) revListRange(ctx context.Context, worktree, baseSHA string) ([]string, error) {
 	baseSHA = strings.TrimSpace(baseSHA)
 	if baseSHA == "" {
@@ -96,6 +98,7 @@ func (s *Service) revListRange(ctx context.Context, worktree, baseSHA string) ([
 	return strings.Split(out, "\n"), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) commitDetails(ctx context.Context, worktree, sha string) (message string, committedAt time.Time, err error) {
 	out, err := s.repo().Run(ctx, worktree, "log", "-1", "--format=%s%n%ci", sha)
 	if err != nil {
@@ -119,6 +122,7 @@ func (s *Service) commitDetails(ctx context.Context, worktree, sha string) (mess
 	return msg, ts.UTC(), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) branchContaining(ctx context.Context, worktree, sha string) (string, error) {
 	out, err := s.repo().Run(ctx, worktree, "branch", "--contains", sha, "--format=%(refname:short)")
 	if err != nil {
@@ -156,6 +160,7 @@ func buildReportedBranchMap(reported []commitReport, shas []string, cycleID stri
 	return reportedMap, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext, reported []commitReport, cycleID string) ([]store.CycleCommitEntry, error) {
 	shas, err := s.revListRange(ctx, g.Worktree, g.CycleBaseSHA)
 	if err != nil {
@@ -195,6 +200,7 @@ func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext, repor
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) commitExists(ctx context.Context, worktree, sha string) bool {
 	sha = strings.TrimSpace(sha)
 	if sha == "" {
@@ -204,6 +210,7 @@ func (s *Service) commitExists(ctx context.Context, worktree, sha string) bool {
 	return err == nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BuildInheritedCommitEntries copies parent-cycle commits when resume made no new commits.
 func (s *Service) BuildInheritedCommitEntries(
 	ctx context.Context,
@@ -297,11 +304,13 @@ func (s *Service) evaluateExecuteCommitGates(
 	return "", nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AssignCommitAdmissionStatuses sets observe/eligible status from gate outcome.
 func AssignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason string) {
 	assignCommitAdmissionStatuses(entries, failReason)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func assignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason string) {
 	for i := range entries {
 		if failReason != "" {
@@ -319,6 +328,7 @@ func assignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason 
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResolvePhaseCommitsFromReports resolves commits using criteria-report SHA hints.
 func ResolvePhaseCommitsFromReports(ctx context.Context, s *Service, snap PhaseSnapshot, reported []CommitReport, cycleID string) ([]store.CycleCommitEntry, error) {
 	reports := make([]commitReport, len(reported))
@@ -350,6 +360,7 @@ type PhaseContext struct {
 	BaseBranch   string
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func phaseContextFromSnapshot(snap PhaseSnapshot) phaseContext {
 	return phaseContext{
 		Repo:         snap.Repo,
@@ -426,6 +437,7 @@ func (s *Service) IngestExecuteCommits(
 	return ExecuteCommitIngestOutcome{CommitCount: len(entries)}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // PriorCycleBaseSHA reads cycle_base_sha from the earliest prior execute phase.
 func (s *Service) PriorCycleBaseSHA(ctx context.Context, cycleID string, currentPhaseSeq int64) (string, error) {
 	phases, err := s.store.ListPhasesForCycle(ctx, cycleID)

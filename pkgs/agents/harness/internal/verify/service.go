@@ -34,6 +34,7 @@ type Deps struct {
 	Hooks        Hooks
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewService constructs a verify Service. VerifyRunner falls back to Runner when nil.
 func NewService(deps Deps) *Service {
 	verifyRunner := deps.Runner
@@ -56,14 +57,17 @@ func NewService(deps Deps) *Service {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) SetReportDir(dir string) {
 	s.reportDir = dir
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) SetWorkingDir(dir string) {
 	s.workingDir = dir
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) SetVerifyRunner(r runner.Runner) {
 	if r != nil {
 		s.verifyRunner = r
@@ -78,18 +82,21 @@ func (s *Service) SetStreamIdleStuck(d time.Duration) {
 	s.hooks.StreamIdleStuck = d
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) publish(taskID, cycleID string) {
 	if s.hooks.Publish != nil {
 		s.hooks.Publish(taskID, cycleID)
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) recordVerdict(kind domain.VerifierKind, passed bool) {
 	if s.hooks.RecordVerdict != nil {
 		s.hooks.RecordVerdict(kind, passed)
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) observeDuration(d time.Duration) {
 	if s.hooks.ObserveDuration != nil {
 		if d < 0 {

@@ -11,6 +11,7 @@ type ChecklistItem struct {
 	Text string
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // InjectCriteria prepends the Done-criteria block before the operator's
 // initial prompt. alreadyVerified is the set of criterion IDs proven
 // passed in earlier retry attempts; when non-empty, those items render
@@ -64,6 +65,7 @@ func InjectCriteria(prompt string, items []ChecklistItem, reportPath string, alr
 	return strings.TrimPrefix(criteria.String(), "\n\n") + "\n\n" + prompt
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendVerifyFeedback appends prior verification feedback when non-empty.
 func AppendVerifyFeedback(prompt string, feedback string) string {
 	feedback = strings.TrimSpace(feedback)
@@ -73,6 +75,7 @@ func AppendVerifyFeedback(prompt string, feedback string) string {
 	return prompt + "\n\n## Previous verification feedback\n\n" + feedback + "\n"
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendExecuteHarnessFeedback appends execute-phase harness feedback when non-empty.
 func AppendExecuteHarnessFeedback(prompt string, feedback string) string {
 	feedback = strings.TrimSpace(feedback)

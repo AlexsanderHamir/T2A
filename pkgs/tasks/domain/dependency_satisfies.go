@@ -11,6 +11,7 @@ const (
 	DependencySatisfiesDone DependencySatisfies = "done"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidDependencySatisfies reports whether s is a known edge predicate.
 func ValidDependencySatisfies(s DependencySatisfies) bool {
 	switch s {
@@ -21,6 +22,7 @@ func ValidDependencySatisfies(s DependencySatisfies) bool {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeDependencySatisfies returns the canonical predicate, defaulting
 // empty to done.
 func NormalizeDependencySatisfies(s DependencySatisfies) DependencySatisfies {

@@ -10,6 +10,7 @@ import (
 
 type dependsOnWire []json.RawMessage
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseDependsOnWire(raw dependsOnWire) ([]domain.DependencyEdge, error) {
 	if raw == nil {
 		return nil, nil
@@ -48,6 +49,7 @@ func parseDependsOnWire(raw dependsOnWire) ([]domain.DependencyEdge, error) {
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (d *dependsOnWire) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		*d = nil
@@ -66,6 +68,7 @@ type dependsOnPatchWire struct {
 	value []domain.DependencyEdge
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (d *dependsOnPatchWire) UnmarshalJSON(data []byte) error {
 	d.set = true
 	if string(data) == "null" {

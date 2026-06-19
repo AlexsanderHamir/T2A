@@ -308,6 +308,7 @@ func (h *Handler) deleteProjectContext(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseProjectContextPath(r *http.Request) (projectID, itemID string, err error) {
 	projectID, err = parseTaskPathID(r.PathValue("id"))
 	if err != nil {
@@ -320,6 +321,7 @@ func parseProjectContextPath(r *http.Request) (projectID, itemID string, err err
 	return projectID, itemID, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseProjectContextEdgePath(r *http.Request) (projectID, edgeID string, err error) {
 	projectID, err = parseTaskPathID(r.PathValue("id"))
 	if err != nil {
@@ -332,6 +334,7 @@ func parseProjectContextEdgePath(r *http.Request) (projectID, edgeID string, err
 	return projectID, edgeID, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseProjectListParams(q map[string][]string) (limit int, includeArchived bool, err error) {
 	limit, err = parseBoundedLimit(q, 50, 100)
 	if err != nil {
@@ -341,6 +344,7 @@ func parseProjectListParams(q map[string][]string) (limit int, includeArchived b
 	return limit, includeArchived, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseProjectContextListParams(q map[string][]string) (limit int, includeUnpinned bool, err error) {
 	limit, err = parseBoundedLimit(q, 50, 100)
 	if err != nil {
@@ -350,6 +354,7 @@ func parseProjectContextListParams(q map[string][]string) (limit int, includeUnp
 	return limit, includeUnpinned, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseBoundedLimit(q map[string][]string, def, max int) (int, error) {
 	raw := strings.TrimSpace(firstQueryValue(q, "limit"))
 	if raw == "" {
@@ -368,6 +373,7 @@ func parseBoundedLimit(q map[string][]string, def, max int) (int, error) {
 	return n, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func firstQueryValue(q map[string][]string, key string) string {
 	values := q[key]
 	if len(values) == 0 {

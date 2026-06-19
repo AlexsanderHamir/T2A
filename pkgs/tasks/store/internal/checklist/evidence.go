@@ -89,6 +89,7 @@ func SetDoneWithEvidenceInTx(
 	return syncCriteriaSatisfiedAtInTx(tx, subjectTaskID, by)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateEvidencePayload(evidence string, verifier domain.VerifierKind, reasoning string) error {
 	if !domain.ValidVerifierKind(verifier) {
 		return fmt.Errorf("%w: invalid verified_by", domain.ErrInvalidInput)

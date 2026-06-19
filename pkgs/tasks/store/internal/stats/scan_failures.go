@@ -120,6 +120,7 @@ func decodeCycleFailedRows(rows []cycleFailedRow) []RecentFailure {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func resolveRecentFailureReason(failureSummary, cycleReason string) string {
 	if s := strings.TrimSpace(failureSummary); s != "" {
 		return s
@@ -201,6 +202,7 @@ func enrichRecentFailuresFromPhaseEvents(ctx context.Context, db *gorm.DB, failu
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func observabilityReasonFromPhaseAndCycle(cycleReason string, phase *phaseFailedMirrorPayload) string {
 	if phase == nil {
 		return ""

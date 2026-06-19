@@ -8,6 +8,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // parseCreateChecklistItems normalizes POST /tasks checklist_items: trims text,
 // drops blanks, and requires at least one surviving criterion.
 func parseCreateChecklistItems(items []store.EvaluateDraftChecklistItemInput) ([]store.CreateChecklistItemInput, error) {

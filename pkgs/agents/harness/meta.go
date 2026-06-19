@@ -49,6 +49,7 @@ func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
 	return b
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // mergeCycleMetaBytes overlays extra keys onto cycle MetaJSON bytes.
 // retryModeFromCycleMeta reads operator retry mode stamped on cycle MetaJSON.
 func retryModeFromCycleMeta(cycle *domain.TaskCycle) domain.RetryMode {
@@ -64,6 +65,7 @@ func retryModeFromCycleMeta(cycle *domain.TaskCycle) domain.RetryMode {
 	return domain.RetryMode(strings.TrimSpace(meta.RetryMode))
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mergeCycleMetaBytes(base []byte, extra map[string]any) []byte {
 	if len(extra) == 0 {
 		return base

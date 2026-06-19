@@ -98,6 +98,7 @@ type Harness struct {
 	cancelByOperator atomic.Bool
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // New constructs a Harness with sensible defaults applied to opts.
 func New(st *store.Store, r runner.Runner, opts Options) *Harness {
 	if opts.ShutdownAbortTimeout <= 0 {
@@ -137,16 +138,19 @@ func (h *Harness) CancelCurrentRun() bool {
 	return true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) setCurrentRunCancel(cancel context.CancelFunc) {
 	h.mu.Lock()
 	h.currentRunCancel = cancel
 	h.mu.Unlock()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) consumeOperatorCancel() bool {
 	return h.cancelByOperator.Swap(false)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) publish(taskID, cycleID string) {
 	if h.opts.Notifier == nil {
 		return
@@ -154,6 +158,7 @@ func (h *Harness) publish(taskID, cycleID string) {
 	h.opts.Notifier.PublishCycleChange(taskID, cycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) publishProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
 	if h.opts.ProgressNotifier == nil || ev.Kind == "" {
 		return

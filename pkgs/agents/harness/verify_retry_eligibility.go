@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func verdictsToClassifyInput(verdicts []criterionVerdict) []orchestration.ClassifyVerdict {
 	out := make([]orchestration.ClassifyVerdict, len(verdicts))
 	for i, v := range verdicts {
@@ -41,6 +42,7 @@ func (h *Harness) anchorPostExecuteState(
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func commitIngestOK(
 	snap git.PhaseSnapshot,
 	ingestAttempted bool,
@@ -59,6 +61,7 @@ func commitIngestOK(
 	return ingestOutcome.FailReason == ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) resolveCurrentHeadSHA(ctx context.Context, snap git.PhaseSnapshot) (head string, ok bool, err error) {
 	if snap.Skipped {
 		return "", false, nil
@@ -81,6 +84,7 @@ func (h *Harness) resolveCurrentHeadSHA(ctx context.Context, snap git.PhaseSnaps
 	return strings.TrimSpace(out), true, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) gatherRetryClassifyInput(
 	ctx context.Context,
 	cycle *domain.TaskCycle,

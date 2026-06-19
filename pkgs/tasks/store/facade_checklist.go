@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BackfillCriteriaSatisfiedAt sets criteria_satisfied_at for tasks whose
 // checklist is already complete. Idempotent migration helper.
 func BackfillCriteriaSatisfiedAt(ctx context.Context, db *gorm.DB) error {
@@ -50,6 +51,7 @@ func (s *Store) ReplaceChecklistVerifyCommands(ctx context.Context, taskID, item
 	return checklist.ReplaceVerifyCommands(ctx, s.db, taskID, itemID, cmds, by)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeVerifyCommands validates optional verify command inputs.
 func NormalizeVerifyCommands(in []VerifyCommandInput) ([]VerifyCommandInput, error) {
 	return checklist.NormalizeVerifyCommandInputs(in)

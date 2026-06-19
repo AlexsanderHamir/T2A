@@ -52,6 +52,7 @@ type Patch struct {
 	VerifyCommandTimeoutSeconds *int
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IsEmpty reports whether the patch has nothing to apply. Used by the
 // HTTP handler to short-circuit no-op PATCH calls without a DB write.
 // Skip-listed in cmd/funclogmeasure/analyze.go: pure five-pointer-nil

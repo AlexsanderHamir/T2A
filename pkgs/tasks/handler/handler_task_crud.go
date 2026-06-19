@@ -296,6 +296,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func projectFieldPatchToStore(p patchProjectField) *store.ProjectFieldPatch {
 	if !p.Defined {
 		return nil
@@ -306,6 +307,7 @@ func projectFieldPatchToStore(p patchProjectField) *store.ProjectFieldPatch {
 	return &store.ProjectFieldPatch{ID: p.SetID}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func gateFieldPatchToStore(p patchGateField) **domain.TaskGate {
 	if !p.Defined {
 		return nil

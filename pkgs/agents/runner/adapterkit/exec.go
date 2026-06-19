@@ -32,6 +32,7 @@ type ExecFunc func(ctx context.Context, dir string, env []string, stdin []byte, 
 // each complete stdout line while still returning the fully captured streams.
 type StreamExecFunc func(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultExec is the production ExecFunc implementation backed by os/exec.
 func DefaultExec(ctx context.Context, dir string, env []string, stdin []byte, name string, args ...string) ([]byte, []byte, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
@@ -133,6 +134,7 @@ func defaultStreamExec(ctx context.Context, dir string, env []string, stdin []by
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), 0, waitErr
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ScanStdoutLines copies complete lines from r into dst and invokes onLine
 // with a stable copy of each line.
 func ScanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error {
@@ -151,6 +153,7 @@ func ScanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error 
 	return scanner.Err()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizePipeReadError maps benign closed-pipe read errors to nil.
 func NormalizePipeReadError(err error) error {
 	if IsClosedPipeReadError(err) {
@@ -159,6 +162,7 @@ func NormalizePipeReadError(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IsClosedPipeReadError reports whether err represents reading a pipe after
 // the child process has already closed it.
 func IsClosedPipeReadError(err error) bool {

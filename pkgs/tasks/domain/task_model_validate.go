@@ -11,6 +11,7 @@ var (
 	taskMilestonePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$`)
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskTag returns ErrInvalidInput when tag does not match the wire rules.
 func ValidateTaskTag(tag string) error {
 	tag = strings.TrimSpace(tag)
@@ -23,6 +24,7 @@ func ValidateTaskTag(tag string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskTags validates every tag and rejects duplicates.
 func ValidateTaskTags(tags []string) error {
 	seen := make(map[string]struct{}, len(tags))
@@ -38,6 +40,7 @@ func ValidateTaskTags(tags []string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskMilestone returns ErrInvalidInput when milestone is non-empty but invalid.
 func ValidateTaskMilestone(milestone string) error {
 	milestone = strings.TrimSpace(milestone)
@@ -50,6 +53,7 @@ func ValidateTaskMilestone(milestone string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeTaskTags trims, drops empties, and de-duplicates while preserving order.
 func NormalizeTaskTags(tags []string) []string {
 	if len(tags) == 0 {

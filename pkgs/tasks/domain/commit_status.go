@@ -15,6 +15,7 @@ const (
 	CommitSuperseded CommitStatus = "superseded"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidCommitStatus reports whether s is a known commit status value.
 func ValidCommitStatus(s CommitStatus) bool {
 	switch s {
@@ -25,6 +26,7 @@ func ValidCommitStatus(s CommitStatus) bool {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // CommitStatusRank orders statuses for task-wide dedupe (higher wins).
 func CommitStatusRank(s CommitStatus) int {
 	switch s {

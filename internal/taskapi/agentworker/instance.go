@@ -22,6 +22,7 @@ type instance struct {
 	verifyRunner runner.Runner
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func instanceSnapshot(inst *instance, version string) *policy.InstanceSnapshot {
 	if inst == nil {
 		return nil
@@ -43,6 +44,7 @@ func instanceMatchesSettings(inst *instance, cfg store.AppSettings, version stri
 	return policy.InstanceMatchesSettings(instanceSnapshot(inst, version), cfg, version)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func verifyRunnerStatusForInstance(prev *instance, cfg store.AppSettings) string {
 	hasVerify := prev != nil && prev.verifyRunner != nil
 	return policy.VerifyRunnerStatus(hasVerify, cfg)

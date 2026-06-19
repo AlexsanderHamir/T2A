@@ -206,6 +206,7 @@ func (s *Store) ReadyForAgentPickup(ctx context.Context, t *domain.Task, now tim
 	return tasks.ReadyForAgentPickup(ctx, s.db, t, now)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Store) applyNotifyDecision(ctx context.Context, task domain.Task, d scheduling.NotifyDecision) {
 	if d.ScheduleWake != nil {
 		s.schedulePickupWake(ctx, task.ID, *d.ScheduleWake)

@@ -134,6 +134,7 @@ func ReadDefault(now time.Time) Snapshot {
 	return Read(prometheus.DefaultGatherer, now)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func newZeroSnapshot(now time.Time) Snapshot {
 	return Snapshot{
 		Now: now.UTC(),
@@ -156,11 +157,13 @@ func newZeroSnapshot(now time.Time) Snapshot {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func readBuildFromVersion() Build {
 	v, r, gv := version.PrometheusBuildInfoLabels()
 	return Build{Version: v, Revision: r, GoVersion: gv}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // applyFamily routes one MetricFamily into the matching Snapshot
 // slot. Unrelated families are ignored so /system/health stays
 // independent of Go runtime metrics drift.
@@ -202,6 +205,7 @@ func applyFamily(snap *Snapshot, mf *dto.MetricFamily) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyHTTPRequests(h *HTTP, mf *dto.MetricFamily) {
 	for _, m := range mf.GetMetric() {
 		c := m.GetCounter()
@@ -214,6 +218,7 @@ func applyHTTPRequests(h *HTTP, mf *dto.MetricFamily) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func classifyStatus(code string) string {
 	if len(code) == 0 {
 		return "other"
@@ -232,6 +237,7 @@ func classifyStatus(code string) string {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyHTTPDuration(h *HTTP, mf *dto.MetricFamily) {
 	// Aggregate buckets across all label combinations so the global
 	// p50/p95 reflects every request, not just one (method,route)
@@ -259,6 +265,7 @@ type mergedHistogram struct {
 	buckets []bucket
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mergeHistograms(mf *dto.MetricFamily) mergedHistogram {
 	totals := map[float64]uint64{}
 	var count uint64
@@ -284,6 +291,7 @@ func mergeHistograms(mf *dto.MetricFamily) mergedHistogram {
 	return mergedHistogram{count: count, buckets: out}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // percentileFromBuckets does a Prometheus-style linear interpolation
 // inside the bucket that contains the target rank. Behaviour matches
 // histogram_quantile() closely enough for an operator UI: it errs on
@@ -311,6 +319,7 @@ func percentileFromBuckets(mh mergedHistogram, q float64) float64 {
 	return mh.buckets[len(mh.buckets)-1].upperBound
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyAgentRuns(a *Agent, mf *dto.MetricFamily) {
 	for _, m := range mf.GetMetric() {
 		c := m.GetCounter()
@@ -333,6 +342,7 @@ func applyAgentRuns(a *Agent, mf *dto.MetricFamily) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyUptime(snap *Snapshot, mf *dto.MetricFamily) {
 	start := gaugeSum(mf)
 	if start <= 0 {
@@ -345,6 +355,7 @@ func applyUptime(snap *Snapshot, mf *dto.MetricFamily) {
 	snap.UptimeSeconds = delta
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func gaugeSum(mf *dto.MetricFamily) float64 {
 	var sum float64
 	for _, m := range mf.GetMetric() {
@@ -359,6 +370,7 @@ func gaugeSum(mf *dto.MetricFamily) float64 {
 	return sum
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func counterSum(mf *dto.MetricFamily) float64 {
 	var sum float64
 	for _, m := range mf.GetMetric() {
@@ -369,6 +381,7 @@ func counterSum(mf *dto.MetricFamily) float64 {
 	return sum
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func labelValue(m *dto.Metric, name string) string {
 	for _, lp := range m.GetLabel() {
 		if lp.GetName() == name {

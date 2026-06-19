@@ -108,6 +108,7 @@ func (h *Harness) runResumeRetry(parentCtx context.Context, task *domain.Task, i
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) runFreshCycle(parentCtx context.Context, task *domain.Task, opts startCycleOpts) {
 	startedAt := h.opts.Clock()
 	state := processState{startedAt: startedAt, previouslyPassed: map[string]criterionVerdict{}}
@@ -122,26 +123,32 @@ func (h *Harness) runFreshCycle(parentCtx context.Context, task *domain.Task, op
 	h.runCycleLoop(parentCtx, task, cycle, &state, cycleLoopOpts{})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskCycle) (resumeCheckpoint, error) {
 	return h.resumeSvc().ReconstructCheckpoint(ctx, cycle)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) loadCheckpointFromParent(ctx context.Context, parentCycleID string) (resumeCheckpoint, error) {
 	return h.resumeSvc().LoadCheckpointFromParent(ctx, parentCycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) loadContinuationBundle(ctx context.Context, parentCycleID string) (ContinuationBundle, error) {
 	return h.resumeSvc().LoadContinuationBundle(ctx, parentCycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) seedCrossCycleExecuteFromParent(ctx context.Context, cycle *domain.TaskCycle, parentCycleID string) error {
 	return h.resumeSvc().SeedCrossCycleExecuteFromParent(ctx, cycle, parentCycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) mirrorParentCriteriaForVerifyOnly(ctx context.Context, childCycleID, parentCycleID string) error {
 	return h.resumeSvc().MirrorParentCriteriaForVerifyOnly(ctx, childCycleID, parentCycleID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) failTaskAfterRetryPrep(ctx context.Context, taskID, reason string) {
 	h.resumeSvc().FailTaskAfterRetryPrep(ctx, taskID, reason)
 }

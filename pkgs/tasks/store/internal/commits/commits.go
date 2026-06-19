@@ -162,6 +162,7 @@ func ListCommitsForTask(ctx context.Context, db *gorm.DB, taskID string) ([]doma
 	return dedupeCommitsBySHA(rows), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func dedupeCommitsBySHA(rows []domain.TaskCycleCommit) []domain.TaskCycleCommit {
 	if len(rows) == 0 {
 		return nil

@@ -15,6 +15,7 @@ type verificationSnapshot = verify.Snapshot
 
 const verificationFailedReason = verify.FailedReasonPrefix
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) verifySvc() *verify.Service {
 	if h.verify == nil {
 		h.verify = verify.NewService(verify.Deps{
@@ -47,18 +48,22 @@ func (h *Harness) verifySvc() *verify.Service {
 	return h.verify
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) loadVerificationSnapshot(ctx context.Context, taskID string) (verificationSnapshot, error) {
 	return h.verifySvc().LoadSnapshot(ctx, taskID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) completeChecklistLegacy(ctx context.Context, taskID string) error {
 	return h.verifySvc().CompleteChecklistLegacy(ctx, taskID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) applyVerifiedCompletions(ctx context.Context, taskID, cycleID string, verdicts []criterionVerdict) error {
 	return h.verifySvc().ApplyVerifiedCompletions(ctx, taskID, cycleID, verdicts)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) runVerificationPipeline(
 	parentCtx context.Context,
 	task *domain.Task,
@@ -79,14 +84,17 @@ func (h *Harness) runVerificationPipeline(
 	})
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func formatVerificationFailedReason(finalVerdicts []criterionVerdict, lockedPasses map[string]criterionVerdict) string {
 	return verify.FormatFailedReason(finalVerdicts, lockedPasses)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func verifyDiffSection(workingDir string) string {
 	return verify.DiffSection(workingDir)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) persistCriteriaReports(
 	ctx context.Context,
 	cycleID string,

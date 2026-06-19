@@ -18,6 +18,7 @@ type projectPatchJSON struct {
 	ContextSummary *string               `json:"context_summary"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p projectPatchJSON) isEmpty() bool {
 	return p.Name == nil && p.Description == nil && p.Status == nil && p.ContextSummary == nil
 }
@@ -44,6 +45,7 @@ type projectContextPatchJSON struct {
 	Pinned *bool                      `json:"pinned"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p projectContextPatchJSON) isEmpty() bool {
 	return p.Kind == nil && p.Title == nil && p.Body == nil && p.Pinned == nil
 }
@@ -69,6 +71,7 @@ type projectContextEdgePatchJSON struct {
 	Note     *string                        `json:"note"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p projectContextEdgePatchJSON) isEmpty() bool {
 	return p.Relation == nil && p.Strength == nil && p.Note == nil
 }
