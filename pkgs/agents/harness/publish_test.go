@@ -32,11 +32,11 @@ type statusSnappingNotifier struct {
 }
 
 type progressCall struct {
-	TaskID             string
-	CycleID            string
-	PhaseSeq           int64
-	RunCorrelationID   string
-	Event              runner.ProgressEvent
+	TaskID           string
+	CycleID          string
+	PhaseSeq         int64
+	RunCorrelationID string
+	Event            runner.ProgressEvent
 }
 
 type recordingProgressNotifier struct {

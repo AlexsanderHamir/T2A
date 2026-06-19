@@ -93,10 +93,10 @@ type Harness struct {
 	resume *resume.Service
 	verify *verify.Service
 
-	mu               sync.Mutex
-	currentRunCancel context.CancelFunc
+	mu                      sync.Mutex
+	currentRunCancel        context.CancelFunc
 	currentRunCorrelationID string
-	cancelByOperator atomic.Bool
+	cancelByOperator        atomic.Bool
 }
 
 // New constructs a Harness with sensible defaults applied to opts.

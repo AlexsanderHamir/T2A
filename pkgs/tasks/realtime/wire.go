@@ -23,13 +23,13 @@ const (
 // Event is one JSON line sent as an SSE data frame. See docs/api.md and
 // docs/domain/sse-hub.md for wire contracts and enrichment rules.
 type Event struct {
-	Type              ChangeType          `json:"type"`
-	ID                string              `json:"id"`
-	CycleID           string              `json:"cycle_id,omitempty"`
-	PhaseSeq          int64               `json:"phase_seq,omitempty"`
-	RunCorrelationID  string              `json:"run_correlation_id,omitempty"`
-	Progress          *RunProgressPayload `json:"progress,omitempty"`
-	Data     any                 `json:"data,omitempty"`
+	Type             ChangeType          `json:"type"`
+	ID               string              `json:"id"`
+	CycleID          string              `json:"cycle_id,omitempty"`
+	PhaseSeq         int64               `json:"phase_seq,omitempty"`
+	RunCorrelationID string              `json:"run_correlation_id,omitempty"`
+	Progress         *RunProgressPayload `json:"progress,omitempty"`
+	Data             any                 `json:"data,omitempty"`
 }
 
 // RunProgressPayload is a normalized live runner update. Raw CLI JSON

@@ -1009,15 +1009,14 @@ time.task-attempt-meta-inline-item {
 }
 
 .task-attempt-phase-step-button:focus-visible {
-  outline: 2px solid rgba(99, 91, 255, 0.55);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .task-attempt-phase-step--filter-active .task-attempt-phase-step-main {
-  background: var(--color-brand-subtle, rgba(99, 91, 255, 0.08));
+  background: var(--brand-soft, var(--neutral-fill-subtle));
   border-radius: var(--radius-md);
-  outline: 2px solid rgba(99, 91, 255, 0.35);
-  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
 }
 
 .task-attempt-activity-filter-bar {

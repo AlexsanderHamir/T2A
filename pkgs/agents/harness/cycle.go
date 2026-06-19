@@ -25,14 +25,14 @@ import (
 // task. The deferred panic-recovery and the shutdown branch use it to
 // decide which cleanup writes are still needed.
 type processState struct {
-	cycleID         string
-	cycleStarted    bool
-	runningPhase    domain.Phase
-	runningPhaseSeq int64
+	cycleID          string
+	cycleStarted     bool
+	runningPhase     domain.Phase
+	runningPhaseSeq  int64
 	runCorrelationID string
-	verifySnap      verificationSnapshot
-	verifyAttempt   int
-	verifyFeedback  string
+	verifySnap       verificationSnapshot
+	verifyAttempt    int
+	verifyFeedback   string
 	// previouslyPassed accumulates criterion verdicts that earlier
 	// retry attempts proved passed. Keyed by criterion ID; carried in
 	// memory across the retry loop so the next execute prompt can list
@@ -199,17 +199,17 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 	}
 	streamIdleStuck, onStreamIdle := h.streamIdleRunnerFields(onProgress)
 	return h.runner.Run(runCtx, runner.Request{
-		TaskID:             task.ID,
-		AttemptSeq:         cycle.AttemptSeq,
-		Phase:              domain.PhaseExecute,
-		Prompt:             prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
-		WorkingDir:         h.opts.WorkingDir,
-		Timeout:            h.opts.RunTimeout,
-		CursorModel:        task.CursorModel,
-		RunCorrelationID:   runCorrelationID,
-		StreamIdleStuck:    streamIdleStuck,
-		OnStreamIdle:       onStreamIdle,
-		OnProgress:         onProgress,
+		TaskID:           task.ID,
+		AttemptSeq:       cycle.AttemptSeq,
+		Phase:            domain.PhaseExecute,
+		Prompt:           prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
+		WorkingDir:       h.opts.WorkingDir,
+		Timeout:          h.opts.RunTimeout,
+		CursorModel:      task.CursorModel,
+		RunCorrelationID: runCorrelationID,
+		StreamIdleStuck:  streamIdleStuck,
+		OnStreamIdle:     onStreamIdle,
+		OnProgress:       onProgress,
 	})
 }
 

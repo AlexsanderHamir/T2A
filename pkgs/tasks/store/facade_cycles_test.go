@@ -1010,10 +1010,10 @@ func TestStore_DualWrite_StartPhase_backfills_event_seq(t *testing.T) {
 		wantType: domain.EventPhaseStarted,
 		wantBy:   domain.ActorAgent,
 		wantPayload: map[string]any{
-			"cycle_id":             cyc.ID,
-			"phase":                "execute",
-			"phase_seq":            int(ph.PhaseSeq),
-			"run_correlation_id":   runID,
+			"cycle_id":           cyc.ID,
+			"phase":              "execute",
+			"phase_seq":          int(ph.PhaseSeq),
+			"run_correlation_id": runID,
 		},
 	})
 	if ev.Seq != *ph.EventSeq {
