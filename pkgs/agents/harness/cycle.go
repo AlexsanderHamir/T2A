@@ -57,21 +57,7 @@ type processState struct {
 // The worker owns queue admission (reload, readiness, ready→running) and
 // ack ordering before calling Run.
 func (h *Harness) Run(parentCtx context.Context, task *domain.Task) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.Run",
-		"task_id", task.ID)
-	startedAt := h.opts.Clock()
-	state := processState{startedAt: startedAt, previouslyPassed: map[string]criterionVerdict{}}
-
-	defer h.recoverFromPanic(&state, *task)
-
-	cycle, ok := h.startCycle(parentCtx, task, &state)
-	if !ok {
-		h.bestEffortFailTask(parentCtx, task.ID)
-		return
-	}
-
-	state.verifySnap, _ = h.loadVerificationSnapshot(parentCtx, task.ID)
-	h.runCycleLoop(parentCtx, task, cycle, &state, cycleLoopOpts{})
+	h.RunWithRetry(parentCtx, task, nil)
 }
 
 // transitionTask flips the task to next; returns false on any store
@@ -106,7 +92,7 @@ func (h *Harness) transitionTask(ctx context.Context, taskID string, next domain
 // the CycleMetaProvider interface; metric model labels from
 // MetricsLabeler. Both may produce "" and that empty string is the
 // truth, not a placeholder.
-func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
+func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *processState, opts startCycleOpts) (*domain.TaskCycle, bool) {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.startCycle",
 		"task_id", task.ID)
 	req := runner.Request{
@@ -117,11 +103,16 @@ func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *proc
 		CursorModel: task.CursorModel,
 	}
 	meta := buildCycleMeta(h.runner, task.InitialPrompt, req)
-	cycle, err := h.store.StartCycle(ctx, store.StartCycleInput{
-		TaskID:      task.ID,
-		TriggeredBy: domain.ActorAgent,
-		Meta:        meta,
-	})
+	if opts.retryMode != "" {
+		meta = mergeCycleMetaBytes(meta, map[string]any{"retry_mode": string(opts.retryMode)})
+	}
+	in := store.StartCycleInput{
+		TaskID:        task.ID,
+		TriggeredBy:   domain.ActorAgent,
+		ParentCycleID: opts.parentCycleID,
+		Meta:          meta,
+	}
+	cycle, err := h.store.StartCycle(ctx, in)
 	if err != nil {
 		slog.Warn("agent harness StartCycle failed", "cmd", harnessLogCmd,
 			"operation", "agent.harness.Harness.startCycle.err", "task_id", task.ID, "err", err)

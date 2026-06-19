@@ -47,6 +47,25 @@ func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
 	return b
 }
 
+// mergeCycleMetaBytes overlays extra keys onto cycle MetaJSON bytes.
+func mergeCycleMetaBytes(base []byte, extra map[string]any) []byte {
+	if len(extra) == 0 {
+		return base
+	}
+	out := map[string]any{}
+	if len(base) > 0 {
+		_ = json.Unmarshal(base, &out)
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return base
+	}
+	return b
+}
+
 // sha256Hex returns the lowercase hex SHA-256 of s. The worker writes
 // this into MetaJSON.prompt_hash so the audit trail can correlate runs
 // of the same prompt across replays without storing the prompt itself.

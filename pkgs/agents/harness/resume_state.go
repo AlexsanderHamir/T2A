@@ -68,35 +68,14 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 		return cp, fmt.Errorf("resume: cannot continue from phase %q status %q", last.Phase, last.Status)
 	}
 
-	verifyRows, err := h.store.ListVerifyReportsForCycle(ctx, cycle.ID)
+	previouslyPassed, maxAttempt, verifyFeedback, err := h.loadVerifyCheckpointData(ctx, cycle.ID)
 	if err != nil {
 		return cp, err
 	}
-	var maxAttempt int64
-	for _, row := range verifyRows {
-		if row.AttemptSeq > maxAttempt {
-			maxAttempt = row.AttemptSeq
-		}
-		if !row.Verified {
-			continue
-		}
-		if _, ok := cp.previouslyPassed[row.CriterionID]; ok {
-			continue
-		}
-		cp.previouslyPassed[row.CriterionID] = criterionVerdict{
-			id:        row.CriterionID,
-			passed:    true,
-			evidence:  "",
-			verifier:  row.VerifierKind,
-			reasoning: row.Reasoning,
-		}
-	}
+	cp.previouslyPassed = previouslyPassed
 	if maxAttempt > 0 {
 		cp.verifyAttempt = int(maxAttempt)
-	}
-
-	if maxAttempt > 0 {
-		cp.verifyFeedback = buildVerifyFeedbackFromRows(verifyRows, maxAttempt)
+		cp.verifyFeedback = verifyFeedback
 	}
 
 	commits, err := h.store.ListCommitsForCycle(ctx, cycle.ID)
@@ -106,6 +85,70 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 	cp.knownCommits = commits
 
 	return cp, nil
+}
+
+func (h *Harness) loadCheckpointFromParent(ctx context.Context, parentCycleID string) (resumeCheckpoint, error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.loadCheckpointFromParent",
+		"parent_cycle_id", parentCycleID)
+	var cp resumeCheckpoint
+	cp.previouslyPassed = map[string]criterionVerdict{}
+	parentCycleID = strings.TrimSpace(parentCycleID)
+	if parentCycleID == "" {
+		return cp, fmt.Errorf("resume parent: empty cycle id")
+	}
+	cycle, err := h.store.GetCycle(ctx, parentCycleID)
+	if err != nil {
+		return cp, err
+	}
+	if !domain.TerminalCycleStatus(cycle.Status) {
+		return cp, fmt.Errorf("resume parent: cycle status %q is not terminal", cycle.Status)
+	}
+	previouslyPassed, maxAttempt, verifyFeedback, err := h.loadVerifyCheckpointData(ctx, parentCycleID)
+	if err != nil {
+		return cp, err
+	}
+	cp.previouslyPassed = previouslyPassed
+	cp.verifyFeedback = verifyFeedback
+	_ = maxAttempt // cross-cycle resume always starts verifyAttempt at 0 in runResumeRetry
+	commits, err := h.store.ListCommitsForCycle(ctx, parentCycleID)
+	if err != nil {
+		return cp, err
+	}
+	cp.knownCommits = commits
+	cp.entry = resumeEntryExecute
+	return cp, nil
+}
+
+func (h *Harness) loadVerifyCheckpointData(ctx context.Context, cycleID string) (map[string]criterionVerdict, int64, string, error) {
+	previouslyPassed := map[string]criterionVerdict{}
+	verifyRows, err := h.store.ListVerifyReportsForCycle(ctx, cycleID)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	var maxAttempt int64
+	for _, row := range verifyRows {
+		if row.AttemptSeq > maxAttempt {
+			maxAttempt = row.AttemptSeq
+		}
+		if !row.Verified {
+			continue
+		}
+		if _, ok := previouslyPassed[row.CriterionID]; ok {
+			continue
+		}
+		previouslyPassed[row.CriterionID] = criterionVerdict{
+			id:        row.CriterionID,
+			passed:    true,
+			evidence:  "",
+			verifier:  row.VerifierKind,
+			reasoning: row.Reasoning,
+		}
+	}
+	feedback := ""
+	if maxAttempt > 0 {
+		feedback = buildVerifyFeedbackFromRows(verifyRows, maxAttempt)
+	}
+	return previouslyPassed, maxAttempt, feedback, nil
 }
 
 func isInterruptPhase(p domain.TaskCyclePhase) bool {
