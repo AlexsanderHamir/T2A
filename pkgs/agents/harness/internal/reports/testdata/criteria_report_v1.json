@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "criteria": [
+    {
+      "id": "criterion-a",
+      "claimed_done": true,
+      "evidence": "Implemented feature X with unit tests."
+    }
+  ]
+}
