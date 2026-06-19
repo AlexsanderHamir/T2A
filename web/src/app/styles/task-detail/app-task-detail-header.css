@@ -22,13 +22,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2) var(--space-4);
-  align-items: start;
+  align-items: center;
   padding-bottom: var(--space-5);
   margin-bottom: 0;
   border-bottom: 1px solid var(--border-hairline);
 }
 
-.task-detail-title {
+/* `.panel h2` (app-panel.css) is more specific than a lone class and was
+   shrinking the hero title to `--text-lg` plus adding `--space-4` bottom
+   margin — both threw off vertical rhythm against the meta chip row. */
+.task-detail-header .task-detail-title {
   grid-column: 1;
   grid-row: 1;
   margin: 0;
@@ -43,19 +46,38 @@
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
-  align-self: start;
+  align-self: center;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   justify-content: flex-end;
-  /* Default flex `align-items: stretch` made status/priority pills match a
-     taller runtime column; keep start alignment so pill heights stay natural. */
   align-items: center;
   max-width: min(100%, 28rem);
 }
 
+/* One chip track so status badge, priority dot, and runtime pill share a
+   common vertical center — mixed ui-badge vs cell-pill padding was the
+   main source of the "floating dot" look in the header. */
+.task-detail-meta .ui-badge,
+.task-detail-meta .cell-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 1.375rem;
+  padding-block: 0.12rem;
+  padding-inline: 0.5rem;
+  line-height: 1.25;
+}
+
+.task-detail-meta .cell-pill {
+  border: 1px solid transparent;
+}
+
 .task-detail-meta .task-list-priority-dot {
   flex-shrink: 0;
+  align-self: center;
+  margin-inline: 0;
 }
 
 /* Runtime identity chip in the header — cap width for long model names. */
