@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker"
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -15,14 +17,11 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-// supervisorTestRig wires a real store + queue + hub against an
-// in-memory SQLite DB and lets each test inject a stub probe so the
-// supervisor never spawns a real cursor binary.
 type supervisorTestRig struct {
 	store *store.Store
 	queue *agents.MemoryQueue
 	hub   *handler.SSEHub
-	sup   *agentWorkerSupervisor
+	sup   *agentworker.Supervisor
 }
 
 func newSupervisorTestRig(t *testing.T, ctx context.Context, probeFn func(ctx context.Context, id, bin string, timeout time.Duration) (string, string, error)) *supervisorTestRig {
@@ -31,20 +30,15 @@ func newSupervisorTestRig(t *testing.T, ctx context.Context, probeFn func(ctx co
 	q := agents.NewMemoryQueue(8)
 	st.SetReadyTaskNotifier(q)
 	hub := handler.NewSSEHub()
-	sup := newAgentWorkerSupervisor(ctx, st, q, hub)
+	sup := agentworker.New(ctx, st, q, hub)
 	if probeFn != nil {
-		sup.probe = probeFn
+		sup.SetProbeForTest(probeFn)
 	}
-	sup.probeBudge = 200 * time.Millisecond
+	sup.SetProbeBudgetForTest(200 * time.Millisecond)
 	t.Cleanup(sup.Drain)
 	return &supervisorTestRig{store: st, queue: q, hub: hub, sup: sup}
 }
 
-// TestSupervisor_StaysIdleWhenRepoRootEmpty pins the documented "no
-// repo configured -> worker idle" branch. The probe must NOT be called
-// (that's the whole point of the early idle return: an operator who
-// hasn't picked a repo root yet won't see misleading "cursor not
-// installed" errors).
 func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -60,10 +54,7 @@ func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur != nil {
+	if rig.sup.HasRunningInstance() {
 		t.Errorf("supervisor spawned worker despite empty repo root")
 	}
 	if probeCalled {
@@ -71,11 +62,6 @@ func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 	}
 }
 
-// TestSupervisor_StaysIdleWhenAgentPaused pins the operator-facing
-// soft-pause idle path. The pause flag is the only "stop dequeuing"
-// knob today (there is no separate enabled/disabled master switch);
-// it must short-circuit before the probe so a paused process doesn't
-// burn its probe budget on every Reload.
 func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,18 +75,15 @@ func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
 		t.Fatalf("seed settings: %v", err)
 	}
 	probeCalled := false
-	rig.sup.probe = func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
+	rig.sup.SetProbeForTest(func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		probeCalled = true
 		return "x", "", nil
-	}
+	})
 
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur != nil {
+	if rig.sup.HasRunningInstance() {
 		t.Errorf("supervisor spawned worker despite AgentPaused=true")
 	}
 	if probeCalled {
@@ -108,12 +91,6 @@ func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
 	}
 }
 
-// TestSupervisor_ReloadStopsRunningWorkerOnPause covers the live-pause
-// path: a worker that was happily running must stop on the next
-// Reload after AgentPaused flips to true. instanceMatchesSettings has
-// to honor the flag for this to work — without that, Reload would
-// observe "all the runner-shaped fields match" and skip the restart,
-// leaving the worker dequeuing despite the operator's pause click.
 func TestSupervisor_ReloadStopsRunningWorkerOnPause(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -130,12 +107,9 @@ func TestSupervisor_ReloadStopsRunningWorkerOnPause(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	if rig.sup.current == nil {
-		rig.sup.mu.Unlock()
+	if !rig.sup.HasRunningInstance() {
 		t.Fatal("precondition: supervisor failed to spawn worker for valid config")
 	}
-	rig.sup.mu.Unlock()
 
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
 		AgentPaused: ptrBool(true),
@@ -146,18 +120,11 @@ func TestSupervisor_ReloadStopsRunningWorkerOnPause(t *testing.T) {
 		t.Fatalf("Reload after pause: %v", err)
 	}
 
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur != nil {
+	if rig.sup.HasRunningInstance() {
 		t.Errorf("supervisor kept worker running despite AgentPaused=true after Reload")
 	}
 }
 
-// TestSupervisor_ProbeFailureKeepsIdle ensures a failing probe (e.g.
-// cursor not installed) does not crash boot — instead the supervisor
-// stays idle and Start returns nil. This is what makes the "configure
-// later through the SPA" UX work.
 func TestSupervisor_ProbeFailureKeepsIdle(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -175,18 +142,11 @@ func TestSupervisor_ProbeFailureKeepsIdle(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start should not surface probe failure: %v", err)
 	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur != nil {
+	if rig.sup.HasRunningInstance() {
 		t.Errorf("supervisor spawned worker despite probe failure")
 	}
 }
 
-// TestSupervisor_StartsWorkerWhenConfigured exercises the happy path:
-// repo root + worker enabled + probe ok = a running worker. Pins the
-// invariant that current is non-nil after Start so the SPA "Status"
-// panel can show the runner version sourced from the live worker.
 func TestSupervisor_StartsWorkerWhenConfigured(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,22 +164,15 @@ func TestSupervisor_StartsWorkerWhenConfigured(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur == nil {
+	if !rig.sup.HasRunningInstance() {
 		t.Fatal("supervisor failed to spawn worker for valid config")
 	}
-	if cur.runner == nil || cur.runner.Version() != "test-version-1.2.3" {
-		t.Errorf("runner version mismatch: got %v", cur.runner)
+	version, ok := rig.sup.RunningInstanceRunnerVersion()
+	if !ok || version != "test-version-1.2.3" {
+		t.Errorf("runner version mismatch: got %q ok=%v", version, ok)
 	}
 }
 
-// TestSupervisor_ReloadRespawnsOnRepoRootChange covers the hot-reload
-// path that makes the SPA Save button feel instant: changing the repo
-// root tears down the old worker and spawns a new one with the new
-// settings. Without the respawn the SPA would have to instruct the
-// operator to restart the process.
 func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -237,10 +190,8 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	first := rig.sup.current
-	rig.sup.mu.Unlock()
-	if first == nil {
+	first := rig.sup.RunningInstanceIdentity()
+	if first == 0 {
 		t.Fatal("first start did not spawn worker")
 	}
 
@@ -253,25 +204,19 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 	if err := rig.sup.Reload(ctx); err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	rig.sup.mu.Lock()
-	second := rig.sup.current
-	rig.sup.mu.Unlock()
-	if second == nil {
+	second := rig.sup.RunningInstanceIdentity()
+	if second == 0 {
 		t.Fatal("reload dropped worker for valid config")
 	}
 	if second == first {
 		t.Error("reload did not respawn worker on repo root change")
 	}
-	if second.settings.RepoRoot != dirB {
-		t.Errorf("worker settings.RepoRoot = %q, want %q", second.settings.RepoRoot, dirB)
+	repoRoot, ok := rig.sup.RunningInstanceRepoRoot()
+	if !ok || repoRoot != dirB {
+		t.Errorf("worker repo root = %q ok=%v, want %q", repoRoot, ok, dirB)
 	}
 }
 
-// TestSupervisor_ReloadSkipsRespawnOnNoMaterialChange protects against
-// gratuitous worker churn: if PATCH /settings lands without changing
-// any field the supervisor cares about, the in-flight worker stays.
-// Without this check, every Save click would interrupt an in-flight
-// run for no reason.
 func TestSupervisor_ReloadSkipsRespawnOnNoMaterialChange(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -288,25 +233,17 @@ func TestSupervisor_ReloadSkipsRespawnOnNoMaterialChange(t *testing.T) {
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	rig.sup.mu.Lock()
-	first := rig.sup.current
-	rig.sup.mu.Unlock()
+	first := rig.sup.RunningInstanceIdentity()
 
 	if err := rig.sup.Reload(ctx); err != nil {
 		t.Fatalf("reload (no-op): %v", err)
 	}
-	rig.sup.mu.Lock()
-	second := rig.sup.current
-	rig.sup.mu.Unlock()
+	second := rig.sup.RunningInstanceIdentity()
 	if first != second {
-		t.Errorf("reload respawned worker without material change (first=%p second=%p)", first, second)
+		t.Errorf("reload respawned worker without material change (first=%x second=%x)", first, second)
 	}
 }
 
-// TestSupervisor_CancelCurrentRun_idleReturnsFalse pins the documented
-// "no run in flight = no-op" semantic so the HTTP handler can call
-// CancelCurrentRun unconditionally and use the return value to decide
-// whether to fan out an SSE event.
 func TestSupervisor_CancelCurrentRun_idleReturnsFalse(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -318,9 +255,6 @@ func TestSupervisor_CancelCurrentRun_idleReturnsFalse(t *testing.T) {
 	}
 }
 
-// TestSupervisor_DrainAfterDrainIsNoOp covers the documented idempotent
-// shutdown: signal handlers fire, Drain runs, and any deferred cleanup
-// that calls Drain again should be a safe no-op rather than a panic.
 func TestSupervisor_DrainAfterDrainIsNoOp(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -331,24 +265,6 @@ func TestSupervisor_DrainAfterDrainIsNoOp(t *testing.T) {
 	rig.sup.Drain()
 }
 
-// TestSupervisor_ConcurrentReloadIsSerialized pins the supervisor's
-// Reload contract: concurrent calls (e.g. two PATCH /settings requests
-// landing within the probe budget) must be serialized end-to-end so
-// they observe each other's effects on s.current. Before the
-// applyMu fix, applySettings released the lifecycle mutex during the
-// long-running probe + build + spawn section: two Reloads could both
-// snapshot the same prev pointer, both proceed to spawn fresh worker
-// goroutines, and the second one would overwrite s.current — leaking
-// the worker the first call had just spawned (its cancelCtx never
-// fires, its goroutine drains the ready queue forever). The defect
-// surfaces as "two probes ran concurrently": probe is the slowest
-// observable step and a fast-and-loose proxy for the spawn race
-// because both paths must traverse it before the supervisor mutates
-// s.current. We also assert that applyMu's contract is end-to-end —
-// the second Reload's probe MUST run after the first Reload has
-// already updated s.current, so it can observe the new prev (set by
-// instanceMatchesSettings to a no-op respawn or correctly tear down
-// the previous-previous worker via stopWorkerInstance).
 func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -358,12 +274,9 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 		probeMu       sync.Mutex
 		concurrentMax int32
 		concurrentNow int32
-		// blockProbe gate is replaced under probeMu when we want
-		// to switch the probe behaviour from fast (Start) to slow
-		// (concurrent Reload).
-		blockProbe = make(chan struct{})
+		blockProbe    = make(chan struct{})
 	)
-	close(blockProbe) // Start phase: no blocking.
+	close(blockProbe)
 
 	getGate := func() chan struct{} {
 		probeMu.Lock()
@@ -398,8 +311,6 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 		t.Fatalf("Start should have probed exactly once (concurrentMax=%d)", concurrentMax)
 	}
 
-	// Switch to a blocking gate so concurrent Reloads pile up
-	// inside the probe and we can measure overlap.
 	probeMu.Lock()
 	blockProbe = make(chan struct{})
 	probeMu.Unlock()
@@ -422,10 +333,6 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 			errs <- rig.sup.Reload(ctx)
 		}()
 	}
-	// Give both goroutines time to enter the probe (or be blocked
-	// at applyMu, depending on the fix). 200ms is comfortably above
-	// the 5ms scheduling jitter floor on Windows runners and well
-	// below the t.Cleanup -> Drain bound.
 	time.Sleep(200 * time.Millisecond)
 	probeMu.Lock()
 	close(blockProbe)
@@ -439,16 +346,14 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	}
 
 	if got := atomic.LoadInt32(&concurrentMax); got > 1 {
-		t.Errorf("Reload not serialized: %d probes ran concurrently (want <=1) — concurrent applySettings can leak worker goroutines by overwriting s.current after both probes return", got)
+		t.Errorf("Reload not serialized: %d probes ran concurrently (want <=1)", got)
 	}
-	rig.sup.mu.Lock()
-	cur := rig.sup.current
-	rig.sup.mu.Unlock()
-	if cur == nil {
+	if !rig.sup.HasRunningInstance() {
 		t.Fatal("supervisor lost worker after concurrent Reload")
 	}
-	if cur.settings.RepoRoot != dirB {
-		t.Errorf("final worker settings.RepoRoot = %q, want %q (last write wins)", cur.settings.RepoRoot, dirB)
+	repoRoot, ok := rig.sup.RunningInstanceRepoRoot()
+	if !ok || repoRoot != dirB {
+		t.Errorf("final worker repo root = %q ok=%v, want %q", repoRoot, ok, dirB)
 	}
 }
 
@@ -456,13 +361,6 @@ func ptrBool(v bool) *bool           { return &v }
 func ptrString(v string) *string     { return &v }
 func ptrTime(v time.Time) *time.Time { return &v }
 
-// TestDecideSchedulingIdleHint_unitTable pins the truth table for the
-// pure helper. The hint must fire ONLY when the queue is empty AND
-// there is at least one ready+future row — every other combination
-// (queue non-empty, no scheduled rows, both empty) returns "" so the
-// supervisor's effective-config log line stays uncluttered. This is
-// the operator-visible "0 ready, N scheduled" vs "0 ready, 0
-// scheduled" distinction promised in docs/data-model.md.
 func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -473,39 +371,27 @@ func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
 	}{
 		{"queue-non-empty/some-scheduled", false, 5, ""},
 		{"queue-non-empty/no-scheduled", false, 0, ""},
-		{"queue-empty/some-scheduled", true, 1, SchedulingIdleHintReason},
-		{"queue-empty/many-scheduled", true, 42, SchedulingIdleHintReason},
+		{"queue-empty/some-scheduled", true, 1, policy.SchedulingIdleHintReason},
+		{"queue-empty/many-scheduled", true, 42, policy.SchedulingIdleHintReason},
 		{"queue-empty/no-scheduled", true, 0, ""},
 		{"queue-empty/negative-defensive", true, -1, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := decideSchedulingIdleHint(c.queueEmpty, c.scheduledCount); got != c.want {
-				t.Fatalf("decideSchedulingIdleHint(%v, %d) = %q, want %q",
+			if got := policy.DecideSchedulingIdleHint(c.queueEmpty, c.scheduledCount); got != c.want {
+				t.Fatalf("DecideSchedulingIdleHint(%v, %d) = %q, want %q",
 					c.queueEmpty, c.scheduledCount, got, c.want)
 			}
 		})
 	}
 }
 
-// TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask is the
-// integration counterpart: drive the real supervisor against an
-// in-memory store seeded so the queue is empty (no ready+now rows)
-// but the scheduled count is positive (one ready+future row), then
-// assert probeSchedulingHint returns the documented reason. The
-// alternate seedings (queue non-empty / nothing scheduled) are
-// covered by the unit-table test above; this test pins the wire-up
-// (store -> probe -> hint).
 func TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	rig := newSupervisorTestRig(t, ctx, nil)
-	// One ready task scheduled an hour into the future.
-	// ListReadyTaskQueueCandidates excludes it (filter:
-	// pickup_not_before <= now). stats.Scheduled counts it
-	// (predicate: pickup_not_before > now).
 	future := time.Now().UTC().Add(time.Hour)
 	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
 		Title:           "deferred",
@@ -516,26 +402,18 @@ func TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask(t *testing.T)
 		t.Fatalf("create deferred task: %v", err)
 	}
 
-	hint := rig.sup.probeSchedulingHint(ctx)
-	if hint != SchedulingIdleHintReason {
-		t.Fatalf("probeSchedulingHint = %q, want %q (ready+future task should fire the hint)",
-			hint, SchedulingIdleHintReason)
+	hint := rig.sup.ProbeSchedulingHintForTest(ctx)
+	if hint != policy.SchedulingIdleHintReason {
+		t.Fatalf("probeSchedulingHint = %q, want %q", hint, policy.SchedulingIdleHintReason)
 	}
 }
 
-// TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow pins
-// the negative case: when at least one ready task is dequeue-eligible
-// right now, the supervisor must NOT surface "awaiting_scheduled_task"
-// even if other ready rows are scheduled for later. Otherwise the log
-// line would mislead operators into thinking the worker is idle when
-// it actually has work pending.
 func TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	rig := newSupervisorTestRig(t, ctx, nil)
-	// One ready+now (no schedule) task → queue non-empty.
 	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
 		Title:    "ready-now",
 		Priority: domain.PriorityMedium,
@@ -543,7 +421,6 @@ func TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow(t *testing.T)
 	}, domain.ActorUser); err != nil {
 		t.Fatalf("create ready-now task: %v", err)
 	}
-	// Plus one ready+future task → stats.Scheduled = 1.
 	future := time.Now().UTC().Add(time.Hour)
 	if _, err := rig.store.Create(ctx, store.CreateTaskInput{
 		Title:           "deferred",
@@ -554,30 +431,22 @@ func TestSupervisor_probeSchedulingHint_silentWhenQueueHasReadyNow(t *testing.T)
 		t.Fatalf("create deferred task: %v", err)
 	}
 
-	if hint := rig.sup.probeSchedulingHint(ctx); hint != "" {
-		t.Fatalf("probeSchedulingHint = %q, want \"\" (queue non-empty must suppress the hint)", hint)
+	if hint := rig.sup.ProbeSchedulingHintForTest(ctx); hint != "" {
+		t.Fatalf("probeSchedulingHint = %q, want \"\"", hint)
 	}
 }
 
-// TestSupervisor_probeSchedulingHint_silentWhenNothingScheduled pins
-// the truly-idle case: empty database (no ready, no scheduled). The
-// supervisor must not invent a reason — the absence of work is just
-// "0 ready, 0 scheduled", not "awaiting_scheduled_task".
 func TestSupervisor_probeSchedulingHint_silentWhenNothingScheduled(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	rig := newSupervisorTestRig(t, ctx, nil)
-	if hint := rig.sup.probeSchedulingHint(ctx); hint != "" {
-		t.Fatalf("probeSchedulingHint = %q, want \"\" (empty DB must not fire the hint)", hint)
+	if hint := rig.sup.ProbeSchedulingHintForTest(ctx); hint != "" {
+		t.Fatalf("probeSchedulingHint = %q, want \"\"", hint)
 	}
 }
 
-// TestSupervisor_buildVerifyRunner_returnsNilWhenUnconfigured pins the
-// V1 default: with VerifyRunnerName="" the supervisor must NOT build a
-// second runner. Verify reuses the execute runner and the worker sees
-// Options.VerifyRunner=nil.
 func TestSupervisor_buildVerifyRunner_returnsNilWhenUnconfigured(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -587,18 +456,12 @@ func TestSupervisor_buildVerifyRunner_returnsNilWhenUnconfigured(t *testing.T) {
 		t.Fatal("probe must not be called when VerifyRunnerName is empty")
 		return "", "", nil
 	})
-	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{Runner: "cursor", VerifyRunnerName: ""})
+	r, status := rig.sup.BuildVerifyRunnerForTest(ctx, store.AppSettings{Runner: "cursor", VerifyRunnerName: ""})
 	if r != nil || status != "" {
 		t.Fatalf("buildVerifyRunner(unconfigured) = (%v, %q), want (nil, \"\")", r, status)
 	}
 }
 
-// TestSupervisor_buildVerifyRunner_demotesOnProbeFailure pins the
-// "fail loudly, keep running" contract: a probe error for the verify
-// runner MUST NOT block the worker. The verify pass demotes to
-// "reuse execute runner" with a stable demote_probe_failed status so
-// the operator can see it in the effective-config log without losing
-// throughput.
 func TestSupervisor_buildVerifyRunner_demotesOnProbeFailure(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -609,7 +472,7 @@ func TestSupervisor_buildVerifyRunner_demotesOnProbeFailure(t *testing.T) {
 		probeCalls++
 		return "", "", errors.New("verify binary not found")
 	})
-	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{
+	r, status := rig.sup.BuildVerifyRunnerForTest(ctx, store.AppSettings{
 		Runner:           "cursor",
 		VerifyRunnerName: "claudecode",
 	})
@@ -624,10 +487,6 @@ func TestSupervisor_buildVerifyRunner_demotesOnProbeFailure(t *testing.T) {
 	}
 }
 
-// TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName pins
-// the optimisation: configuring VerifyRunnerName=Runner is equivalent
-// to leaving it empty. We must not build/probe the runner twice — the
-// status label "reuse_execute_runner" makes this visible in logs.
 func TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -637,7 +496,7 @@ func TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName(t *testing.
 		t.Fatal("probe must not be called when verify == execute")
 		return "", "", nil
 	})
-	r, status := rig.sup.buildVerifyRunner(ctx, store.AppSettings{
+	r, status := rig.sup.BuildVerifyRunnerForTest(ctx, store.AppSettings{
 		Runner:           "cursor",
 		VerifyRunnerName: "cursor",
 	})
@@ -646,36 +505,32 @@ func TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName(t *testing.
 	}
 }
 
-// TestInstanceMatchesSettings_restartsOnVerifyRunnerChange pins the
-// hot-reload trigger: editing VerifyRunnerName via the settings page
-// must force a restart, otherwise the running worker would silently
-// keep the old verify runner. Same property for VerifyRunnerModel.
 func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
 	t.Parallel()
-	prev := &agentWorkerInstance{
-		settings: store.AppSettings{
+	prev := &policy.InstanceSnapshot{
+		Settings: store.AppSettings{
 			Runner:            "cursor",
 			VerifyRunnerName:  "claudecode",
 			VerifyRunnerModel: "opus",
 			RepoRoot:          "/x",
 		},
 	}
-	matches := instanceMatchesSettings(prev, store.AppSettings{
+	matches := policy.InstanceMatchesSettings(prev, store.AppSettings{
 		Runner:            "cursor",
 		VerifyRunnerName:  "claudecode",
 		VerifyRunnerModel: "sonnet-4.5",
 		RepoRoot:          "/x",
 	}, "")
 	if matches {
-		t.Fatal("expected restart trigger on VerifyRunnerModel change; instanceMatchesSettings returned true")
+		t.Fatal("expected restart trigger on VerifyRunnerModel change")
 	}
-	matches = instanceMatchesSettings(prev, store.AppSettings{
+	matches = policy.InstanceMatchesSettings(prev, store.AppSettings{
 		Runner:            "cursor",
 		VerifyRunnerName:  "cursor",
 		VerifyRunnerModel: "opus",
 		RepoRoot:          "/x",
 	}, "")
 	if matches {
-		t.Fatal("expected restart trigger on VerifyRunnerName change; instanceMatchesSettings returned true")
+		t.Fatal("expected restart trigger on VerifyRunnerName change")
 	}
 }

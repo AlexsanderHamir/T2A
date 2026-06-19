@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -64,7 +65,7 @@ type taskAPIApp struct {
 	taskStore   *store.Store
 	hub         *handler.SSEHub
 	agentQueue  *agents.MemoryQueue
-	agentWorker *agentWorkerSupervisor
+	agentWorker *agentworker.Supervisor
 }
 
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {

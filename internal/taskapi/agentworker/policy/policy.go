@@ -42,8 +42,8 @@ func DecideIdle(cfg store.AppSettings, checkRepo RepoRootChecker) (idle bool, re
 // InstanceSnapshot captures the running worker state needed for
 // material-change comparison without importing supervisor types.
 type InstanceSnapshot struct {
-	Settings      store.AppSettings
-	RunnerVersion string
+	Settings        store.AppSettings
+	RunnerVersion   string
 	HasVerifyRunner bool
 }
 
