@@ -192,6 +192,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleVerifyReport.TableName":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskChecklistItemCommand.TableName": {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleCommandRun.TableName":      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskCycleCommit.TableName":          {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tAppSettings.TableName":              {},
 	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
 	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)
@@ -531,6 +532,26 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseAutomationListParams":                      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tautomationPatchJSON.isEmpty":                    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseAutomationSelectionsWire":                  {},
+
+	// Cycle commit tracking (ADR-0014): git subprocess helpers, JSON/prompt
+	// formatters, and handler DTO mappers. runCycleLoop logs git snapshot and
+	// commit_ingest_err; getTaskCycleVerdicts logs the HTTP trace; captureExecuteGitSnapshot
+	// logs at entry. Per-git-call slog would flood execute ingest.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.repoRootForGit":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.priorCycleBaseSHA":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitCycleBaseFromPhaseDetails":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitSnapshotToMap":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tmergeRunnerDetailsWithGit":     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparseCommitReports":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitRevListRange":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitCommitDetails":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitBranchContaining":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitWorkingTreeDirty":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tresolvePhaseCommits":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.ingestExecuteCommits": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tformatGitContextForPrompt":     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tformatKnownCommitsForResume":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tcycleGitContextFromCommits":     {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {
