@@ -173,6 +173,39 @@ export type AttemptAuditRightColumn = {
   ariaLabel?: string;
 };
 
+export type VerificationScoreBadge = {
+  passed: number;
+  total: number;
+  label: string;
+  tone: "success" | "partial" | "failed";
+  ariaLabel: string;
+};
+
+/**
+ * Compact passed/total chip for verify-phase audit rows. Shown beside the
+ * phase badge so operators can scan outcomes without expanding the row.
+ */
+export function resolveVerificationScoreBadge(
+  ev: TaskEvent,
+): VerificationScoreBadge | null {
+  const overview = parsePhaseEventOverview(ev.type, ev.data);
+  const verification = overview?.verification;
+  if (!verification || overview?.phase !== "verify") return null;
+  const total = verification.passedCount + verification.failedCount;
+  if (total <= 0) return null;
+  const passed = verification.passedCount;
+  const label = `${passed}/${total}`;
+  const tone =
+    passed === total ? "success" : passed === 0 ? "failed" : "partial";
+  return {
+    passed,
+    total,
+    label,
+    tone,
+    ariaLabel: `${passed} of ${total} criteria passed`,
+  };
+}
+
 const CYCLE_SCOPE_TYPES = new Set<TaskEventType>([
   "cycle_started",
   "cycle_completed",

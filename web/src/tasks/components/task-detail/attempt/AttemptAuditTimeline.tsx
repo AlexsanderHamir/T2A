@@ -7,6 +7,7 @@ import {
   eventTypeNeedsUserInput,
   parsePhaseEventOverview,
   resolveAttemptAuditRightColumn,
+  resolveVerificationScoreBadge,
   type AttemptAuditRightColumn,
 } from "../../../task-events";
 
@@ -31,6 +32,7 @@ export function AttemptAuditTimeline({
 function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
   const rightColumn = resolveAttemptAuditRightColumn(ev);
+  const verificationScore = resolveVerificationScoreBadge(ev);
   const eventHref = `/tasks/${encodeURIComponent(taskId)}/events/${ev.seq}`;
   const label = eventDisplayLabel(ev);
 
@@ -54,7 +56,12 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
             : undefined
         }
       >
-        <AttemptAuditRowHead ev={ev} label={label} rightColumn={rightColumn} />
+        <AttemptAuditRowHead
+          ev={ev}
+          label={label}
+          rightColumn={rightColumn}
+          verificationScore={verificationScore}
+        />
       </Link>
       <AttemptAuditVerificationDetail ev={ev} />
       <AttemptAuditThread ev={ev} />
@@ -66,10 +73,12 @@ function AttemptAuditRowHead({
   ev,
   label,
   rightColumn,
+  verificationScore,
 }: {
   ev: TaskEvent;
   label: string;
   rightColumn: AttemptAuditRightColumn | null;
+  verificationScore: ReturnType<typeof resolveVerificationScoreBadge>;
 }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
   return (
@@ -81,13 +90,25 @@ function AttemptAuditRowHead({
         })}
       </time>
       <span className="attempt-audit-label">{label}</span>
-      {rightColumn ? (
-        <span
-          className={attemptAuditRightColumnClassName(rightColumn)}
-          title={rightColumn.title}
-          aria-label={rightColumn.ariaLabel}
-        >
-          {rightColumn.label}
+      {rightColumn || verificationScore ? (
+        <span className="attempt-audit-row-trailing">
+          {rightColumn ? (
+            <span
+              className={attemptAuditRightColumnClassName(rightColumn)}
+              title={rightColumn.title}
+              aria-label={rightColumn.ariaLabel}
+            >
+              {rightColumn.label}
+            </span>
+          ) : null}
+          {verificationScore ? (
+            <span
+              className={`attempt-audit-verify-score attempt-audit-verify-score--${verificationScore.tone}`}
+              aria-label={verificationScore.ariaLabel}
+            >
+              {verificationScore.label}
+            </span>
+          ) : null}
         </span>
       ) : null}
       {needsUser && awaitingUserReply(ev) ? (

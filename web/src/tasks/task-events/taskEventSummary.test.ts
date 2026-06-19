@@ -5,6 +5,7 @@ import {
   formatEventSummaryCompact,
   formatPhaseSummaryCompact,
   resolveAttemptAuditRightColumn,
+  resolveVerificationScoreBadge,
 } from "./taskEventSummary";
 
 function ev(
@@ -233,5 +234,86 @@ describe("resolveAttemptAuditRightColumn", () => {
       title: "Applies to the whole execution attempt",
       ariaLabel: "Whole attempt",
     });
+  });
+});
+
+describe("resolveVerificationScoreBadge", () => {
+  it("returns passed/total for verify phase_completed events", () => {
+    expect(
+      resolveVerificationScoreBadge(
+        ev({
+          type: "phase_completed",
+          data: {
+            phase: "verify",
+            status: "succeeded",
+            phase_seq: 2,
+            details: {
+              verification: {
+                attempt_seq: 1,
+                passed_count: 4,
+                failed_count: 0,
+                criteria: [
+                  { criterion_id: "c1", verified: true },
+                  { criterion_id: "c2", verified: true },
+                  { criterion_id: "c3", verified: true },
+                  { criterion_id: "c4", verified: true },
+                ],
+              },
+            },
+          },
+        }),
+      ),
+    ).toEqual({
+      passed: 4,
+      total: 4,
+      label: "4/4",
+      tone: "success",
+      ariaLabel: "4 of 4 criteria passed",
+    });
+  });
+
+  it("returns partial tone when some criteria failed", () => {
+    expect(
+      resolveVerificationScoreBadge(
+        ev({
+          type: "phase_failed",
+          data: {
+            phase: "verify",
+            status: "failed",
+            phase_seq: 2,
+            details: {
+              verification: {
+                attempt_seq: 1,
+                passed_count: 1,
+                failed_count: 3,
+                criteria: [
+                  { criterion_id: "c1", verified: true },
+                  { criterion_id: "c2", verified: false },
+                  { criterion_id: "c3", verified: false },
+                  { criterion_id: "c4", verified: false },
+                ],
+              },
+            },
+          },
+        }),
+      ),
+    ).toEqual({
+      passed: 1,
+      total: 4,
+      label: "1/4",
+      tone: "partial",
+      ariaLabel: "1 of 4 criteria passed",
+    });
+  });
+
+  it("returns null for non-verify phases", () => {
+    expect(
+      resolveVerificationScoreBadge(
+        ev({
+          type: "phase_completed",
+          data: { phase: "execute", status: "succeeded", phase_seq: 1 },
+        }),
+      ),
+    ).toBeNull();
   });
 });
