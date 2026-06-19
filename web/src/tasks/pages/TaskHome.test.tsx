@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { useTasksApp } from "../hooks/useTasksApp";
+import { TasksAppProvider } from "../app/TasksAppProvider";
 import { TaskHome } from "./TaskHome";
 
 vi.mock("../components/task-list", () => ({
@@ -28,6 +29,8 @@ function makeApp(overrides: Partial<App> = {}): App {
     resetTaskListPage: () => {},
     openEdit: () => {},
     requestDelete: () => {},
+    patchPending: false,
+    deletePending: false,
     openCreateModal: () => {},
     closeCreateModal: () => {},
     createModalOpen: false,
@@ -55,9 +58,11 @@ function renderHome(app: App) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
-        <TaskHome app={app} />
-      </MemoryRouter>
+      <TasksAppProvider value={app}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+          <TaskHome />
+        </MemoryRouter>
+      </TasksAppProvider>
     </QueryClientProvider>,
   );
 }

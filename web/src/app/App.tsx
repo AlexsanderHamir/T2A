@@ -6,8 +6,9 @@ import {
   TaskDraftsPage,
   TaskCreateModalsLayer,
   TaskHome,
-  useTasksApp,
 } from "@/tasks";
+import { TasksAppProvider, useTasksAppContext, useTasksAppMeta } from "@/tasks/app/TasksAppProvider";
+import { useTasksApp } from "@/tasks/hooks/useTasksApp";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { useStickyShellElevation } from "@/lib/useStickyShellElevation";
 
@@ -71,7 +72,9 @@ import { useBootstrap } from "./hooks/useBootstrap";
 import { useSettingsRoutePrefetch } from "./hooks/usePrefetchOnIntent";
 import "./App.css";
 
-function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
+function AppShell() {
+  const app = useTasksAppContext();
+  const { error } = useTasksAppMeta();
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
@@ -179,11 +182,11 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
           </div>
         </header>
         <UiTestModeBanner />
-        {app.error ? <ErrorBanner message={app.error} /> : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
         <main id="main-content" tabIndex={-1}>
           <RoutedMainOutlet />
-          <TaskCreateModalsLayer app={app} />
+          <TaskCreateModalsLayer />
 
           {app.deleteTarget ? (
             <DeleteConfirmDialog
@@ -236,28 +239,19 @@ function routeNeedsHomeListData(pathname: string): boolean {
 }
 
 export default function App() {
-  // Aggregate bootstrap seeds the TanStack Query cache for settings,
-  // root tasks page, stats, projects, and drafts in one round trip so
-  // the per-page hooks below skip their cold-start GETs. Silent fallback
-  // when /v1/bootstrap is unavailable (older server, stripped build).
   useBootstrap();
   const sseLive = useTaskEventStream();
   const location = useLocation();
   const dataEnabled = routeNeedsHomeListData(location.pathname);
   const app = useTasksApp({ sseLive, dataEnabled });
 
-  // Lazy routes need a Suspense boundary above them. The fallback is
-  // intentionally empty: the chunks are small (each page module + its
-  // local components) and ship gzipped over a same-origin connection,
-  // so a visible loader would flash for ~50ms on most navigations and
-  // do more visual harm than good. Pages render their own skeletons
-  // for data loading once the chunk arrives.
   return (
-    <Suspense fallback={null}>
-      <Routes>
-        <Route path="/" element={<AppShell app={app} />}>
-          <Route index element={<TaskHome app={app} />} />
-          <Route path="drafts" element={<TaskDraftsPage app={app} />} />
+    <TasksAppProvider value={app}>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<TaskHome />} />
+            <Route path="drafts" element={<TaskDraftsPage />} />
           <Route path="projects" element={<ProjectListPage />} />
           <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
@@ -275,10 +269,11 @@ export default function App() {
             path="tasks/:taskId/cycles/:cycleId"
             element={<TaskCycleDetailPage />}
           />
-          <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
+          <Route path="tasks/:taskId" element={<TaskDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </Suspense>
+    </TasksAppProvider>
   );
 }

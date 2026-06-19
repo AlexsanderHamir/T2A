@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
 import { taskQueryKeys } from "@/tasks/task-query";
+import { QUERY_POLICY } from "@/tasks/queryPolicy";
 import { projectQueryKeys } from "@/projects/queryKeys";
 
 /**
@@ -74,10 +75,15 @@ export function prefetchTaskDetail(
       const { getTask } = await import("@/api/tasks");
       return getTask(taskId, { signal });
     },
-    // 30s gives the user time to hover, glance away, and come back
-    // without re-firing the GET. The task list itself runs with a
-    // 60s staleTime once Phase 5 lands; aligning here is intentional.
-    staleTime: 30_000,
+    staleTime: QUERY_POLICY.prefetchStaleTimeMs,
+  });
+  void queryClient.prefetchQuery({
+    queryKey: taskQueryKeys.checklist(taskId),
+    queryFn: async ({ signal }) => {
+      const { listChecklist } = await import("@/api/tasks");
+      return listChecklist(taskId, { signal });
+    },
+    staleTime: QUERY_POLICY.prefetchStaleTimeMs,
   });
 }
 
@@ -95,7 +101,7 @@ export function prefetchProjectDetail(
       const { getProject } = await import("@/api/projects");
       return getProject(projectId, { signal });
     },
-    staleTime: 30_000,
+    staleTime: QUERY_POLICY.prefetchStaleTimeMs,
   });
 }
 

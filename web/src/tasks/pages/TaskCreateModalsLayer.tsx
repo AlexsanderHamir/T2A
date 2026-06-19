@@ -8,13 +8,10 @@ import { AutomationPicker } from "@/automations/AutomationPicker";
 import { useAppTimezone } from "@/shared/time/appTimezone";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
-import type { useTasksApp } from "../hooks/useTasksApp";
+import { useTasksAppContext } from "../app/TasksAppProvider";
 
-type Props = {
-  app: ReturnType<typeof useTasksApp>;
-};
-
-export function TaskCreateModalsLayer({ app }: Props) {
+export function TaskCreateModalsLayer() {
+  const app = useTasksAppContext();
   const appTimezone = useAppTimezone();
   const projects = useProjects({
     includeArchived: false,

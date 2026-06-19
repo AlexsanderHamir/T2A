@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { useTasksApp } from "../hooks/useTasksApp";
+import { TasksAppProvider } from "../app/TasksAppProvider";
 import { stubEventSource } from "../../test/browserMocks";
 import { requestUrl } from "../../test/requestUrl";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
@@ -49,17 +50,16 @@ function renderDetail(
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        future={ROUTER_FUTURE_FLAGS}
-        initialEntries={[initialPath]}
-      >
-        <Routes>
-          <Route
-            path="/tasks/:taskId"
-            element={<TaskDetailPage app={app} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <TasksAppProvider value={app}>
+        <MemoryRouter
+          future={ROUTER_FUTURE_FLAGS}
+          initialEntries={[initialPath]}
+        >
+          <Routes>
+            <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TasksAppProvider>
     </QueryClientProvider>,
   );
 }

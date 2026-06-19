@@ -16,6 +16,7 @@ import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { useTaskPatchFlow } from "./useTaskPatchFlow";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
 import { canEditTaskPickupSchedule } from "../task-pickup/canEditTaskPickupSchedule";
+import { QUERY_POLICY } from "../queryPolicy";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
 const LIST_REFRESH_SHOW_MS = TASK_TIMINGS.listRefreshShowMs;
@@ -102,7 +103,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
         { signal },
       ),
     enabled: dataEnabled,
-    staleTime: 60_000,
+    staleTime: QUERY_POLICY.listStaleTimeMs,
   });
   const taskStatsQuery = useQuery({
     queryKey: taskQueryKeys.stats(),
@@ -114,7 +115,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
       }
     },
     enabled: dataEnabled,
-    staleTime: 60_000,
+    staleTime: QUERY_POLICY.listStaleTimeMs,
   });
 
   const resetTaskListPage = useCallback(() => {

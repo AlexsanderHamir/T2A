@@ -34,5 +34,7 @@ export {
   mutationRolledBack as rumMutationRolledBack,
   sseReconnected as rumSSEReconnected,
   sseResyncReceived as rumSSEResyncReceived,
+  rumNavigationTiming,
+  type RUMNavigationMetric,
   type RUMMutationKind,
 } from "./rum";

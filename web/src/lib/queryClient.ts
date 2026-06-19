@@ -4,6 +4,7 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import { isSseLiveForQueries } from "@/tasks/sync/connectionPolicy";
+import { QUERY_POLICY } from "@/tasks/queryPolicy";
 
 /** Dev-only: production builds omit cache `console.error` noise (UI still surfaces query errors). */
 function logQueryError(scope: string, err: unknown): void {
@@ -21,8 +22,8 @@ export function createAppQueryClient(): QueryClient {
     }),
     defaultOptions: {
       queries: {
-        staleTime: 15_000,
-        gcTime: 5 * 60_000,
+        staleTime: QUERY_POLICY.defaultStaleTimeMs,
+        gcTime: QUERY_POLICY.gcTimeMs,
         // While the SSE stream is connected, the cache is already
         // being kept fresh by realtime events. Refetching on window
         // focus would just stampede the same endpoints we are already

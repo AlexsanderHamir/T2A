@@ -1,18 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist, patchTask, retryTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { errorMessage } from "@/lib/errorMessage";
 import {
-  rumMutationOptimisticApplied,
   rumMutationRolledBack,
   rumMutationSettled,
-  rumMutationStarted,
+  rumNavigationTiming,
 } from "@/observability";
+import { rememberPersistedDetailId } from "@/lib/queryPersist";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
-import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
+import {
+  beginGuardedTaskWrite,
+  endGuardedTaskWrite,
+  recordOptimisticApplied,
+} from "@/tasks/mutations";
 import type { Task } from "@/types";
 import {
   TaskCyclesPanel,
@@ -34,14 +38,13 @@ import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { resolveTaskDependencySummaries, taskQueryKeys } from "../task-query";
-import { useTasksApp } from "../hooks/useTasksApp";
+import { useTasksAppMeta, useTasksAppModals } from "../app/TasksAppProvider";
+import { QUERY_POLICY } from "../queryPolicy";
 import { useTaskDetailScheduling } from "../hooks/useTaskDetailScheduling";
 
-type Props = {
-  app: ReturnType<typeof useTasksApp>;
-};
-
-export function TaskDetailPage({ app }: Props) {
+export function TaskDetailPage() {
+  const modals = useTasksAppModals();
+  const { saving } = useTasksAppMeta();
   const { taskId = "" } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -76,21 +79,60 @@ export function TaskDetailPage({ app }: Props) {
   useTaskDetailDeleteNavigate(
     taskId,
     navigate,
-    app.deleteSuccess,
-    app.deleteVariables,
+    modals.deleteSuccess,
+    modals.deleteVariables,
   );
+
+  const navigationMountAtRef = useRef(performance.now());
+  const taskTimingSentRef = useRef(false);
+  const interactiveTimingSentRef = useRef(false);
+
+  useEffect(() => {
+    if (taskId) {
+      rememberPersistedDetailId(taskId);
+    }
+    navigationMountAtRef.current = performance.now();
+    taskTimingSentRef.current = false;
+    interactiveTimingSentRef.current = false;
+  }, [taskId]);
 
   const taskQuery = useQuery({
     queryKey: taskQueryKeys.detail(taskId),
     queryFn: ({ signal }) => getTask(taskId, { signal }),
     enabled: Boolean(taskId),
+    staleTime: QUERY_POLICY.detailStaleTimeMs,
   });
 
   const checklistQuery = useQuery({
     queryKey: taskQueryKeys.checklist(taskId),
     queryFn: ({ signal }) => listChecklist(taskId, { signal }),
-    enabled: Boolean(taskId) && taskQuery.isSuccess,
+    enabled: Boolean(taskId),
+    staleTime: QUERY_POLICY.detailStaleTimeMs,
   });
+
+  useEffect(() => {
+    if (!taskQuery.isSuccess || taskTimingSentRef.current) return;
+    taskTimingSentRef.current = true;
+    rumNavigationTiming(
+      "navigation.task_detail.time_to_task_ms",
+      performance.now() - navigationMountAtRef.current,
+    );
+  }, [taskQuery.isSuccess]);
+
+  useEffect(() => {
+    if (
+      !taskQuery.isSuccess ||
+      !checklistQuery.isSuccess ||
+      interactiveTimingSentRef.current
+    ) {
+      return;
+    }
+    interactiveTimingSentRef.current = true;
+    rumNavigationTiming(
+      "navigation.task_detail.time_to_interactive_ms",
+      performance.now() - navigationMountAtRef.current,
+    );
+  }, [taskQuery.isSuccess, checklistQuery.isSuccess]);
 
   const toast = useOptionalToast();
   const scheduling = useTaskDetailScheduling(taskId);
@@ -99,24 +141,26 @@ export function TaskDetailPage({ app }: Props) {
     unknown,
     unknown,
     TaskRetryMode,
-    { prev: Task | undefined; startedAtMs: number }
+    { prev: Task | undefined; startedAtMs: number; guarded: boolean }
   >({
     mutationFn: (mode) => retryTask(taskId, { mode }),
     onMutate: async () => {
-      const startedAtMs = performance.now();
-      rumMutationStarted("task_retry");
-      if (!optimisticMutationsEnabled) {
-        return { prev: undefined, startedAtMs };
+      const guard = beginGuardedTaskWrite({
+        taskId,
+        optimisticEnabled: optimisticMutationsEnabled,
+        rumKind: "task_retry",
+      });
+      if (!guard.guarded) {
+        return { prev: undefined, startedAtMs: guard.startedAtMs, guarded: false };
       }
-      beginTaskMutation(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
       const prev = queryClient.getQueryData<Task>(detailKey);
       if (prev) {
         queryClient.setQueryData<Task>(detailKey, { ...prev, status: "ready" });
       }
-      rumMutationOptimisticApplied("task_retry", performance.now() - startedAtMs);
-      return { prev, startedAtMs };
+      recordOptimisticApplied("task_retry", guard.startedAtMs);
+      return { prev, startedAtMs: guard.startedAtMs, guarded: true };
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {
@@ -148,8 +192,10 @@ export function TaskDetailPage({ app }: Props) {
         );
       }
     },
-    onSettled: () => {
-      endTaskMutation(taskId);
+    onSettled: (_data, _err, _vars, context) => {
+      if (context?.guarded) {
+        endGuardedTaskWrite(taskId);
+      }
     },
   });
 
@@ -157,24 +203,26 @@ export function TaskDetailPage({ app }: Props) {
     unknown,
     unknown,
     "ready" | "on_hold",
-    { prev: Task | undefined; startedAtMs: number; next: "ready" | "on_hold" }
+    { prev: Task | undefined; startedAtMs: number; next: "ready" | "on_hold"; guarded: boolean }
   >({
     mutationFn: (next) => patchTask(taskId, { status: next }),
     onMutate: async (next) => {
-      const startedAtMs = performance.now();
-      rumMutationStarted("task_autonomy");
-      if (!optimisticMutationsEnabled) {
-        return { prev: undefined, startedAtMs, next };
+      const guard = beginGuardedTaskWrite({
+        taskId,
+        optimisticEnabled: optimisticMutationsEnabled,
+        rumKind: "task_autonomy",
+      });
+      if (!guard.guarded) {
+        return { prev: undefined, startedAtMs: guard.startedAtMs, next, guarded: false };
       }
-      beginTaskMutation(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
       const prev = queryClient.getQueryData<Task>(detailKey);
       if (prev) {
         queryClient.setQueryData<Task>(detailKey, { ...prev, status: next });
       }
-      rumMutationOptimisticApplied("task_autonomy", performance.now() - startedAtMs);
-      return { prev, startedAtMs, next };
+      recordOptimisticApplied("task_autonomy", guard.startedAtMs);
+      return { prev, startedAtMs: guard.startedAtMs, next, guarded: true };
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {
@@ -207,8 +255,10 @@ export function TaskDetailPage({ app }: Props) {
         );
       }
     },
-    onSettled: () => {
-      endTaskMutation(taskId);
+    onSettled: (_data, _err, _vars, context) => {
+      if (context?.guarded) {
+        endGuardedTaskWrite(taskId);
+      }
     },
   });
 
@@ -282,9 +332,9 @@ export function TaskDetailPage({ app }: Props) {
       <div className="task-detail-toolbar">
         <TaskDetailSchedule task={task} />
         <TaskDetailToolbarActions
-          saving={app.saving}
-          onEdit={() => app.openEdit(task)}
-          onDelete={() => app.requestDelete(task)}
+          saving={saving}
+          onEdit={() => modals.openEdit(task)}
+          onDelete={() => modals.requestDelete(task)}
           onRetryFresh={
             task.status === "failed"
               ? () => setRetryConfirmMode("fresh")
@@ -312,7 +362,7 @@ export function TaskDetailPage({ app }: Props) {
         <AutonomyConfirmDialog
           enable={autonomyEnable}
           taskTitle={task.title}
-          saving={app.saving}
+          saving={saving}
           pending={autonomyMutation.isPending}
           error={
             autonomyMutation.isError
@@ -338,7 +388,7 @@ export function TaskDetailPage({ app }: Props) {
         <TaskRetryConfirmDialog
           mode={retryConfirmMode}
           taskTitle={task.title}
-          saving={app.saving}
+          saving={saving}
           pending={retryMutation.isPending}
           error={
             retryMutation.isError
@@ -361,8 +411,8 @@ export function TaskDetailPage({ app }: Props) {
       {modelConfigOpen ? (
         <TaskModelConfigModal
           taskTitle={task.title}
-          saving={app.saving}
-          onChangeModel={() => app.openChangeModel(task)}
+          saving={saving}
+          onChangeModel={() => modals.openChangeModel(task)}
           onClose={() => setModelConfigOpen(false)}
         />
       ) : null}
@@ -378,7 +428,7 @@ export function TaskDetailPage({ app }: Props) {
       />
 
       <TaskDetailChecklistSection
-        saving={app.saving}
+        saving={saving}
         canAddCriterion={canMutateTaskCriteria(task.status)}
         taskStatus={task.status}
         checklistQuery={checklistQuery}

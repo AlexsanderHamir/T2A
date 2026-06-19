@@ -85,6 +85,21 @@ if (Test-Path $handlerRoot) {
     }
 }
 
+# TypeScript: mutations pure modules must not import React.
+$mutationsRoot = Join-Path $srcRoot (Join-Path "tasks" "mutations")
+if (Test-Path $mutationsRoot) {
+    $mutationPureFiles = Get-ChildItem -Path $mutationsRoot -Filter *.ts -File |
+        Where-Object { $_.Name -notmatch '\.test\.ts$' }
+    foreach ($f in $mutationPureFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($null -eq $text) { continue }
+        if ($text -match 'from\s+["'']react["'']|from\s+["'']react/') {
+            Write-Host "VIOLATION: mutations pure module imports react: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+}
+
 # TypeScript: create slice pure modules must not import React or modal components.
 $createRoot = Join-Path $srcRoot (Join-Path "tasks" "create")
 if (Test-Path $createRoot) {

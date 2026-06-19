@@ -319,7 +319,7 @@
 .task-commit-diff-page-sha .copyable-id__btn {
   min-height: 1.5rem;
   padding: 0.1rem 0.4rem;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
 }
 
 .task-commit-diff-parent-link {

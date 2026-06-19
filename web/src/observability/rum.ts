@@ -57,7 +57,16 @@ type RUMEvent =
       duration_seconds: number;
     }
   | { type: "sse_reconnected"; duration_seconds: number }
-  | { type: "sse_resync_received" };
+  | { type: "sse_resync_received" }
+  | {
+      type: "navigation_timing";
+      metric: RUMNavigationMetric;
+      duration_seconds: number;
+    };
+
+export type RUMNavigationMetric =
+  | "navigation.task_detail.time_to_task_ms"
+  | "navigation.task_detail.time_to_interactive_ms";
 
 const FLUSH_INTERVAL_MS = 10_000;
 const MAX_QUEUE_LENGTH = 200;
@@ -229,6 +238,18 @@ export function sseReconnected(gapMs: number): void {
  * directive from the hub. */
 export function sseResyncReceived(): void {
   enqueue({ type: "sse_resync_received" });
+}
+
+/** Records route-level navigation latency for task detail (ADR-0025). */
+export function rumNavigationTiming(
+  metric: RUMNavigationMetric,
+  durationMs: number,
+): void {
+  enqueue({
+    type: "navigation_timing",
+    metric,
+    duration_seconds: clampDurationMs(durationMs) / 1000,
+  });
 }
 
 function clampDurationMs(ms: number): number {

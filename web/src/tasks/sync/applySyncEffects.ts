@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { parseTask, parseTaskCycleDetail } from "@/api/parseTaskApi";
 import { rumSSEResyncReceived } from "@/observability";
+import { bustQueryPersistCache } from "@/lib/queryPersist";
 import { taskQueryKeys } from "../task-query";
 import { pushAgentRunProgress } from "../hooks/useAgentRunProgress";
 import type { PendingDelta, SyncEffect } from "./syncTypes";
@@ -54,6 +55,7 @@ export function applySyncEffects(
     }
     if (effect.kind === "rum_sse_resync") {
       rumSSEResyncReceived();
+      bustQueryPersistCache();
       continue;
     }
     if (effect.kind === "patch_task_detail") {

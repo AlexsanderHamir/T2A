@@ -7,18 +7,15 @@ import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
 import { TaskListDeleteGlyph } from "../components/task-list/table/TaskListRowActionIcons";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
-import { useTasksApp } from "../hooks/useTasksApp";
-
-type Props = {
-  app: ReturnType<typeof useTasksApp>;
-};
+import { useTasksAppContext } from "../app/TasksAppProvider";
 
 function isDraftRowActionExcluded(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return true;
   return Boolean(target.closest("button"));
 }
 
-export function TaskDraftsPage({ app }: Props) {
+export function TaskDraftsPage() {
+  const app = useTasksAppContext();
   useDocumentTitle("Task drafts");
   const navigate = useNavigate();
   const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);

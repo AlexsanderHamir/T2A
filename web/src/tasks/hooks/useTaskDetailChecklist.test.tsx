@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { shouldSuppressTaskMutationEcho } from "@/tasks/sync/mutationGuard";
 import { taskQueryKeys } from "../task-query";
 import { useTaskDetailChecklist } from "./useTaskDetailChecklist";
 import { ToastProvider } from "@/shared/toast";
@@ -523,5 +524,39 @@ describe("useTaskDetailChecklist", () => {
     });
     const cached = qc.getQueryData<TaskChecklistResponse>(taskQueryKeys.checklist(TASK_A));
     expect(cached?.items.map((i) => i.id)).toEqual(["i1"]);
+  });
+
+  it("bumps the optimistic-version counter so SSE echoes are suppressed in flight", async () => {
+    let resolveFn: (() => void) | undefined;
+    mockAdd.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }),
+    );
+    const qc = newQueryClient();
+    const { result } = renderHook(() => useTaskDetailChecklist(TASK_A), {
+      wrapper: createWrapper(qc),
+    });
+    act(() => {
+      result.current.openChecklistModal();
+      result.current.setNewChecklistText("new criterion");
+    });
+    act(() => {
+      const ev = { preventDefault: vi.fn() } as unknown as FormEvent;
+      result.current.submitNewChecklistCriterion(ev);
+    });
+    await waitFor(() => {
+      expect(result.current.addChecklistMutation.isPending).toBe(true);
+    });
+    expect(shouldSuppressTaskMutationEcho(TASK_A)).toBe(true);
+    expect(shouldSuppressTaskMutationEcho(TASK_B)).toBe(false);
+    act(() => {
+      resolveFn?.();
+    });
+    await waitFor(() => {
+      expect(result.current.addChecklistMutation.isPending).toBe(false);
+    });
+    expect(shouldSuppressTaskMutationEcho(TASK_A)).toBe(false);
   });
 });

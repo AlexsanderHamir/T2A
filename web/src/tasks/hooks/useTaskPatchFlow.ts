@@ -4,15 +4,20 @@ import { patchTask as patchTaskApi } from "../../api";
 import { errorMessage } from "@/lib/errorMessage";
 import { taskQueryKeys } from "../task-query";
 import {
-  rumMutationOptimisticApplied,
   rumMutationRolledBack,
   rumMutationSettled,
-  rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import type { Priority, Status, Task, TaskListResponse } from "@/types";
-import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
+import {
+  beginGuardedTaskWrite,
+  cancelQueriesForKeys,
+  endGuardedTaskWrite,
+  mergePatchIntoTask,
+  patchTaskInList,
+  recordOptimisticApplied,
+} from "@/tasks/mutations";
 
 export type TaskPatchInput = {
   id: string;
@@ -55,52 +60,7 @@ interface PatchSnapshot {
   lists: Array<{ key: readonly unknown[]; data: TaskListResponse }>;
   /** Click moment for RUM latency observations. */
   startedAtMs: number;
-}
-
-/**
- * Patch a task in the cached list, returning a new TaskListResponse
- * if a matching task was found. Returns null when the task wasn't
- * found so callers can skip writing back.
- */
-function patchTaskInList(
-  list: TaskListResponse,
-  patch: TaskPatchInput,
-): TaskListResponse | null {
-  let changed = false;
-  function visit(tasks: Task[]): Task[] {
-    return tasks.map((t) => {
-      if (t.id === patch.id) {
-        changed = true;
-        return {
-          ...t,
-          title: patch.title,
-          initial_prompt: patch.initial_prompt,
-          status: patch.status,
-          priority: patch.priority,
-          project_id:
-            patch.project_id === undefined
-              ? t.project_id
-              : patch.project_id ?? undefined,
-          project_context_item_ids:
-            patch.project_context_item_ids === undefined
-              ? t.project_context_item_ids
-              : patch.project_context_item_ids,
-          tags: patch.tags === undefined ? t.tags : patch.tags,
-          milestone:
-            patch.milestone === undefined ? t.milestone : patch.milestone ?? undefined,
-          cursor_model: patch.cursor_model,
-          pickup_not_before:
-            patch.pickup_not_before === undefined
-              ? t.pickup_not_before
-              : patch.pickup_not_before ?? undefined,
-        };
-      }
-      return t;
-    });
-  }
-  const next = visit(list.tasks);
-  if (!changed) return null;
-  return { ...list, tasks: next };
+  guarded: boolean;
 }
 
 /**
@@ -141,51 +101,28 @@ export function useTaskPatchFlow(opts: {
           : {}),
       }),
     onMutate: async (input) => {
-      const startedAtMs = performance.now();
-      rumMutationStarted("task_patch");
-      // When the rollout flag is off, stay on the legacy pessimistic
-      // path: skip optimistic cache writes and version-bumping so an
-      // SSE echo from the server's own publish arrives through the
-      // normal invalidation path without any client-side suppression.
-      // Still return an empty snapshot so onError can no-op safely
-      // and RUM still records started/settled.
-      if (!optimisticMutationsEnabled) {
-        return { detail: undefined, lists: [], startedAtMs };
+      const guard = beginGuardedTaskWrite({
+        taskId: input.id,
+        optimisticEnabled: optimisticMutationsEnabled,
+        rumKind: "task_patch",
+      });
+      if (!guard.guarded) {
+        return { detail: undefined, lists: [], startedAtMs: guard.startedAtMs, guarded: false };
       }
-      beginTaskMutation(input.id);
 
-      // Cancel in-flight refetches so they can't overwrite our optimistic write.
-      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
-      await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
+      await cancelQueriesForKeys(queryClient, [
+        taskQueryKeys.detail(input.id),
+        taskQueryKeys.listRoot(),
+      ]);
 
       const detailKey = taskQueryKeys.detail(input.id);
       const detailPrev = queryClient.getQueryData<Task>(detailKey);
+      const { id: taskId, ...patchFields } = input;
       if (detailPrev) {
-        queryClient.setQueryData<Task>(detailKey, {
-          ...detailPrev,
-          title: input.title,
-          initial_prompt: input.initial_prompt,
-          status: input.status,
-          priority: input.priority,
-          project_id:
-            input.project_id === undefined
-              ? detailPrev.project_id
-              : input.project_id ?? undefined,
-          project_context_item_ids:
-            input.project_context_item_ids === undefined
-              ? detailPrev.project_context_item_ids
-              : input.project_context_item_ids,
-          tags: input.tags === undefined ? detailPrev.tags : input.tags,
-          milestone:
-            input.milestone === undefined
-              ? detailPrev.milestone
-              : input.milestone ?? undefined,
-          cursor_model: input.cursor_model,
-          pickup_not_before:
-            input.pickup_not_before === undefined
-              ? detailPrev.pickup_not_before
-              : input.pickup_not_before ?? undefined,
-        });
+        queryClient.setQueryData<Task>(
+          detailKey,
+          mergePatchIntoTask(detailPrev, patchFields),
+        );
       }
 
       const listSnapshots: PatchSnapshot["lists"] = [];
@@ -195,15 +132,20 @@ export function useTaskPatchFlow(opts: {
       for (const [key, data] of listEntries) {
         if (!data) continue;
         listSnapshots.push({ key, data });
-        const next = patchTaskInList(data, input);
+        const next = patchTaskInList(data, taskId, patchFields);
         if (next) {
           queryClient.setQueryData<TaskListResponse>(key, next);
         }
       }
 
-      rumMutationOptimisticApplied("task_patch", performance.now() - startedAtMs);
+      recordOptimisticApplied("task_patch", guard.startedAtMs);
 
-      return { detail: detailPrev, lists: listSnapshots, startedAtMs };
+      return {
+        detail: detailPrev,
+        lists: listSnapshots,
+        startedAtMs: guard.startedAtMs,
+        guarded: true,
+      };
     },
     onError: (err, input, context) => {
       const rolledBackSomething =
@@ -254,8 +196,10 @@ export function useTaskPatchFlow(opts: {
         );
       }
     },
-    onSettled: (_data, _err, variables) => {
-      endTaskMutation(variables.id);
+    onSettled: (_data, _err, variables, context) => {
+      if (context?.guarded) {
+        endGuardedTaskWrite(variables.id);
+      }
     },
   });
 

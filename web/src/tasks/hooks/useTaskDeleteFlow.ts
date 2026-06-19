@@ -3,15 +3,18 @@ import { useCallback, useState } from "react";
 import { deleteTask } from "../../api";
 import { errorMessage } from "@/lib/errorMessage";
 import {
-  rumMutationOptimisticApplied,
   rumMutationRolledBack,
   rumMutationSettled,
-  rumMutationStarted,
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
-import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
+import {
+  beginGuardedTaskWrite,
+  cancelQueriesForKeys,
+  endGuardedTaskWrite,
+  recordOptimisticApplied,
+} from "@/tasks/mutations";
 import type { Task, TaskListResponse } from "@/types";
 
 /** Subset of `Task` the confirm dialog needs; widened so callers can pass plain rows. */
@@ -74,6 +77,7 @@ interface DeleteSnapshot {
   /** Per-list-key snapshots so we can restore each cached page on rollback. */
   lists: Array<{ key: readonly unknown[]; data: TaskListResponse }>;
   startedAtMs: number;
+  guarded: boolean;
 }
 
 /** Remove the task with id `removeId` from a cached TaskListResponse.
@@ -99,25 +103,22 @@ export function useTaskDeleteFlow(opts: {
   const mutation = useMutation<unknown, unknown, DeleteVariables, DeleteSnapshot>({
     mutationFn: (input) => deleteTask(input.id),
     onMutate: async (input) => {
-      const startedAtMs = performance.now();
-      rumMutationStarted("task_delete");
-      // See useTaskPatchFlow: pessimistic path returns an empty
-      // snapshot, so onError can no-op and we don't pollute the
-      // rolled_back SLI. endTaskMutation stays safe when
-      // nothing was bumped.
-      if (!optimisticMutationsEnabled) {
-        return { detail: undefined, lists: [], startedAtMs };
+      const guard = beginGuardedTaskWrite({
+        taskId: input.id,
+        optimisticEnabled: optimisticMutationsEnabled,
+        rumKind: "task_delete",
+      });
+      if (!guard.guarded) {
+        return { detail: undefined, lists: [], startedAtMs: guard.startedAtMs, guarded: false };
       }
-      beginTaskMutation(input.id);
 
-      await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
-      await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
+      await cancelQueriesForKeys(queryClient, [
+        taskQueryKeys.listRoot(),
+        taskQueryKeys.detail(input.id),
+      ]);
 
       const detailKey = taskQueryKeys.detail(input.id);
       const detailPrev = queryClient.getQueryData<Task>(detailKey);
-      // Drop the detail entry so any open detail page sees the
-      // "task not found / deleted" empty state immediately. The
-      // server-truth refetch on rollback restores the full Task.
       queryClient.removeQueries({ queryKey: detailKey });
 
       const listSnapshots: DeleteSnapshot["lists"] = [];
@@ -133,8 +134,13 @@ export function useTaskDeleteFlow(opts: {
         }
       }
 
-      rumMutationOptimisticApplied("task_delete", performance.now() - startedAtMs);
-      return { detail: detailPrev, lists: listSnapshots, startedAtMs };
+      recordOptimisticApplied("task_delete", guard.startedAtMs);
+      return {
+        detail: detailPrev,
+        lists: listSnapshots,
+        startedAtMs: guard.startedAtMs,
+        guarded: true,
+      };
     },
     onError: (_err, input, context) => {
       const rolledBackSomething =
@@ -176,8 +182,10 @@ export function useTaskDeleteFlow(opts: {
         );
       }
     },
-    onSettled: (_data, _err, variables) => {
-      endTaskMutation(variables.id);
+    onSettled: (_data, _err, variables, context) => {
+      if (context?.guarded) {
+        endGuardedTaskWrite(variables.id);
+      }
     },
   });
 
