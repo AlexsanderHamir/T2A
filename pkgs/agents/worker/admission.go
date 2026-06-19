@@ -124,9 +124,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	if !ok {
 		return
 	}
-	_ = consumedRetry // harness dispatch uses this in RunWithRetry (wired in worker admission cycle)
-
-	w.harness.Run(parentCtx, picked)
+	w.harness.RunWithRetry(parentCtx, picked, consumedRetry)
 }
 
 func (w *Worker) recoverAdmissionPanic(taskID string) {
