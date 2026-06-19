@@ -85,6 +85,25 @@ if (Test-Path $handlerRoot) {
     }
 }
 
+# TypeScript: create slice pure modules must not import React or modal components.
+$createRoot = Join-Path $srcRoot (Join-Path "tasks" "create")
+if (Test-Path $createRoot) {
+    $createPureFiles = Get-ChildItem -Path $createRoot -Filter *.ts -File |
+        Where-Object { $_.Name -notmatch '\.test\.ts$' }
+    foreach ($f in $createPureFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($null -eq $text) { continue }
+        if ($text -match 'from\s+["'']react["'']|from\s+["'']react/') {
+            Write-Host "VIOLATION: create pure module imports react: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+        if ($text -match 'task-create-modal') {
+            Write-Host "VIOLATION: create pure module imports task-create-modal: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+}
+
 if ($failed) {
     exit 1
 }

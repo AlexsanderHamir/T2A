@@ -4,10 +4,10 @@ import type { FormEvent, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Task, TaskDraftDetail } from "@/types";
 import { DEFAULT_PROJECT_ID } from "@/types";
-import { settingsQueryKeys } from "../task-query";
+import { settingsQueryKeys } from "../../task-query";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
 
-vi.mock("../../api", () => ({
+vi.mock("@/api", () => ({
   createTask: vi.fn(),
   deleteTaskDraft: vi.fn(),
   evaluateDraftTask: vi.fn(),
@@ -22,7 +22,7 @@ import {
   getTaskDraft,
   listTaskDrafts,
   saveTaskDraft,
-} from "../../api";
+} from "@/api";
 
 const mockedCreateTask = vi.mocked(createTask);
 const mockedListDrafts = vi.mocked(listTaskDrafts);
@@ -268,7 +268,7 @@ describe("useTaskCreateFlow", () => {
       result.current.openCreateModal();
     });
 
-    const scenarios = await import("../test-scenarios");
+    const scenarios = await import("../../test-scenarios");
     const scenario = scenarios.TEST_SCENARIOS.find(
       (s) => s.criteria.length > 0,
     );
@@ -289,9 +289,6 @@ describe("useTaskCreateFlow", () => {
           : {}),
       })),
     );
-    // Prompt is wrapped in <p> blocks by plainTextToInitialHtml; assert the
-    // first paragraph contains the scenario's first line so we know the
-    // body actually made it into the editor.
     const firstLine = scenario.prompt.split("\n", 1)[0]!;
     expect(result.current.newPrompt).toContain(firstLine);
   });

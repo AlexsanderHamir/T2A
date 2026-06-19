@@ -44,6 +44,18 @@ Live task UI cache policy lives in [`web/src/tasks/sync/`](../../web/src/tasks/s
 
 Wire decode stays in `web/src/tasks/task-query/sseInvalidate.ts`. Event catalog and operator tuning: [domain/sse-hub.md](./domain/sse-hub.md).
 
+## Task create flow
+
+Create-task policy and hook composition live in [`web/src/tasks/create/`](../web/src/tasks/create/). Read order:
+
+1. [ADR-0024](./adr/ADR-0024-task-create-flow-slice.md) — Decide vs Apply boundaries, invariants I1–I7
+2. `decideCreateEntry.ts` — `openCreateModal` routing (loading / error / drafts / fresh)
+3. `validateCreateForm.ts`, `draftPayload.ts`, `buildCreateMutationInput.ts` — pure validation and wire payloads
+4. `mapCreateFlowViewModel.ts` — flat public return shape for `useTasksApp`
+5. `hooks/useTaskCreateFlow.ts` — composer; shim at `web/src/tasks/hooks/useTaskCreateFlow.ts`
+
+Modal UI stays in `web/src/tasks/components/task-create-modal/` for V1. Race contracts: `useTasksApp.test.tsx`.
+
 ## Task detail — execution cycles
 
 Expanded cycle rows in `TaskCyclesPanel` load `GET /tasks/{id}/cycles/{cycleId}/verdicts`. When the worker indexed git commits for the cycle, the panel shows a repo → branch breadcrumb and commit rows (`git_context`, `commits[]`) with **status badges** (`eligible`, `observed`, …) above the per-criterion verdict list.

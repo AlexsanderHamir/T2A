@@ -55,6 +55,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 | Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks. |
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |
 | Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. Task UI under `web/src/tasks/components/` groups families with per-folder `index.ts` barrels — see [docs/web.md](docs/web.md). Global styles: `web/src/app/App.css` `@import`s partials under `web/src/app/styles/`. |
+| Task create flow (Decide) | `web/src/tasks/create/` | Create modal policy, draft autosave, mutations; ADR-0024. UI in `task-create-modal/`; public hook via `hooks/useTaskCreateFlow.ts` shim. |
 
 API contracts (paths, query params, JSON shapes) are authoritative in [docs/api.md](docs/api.md) (and `pkgs/tasks/handler/` godoc for exhaustive behavior). [docs/architecture.md](docs/architecture.md) is the system overview.
 
