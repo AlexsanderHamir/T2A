@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import type { AppSettings } from "@/api/settings";
 import {
   useCallback,
@@ -42,7 +42,9 @@ import {
   normalizeChecklistItems,
   normalizeVerifyCommands,
 } from "../task-compose/checklistRequirement";
-import type { ChecklistItemDraft, Task, TaskDraftChecklistItem, TaskDraftDetail } from "@/types";
+import type { ChecklistItemDraft, Task, TaskDraftChecklistItem, TaskDraftDetail, TaskDraftSummary } from "@/types";
+
+type TaskDraftsQuery = UseQueryResult<TaskDraftSummary[], Error>;
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -863,7 +865,7 @@ function useTaskCreateFlowActions(input: {
   form: ReturnType<typeof useTaskCreateFormState>;
   modal: ReturnType<typeof useTaskCreateModalState>;
   mutations: ReturnType<typeof useTaskCreateFlowMutations>;
-  draftsQuery: ReturnType<typeof useQuery<unknown>>;
+  draftsQuery: TaskDraftsQuery;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const openCreateModal = useCallback(
@@ -1087,7 +1089,7 @@ function buildTaskCreateFlowReturnValue(input: {
   mutations: ReturnType<typeof useTaskCreateFlowMutations>;
   autosave: ReturnType<typeof useTaskCreateDraftAutosave>;
   actions: ReturnType<typeof useTaskCreateFlowActions>;
-  draftsQuery: ReturnType<typeof useQuery<unknown>>;
+  draftsQuery: TaskDraftsQuery;
 }) {
   return {
     createFlowError: input.createFlowError,
