@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
@@ -72,6 +73,8 @@ func (s *Service) SetVerifyRunner(r runner.Runner) {
 }
 
 func (s *Service) SetStreamIdleStuck(d time.Duration) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.SetStreamIdleStuck",
+		"stuck_ns", int64(d))
 	s.hooks.StreamIdleStuck = d
 }
 

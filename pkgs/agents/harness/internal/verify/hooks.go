@@ -15,7 +15,7 @@ type Hooks struct {
 	RecordVerdict   func(kind domain.VerifierKind, passed bool)
 	ObserveDuration func(d time.Duration)
 	// SetRunCancel registers or clears the in-flight verify cursor cancel func.
-	SetRunCancel func(cancel context.CancelFunc)
+	SetRunCancel    func(cancel context.CancelFunc)
 	StreamIdleStuck time.Duration
 	OnStreamIdle    func(kind runner.StreamIdleKind)
 }

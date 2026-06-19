@@ -3,6 +3,7 @@ package adapterkit
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -30,6 +31,8 @@ type StreamIdleConfig struct {
 // StreamIdleThresholds derives suspicious and kill-pending lead times from the
 // stuck threshold. killLead defaults to 5s but shrinks when stuck is shorter.
 func StreamIdleThresholds(stuck time.Duration) (suspicious, killPending time.Duration) {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.StreamIdleThresholds",
+		"stuck_ns", int64(stuck))
 	if stuck <= 0 {
 		return 0, 0
 	}
@@ -68,6 +71,8 @@ type streamIdleWatchdog struct {
 }
 
 func newStreamIdleWatchdog(cfg StreamIdleConfig) *streamIdleWatchdog {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.newStreamIdleWatchdog",
+		"stuck_ns", int64(cfg.Stuck))
 	suspicious, killPending := StreamIdleThresholds(cfg.Stuck)
 	return &streamIdleWatchdog{
 		cfg:         cfg,
@@ -78,6 +83,7 @@ func newStreamIdleWatchdog(cfg StreamIdleConfig) *streamIdleWatchdog {
 }
 
 func (w *streamIdleWatchdog) wrap(onLine func([]byte)) func([]byte) {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.streamIdleWatchdog.wrap")
 	if w == nil || w.cfg.Stuck <= 0 {
 		return onLine
 	}
@@ -93,6 +99,7 @@ func (w *streamIdleWatchdog) wrap(onLine func([]byte)) func([]byte) {
 }
 
 func (w *streamIdleWatchdog) run(ctx context.Context) {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.streamIdleWatchdog.run")
 	if w == nil || w.cfg.Stuck <= 0 {
 		return
 	}
@@ -111,6 +118,7 @@ func (w *streamIdleWatchdog) run(ctx context.Context) {
 }
 
 func (w *streamIdleWatchdog) tick() {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.streamIdleWatchdog.tick")
 	w.mu.Lock()
 	if !w.seenLine {
 		w.mu.Unlock()
@@ -143,6 +151,7 @@ func (w *streamIdleWatchdog) tick() {
 }
 
 func (w *streamIdleWatchdog) close() {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.streamIdleWatchdog.close")
 	if w == nil {
 		return
 	}

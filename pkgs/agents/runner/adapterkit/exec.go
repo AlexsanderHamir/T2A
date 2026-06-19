@@ -6,10 +6,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 )
+
+const adapterkitLogCmd = "taskapi"
 
 const (
 	// DefaultScannerInitialBufferBytes is the initial stdout line scanner
@@ -62,10 +65,14 @@ func DefaultStreamExec(ctx context.Context, dir string, env []string, stdin []by
 // silence. When idle.Stuck elapses after the first stdout line, idle.Cancel is
 // invoked with ErrStreamIdle.
 func DefaultStreamExecWithIdle(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), idle StreamIdleConfig, args ...string) ([]byte, []byte, int, error) {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.DefaultStreamExecWithIdle",
+		"stuck_ns", int64(idle.Stuck))
 	return defaultStreamExec(ctx, dir, env, stdin, name, onStdoutLine, idle, args...)
 }
 
 func defaultStreamExec(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), idle StreamIdleConfig, args ...string) ([]byte, []byte, int, error) {
+	slog.Debug("trace", "cmd", adapterkitLogCmd, "operation", "adapterkit.defaultStreamExec",
+		"stuck_ns", int64(idle.Stuck))
 	var watchdog *streamIdleWatchdog
 	if idle.Stuck > 0 && idle.Cancel != nil {
 		watchdog = newStreamIdleWatchdog(idle)

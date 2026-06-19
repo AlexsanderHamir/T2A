@@ -85,6 +85,8 @@ func staleSummary(stuck time.Duration) string {
 }
 
 func mapStreamIdleCallback(fn func(runner.StreamIdleKind)) func(adapterkit.StreamIdleKind) {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.mapStreamIdleCallback",
+		"has_callback", fn != nil)
 	if fn == nil {
 		return nil
 	}
@@ -94,6 +96,8 @@ func mapStreamIdleCallback(fn func(runner.StreamIdleKind)) func(adapterkit.Strea
 }
 
 func adapterkitStreamIdleKind(kind adapterkit.StreamIdleKind) runner.StreamIdleKind {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.adapterkitStreamIdleKind",
+		"kind", int(kind))
 	switch kind {
 	case adapterkit.StreamIdleKillPending:
 		return runner.StreamIdleKillPending

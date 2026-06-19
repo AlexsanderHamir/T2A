@@ -1,6 +1,12 @@
 package orchestration
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import (
+	"log/slog"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+)
+
+const orchestrationLogCmd = "taskapi"
 
 // DecideExecutePostRun maps execute post-run facts to effects. The harness root
 // applies store writes; this function is pure policy only.
@@ -53,6 +59,8 @@ func DecideExecutePostRun(in ExecutePostRunInput) ExecuteEffects {
 }
 
 func decideExecuteAfterEvidenceRecovery(in ExecutePostRunInput) ExecuteEffects {
+	slog.Debug("trace", "cmd", orchestrationLogCmd, "operation", "agent.harness.orchestration.decideExecuteAfterEvidenceRecovery",
+		"operator_cancelled", in.OperatorCancelled, "evidence_recovery", in.EvidenceRecovery)
 	if in.OperatorCancelled {
 		return ExecuteEffects{
 			TerminateFailed: true,

@@ -151,7 +151,7 @@ function resolveActiveIndexForOpenMenu(
 }
 
 function useDropdownPanelPosition(
-  shellRef: RefObject<HTMLDivElement | null>,
+  shellRef: RefObject<HTMLDivElement>,
   open: boolean,
 ) {
   const [pos, setPos] = useState<{
@@ -188,7 +188,7 @@ function useDropdownPanelPosition(
 function useCloseOnOutsideClick(
   open: boolean,
   baseId: string,
-  rootRef: RefObject<HTMLDivElement | null>,
+  rootRef: RefObject<HTMLDivElement>,
   onClose: () => void,
 ) {
   useEffect(() => {
@@ -207,8 +207,8 @@ function useCloseOnOutsideClick(
 function useFocusMenuOnOpen(
   open: boolean,
   searchable: boolean,
-  searchRef: RefObject<HTMLInputElement | null>,
-  listRef: RefObject<HTMLUListElement | null>,
+  searchRef: RefObject<HTMLInputElement>,
+  listRef: RefObject<HTMLUListElement>,
 ) {
   useEffect(() => {
     if (!open) return;
@@ -337,8 +337,8 @@ type SettingsSelectPanelProps = {
   searchPlaceholder: string;
   search: string;
   setSearch: (value: string) => void;
-  searchRef: RefObject<HTMLInputElement | null>;
-  listRef: RefObject<HTMLUListElement | null>;
+  searchRef: RefObject<HTMLInputElement>;
+  listRef: RefObject<HTMLUListElement>;
   filteredRows: SettingsSelectRow[];
   selectable: SettingsSelectOption[];
   activeIndex: number;
@@ -467,9 +467,9 @@ function SettingsSelectPanel({
 }
 
 type SettingsSelectController = {
-  rootRef: RefObject<HTMLDivElement | null>;
-  shellRef: RefObject<HTMLDivElement | null>;
-  triggerRef: RefObject<HTMLButtonElement | null>;
+  rootRef: RefObject<HTMLDivElement>;
+  shellRef: RefObject<HTMLDivElement>;
+  triggerRef: RefObject<HTMLButtonElement>;
   baseId: string;
   listId: string;
   open: boolean;

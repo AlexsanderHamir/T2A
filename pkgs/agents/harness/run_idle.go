@@ -3,6 +3,7 @@ package harness
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
@@ -18,6 +19,8 @@ const (
 )
 
 func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.streamIdleProgressEvent",
+		"kind", int(kind), "stuck_ns", int64(stuck))
 	switch kind {
 	case runner.StreamIdleKillPending:
 		lead := 5 * time.Second
@@ -47,6 +50,7 @@ func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) ru
 }
 
 func streamIdleRecoveredEvent() runner.ProgressEvent {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.streamIdleRecoveredEvent")
 	return runner.ProgressEvent{
 		Kind:    runStateProgressKind,
 		Subtype: runStateIdleRecovered,
@@ -55,6 +59,8 @@ func streamIdleRecoveredEvent() runner.ProgressEvent {
 }
 
 func mergeStreamIdleRecoveryDetails(base []byte, stuck time.Duration) []byte {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.mergeStreamIdleRecoveryDetails",
+		"base_bytes", len(base), "stuck_ns", int64(stuck))
 	out := map[string]any{
 		"stream_idle_recovery": true,
 	}
@@ -81,6 +87,8 @@ func mergeStreamIdleRecoveryDetails(base []byte, stuck time.Duration) []byte {
 }
 
 func (h *Harness) streamIdleRunnerFields(baseOnProgress func(runner.ProgressEvent)) (time.Duration, func(runner.StreamIdleKind)) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.streamIdleRunnerFields",
+		"stuck_ns", int64(h.opts.StreamIdleStuck))
 	stuck := h.opts.StreamIdleStuck
 	if stuck <= 0 {
 		return 0, nil

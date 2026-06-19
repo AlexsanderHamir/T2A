@@ -49,6 +49,8 @@ func buildVerifyPrompt(
 	feedback string,
 	cmdEvidence []CommandEvidence,
 ) string {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.buildVerifyPrompt",
+		"cycle_id", cycleID, "locked_passes", len(previouslyPassed))
 	commits := s.loadEligibleCommits(ctx, cycleID)
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
@@ -93,6 +95,8 @@ func (s *Service) runVerifyCursor(
 	snap Snapshot,
 	promptText string,
 ) (runner.Result, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyCursor",
+		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseSeq)
 	runCtx, cancelCause := context.WithCancelCause(ctx)
 	cancel := func() { cancelCause(context.Canceled) }
 	if s.hooks.SetRunCancel != nil {
@@ -126,6 +130,8 @@ func (s *Service) runVerifyCursor(
 }
 
 func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.streamIdleProgressEvent",
+		"kind", int(kind), "stuck_ns", int64(stuck))
 	switch kind {
 	case runner.StreamIdleKillPending:
 		lead := 5 * time.Second
@@ -161,6 +167,8 @@ func (s *Service) assembleVerdictsFromVerifyReport(
 	selfReport map[string]reports.CriteriaEntry,
 	previouslyPassed map[string]Verdict,
 ) ([]Verdict, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.assembleVerdictsFromVerifyReport",
+		"cycle_id", cycleID, "expected", len(expected))
 	vrep, err := reports.ParseVerifyReport(s.reportDir, cycleID, expected)
 	if err != nil {
 		return nil, err
@@ -194,6 +202,8 @@ func (s *Service) assembleVerdictsFromVerifyReport(
 }
 
 func verifyLLMRunError(runErr error, parseErr error) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.verifyLLMRunError",
+		"has_run_err", runErr != nil, "has_parse_err", parseErr != nil)
 	if runErr != nil && !errors.Is(runErr, runner.ErrStale) {
 		return runErr
 	}
