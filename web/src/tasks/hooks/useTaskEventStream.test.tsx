@@ -111,6 +111,9 @@ describe("useTaskEventStream", () => {
     expect(calls).toContainEqual({
       queryKey: ["tasks", "detail"],
     });
+    expect(calls).toContainEqual({
+      queryKey: taskQueryKeys.commits("task-1"),
+    });
     // Standalone "cycles only" invalidation must not also fire — it
     // would be redundant work and would defeat the dedup logic.
     for (const arg of calls) {

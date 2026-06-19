@@ -1,3 +1,4 @@
 /* Task cycle styles split by live/history rows and attempt detail. */
 @import "./app-task-cycles-panel.css";
+@import "./app-task-commits-panel.css";
 @import "./app-task-attempt-detail.css";

@@ -1,8 +1,12 @@
 import { useMemo } from "react";
+import { errorMessage } from "@/lib/errorMessage";
+import {
+  EmptyState,
+  EmptyStateTimelineGlyph,
+} from "@/shared/EmptyState";
 import { useTaskCommits } from "@/tasks/hooks/useTaskCommits";
-import type { CommitStatus } from "@/types";
-import { formatRelativeTime } from "@/shared/time/relativeTime";
-import { useNow } from "@/shared/useNow";
+import { CommitList } from "./CommitList";
+import { GitContextMeta } from "./GitContextMeta";
 
 type Props = {
   taskId: string;
@@ -15,7 +19,6 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
     () => commitsQuery.data?.commits ?? [],
     [commitsQuery.data?.commits],
   );
-  const now = useNow();
 
   const gitContext = useMemo(() => {
     if (commits.length === 0) return null;
@@ -30,98 +33,69 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
 
   return (
     <section
-      className="task-detail-section"
+      className="task-detail-section task-commits-panel"
       data-testid="task-commits-panel"
       aria-labelledby="task-commits-heading"
     >
       <h2 id="task-commits-heading" className="task-detail-section-heading">
         Git commits
       </h2>
-      {commitsQuery.isLoading ? (
-        <p className="muted">Loading commits…</p>
+      <p className="task-detail-section-hint">
+        Commits indexed across all execution attempts. Eligible commits passed
+        execute gates and were admitted for verify.
+      </p>
+
+      {commitsQuery.isPending ? (
+        <CommitsLoading />
+      ) : commitsQuery.isError ? (
+        <div className="err" role="alert">
+          <p>
+            {errorMessage(
+              commitsQuery.error,
+              "Could not load commits.",
+            )}
+          </p>
+          <div className="task-detail-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                void commitsQuery.refetch();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
       ) : commits.length === 0 ? (
-        <p className="muted">No commits indexed yet.</p>
+        <EmptyState
+          icon={<EmptyStateTimelineGlyph />}
+          title="No commits indexed yet"
+          description="Commits appear here when an agent run records them in a git worktree."
+          density="compact"
+          className="task-detail-section-empty empty-state--compact"
+        />
       ) : (
         <>
-          {gitContext ? (
-            <p className="task-cycle-commits-breadcrumb muted">
-              {formatGitBreadcrumb(gitContext)}
-            </p>
-          ) : null}
-          <ul className="task-cycle-commits-list">
-            {commits.map((commit) => (
-              <li key={commit.sha} className="task-cycle-commit-row">
-                <CommitStatusBadge status={commit.status} gateReason={commit.gate_reason} />
-                <span className="task-cycle-commit-sha">{shortSha(commit.sha)}</span>
-                <span className="task-cycle-commit-sep" aria-hidden="true">
-                  ·
-                </span>
-                <span className="task-cycle-commit-message">{commit.message}</span>
-                <span className="task-cycle-commit-sep" aria-hidden="true">
-                  ·
-                </span>
-                <span className="task-cycle-commit-time muted">
-                  Attempt #{commit.attempt_seq} ·{" "}
-                  {formatRelativeTime(commit.committed_at, new Date(now))}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {gitContext ? <GitContextMeta context={gitContext} /> : null}
+          <CommitList commits={commits} showAttempt />
         </>
       )}
     </section>
   );
 }
 
-export function CommitStatusBadge({
-  status,
-  gateReason,
-}: {
-  status: CommitStatus;
-  gateReason?: string;
-}) {
-  const label =
-    status === "eligible"
-      ? "Eligible"
-      : status === "observed"
-        ? "Observed"
-        : status === "inherited"
-          ? "Inherited"
-          : "Superseded";
-  const title = gateReason?.trim() ? gateReason : undefined;
+function CommitsLoading() {
   return (
-    <span
-      className={`task-commit-status task-commit-status--${status}`}
-      title={title}
+    <ul
+      className="task-commits-list task-commits-list--loading"
+      aria-busy="true"
+      aria-label="Loading git commits"
     >
-      {label}
-    </span>
+      <li className="task-commit-row task-commit-row--skeleton" />
+      <li className="task-commit-row task-commit-row--skeleton" />
+    </ul>
   );
 }
 
-function shortSha(sha: string): string {
-  const trimmed = sha.trim();
-  return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
-}
-
-function pathTail(path: string): string {
-  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "");
-  const parts = normalized.split("/").filter(Boolean);
-  return parts.length > 0 ? parts[parts.length - 1] : path;
-}
-
-function formatGitBreadcrumb(ctx: {
-  repo: string;
-  worktree: string;
-  branch: string;
-}): string {
-  const repo = ctx.repo.trim();
-  const worktree = ctx.worktree.trim();
-  const branch = ctx.branch.trim() || "detached";
-  const segments = [pathTail(repo || "repo")];
-  if (worktree !== "" && worktree !== repo) {
-    segments.push(pathTail(worktree));
-  }
-  segments.push(branch);
-  return segments.join(" › ");
-}
+export { CommitStatusBadge } from "./CommitStatusBadge";

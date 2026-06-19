@@ -39,7 +39,8 @@ import {
   useTaskCycles,
 } from "../../../hooks/useTaskCycles";
 import { formatCycleLineageLabel } from "../../../cycleDisplay/cycleLineage";
-import { CommitStatusBadge } from "../commits/TaskCommitsPanel";
+import { CommitList } from "../commits/CommitList";
+import { GitContextMeta } from "../commits/GitContextMeta";
 
 type Props = {
   taskId: string;
@@ -644,7 +645,6 @@ function CycleCommitsSummary({
   gitContext?: CycleGitContext;
   commits: ReadonlyArray<CycleCommit>;
 }) {
-  const now = useNow();
   if (commits.length === 0) {
     return null;
   }
@@ -660,52 +660,10 @@ function CycleCommitsSummary({
       aria-label="Git commits"
     >
       <h4 className="task-cycle-row-verdicts-heading">Commits</h4>
-      <p className="task-cycle-commits-breadcrumb muted">
-        {formatGitBreadcrumb(ctx)}
-      </p>
-      <ul className="task-cycle-commits-list">
-        {commits.map((commit) => (
-          <li key={commit.sha} className="task-cycle-commit-row">
-            <CommitStatusBadge status={commit.status} gateReason={commit.gate_reason} />
-            <span className="task-cycle-commit-sha">{shortSha(commit.sha)}</span>
-            <span className="task-cycle-commit-sep" aria-hidden="true">
-              ·
-            </span>
-            <span className="task-cycle-commit-message">{commit.message}</span>
-            <span className="task-cycle-commit-sep" aria-hidden="true">
-              ·
-            </span>
-            <span className="task-cycle-commit-time muted">
-              {formatRelativeTime(commit.committed_at, new Date(now))}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <GitContextMeta context={ctx} />
+      <CommitList commits={commits} />
     </section>
   );
-}
-
-function shortSha(sha: string): string {
-  const trimmed = sha.trim();
-  return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
-}
-
-function pathTail(path: string): string {
-  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "");
-  const parts = normalized.split("/").filter(Boolean);
-  return parts.length > 0 ? parts[parts.length - 1] : path;
-}
-
-function formatGitBreadcrumb(ctx: CycleGitContext): string {
-  const repo = ctx.repo.trim();
-  const worktree = ctx.worktree.trim();
-  const branch = ctx.branch.trim() || "detached";
-  const segments = [pathTail(repo || "repo")];
-  if (worktree !== "" && worktree !== repo) {
-    segments.push(pathTail(worktree));
-  }
-  segments.push(branch);
-  return segments.join(" › ");
 }
 
 function CycleCommandRunsSummary({

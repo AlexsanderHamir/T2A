@@ -1,0 +1,155 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Task-wide git commits panel (TaskCommitsPanel)
+   Mirrors Execution cycles: section heading, card rows, filled status pills.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.task-commits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-commits-context {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+}
+
+.task-commits-context-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+
+.task-commits-context-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.task-commits-context-label {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.task-commits-context-value {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.task-commits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.task-commits-list--loading {
+  pointer-events: none;
+}
+
+.task-commit-row {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.task-commit-row--skeleton {
+  height: 2.75rem;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-1) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: task-cycle-skeleton-shimmer 1.6s linear infinite;
+  border-color: var(--border-chrome-hairline);
+}
+
+.task-commit-row-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
+  padding: 0.55rem 0.75rem;
+  font-size: var(--text-sm);
+}
+
+.task-commit-sha {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-chrome-hairline);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+}
+
+.task-commit-message {
+  min-width: 0;
+  flex: 1 1 12rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.task-commit-meta {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.task-commit-meta-sep {
+  margin: 0 0.25rem;
+}
+
+/* Commit status pills — filled swatches aligned with cycle/status pills. */
+.cell-pill--commit-eligible {
+  background: var(--pill-success-fill-bg);
+  color: var(--pill-success-fill-text);
+}
+
+.cell-pill--commit-observed {
+  background: var(--warning-surface);
+  color: var(--warning-ink);
+}
+
+.cell-pill--commit-inherited {
+  background: var(--pill-review-bg);
+  color: var(--pill-review-text);
+}
+
+.cell-pill--commit-superseded {
+  background: var(--pill-neutral-bg);
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+/* Cycle-expanded commits reuse the same row chrome inside verdict blocks. */
+.task-cycle-commits .task-commits-context {
+  margin-bottom: 0.35rem;
+}
+
+.task-cycle-commits .task-commits-list {
+  gap: 0.35rem;
+}
+
+.task-cycle-commits .task-commit-row-inner {
+  padding: 0.45rem 0.55rem;
+}

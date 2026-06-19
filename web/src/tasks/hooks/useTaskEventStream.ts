@@ -179,6 +179,16 @@ export function useTaskEventStream(): boolean {
           queryKey: taskQueryKeys.cycles(taskId),
         });
       }
+    }
+    // Commit rows are keyed outside the enriched-cycle fast path and
+    // outside the broad detail prefix when every task frame was
+    // enriched. UpsertCycleCommits publishes task_cycle_changed, so
+    // always invalidate commits for every task touched in this batch.
+    const commitsTaskIds = new Set(taskIds);
+    for (const [taskId] of cycleEntries) {
+      commitsTaskIds.add(taskId);
+    }
+    for (const taskId of commitsTaskIds) {
       void queryClient.invalidateQueries({
         queryKey: taskQueryKeys.commits(taskId),
       });
