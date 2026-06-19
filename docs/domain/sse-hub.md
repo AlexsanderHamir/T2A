@@ -4,7 +4,7 @@ In-process fanout for `GET /events`: monotonic event ids, ring-buffer replay, sl
 
 | | |
 | --- | --- |
-| **Applies to** | `pkgs/tasks/handler/sse.go`, handler notify helpers, `cmd/taskapi/run_helpers.go`, worker SSE adapters, `web/src/tasks/hooks/useTaskEventStream.ts` |
+| **Applies to** | `pkgs/tasks/realtime`, `pkgs/tasks/handler/sse_*.go`, handler notify helpers, `cmd/taskapi/run_helpers.go`, worker SSE adapters, `web/src/tasks/hooks/useTaskEventStream.ts` |
 | **Audience** | Contributors adding publish sites; frontend authors changing cache invalidation; operators debugging stale UI |
 | **Prerequisite** | [architecture.md](../architecture.md), [api.md](../api.md) (`GET /events`) |
 | **Companion articles** | [agent-queue.md](./agent-queue.md), [harness.md](./harness.md), [execute-agent.md](./execute-agent.md) |
@@ -30,7 +30,7 @@ In-process fanout for `GET /events`: monotonic event ids, ring-buffer replay, sl
 
 Server-sent events carry **change hints** to connected browsers. The authoritative task, cycle, and settings bodies always come from REST — SSE tells the SPA *what* to refetch or, when enriched, supplies the full entity inline.
 
-The **`SSEHub`** (`pkgs/tasks/handler/sse.go`) is a single in-process pub/sub with:
+The **`SSEHub`** ([`pkgs/tasks/handler/sse_hub.go`](../../pkgs/tasks/handler/sse_hub.go)) is a single in-process pub/sub with:
 
 - A **monotonic event id** on every frame (for `Last-Event-ID` reconnect)
 - A **ring buffer** (default 1024 events) for lossless replay within the window
@@ -334,10 +334,10 @@ Aggregated snapshot: `GET /system/health` ([api.md](../api.md)).
 
 | Concern | Files |
 | --- | --- |
-| Hub + handler | [`sse.go`](../../pkgs/tasks/handler/sse.go) |
-| Notify helpers | [`handler.go`](../../pkgs/tasks/handler/handler.go) (`notifyChange`, `notifyTaskChanged`, …) |
+| Wire types + publish port | [`pkgs/tasks/realtime/`](../../pkgs/tasks/realtime/) |
+| Hub + stream + notify | [`sse_hub.go`](../../pkgs/tasks/handler/sse_hub.go), [`sse_stream.go`](../../pkgs/tasks/handler/sse_stream.go), [`sse_notify.go`](../../pkgs/tasks/handler/sse_notify.go) |
 | Production wiring | [`run_helpers.go`](../../cmd/taskapi/run_helpers.go) |
-| Worker adapters | [`run_agentworker.go`](../../cmd/taskapi/run_agentworker.go) |
+| Worker adapters | [`internal/taskapi/agentworker/sse.go`](../../internal/taskapi/agentworker/sse.go) |
 | Metrics | [`metrics_http.go`](../../pkgs/tasks/middleware/metrics_http.go) |
 | SPA stream | [`useTaskEventStream.ts`](../../web/src/tasks/hooks/useTaskEventStream.ts), [`sseInvalidate.ts`](../../web/src/tasks/task-query/sseInvalidate.ts) |
 | Dev synthetic | [`pkgs/tasks/devsim/`](../../pkgs/tasks/devsim/) |

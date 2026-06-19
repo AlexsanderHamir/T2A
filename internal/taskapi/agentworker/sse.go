@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
 )
 
 const (
@@ -16,39 +16,39 @@ const (
 )
 
 type cycleChangeSSEAdapter struct {
-	hub *handler.SSEHub
+	pub realtime.Publisher
 }
 
-func newCycleChangeSSEAdapter(hub *handler.SSEHub) *cycleChangeSSEAdapter {
+func newCycleChangeSSEAdapter(pub realtime.Publisher) *cycleChangeSSEAdapter {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newCycleChangeSSEAdapter")
-	return &cycleChangeSSEAdapter{hub: hub}
+	return &cycleChangeSSEAdapter{pub: pub}
 }
 
 func (a *cycleChangeSSEAdapter) PublishCycleChange(taskID, cycleID string) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.cycleChangeSSEAdapter.PublishCycleChange",
 		"task_id", taskID, "cycle_id", cycleID)
-	if a == nil || a.hub == nil || taskID == "" {
+	if a == nil || a.pub == nil || taskID == "" {
 		return
 	}
-	a.hub.Publish(handler.TaskChangeEvent{
-		Type:    handler.TaskCycleChanged,
+	a.pub.Publish(realtime.Event{
+		Type:    realtime.TaskCycleChanged,
 		ID:      taskID,
 		CycleID: cycleID,
 	})
 }
 
 type runProgressSSEAdapter struct {
-	hub         *handler.SSEHub
+	pub         realtime.Publisher
 	minInterval time.Duration
 
 	mu       sync.Mutex
 	lastSent map[string]time.Time
 }
 
-func newRunProgressSSEAdapter(hub *handler.SSEHub, minInterval time.Duration) *runProgressSSEAdapter {
+func newRunProgressSSEAdapter(pub realtime.Publisher, minInterval time.Duration) *runProgressSSEAdapter {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newRunProgressSSEAdapter")
 	return &runProgressSSEAdapter{
-		hub:         hub,
+		pub:         pub,
 		minInterval: minInterval,
 		lastSent:    make(map[string]time.Time),
 	}
@@ -58,18 +58,18 @@ func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phase
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.runProgressSSEAdapter.PublishRunProgress",
 		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 		"kind", ev.Kind, "subtype", ev.Subtype)
-	if a == nil || a.hub == nil || taskID == "" || cycleID == "" || phaseSeq <= 0 || ev.Kind == "" {
+	if a == nil || a.pub == nil || taskID == "" || cycleID == "" || phaseSeq <= 0 || ev.Kind == "" {
 		return
 	}
 	if a.shouldDrop(taskID, cycleID, phaseSeq) {
 		return
 	}
-	a.hub.Publish(handler.TaskChangeEvent{
-		Type:     handler.AgentRunProgress,
+	a.pub.Publish(realtime.Event{
+		Type:     realtime.AgentRunProgress,
 		ID:       taskID,
 		CycleID:  cycleID,
 		PhaseSeq: phaseSeq,
-		Progress: &handler.AgentRunProgressPayload{
+		Progress: &realtime.RunProgressPayload{
 			Kind:    ev.Kind,
 			Subtype: ev.Subtype,
 			Message: ev.Message,

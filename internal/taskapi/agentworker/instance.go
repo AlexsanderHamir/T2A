@@ -72,8 +72,8 @@ func stopWorkerInstance(inst *instance, reason string) {
 
 func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSettings, r runner.Runner) (*instance, string) {
 	runTimeout := time.Duration(cfg.MaxRunDurationSeconds) * time.Second
-	notifier := newCycleChangeSSEAdapter(s.hub)
-	progressNotifier := newRunProgressSSEAdapter(s.hub, agentRunProgressMinInterval)
+	notifier := newCycleChangeSSEAdapter(s.publisher)
+	progressNotifier := newRunProgressSSEAdapter(s.publisher, agentRunProgressMinInterval)
 	verifyRunner, verifyStatus := s.buildVerifyRunner(ctx, cfg)
 	reportDir := taskapiconfig.WorkerReportDir()
 	if err := ensureWorkerReportDirWritable(reportDir); err != nil {

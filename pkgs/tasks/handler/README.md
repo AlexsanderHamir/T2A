@@ -27,8 +27,11 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 
 | File | Role |
 |------|------|
-| `handler.go` | `Handler`, `NewHandler`, route registration, `notifyChange` / SSE publish wiring, JSON security header helpers. |
-| `sse.go` | `SSEHub`, `streamEvents` (`GET /events`). Domain doc: [docs/domain/sse-hub.md](../../docs/domain/sse-hub.md). |
+| `handler.go` | `Handler`, `NewHandler`, route registration, JSON security header helpers. |
+| `sse_types.go` | Wire type aliases to `pkgs/tasks/realtime`. |
+| `sse_hub.go` | `SSEHub`, publish fanout, ring buffer, eviction. |
+| `sse_stream.go` | `streamEvents` (`GET /events`). |
+| `sse_notify.go` | `notifyChange` / enriched publish helpers. Domain doc: [docs/domain/sse-hub.md](../../docs/domain/sse-hub.md). |
 
 ## Route handlers (inner mux)
 

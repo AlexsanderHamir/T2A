@@ -2,7 +2,7 @@
 
 In-process agent worker supervisor: settings-driven boot and hot reload, runner registry build/probe, instance lifecycle, SSE notifier wiring, and shutdown drain.
 
-**Behavioral reference:** [docs/domain/agent-supervisor.md](../../../docs/domain/agent-supervisor.md). **Layout ADR:** [ADR-0019](../../../docs/adr/ADR-0019-agentworker-internal-layout.md).
+**Behavioral reference:** [docs/domain/agent-supervisor.md](../../../docs/domain/agent-supervisor.md). **Layout ADRs:** [ADR-0019](../../../docs/adr/ADR-0019-agentworker-internal-layout.md), [ADR-0020](../../../docs/adr/ADR-0020-realtime-sse-layout.md) (SSE publish port).
 
 ## Files
 
@@ -19,6 +19,6 @@ In-process agent worker supervisor: settings-driven boot and hot reload, runner 
 
 ## Wiring
 
-`cmd/taskapi/run_agentworker.go` calls `agentworker.New` + `Start` after queue/reconcile boot. The handler receives the supervisor as `handler.AgentWorkerControl`.
+`cmd/taskapi/run_agentworker.go` calls `agentworker.New` + `Start` after queue/reconcile boot, passing `handler.NewSSEHubWith(...)` as `realtime.Publisher`. The handler receives the supervisor as `handler.AgentWorkerControl`.
 
 Metrics registration stays in [`../agent_worker_metrics.go`](../agent_worker_metrics.go) and is injected at `New`.

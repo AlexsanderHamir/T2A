@@ -10,7 +10,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -30,7 +30,7 @@ type Supervisor struct {
 	parentCtx  context.Context
 	store      *store.Store
 	queue      *agents.MemoryQueue
-	hub        *handler.SSEHub
+	publisher  realtime.Publisher
 	metrics    worker.RunMetrics
 	probe      func(ctx context.Context, id, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error)
 	probeBudge time.Duration
@@ -45,13 +45,13 @@ type Supervisor struct {
 // New wires the supervisor with its dependencies. The supervisor does
 // not start the worker; the caller invokes Start once after the rest
 // of taskapi assembly finishes.
-func New(ctx context.Context, st *store.Store, q *agents.MemoryQueue, hub *handler.SSEHub) *Supervisor {
+func New(ctx context.Context, st *store.Store, q *agents.MemoryQueue, pub realtime.Publisher) *Supervisor {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newAgentWorkerSupervisor")
 	return &Supervisor{
 		parentCtx:  ctx,
 		store:      st,
 		queue:      q,
-		hub:        hub,
+		publisher:  pub,
 		metrics:    taskapi.RegisterAgentWorkerMetrics(),
 		probe:      registry.Probe,
 		probeBudge: 5 * time.Second,

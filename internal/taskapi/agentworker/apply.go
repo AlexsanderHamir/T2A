@@ -9,7 +9,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
@@ -196,8 +196,8 @@ func (s *Supervisor) logEffective(phase string, eff effectiveSettingsLog) {
 
 func (s *Supervisor) publishSettingsChanged() {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.publishSettingsChanged")
-	if s.hub == nil {
+	if s.publisher == nil {
 		return
 	}
-	s.hub.Publish(handler.TaskChangeEvent{Type: handler.SettingsChanged})
+	s.publisher.Publish(realtime.Event{Type: realtime.SettingsChanged})
 }

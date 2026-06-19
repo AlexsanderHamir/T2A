@@ -340,7 +340,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tNewSSEHubWith":                                      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*SSEHub.snapshotSinceLocked":                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*SSEHub.appendRingLocked":                           {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tcoalesceKey":                                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime\tCoalesceKey":                                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*SSEHub.evictSubscriber":                            {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*SSEHub.LastEventID":                                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseLastEventIDHeader":                             {},
