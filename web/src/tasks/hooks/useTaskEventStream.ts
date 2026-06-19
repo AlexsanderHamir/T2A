@@ -1,222 +1,55 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseTaskChangeFrame, settingsQueryKeys, taskQueryKeys } from "../task-query";
-import { projectQueryKeys } from "@/projects/queryKeys";
-import { rumSSEReconnected, rumSSEResyncReceived } from "@/observability";
-import { pushAgentRunProgress } from "./useAgentRunProgress";
-import { shouldSuppressSSEFor } from "./optimisticVersion";
-import { parseTask, parseTaskCycleDetail } from "@/api/parseTaskApi";
 import { setSseLiveForQueries } from "@/lib/queryClient";
+import { connectTaskEventSource } from "./sseConnection";
+import {
+  dispatchTaskChangeFrame,
+  flushProgressStreamInvalidation,
+  flushStreamInvalidation,
+} from "./sseCacheBridge";
+import {
+  clearPending,
+  debounceDelayMs,
+  emptyPending,
+  PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS,
+  PROGRESS_STREAM_INVALIDATE_WINDOW_MS,
+  SSE_INVALIDATE_MAX_WAIT_MS,
+  SSE_INVALIDATE_WINDOW_MS,
+  type PendingInvalidations,
+  type PendingProgressStreams,
+} from "./sseInvalidationScheduler";
 
 /**
  * Coalesce window for trailing-debounced SSE invalidations. The agent
  * worker emits ~4 `task_cycle_changed` frames per task run (StartCycle
  * → execute start/complete → terminate), spaced ~1–1.5s apart in real
- * workloads. A short 400ms debounce never
- * actually batched them — every frame fired its own flush, kicking off
- * a refetch storm (events list + checklist + task row + cycles) on the
- * open task detail page roughly every second.
+ * workloads. A short 400ms debounce never actually batched them — every
+ * frame fired its own flush, kicking off a refetch storm on the open
+ * task detail page roughly every second.
  *
- * 900ms is wide enough to cluster typical worker bursts into a single
- * flush, narrow enough that the user still sees status flips inside the
- * "feels live" budget. `MAX_WAIT_MS` is the safety valve: under a
- * continuous stream of frames (concurrent tasks, fast runner) the
- * debounce would otherwise reset forever and the UI would freeze; the
- * cap forces a flush at least every 2.5s no matter how busy the stream.
- *
- * Tuned with the agent's emission cadence in mind, NOT browser frame
- * rate — bumping the window further only delays the *first* visible
- * change for an idle-then-active task without improving throughput.
+ * 900ms clusters typical worker bursts; `MAX_WAIT_MS` forces a flush at
+ * least every 2.5s under continuous frames. See sseInvalidationScheduler
+ * for constants; sseCacheBridge for enrichment vs hint-only flush logic.
  */
-const SSE_INVALIDATE_WINDOW_MS = 900;
-const SSE_INVALIDATE_MAX_WAIT_MS = 2500;
-const PROGRESS_STREAM_INVALIDATE_WINDOW_MS = 5000;
-const PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS = 10000;
-
-/** Wait this long after an error before showing disconnected (browser may reconnect). */
-const SSE_DISCONNECT_UI_MS = 900;
-
-/**
- * Pending invalidation slots collected between debounce ticks. On flush we
- * invalidate the `["tasks","detail"]` prefix so every cached task detail
- * (and nested checklist/events/cycles keys) refetches — required because
- * subtask rows are embedded under the parent's `children` while SSE only
- * names the updated task id.
- *
- * Cycle frames (`task_cycle_changed`) are the *only* SSE signal the agent
- * worker emits — `task_updated` is HTTP-handler-only — so the worker's
- * status flips (running → done), audit-event appends, and checklist
- * toggles all surface as cycle frames. Treating them as task-scoped
- * invalidations is what keeps the task detail page actually live; the
- * earlier "cycles only" optimisation left events / checklist / status
- * stale until the user manually refreshed the page.
- */
-type PendingInvalidations = {
-  tasks: Set<string>;
-  /**
-   * Subset of `tasks` whose SSE frame carried an enriched `data`
-   * payload that we already applied via setQueryData. If a flush batch
-   * contains only enriched task ids (and no hint-only ids), we skip
-   * the broad `["tasks","detail"]` prefix invalidation because every
-   * affected detail cache is already up to date. When the batch is
-   * mixed, we still run the broad invalidation — a hint-only frame
-   * may have changed a parent's nested children we cannot reach with
-   * setQueryData on the child key alone.
-   */
-  enrichedTasks: Set<string>;
-  cycles: Map<string, Set<string>>;
-  /**
-   * Subset of `cycles` (keyed by `${taskId}\u0000${cycleId}`) whose
-   * frame carried enriched cycle detail. Same skip semantics as
-   * `enrichedTasks` but scoped to the per-cycle detail cache.
-   */
-  enrichedCycles: Set<string>;
-};
-
-type PendingProgressStreams = Map<string, { taskId: string; cycleId: string }>;
-
-function emptyPending(): PendingInvalidations {
-  return {
-    tasks: new Set(),
-    enrichedTasks: new Set(),
-    cycles: new Map(),
-    enrichedCycles: new Set(),
-  };
-}
-
-function clearPending(p: PendingInvalidations): void {
-  p.tasks.clear();
-  p.enrichedTasks.clear();
-  p.cycles.clear();
-  p.enrichedCycles.clear();
-}
-
-function cycleEnrichmentKey(taskId: string, cycleId: string): string {
-  return `${taskId}\u0000${cycleId}`;
-}
-
 export function useTaskEventStream(): boolean {
   const queryClient = useQueryClient();
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const progressStreamDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
-  const disconnectUiRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const pendingRef = useRef<PendingInvalidations>(emptyPending());
   const pendingProgressStreamsRef = useRef<PendingProgressStreams>(new Map());
-  /**
-   * Wall-clock timestamp when the *current* pending flush window opened.
-   * Reset to null after each flush. Used to enforce
-   * SSE_INVALIDATE_MAX_WAIT_MS so a continuous stream of frames cannot
-   * reset the trailing debounce indefinitely.
-   */
   const firstQueuedAtRef = useRef<number | null>(null);
   const firstProgressStreamQueuedAtRef = useRef<number | null>(null);
-  /** Cleared on effect cleanup so queued timer callbacks cannot run after unmount. */
   const streamEffectActiveRef = useRef(false);
   const [sseLive, setSseLive] = useState(false);
 
-  const flushStreamInvalidation = useCallback(() => {
+  const runFlushStreamInvalidation = useCallback(() => {
     firstQueuedAtRef.current = null;
-    const taskIds = [...pendingRef.current.tasks];
-    const enrichedTaskIds = new Set(pendingRef.current.enrichedTasks);
-    const cycleEntries = [...pendingRef.current.cycles.entries()];
-    const enrichedCycles = new Set(pendingRef.current.enrichedCycles);
-    clearPending(pendingRef.current);
-    if (taskIds.length === 0 && cycleEntries.length === 0) {
-      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      // `taskQueryKeys.stats()` (shared with Observability) is keyed outside
-      // taskQueryKeys.all, so the broad task fallback above does not
-      // touch it. Without this companion invalidation, aggregated counts
-      // stay stale until the next manual mutation or page refresh.
-      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-      void queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.cycleFailuresRoot(),
-      });
-      return;
-    }
-    if (taskIds.length > 0) {
-      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-      // `GET /tasks/{id}` returns a nested tree: subtask rows live under the
-      // parent's `children` array in React Query cache
-      // `["tasks","detail",parentId]`. SSE payloads only carry the *updated*
-      // task id (subtask or root), so invalidating that id alone refreshes the
-      // subtask detail view but leaves the parent's cached tree stale until a
-      // hard reload — the Subtasks list on the parent task page. Prefix-
-      // match every `["tasks","detail", …]` subtree so open ancestor pages
-      // refetch too (checklist/events/cycle queries share the same prefix).
-      //
-      // Enrichment fast path: when EVERY pending task frame carried a
-      // `data` payload we already applied directly to the detail
-      // cache via setQueryData. Skipping the broad prefix invalidation
-      // is the whole point of the enrichment — it eliminates the
-      // follow-up GET tree. If even one frame in the batch was
-      // hint-only, we fall back to invalidating the prefix because
-      // that frame may have changed a parent's nested children we
-      // cannot reach with setQueryData on the child key.
-      const allTasksEnriched = taskIds.every((id) => enrichedTaskIds.has(id));
-      if (!allTasksEnriched) {
-        void queryClient.invalidateQueries({
-          queryKey: [...taskQueryKeys.all, "detail"],
-        });
-      }
-    }
-    for (const [taskId, cycleSet] of cycleEntries) {
-      if (taskIds.includes(taskId)) {
-        // Already covered by the broad detail invalidation above
-        // (or no invalidation needed when the task was enriched).
-        continue;
-      }
-      // If every cycle frame for this task was enriched, the per-cycle
-      // detail cache is already current via setQueryData. The parent
-      // cycle list (`taskQueryKeys.cycles(taskId)`) still needs a
-      // refresh so the listing reflects any newly-added phases —
-      // enrichment carries one cycle, not the full list — so we keep
-      // the list-scoped invalidation.
-      const allCyclesEnriched = [...cycleSet].every((cycleId) =>
-        enrichedCycles.has(cycleEnrichmentKey(taskId, cycleId)),
-      );
-      if (!allCyclesEnriched) {
-        void queryClient.invalidateQueries({
-          queryKey: taskQueryKeys.cycles(taskId),
-        });
-      }
-    }
-    // Commit rows are keyed outside the enriched-cycle fast path and
-    // outside the broad detail prefix when every task frame was
-    // enriched. UpsertCycleCommits publishes task_cycle_changed, so
-    // always invalidate commits for every task touched in this batch.
-    const commitsTaskIds = new Set(taskIds);
-    for (const [taskId] of cycleEntries) {
-      commitsTaskIds.add(taskId);
-    }
-    for (const taskId of commitsTaskIds) {
-      void queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.commits(taskId),
-      });
-    }
-    // Any task/cycle frame can flip a status (running → done), change
-    // priority, or add/remove a task — all of which feed the home-page
-    // KPI counts. The stats query lives outside taskQueryKeys, so we
-    // have to invalidate it explicitly here; the existing list/detail
-    // invalidations above do not cover it. Mutation handlers
-    // (useTaskPatchFlow / useTaskDeleteFlow / useTasksApp.create*) also
-    // invalidate taskQueryKeys.stats(), but those only fire for user-initiated
-    // edits — agent-driven worker transitions reach the SPA solely
-    // through this SSE path.
-    void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-    void queryClient.invalidateQueries({
-      queryKey: taskQueryKeys.cycleFailuresRoot(),
-    });
+    flushStreamInvalidation(queryClient, pendingRef.current);
   }, [queryClient]);
 
-  const flushProgressStreamInvalidation = useCallback(() => {
+  const runFlushProgressStreamInvalidation = useCallback(() => {
     firstProgressStreamQueuedAtRef.current = null;
-    const streams = [...pendingProgressStreamsRef.current.values()];
-    pendingProgressStreamsRef.current.clear();
-    for (const stream of streams) {
-      void queryClient.invalidateQueries({
-        queryKey: taskQueryKeys.cycleStream(stream.taskId, stream.cycleId),
-      });
-    }
+    flushProgressStreamInvalidation(queryClient, pendingProgressStreamsRef.current);
   }, [queryClient]);
 
   const scheduleProgressStreamInvalidation = useCallback(
@@ -227,11 +60,11 @@ export function useTaskEventStream(): boolean {
       if (firstProgressStreamQueuedAtRef.current === null) {
         firstProgressStreamQueuedAtRef.current = now;
       }
-      const elapsedSinceFirst = now - firstProgressStreamQueuedAtRef.current;
-      const remainingBudget = PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS - elapsedSinceFirst;
-      const delay = Math.max(
-        0,
-        Math.min(PROGRESS_STREAM_INVALIDATE_WINDOW_MS, remainingBudget),
+      const delay = debounceDelayMs(
+        now,
+        firstProgressStreamQueuedAtRef.current,
+        PROGRESS_STREAM_INVALIDATE_WINDOW_MS,
+        PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS,
       );
       if (progressStreamDebounceRef.current !== undefined) {
         clearTimeout(progressStreamDebounceRef.current);
@@ -241,235 +74,71 @@ export function useTaskEventStream(): boolean {
         if (!streamEffectActiveRef.current) {
           return;
         }
-        flushProgressStreamInvalidation();
+        runFlushProgressStreamInvalidation();
       }, delay);
     },
-    [flushProgressStreamInvalidation],
+    [runFlushProgressStreamInvalidation],
   );
+
+  const scheduleDebouncedFlush = useCallback(() => {
+    const now = Date.now();
+    if (firstQueuedAtRef.current === null) {
+      firstQueuedAtRef.current = now;
+    }
+    const delay = debounceDelayMs(
+      now,
+      firstQueuedAtRef.current,
+      SSE_INVALIDATE_WINDOW_MS,
+      SSE_INVALIDATE_MAX_WAIT_MS,
+    );
+    if (sseDebounceRef.current !== undefined) {
+      clearTimeout(sseDebounceRef.current);
+    }
+    sseDebounceRef.current = setTimeout(() => {
+      sseDebounceRef.current = undefined;
+      if (!streamEffectActiveRef.current) {
+        return;
+      }
+      runFlushStreamInvalidation();
+    }, delay);
+  }, [runFlushStreamInvalidation]);
 
   const scheduleInvalidateFromStream = useCallback(
     (data: string) => {
-      const frame = parseTaskChangeFrame(data);
-      if (frame !== null) {
-        if (frame.kind === "task") {
-          // Optimistic-mutation guard: if the SPA has an in-flight
-          // patch/delete on this task, the SSE echo would race the
-          // optimistic apply and yank the row back to its server-truth
-          // value mid-edit. Skip the echo; the mutation's onSettled
-          // will invalidate after the server confirms, so cache truth
-          // re-converges via the mutation path instead of the SSE path.
-          if (shouldSuppressSSEFor(frame.taskId)) {
-            return;
-          }
-          pendingRef.current.tasks.add(frame.taskId);
-          // Enriched-payload fast path: when the server embedded the
-          // full task tree we can apply it directly to the detail
-          // cache and short-circuit the follow-up GET /tasks/{id}.
-          // Validate via parseTask before writing; a malformed
-          // payload silently falls back to the invalidate-and-refetch
-          // path so a server contract drift never poisons the cache.
-          if (frame.data !== undefined) {
-            try {
-              const parsed = parseTask(frame.data);
-              queryClient.setQueryData(
-                taskQueryKeys.detail(frame.taskId),
-                parsed,
-              );
-              pendingRef.current.enrichedTasks.add(frame.taskId);
-            } catch {
-              /* fall back to invalidate-and-refetch */
-            }
-          }
-        } else if (frame.kind === "project") {
-          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.listRoot() });
-          return;
-        } else if (frame.kind === "project_context") {
-          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.context(frame.projectId) });
-          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.detail(frame.projectId) });
-          return;
-        } else if (frame.kind === "cycle") {
-          // The agent worker only emits cycle frames (it never calls
-          // notifyChange / task_updated), so we must treat cycle frames
-          // as broad task-scoped invalidations or the open task detail
-          // page never sees worker-driven status flips, audit events, or
-          // checklist toggles. The cycleId is still bucketed under
-          // `cycles` for tests / analytics, but flushStreamInvalidation
-          // de-duplicates against the broader `tasks` set so we don't
-          // double-invalidate the cycles subtree.
-          pendingRef.current.tasks.add(frame.taskId);
-          let bucket = pendingRef.current.cycles.get(frame.taskId);
-          if (bucket === undefined) {
-            bucket = new Set();
-            pendingRef.current.cycles.set(frame.taskId, bucket);
-          }
-          bucket.add(frame.cycleId);
-          // Enriched cycle frames carry the same shape as
-          // `GET /tasks/{id}/cycles/{cycleId}` (cycle + phases). Apply
-          // directly so the open cycle detail page reflects the new
-          // phase status without a refetch round trip. The task's
-          // broader detail/list invalidations still fire (the worker
-          // also touches task.status / events) — that's the right
-          // behaviour because cycle enrichment only refreshes the
-          // per-cycle slot, not the rest of the task tree.
-          if (frame.data !== undefined) {
-            try {
-              const parsedCycle = parseTaskCycleDetail(frame.data);
-              queryClient.setQueryData(
-                taskQueryKeys.cycle(frame.taskId, frame.cycleId),
-                parsedCycle,
-              );
-              pendingRef.current.enrichedCycles.add(
-                cycleEnrichmentKey(frame.taskId, frame.cycleId),
-              );
-            } catch {
-              /* fall back to invalidate-and-refetch */
-            }
-          }
-        } else if (frame.kind === "resync") {
-          // The server's ring buffer either evicted us as a slow
-          // consumer or we reconnected past the retained window.
-          // Cancel any pending debounced flush and do a *full*
-          // refetch so the cache catches up to whatever we missed.
-          // This is the loss-prevention escape hatch documented in
-          // docs/api.md (Phase 2 of the realtime smoothness
-          // plan): better to over-refetch once than silently miss
-          // an SSE frame and let the UI go stale.
-          rumSSEResyncReceived();
-          if (sseDebounceRef.current !== undefined) {
-            clearTimeout(sseDebounceRef.current);
-            sseDebounceRef.current = undefined;
-          }
-          firstQueuedAtRef.current = null;
-          clearPending(pendingRef.current);
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-          void queryClient.invalidateQueries({
-            queryKey: taskQueryKeys.cycleFailuresRoot(),
-          });
-          void queryClient.invalidateQueries({
-            queryKey: settingsQueryKeys.app(),
-          });
-          return;
-        } else if (frame.kind === "progress") {
-          pushAgentRunProgress({
-            taskId: frame.taskId,
-            cycleId: frame.cycleId,
-            phaseSeq: frame.phaseSeq,
-            progress: frame.progress,
-          });
-          scheduleProgressStreamInvalidation(frame.taskId, frame.cycleId);
-          return;
-        } else if (frame.kind === "settings" || frame.kind === "agent_run_cancelled") {
-          // Settings updates and operator-initiated cancels are rare
-          // and don't touch task data; refetch the settings cache
-          // directly without joining the debounce batch (the SPA
-          // Settings page should reflect the change instantly).
-          // Returning here is load-bearing: the trailing debounce below
-          // would otherwise arm a timer that, on an empty pendingRef,
-          // falls through to the broad ["tasks"] fallback in
-          // flushStreamInvalidation and silently refetches every active
-          // task query SSE_INVALIDATE_WINDOW_MS later — exactly what the
-          // documented contract in docs/api.md forbids. This is also
-          // why settings/cancel frames live BEFORE the timer scheduling
-          // rather than alongside task/cycle accumulation.
-          void queryClient.invalidateQueries({
-            queryKey: settingsQueryKeys.app(),
-          });
-          return;
+      const result = dispatchTaskChangeFrame(
+        data,
+        queryClient,
+        pendingRef.current,
+        scheduleProgressStreamInvalidation,
+      );
+      if (result.kind === "immediate") {
+        return;
+      }
+      if (result.kind === "resync") {
+        if (sseDebounceRef.current !== undefined) {
+          clearTimeout(sseDebounceRef.current);
+          sseDebounceRef.current = undefined;
         }
+        firstQueuedAtRef.current = null;
+        return;
       }
-      // Trailing debounce that respects a hard maxWait ceiling. New
-      // frames push the flush back by SSE_INVALIDATE_WINDOW_MS, but we
-      // also remember when the *first* pending frame landed so a
-      // continuous stream cannot delay the flush past
-      // SSE_INVALIDATE_MAX_WAIT_MS. Without the cap the debounce would
-      // reset forever during back-to-back agent activity and the open
-      // task page would freeze on stale data — exactly the smoothness
-      // bug we are fixing here. Date.now() is intentional (not
-      // performance.now()) because vitest fake timers mock the wall
-      // clock and the existing test suite advances timers in ms ticks.
-      //
-      // NOTE: unrecognised frames (parseTaskChangeFrame returns null,
-      // e.g. a future event type or a malformed payload) intentionally
-      // fall through to here so the broad-fallback branch in
-      // flushStreamInvalidation refetches the task tree — better to
-      // over-refetch than to silently miss a server-side state change.
-      const now = Date.now();
-      if (firstQueuedAtRef.current === null) {
-        firstQueuedAtRef.current = now;
-      }
-      const elapsedSinceFirst = now - firstQueuedAtRef.current;
-      const remainingBudget = SSE_INVALIDATE_MAX_WAIT_MS - elapsedSinceFirst;
-      const delay = Math.max(0, Math.min(SSE_INVALIDATE_WINDOW_MS, remainingBudget));
-      if (sseDebounceRef.current !== undefined) {
-        clearTimeout(sseDebounceRef.current);
-      }
-      sseDebounceRef.current = setTimeout(() => {
-        sseDebounceRef.current = undefined;
-        if (!streamEffectActiveRef.current) {
-          return;
-        }
-        flushStreamInvalidation();
-      }, delay);
+      scheduleDebouncedFlush();
     },
-    [flushStreamInvalidation, queryClient, scheduleProgressStreamInvalidation],
+    [queryClient, scheduleDebouncedFlush, scheduleProgressStreamInvalidation],
   );
 
   useEffect(() => {
     streamEffectActiveRef.current = true;
-    const es = new EventSource("/events");
-    /** Click moment for the most recent disconnect; null when we are
-     * currently connected. The browser's EventSource auto-reconnect
-     * fires onopen again so we observe the reconnect gap by diffing
-     * onopen.now() against this ref. */
-    let disconnectedAt: number | null = null;
-    /** Tracks whether we have seen at least one onopen — the first
-     * open is the initial connect, not a reconnect, and shouldn't be
-     * counted in the RUM reconnect histogram. */
-    let hasOpenedOnce = false;
-    const clearDisconnectUi = () => {
-      if (disconnectUiRef.current !== undefined) {
-        clearTimeout(disconnectUiRef.current);
-        disconnectUiRef.current = undefined;
-      }
-    };
-    es.onopen = () => {
-      clearDisconnectUi();
-      if (!streamEffectActiveRef.current) {
-        return;
-      }
-      if (hasOpenedOnce && disconnectedAt !== null) {
-        const gapMs = Math.max(0, performance.now() - disconnectedAt);
-        rumSSEReconnected(gapMs);
-      }
-      hasOpenedOnce = true;
-      disconnectedAt = null;
-      setSseLive(true);
-    };
-    es.onmessage = (ev) => {
-      scheduleInvalidateFromStream(String(ev.data ?? ""));
-    };
-    es.onerror = () => {
-      if (disconnectedAt === null) {
-        disconnectedAt = performance.now();
-      }
-      clearDisconnectUi();
-      disconnectUiRef.current = setTimeout(() => {
-        disconnectUiRef.current = undefined;
-        if (!streamEffectActiveRef.current) {
-          return;
-        }
-        if (es.readyState !== EventSource.OPEN) {
-          setSseLive(false);
-        }
-      }, SSE_DISCONNECT_UI_MS);
-    };
+    const disconnect = connectTaskEventSource({
+      isActive: () => streamEffectActiveRef.current,
+      onMessage: scheduleInvalidateFromStream,
+      onLiveChange: setSseLive,
+    });
     const pending = pendingRef.current;
     const pendingProgressStreams = pendingProgressStreamsRef.current;
     return () => {
       streamEffectActiveRef.current = false;
-      clearDisconnectUi();
+      disconnect();
       if (sseDebounceRef.current !== undefined) {
         clearTimeout(sseDebounceRef.current);
         sseDebounceRef.current = undefined;
@@ -482,17 +151,9 @@ export function useTaskEventStream(): boolean {
       firstProgressStreamQueuedAtRef.current = null;
       clearPending(pending);
       pendingProgressStreams.clear();
-      es.close();
-      setSseLive(false);
     };
   }, [scheduleInvalidateFromStream]);
 
-  // Mirror the connection state into the module-level flag that
-  // `createAppQueryClient` reads from its `refetchOnWindowFocus`
-  // predicate. We keep this as a separate effect (rather than inlining
-  // it next to each `setSseLive` call) so the React state and the
-  // out-of-tree flag cannot diverge — `useState` + `useEffect` is the
-  // only ordering React promises us here.
   useEffect(() => {
     setSseLiveForQueries(sseLive);
     return () => {
