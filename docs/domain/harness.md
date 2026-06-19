@@ -303,6 +303,8 @@ Files live **outside** `repo_root` so customer git trees stay clean. See [execut
 
 Durable mirrors (`task_cycle_criteria_reports`, `task_cycle_verify_reports`, `task_cycle_command_runs`) are upserted during the verify pipeline. Failures to mirror are logged but non-gating — forensics can use DB rows after ephemeral files are GC'd.
 
+Report JSON includes `"schema_version": 1` ([`internal/reports`](../../pkgs/agents/harness/internal/reports/criteria_parse.go)). Parsers accept omitted or `1`; reject unknown major versions. Golden fixtures live under `internal/reports/testdata/`.
+
 ## Durability tiers
 
 Resume and retry code must declare which tier it reads. Do not assume T1 report files exist after restart.
