@@ -33,8 +33,19 @@ Task detail edit UI for automations is not in V1; PATCH `/tasks/{id}` accepts `a
 
 See [ADR-0013](./adr/ADR-0013-prompt-automations.md).
 
+## Task sync (SSE cache coherence)
+
+Live task UI cache policy lives in [`web/src/tasks/sync/`](../../web/src/tasks/sync/). Read order:
+
+1. [ADR-0022](./adr/ADR-0022-task-sync-policy.md) — Decide vs Apply boundaries
+2. `decideSyncFrame.ts` — per-frame schedule, suppression, enrichment effects
+3. `decideFlushBatch.ts` — debounced invalidation targets
+4. `taskSyncCoordinator.ts` — pending state + debounce wiring consumed by `useTaskEventStream`
+
+Wire decode stays in `web/src/tasks/task-query/sseInvalidate.ts`. Event catalog and operator tuning: [domain/sse-hub.md](./domain/sse-hub.md).
+
 ## Task detail — execution cycles
 
 Expanded cycle rows in `TaskCyclesPanel` load `GET /tasks/{id}/cycles/{cycleId}/verdicts`. When the worker indexed git commits for the cycle, the panel shows a repo → branch breadcrumb and commit rows (`git_context`, `commits[]`) with **status badges** (`eligible`, `observed`, …) above the per-criterion verdict list.
 
-The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPanel` / `useTaskCommits` — task-wide commit history deduped by SHA, refetched on `task_cycle_changed` SSE. Clicking a commit row navigates to **`/tasks/{id}/commits/{sha}`** (`TaskCommitDiffPage`), which lazy-loads **`GET /repo/diff?sha=`** and renders the patch with `react-diff-view`. Parsers: `web/src/api/parseTaskApiCycles.ts`; types: `web/src/types/cycle.ts`. See [domain/cycle-commits.md](./domain/cycle-commits.md) and [commit-eligibility.md](./domain/commit-eligibility.md).
+The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPanel` / `useTaskCommits` — task-wide commit history deduped by SHA, refetched on `task_cycle_changed` SSE. Clicking a commit row navigates to **`/tasks/{id}/commits/{sha}`** (`TaskCommitDiffPage`), which loads **`GET /repo/diff?sha=`** with GitHub-style summary stats, syntax-highlighted hunks (refractor + `react-diff-view`), unified/split toggle, file navigator, and collapsible large files. Parsers: `web/src/api/parseTaskApiCycles.ts`; types: `web/src/types/cycle.ts`. See [domain/cycle-commits.md](./domain/cycle-commits.md) and [commit-eligibility.md](./domain/commit-eligibility.md).

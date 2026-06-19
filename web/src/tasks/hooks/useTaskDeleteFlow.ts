@@ -11,10 +11,7 @@ import {
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import { taskQueryKeys } from "../task-query";
-import {
-  bumpOptimisticVersion,
-  clearOptimisticVersion,
-} from "./optimisticVersion";
+import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
 import type { Task, TaskListResponse } from "@/types";
 
 /** Subset of `Task` the confirm dialog needs; widened so callers can pass plain rows. */
@@ -106,12 +103,12 @@ export function useTaskDeleteFlow(opts: {
       rumMutationStarted("task_delete");
       // See useTaskPatchFlow: pessimistic path returns an empty
       // snapshot, so onError can no-op and we don't pollute the
-      // rolled_back SLI. clearOptimisticVersion stays safe when
+      // rolled_back SLI. endTaskMutation stays safe when
       // nothing was bumped.
       if (!optimisticMutationsEnabled) {
         return { detail: undefined, lists: [], startedAtMs };
       }
-      bumpOptimisticVersion(input.id);
+      beginTaskMutation(input.id);
 
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.listRoot() });
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
@@ -180,7 +177,7 @@ export function useTaskDeleteFlow(opts: {
       }
     },
     onSettled: (_data, _err, variables) => {
-      clearOptimisticVersion(variables.id);
+      endTaskMutation(variables.id);
     },
   });
 

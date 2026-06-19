@@ -12,10 +12,7 @@ import {
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import type { Priority, Status, Task, TaskListResponse } from "@/types";
-import {
-  bumpOptimisticVersion,
-  clearOptimisticVersion,
-} from "./optimisticVersion";
+import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
 
 export type TaskPatchInput = {
   id: string;
@@ -155,7 +152,7 @@ export function useTaskPatchFlow(opts: {
       if (!optimisticMutationsEnabled) {
         return { detail: undefined, lists: [], startedAtMs };
       }
-      bumpOptimisticVersion(input.id);
+      beginTaskMutation(input.id);
 
       // Cancel in-flight refetches so they can't overwrite our optimistic write.
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(input.id) });
@@ -258,7 +255,7 @@ export function useTaskPatchFlow(opts: {
       }
     },
     onSettled: (_data, _err, variables) => {
-      clearOptimisticVersion(variables.id);
+      endTaskMutation(variables.id);
     },
   });
 

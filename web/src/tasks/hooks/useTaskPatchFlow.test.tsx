@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { useTaskPatchFlow, type TaskPatchInput } from "./useTaskPatchFlow";
 import { taskQueryKeys } from "../task-query";
 import { ToastProvider } from "@/shared/toast";
-import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import {
+  __resetMutationGuardForTests,
+  shouldSuppressTaskMutationEcho,
+} from "@/tasks/sync/mutationGuard";
 import { settingsQueryKeys } from "../task-query";
 import type { AppSettings } from "@/api/settings";
 import type { Task } from "@/types";
@@ -74,10 +77,10 @@ const baseInput: TaskPatchInput = {
 describe("useTaskPatchFlow", () => {
   beforeEach(() => {
     mockedPatch.mockReset();
-    __resetOptimisticVersionsForTests();
+    __resetMutationGuardForTests();
   });
   afterEach(() => {
-    __resetOptimisticVersionsForTests();
+    __resetMutationGuardForTests();
     vi.restoreAllMocks();
   });
 
@@ -363,8 +366,8 @@ describe("useTaskPatchFlow", () => {
     await waitFor(() => {
       expect(result.current.patchPending).toBe(true);
     });
-    expect(shouldSuppressSSEFor("t1")).toBe(true);
-    expect(shouldSuppressSSEFor("other-task")).toBe(false);
+    expect(shouldSuppressTaskMutationEcho("t1")).toBe(true);
+    expect(shouldSuppressTaskMutationEcho("other-task")).toBe(false);
     act(() => {
       resolveFn?.();
     });
@@ -374,6 +377,6 @@ describe("useTaskPatchFlow", () => {
     // After settled, the version is cleared so the *next* SSE echo
     // is no longer suppressed (server truth re-converges via the
     // mutation's onSuccess invalidation).
-    expect(shouldSuppressSSEFor("t1")).toBe(false);
+    expect(shouldSuppressTaskMutationEcho("t1")).toBe(false);
   });
 });

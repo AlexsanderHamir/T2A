@@ -23,16 +23,15 @@ const versions = new Map<string, number>();
 const lastSeen = new Map<string, number>();
 
 /** Increment the optimistic version for a task. Call from onMutate. */
-export function bumpOptimisticVersion(taskId: string): number {
+export function beginTaskMutationGuard(taskId: string): number {
   const next = (versions.get(taskId) ?? 0) + 1;
   versions.set(taskId, next);
   return next;
 }
 
-/** Mark the SSE echo for a given task as observed (called from the
- * SSE invalidation path). Returns true if the caller should
- * SUPPRESS the echo (i.e. an in-flight mutation is still ahead). */
-export function shouldSuppressSSEFor(taskId: string): boolean {
+/** Mark the SSE echo for a given task as observed. Returns true if the
+ * caller should SUPPRESS the echo (i.e. an in-flight mutation is still ahead). */
+export function shouldSuppressTaskMutationEcho(taskId: string): boolean {
   const v = versions.get(taskId) ?? 0;
   const seen = lastSeen.get(taskId) ?? 0;
   if (v > seen) {
@@ -42,10 +41,8 @@ export function shouldSuppressSSEFor(taskId: string): boolean {
   return false;
 }
 
-/** Drop the bookkeeping for a task once the mutation settled. Call
- * from onSettled. The decrement is symmetric with bumpOptimisticVersion
- * so the counter doesn't grow unbounded. */
-export function clearOptimisticVersion(taskId: string): void {
+/** Drop the bookkeeping for a task once the mutation settled. */
+export function endTaskMutationGuard(taskId: string): void {
   const v = versions.get(taskId) ?? 0;
   if (v <= 1) {
     versions.delete(taskId);
@@ -56,7 +53,7 @@ export function clearOptimisticVersion(taskId: string): void {
 }
 
 /** Test-only: reset module state between cases. */
-export function __resetOptimisticVersionsForTests(): void {
+export function __resetMutationGuardForTests(): void {
   versions.clear();
   lastSeen.clear();
 }

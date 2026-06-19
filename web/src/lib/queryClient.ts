@@ -3,28 +3,12 @@ import {
   QueryCache,
   QueryClient,
 } from "@tanstack/react-query";
+import { isSseLiveForQueries } from "@/tasks/sync/connectionPolicy";
 
 /** Dev-only: production builds omit cache `console.error` noise (UI still surfaces query errors). */
 function logQueryError(scope: string, err: unknown): void {
   if (!import.meta.env.DEV) return;
   console.error(`[${scope}]`, err);
-}
-
-// Module-level flag that mirrors the `useTaskEventStream` connection
-// state. We expose `set`/`get` rather than a React context so the
-// QueryClient's `refetchOnWindowFocus` predicate — which runs outside
-// the React render path — can read it without an extra subscription.
-// Default `false` (treat SSE as not connected) so first-paint focus
-// behaviour stays conservative until `useTaskEventStream` has had a
-// chance to update it.
-let sseLiveForQueries = false;
-
-export function setSseLiveForQueries(connected: boolean): void {
-  sseLiveForQueries = connected;
-}
-
-export function isSseLiveForQueries(): boolean {
-  return sseLiveForQueries;
 }
 
 export function createAppQueryClient(): QueryClient {

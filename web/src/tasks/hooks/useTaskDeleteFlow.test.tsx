@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { taskQueryKeys } from "../task-query";
 import { ToastProvider } from "@/shared/toast";
-import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
+import {
+  __resetMutationGuardForTests,
+  shouldSuppressTaskMutationEcho,
+} from "@/tasks/sync/mutationGuard";
 import { settingsQueryKeys } from "../task-query";
 import type { AppSettings } from "@/api/settings";
 import type { Task, TaskListResponse } from "@/types";
@@ -61,10 +64,10 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 describe("useTaskDeleteFlow", () => {
   beforeEach(() => {
     mockedDelete.mockReset();
-    __resetOptimisticVersionsForTests();
+    __resetMutationGuardForTests();
   });
   afterEach(() => {
-    __resetOptimisticVersionsForTests();
+    __resetMutationGuardForTests();
     vi.restoreAllMocks();
   });
 
@@ -402,13 +405,13 @@ describe("useTaskDeleteFlow", () => {
     await waitFor(() => {
       expect(result.current.deletePending).toBe(true);
     });
-    expect(shouldSuppressSSEFor("t1")).toBe(true);
+    expect(shouldSuppressTaskMutationEcho("t1")).toBe(true);
     act(() => {
       resolveFn?.();
     });
     await waitFor(() => {
       expect(result.current.deletePending).toBe(false);
     });
-    expect(shouldSuppressSSEFor("t1")).toBe(false);
+    expect(shouldSuppressTaskMutationEcho("t1")).toBe(false);
   });
 });

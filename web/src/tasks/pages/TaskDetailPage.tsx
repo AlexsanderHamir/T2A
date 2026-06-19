@@ -12,10 +12,7 @@ import {
 } from "@/observability";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
-import {
-  bumpOptimisticVersion,
-  clearOptimisticVersion,
-} from "../hooks/optimisticVersion";
+import { beginTaskMutation, endTaskMutation } from "@/tasks/sync";
 import type { Task } from "@/types";
 import {
   TaskCyclesPanel,
@@ -111,7 +108,7 @@ export function TaskDetailPage({ app }: Props) {
       if (!optimisticMutationsEnabled) {
         return { prev: undefined, startedAtMs };
       }
-      bumpOptimisticVersion(taskId);
+      beginTaskMutation(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
       const prev = queryClient.getQueryData<Task>(detailKey);
@@ -152,7 +149,7 @@ export function TaskDetailPage({ app }: Props) {
       }
     },
     onSettled: () => {
-      clearOptimisticVersion(taskId);
+      endTaskMutation(taskId);
     },
   });
 
@@ -169,7 +166,7 @@ export function TaskDetailPage({ app }: Props) {
       if (!optimisticMutationsEnabled) {
         return { prev: undefined, startedAtMs, next };
       }
-      bumpOptimisticVersion(taskId);
+      beginTaskMutation(taskId);
       await queryClient.cancelQueries({ queryKey: taskQueryKeys.detail(taskId) });
       const detailKey = taskQueryKeys.detail(taskId);
       const prev = queryClient.getQueryData<Task>(detailKey);
@@ -211,7 +208,7 @@ export function TaskDetailPage({ app }: Props) {
       }
     },
     onSettled: () => {
-      clearOptimisticVersion(taskId);
+      endTaskMutation(taskId);
     },
   });
 

@@ -1,23 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { setSseLiveForQueries } from "@/lib/queryClient";
+import { setSseLiveForQueries } from "@/tasks/sync/connectionPolicy";
 import { connectTaskEventSource } from "./sseConnection";
 import {
-  dispatchTaskChangeFrame,
-  flushProgressStreamInvalidation,
-  flushStreamInvalidation,
-} from "./sseCacheBridge";
+  createTaskSyncCoordinator,
+  type TaskSyncCoordinator,
+} from "../sync/taskSyncCoordinator";
 import {
-  clearPending,
   debounceDelayMs,
-  emptyPending,
   PROGRESS_STREAM_INVALIDATE_MAX_WAIT_MS,
   PROGRESS_STREAM_INVALIDATE_WINDOW_MS,
   SSE_INVALIDATE_MAX_WAIT_MS,
   SSE_INVALIDATE_WINDOW_MS,
-  type PendingInvalidations,
-  type PendingProgressStreams,
-} from "./sseInvalidationScheduler";
+} from "../sync/syncConstants";
 
 /**
  * Coalesce window for trailing-debounced SSE invalidations. The agent
@@ -28,15 +23,17 @@ import {
  * task detail page roughly every second.
  *
  * 900ms clusters typical worker bursts; `MAX_WAIT_MS` forces a flush at
- * least every 2.5s under continuous frames. See sseInvalidationScheduler
- * for constants; sseCacheBridge for enrichment vs hint-only flush logic.
+ * least every 2.5s under continuous frames. Policy lives in
+ * `web/src/tasks/sync/`; this hook owns transport and debounce timers.
  */
 export function useTaskEventStream(): boolean {
   const queryClient = useQueryClient();
   const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const progressStreamDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>();
-  const pendingRef = useRef<PendingInvalidations>(emptyPending());
-  const pendingProgressStreamsRef = useRef<PendingProgressStreams>(new Map());
+  const coordinatorRef = useRef<TaskSyncCoordinator | null>(null);
+  if (coordinatorRef.current === null) {
+    coordinatorRef.current = createTaskSyncCoordinator(queryClient);
+  }
   const firstQueuedAtRef = useRef<number | null>(null);
   const firstProgressStreamQueuedAtRef = useRef<number | null>(null);
   const streamEffectActiveRef = useRef(false);
@@ -44,18 +41,22 @@ export function useTaskEventStream(): boolean {
 
   const runFlushStreamInvalidation = useCallback(() => {
     firstQueuedAtRef.current = null;
-    flushStreamInvalidation(queryClient, pendingRef.current);
-  }, [queryClient]);
+    coordinatorRef.current?.flushStreamInvalidation();
+  }, []);
 
   const runFlushProgressStreamInvalidation = useCallback(() => {
     firstProgressStreamQueuedAtRef.current = null;
-    flushProgressStreamInvalidation(queryClient, pendingProgressStreamsRef.current);
-  }, [queryClient]);
+    coordinatorRef.current?.flushProgressStreamInvalidation();
+  }, []);
 
   const scheduleProgressStreamInvalidation = useCallback(
     (taskId: string, cycleId: string) => {
+      const coordinator = coordinatorRef.current;
+      if (coordinator === null) {
+        return;
+      }
       const streamKey = `${taskId}\u0000${cycleId}`;
-      pendingProgressStreamsRef.current.set(streamKey, { taskId, cycleId });
+      coordinator.pendingProgressStreams.set(streamKey, { taskId, cycleId });
       const now = Date.now();
       if (firstProgressStreamQueuedAtRef.current === null) {
         firstProgressStreamQueuedAtRef.current = now;
@@ -105,12 +106,11 @@ export function useTaskEventStream(): boolean {
 
   const scheduleInvalidateFromStream = useCallback(
     (data: string) => {
-      const result = dispatchTaskChangeFrame(
-        data,
-        queryClient,
-        pendingRef.current,
-        scheduleProgressStreamInvalidation,
-      );
+      const coordinator = coordinatorRef.current;
+      if (coordinator === null) {
+        return;
+      }
+      const result = coordinator.handleRawFrame(data, scheduleProgressStreamInvalidation);
       if (result.kind === "immediate") {
         return;
       }
@@ -124,7 +124,7 @@ export function useTaskEventStream(): boolean {
       }
       scheduleDebouncedFlush();
     },
-    [queryClient, scheduleDebouncedFlush, scheduleProgressStreamInvalidation],
+    [scheduleDebouncedFlush, scheduleProgressStreamInvalidation],
   );
 
   useEffect(() => {
@@ -134,8 +134,7 @@ export function useTaskEventStream(): boolean {
       onMessage: scheduleInvalidateFromStream,
       onLiveChange: setSseLive,
     });
-    const pending = pendingRef.current;
-    const pendingProgressStreams = pendingProgressStreamsRef.current;
+    const coordinator = coordinatorRef.current;
     return () => {
       streamEffectActiveRef.current = false;
       disconnect();
@@ -149,8 +148,7 @@ export function useTaskEventStream(): boolean {
       }
       firstQueuedAtRef.current = null;
       firstProgressStreamQueuedAtRef.current = null;
-      clearPending(pending);
-      pendingProgressStreams.clear();
+      coordinator?.dispose();
     };
   }, [scheduleInvalidateFromStream]);
 

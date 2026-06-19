@@ -236,7 +236,7 @@ JSON uses snake_case; shape pinned by handler tests.
 
 ## SPA invalidation strategy
 
-Entry hook: [`useTaskEventStream.ts`](../../web/src/tasks/hooks/useTaskEventStream.ts). Frame parser: [`sseInvalidate.ts`](../../web/src/tasks/task-query/sseInvalidate.ts).
+Architecture: [ADR-0022](../adr/ADR-0022-task-sync-policy.md). Entry hook: [`useTaskEventStream.ts`](../../web/src/tasks/hooks/useTaskEventStream.ts) (transport + timers). Policy: [`web/src/tasks/sync/`](../../web/src/tasks/sync/) (`decideSyncFrame`, `decideFlushBatch`, `taskSyncCoordinator`). Frame parser: [`sseInvalidate.ts`](../../web/src/tasks/task-query/sseInvalidate.ts).
 
 1. **`EventSource("/events")`** mounted once at app shell
 2. Each `message` → `parseTaskChangeFrame(data)`
