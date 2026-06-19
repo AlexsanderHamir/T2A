@@ -158,47 +158,51 @@ a.task-create-agent-lock-notice-link:hover {
    speck, without the loud 3px glow the old schedule dot used to
    carry. */
 .task-detail-ok {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
-  margin-bottom: 0;
-  font-size: var(--text-sm);
-  line-height: 1.4;
+  margin: 0;
+}
+
+.task-detail-ok-pill--success {
+  background: var(--pill-success-fill-bg);
+  color: var(--pill-success-fill-text);
+}
+
+.task-detail-ok-pill--active {
+  background: var(--brand-muted);
+  color: var(--brand-deep);
+  border: 1px solid var(--brand-border-soft);
+}
+
+.task-detail-ok-pill--info {
+  background: var(--info-soft);
+  color: color-mix(in srgb, var(--info) 80%, var(--text-primary));
+}
+
+.task-detail-ok-pill--caution {
+  background: var(--warning-surface);
+  color: var(--warning-ink);
+}
+
+.task-detail-ok-pill--neutral {
+  background: var(--pill-neutral-bg);
   color: var(--text-secondary);
 }
 
-.task-detail-ok::before {
-  content: "";
-  flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: var(--radius-full);
-  background: var(--text-tertiary);
+.task-detail-fact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  padding: 0.55rem 0.75rem;
+  font-size: var(--text-sm);
 }
 
-.task-detail-ok[data-tone="success"]::before {
-  background: var(--success);
-  box-shadow: 0 0 0 2px var(--success-soft);
+.task-detail-fact-copy {
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
-.task-detail-ok[data-tone="active"]::before {
-  background: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand-muted);
-}
-
-.task-detail-ok[data-tone="info"]::before {
-  background: var(--info);
-  box-shadow: 0 0 0 2px var(--info-soft);
-}
-
-.task-detail-ok[data-tone="caution"]::before {
-  background: var(--warning);
-  box-shadow: 0 0 0 2px var(--warning-soft);
-}
-
-.task-detail-ok[data-tone="neutral"]::before {
-  background: var(--text-tertiary);
+.task-detail-fact-when {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Action row — a single tidy cluster, primary CTA leads. The previous
@@ -230,73 +234,47 @@ a.task-create-agent-lock-notice-link:hover {
 }
 
 /* === Hero toolbar =====================================================
-   Wraps the attention bar (ok line OR rich warning callout) + actions +
-   schedule line into ONE rhythmic strip beneath the title. Before this
-   wrapper the three pieces stacked as orphan rows with competing margins
-   and the action cluster split the metadata in half — facts above,
-   facts below, buttons stranded between. The grid below puts state
-   facts on the left and a right-anchored action cluster on the right,
-   with a single hairline separator at the bottom replacing the three
-   stray dividers that used to live below each row.
-
-   The grid uses two columns (facts | actions) and grows rows as needed:
-   - ok line + actions (single row, common case)
-   - schedule row sits below the ok line on the left, actions stay aligned
-   - warning callout spans both columns on row 1; everything else shifts
-     down so the alert gets full emphasis. ==================================== */
+   Status + schedule facts live in a bordered card (same chrome family as
+   execution cycle rows). Actions sit beside the card on wide screens. */
 .task-detail-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-4);
-  row-gap: var(--space-2);
+  justify-content: space-between;
+  gap: var(--space-3);
   margin-top: var(--space-5);
   margin-bottom: 0;
   padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--border-hairline);
 }
 
-/* All toolbar children own zero outer margin — the grid owns spacing. */
-.task-detail-toolbar > .task-detail-ok,
-.task-detail-toolbar > .task-detail-attention,
-.task-detail-toolbar > .task-detail-schedule,
+.task-detail-toolbar-card {
+  flex: 1 1 18rem;
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.task-detail-toolbar-card .task-detail-attention {
+  margin: 0;
+  border-radius: 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: 1px solid var(--border-chrome-hairline);
+}
+
+.task-detail-toolbar-card .task-detail-fact-row + .task-detail-schedule-row,
+.task-detail-toolbar-card .task-detail-schedule-row + .task-detail-schedule-row,
+.task-detail-toolbar-card .task-detail-ok + .task-detail-schedule .task-detail-schedule-row:first-child {
+  border-top: 1px solid var(--border-chrome-hairline);
+}
+
 .task-detail-toolbar > .task-detail-actions {
   margin: 0;
-}
-
-.task-detail-toolbar > .task-detail-ok {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.task-detail-toolbar > .task-detail-schedule {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.task-detail-toolbar > .task-detail-actions {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  flex: 0 0 auto;
   align-self: center;
-  justify-self: end;
-  flex-wrap: nowrap;
-}
-
-/* Rich warning callout takes the whole top row; the schedule and the
-   action cluster drop to row 2 underneath it so the message is the
-   loudest thing in the strip. */
-.task-detail-toolbar > .task-detail-attention {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule {
-  grid-row: 2;
-}
-
-.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
-  grid-column: 2;
-  grid-row: 2;
 }
 
 /* The toolbar already carries its own bottom hairline, so the first
@@ -306,25 +284,14 @@ a.task-create-agent-lock-notice-link:hover {
   padding-top: var(--space-6);
 }
 
-/* Narrow screens: collapse the two-column toolbar to a single column.
-   The action cluster slides under the facts and stretches edge-to-edge
-   so Edit/Delete remain reachable as full-width touch targets. */
 @media (max-width: 720px) {
   .task-detail-toolbar {
-    grid-template-columns: 1fr;
-  }
-
-  .task-detail-toolbar > .task-detail-ok,
-  .task-detail-toolbar > .task-detail-schedule,
-  .task-detail-toolbar > .task-detail-actions,
-  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule,
-  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: stretch;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .task-detail-toolbar > .task-detail-actions {
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 }

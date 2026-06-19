@@ -21,6 +21,7 @@ import {
   TaskCyclesPanel,
   TaskCommitsPanel,
   TaskDetailAttentionBar,
+  TaskDetailToolbarActions,
   TaskDetailChecklistSection,
   TaskDetailHeader,
   TaskDetailPromptSection,
@@ -302,10 +303,39 @@ export function TaskDetailPage({ app }: Props) {
       <TaskDetailHeader task={task} />
 
       <div className="task-detail-toolbar">
-        <TaskDetailAttentionBar
-          attention={attention}
+        <div className="task-detail-toolbar-card">
+          <TaskDetailAttentionBar
+            attention={attention}
+            saving={app.saving}
+            okTone={okTone}
+            onEdit={() => app.openEdit(task)}
+            onDelete={() => app.requestDelete(task)}
+            onRetryFresh={
+              task.status === "failed"
+                ? () => setRetryConfirmMode("fresh")
+                : undefined
+            }
+            onRetryResume={
+              task.status === "failed"
+                ? () => setRetryConfirmMode("resume")
+                : undefined
+            }
+            retryPending={retryMutation.isPending}
+            onConfigureModel={() => setModelConfigOpen(true)}
+            showModelConfig={task.status === "failed"}
+            autonomyMode={autonomyMode}
+            onToggleAutonomy={
+              autonomyMode !== "hidden"
+                ? () => setAutonomyConfirmOpen(true)
+                : undefined
+            }
+            autonomyPending={autonomyMutation.isPending}
+            showActions={false}
+          />
+          <TaskDetailSchedule task={task} />
+        </div>
+        <TaskDetailToolbarActions
           saving={app.saving}
-          okTone={okTone}
           onEdit={() => app.openEdit(task)}
           onDelete={() => app.requestDelete(task)}
           onRetryFresh={
@@ -329,7 +359,6 @@ export function TaskDetailPage({ app }: Props) {
           }
           autonomyPending={autonomyMutation.isPending}
         />
-        <TaskDetailSchedule task={task} />
       </div>
 
       {autonomyConfirmOpen && autonomyMode !== "hidden" ? (

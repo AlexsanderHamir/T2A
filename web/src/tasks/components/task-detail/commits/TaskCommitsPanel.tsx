@@ -46,7 +46,9 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
       </p>
 
       {commitsQuery.isPending ? (
-        <CommitsLoading />
+        <div className="task-commits-board task-commits-board--loading">
+          <CommitsLoading />
+        </div>
       ) : commitsQuery.isError ? (
         <div className="err" role="alert">
           <p>
@@ -76,10 +78,10 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
           className="task-detail-section-empty empty-state--compact"
         />
       ) : (
-        <>
+        <div className="task-commits-board">
           {gitContext ? <GitContextMeta context={gitContext} /> : null}
           <CommitList commits={commits} showAttempt />
-        </>
+        </div>
       )}
     </section>
   );
