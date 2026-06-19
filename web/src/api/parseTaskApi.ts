@@ -18,6 +18,7 @@ export {
   parseCycleCriteriaReport,
   parseCycleVerdictsResponse,
   parseCycleVerifyReport,
+  parseTaskCommitsResponse,
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,
