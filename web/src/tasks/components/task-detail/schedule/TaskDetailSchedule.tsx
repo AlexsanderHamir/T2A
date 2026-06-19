@@ -35,32 +35,100 @@ export function TaskDetailSchedule({ task }: Props) {
       data-testid="task-detail-schedule"
       data-state={hasSchedule ? "scheduled" : "unscheduled"}
     >
-      {hasPhaseComplete ? (
-        <span
-          className="task-detail-schedule-badge task-detail-schedule-badge--phase"
-          data-testid="task-detail-phase-complete"
-        >
-          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
-          <span className="task-detail-schedule-badge-text">
-            Phase complete · {phaseFormatted}
+      <div className="task-detail-schedule-strip">
+        {hasPhaseComplete ? (
+          <span
+            className="task-detail-schedule-badge task-detail-schedule-badge--phase"
+            data-testid="task-detail-phase-complete"
+          >
+            <span aria-hidden="true" className="task-detail-schedule-badge-icon">
+              <ScheduleStatusIcon variant="phase" />
+            </span>
+            <span className="task-detail-schedule-badge-body">
+              <span className="task-detail-schedule-badge-label">
+                Phase complete
+              </span>
+              <time className="task-detail-schedule-badge-value">
+                {phaseFormatted}
+              </time>
+            </span>
           </span>
-        </span>
-      ) : null}
-      {hasSchedule ? (
-        <span
-          className="task-detail-schedule-badge"
-          data-testid="task-detail-schedule-badge"
-        >
-          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
-          <span className="task-detail-schedule-badge-text">
-            Scheduled for {formatted}
+        ) : null}
+        {hasSchedule ? (
+          <span
+            className="task-detail-schedule-badge"
+            data-testid="task-detail-schedule-badge"
+          >
+            <span aria-hidden="true" className="task-detail-schedule-badge-icon">
+              <ScheduleStatusIcon variant="scheduled" />
+            </span>
+            <span className="task-detail-schedule-badge-body">
+              <span className="task-detail-schedule-badge-label">
+                Scheduled for
+              </span>
+              <time className="task-detail-schedule-badge-value">
+                {formatted}
+              </time>
+            </span>
           </span>
-        </span>
-      ) : !hasPhaseComplete ? (
-        <span className="task-detail-schedule-empty muted">
-          No pickup scheduled.
-        </span>
-      ) : null}
+        ) : !hasPhaseComplete ? (
+          <span className="task-detail-schedule-empty muted">
+            No pickup scheduled.
+          </span>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function ScheduleStatusIcon({
+  variant,
+}: {
+  variant: "phase" | "scheduled";
+}) {
+  if (variant === "phase") {
+    return (
+      <svg
+        width={14}
+        height={14}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M20 6 9 17l-5-5"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x={3}
+        y={4}
+        width={18}
+        height={18}
+        rx={2}
+        stroke="currentColor"
+        strokeWidth={1.75}
+      />
+      <path
+        d="M16 2v4M8 2v4M3 10h18"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

@@ -111,7 +111,35 @@ export function TaskDetailAttentionBar({
         // `TaskDetailOkTone`) so the same copy still distinguishes
         // "done" from "running" from "on_hold" at a glance.
         <p className="task-detail-ok" role="status" data-tone={okTone}>
-          No agent is waiting on you for this task right now.
+          <span className="task-detail-ok-inner">
+            <span className="task-detail-ok-icon" aria-hidden="true">
+              <svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx={12}
+                  cy={12}
+                  r={9}
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                />
+                <path
+                  d="M8 12.5 10.8 15.2 16 9.8"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="task-detail-ok-copy">
+              No agent is waiting on you for this task right now.
+            </span>
+          </span>
         </p>
       )}
 

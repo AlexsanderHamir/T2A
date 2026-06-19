@@ -1,58 +1,76 @@
-/* Schedule line. Renders as a quiet metadata fact inside the hero
-   toolbar — small neutral dot + muted text — matching the slim
-   "all clear" line above it. Edit/Clear (non-terminal tasks) sit at
-   the trailing edge of the line, before the right-anchored action
-   cluster.
-
-   The schedule sits inside `.task-detail-toolbar`, which owns its
-   margins; the legacy `margin-top` here would only fire if the
-   schedule rendered outside the toolbar (which no longer happens),
-   but is kept tiny so a stray usage doesn't crash visual rhythm. */
+/* Schedule metadata inside the hero toolbar — structured chips with
+   icon, label, and tabular timestamp so phase-complete and pickup
+   schedule read as distinct facts instead of two undifferentiated lines. */
 .task-detail-schedule {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
   margin-top: 0;
   margin-bottom: 0;
+}
+
+.task-detail-schedule-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
 }
 
 .task-detail-schedule-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 400;
-  line-height: 1.4;
-  color: var(--text-secondary);
+  min-height: 2.25rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-xs);
 }
 
-/* Info-blue dot with a 2px soft halo. Schedule is an *informational*
-   future event ("the agent will pick this up at X") — neither a
-   success state nor an active-now signal, so blue carries the
-   universal "scheduled / calendar / timing" semantic without
-   stealing the success-green reserved for `done` or the brand-purple
-   reserved for `running` on the OK line directly above. The 2px
-   halo matches the OK dot family so the two fact lines read as a
-   coherent pair; the previous 3px brand ring was the loudest atom
-   in the upper region and shouted "primary accent" for what is
-   plainly quiet metadata. */
-.task-detail-schedule-badge-dot {
-  display: inline-block;
+.task-detail-schedule-badge-icon {
+  display: inline-flex;
   flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: var(--radius-full);
-  background: var(--info);
-  box-shadow: 0 0 0 2px var(--info-soft);
+  color: var(--info);
+  background: var(--info-soft);
 }
 
-.task-detail-schedule-badge--phase .task-detail-schedule-badge-dot {
-  background: var(--success);
-  box-shadow: 0 0 0 2px var(--success-soft);
+.task-detail-schedule-badge--phase .task-detail-schedule-badge-icon {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.task-detail-schedule-badge-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.task-detail-schedule-badge-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  line-height: 1.2;
+}
+
+.task-detail-schedule-badge-value {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1.35;
 }
 
 .task-detail-schedule-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--space-1);
   font-size: var(--text-sm);
 }
 

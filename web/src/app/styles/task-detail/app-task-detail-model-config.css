@@ -158,47 +158,88 @@ a.task-create-agent-lock-notice-link:hover {
    speck, without the loud 3px glow the old schedule dot used to
    carry. */
 .task-detail-ok {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   margin-top: var(--space-5);
   margin-bottom: 0;
+}
+
+.task-detail-ok-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-xs);
+}
+
+.task-detail-ok-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: var(--surface-2);
+}
+
+.task-detail-ok-copy {
   font-size: var(--text-sm);
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-secondary);
 }
 
-.task-detail-ok::before {
-  content: "";
-  flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: var(--radius-full);
-  background: var(--text-tertiary);
+.task-detail-ok[data-tone="success"] .task-detail-ok-inner {
+  border-color: color-mix(in srgb, var(--success) 28%, var(--border-hairline));
+  background: color-mix(in srgb, var(--success-soft) 55%, var(--surface-1));
 }
 
-.task-detail-ok[data-tone="success"]::before {
-  background: var(--success);
-  box-shadow: 0 0 0 2px var(--success-soft);
+.task-detail-ok[data-tone="success"] .task-detail-ok-icon {
+  color: var(--success);
+  background: var(--success-soft);
 }
 
-.task-detail-ok[data-tone="active"]::before {
-  background: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand-muted);
+.task-detail-ok[data-tone="active"] .task-detail-ok-inner {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--border-hairline));
+  background: color-mix(in srgb, var(--brand-muted) 70%, var(--surface-1));
 }
 
-.task-detail-ok[data-tone="info"]::before {
-  background: var(--info);
-  box-shadow: 0 0 0 2px var(--info-soft);
+.task-detail-ok[data-tone="active"] .task-detail-ok-icon {
+  color: var(--brand-deep);
+  background: var(--brand-muted);
 }
 
-.task-detail-ok[data-tone="caution"]::before {
-  background: var(--warning);
-  box-shadow: 0 0 0 2px var(--warning-soft);
+.task-detail-ok[data-tone="info"] .task-detail-ok-inner {
+  border-color: color-mix(in srgb, var(--info) 28%, var(--border-hairline));
+  background: color-mix(in srgb, var(--info-soft) 55%, var(--surface-1));
 }
 
-.task-detail-ok[data-tone="neutral"]::before {
-  background: var(--text-tertiary);
+.task-detail-ok[data-tone="info"] .task-detail-ok-icon {
+  color: var(--info);
+  background: var(--info-soft);
+}
+
+.task-detail-ok[data-tone="caution"] .task-detail-ok-inner {
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--border-hairline));
+  background: color-mix(in srgb, var(--warning-soft) 55%, var(--surface-1));
+}
+
+.task-detail-ok[data-tone="caution"] .task-detail-ok-icon {
+  color: var(--warning-ink);
+  background: var(--warning-soft);
+}
+
+.task-detail-ok[data-tone="neutral"] .task-detail-ok-inner {
+  border-color: var(--border-hairline);
+  background: var(--surface-1);
+}
+
+.task-detail-ok[data-tone="neutral"] .task-detail-ok-icon {
+  color: var(--text-tertiary);
+  background: var(--surface-2);
 }
 
 /* Action row — a single tidy cluster, primary CTA leads. The previous
