@@ -41,48 +41,18 @@ import { resolveTaskDependencySummaries, taskQueryKeys } from "../task-query";
 import { useTasksAppMeta, useTasksAppModals } from "../app/TasksAppProvider";
 import { QUERY_POLICY } from "../queryPolicy";
 import { useTaskDetailScheduling } from "../hooks/useTaskDetailScheduling";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { TaskChecklistResponse } from "@/types";
 
-export function TaskDetailPage() {
-  const modals = useTasksAppModals();
-  const { saving } = useTasksAppMeta();
-  const { taskId = "" } = useParams<{ taskId: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [modelConfigOpen, setModelConfigOpen] = useState(false);
-  const [autonomyConfirmOpen, setAutonomyConfirmOpen] = useState(false);
-  const [retryConfirmMode, setRetryConfirmMode] = useState<TaskRetryMode | null>(
-    null,
-  );
-  const {
-    checklistModalOpen,
-    newChecklistText,
-    setNewChecklistText,
-    newChecklistVerifyCommands,
-    setNewChecklistVerifyCommands,
-    editCriterionModalOpen,
-    editingChecklistItemId,
-    editChecklistText,
-    setEditChecklistText,
-    editChecklistVerifyCommands,
-    setEditChecklistVerifyCommands,
-    closeChecklistModal,
-    closeEditCriterionModal,
-    openChecklistModal,
-    openEditCriterionModal,
-    addChecklistMutation,
-    submitNewChecklistCriterion,
-    updateChecklistTextMutation,
-    submitEditChecklistCriterion,
-    deleteChecklistMutation,
-  } = useTaskDetailChecklist(taskId);
+type AutonomyMode = "hidden" | "ready" | "on_hold";
 
-  useTaskDetailDeleteNavigate(
-    taskId,
-    navigate,
-    modals.deleteSuccess,
-    modals.deleteVariables,
-  );
+type TaskDetailChecklistState = ReturnType<typeof useTaskDetailChecklist>;
 
+function useTaskDetailNavigationTiming(
+  taskId: string,
+  taskQuery: UseQueryResult<Task>,
+  checklistQuery: UseQueryResult<TaskChecklistResponse>,
+) {
   const navigationMountAtRef = useRef(performance.now());
   const taskTimingSentRef = useRef(false);
   const interactiveTimingSentRef = useRef(false);
@@ -95,20 +65,6 @@ export function TaskDetailPage() {
     taskTimingSentRef.current = false;
     interactiveTimingSentRef.current = false;
   }, [taskId]);
-
-  const taskQuery = useQuery({
-    queryKey: taskQueryKeys.detail(taskId),
-    queryFn: ({ signal }) => getTask(taskId, { signal }),
-    enabled: Boolean(taskId),
-    staleTime: QUERY_POLICY.detailStaleTimeMs,
-  });
-
-  const checklistQuery = useQuery({
-    queryKey: taskQueryKeys.checklist(taskId),
-    queryFn: ({ signal }) => listChecklist(taskId, { signal }),
-    enabled: Boolean(taskId),
-    staleTime: QUERY_POLICY.detailStaleTimeMs,
-  });
 
   useEffect(() => {
     if (!taskQuery.isSuccess || taskTimingSentRef.current) return;
@@ -133,11 +89,16 @@ export function TaskDetailPage() {
       performance.now() - navigationMountAtRef.current,
     );
   }, [taskQuery.isSuccess, checklistQuery.isSuccess]);
+}
 
-  const toast = useOptionalToast();
-  const scheduling = useTaskDetailScheduling(taskId);
-  const { optimisticMutationsEnabled } = useRolloutFlags();
-  const retryMutation = useMutation<
+function useTaskDetailRetryMutation(
+  taskId: string,
+  optimisticMutationsEnabled: boolean,
+  onRetryConfirmed: () => void,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
     unknown,
     unknown,
     TaskRetryMode,
@@ -181,7 +142,7 @@ export function TaskDetailPage() {
       }
     },
     onSuccess: async (_data, _vars, context) => {
-      setRetryConfirmMode(null);
+      onRetryConfirmed();
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       if (context) {
@@ -198,8 +159,17 @@ export function TaskDetailPage() {
       }
     },
   });
+}
 
-  const autonomyMutation = useMutation<
+function useTaskDetailAutonomyMutation(
+  taskId: string,
+  optimisticMutationsEnabled: boolean,
+  toast: ReturnType<typeof useOptionalToast>,
+  onAutonomyConfirmed: () => void,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
     unknown,
     unknown,
     "ready" | "on_hold",
@@ -246,7 +216,7 @@ export function TaskDetailPage() {
     onSuccess: async (_data, _vars, context) => {
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-      setAutonomyConfirmOpen(false);
+      onAutonomyConfirmed();
       if (context) {
         rumMutationSettled(
           "task_autonomy",
@@ -261,68 +231,97 @@ export function TaskDetailPage() {
       }
     },
   });
+}
 
-  const taskDocTitle =
-    taskId && taskQuery.isSuccess && taskQuery.data
-      ? taskQuery.data.title.trim() || "Untitled task"
-      : null;
-  useDocumentTitle(taskDocTitle);
+function resolveAutonomyMode(taskStatus: Task["status"]): AutonomyMode {
+  if (taskStatus === "ready") return "ready";
+  if (taskStatus === "on_hold") return "on_hold";
+  return "hidden";
+}
 
-  const dependencySummaries = useMemo(
-    () =>
-      resolveTaskDependencySummaries(
-        queryClient,
-        taskQuery.data?.depends_on ?? [],
-      ),
-    [queryClient, taskQuery.data?.depends_on],
+function countChecklistProgress(items: { done: boolean }[]) {
+  const doneCount = items.filter((item) => item.done).length;
+  return { doneCount, totalCount: items.length };
+}
+
+function renderMissingTaskId() {
+  return (
+    <p className="muted" role="status">
+      Missing task id.
+    </p>
   );
+}
 
-  if (!taskId) {
-    return (
-      <p className="muted" role="status">
-        Missing task id.
-      </p>
-    );
-  }
-
-  if (taskQuery.isPending) {
-    return <TaskDetailPageSkeleton />;
-  }
-
-  if (taskQuery.isError) {
-    return (
-      <section className="panel task-detail-panel task-detail-content--enter">
-        <div className="err" role="alert">
-          <p>{errorMessage(taskQuery.error, "Could not load task.")}</p>
-          <div className="task-detail-error-actions">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => void taskQuery.refetch()}
-            >
-              Try again
-            </button>
-            <Link to="/" className="pd__back project-context-back-link">
-              <span aria-hidden="true">&#8249;</span>
-              All tasks
-            </Link>
-          </div>
+function renderTaskLoadError(
+  error: unknown,
+  onRetry: () => void,
+) {
+  return (
+    <section className="panel task-detail-panel task-detail-content--enter">
+      <div className="err" role="alert">
+        <p>{errorMessage(error, "Could not load task.")}</p>
+        <div className="task-detail-error-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void onRetry()}
+          >
+            Try again
+          </button>
+          <Link to="/" className="pd__back project-context-back-link">
+            <span aria-hidden="true">&#8249;</span>
+            All tasks
+          </Link>
         </div>
-      </section>
-    );
-  }
+      </div>
+    </section>
+  );
+}
 
-  const task = taskQuery.data;
+type TaskDetailLoadedViewProps = {
+  task: Task;
+  taskId: string;
+  taskQuerySuccess: boolean;
+  saving: boolean;
+  modals: ReturnType<typeof useTasksAppModals>;
+  scheduling: ReturnType<typeof useTaskDetailScheduling>;
+  checklistQuery: UseQueryResult<TaskChecklistResponse>;
+  checklistState: TaskDetailChecklistState;
+  dependencySummaries: ReturnType<typeof resolveTaskDependencySummaries>;
+  autonomyMode: AutonomyMode;
+  autonomyConfirmOpen: boolean;
+  setAutonomyConfirmOpen: (open: boolean) => void;
+  autonomyMutation: ReturnType<typeof useTaskDetailAutonomyMutation>;
+  retryConfirmMode: TaskRetryMode | null;
+  setRetryConfirmMode: (mode: TaskRetryMode | null) => void;
+  retryMutation: ReturnType<typeof useTaskDetailRetryMutation>;
+  modelConfigOpen: boolean;
+  setModelConfigOpen: (open: boolean) => void;
+};
+
+function renderTaskDetailLoadedView({
+  task,
+  taskId,
+  taskQuerySuccess,
+  saving,
+  modals,
+  scheduling,
+  checklistQuery,
+  checklistState,
+  dependencySummaries,
+  autonomyMode,
+  autonomyConfirmOpen,
+  setAutonomyConfirmOpen,
+  autonomyMutation,
+  retryConfirmMode,
+  setRetryConfirmMode,
+  retryMutation,
+  modelConfigOpen,
+  setModelConfigOpen,
+}: TaskDetailLoadedViewProps) {
   const checklistItems = checklistQuery.data?.items ?? [];
-  const checklistDoneCount = checklistItems.filter((i) => i.done).length;
-  const checklistTotal = checklistItems.length;
+  const { doneCount, totalCount } = countChecklistProgress(checklistItems);
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
-  const autonomyMode: "hidden" | "ready" | "on_hold" =
-    task.status === "ready"
-      ? "ready"
-      : task.status === "on_hold"
-      ? "on_hold"
-      : "hidden";
   const autonomyEnable = autonomyMode === "on_hold";
 
   return (
@@ -432,32 +431,32 @@ export function TaskDetailPage() {
         canAddCriterion={canMutateTaskCriteria(task.status)}
         taskStatus={task.status}
         checklistQuery={checklistQuery}
-        doneCount={checklistDoneCount}
-        totalCount={checklistTotal}
-        modalOpen={checklistModalOpen}
-        newCriterionText={newChecklistText}
-        onNewCriterionTextChange={setNewChecklistText}
-        newCriterionVerifyCommands={newChecklistVerifyCommands}
-        onNewCriterionVerifyCommandsChange={setNewChecklistVerifyCommands}
-        onOpenAddModal={openChecklistModal}
-        onCloseAddModal={closeChecklistModal}
-        onSubmitNewCriterion={submitNewChecklistCriterion}
-        addCriterionPending={addChecklistMutation.isPending}
-        editModalOpen={editCriterionModalOpen}
-        editingItemId={editingChecklistItemId}
-        editCriterionText={editChecklistText}
-        onEditCriterionTextChange={setEditChecklistText}
-        editCriterionVerifyCommands={editChecklistVerifyCommands}
-        onEditCriterionVerifyCommandsChange={setEditChecklistVerifyCommands}
-        onOpenEditCriterionModal={openEditCriterionModal}
-        onCloseEditCriterionModal={closeEditCriterionModal}
-        onSubmitEditCriterion={submitEditChecklistCriterion}
-        editCriterionPending={updateChecklistTextMutation.isPending}
-        onRemoveChecklistItem={(id) => deleteChecklistMutation.mutate(id)}
-        removeItemPending={deleteChecklistMutation.isPending}
-        addCriterionError={addChecklistMutation.error}
-        editCriterionError={updateChecklistTextMutation.error}
-        removeItemError={deleteChecklistMutation.error}
+        doneCount={doneCount}
+        totalCount={totalCount}
+        modalOpen={checklistState.checklistModalOpen}
+        newCriterionText={checklistState.newChecklistText}
+        onNewCriterionTextChange={checklistState.setNewChecklistText}
+        newCriterionVerifyCommands={checklistState.newChecklistVerifyCommands}
+        onNewCriterionVerifyCommandsChange={checklistState.setNewChecklistVerifyCommands}
+        onOpenAddModal={checklistState.openChecklistModal}
+        onCloseAddModal={checklistState.closeChecklistModal}
+        onSubmitNewCriterion={checklistState.submitNewChecklistCriterion}
+        addCriterionPending={checklistState.addChecklistMutation.isPending}
+        editModalOpen={checklistState.editCriterionModalOpen}
+        editingItemId={checklistState.editingChecklistItemId}
+        editCriterionText={checklistState.editChecklistText}
+        onEditCriterionTextChange={checklistState.setEditChecklistText}
+        editCriterionVerifyCommands={checklistState.editChecklistVerifyCommands}
+        onEditCriterionVerifyCommandsChange={checklistState.setEditChecklistVerifyCommands}
+        onOpenEditCriterionModal={checklistState.openEditCriterionModal}
+        onCloseEditCriterionModal={checklistState.closeEditCriterionModal}
+        onSubmitEditCriterion={checklistState.submitEditChecklistCriterion}
+        editCriterionPending={checklistState.updateChecklistTextMutation.isPending}
+        onRemoveChecklistItem={(id) => checklistState.deleteChecklistMutation.mutate(id)}
+        removeItemPending={checklistState.deleteChecklistMutation.isPending}
+        addCriterionError={checklistState.addChecklistMutation.error}
+        editCriterionError={checklistState.updateChecklistTextMutation.error}
+        removeItemError={checklistState.deleteChecklistMutation.error}
       />
 
       <TaskDetailPromptSection
@@ -465,9 +464,142 @@ export function TaskDetailPage() {
         sanitizedInitialPrompt={sanitizedInitialPrompt}
       />
 
-      <TaskCyclesPanel taskId={taskId} enabled={taskQuery.isSuccess} />
+      <TaskCyclesPanel taskId={taskId} enabled={taskQuerySuccess} />
 
-      <TaskCommitsPanel taskId={taskId} enabled={taskQuery.isSuccess} />
+      <TaskCommitsPanel taskId={taskId} enabled={taskQuerySuccess} />
     </section>
   );
+}
+
+function useTaskDetailPageQueries(taskId: string) {
+  const queryClient = useQueryClient();
+
+  const taskQuery = useQuery({
+    queryKey: taskQueryKeys.detail(taskId),
+    queryFn: ({ signal }) => getTask(taskId, { signal }),
+    enabled: Boolean(taskId),
+    staleTime: QUERY_POLICY.detailStaleTimeMs,
+  });
+
+  const checklistQuery = useQuery({
+    queryKey: taskQueryKeys.checklist(taskId),
+    queryFn: ({ signal }) => listChecklist(taskId, { signal }),
+    enabled: Boolean(taskId),
+    staleTime: QUERY_POLICY.detailStaleTimeMs,
+  });
+
+  useTaskDetailNavigationTiming(taskId, taskQuery, checklistQuery);
+
+  const taskDocTitle =
+    taskId && taskQuery.isSuccess && taskQuery.data
+      ? taskQuery.data.title.trim() || "Untitled task"
+      : null;
+  useDocumentTitle(taskDocTitle);
+
+  const dependencySummaries = useMemo(
+    () =>
+      resolveTaskDependencySummaries(
+        queryClient,
+        taskQuery.data?.depends_on ?? [],
+      ),
+    [queryClient, taskQuery.data?.depends_on],
+  );
+
+  return { taskQuery, checklistQuery, dependencySummaries };
+}
+
+function useTaskDetailPageDialogs(taskId: string) {
+  const [modelConfigOpen, setModelConfigOpen] = useState(false);
+  const [autonomyConfirmOpen, setAutonomyConfirmOpen] = useState(false);
+  const [retryConfirmMode, setRetryConfirmMode] = useState<TaskRetryMode | null>(
+    null,
+  );
+  const toast = useOptionalToast();
+  const { optimisticMutationsEnabled } = useRolloutFlags();
+  const retryMutation = useTaskDetailRetryMutation(
+    taskId,
+    optimisticMutationsEnabled,
+    () => setRetryConfirmMode(null),
+  );
+  const autonomyMutation = useTaskDetailAutonomyMutation(
+    taskId,
+    optimisticMutationsEnabled,
+    toast,
+    () => setAutonomyConfirmOpen(false),
+  );
+
+  return {
+    modelConfigOpen,
+    setModelConfigOpen,
+    autonomyConfirmOpen,
+    setAutonomyConfirmOpen,
+    retryConfirmMode,
+    setRetryConfirmMode,
+    retryMutation,
+    autonomyMutation,
+  };
+}
+
+export function TaskDetailPage() {
+  const modals = useTasksAppModals();
+  const { saving } = useTasksAppMeta();
+  const { taskId = "" } = useParams<{ taskId: string }>();
+  const navigate = useNavigate();
+  const checklistState = useTaskDetailChecklist(taskId);
+  const { taskQuery, checklistQuery, dependencySummaries } =
+    useTaskDetailPageQueries(taskId);
+  const scheduling = useTaskDetailScheduling(taskId);
+  const {
+    modelConfigOpen,
+    setModelConfigOpen,
+    autonomyConfirmOpen,
+    setAutonomyConfirmOpen,
+    retryConfirmMode,
+    setRetryConfirmMode,
+    retryMutation,
+    autonomyMutation,
+  } = useTaskDetailPageDialogs(taskId);
+
+  useTaskDetailDeleteNavigate(
+    taskId,
+    navigate,
+    modals.deleteSuccess,
+    modals.deleteVariables,
+  );
+
+  if (!taskId) {
+    return renderMissingTaskId();
+  }
+
+  if (taskQuery.isPending) {
+    return <TaskDetailPageSkeleton />;
+  }
+
+  if (taskQuery.isError) {
+    return renderTaskLoadError(taskQuery.error, () => void taskQuery.refetch());
+  }
+
+  const task = taskQuery.data;
+  const autonomyMode = resolveAutonomyMode(task.status);
+
+  return renderTaskDetailLoadedView({
+    task,
+    taskId,
+    taskQuerySuccess: taskQuery.isSuccess,
+    saving,
+    modals,
+    scheduling,
+    checklistQuery,
+    checklistState,
+    dependencySummaries,
+    autonomyMode,
+    autonomyConfirmOpen,
+    setAutonomyConfirmOpen,
+    autonomyMutation,
+    retryConfirmMode,
+    setRetryConfirmMode,
+    retryMutation,
+    modelConfigOpen,
+    setModelConfigOpen,
+  });
 }
