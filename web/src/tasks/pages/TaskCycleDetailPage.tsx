@@ -32,6 +32,12 @@ import {
 import { useTaskCycle, useTaskCycleStream } from "../hooks/useTaskCycles";
 import { agentProgressKindDescriptor } from "../cycleDisplay/agentProgressDisplay";
 import { taskQueryKeys } from "../task-query";
+import {
+  activityCountCaption,
+  filterAuditEventsByPhase,
+  filterStreamEventsByPhase,
+} from "./attempt/filterActivityByPhase";
+import { useAttemptPhaseFilter } from "./attempt/useAttemptPhaseFilter";
 
 const STREAM_VISIBLE_INITIAL = 6;
 const AUDIT_VISIBLE_INITIAL = 6;
@@ -224,12 +230,21 @@ function TaskCycleDetailLoadedSection({
   pageState: TaskCycleDetailPageState;
   cycle: TaskCycleDetail;
 }) {
-  const streamEvents = sortStreamEventsNewestFirst(pageState.streamQuery.events);
-  const auditEvents = filterAuditEventsForCycle(
+  const timelineDisplay = buildAttemptTimelineDisplay(cycle, pageState.now);
+  const phaseFilter = useAttemptPhaseFilter(cycle.phases);
+  const allStreamEvents = sortStreamEventsNewestFirst(pageState.streamQuery.events);
+  const allAuditEvents = filterAuditEventsForCycle(
     pageState.auditQuery.data?.events,
     pageState.cycleId,
   );
-  const timelineDisplay = buildAttemptTimelineDisplay(cycle, pageState.now);
+  const streamEvents = filterStreamEventsByPhase(
+    allStreamEvents,
+    phaseFilter.filterPhaseSeq,
+  );
+  const auditEvents = filterAuditEventsByPhase(
+    allAuditEvents,
+    phaseFilter.filterPhaseSeq,
+  );
 
   return (
     <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
@@ -240,12 +255,20 @@ function TaskCycleDetailLoadedSection({
         cycleId={pageState.cycleId}
         cycle={cycle}
         timelineDisplay={timelineDisplay}
+        filterPhaseSeq={phaseFilter.filterPhaseSeq}
+        onSelectPhase={phaseFilter.setFilterPhaseSeq}
+        phaseFilterEnabled={timelineDisplay.showPhaseBadge}
       />
       <AttemptActivitySection
         pageState={pageState}
+        cycle={cycle}
         streamEvents={streamEvents}
+        allStreamCount={allStreamEvents.length}
         auditEvents={auditEvents}
+        allAuditCount={allAuditEvents.length}
         showPhaseBadge={timelineDisplay.showPhaseBadge}
+        filterPhaseSeq={phaseFilter.filterPhaseSeq}
+        onClearPhaseFilter={phaseFilter.clearFilter}
       />
     </section>
   );
@@ -316,11 +339,17 @@ function AttemptPhasesSection({
   cycleId,
   cycle,
   timelineDisplay,
+  filterPhaseSeq,
+  onSelectPhase,
+  phaseFilterEnabled,
 }: {
   taskId: string;
   cycleId: string;
   cycle: TaskCycleDetail;
   timelineDisplay: AttemptTimelineDisplay;
+  filterPhaseSeq: number | null;
+  onSelectPhase: (seq: number | null) => void;
+  phaseFilterEnabled: boolean;
 }) {
   const {
     showPhaseBadge,
@@ -356,30 +385,19 @@ function AttemptPhasesSection({
             .join(" ")}
         >
           {cycle.phases.map((phase, index) => (
-            <li
+            <AttemptPhaseStep
               key={phase.id}
-              className="task-attempt-phase-step"
-              data-status={phase.status}
-              data-last={
-                !showEndcap && index === cycle.phases.length - 1
-                  ? "true"
-                  : undefined
-              }
-            >
-              <span className="task-attempt-phase-step-marker" aria-hidden="true" />
-              <div className="task-attempt-phase-step-main">
-                <span className="task-attempt-phase-step-name">
-                  {phaseLabel(phase.phase)}
-                </span>
-                <span
-                  className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
-                >
-                  {phaseStatusLabel(phase.status)}
-                </span>
-                {showPhaseBadge ? <PhaseSeqBadge seq={phase.phase_seq} /> : null}
-              </div>
-              <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
-            </li>
+              taskId={taskId}
+              cycleId={cycleId}
+              phase={phase}
+              index={index}
+              phaseCount={cycle.phases.length}
+              showPhaseBadge={showPhaseBadge}
+              showEndcap={showEndcap}
+              filterActive={filterPhaseSeq === phase.phase_seq}
+              phaseFilterEnabled={phaseFilterEnabled}
+              onSelectPhase={() => onSelectPhase(phase.phase_seq)}
+            />
           ))}
         </ol>
         {showEndcap && endcapLabel ? (
@@ -395,18 +413,96 @@ function AttemptPhasesSection({
   );
 }
 
+function AttemptPhaseStep({
+  taskId,
+  cycleId,
+  phase,
+  index,
+  phaseCount,
+  showPhaseBadge,
+  showEndcap,
+  filterActive,
+  phaseFilterEnabled,
+  onSelectPhase,
+}: {
+  taskId: string;
+  cycleId: string;
+  phase: TaskCyclePhase;
+  index: number;
+  phaseCount: number;
+  showPhaseBadge: boolean;
+  showEndcap: boolean;
+  filterActive: boolean;
+  phaseFilterEnabled: boolean;
+  onSelectPhase: () => void;
+}) {
+  const stepClass = [
+    "task-attempt-phase-step",
+    filterActive && "task-attempt-phase-step--filter-active",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const main = (
+    <div className="task-attempt-phase-step-main">
+      <span className="task-attempt-phase-step-name">
+        {phaseLabel(phase.phase)}
+      </span>
+      <span className={`cell-pill ${phaseStatusFillClass(phase.status)}`}>
+        {phaseStatusLabel(phase.status)}
+      </span>
+      {showPhaseBadge ? <PhaseSeqBadge seq={phase.phase_seq} /> : null}
+    </div>
+  );
+
+  return (
+    <li
+      className={stepClass}
+      data-status={phase.status}
+      data-last={
+        !showEndcap && index === phaseCount - 1 ? "true" : undefined
+      }
+    >
+      <span className="task-attempt-phase-step-marker" aria-hidden="true" />
+      {phaseFilterEnabled ? (
+        <button
+          type="button"
+          className="task-attempt-phase-step-button"
+          aria-current={filterActive ? "true" : undefined}
+          aria-label={`Filter activity to ${phaseLabel(phase.phase)} phase ${phase.phase_seq}`}
+          onClick={onSelectPhase}
+        >
+          {main}
+        </button>
+      ) : (
+        main
+      )}
+      <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
+    </li>
+  );
+}
+
 function AttemptActivitySection({
   pageState,
+  cycle,
   streamEvents,
+  allStreamCount,
   auditEvents,
+  allAuditCount,
   showPhaseBadge,
+  filterPhaseSeq,
+  onClearPhaseFilter,
 }: {
   pageState: TaskCycleDetailPageState;
+  cycle: TaskCycleDetail;
   streamEvents: TaskCycleStreamEvent[];
+  allStreamCount: number;
   auditEvents: NonNullable<
     Awaited<ReturnType<typeof listTaskEvents>>["events"]
   >;
+  allAuditCount: number;
   showPhaseBadge: boolean;
+  filterPhaseSeq: number | null;
+  onClearPhaseFilter: () => void;
 }) {
   const {
     activityTab,
@@ -422,6 +518,21 @@ function AttemptActivitySection({
     streamQuery,
     taskId,
   } = pageState;
+
+  useEffect(() => {
+    setVisibleStreamCount(STREAM_VISIBLE_INITIAL);
+    setVisibleAuditCount(AUDIT_VISIBLE_INITIAL);
+  }, [filterPhaseSeq, setVisibleStreamCount, setVisibleAuditCount]);
+
+  const filteredPhase = filterPhaseSeq
+    ? cycle.phases.find((p) => p.phase_seq === filterPhaseSeq)
+    : undefined;
+  const filterLabel =
+    filteredPhase && filterPhaseSeq
+      ? `${phaseLabel(filteredPhase.phase)} #${filterPhaseSeq}`
+      : null;
+  const streamCountCaption = activityCountCaption(streamEvents.length, allStreamCount);
+  const auditCountCaption = activityCountCaption(auditEvents.length, allAuditCount);
   const visibleStreamEvents = streamEvents.slice(0, visibleStreamCount);
   const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
 
@@ -451,6 +562,7 @@ function AttemptActivitySection({
                 : "task-attempt-activity-tab"
             }
             onClick={() => setActivityTab("cursor")}
+            title={streamCountCaption}
           >
             Cursor
             <span className="task-attempt-activity-tab-count">
@@ -469,6 +581,7 @@ function AttemptActivitySection({
                 : "task-attempt-activity-tab"
             }
             onClick={() => setActivityTab("audit")}
+            title={auditCountCaption}
           >
             Audit
             <span className="task-attempt-activity-tab-count">
@@ -478,6 +591,21 @@ function AttemptActivitySection({
         </div>
       </div>
 
+      {filterLabel ? (
+        <div className="task-attempt-activity-filter-bar">
+          <p className="task-attempt-activity-filter-label">
+            Showing {filterLabel}
+          </p>
+          <button
+            type="button"
+            className="secondary task-attempt-activity-filter-clear"
+            onClick={onClearPhaseFilter}
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : null}
+
       {activityTab === "cursor" ? (
         <CursorActivityPanel
           panelId={cursorPanelId}
@@ -486,6 +614,8 @@ function AttemptActivitySection({
           streamEvents={streamEvents}
           visibleStreamEvents={visibleStreamEvents}
           showPhaseBadge={showPhaseBadge}
+          filterLabel={filterLabel}
+          onClearPhaseFilter={onClearPhaseFilter}
           onLoadMore={() => setVisibleStreamCount((n) => n + LOAD_MORE_STEP)}
         />
       ) : (
@@ -496,6 +626,8 @@ function AttemptActivitySection({
           auditEvents={auditEvents}
           visibleAuditEvents={visibleAuditEvents}
           taskId={taskId}
+          filterLabel={filterLabel}
+          onClearPhaseFilter={onClearPhaseFilter}
           onLoadMore={() => setVisibleAuditCount((n) => n + LOAD_MORE_STEP)}
         />
       )}
@@ -510,6 +642,8 @@ function CursorActivityPanel({
   streamEvents,
   visibleStreamEvents,
   showPhaseBadge,
+  filterLabel,
+  onClearPhaseFilter,
   onLoadMore,
 }: {
   panelId: string;
@@ -518,6 +652,8 @@ function CursorActivityPanel({
   streamEvents: TaskCycleStreamEvent[];
   visibleStreamEvents: TaskCycleStreamEvent[];
   showPhaseBadge: boolean;
+  filterLabel: string | null;
+  onClearPhaseFilter: () => void;
   onLoadMore: () => void;
 }) {
   return (
@@ -534,12 +670,22 @@ function CursorActivityPanel({
           </p>
         </div>
       ) : streamEvents.length === 0 ? (
-        <EmptyState
-          title="No Cursor output yet"
-          description="Stream lines appear here as the agent runs."
-          density="compact"
-          hideIcon
-        />
+        filterLabel ? (
+          <EmptyState
+            title={`No Cursor output for ${filterLabel}`}
+            description="Try another phase or show all activity."
+            density="compact"
+            hideIcon
+            action={{ label: "Show all phases", onClick: onClearPhaseFilter }}
+          />
+        ) : (
+          <EmptyState
+            title="No Cursor output yet"
+            description="Stream lines appear here as the agent runs."
+            density="compact"
+            hideIcon
+          />
+        )
       ) : (
         <>
           <ol
@@ -576,6 +722,8 @@ function AuditActivityPanel({
   auditEvents,
   visibleAuditEvents,
   taskId,
+  filterLabel,
+  onClearPhaseFilter,
   onLoadMore,
 }: {
   panelId: string;
@@ -588,6 +736,8 @@ function AuditActivityPanel({
     Awaited<ReturnType<typeof listTaskEvents>>["events"]
   >;
   taskId: string;
+  filterLabel: string | null;
+  onClearPhaseFilter: () => void;
   onLoadMore: () => void;
 }) {
   return (
@@ -613,12 +763,22 @@ function AuditActivityPanel({
           </div>
         </div>
       ) : auditEvents.length === 0 ? (
-        <EmptyState
-          title="No audit events yet"
-          description="System events for this attempt appear here."
-          density="compact"
-          hideIcon
-        />
+        filterLabel ? (
+          <EmptyState
+            title={`No audit events for ${filterLabel}`}
+            description="Try another phase or show all activity."
+            density="compact"
+            hideIcon
+            action={{ label: "Show all phases", onClick: onClearPhaseFilter }}
+          />
+        ) : (
+          <EmptyState
+            title="No audit events yet"
+            description="System events for this attempt appear here."
+            density="compact"
+            hideIcon
+          />
+        )
       ) : (
         <>
           <AttemptAuditTimeline

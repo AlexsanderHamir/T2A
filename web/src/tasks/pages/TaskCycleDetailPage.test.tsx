@@ -8,7 +8,7 @@ import { requestUrl } from "../../test/requestUrl";
 import { pushAgentRunProgress } from "../hooks/useAgentRunProgress";
 import { TaskCycleDetailPage } from "./TaskCycleDetailPage";
 
-function renderAttemptPage() {
+function renderAttemptPage(initialEntry = "/tasks/t1/cycles/cyc-1") {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -16,7 +16,7 @@ function renderAttemptPage() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
         future={ROUTER_FUTURE_FLAGS}
-        initialEntries={["/tasks/t1/cycles/cyc-1"]}
+        initialEntries={[initialEntry]}
       >
         <Routes>
           <Route
@@ -27,6 +27,69 @@ function renderAttemptPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function multiPhaseCycleDetail() {
+  return {
+    ...cycleDetail,
+    status: "succeeded",
+    ended_at: "2026-04-25T12:00:40.000Z",
+    phases: [
+      {
+        id: "phase-1",
+        cycle_id: "cyc-1",
+        phase: "execute",
+        phase_seq: 1,
+        status: "succeeded",
+        started_at: "2026-04-25T12:00:10.000Z",
+        ended_at: "2026-04-25T12:00:20.000Z",
+        details: {},
+      },
+      {
+        id: "phase-2",
+        cycle_id: "cyc-1",
+        phase: "verify",
+        phase_seq: 2,
+        status: "succeeded",
+        started_at: "2026-04-25T12:00:20.000Z",
+        ended_at: "2026-04-25T12:00:30.000Z",
+        details: {},
+      },
+    ],
+  };
+}
+
+function mockAttemptFetchHandlers(cyclePayload: typeof cycleDetail) {
+  return async (input: RequestInfo | URL) => {
+    const url = requestUrl(input);
+    if (url === "/tasks/t1/cycles/cyc-1") {
+      return Response.json(cyclePayload);
+    }
+    if (url === "/tasks/t1/cycles/cyc-1/stream?limit=500") {
+      return Response.json({
+        task_id: "t1",
+        cycle_id: "cyc-1",
+        events: [
+          { ...streamEvent(1), phase_seq: 1 },
+          { ...streamEvent(2), phase_seq: 2, message: "Verify stream line" },
+        ],
+        limit: 500,
+        has_more: false,
+      });
+    }
+    if (url === "/tasks/t1/events?limit=200") {
+      return Response.json({
+        task_id: "t1",
+        events: [
+          { seq: 1, type: "cycle_started", data: { cycle_id: "cyc-1" } },
+          { seq: 2, type: "phase_started", data: { cycle_id: "cyc-1", phase_seq: 1 } },
+          { seq: 3, type: "phase_started", data: { cycle_id: "cyc-1", phase_seq: 2 } },
+        ],
+        approval_pending: false,
+      });
+    }
+    return new Response("not found", { status: 404 });
+  };
 }
 
 const cycleDetail = {
@@ -315,5 +378,51 @@ describe("TaskCycleDetailPage", () => {
     });
 
     expect(screen.getByText(/Running for 35\.0 s/)).toBeInTheDocument();
+  });
+
+  it("pre-filters activity from ?phase= query param", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockAttemptFetchHandlers(multiPhaseCycleDetail()),
+    );
+
+    renderAttemptPage("/tasks/t1/cycles/cyc-1?phase=2");
+
+    expect(
+      await screen.findByRole("heading", { name: /attempt #3/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Showing Verify #2")).toBeInTheDocument();
+    const activitySection = screen.getByRole("heading", {
+      name: /^activity$/i,
+    }).parentElement?.parentElement;
+    if (!activitySection) throw new Error("missing activity section");
+    expect(within(activitySection).getByText("Verify stream line")).toBeInTheDocument();
+    expect(within(activitySection).queryByText("Cursor update 1")).toBeNull();
+  });
+
+  it("clicking a phase updates the URL and filters activity", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockAttemptFetchHandlers(multiPhaseCycleDetail()),
+    );
+
+    renderAttemptPage();
+    expect(
+      await screen.findByRole("heading", { name: /attempt #3/i }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /filter activity to verify phase 2/i,
+      }),
+    );
+    expect(screen.getByText("Showing Verify #2")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /filter activity to verify phase 2/i,
+      }),
+    ).toHaveAttribute("aria-current", "true");
+
+    await user.click(screen.getByRole("button", { name: /clear filter/i }));
+    expect(screen.queryByText("Showing Verify #2")).toBeNull();
   });
 });

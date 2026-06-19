@@ -993,3 +993,51 @@ time.task-attempt-meta-inline-item {
     align-self: flex-start;
   }
 }
+
+.task-attempt-phase-step-button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.task-attempt-phase-step-button:focus-visible {
+  outline: 2px solid rgba(99, 91, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.task-attempt-phase-step--filter-active .task-attempt-phase-step-main {
+  background: var(--color-brand-subtle, rgba(99, 91, 255, 0.08));
+  border-radius: var(--radius-md);
+  outline: 2px solid rgba(99, 91, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.task-attempt-activity-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  margin: 0 0 var(--space-4, 1rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  border: 1px solid var(--border-chrome-hairline);
+}
+
+.task-attempt-activity-filter-label {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.task-attempt-activity-filter-clear {
+  flex-shrink: 0;
+}
