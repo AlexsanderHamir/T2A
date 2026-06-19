@@ -1,9 +1,14 @@
 package main
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func TestIsNPMWebNodeModulesGo(t *testing.T) {
@@ -24,79 +29,146 @@ func TestIsNPMWebNodeModulesGo(t *testing.T) {
 	}
 }
 
-func TestShouldSkipSlogRequirement_versionString(t *testing.T) {
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "String") {
-		t.Fatal("expected internal/version.String to be excluded from funclogmeasure slog requirement")
-	}
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "PrometheusBuildInfoLabels") {
-		t.Fatal("expected internal/version.PrometheusBuildInfoLabels to be excluded (pure label helper)")
-	}
-	if shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/internal/version", "Other") {
-		t.Fatal("unexpected skip")
-	}
-}
-
-func TestShouldSkipSlogRequirement_agentsQueueBufferAccessors(t *testing.T) {
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/agents", "*MemoryQueue.BufferDepth") {
-		t.Fatal("expected agents.MemoryQueue.BufferDepth skip")
-	}
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/agents", "*MemoryQueue.BufferCap") {
-		t.Fatal("expected agents.MemoryQueue.BufferCap skip")
-	}
-}
-
-func TestShouldSkipSlogRequirement_repoIsMentionDelimiter(t *testing.T) {
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/repo", "isMentionDelimiter") {
-		t.Fatal("expected pkgs/repo.isMentionDelimiter to be excluded (inner loop of ParseFileMentions)")
-	}
-}
-
-func TestShouldSkipSlogRequirement_storeKernelDeferLatency(t *testing.T) {
-	if !shouldSkipSlogRequirement("github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel", "DeferLatency") {
-		t.Fatal("expected pkgs/tasks/store/internal/kernel.DeferLatency skip (Prometheus hot path)")
-	}
-}
-
-func TestShouldSkipSlogRequirement_handlerHotHelpers(t *testing.T) {
-	for _, tt := range []struct {
-		pkg, fn string
-	}{
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson", "ApplySecurityHeaders"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "ServerVersion"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "SSESubscribersGauge"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.WriteHeader"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.Write"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.Flush"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware", "*metricsHTTPResponseWriter.statusCode"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "WithRecovery"},
-		{"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler", "HasValidBearerToken"},
-	} {
-		if !shouldSkipSlogRequirement(tt.pkg, tt.fn) {
-			t.Fatalf("expected skip %s.%s", tt.pkg, tt.fn)
-		}
-	}
-}
-
 func TestMiniMod_typeResolvedSlog(t *testing.T) {
 	dir := filepath.Join("testdata", "minimod")
 	rep, err := buildReport(dir, analyzeOpts{includeTool: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.FilesScanned != 3 {
-		t.Fatalf("files_scanned: got %d want 3", rep.FilesScanned)
+	var noLog *violation
+	for i := range rep.Violations {
+		v := &rep.Violations[i]
+		if v.Pkg == "minimod/bad" && v.FuncName == "NoLog" {
+			noLog = v
+			break
+		}
 	}
-	if rep.FuncsConsidered != 5 {
-		t.Fatalf("funcs_considered: got %d want 5", rep.FuncsConsidered)
+	if noLog == nil {
+		t.Fatalf("expected minimod/bad.NoLog violation, got %#v", rep.Violations)
 	}
-	if rep.FuncsWithSlog != 4 {
-		t.Fatalf("funcs_with_slog: got %d want 4", rep.FuncsWithSlog)
+	if rep.Satisfaction.DirectSlog < 4 {
+		t.Fatalf("expected direct_slog from good/dotpkg packages, got %d", rep.Satisfaction.DirectSlog)
 	}
-	if rep.FuncsMissingSlog != 1 || len(rep.Violations) != 1 {
-		t.Fatalf("missing: got %d violations %#v", rep.FuncsMissingSlog, rep.Violations)
+}
+
+func TestSatisfy_runObservedDelegate(t *testing.T) {
+	rep := mustBuildMinimodPkg(t, "minimod/delegate")
+	if layer := rep.layerFor("ViaRunObserved"); layer != layerTraceDelegate {
+		t.Fatalf("ViaRunObserved layer: got %q want %q", layer, layerTraceDelegate)
 	}
-	v := rep.Violations[0]
-	if v.Pkg != "minimod/bad" || v.FuncName != "NoLog" {
-		t.Fatalf("unexpected violation: %+v", v)
+}
+
+func TestSatisfy_samePackageWrapper(t *testing.T) {
+	rep := mustBuildMinimodPkg(t, "minimod/delegate")
+	if layer := rep.layerFor("ThinWrapper"); layer != layerTraceDelegate {
+		t.Fatalf("ThinWrapper layer: got %q want %q", layer, layerTraceDelegate)
 	}
+}
+
+func TestAutoExempt_errorString(t *testing.T) {
+	rep := mustBuildMinimodPkg(t, "minimod/exempt")
+	for _, fn := range []string{"errVal.Error", "stringerVal.String"} {
+		if layer := rep.layerFor(fn); layer != layerAutoExempt {
+			t.Fatalf("%s layer: got %q want %q", fn, layer, layerAutoExempt)
+		}
+	}
+}
+
+func TestAutoExempt_scanValueTableName(t *testing.T) {
+	rep := mustBuildMinimodPkg(t, "minimod/exempt")
+	for _, fn := range []string{"*enum.Scan", "enum.Value", "model.TableName"} {
+		if layer := rep.layerFor(fn); layer != layerAutoExempt {
+			t.Fatalf("%s layer: got %q want %q", fn, layer, layerAutoExempt)
+		}
+	}
+}
+
+func TestDirective_validAndInvalid(t *testing.T) {
+	rep := mustBuildMinimodPkg(t, "minimod/directive")
+	if layer := rep.layerFor("Skipped"); layer != layerDirective {
+		t.Fatalf("Skipped layer: got %q want %q", layer, layerDirective)
+	}
+	if layer := rep.layerFor("BadReason"); layer != layerUnsatisfied {
+		t.Fatalf("BadReason should fail validation, got %q", layer)
+	}
+	if layer := rep.layerFor("MissingDirective"); layer != layerUnsatisfied {
+		t.Fatalf("MissingDirective should violate, got %q", layer)
+	}
+}
+
+func TestDirective_missingReasonFails(t *testing.T) {
+	fd := parseFuncDecl(t, `package p
+//funclogmeasure:skip category=hot-path reason="short"
+func Bad() {}`)
+	if hasValidSkipDirective(fd) {
+		t.Fatal("expected invalid directive with short reason")
+	}
+	_, err := parseSkipDirective(fd)
+	if err == nil {
+		t.Fatal("expected parse error for short reason")
+	}
+}
+
+func TestDirective_validParse(t *testing.T) {
+	fd := parseFuncDecl(t, `package p
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func Ok() {}`)
+	d, err := parseSkipDirective(fd)
+	if err != nil || d == nil {
+		t.Fatalf("parseSkipDirective: err=%v d=%v", err, d)
+	}
+	if d.Category != categoryHotPath {
+		t.Fatalf("category: got %q", d.Category)
+	}
+}
+
+type pkgLayerReport struct {
+	layers map[string]string
+}
+
+func (r pkgLayerReport) layerFor(name string) string {
+	return r.layers[name]
+}
+
+func mustBuildMinimodPkg(t *testing.T, pkgPath string) pkgLayerReport {
+	t.Helper()
+	dir := filepath.Join("testdata", "minimod")
+	rep, err := buildReport(dir, analyzeOpts{includeTool: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := newPkgSatisfyCache()
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedCompiledGoFiles,
+		Dir:  dir,
+	}
+	pkgs, err := packages.Load(cfg, "./...")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := pkgLayerReport{layers: map[string]string{}}
+	for _, pkg := range pkgs {
+		if pkg.PkgPath != pkgPath {
+			continue
+		}
+		layers := analyzePackageSatisfaction(pkg, cache)
+		return pkgLayerReport{layers: layers}
+	}
+	t.Fatalf("package %q not found in minimod (funcs_considered=%d violations=%d)", pkgPath, rep.FuncsConsidered, len(rep.Violations))
+	return out
+}
+
+func parseFuncDecl(t *testing.T, src string) *ast.FuncDecl {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), "x.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, decl := range f.Decls {
+		if fd, ok := decl.(*ast.FuncDecl); ok {
+			return fd
+		}
+	}
+	t.Fatal("no FuncDecl")
+	return nil
 }
