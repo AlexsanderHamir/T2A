@@ -91,7 +91,21 @@ type Request struct {
 	// OnProgress is an optional live-update callback. It is excluded from
 	// JSON so the persisted/tested request wire shape stays stable.
 	OnProgress func(ProgressEvent) `json:"-"`
+	// StreamIdleStuck is the stdout-silence threshold after the first line
+	// before the adapter kills the child process with ErrStale. Zero
+	// disables stream-idle detection.
+	StreamIdleStuck time.Duration `json:"-"`
+	// OnStreamIdle emits suspicious / kill-pending warnings before stuck kill.
+	OnStreamIdle func(StreamIdleKind) `json:"-"`
 }
+
+// StreamIdleKind identifies stdout-silence tiers surfaced to the harness/UI.
+type StreamIdleKind int
+
+const (
+	StreamIdleSuspicious StreamIdleKind = iota
+	StreamIdleKillPending
+)
 
 // Result is what Runner.Run returns. On wrapped error returns
 // (ErrTimeout, ErrNonZeroExit, ErrInvalidOutput) the Result is still
@@ -135,6 +149,11 @@ var (
 	// Result (e.g. malformed JSON from the tool, or no script entry in
 	// the fake runner). The Result returned is the zero value.
 	ErrInvalidOutput = errors.New("runner: invalid output")
+
+	// ErrStale indicates the child process was killed because stdout went
+	// silent for StreamIdleStuck after the first line. Callers may attempt
+	// evidence-based recovery rather than treating this as a hard failure.
+	ErrStale = errors.New("runner: stream idle")
 )
 
 // NewResult constructs a Result with byte/rune caps already applied. It is

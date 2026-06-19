@@ -29,6 +29,7 @@ type Patch struct {
 	CursorBin               *string
 	CursorModel             *string
 	MaxRunDurationSeconds   *int
+	StreamIdleStuckSeconds  *int
 	AgentPickupDelaySeconds *int
 	// DisplayTimezone is an IANA timezone identifier validated via
 	// time.LoadLocation. Empty string ("") is accepted and means
@@ -63,6 +64,7 @@ func (p Patch) IsEmpty() bool {
 		p.CursorBin == nil &&
 		p.CursorModel == nil &&
 		p.MaxRunDurationSeconds == nil &&
+		p.StreamIdleStuckSeconds == nil &&
 		p.AgentPickupDelaySeconds == nil &&
 		p.DisplayTimezone == nil &&
 		p.OptimisticMutationsEnabled == nil &&
@@ -184,6 +186,9 @@ func validatePatch(patch Patch) error {
 	if patch.MaxRunDurationSeconds != nil && *patch.MaxRunDurationSeconds < 0 {
 		return fmt.Errorf("%w: max_run_duration_seconds must be >= 0", domain.ErrInvalidInput)
 	}
+	if patch.StreamIdleStuckSeconds != nil && *patch.StreamIdleStuckSeconds < 0 {
+		return fmt.Errorf("%w: stream_idle_stuck_seconds must be >= 0", domain.ErrInvalidInput)
+	}
 	if patch.AgentPickupDelaySeconds != nil {
 		v := *patch.AgentPickupDelaySeconds
 		if v < 0 || v > 604800 {
@@ -240,6 +245,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.MaxRunDurationSeconds != nil {
 		row.MaxRunDurationSeconds = *patch.MaxRunDurationSeconds
+	}
+	if patch.StreamIdleStuckSeconds != nil {
+		row.StreamIdleStuckSeconds = *patch.StreamIdleStuckSeconds
 	}
 	if patch.AgentPickupDelaySeconds != nil {
 		row.AgentPickupDelaySeconds = *patch.AgentPickupDelaySeconds

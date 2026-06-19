@@ -72,6 +72,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty = `PATH` lookup of `cursor`. Absolute paths pin a build. |
 | `cursor_model` | string | `""` | Optional Cursor model forwarded to the runner. Empty = omit the model flag (Cursor uses account default). |
 | `max_run_duration_seconds` | int (≥0) | `0` | Per-run wall-clock cap on `runner.Request.Timeout`. `0` = no limit. |
+| `stream_idle_stuck_seconds` | int (≥0) | `60` | Stdout silence threshold after the first line before killing a hung cursor run and attempting evidence recovery. `0` = disabled. Suspicious/kill-warning tiers are derived (`stuck/2`, `stuck−5s`). |
 | `agent_pickup_delay_seconds` | int (≥0) | `5` | Delay applied to new ready tasks before the worker can dequeue them. `0` disables. |
 | `display_timezone` | string | `""` | IANA timezone for SPA timestamps. Empty = browser auto-detect. Validated via `time.LoadLocation`. |
 | `optimistic_mutations_enabled` | bool | `true` | Always-on compatibility field. |
@@ -90,6 +91,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 
 - `runner` is non-empty and not in `pkgs/agents/runner/registry`.
 - `max_run_duration_seconds` is negative.
+- `stream_idle_stuck_seconds` is negative.
 - `verify_max_retries` is negative.
 - `repo_root` contains a NUL byte.
 

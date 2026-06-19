@@ -55,6 +55,24 @@ func DefaultExec(ctx context.Context, dir string, env []string, stdin []byte, na
 // DefaultStreamExec is the production StreamExecFunc implementation backed by
 // os/exec and stdout/stderr pipes.
 func DefaultStreamExec(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) ([]byte, []byte, int, error) {
+	return defaultStreamExec(ctx, dir, env, stdin, name, onStdoutLine, StreamIdleConfig{}, args...)
+}
+
+// DefaultStreamExecWithIdle is like DefaultStreamExec but monitors stdout
+// silence. When idle.Stuck elapses after the first stdout line, idle.Cancel is
+// invoked with ErrStreamIdle.
+func DefaultStreamExecWithIdle(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), idle StreamIdleConfig, args ...string) ([]byte, []byte, int, error) {
+	return defaultStreamExec(ctx, dir, env, stdin, name, onStdoutLine, idle, args...)
+}
+
+func defaultStreamExec(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), idle StreamIdleConfig, args ...string) ([]byte, []byte, int, error) {
+	var watchdog *streamIdleWatchdog
+	if idle.Stuck > 0 && idle.Cancel != nil {
+		watchdog = newStreamIdleWatchdog(idle)
+		onStdoutLine = watchdog.wrap(onStdoutLine)
+		go watchdog.run(ctx)
+		defer watchdog.close()
+	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = env
@@ -115,8 +133,10 @@ func ScanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error 
 	scanner.Buffer(make([]byte, 0, DefaultScannerInitialBufferBytes), DefaultScannerMaxBufferBytes)
 	for scanner.Scan() {
 		line := append([]byte(nil), scanner.Bytes()...)
-		dst.Write(line)
-		dst.WriteByte('\n')
+		if dst != nil {
+			dst.Write(line)
+			dst.WriteByte('\n')
+		}
 		if onLine != nil {
 			onLine(line)
 		}

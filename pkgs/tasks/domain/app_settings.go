@@ -62,6 +62,7 @@ type AppSettings struct {
 	CursorBin                  string `gorm:"not null;default:''"`
 	CursorModel                string `gorm:"not null;default:''"`
 	MaxRunDurationSeconds      int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	StreamIdleStuckSeconds     int    `gorm:"not null;default:60;check:chk_app_settings_stream_idle_stuck_seconds,stream_idle_stuck_seconds >= 0"`
 	AgentPickupDelaySeconds    int    `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
 	DisplayTimezone            string `gorm:"not null;default:''"`
 	OptimisticMutationsEnabled bool   `gorm:"not null;default:true"`
@@ -95,6 +96,10 @@ const DefaultRunner = "cursor"
 // on first boot (seconds before the worker may dequeue a newly created ready task).
 const DefaultAgentPickupDelaySeconds = 5
 
+// DefaultStreamIdleStuckSeconds is the stdout-silence threshold before
+// the worker kills a hung cursor-agent run and attempts evidence recovery.
+const DefaultStreamIdleStuckSeconds = 60
+
 // DefaultVerifyMaxRetries is the seed value for VerifyMaxRetries on first boot.
 const DefaultVerifyMaxRetries = 2
 
@@ -125,6 +130,7 @@ func DefaultAppSettings() AppSettings {
 		RepoRoot:                    "",
 		CursorBin:                   "",
 		MaxRunDurationSeconds:       0,
+		StreamIdleStuckSeconds:      DefaultStreamIdleStuckSeconds,
 		AgentPickupDelaySeconds:     DefaultAgentPickupDelaySeconds,
 		DisplayTimezone:             DefaultDisplayTimezone,
 		OptimisticMutationsEnabled:  true,

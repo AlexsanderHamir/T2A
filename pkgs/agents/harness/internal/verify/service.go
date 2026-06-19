@@ -71,6 +71,10 @@ func (s *Service) SetVerifyRunner(r runner.Runner) {
 	}
 }
 
+func (s *Service) SetStreamIdleStuck(d time.Duration) {
+	s.hooks.StreamIdleStuck = d
+}
+
 func (s *Service) publish(taskID, cycleID string) {
 	if s.hooks.Publish != nil {
 		s.hooks.Publish(taskID, cycleID)

@@ -30,6 +30,7 @@ export type SettingsFormState = {
   cursorBin: string;
   cursorModel: string;
   maxRunDurationSeconds: string;
+  streamIdleStuckSeconds: string;
   agentPickupDelaySeconds: string;
   displayTimezone: string;
   verifyMaxRetries: string;
@@ -52,6 +53,7 @@ export function toFormState(s: AppSettings): SettingsFormState {
     cursorBin: s.cursor_bin,
     cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
+    streamIdleStuckSeconds: String(s.stream_idle_stuck_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
     displayTimezone: s.display_timezone,
     verifyMaxRetries: String(s.verify_max_retries),
@@ -80,6 +82,16 @@ export function diffPatch(
   const parsedMax = Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10);
   if (Number.isFinite(parsedMax) && parsedMax !== initial.max_run_duration_seconds) {
     out.max_run_duration_seconds = parsedMax;
+  }
+  const parsedStreamIdle = Number.parseInt(
+    form.streamIdleStuckSeconds.trim() || "0",
+    10,
+  );
+  if (
+    Number.isFinite(parsedStreamIdle) &&
+    parsedStreamIdle !== initial.stream_idle_stuck_seconds
+  ) {
+    out.stream_idle_stuck_seconds = parsedStreamIdle;
   }
   const parsedPickup = Number.parseInt(
     form.agentPickupDelaySeconds.trim() || "0",

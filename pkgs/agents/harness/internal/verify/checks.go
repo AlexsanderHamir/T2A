@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -72,39 +71,12 @@ func (s *Service) runVerifyChecks(
 		if cmdErr != nil {
 			return nil, "", cmdErr
 		}
-		if err := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback, cmdEvidence); err != nil {
+		runErr := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback, cmdEvidence)
+		nextVerdicts, parseErr := s.assembleVerdictsFromVerifyReport(cycle.ID, expected, verdicts, selfReport, previouslyPassed)
+		if err := verifyLLMRunError(runErr, parseErr); err != nil {
 			return nil, "", err
 		}
-		vrep, err := reports.ParseVerifyReport(s.reportDir, cycle.ID, expected)
-		if err != nil {
-			return nil, "", err
-		}
-		next := make([]Verdict, 0, len(verdicts))
-		for _, v := range verdicts {
-			if _, locked := previouslyPassed[v.ID]; locked {
-				next = append(next, v)
-				continue
-			}
-			if v.Verifier == domain.VerifierAgentSelf {
-				next = append(next, v)
-				continue
-			}
-			entry := selfReport[v.ID]
-			vr := vrep[v.ID]
-			nv := Verdict{ID: v.ID, Evidence: entry.Evidence}
-			if vr.Verified {
-				nv.Passed = true
-				nv.Verifier = domain.VerifierVerifyAgent
-				nv.Reasoning = vr.Reasoning
-			} else {
-				nv.Passed = false
-				nv.Verifier = domain.VerifierVerifyAgent
-				nv.Reasoning = vr.Reasoning
-			}
-			next = append(next, nv)
-			s.recordVerdict(domain.VerifierVerifyAgent, nv.Passed)
-		}
-		verdicts = next
+		verdicts = nextVerdicts
 	}
 
 	if uerr := s.persistVerifyReports(parentCtx, cycle.ID, attemptSeq, verdicts, previouslyPassed); uerr != nil {

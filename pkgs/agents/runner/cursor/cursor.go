@@ -3,11 +3,13 @@ package cursor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -147,26 +149,49 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 		return runner.Result{}, fmt.Errorf("cursor: %w: %v", runner.ErrTimeout, err)
 	}
 
-	runCtx, cancel := withOptionalTimeout(ctx, req.Timeout)
-	defer cancel()
+	runCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(context.Canceled)
+	if req.Timeout > 0 {
+		var timeoutCancel context.CancelFunc
+		runCtx, timeoutCancel = context.WithTimeout(runCtx, req.Timeout)
+		defer timeoutCancel()
+	}
 
 	env := buildEnv(req.Env, a.extraKeys)
 	argv := a.argvFor(req)
 	var stdout, stderr []byte
 	var exitCode int
 	var execErr error
+	lineCallback := func(line []byte) {
+		emitProgressFromLine(req.OnProgress, line, a.homePaths)
+	}
 	if a.streamExec != nil {
-		stdout, stderr, exitCode, execErr = a.streamExec(
-			runCtx,
-			req.WorkingDir,
-			env,
-			[]byte(req.Prompt),
-			a.binaryPath,
-			func(line []byte) {
-				emitProgressFromLine(req.OnProgress, line, a.homePaths)
-			},
-			argv...,
-		)
+		if req.StreamIdleStuck > 0 {
+			stdout, stderr, exitCode, execErr = adapterkit.DefaultStreamExecWithIdle(
+				runCtx,
+				req.WorkingDir,
+				env,
+				[]byte(req.Prompt),
+				a.binaryPath,
+				lineCallback,
+				adapterkit.StreamIdleConfig{
+					Stuck:  req.StreamIdleStuck,
+					Cancel: cancel,
+					OnIdle: mapStreamIdleCallback(req.OnStreamIdle),
+				},
+				argv...,
+			)
+		} else {
+			stdout, stderr, exitCode, execErr = a.streamExec(
+				runCtx,
+				req.WorkingDir,
+				env,
+				[]byte(req.Prompt),
+				a.binaryPath,
+				lineCallback,
+				argv...,
+			)
+		}
 	} else {
 		stdout, stderr, exitCode, execErr = a.exec(
 			runCtx,
@@ -188,6 +213,13 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 	}
 
 	if execErr != nil {
+		if errors.Is(context.Cause(runCtx), adapterkit.ErrStreamIdle) {
+			return runner.NewResult(domain.PhaseStatusFailed, staleSummary(req.StreamIdleStuck),
+					failureDetails("stream_idle", execErr, stdout, stderr, a.homePaths, map[string]any{
+						"stream_idle_stuck_ns": int64(req.StreamIdleStuck),
+					}), rawOutput),
+				fmt.Errorf("cursor: %w: %v", runner.ErrStale, execErr)
+		}
 		if isCtxErr(runCtx) {
 			return runner.NewResult(domain.PhaseStatusFailed, timeoutSummary(req.Timeout),
 					failureDetails("timeout", execErr, stdout, stderr, a.homePaths, map[string]any{

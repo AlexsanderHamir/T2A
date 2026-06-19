@@ -10,6 +10,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -129,13 +130,14 @@ func (h *Harness) runCycleLoopExecute(
 		effects := orchestration.DecideExecutePostRun(orchestration.ExecutePostRunInput{
 			ContextCancelled: true,
 		})
-		return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, 0, snap, operatorCancelled)
+		return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, 0, snap, operatorCancelled, false)
 	}
 
 	var ingestOutcome executeCommitIngestOutcome
 	var ingestErr error
 	ingestAttempted := false
-	if runErr == nil && !operatorCancelled && !snap.Skipped {
+	staleRecovery := errors.Is(runErr, runner.ErrStale)
+	if (runErr == nil || staleRecovery) && !operatorCancelled && !snap.Skipped {
 		ingestAttempted = true
 		ingestOutcome, ingestErr = h.ingestExecuteCommits(
 			parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap,
@@ -155,7 +157,12 @@ func (h *Harness) runCycleLoopExecute(
 
 	postRunIn := buildExecutePostRunInput(parentCtx, runErr, operatorCancelled, snap, ingestAttempted, ingestOutcome, ingestErr)
 	effects := orchestration.DecideExecutePostRun(postRunIn)
-	return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled)
+	if staleRecovery && effects.ContinueToVerify {
+		recovered := streamIdleRecoveredEvent()
+		h.persistProgress(parentCtx, task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
+		h.publishProgress(task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
+	}
+	return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
 }
 
 // runCycleLoopVerify runs verification for one loop iteration. retryLoop is

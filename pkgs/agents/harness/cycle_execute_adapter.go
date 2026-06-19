@@ -16,6 +16,8 @@ func mapRunnerOutcome(err error) orchestration.ExecuteRunnerOutcome {
 		return orchestration.ExecuteRunnerOutcomeOK
 	}
 	switch {
+	case errors.Is(err, runner.ErrStale):
+		return orchestration.ExecuteRunnerOutcomeOK
 	case errors.Is(err, runner.ErrTimeout):
 		return orchestration.ExecuteRunnerOutcomeTimeout
 	case errors.Is(err, runner.ErrNonZeroExit):
@@ -36,15 +38,18 @@ func buildExecutePostRunInput(
 	ingestOutcome executeCommitIngestOutcome,
 	ingestErr error,
 ) orchestration.ExecutePostRunInput {
+	evidenceRecovery := errors.Is(runErr, runner.ErrStale)
 	in := orchestration.ExecutePostRunInput{
 		RunnerOutcome:     mapRunnerOutcome(runErr),
 		OperatorCancelled: operatorCancelled,
 		ContextCancelled:  parentCtx.Err() != nil,
+		EvidenceRecovery:  evidenceRecovery,
 		CommitIngest: orchestration.ExecuteCommitIngestSummary{
 			GitSnapshotSkipped: snap.Skipped,
 		},
 	}
-	if runErr == nil && !operatorCancelled && !snap.Skipped {
+	shouldIngest := (runErr == nil || evidenceRecovery) && !operatorCancelled && !snap.Skipped
+	if shouldIngest {
 		in.CommitIngest.IngestAttempted = ingestAttempted
 		if ingestAttempted {
 			in.CommitIngest.IngestErr = ingestErr != nil

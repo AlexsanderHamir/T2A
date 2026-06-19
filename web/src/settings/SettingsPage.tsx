@@ -195,6 +195,12 @@ export function SettingsPage() {
 
   const maxParsed = form ? Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10) : 0;
   const maxInvalid = form ? !Number.isFinite(maxParsed) || maxParsed < 0 : false;
+  const streamIdleParsed = form
+    ? Number.parseInt(form.streamIdleStuckSeconds.trim() || "0", 10)
+    : 0;
+  const streamIdleInvalid = form
+    ? !Number.isFinite(streamIdleParsed) || streamIdleParsed < 0
+    : false;
   const pickupParsed = form
     ? Number.parseInt(form.agentPickupDelaySeconds.trim() || "0", 10)
     : 0;
@@ -223,6 +229,7 @@ export function SettingsPage() {
       !settings ||
       !form ||
       maxInvalid ||
+      streamIdleInvalid ||
       pickupInvalid
     ) {
       return;
@@ -269,6 +276,9 @@ export function SettingsPage() {
         }
         if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
           merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
+        }
+        if (cur.streamIdleStuckSeconds === formAtSubmit.streamIdleStuckSeconds) {
+          merged.streamIdleStuckSeconds = String(next.stream_idle_stuck_seconds);
         }
         if (cur.agentPickupDelaySeconds === formAtSubmit.agentPickupDelaySeconds) {
           merged.agentPickupDelaySeconds = String(
@@ -401,6 +411,7 @@ export function SettingsPage() {
             form={form}
             pickupInvalid={pickupInvalid}
             maxInvalid={maxInvalid}
+            streamIdleInvalid={streamIdleInvalid}
             cursorModelsQuery={cursorModelsQuery}
             modelIdsFromList={modelIdsFromList}
             verifyModelsQuery={verifyModelsQuery}
@@ -423,6 +434,7 @@ export function SettingsPage() {
           <SettingsActions
             isDirty={isDirty}
             maxInvalid={maxInvalid}
+            streamIdleInvalid={streamIdleInvalid}
             pickupInvalid={pickupInvalid}
             patchPending={patch.isPending}
             onDiscard={() => setForm(toFormState(settings))}

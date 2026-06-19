@@ -166,8 +166,14 @@ func (h *Harness) invokeRunnerWithTask(parentCtx context.Context, task *domain.T
 func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunner",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq,
-		"run_timeout_ns", int64(h.opts.RunTimeout))
-	runCtx, cancel := withOptionalRunTimeout(parentCtx, h.opts.RunTimeout)
+		"run_timeout_ns", int64(h.opts.RunTimeout), "stream_idle_stuck_ns", int64(h.opts.StreamIdleStuck))
+	runCtx, cancelCause := context.WithCancelCause(parentCtx)
+	if h.opts.RunTimeout > 0 {
+		var timeoutCancel context.CancelFunc
+		runCtx, timeoutCancel = context.WithTimeout(runCtx, h.opts.RunTimeout)
+		defer timeoutCancel()
+	}
+	cancel := func() { cancelCause(context.Canceled) }
 	defer cancel()
 	projectContext, err := h.selectedProjectContext(runCtx, task, cycle)
 	if err != nil {
@@ -176,18 +182,22 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 	}
 	h.setCurrentRunCancel(cancel)
 	defer h.setCurrentRunCancel(nil)
+	onProgress := func(ev runner.ProgressEvent) {
+		h.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
+		h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
+	}
+	streamIdleStuck, onStreamIdle := h.streamIdleRunnerFields(onProgress)
 	return h.runner.Run(runCtx, runner.Request{
-		TaskID:      task.ID,
-		AttemptSeq:  cycle.AttemptSeq,
-		Phase:       domain.PhaseExecute,
-		Prompt:      prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
-		WorkingDir:  h.opts.WorkingDir,
-		Timeout:     h.opts.RunTimeout,
-		CursorModel: task.CursorModel,
-		OnProgress: func(ev runner.ProgressEvent) {
-			h.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
-			h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
-		},
+		TaskID:          task.ID,
+		AttemptSeq:      cycle.AttemptSeq,
+		Phase:           domain.PhaseExecute,
+		Prompt:          prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
+		WorkingDir:      h.opts.WorkingDir,
+		Timeout:         h.opts.RunTimeout,
+		CursorModel:     task.CursorModel,
+		StreamIdleStuck: streamIdleStuck,
+		OnStreamIdle:    onStreamIdle,
+		OnProgress:      onProgress,
 	})
 }
 

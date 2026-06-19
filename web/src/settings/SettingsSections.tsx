@@ -521,6 +521,7 @@ export function PhasesSettingsSection({
   form,
   pickupInvalid,
   maxInvalid,
+  streamIdleInvalid,
   cursorModelsQuery,
   modelIdsFromList,
   verifyModelsQuery,
@@ -530,6 +531,7 @@ export function PhasesSettingsSection({
   form: SettingsFormState;
   pickupInvalid: boolean;
   maxInvalid: boolean;
+  streamIdleInvalid: boolean;
   cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
   modelIdsFromList: Set<string>;
   verifyModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
@@ -621,6 +623,41 @@ export function PhasesSettingsSection({
                 </p>
               </div>
               {maxInvalid ? (
+                <p role="alert" className="settings-field-error">
+                  Must be a non-negative integer.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="settings-field-block">
+              <label className="settings-field">
+                <span className="settings-field-label">Stream idle stuck</span>
+                <span className="settings-field-input-suffix">
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.streamIdleStuckSeconds}
+                    onChange={(e) =>
+                      onField("streamIdleStuckSeconds", e.target.value)
+                    }
+                    aria-invalid={streamIdleInvalid}
+                  />
+                  <span className="settings-field-suffix" aria-hidden="true">
+                    seconds
+                  </span>
+                </span>
+              </label>
+              <div className="settings-field-help-block">
+                <p className="settings-field-help">
+                  Kills a hung run after stdout goes quiet and tries to recover
+                  from saved evidence (commits or verify report).
+                </p>
+                <p className="settings-field-help settings-field-help-meta">
+                  Default <code>60</code>s. Set <code>0</code> to disable.
+                </p>
+              </div>
+              {streamIdleInvalid ? (
                 <p role="alert" className="settings-field-error">
                   Must be a non-negative integer.
                 </p>
@@ -729,12 +766,14 @@ export function DisplaySettingsSection({
 export function SettingsActions({
   isDirty,
   maxInvalid,
+  streamIdleInvalid,
   pickupInvalid,
   patchPending,
   onDiscard,
 }: {
   isDirty: boolean;
   maxInvalid: boolean;
+  streamIdleInvalid: boolean;
   pickupInvalid: boolean;
   patchPending: boolean;
   onDiscard: () => void;
@@ -742,7 +781,7 @@ export function SettingsActions({
   return (
     <div className="settings-actions" data-dirty={isDirty ? "true" : "false"}>
       <div className="settings-actions-status" aria-hidden="true">
-        {maxInvalid || pickupInvalid ? (
+        {maxInvalid || streamIdleInvalid || pickupInvalid ? (
           <span className="settings-actions-hint settings-actions-hint--warn">
             Resolve the errors above to save.
           </span>
@@ -775,6 +814,7 @@ export function SettingsActions({
             !isDirty ||
             patchPending ||
             maxInvalid ||
+            streamIdleInvalid ||
             pickupInvalid
           }
         >

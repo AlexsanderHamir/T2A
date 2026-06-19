@@ -55,6 +55,29 @@ export function agentProgressKindDescriptor(
       tone: "reply",
     };
   }
+  if (kind === "run_state") {
+    if (subtype === "idle_suspicious") {
+      return {
+        label: "May be stuck",
+        title: "Agent stdout has gone quiet",
+        tone: "failed",
+      };
+    }
+    if (subtype === "idle_kill_pending") {
+      return {
+        label: "Terminating soon",
+        title: "Agent will be terminated if output stays silent",
+        tone: "error",
+      };
+    }
+    if (subtype === "idle_recovered") {
+      return {
+        label: "Recovered",
+        title: "Recovered from a silent agent using saved evidence",
+        tone: "done",
+      };
+    }
+  }
   if (kind === "system") {
     return {
       label: "Session",

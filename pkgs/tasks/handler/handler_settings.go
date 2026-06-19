@@ -28,6 +28,7 @@ type settingsResponse struct {
 	CursorBin                   string `json:"cursor_bin"`
 	CursorModel                 string `json:"cursor_model"`
 	MaxRunDurationSeconds       int    `json:"max_run_duration_seconds"`
+	StreamIdleStuckSeconds      int    `json:"stream_idle_stuck_seconds"`
 	AgentPickupDelaySeconds     int    `json:"agent_pickup_delay_seconds"`
 	DisplayTimezone             string `json:"display_timezone"`
 	OptimisticMutationsEnabled  bool   `json:"optimistic_mutations_enabled"`
@@ -52,6 +53,7 @@ type settingsPatchBody struct {
 	CursorBin                   *string `json:"cursor_bin,omitempty"`
 	CursorModel                 *string `json:"cursor_model,omitempty"`
 	MaxRunDurationSeconds       *int    `json:"max_run_duration_seconds,omitempty"`
+	StreamIdleStuckSeconds      *int    `json:"stream_idle_stuck_seconds,omitempty"`
 	AgentPickupDelaySeconds     *int    `json:"agent_pickup_delay_seconds,omitempty"`
 	DisplayTimezone             *string `json:"display_timezone,omitempty"`
 	OptimisticMutationsEnabled  *bool   `json:"optimistic_mutations_enabled,omitempty"`
@@ -153,6 +155,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		CursorBin:                   body.CursorBin,
 		CursorModel:                 body.CursorModel,
 		MaxRunDurationSeconds:       body.MaxRunDurationSeconds,
+		StreamIdleStuckSeconds:      body.StreamIdleStuckSeconds,
 		AgentPickupDelaySeconds:     body.AgentPickupDelaySeconds,
 		DisplayTimezone:             body.DisplayTimezone,
 		VerifyMaxRetries:            body.VerifyMaxRetries,
@@ -322,6 +325,7 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		CursorBin:                   cfg.CursorBin,
 		CursorModel:                 cfg.CursorModel,
 		MaxRunDurationSeconds:       cfg.MaxRunDurationSeconds,
+		StreamIdleStuckSeconds:      cfg.StreamIdleStuckSeconds,
 		AgentPickupDelaySeconds:     cfg.AgentPickupDelaySeconds,
 		DisplayTimezone:             cfg.DisplayTimezone,
 		OptimisticMutationsEnabled:  cfg.OptimisticMutationsEnabled,

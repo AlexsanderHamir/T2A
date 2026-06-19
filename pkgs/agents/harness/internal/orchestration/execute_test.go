@@ -109,6 +109,33 @@ func TestDecideExecutePostRun_gitSkippedSkipsIngest(t *testing.T) {
 	}
 }
 
+func TestDecideExecutePostRun_evidenceRecoveryContinue(t *testing.T) {
+	t.Parallel()
+	e := DecideExecutePostRun(ExecutePostRunInput{
+		EvidenceRecovery: true,
+		CommitIngest: ExecuteCommitIngestSummary{
+			IngestAttempted: true,
+		},
+	})
+	if !e.ContinueToVerify || e.TerminateFailed {
+		t.Fatalf("got %+v", e)
+	}
+}
+
+func TestDecideExecutePostRun_evidenceRecoveryNoCommits(t *testing.T) {
+	t.Parallel()
+	e := DecideExecutePostRun(ExecutePostRunInput{
+		EvidenceRecovery: true,
+		CommitIngest: ExecuteCommitIngestSummary{
+			IngestAttempted: true,
+			FailReason:      "execute_no_commits",
+		},
+	})
+	if !e.TerminateFailed || string(e.Reason) != "execute_no_commits" {
+		t.Fatalf("got %+v", e)
+	}
+}
+
 func TestDecideVerifyDisabledLegacy(t *testing.T) {
 	t.Parallel()
 	if e := DecideVerifyDisabledLegacy(nil); e.TerminalFailure {

@@ -23,6 +23,7 @@ func (h *Harness) applyExecuteEffects(
 	commitCount int,
 	snap git.PhaseSnapshot,
 	operatorCancelled bool,
+	streamIdleRecovery bool,
 ) bool {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.applyExecuteEffects",
 		"task_id", task.ID, "cycle_id", cycle.ID, "continue", effects.ContinueToVerify,
@@ -39,6 +40,9 @@ func (h *Harness) applyExecuteEffects(
 
 	phaseStatus := executePhaseStatusFromEffects(effects)
 	phaseDetails := mergeRunnerDetailsWithGit(detailsBytes(result), snap, commitCount)
+	if streamIdleRecovery && effects.ContinueToVerify {
+		phaseDetails = mergeStreamIdleRecoveryDetails(phaseDetails, h.opts.StreamIdleStuck)
+	}
 
 	if !h.completeExecutePhase(parentCtx, state, cycle, execPhase, phaseStatus, result, phaseDetails) {
 		h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)

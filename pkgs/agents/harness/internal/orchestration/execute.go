@@ -9,6 +9,10 @@ func DecideExecutePostRun(in ExecutePostRunInput) ExecuteEffects {
 		return ExecuteEffects{StopLoop: true}
 	}
 
+	if in.EvidenceRecovery {
+		return decideExecuteAfterEvidenceRecovery(in)
+	}
+
 	effects := executeEffectsFromRunner(in.RunnerOutcome)
 	if effects.TerminateFailed {
 		effects = overlayOperatorCancel(in.OperatorCancelled, effects)
@@ -45,6 +49,42 @@ func DecideExecutePostRun(in ExecutePostRunInput) ExecuteEffects {
 		}
 	}
 
+	return ExecuteEffects{ContinueToVerify: true}
+}
+
+func decideExecuteAfterEvidenceRecovery(in ExecutePostRunInput) ExecuteEffects {
+	if in.OperatorCancelled {
+		return ExecuteEffects{
+			TerminateFailed: true,
+			TransitionTask:  domain.StatusFailed,
+			Reason:          ReasonCancelledByOperator,
+			ResultSummary:   "cancelled by operator",
+		}
+	}
+
+	if in.CommitIngest.GitSnapshotSkipped || !in.CommitIngest.IngestAttempted {
+		return ExecuteEffects{ContinueToVerify: true}
+	}
+	if in.CommitIngest.IngestErr {
+		return ExecuteEffects{
+			TerminateFailed: true,
+			TransitionTask:  domain.StatusFailed,
+			Reason:          ReasonExecuteInvalidCommit,
+			ResultSummary:   string(ReasonExecuteInvalidCommit),
+		}
+	}
+	if in.CommitIngest.FailReason != "" {
+		reason := TerminationReason(in.CommitIngest.FailReason)
+		if reason == "" {
+			reason = ReasonRunnerStale
+		}
+		return ExecuteEffects{
+			TerminateFailed: true,
+			TransitionTask:  domain.StatusFailed,
+			Reason:          reason,
+			ResultSummary:   in.CommitIngest.FailReason,
+		}
+	}
 	return ExecuteEffects{ContinueToVerify: true}
 }
 

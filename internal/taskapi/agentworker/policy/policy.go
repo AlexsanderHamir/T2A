@@ -68,6 +68,9 @@ func InstanceMatchesSettings(inst *InstanceSnapshot, cfg store.AppSettings, vers
 	if inst.Settings.MaxRunDurationSeconds != cfg.MaxRunDurationSeconds {
 		return false
 	}
+	if inst.Settings.StreamIdleStuckSeconds != cfg.StreamIdleStuckSeconds {
+		return false
+	}
 	if inst.Settings.VerifyRunnerName != cfg.VerifyRunnerName {
 		return false
 	}

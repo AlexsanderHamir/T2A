@@ -11,6 +11,7 @@ const (
 	ReasonRunnerNonZeroExit         TerminationReason = "runner_non_zero_exit"
 	ReasonRunnerInvalidOutput       TerminationReason = "runner_invalid_output"
 	ReasonRunnerError               TerminationReason = "runner_error"
+	ReasonRunnerStale               TerminationReason = "runner_stale"
 	ReasonExecuteInvalidCommit      TerminationReason = "execute_invalid_commit"
 	ReasonCancelledByOperator       TerminationReason = "cancelled_by_operator"
 	ReasonChecklistCompletionFailed TerminationReason = "checklist_completion_failed"

@@ -72,6 +72,7 @@ type ProgressNotifier interface {
 // every field.
 type Options struct {
 	RunTimeout           time.Duration
+	StreamIdleStuck      time.Duration
 	ShutdownAbortTimeout time.Duration
 	WorkingDir           string
 	ReportDir            string

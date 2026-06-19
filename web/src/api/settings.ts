@@ -22,6 +22,8 @@ export type AppSettings = {
   /** Empty string = Cursor default model (`cursor-agent` omits `--model`). */
   cursor_model: string;
   max_run_duration_seconds: number;
+  /** Stdout silence before killing a hung run and attempting evidence recovery. 0 = off. */
+  stream_idle_stuck_seconds: number;
   /** Minimum seconds before the worker runs a new ready task. Default 5; 0 = no wait. */
   agent_pickup_delay_seconds: number;
   /**
@@ -66,6 +68,7 @@ export type AppSettingsPatch = Partial<{
   cursor_bin: string;
   cursor_model: string;
   max_run_duration_seconds: number;
+  stream_idle_stuck_seconds: number;
   agent_pickup_delay_seconds: number;
   /**
    * IANA timezone identifier (e.g. "America/New_York"). Empty string
@@ -127,6 +130,7 @@ function assertSettings(raw: unknown): AppSettings {
   const cursorBin = o.cursor_bin;
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
+  const streamIdleStuck = o.stream_idle_stuck_seconds;
   const pickupDelay = o.agent_pickup_delay_seconds;
   // display_timezone is preserved verbatim when the server sends a
   // string. Empty string ("") is the documented auto-detect sentinel
@@ -162,6 +166,7 @@ function assertSettings(raw: unknown): AppSettings {
     typeof cursorBin !== "string" ||
     typeof cursorModel !== "string" ||
     typeof maxDur !== "number" ||
+    typeof streamIdleStuck !== "number" ||
     typeof pickupDelay !== "number"
   ) {
     throw new Error("unexpected settings response shape");
@@ -173,6 +178,7 @@ function assertSettings(raw: unknown): AppSettings {
     cursor_bin: cursorBin,
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
+    stream_idle_stuck_seconds: streamIdleStuck,
     agent_pickup_delay_seconds: pickupDelay,
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,

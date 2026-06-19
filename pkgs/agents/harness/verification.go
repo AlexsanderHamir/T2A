@@ -33,12 +33,17 @@ func (h *Harness) verifySvc() *verify.Service {
 				},
 				RecordVerdict:   h.recordVerifyVerdict,
 				ObserveDuration: h.observeVerifyDuration,
+				SetRunCancel: func(cancel context.CancelFunc) {
+					h.setCurrentRunCancel(cancel)
+				},
+				StreamIdleStuck: h.opts.StreamIdleStuck,
 			},
 		})
 	}
 	h.verify.SetReportDir(h.opts.ReportDir)
 	h.verify.SetWorkingDir(h.opts.WorkingDir)
 	h.verify.SetVerifyRunner(h.opts.VerifyRunner)
+	h.verify.SetStreamIdleStuck(h.opts.StreamIdleStuck)
 	return h.verify
 }
 

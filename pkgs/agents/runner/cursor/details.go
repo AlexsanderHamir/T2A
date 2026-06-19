@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
 )
 
@@ -73,6 +74,32 @@ func timeoutSummary(timeout time.Duration) string {
 		return "cursor: timeout after " + timeout.String()
 	}
 	return "cursor: cancelled"
+}
+
+func staleSummary(stuck time.Duration) string {
+	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.staleSummary", "stuck_ns", int64(stuck))
+	if stuck > 0 {
+		return "cursor: stream idle after " + stuck.String()
+	}
+	return "cursor: stream idle"
+}
+
+func mapStreamIdleCallback(fn func(runner.StreamIdleKind)) func(adapterkit.StreamIdleKind) {
+	if fn == nil {
+		return nil
+	}
+	return func(kind adapterkit.StreamIdleKind) {
+		fn(adapterkitStreamIdleKind(kind))
+	}
+}
+
+func adapterkitStreamIdleKind(kind adapterkit.StreamIdleKind) runner.StreamIdleKind {
+	switch kind {
+	case adapterkit.StreamIdleKillPending:
+		return runner.StreamIdleKillPending
+	default:
+		return runner.StreamIdleSuspicious
+	}
 }
 
 func execFailedSummary(err error, homePaths []string) string {

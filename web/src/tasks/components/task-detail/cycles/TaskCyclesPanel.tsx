@@ -30,6 +30,7 @@ import type {
 } from "@/types/cycle";
 import {
   useAgentRunProgress,
+  type AgentRunProgressItem,
 } from "../../../hooks/useAgentRunProgress";
 import {
   useTaskCycle,
@@ -331,6 +332,23 @@ function CurrentPhaseLine({
   );
 }
 
+function idlePendingMessage(items: ReadonlyArray<AgentRunProgressItem>): string {
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const entry = items[i];
+    if (entry.progress.kind !== "run_state") continue;
+    if (entry.progress.message?.trim()) {
+      return entry.progress.message;
+    }
+    if (entry.progress.subtype === "idle_kill_pending") {
+      return "Terminating agent soon if no output";
+    }
+    if (entry.progress.subtype === "idle_suspicious") {
+      return "No agent output for a while — run may be stuck";
+    }
+  }
+  return "Waiting for the next agent update…";
+}
+
 function PhaseProgress({
   taskId,
   cycleId,
@@ -349,6 +367,7 @@ function PhaseProgress({
       now={now}
       showPendingRow={items.length > 0}
       emptyMessage="Waiting for the next agent update…"
+      pendingMessage={idlePendingMessage(items)}
     />
   );
 }

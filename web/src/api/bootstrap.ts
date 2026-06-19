@@ -61,6 +61,7 @@ function parseSettingsField(raw: unknown): AppSettings {
   const cursorBin = o.cursor_bin;
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
+  const streamIdleStuck = o.stream_idle_stuck_seconds;
   const pickupDelay = o.agent_pickup_delay_seconds;
   const tz = typeof o.display_timezone === "string" ? o.display_timezone : "";
   const optimistic = typeof o.optimistic_mutations_enabled === "boolean"
@@ -85,6 +86,7 @@ function parseSettingsField(raw: unknown): AppSettings {
     typeof cursorBin !== "string" ||
     typeof cursorModel !== "string" ||
     typeof maxDur !== "number" ||
+    typeof streamIdleStuck !== "number" ||
     typeof pickupDelay !== "number"
   ) {
     throw new Error("Invalid API response: bootstrap.settings shape");
@@ -96,6 +98,7 @@ function parseSettingsField(raw: unknown): AppSettings {
     cursor_bin: cursorBin,
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,
+    stream_idle_stuck_seconds: streamIdleStuck,
     agent_pickup_delay_seconds: pickupDelay,
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,

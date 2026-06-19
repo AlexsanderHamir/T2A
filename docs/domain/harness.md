@@ -346,6 +346,7 @@ Supervisor wiring → `Options` (full reference: [configuration.md](../configura
 | --- | --- |
 | `repo_root` | `Options.WorkingDir` |
 | `max_run_duration_seconds` | `Options.RunTimeout` |
+| `stream_idle_stuck_seconds` | `Options.StreamIdleStuck` — stdout silence watchdog; see [ADR-0027](../adr/ADR-0027-stream-idle-evidence-recovery.md) |
 | `T2A_WORKER_REPORT_DIR` | `Options.ReportDir` |
 | Built verify runner | `Options.VerifyRunner` |
 | SSE hub adapter | `Options.Notifier`, `Options.ProgressNotifier` |
@@ -360,6 +361,19 @@ Read at runtime from store inside harness methods:
 | `verify_command_timeout_seconds` | Per shell verify command |
 
 Task-level fields consumed in the loop: `cursor_model`, `automation_selections`, `project_id`, `project_context_item_ids`.
+
+### Stream-idle evidence recovery
+
+When `stream_idle_stuck_seconds` > 0, the cursor runner watches stdout line silence after the first line. Derived tiers emit `run_state` progress (`idle_suspicious`, `idle_kill_pending`); at the stuck threshold the run context is cancelled with `runner.ErrStale`.
+
+Recovery reuses existing post-run gates — no parallel success path:
+
+| Phase | On `ErrStale` |
+| --- | --- |
+| Execute | Run commit ingest + `DecideExecutePostRun` with `EvidenceRecovery`; success → verify, failure → `runner_stale` |
+| Verify LLM | Parse `verify-report.json` via `ParseVerifyReport`; success → existing verdict assembly, failure → retryable verify error |
+
+Wall-clock `max_run_duration_seconds` (`ErrTimeout`) and operator cancel do **not** trigger recovery. See [ADR-0027](../adr/ADR-0027-stream-idle-evidence-recovery.md).
 
 ## Best practices
 

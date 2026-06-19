@@ -24,7 +24,9 @@ describe("agentProgressDisplay", () => {
     ["tool_call", "error", "Read", "Tool failed"],
     ["tool_call", "started", "Read", "Tool call"],
     ["assistant", undefined, undefined, "Agent reply"],
-    ["system", undefined, undefined, "Session"],
+    ["run_state", "idle_suspicious", undefined, "May be stuck"],
+    ["run_state", "idle_kill_pending", undefined, "Terminating soon"],
+    ["run_state", "idle_recovered", undefined, "Recovered"],
     ["custom_event", undefined, undefined, "custom event"],
   ] as const)(
     "agentProgressKindLabel(%s, %s) → %s",
