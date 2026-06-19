@@ -751,9 +751,9 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tbuildExecutePostRunInput":                          {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\texecutePhaseStatusFromEffects":                     {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\toverlayOperatorCancelOnResult":                     {},
-	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\tRun":                                                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\tRun":                                                      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\tShowCommitPatch":                                          {},
-	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\t*execErr.Error":                                          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\t*execErr.Error":                                           {},
 	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\t*execErr.Unwrap":                                          {},
 	"github.com/AlexsanderHamir/T2A/pkgs/gitexec\tisNotFoundErr":                                            {},
 }
