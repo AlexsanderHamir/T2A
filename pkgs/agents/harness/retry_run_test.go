@@ -130,8 +130,7 @@ func TestRunWithRetry_freshStartsNewCycleWithParent(t *testing.T) {
 }
 
 func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
 
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
@@ -175,30 +174,46 @@ func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 		WorkingDir: t.TempDir(),
 		Clock:      func() time.Time { return time.Unix(0, 0).UTC() },
 	})
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		h.RunWithRetry(ctx, tsk, &domain.PendingRetry{Mode: domain.RetryResume, ParentCycleID: parent.ID})
 	}()
-	deadline := time.Now().Add(2 * time.Second)
+
+	deadline := time.Now().Add(5 * time.Second)
+	var sawPrompt bool
 	for time.Now().Before(deadline) {
 		for _, call := range r.Calls() {
 			if strings.Contains(call.Prompt, "Continuation") || strings.Contains(call.Prompt, "Operator retry") {
-				cancel()
-				cycles, err := st.ListCyclesForTask(context.Background(), tsk.ID, 10)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if len(cycles) < 2 {
-					t.Fatalf("cycles=%d want >=2", len(cycles))
-				}
-				if !strings.Contains(string(cycles[0].MetaJSON), `"retry_mode":"resume"`) {
-					t.Fatalf("meta=%s", cycles[0].MetaJSON)
-				}
-				return
+				sawPrompt = true
+				break
 			}
+		}
+		if sawPrompt {
+			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("resume prompt not observed")
+	if !sawPrompt {
+		t.Fatal("resume prompt not observed")
+	}
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("RunWithRetry did not finish")
+	}
+
+	cycles, err := st.ListCyclesForTask(ctx, tsk.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cycles) < 2 {
+		t.Fatalf("cycles=%d want >=2", len(cycles))
+	}
+	if !strings.Contains(string(cycles[0].MetaJSON), `"retry_mode":"resume"`) {
+		t.Fatalf("meta=%s", cycles[0].MetaJSON)
+	}
 }
 
 func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {

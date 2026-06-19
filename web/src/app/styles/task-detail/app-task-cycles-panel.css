@@ -365,13 +365,15 @@
 }
 
 .task-commit-status--eligible {
-  color: var(--status-success-text, #0a7a4b);
-  background: var(--status-success-subtle, #dcfce7);
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: var(--success-border);
 }
 
 .task-commit-status--observed {
-  color: var(--status-warning-text, #9a6700);
-  background: var(--status-warning-subtle, #fef3c7);
+  color: var(--warning-ink);
+  background: var(--warning-surface);
+  border-color: var(--warning-border);
 }
 
 .task-commit-status--inherited {
