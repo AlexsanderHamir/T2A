@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/internal/taskapi"
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
 	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
@@ -399,16 +400,6 @@ func (s *agentWorkerSupervisor) handleApplySettingsProbeFailed(phase string, cfg
 	return nil
 }
 
-func verifyRunnerStatusForInstance(prev *agentWorkerInstance, cfg store.AppSettings) string {
-	if prev.verifyRunner != nil {
-		return "ok"
-	}
-	if cfg.VerifyRunnerName == cfg.Runner && cfg.VerifyRunnerName != "" {
-		return "reuse_execute_runner"
-	}
-	return ""
-}
-
 func (s *agentWorkerSupervisor) handleApplySettingsUnchanged(ctx context.Context, phase string, cfg store.AppSettings, prev *agentWorkerInstance, version string) error {
 	eff := baseEffectiveSettings(cfg)
 	eff.RunnerVersion = version
@@ -622,116 +613,51 @@ func (s *agentWorkerSupervisor) publishSettingsChanged() {
 	s.hub.Publish(handler.TaskChangeEvent{Type: handler.SettingsChanged})
 }
 
-// SchedulingIdleHintReason is the diagnostic idle reason emitted when
-// the worker is fully configured and could run, but the ready queue
-// is empty *only because* every ready task is currently deferred via
-// `pickup_not_before > now`. This is intentionally not returned by
-// `decideIdle` (and therefore does NOT prevent the worker from
-// spawning) because the schedule horizon could expire on the next
-// reconcile tick and the worker must already be live to pick the
-// task up — see docs/data-model.md "the two queues" section. The
-// supervisor surfaces this as `IdleReason` on `effectiveSettingsLog`
-// alongside `Idle=false` so operators reading logs and the
-// observability page see the same explanation for "0 ready, 12
-// scheduled" without conflating it with the genuine
-// disabled/paused/probe-failed idle states.
-const SchedulingIdleHintReason = "awaiting_scheduled_task"
+// SchedulingIdleHintReason re-exports the policy constant for cmd tests.
+const SchedulingIdleHintReason = policy.SchedulingIdleHintReason
 
-// decideSchedulingIdleHint reports the diagnostic hint described
-// above. It is a *runtime* probe (not part of decideIdle) so the
-// supervisor can surface "intentionally deferred" without idling the
-// worker process. Both probe arguments are bounded: queue probe asks
-// for one row only, stats probe is the same single-COUNT pass that
-// /tasks/stats already pays for. Errors degrade silently to "" so a
-// transient DB hiccup does not poison the effective-config log line
-// (the rest of the log is best-effort observability anyway).
-//
-// queueEmpty must report whether ListReadyTaskQueueCandidates returns
-// zero rows (i.e. no row currently satisfies `status='ready' AND
-// (pickup_not_before IS NULL OR pickup_not_before <= now)`).
-//
-// scheduledCount must report stats.Scheduled — the number of
-// `status='ready' AND pickup_not_before > now` rows.
 func decideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideSchedulingIdleHint",
 		"queue_empty", queueEmpty, "scheduled_count", scheduledCount)
-	if queueEmpty && scheduledCount > 0 {
-		return SchedulingIdleHintReason
-	}
-	return ""
+	return policy.DecideSchedulingIdleHint(queueEmpty, scheduledCount)
 }
 
-// decideIdle reports whether the worker should stay idle given the
-// effective settings. Returns (false, "") when the worker should run.
-// Centralised so the boot, reload, and (future) HTTP probe paths agree
-// on what counts as "configured enough to run".
-//
-// NOTE: this is intentionally a config-only check. The runtime
-// "awaiting_scheduled_task" hint lives in decideSchedulingIdleHint
-// because it must NOT prevent the worker from spawning — see that
-// function's doc.
 func decideIdle(cfg store.AppSettings) (bool, string) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.decideIdle",
 		"paused", cfg.AgentPaused, "repo_root", cfg.RepoRoot)
-	// Operator-facing soft pause is the only "stop dequeuing" knob
-	// today. The supervisor surfaces idle_reason="paused_by_operator"
-	// so the observability page can render "Paused" (amber) distinctly
-	// from "Disabled" / probe-failed states.
-	if cfg.AgentPaused {
-		return true, "paused_by_operator"
-	}
-	if cfg.RepoRoot == "" {
-		return true, "repo_root_not_configured"
-	}
-	if err := assertWorkingDirExists(cfg.RepoRoot); err != nil {
+	idle, reason := policy.DecideIdle(cfg, assertWorkingDirExists)
+	if reason == "repo_root_invalid" {
 		slog.Warn("agent worker repo root not usable; staying idle",
 			"cmd", cmdName, "operation", "taskapi.agent_worker.repo_root_err",
-			"path", cfg.RepoRoot, "err", err)
-		return true, "repo_root_invalid"
+			"path", cfg.RepoRoot, "err", assertWorkingDirExists(cfg.RepoRoot))
 	}
-	return false, ""
+	return idle, reason
 }
 
-// instanceMatchesSettings reports whether the running worker already
-// matches the desired settings. Used by Reload to skip pointless
-// restarts when an operator hits Save without changing anything (or
-// when the patch only touched fields the worker doesn't care about).
+func instanceSnapshot(inst *agentWorkerInstance, version string) *policy.InstanceSnapshot {
+	if inst == nil {
+		return nil
+	}
+	snap := &policy.InstanceSnapshot{Settings: inst.settings}
+	if inst.runner != nil {
+		if version != "" {
+			snap.RunnerVersion = version
+		} else {
+			snap.RunnerVersion = inst.runner.Version()
+		}
+	}
+	snap.HasVerifyRunner = inst.verifyRunner != nil
+	return snap
+}
+
 func instanceMatchesSettings(inst *agentWorkerInstance, cfg store.AppSettings, version string) bool {
 	slog.Debug("trace", "cmd", cmdName, "operation", "taskapi.instanceMatchesSettings")
-	if inst == nil {
-		return false
-	}
-	if inst.settings.Runner != cfg.Runner {
-		return false
-	}
-	if inst.settings.CursorBin != cfg.CursorBin {
-		return false
-	}
-	if inst.settings.CursorModel != cfg.CursorModel {
-		return false
-	}
-	if inst.settings.RepoRoot != cfg.RepoRoot {
-		return false
-	}
-	if inst.settings.MaxRunDurationSeconds != cfg.MaxRunDurationSeconds {
-		return false
-	}
-	if inst.settings.VerifyRunnerName != cfg.VerifyRunnerName {
-		return false
-	}
-	if inst.settings.VerifyRunnerModel != cfg.VerifyRunnerModel {
-		return false
-	}
-	// A pause flip changes effective state (idle vs running) even
-	// though all other fields match — return false so applySettings
-	// reaches its idle branch and stops the running instance.
-	if inst.settings.AgentPaused != cfg.AgentPaused {
-		return false
-	}
-	if inst.runner != nil && inst.runner.Version() != version {
-		return false
-	}
-	return true
+	return policy.InstanceMatchesSettings(instanceSnapshot(inst, version), cfg, version)
+}
+
+func verifyRunnerStatusForInstance(prev *agentWorkerInstance, cfg store.AppSettings) string {
+	hasVerify := prev != nil && prev.verifyRunner != nil
+	return policy.VerifyRunnerStatus(hasVerify, cfg)
 }
 
 // stopWorkerInstance cancels and drains a single worker incarnation
