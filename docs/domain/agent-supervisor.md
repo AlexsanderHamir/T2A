@@ -4,7 +4,7 @@ In-process lifecycle owner for the single worker goroutine: settings-driven boot
 
 | | |
 | --- | --- |
-| **Applies to** | `cmd/taskapi/run_agentworker.go`, `cmd/taskapi/run_helpers.go`, `pkgs/tasks/handler/handler_settings.go` |
+| **Applies to** | [`internal/taskapi/agentworker`](../../internal/taskapi/agentworker/), `cmd/taskapi/run_agentworker.go` (boot wiring), `pkgs/tasks/handler/handler_settings.go` |
 | **Audience** | Contributors debugging worker idle states, hot reload after Settings changes, or shutdown ordering |
 | **Prerequisite** | [configuration.md](../configuration.md) (`app_settings`), [agent-queue.md](./agent-queue.md) (queue + reconcile) |
 | **Companion articles** | [runner-adapters.md](./runner-adapters.md), [harness.md](./harness.md), [sse-hub.md](./sse-hub.md) |
@@ -33,7 +33,7 @@ In-process lifecycle owner for the single worker goroutine: settings-driven boot
 
 ## Overview
 
-The **agent worker supervisor** (`agentWorkerSupervisor` in [`run_agentworker.go`](../../cmd/taskapi/run_agentworker.go)) sits between HTTP Settings handlers and the in-process [`worker.Worker`](../../pkgs/agents/worker/worker.go). It reads the singleton `app_settings` row, decides whether a worker should run, builds runners through [`registry`](../../pkgs/agents/runner/registry/), spawns one consumer goroutine, and swaps that incarnation on material config changes without restarting `taskapi`.
+The **agent worker supervisor** (`agentworker.Supervisor` in [`internal/taskapi/agentworker`](../../internal/taskapi/agentworker/)) sits between HTTP Settings handlers and the in-process [`worker.Worker`](../../pkgs/agents/worker/worker.go). It reads the singleton `app_settings` row, decides whether a worker should run, builds runners through [`registry`](../../pkgs/agents/runner/registry/), spawns one consumer goroutine, and swaps that incarnation on material config changes without restarting `taskapi`.
 
 Configuration is **DB-driven**, not env-driven for worker behavior. Legacy `T2A_AGENT_WORKER_*` variables are ignored; operators use the SPA Settings page or `PATCH /settings` ([configuration.md](../configuration.md)).
 
@@ -41,7 +41,7 @@ Configuration is **DB-driven**, not env-driven for worker behavior. Legacy `T2A_
 
 ### In scope
 
-- `agentWorkerSupervisor`: `Start`, `Reload`, `CancelCurrentRun`, `Drain`, `ProbeRunner`
+- `agentworker.Supervisor`: `Start`, `Reload`, `CancelCurrentRun`, `Drain`, `ProbeRunner`
 - Shared `applySettings` boot/reload pipeline
 - `decideIdle`, `decideSchedulingIdleHint`, `instanceMatchesSettings`
 - `buildVerifyRunner` demotion policy
@@ -61,8 +61,8 @@ Configuration is **DB-driven**, not env-driven for worker behavior. Legacy `T2A_
 
 | Term | Definition |
 | --- | --- |
-| **Supervisor** | `agentWorkerSupervisor` — owns worker lifecycle, not cycle logic |
-| **Instance** | `agentWorkerInstance` — one spawned worker: `Worker`, cancel func, `doneCh`, settings snapshot, execute + optional verify runners |
+| **Supervisor** | `agentworker.Supervisor` — owns worker lifecycle, not cycle logic |
+| **Instance** | `instance` — one spawned worker: `Worker`, cancel func, `doneCh`, settings snapshot, execute + optional verify runners |
 | **Material change** | Any setting that would change the next dequeue/run: pause, runner id, binary, model, repo root, per-run cap, verify runner name/model, or probed runner version |
 | **Idle (hard)** | No worker goroutine; from `decideIdle` or execute probe/build failure |
 | **Scheduling hint** | Diagnostic `idle_reason` on logs when worker is **running** but queue is empty only because tasks are deferred — does **not** stop the worker |
@@ -137,7 +137,7 @@ Returned `stopAgents` cancels reconcile and stops pickup wake; **`agentWorker.Dr
 
 ## `applySettings` pipeline
 
-`Start` and `Reload` both call [`applySettings`](../../cmd/taskapi/run_agentworker.go) with phase `"boot"` or `"reload"`. The pipeline is serialized by **`applyMu`** so concurrent `PATCH /settings` cannot spawn duplicate worker goroutines (see `TestSupervisor_ConcurrentReloadIsSerialized`).
+`Start` and `Reload` both call [`applySettings`](../../internal/taskapi/agentworker/apply.go) with phase `"boot"` or `"reload"`. The pipeline is serialized by **`applyMu`** so concurrent `PATCH /settings` cannot spawn duplicate worker goroutines (see `TestSupervisor_ConcurrentReloadIsSerialized`).
 
 ```mermaid
 sequenceDiagram
@@ -235,7 +235,7 @@ Every `applySettings` completion emits structured INFO `agent worker effective c
 
 V1 policy: **restart the worker goroutine** on material change instead of mutating a live `Worker`. Cost: one in-flight run may finish on the **old** instance until `stopWorkerInstance` drains it.
 
-[`instanceMatchesSettings`](../../cmd/taskapi/run_agentworker.go) skips respawn when:
+[`policy.InstanceMatchesSettings`](../../internal/taskapi/agentworker/policy/policy.go) skips respawn when:
 
 | Field / signal | Compared |
 | --- | --- |
@@ -265,7 +265,7 @@ On material change:
 
 ## Execute vs verify runner policy
 
-[`buildVerifyRunner`](../../cmd/taskapi/run_agentworker.go) is **opt-in** and **non-blocking** for worker startup.
+[`buildVerifyRunner`](../../internal/taskapi/agentworker/runner_build.go) is **opt-in** and **non-blocking** for worker startup.
 
 | `verify_runner_name` | Action | `verify_runner_status` in log |
 | --- | --- | --- |
@@ -421,7 +421,7 @@ The SPA observability panel maps hard idle reasons to Paused / Disabled / Probe 
 
 ## Testing strategy
 
-Black-box tests in [`agent_worker_supervisor_test.go`](../../cmd/taskapi/agent_worker_supervisor_test.go):
+Black-box tests in [`supervisor_test.go`](../../internal/taskapi/agentworker/supervisor_test.go):
 
 | Test theme | Pins |
 | --- | --- |
@@ -468,6 +468,7 @@ Default CI uses stub probes — no real Cursor binary required.
 | [configuration.md](../configuration.md) | `app_settings` fields and PATCH lifecycle diagram |
 | [api.md](../api.md) | Settings and SSE event shapes |
 | [architecture.md](../architecture.md) | System overview |
-| [`cmd/taskapi/run_agentworker.go`](../../cmd/taskapi/run_agentworker.go) | Implementation |
-| [`cmd/taskapi/agent_worker_supervisor_test.go`](../../cmd/taskapi/agent_worker_supervisor_test.go) | Supervisor contracts |
+| [`internal/taskapi/agentworker/`](../../internal/taskapi/agentworker/) | Implementation; [`README.md`](../../internal/taskapi/agentworker/README.md) file map |
+| [`cmd/taskapi/run_agentworker.go`](../../cmd/taskapi/run_agentworker.go) | Queue/reconcile boot wiring |
+| [`internal/taskapi/agentworker/supervisor_test.go`](../../internal/taskapi/agentworker/supervisor_test.go) | Supervisor contracts |
 | [ADR-0005](../adr/ADR-0005-extract-agent-harness.md) | Harness extraction from worker |
