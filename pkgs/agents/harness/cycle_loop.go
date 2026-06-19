@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
@@ -231,7 +232,7 @@ func (h *Harness) runCycleLoopVerify(
 	cycle *domain.TaskCycle,
 	state *processState,
 ) (retryLoop bool, terminalFailure bool) {
-	if !state.verifySnap.Enabled {
+	if orchestration.VerifyDisabled(state.verifySnap.Enabled) {
 		if err := h.completeChecklistLegacy(parentCtx, task.ID); err != nil {
 			slog.Warn("agent harness checklist completion failed",
 				"cmd", harnessLogCmd,
@@ -258,27 +259,37 @@ func (h *Harness) runCycleLoopVerify(
 		return false, false
 	}
 
+	var result orchestration.VerifyResult
 	var tampered *verify.TamperedError
 	if errors.As(verifyErr, &tampered) {
+		result = orchestration.VerifyResultFailTampered
+	} else {
+		result = orchestration.VerifyResultFailRetryable
+	}
+
+	effects := orchestration.DecideVerifyRetry(state.verifyAttempt, state.verifySnap.MaxRetries, result)
+	if effects.Tampered {
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
 			return false, true
 		}
 		_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
 		return false, true
 	}
-	if state.verifyAttempt < state.verifySnap.MaxRetries {
+	if effects.RetryLoop {
 		state.verifyAttempt++
 		return true, false
 	}
-
-	cycleStatus := domain.CycleStatusFailed
-	taskStatus := domain.StatusFailed
-	reason := formatVerificationFailedReason(verdicts, state.previouslyPassed)
-	if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
+	if effects.TerminalFailure {
+		cycleStatus := domain.CycleStatusFailed
+		taskStatus := domain.StatusFailed
+		reason := formatVerificationFailedReason(verdicts, state.previouslyPassed)
+		if !h.terminateCycle(parentCtx, state, cycle.TaskID, cycleStatus, reason) {
+			return false, true
+		}
+		_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
 		return false, true
 	}
-	_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
-	return false, true
+	return false, false
 }
 
 func (h *Harness) runCycleLoopFinalizeSuccess(

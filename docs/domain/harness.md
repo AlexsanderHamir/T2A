@@ -385,6 +385,7 @@ Task-level fields consumed in the loop: `cursor_model`, `automation_selections`,
 | [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md) | Adversarial verify |
 | [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Shell verify commands |
 | [ADR-0017](../adr/ADR-0017-harness-internal-domains.md) | Internal domain packages |
+| [ADR-0018](../adr/ADR-0018-harness-orchestration-fsm.md) | Verify retry state machine |
 
 ### Code map
 
@@ -396,6 +397,7 @@ Task-level fields consumed in the loop: `cursor_model`, `automation_selections`,
 | Reports | [`internal/reports/`](../../pkgs/agents/harness/internal/reports/) |
 | Git + integrity | [`internal/git/`](../../pkgs/agents/harness/internal/git/), [`git_alias.go`](../../pkgs/agents/harness/git_alias.go) |
 | Resume + retry | [`internal/resume/`](../../pkgs/agents/harness/internal/resume/), [`resume.go`](../../pkgs/agents/harness/resume.go), [`retry_run.go`](../../pkgs/agents/harness/retry_run.go) |
+| Verify retry FSM | [`internal/orchestration/`](../../pkgs/agents/harness/internal/orchestration/) |
 | Recovery | [`recovery.go`](../../pkgs/agents/harness/recovery.go) |
 | Meta + metrics | [`meta.go`](../../pkgs/agents/harness/meta.go), [`metrics.go`](../../pkgs/agents/harness/metrics.go), [`effective_model.go`](../../pkgs/agents/harness/effective_model.go) |
 | Core | [`harness.go`](../../pkgs/agents/harness/harness.go), [`doc.go`](../../pkgs/agents/harness/doc.go) |
