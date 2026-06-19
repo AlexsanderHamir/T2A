@@ -338,6 +338,18 @@ From [`harness.go`](../../pkgs/agents/harness/harness.go) and [`metrics.go`](../
 
 `recordRun` funnels every `TerminateCycle` path (happy, panic, shutdown, best-effort) so new exit paths cannot skip metrics accidentally.
 
+### Phase run correlation (ADR-0030)
+
+Each phase row carries a stable **`run_correlation_id`** minted at `StartPhase` and preserved through `CompletePhase`. Harness and runner attach it to slog and live SSE progress.
+
+| Handle | Use |
+| --- | --- |
+| UI deep link | `/tasks/{taskId}/cycles/{cycleId}?phase={phase_seq}` — filters Cursor + Audit on attempt detail |
+| Log grep | `run_correlation_id=<uuid>` — isolates one execute or verify invocation in taskapi logs |
+| Phase details | `phase.details.run_correlation_id` (copy from attempt detail Debug panel) |
+
+Fallback for legacy rows: `task_id` + `cycle_id` + `phase_seq`.
+
 ## Configuration
 
 Supervisor wiring → `Options` (full reference: [configuration.md](../configuration.md)):

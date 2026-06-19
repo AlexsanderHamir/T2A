@@ -399,6 +399,31 @@ describe("TaskCycleDetailPage", () => {
     expect(within(activitySection).queryByText("Cursor update 1")).toBeNull();
   });
 
+  it("shows debug id copy when phase has run_correlation_id", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      mockAttemptFetchHandlers({
+        ...multiPhaseCycleDetail(),
+        phases: multiPhaseCycleDetail().phases.map((p) =>
+          p.phase_seq === 2
+            ? { ...p, details: { run_correlation_id: "corr-abc-123" } }
+            : p,
+        ),
+      }),
+    );
+
+    renderAttemptPage();
+    expect(
+      await screen.findByRole("heading", { name: /attempt #3/i }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText("Debug"));
+    expect(screen.getByText("corr-abc-123")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /copy full value/i }));
+    expect(
+      screen.getByRole("button", { name: /copied to clipboard/i }),
+    ).toBeInTheDocument();
+  });
+
   it("clicking a phase updates the URL and filters activity", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockImplementation(

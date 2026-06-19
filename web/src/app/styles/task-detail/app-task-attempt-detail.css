@@ -1041,3 +1041,29 @@ time.task-attempt-meta-inline-item {
 .task-attempt-activity-filter-clear {
   flex-shrink: 0;
 }
+
+.task-attempt-phase-debug {
+  margin-top: 0.35rem;
+}
+
+.task-attempt-phase-debug-summary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.task-attempt-phase-debug-list {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+}
+
+.task-attempt-phase-debug-list dt {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+}
+
+.task-attempt-phase-debug-list dd {
+  margin: 0;
+}

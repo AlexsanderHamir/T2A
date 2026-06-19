@@ -53,7 +53,7 @@ Passes run against [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md), [docs/domain/ha
 
 ## Ranked improvements
 
-**Progress:** 1 / 16 actionable items shipped (P0–P2). P3 items are intentional deferrals — check only when explicitly pursued.
+**Progress:** 2 / 16 actionable items shipped (P0–P2). P3 items are intentional deferrals — check only when explicitly pursued.
 
 ### P0 — Highest ROI
 
@@ -71,11 +71,11 @@ Passes run against [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md), [docs/domain/ha
 | **Dependencies / risks** | Must not skip execute when criteria self-report stale or git state changed; integrity rules unchanged |
 | **Success signal** | ↓ execute phases per cycle on verify-retry failures; `ObserveVerifyRetries` unchanged but median `RecordRun` duration drops for multi-criterion tasks |
 
-#### - [ ] 2. Harness trace correlation (cycle → phase → runner)
+#### - [x] 2. Harness trace correlation (cycle → phase → runner)
 
 | | |
 | --- | --- |
-| **Status** | Not started |
+| **Status** | Shipped — [ADR-0030](docs/adr/ADR-0030-attempt-phase-correlation.md), feature commit `e8d5e83`. UI phase filter + `?phase=N` in cycle 3 (`d7e4900`). |
 | **ROI_score** | ~3.9 |
 | **Problem** | Operators correlate cycles via task id + cycle id in logs, but cannot stitch harness phases to Cursor stream events without manual grep ([HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) observability row). |
 | **Proposed change** | Propagate a stable `run_correlation_id` (or OTel trace) from `StartCycle` through phase rows, slog fields, SSE payloads, and runner progress events. |
