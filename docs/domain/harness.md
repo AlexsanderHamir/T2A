@@ -232,6 +232,18 @@ Startup finalization (`FinalizeInterruptedPhases`), reconcile enqueue, and store
 
 > **Note** — Each resume starts a fresh `runner.Run`. The runner is stateless; checkpoint is encoded in composed prompts only.
 
+### Operator retry after terminal failure
+
+When a task is `failed`, the SPA offers **Start over** (`fresh`) and **Resume from failure** (`resume`) via `POST /tasks/{id}/retry`. Intent is stored on `tasks.pending_retry` and consumed on worker pickup; the harness runs [`RunWithRetry`](../../pkgs/agents/harness/retry_run.go) instead of plain `Run`.
+
+| Path | Trigger | Cycle row | Entry |
+| --- | --- | --- | --- |
+| ADR-0006 resume | Process restart; task still `running` | Same open cycle | `Harness.Resume` |
+| Start over | Operator; task `failed` | New (`ParentCycleID`) | `RunWithRetry` fresh |
+| Resume from failure | Operator; task `failed` | New (`ParentCycleID`) | `RunWithRetry` resume |
+
+Deep dives: [retry-start-over.md](./retry-start-over.md), [retry-resume.md](./retry-resume.md). Decision record: [ADR-0015](../adr/ADR-0015-dual-retry-modes.md).
+
 ## Recovery and termination reasons
 
 Stable reason strings land on cycle rows and phase summaries. Recovery paths use a **bounded background context** (`ShutdownAbortTimeout`) when the parent ctx is cancelled so audit rows still persist.
@@ -247,6 +259,9 @@ Stable reason strings land on cycle rows and phase summaries. Recovery paths use
 | `panic` | Deferred `recoverFromPanic` | failed | failed |
 | `verify_tampered` | Post-verify git integrity failure | failed | failed |
 | `verification_failed:<ids>` | Verify retries exhausted | failed | failed |
+| `retry_reset_anchor_missing` | Fresh retry: no git reset anchor on parent | — | failed (no new cycle) |
+| `retry_git_reset_failed` | Fresh retry: git reset/clean command failed | — | failed (no new cycle) |
+| `retry_checkpoint_failed` | Resume retry: parent checkpoint load failed | — | failed (no new cycle) |
 | `complete_phase_failed` | `CompletePhase` store error after runner | failed | failed |
 | `checklist_completion_failed` | `applyVerifiedCompletions` error | failed | failed |
 | `execute_phase_start_failed` | `StartPhase(execute)` error | failed | failed |

@@ -192,6 +192,8 @@ Execute↔verify retries start a **new execute phase** with a higher `phase_seq`
 
 Locked criteria and verify retry orchestration: [harness.md](./harness.md), [verify-agent.md](./verify-agent.md).
 
+**Operator cross-cycle retry (Start over):** fresh retry resets the worktree to the parent cycle's first execute `cycle_base_sha` (fallback: parent of the earliest indexed commit) before starting a new cycle — see [retry-start-over.md](./retry-start-over.md).
+
 ## Configuration
 
 | Knob | Effect |
