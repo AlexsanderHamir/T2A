@@ -1,0 +1,122 @@
+package harness
+
+import (
+	"context"
+	"log/slog"
+	"strings"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+)
+
+func verdictsToClassifyInput(verdicts []criterionVerdict) []orchestration.ClassifyVerdict {
+	out := make([]orchestration.ClassifyVerdict, len(verdicts))
+	for i, v := range verdicts {
+		out[i] = orchestration.ClassifyVerdict{Passed: v.Passed, Verifier: v.Verifier}
+	}
+	return out
+}
+
+func (h *Harness) anchorPostExecuteState(
+	ctx context.Context,
+	state *processState,
+	snap git.PhaseSnapshot,
+	ingestAttempted bool,
+	ingestOutcome executeCommitIngestOutcome,
+	ingestErr error,
+) {
+	state.executeReachedVerify = true
+	state.lastCommitIngestOK = commitIngestOK(snap, ingestAttempted, ingestOutcome, ingestErr)
+	head, ok, err := h.resolveCurrentHeadSHA(ctx, snap)
+	if err != nil {
+		slog.Warn("agent harness post-execute head anchor failed", "cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.anchorPostExecuteState.head",
+			"cycle_id", state.cycleID, "err", err)
+		return
+	}
+	if ok {
+		state.postExecuteHeadSHA = head
+	}
+}
+
+func commitIngestOK(
+	snap git.PhaseSnapshot,
+	ingestAttempted bool,
+	ingestOutcome executeCommitIngestOutcome,
+	ingestErr error,
+) bool {
+	if snap.Skipped {
+		return true
+	}
+	if !ingestAttempted {
+		return true
+	}
+	if ingestErr != nil {
+		return false
+	}
+	return ingestOutcome.FailReason == ""
+}
+
+func (h *Harness) resolveCurrentHeadSHA(ctx context.Context, snap git.PhaseSnapshot) (head string, ok bool, err error) {
+	if snap.Skipped {
+		return "", false, nil
+	}
+	workdir := strings.TrimSpace(h.opts.WorkingDir)
+	if workdir == "" {
+		return "", false, nil
+	}
+	repo := h.gitSvc().Repo()
+	if repo == nil {
+		return "", false, nil
+	}
+	out, err := repo.Run(ctx, workdir, "rev-parse", "HEAD")
+	if err != nil {
+		if git.IsNotAGitRepoErr(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return strings.TrimSpace(out), true, nil
+}
+
+func (h *Harness) gatherRetryClassifyInput(
+	ctx context.Context,
+	cycle *domain.TaskCycle,
+	state *processState,
+	verdicts []criterionVerdict,
+	verifyErr error,
+) orchestration.ClassifyInput {
+	expected := make(map[string]struct{})
+	for _, it := range state.verifySnap.Criteria {
+		if _, locked := state.previouslyPassed[it.ID]; locked {
+			continue
+		}
+		expected[it.ID] = struct{}{}
+	}
+	reportValid := true
+	if len(expected) > 0 {
+		if _, err := reports.ParseCriteriaReport(h.opts.ReportDir, cycle.ID, expected); err != nil {
+			reportValid = false
+		}
+	}
+	headMatches := true
+	if state.postExecuteHeadSHA != "" {
+		current, ok, err := h.resolveCurrentHeadSHA(ctx, state.gitSnap)
+		if err != nil {
+			headMatches = false
+		} else if ok {
+			headMatches = strings.EqualFold(strings.TrimSpace(current), strings.TrimSpace(state.postExecuteHeadSHA))
+		}
+	}
+	pipelineFailed := verifyErr != nil
+	failureClass := orchestration.ClassifyFailureClass(verdictsToClassifyInput(verdicts), pipelineFailed)
+	return orchestration.ClassifyInput{
+		FailureClass:         failureClass,
+		CriteriaReportValid:  reportValid,
+		GitHeadMatchesAnchor: headMatches,
+		CommitIngestOK:       state.lastCommitIngestOK,
+		ExecuteReachedVerify: state.executeReachedVerify,
+	}
+}

@@ -54,6 +54,12 @@ type processState struct {
 	effectiveModel string
 	// gitSnap holds execute-start anchors for commit ingest on success.
 	gitSnap git.PhaseSnapshot
+	// postExecuteHeadSHA is HEAD after a successful execute phase (ADR-0028).
+	postExecuteHeadSHA string
+	// lastCommitIngestOK records whether the latest execute commit ingest succeeded.
+	lastCommitIngestOK bool
+	// executeReachedVerify is true after execute completes with ContinueToVerify.
+	executeReachedVerify bool
 }
 
 // Run drives the harness cycle body for one task already in StatusRunning.

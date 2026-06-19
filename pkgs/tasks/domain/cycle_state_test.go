@@ -51,6 +51,24 @@ func TestValidPhaseTransition_forwardEdges(t *testing.T) {
 	}
 }
 
+func TestValidVerifyOnlyRetryTransition(t *testing.T) {
+	t.Parallel()
+	last := &TaskCyclePhase{
+		Phase:  PhaseVerify,
+		Status: PhaseStatusFailed,
+	}
+	if !ValidVerifyOnlyRetryTransition(last, PhaseVerify) {
+		t.Fatal("verify→verify after terminal failed verify should be allowed")
+	}
+	if ValidVerifyOnlyRetryTransition(last, PhaseExecute) {
+		t.Fatal("verify→execute should use ValidPhaseTransition, not verify-only helper")
+	}
+	running := &TaskCyclePhase{Phase: PhaseVerify, Status: PhaseStatusRunning}
+	if ValidVerifyOnlyRetryTransition(running, PhaseVerify) {
+		t.Fatal("running verify must not allow verify-only re-entry")
+	}
+}
+
 func TestValidPhaseTransition_rejectsInvalidEdges(t *testing.T) {
 	t.Parallel()
 

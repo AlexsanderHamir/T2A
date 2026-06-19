@@ -162,18 +162,23 @@ func (h *Harness) runCycleLoopExecute(
 		h.persistProgress(parentCtx, task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
 		h.publishProgress(task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
 	}
-	return h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
+	cont := h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
+	if cont {
+		h.anchorPostExecuteState(parentCtx, state, snap, ingestAttempted, ingestOutcome, ingestErr)
+	}
+	return cont
 }
 
 // runCycleLoopVerify runs verification for one loop iteration. retryLoop is
 // true when the outer loop should continue for another execute↔verify attempt.
+// skipNextExecute is true when the next iteration should skip execute (ADR-0028).
 // terminalFailure is true when verification failed terminally (caller should return).
 func (h *Harness) runCycleLoopVerify(
 	parentCtx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	state *processState,
-) (retryLoop bool, terminalFailure bool) {
+) (retryLoop bool, terminalFailure bool, skipNextExecute bool) {
 	if orchestration.VerifyDisabled(state.verifySnap.Enabled) {
 		checklistErr := h.completeChecklistLegacy(parentCtx, task.ID)
 		if checklistErr != nil {
@@ -183,7 +188,8 @@ func (h *Harness) runCycleLoopVerify(
 				"task_id", task.ID, "err", checklistErr)
 		}
 		effects := orchestration.DecideVerifyDisabledLegacy(checklistErr)
-		return h.applyVerifyDisabledLegacyEffects(parentCtx, task, cycle, state, effects)
+		retry, term := h.applyVerifyEffects(parentCtx, task, cycle, state, effects, checklistCompletionFailedReason)
+		return retry, term, false
 	}
 
 	verdicts, feedback, verifyErr := h.runVerificationPipeline(parentCtx, task, cycle, state, state.verifySnap, state.verifyFeedback)
@@ -192,7 +198,7 @@ func (h *Harness) runCycleLoopVerify(
 	}
 	recordPassedCriterionVerdicts(state, verdicts)
 	if verifyErr == nil {
-		return false, false
+		return false, false, false
 	}
 
 	var result orchestration.VerifyResult
@@ -203,9 +209,20 @@ func (h *Harness) runCycleLoopVerify(
 		result = orchestration.VerifyResultFailRetryable
 	}
 
-	effects := orchestration.DecideVerifyRetry(state.verifyAttempt, state.verifySnap.MaxRetries, result)
+	classifyIn := h.gatherRetryClassifyInput(parentCtx, cycle, state, verdicts, verifyErr)
+	retryMode, reasonCode := orchestration.ClassifyVerifyRetryMode(classifyIn)
+	executeStillValid := retryMode == orchestration.RetryModeVerifyOnly
+	effects := orchestration.DecideVerifyRetryWithValidity(state.verifyAttempt, state.verifySnap.MaxRetries, result, executeStillValid)
+	if effects.RetryLoop {
+		slog.Info("agent harness verify retry classified", "cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.runCycleLoopVerify.retry_mode",
+			"task_id", task.ID, "cycle_id", cycle.ID,
+			"retry_mode", string(retryMode), "reason_code", string(reasonCode),
+			"skip_next_execute", effects.SkipNextExecute)
+	}
 	terminalReason := formatVerificationFailedReason(verdicts, state.previouslyPassed)
-	return h.applyVerifyEffects(parentCtx, task, cycle, state, effects, terminalReason)
+	retry, term := h.applyVerifyEffects(parentCtx, task, cycle, state, effects, terminalReason)
+	return retry, term, effects.SkipNextExecute
 }
 
 func (h *Harness) runCycleLoopFinalizeSuccess(
@@ -237,8 +254,10 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 			skipExecute = false
 		}
 
-		retryLoop, terminalFailure := h.runCycleLoopVerify(parentCtx, task, cycle, state)
+		retryLoop, terminalFailure, skipNextExecute := h.runCycleLoopVerify(parentCtx, task, cycle, state)
 		if retryLoop {
+			// ADR-0028: skipNextExecute ⇒ must not call runCycleLoopExecute (no scrub, no runner).
+			skipExecute = skipNextExecute
 			continue
 		}
 		if terminalFailure {

@@ -10,11 +10,13 @@ const PhaseInterruptReason = "process_restart"
 // next is rejected (callers always know what they want to enter).
 //
 // The pipeline is `execute → verify`, with one corrective edge `verify →
-// execute` for retries after a failing verification. Verify is terminal
+// execute` for retries after a failing verification. A second corrective edge
+// `verify → verify` is allowed via ValidVerifyOnlyRetryTransition (ADR-0028)
+// when execute is skipped on infra-only verify retries. Verify is terminal
 // within the cycle: the cycle itself then moves to a terminal status via
-// TerminateCycle. Re-entering the same phase enum is rejected (so a
-// second execute without an intervening verify is illegal); store-side
-// PhaseSeq distinguishes the per-attempt rows of repeated phases.
+// TerminateCycle. Re-entering execute without an intervening verify is
+// illegal; store-side PhaseSeq distinguishes the per-attempt rows of repeated
+// phases.
 //
 // Skip-listed in cmd/funclogmeasure/analyze.go: pure predicate with no I/O;
 // every caller (store.StartPhase, store.CompletePhase) logs the transition
@@ -55,6 +57,20 @@ func ValidInterruptResumeTransition(last *TaskCyclePhase, next Phase) bool {
 		return false
 	}
 	return true
+}
+
+// ValidVerifyOnlyRetryTransition reports whether the cycle may open another
+// verify phase immediately after a terminal failed verify without an
+// intervening execute phase (ADR-0028 in-cycle verify-only retry). last must
+// be the highest-seq phase row: terminal failed verify.
+func ValidVerifyOnlyRetryTransition(last *TaskCyclePhase, next Phase) bool {
+	if last == nil || next != PhaseVerify {
+		return false
+	}
+	if last.Phase != PhaseVerify {
+		return false
+	}
+	return TerminalPhaseStatus(last.Status) && last.Status == PhaseStatusFailed
 }
 
 // TerminalCycleStatus reports whether s is a final, immutable cycle status.

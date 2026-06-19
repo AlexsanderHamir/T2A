@@ -67,7 +67,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 		if last != nil {
 			prev = last.Phase
 		}
-		if !domain.ValidPhaseTransition(prev, phase) && !domain.ValidInterruptResumeTransition(last, phase) {
+		if !domain.ValidPhaseTransition(prev, phase) && !domain.ValidInterruptResumeTransition(last, phase) && !domain.ValidVerifyOnlyRetryTransition(last, phase) {
 			return fmt.Errorf("%w: phase transition %q -> %q not allowed", domain.ErrInvalidInput, prev, phase)
 		}
 		nextSeq, err := nextPhaseSeqInTx(tx, cycle.ID)

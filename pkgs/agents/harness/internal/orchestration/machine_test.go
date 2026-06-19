@@ -34,9 +34,24 @@ func TestDecideVerifyRetry_retryable_exhausted(t *testing.T) {
 	}
 }
 
+func TestDecideVerifyRetryWithValidity_skipsExecuteWhenValid(t *testing.T) {
+	t.Parallel()
+	e := DecideVerifyRetryWithValidity(0, 3, VerifyResultFailRetryable, true)
+	if !e.RetryLoop || !e.SkipNextExecute || e.TerminalFailure {
+		t.Fatalf("unexpected effects: %+v", e)
+	}
+}
+
+func TestDecideVerifyRetryWithValidity_fullReexecuteWhenInvalid(t *testing.T) {
+	t.Parallel()
+	e := DecideVerifyRetryWithValidity(0, 3, VerifyResultFailRetryable, false)
+	if !e.RetryLoop || e.SkipNextExecute || e.TerminalFailure {
+		t.Fatalf("unexpected effects: %+v", e)
+	}
+}
+
 func TestDecideVerifyRetry_last_retry_slot(t *testing.T) {
 	t.Parallel()
-	// attempt 2 with max 3 allows one more retry (matches runCycleLoop: attempt < maxRetries).
 	e := DecideVerifyRetry(2, 3, VerifyResultFailRetryable)
 	if !e.RetryLoop {
 		t.Fatalf("want retry at attempt 2 with max 3, got %+v", e)

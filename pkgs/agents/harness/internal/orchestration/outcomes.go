@@ -20,6 +20,7 @@ const (
 // VerifyEffects lists side effects the harness root applies after DecideVerifyRetry.
 type VerifyEffects struct {
 	RetryLoop       bool
+	SkipNextExecute bool
 	TerminalFailure bool
 	Tampered        bool
 }

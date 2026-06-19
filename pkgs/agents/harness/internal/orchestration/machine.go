@@ -19,6 +19,16 @@ func DecideVerifyRetry(attempt, maxRetries int, result VerifyResult) VerifyEffec
 	}
 }
 
+// DecideVerifyRetryWithValidity extends DecideVerifyRetry with in-cycle
+// verify-only retry when execute artifacts remain valid (ADR-0028).
+func DecideVerifyRetryWithValidity(attempt, maxRetries int, result VerifyResult, executeStillValid bool) VerifyEffects {
+	effects := DecideVerifyRetry(attempt, maxRetries, result)
+	if effects.RetryLoop && executeStillValid {
+		effects.SkipNextExecute = true
+	}
+	return effects
+}
+
 // VerifyDisabled indicates verify is off for this task; the harness runs the
 // legacy checklist completion path instead of the adversarial pipeline.
 func VerifyDisabled(enabled bool) bool {

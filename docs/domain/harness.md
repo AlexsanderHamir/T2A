@@ -375,6 +375,39 @@ Recovery reuses existing post-run gates — no parallel success path:
 
 Wall-clock `max_run_duration_seconds` (`ErrTimeout`) and operator cancel do **not** trigger recovery. See [ADR-0027](../adr/ADR-0027-stream-idle-evidence-recovery.md).
 
+### In-cycle verify-only retry
+
+When verify fails retryably **inside one cycle**, the harness may skip the next execute phase if execute artifacts and git anchors are still valid and the failure is **infra-only** (verify runner/parse/command errors — not verify-agent rejection or missing self-claim). Cross-cycle operator resume already used the same loop flag via `skipFirstExecute`; this extends it to in-cycle retries ([ADR-0028](../adr/ADR-0028-in-cycle-verify-only-retry.md)).
+
+```mermaid
+flowchart LR
+  VF[Verify fails retryable]
+  C{Execute still valid?}
+  VO[Skip execute retry verify]
+  FE[Full execute then verify]
+  VF --> C
+  C -->|infra + gates pass| VO
+  C -->|implementation or gate fail| FE
+```
+
+The phase ledger allows `verify → verify` when the previous verify row is terminal failed (`ValidVerifyOnlyRetryTransition` in `pkgs/tasks/domain/cycle_state.go`).
+
+| EC ID | Behavior | Test |
+| --- | --- | --- |
+| EC-01 | Infra verify fail → verify-only retry | `TestEdgeCase_EC01_verifyInfra_skipsExecute` |
+| EC-02 | Verify-agent reject → full re-execute | `TestEdgeCase_EC02_verifyAgentReject_fullReexecute` |
+| EC-03 | `ClaimedDone=false` → full re-execute | `TestEdgeCase_EC03_claimedNotDone_fullReexecute` |
+| EC-04 | Missing/invalid criteria-report → full re-execute | `TestEdgeCase_EC04_reportMissing_fullReexecute` |
+| EC-05 | Git HEAD drift → full re-execute | `TestClassify_EC05_headChanged_fullReexecute` |
+| EC-06 | Commit ingest failed → full re-execute | `TestClassify_EC06_ingestFailed_fullReexecute` |
+| EC-07 | Tamper → terminal | existing verify tamper tests |
+| EC-08 | Retry budget exhausted → terminal | `TestClassify_EC08_budgetExhausted_terminal` |
+| EC-09 | Locked pass + infra fail on other criterion | `TestEdgeCase_EC09_partialPass_infraVerifyOnly` |
+| EC-10 | Cross-cycle verify-only resume unchanged | `TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute` |
+| EC-11 | Process restart mid-cycle | out of scope (#5) |
+
+Structured logs on retry: `retry_mode`, `reason_code`, `skip_next_execute`.
+
 ## Best practices
 
 - Extend cycle behavior in **harness**, not worker — keep admission separate ([ADR-0005](../adr/ADR-0005-extract-agent-harness.md)).
@@ -420,6 +453,7 @@ Wall-clock `max_run_duration_seconds` (`ErrTimeout`) and operator cancel do **no
 | [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Shell verify commands |
 | [ADR-0017](../adr/ADR-0017-harness-internal-domains.md) | Internal domain packages |
 | [ADR-0018](../adr/ADR-0018-harness-orchestration-fsm.md) | Verify retry state machine |
+| [ADR-0028](../adr/ADR-0028-in-cycle-verify-only-retry.md) | In-cycle verify-only retry |
 
 ### Code map
 
@@ -431,7 +465,7 @@ Wall-clock `max_run_duration_seconds` (`ErrTimeout`) and operator cancel do **no
 | Reports | [`internal/reports/`](../../pkgs/agents/harness/internal/reports/) |
 | Git + integrity | [`internal/git/`](../../pkgs/agents/harness/internal/git/), [`git_alias.go`](../../pkgs/agents/harness/git_alias.go) |
 | Resume + retry | [`internal/resume/`](../../pkgs/agents/harness/internal/resume/), [`resume.go`](../../pkgs/agents/harness/resume.go), [`retry_run.go`](../../pkgs/agents/harness/retry_run.go) |
-| Verify retry FSM | [`internal/orchestration/`](../../pkgs/agents/harness/internal/orchestration/) |
+| Verify retry FSM | [`internal/orchestration/`](../../pkgs/agents/harness/internal/orchestration/), [`verify_retry_eligibility.go`](../../pkgs/agents/harness/verify_retry_eligibility.go) |
 | Recovery | [`recovery.go`](../../pkgs/agents/harness/recovery.go) |
 | Meta + metrics | [`meta.go`](../../pkgs/agents/harness/meta.go), [`metrics.go`](../../pkgs/agents/harness/metrics.go), [`effective_model.go`](../../pkgs/agents/harness/effective_model.go) |
 | Core | [`harness.go`](../../pkgs/agents/harness/harness.go), [`doc.go`](../../pkgs/agents/harness/doc.go) |
