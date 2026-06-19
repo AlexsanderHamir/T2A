@@ -56,8 +56,11 @@ Package comment: [`doc.go`](../../pkgs/agents/harness/doc.go). Extraction ration
 | **Harness** | Concrete `harness.Harness` type; no interface or strategy registry ([ADR-0005](../adr/ADR-0005-extract-agent-harness.md)). |
 | **Cycle** | One `task_cycles` row from `StartCycle` through `TerminateCycle`. |
 | **Phase** | Execute or verify row in `task_cycle_phases`; each execute `runner.Run` maps to one execute phase. |
-| **processState** | In-memory scratch for one task run: cycle id, running phase seq, verify retry counters, `previouslyPassed`, `verifyFeedback`. |
-| **Report dir** | `Options.ReportDir/<cycle_id>/` — ephemeral agent↔worker files outside `repo_root`. |
+| **processState** | In-memory scratch for one task run: cycle id, running phase seq, verify retry counters, `previouslyPassed`, `verifyFeedback`. Tier **T0** — lost on process restart. |
+| **Report dir** | `Options.ReportDir/<cycle_id>/` — ephemeral agent↔worker files outside `repo_root`. Tier **T1**. |
+| **Phase ledger** | `task_cycle_phases` rows + verify report mirrors. Tier **T2** — survives restart ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)). |
+| **Commit index** | `task_cycle_commits` + git tree when `repo_root` configured. Tier **T3**. |
+| **Completion ledger** | `task_checklist_completions` on terminal success only. Tier **T4**. |
 | **Atomic completion** | `task_checklist_completions` written only on terminal cycle success via `applyVerifiedCompletions`. |
 
 ### Actors and trust
@@ -299,6 +302,20 @@ Worker-managed scratch under [`criteria_parse.go`](../../pkgs/agents/harness/cri
 Files live **outside** `repo_root` so customer git trees stay clean. See [execute-agent.md](./execute-agent.md).
 
 Durable mirrors (`task_cycle_criteria_reports`, `task_cycle_verify_reports`, `task_cycle_command_runs`) are upserted during the verify pipeline. Failures to mirror are logged but non-gating — forensics can use DB rows after ephemeral files are GC'd.
+
+## Durability tiers
+
+Resume and retry code must declare which tier it reads. Do not assume T1 report files exist after restart.
+
+| Tier | Storage | Survives restart? | Used by |
+| --- | --- | --- | --- |
+| **T0** | `processState` in memory | No | Verify retry counters within one worker process |
+| **T1** | Report dir `<cycle_id>/` | Maybe (ephemeral FS) | Agent self-report parse during active cycle |
+| **T2** | Phase ledger + verify report rows | Yes | ADR-0006 resume, verify-only retry |
+| **T3** | `task_cycle_commits` + git tree | Yes (when repo configured) | Cross-cycle resume, verify diff |
+| **T4** | `task_checklist_completions` | Yes | Terminal success only |
+
+Invariant tests in [`invariant_test.go`](../../pkgs/agents/harness/invariant_test.go) lock orchestration retry/tamper contracts (ADR-0018).
 
 ## Observability seams
 
