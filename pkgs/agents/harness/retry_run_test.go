@@ -181,7 +181,7 @@ func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		for _, call := range r.Calls() {
-			if strings.Contains(call.Prompt, "Worker resume notice") {
+			if strings.Contains(call.Prompt, "Operator retry") {
 				cancel()
 				cycles, err := st.ListCyclesForTask(context.Background(), tsk.ID, 10)
 				if err != nil {

@@ -145,12 +145,24 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 			t.Fatalf("resume notice missing %q in %q", frag, prompt)
 		}
 	}
-	withCommit := appendGitCommitPolicy("")
+	withCommit := appendGitCommitPolicy("", false)
 	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "criteria-report.json") {
 		t.Fatalf("commit policy missing required block: %q", withCommit)
 	}
 	if containsSubstr(withCommit, "t2a:cycle") {
 		t.Fatalf("commit policy must not mention t2a markers: %q", withCommit)
+	}
+	resumePolicy := appendGitCommitPolicy("", true)
+	for _, frag := range []string{"cycle_base_sha..HEAD", "prior attempts", "empty array"} {
+		if !containsSubstr(resumePolicy, frag) {
+			t.Fatalf("resume commit policy missing %q in %q", frag, resumePolicy)
+		}
+	}
+	opRetry := appendOperatorRetryResumeNotice("base", cycle, known)
+	for _, frag := range []string{"Operator retry", "cycle-1", "abc123def456", "do **not** list them", "base"} {
+		if !containsSubstr(opRetry, frag) {
+			t.Fatalf("operator retry notice missing %q in %q", frag, opRetry)
+		}
 	}
 	dir := t.TempDir()
 	initGitRepoForDiffTest(t, dir)

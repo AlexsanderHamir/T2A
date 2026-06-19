@@ -286,22 +286,14 @@ func matchReportedSHAInAncestry(reported string, ancestry []string) (string, err
 	}
 }
 
-func resolvePhaseCommits(ctx context.Context, g gitPhaseContext, reported []commitReport) ([]store.CycleCommitEntry, error) {
+func resolvePhaseCommits(ctx context.Context, g gitPhaseContext, reported []commitReport, cycleID string) ([]store.CycleCommitEntry, error) {
 	shas, err := gitRevListRange(ctx, g.Worktree, g.CycleBaseSHA)
 	if err != nil {
 		return nil, err
 	}
-	reportedMap := make(map[string]string, len(reported))
-	for _, r := range reported {
-		raw := strings.TrimSpace(r.SHA)
-		if raw == "" {
-			continue
-		}
-		full, err := matchReportedSHAInAncestry(raw, shas)
-		if err != nil {
-			return nil, err
-		}
-		reportedMap[full] = strings.TrimSpace(r.Branch)
+	reportedMap, err := buildReportedBranchMap(reported, shas, cycleID)
+	if err != nil {
+		return nil, err
 	}
 	if len(shas) == 0 {
 		return nil, nil
@@ -333,6 +325,101 @@ func resolvePhaseCommits(ctx context.Context, g gitPhaseContext, reported []comm
 	return out, nil
 }
 
+// buildReportedBranchMap maps ancestry SHAs to agent-reported branch hints.
+// Reported SHAs outside cycle_base_sha..HEAD are ignored — agents resuming from
+// a prior attempt often list already-indexed commits; rev-list remains authoritative.
+func buildReportedBranchMap(reported []commitReport, shas []string, cycleID string) (map[string]string, error) {
+	reportedMap := make(map[string]string, len(reported))
+	for _, r := range reported {
+		raw := strings.TrimSpace(r.SHA)
+		if raw == "" {
+			continue
+		}
+		full, err := matchReportedSHAInAncestry(raw, shas)
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidInput) && strings.Contains(err.Error(), "not in cycle ancestry") {
+				slog.Warn("ignoring criteria-report commit outside cycle ancestry",
+					"cmd", harnessLogCmd, "operation", "agent.harness.buildReportedBranchMap",
+					"cycle_id", cycleID, "reported_sha", raw)
+				continue
+			}
+			return nil, err
+		}
+		reportedMap[full] = strings.TrimSpace(r.Branch)
+	}
+	return reportedMap, nil
+}
+
+func gitCommitExists(ctx context.Context, worktree, sha string) bool {
+	sha = strings.TrimSpace(sha)
+	if sha == "" {
+		return false
+	}
+	_, err := runGit(ctx, worktree, "cat-file", "-e", sha+"^{commit}")
+	return err == nil
+}
+
+// buildInheritedCommitEntries copies parent-cycle commits into the current cycle
+// when a resume attempt made no new commits but prior work is still in the repo.
+func buildInheritedCommitEntries(
+	ctx context.Context,
+	g gitPhaseContext,
+	inherited []domain.TaskCycleCommit,
+	execPhaseSeq int64,
+) ([]store.CycleCommitEntry, error) {
+	if len(inherited) == 0 {
+		return nil, nil
+	}
+	out := make([]store.CycleCommitEntry, 0, len(inherited))
+	seq := int64(0)
+	for _, c := range inherited {
+		sha := strings.TrimSpace(c.SHA)
+		if sha == "" {
+			continue
+		}
+		if !gitCommitExists(ctx, g.Worktree, sha) {
+			return nil, fmt.Errorf("%w: inherited commit %s no longer in repository", domain.ErrInvalidInput, sha)
+		}
+		seq++
+		msg := c.Message
+		at := c.CommittedAt
+		if refreshedMsg, refreshedAt, err := gitCommitDetails(ctx, g.Worktree, sha); err == nil {
+			if refreshedMsg != "" {
+				msg = refreshedMsg
+			}
+			if !refreshedAt.IsZero() {
+				at = refreshedAt
+			}
+		}
+		branch := strings.TrimSpace(c.Branch)
+		if branch == "" {
+			branch, _ = gitBranchContaining(ctx, g.Worktree, sha)
+		}
+		if branch == "" {
+			branch = g.BaseBranch
+		}
+		repo := strings.TrimSpace(c.Repo)
+		if repo == "" {
+			repo = g.Repo
+		}
+		worktree := strings.TrimSpace(c.Worktree)
+		if worktree == "" {
+			worktree = g.Worktree
+		}
+		out = append(out, store.CycleCommitEntry{
+			Seq:         seq,
+			Repo:        repo,
+			Worktree:    worktree,
+			Branch:      branch,
+			SHA:         sha,
+			CommittedAt: at,
+			Message:     msg,
+			PhaseSeq:    execPhaseSeq,
+		})
+	}
+	return out, nil
+}
+
 type executeCommitIngestOutcome struct {
 	FailReason  string
 	CommitCount int
@@ -346,6 +433,8 @@ func (h *Harness) ingestExecuteCommits(
 	cycle *domain.TaskCycle,
 	execPhaseSeq int64,
 	snap gitPhaseSnapshot,
+	inherited []domain.TaskCycleCommit,
+	retryMode domain.RetryMode,
 ) (executeCommitIngestOutcome, error) {
 	if snap.Skipped {
 		return executeCommitIngestOutcome{}, nil
@@ -361,9 +450,20 @@ func (h *Harness) ingestExecuteCommits(
 		CycleBaseSHA: snap.CycleBaseSHA,
 		BaseBranch:   snap.BaseBranch,
 	}
-	entries, err := resolvePhaseCommits(ctx, g, reported)
+	entries, err := resolvePhaseCommits(ctx, g, reported, cycle.ID)
 	if err != nil {
 		return executeCommitIngestOutcome{FailReason: executeInvalidCommitReason}, err
+	}
+	if len(entries) == 0 && retryMode == domain.RetryResume && len(inherited) > 0 {
+		entries, err = buildInheritedCommitEntries(ctx, g, inherited, execPhaseSeq)
+		if err != nil {
+			return executeCommitIngestOutcome{FailReason: executeInvalidCommitReason}, err
+		}
+		if len(entries) > 0 {
+			slog.Info("agent harness inherited parent commits for resume attempt",
+				"cmd", harnessLogCmd, "operation", "agent.harness.ingestExecuteCommits.inherit",
+				"cycle_id", cycle.ID, "commit_count", len(entries))
+		}
 	}
 	if len(entries) == 0 {
 		return executeCommitIngestOutcome{FailReason: executeNoCommitsReason}, nil
@@ -389,7 +489,9 @@ func (h *Harness) ingestExecuteCommits(
 		}
 	}
 	for i := range entries {
-		entries[i].PhaseSeq = execPhaseSeq
+		if entries[i].PhaseSeq == 0 {
+			entries[i].PhaseSeq = execPhaseSeq
+		}
 	}
 	if err := h.store.UpsertCycleCommits(ctx, taskID, cycle.ID, entries); err != nil {
 		return executeCommitIngestOutcome{}, err

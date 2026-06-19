@@ -45,11 +45,16 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 		state.previouslyPassed,
 	)
 	prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
+	retryMode := retryModeFromCycleMeta(cycle)
 	if opts.resumeNotice {
-		prompt = appendResumeNotice(prompt, cycle, opts.interruptedPhase, opts.knownCommits)
+		if retryMode == domain.RetryResume {
+			prompt = appendOperatorRetryResumeNotice(prompt, cycle, opts.knownCommits)
+		} else {
+			prompt = appendResumeNotice(prompt, cycle, opts.interruptedPhase, opts.knownCommits)
+		}
 	}
 	if !state.gitSnap.Skipped {
-		prompt = appendGitCommitPolicy(prompt)
+		prompt = appendGitCommitPolicy(prompt, retryMode == domain.RetryResume)
 	}
 	return prompt
 }
@@ -177,7 +182,10 @@ func (h *Harness) runCycleLoopExecute(
 	var ingestOutcome executeCommitIngestOutcome
 	var ingestErr error
 	if runErr == nil && !operatorCancelled && !snap.Skipped {
-		ingestOutcome, ingestErr = h.ingestExecuteCommits(parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap)
+		ingestOutcome, ingestErr = h.ingestExecuteCommits(
+			parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap,
+			opts.knownCommits, retryModeFromCycleMeta(cycle),
+		)
 	}
 	phaseStatus, cycleStatus, taskStatus, reason, result, commitCount := applyExecuteCommitIngestOutcome(
 		runErr, operatorCancelled, snap, cycle.ID, ingestErr, ingestOutcome,

@@ -97,6 +97,13 @@ export function formatEventSummaryCompact(ev: TaskEvent): string | null {
     if (typeof text === "string") return truncate(text, 140);
   }
 
+  if (ev.type === "task_retry_requested") {
+    const mode = ev.data.mode;
+    if (typeof mode === "string" && mode.trim()) {
+      return mode === "fresh" ? "Start over" : mode === "resume" ? "Resume from failure" : mode;
+    }
+  }
+
   return null;
 }
 
@@ -198,6 +205,7 @@ const TASK_SCOPE_TYPES = new Set<TaskEventType>([
   "artifact_added",
   "task_completed",
   "task_failed",
+  "task_retry_requested",
   "sync_ping",
 ]);
 

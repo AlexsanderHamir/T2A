@@ -56,7 +56,7 @@ Schema: [data-model.md](../data-model.md). HTTP surface: `GET /tasks/{id}/cycles
 | --- | --- |
 | `execute_no_commits` | Ancestry range is empty after a successful runner exit |
 | `execute_uncommitted_work` | Working tree has porcelain changes |
-| `execute_invalid_commit` | Reported SHA not in ancestry, or ingest I/O error |
+| `execute_invalid_commit` | Reported SHA ambiguous within ancestry, inherited commit missing from repo, or ingest I/O error |
 | `execute_rewritten_history` | A previously indexed SHA is missing from current ancestry (amend/rebase/squash) |
 
 ## How it works
@@ -139,7 +139,7 @@ Do not push.
 | Field | Writer | Notes |
 | --- | --- | --- |
 | `criteria[]` | Execute agent | Unchanged — self-claim gate for verify |
-| `commits[].sha` | Execute agent | Full or abbreviated; must uniquely match a commit in `cycle_base_sha..HEAD` when present |
+| `commits[].sha` | Execute agent | Full or abbreviated; must uniquely match a commit in `cycle_base_sha..HEAD` when present. SHAs from prior attempts are ignored (warn-only). |
 | `commits[].branch` | Execute agent | Optional hint; worker falls back to `git branch --contains` then `base_branch` |
 
 Path: `<T2A_WORKER_REPORT_DIR>/<cycle_id>/criteria-report.json`. The worker discovers ancestry independently; `commits[]` is a cross-check, not the source of truth.
@@ -193,6 +193,8 @@ Execute↔verify retries start a **new execute phase** with a higher `phase_seq`
 Locked criteria and verify retry orchestration: [harness.md](./harness.md), [verify-agent.md](./verify-agent.md).
 
 **Operator cross-cycle retry (Start over):** fresh retry resets the worktree to the parent cycle's first execute `cycle_base_sha` (fallback: parent of the earliest indexed commit) before starting a new cycle — see [retry-start-over.md](./retry-start-over.md).
+
+**Operator cross-cycle retry (Resume from failure):** when `retry_mode=resume` and the agent makes **no new commits** in `cycle_base_sha..HEAD` but the parent cycle already indexed commits still present in the repo, ingest copies those rows into the new cycle (clean tree required). Stale SHAs listed in `criteria-report.json` from prior attempts are ignored — see [retry-resume.md](./retry-resume.md).
 
 ## Configuration
 

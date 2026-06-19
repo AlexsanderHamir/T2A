@@ -21,6 +21,7 @@ const LABELS: Record<TaskEventType, string> = {
   approval_granted: "Approval granted",
   task_completed: "Task completed",
   task_failed: "Task failed",
+  task_retry_requested: "Retry requested",
   cycle_started: "Attempt started",
   cycle_completed: "Attempt completed",
   cycle_failed: "Attempt failed",

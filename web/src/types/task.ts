@@ -252,6 +252,7 @@ export const TASK_EVENT_TYPES = [
   "approval_granted",
   "task_completed",
   "task_failed",
+  "task_retry_requested",
   // Execution-cycle audit mirrors. The backend writes these in the same
   // SQL transaction as task_cycles / task_cycle_phases rows so GET
   // /tasks/{id}/events is a complete witness of cycle activity (see

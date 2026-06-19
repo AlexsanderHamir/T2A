@@ -126,7 +126,7 @@ func TestResolvePhaseCommits_acceptsAbbreviatedReportedSHA(t *testing.T) {
 		Worktree:     dir,
 		CycleBaseSHA: base,
 		BaseBranch:   "main",
-	}, []commitReport{{SHA: short, Branch: "main"}})
+	}, []commitReport{{SHA: short, Branch: "main"}}, "cycle-test")
 	if err != nil {
 		t.Fatalf("resolvePhaseCommits: %v", err)
 	}
@@ -138,5 +138,73 @@ func TestResolvePhaseCommits_acceptsAbbreviatedReportedSHA(t *testing.T) {
 	}
 	if entries[0].Branch != "main" {
 		t.Fatalf("branch: got %q want main", entries[0].Branch)
+	}
+}
+
+// Regression (2026-06-18): resume attempt listed parent-cycle SHAs in criteria-report;
+// empty rev-list + stale reported SHA must not fail execute_invalid_commit.
+func TestResolvePhaseCommits_ignoresReportedOutsideAncestry(t *testing.T) {
+	skipIfNoGit(t)
+	dir := t.TempDir()
+	gitInit(t, dir)
+
+	ctx := context.Background()
+	base, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse base: %v", err)
+	}
+
+	entries, err := resolvePhaseCommits(ctx, gitPhaseContext{
+		Repo: dir, Worktree: dir, CycleBaseSHA: base, BaseBranch: "main",
+	}, []commitReport{{SHA: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", Branch: "main"}}, "cycle-stale")
+	if err != nil {
+		t.Fatalf("resolvePhaseCommits: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("entries: got %d want 0 (no new commits in range)", len(entries))
+	}
+}
+
+func TestBuildInheritedCommitEntries_copiesParentIndexedCommits(t *testing.T) {
+	skipIfNoGit(t)
+	dir := t.TempDir()
+	gitInit(t, dir)
+
+	ctx := context.Background()
+
+	name := fmt.Sprintf("inherit-%d.txt", time.Now().UnixNano())
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	for _, args := range [][]string{
+		{"add", name},
+		{"-c", "user.email=t@e.local", "-c", "user.name=t", "commit", "-m", "parent work"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	head, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse head: %v", err)
+	}
+
+	when := time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC)
+	inherited := []domain.TaskCycleCommit{
+		{Seq: 1, Repo: dir, Worktree: dir, Branch: "main", SHA: head, CommittedAt: when, Message: "parent work"},
+	}
+	entries, err := buildInheritedCommitEntries(ctx, gitPhaseContext{
+		Repo: dir, Worktree: dir, BaseBranch: "main", CycleBaseSHA: head,
+	}, inherited, 2)
+	if err != nil {
+		t.Fatalf("buildInheritedCommitEntries: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("entries: got %d want 1", len(entries))
+	}
+	if entries[0].SHA != head || entries[0].PhaseSeq != 2 {
+		t.Fatalf("entry: %+v", entries[0])
 	}
 }

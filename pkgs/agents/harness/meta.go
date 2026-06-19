@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log/slog"
+	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 // meta.go owns the payload helpers that produce JSON bytes for the
@@ -48,6 +50,20 @@ func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
 }
 
 // mergeCycleMetaBytes overlays extra keys onto cycle MetaJSON bytes.
+// retryModeFromCycleMeta reads operator retry mode stamped on cycle MetaJSON.
+func retryModeFromCycleMeta(cycle *domain.TaskCycle) domain.RetryMode {
+	if cycle == nil || len(cycle.MetaJSON) == 0 {
+		return ""
+	}
+	var meta struct {
+		RetryMode string `json:"retry_mode"`
+	}
+	if err := json.Unmarshal(cycle.MetaJSON, &meta); err != nil {
+		return ""
+	}
+	return domain.RetryMode(strings.TrimSpace(meta.RetryMode))
+}
+
 func mergeCycleMetaBytes(base []byte, extra map[string]any) []byte {
 	if len(extra) == 0 {
 		return base
