@@ -32,6 +32,7 @@ export type RUMMutationKind =
   | "task_patch"
   | "task_delete"
   | "task_requeue"
+  | "task_retry"
   | "task_autonomy"
   | "checklist_add"
   | "checklist_edit"

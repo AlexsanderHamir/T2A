@@ -109,21 +109,27 @@ describe("TaskDetailAttentionBar", () => {
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
   });
 
-  it("renders Run again when onRequeue is provided", async () => {
+  it("renders Start over and Resume from failure when retry handlers are provided", async () => {
     const user = userEvent.setup();
-    const onRequeue = vi.fn();
+    const onRetryFresh = vi.fn();
+    const onRetryResume = vi.fn();
     render(
       <TaskDetailAttentionBar
         attention={{ show: false, headline: "", body: "" }}
         saving={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
-        onRequeue={onRequeue}
+        onRetryFresh={onRetryFresh}
+        onRetryResume={onRetryResume}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /^run again$/i }));
-    expect(onRequeue).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: /^start over$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /^resume from failure$/i }),
+    );
+    expect(onRetryFresh).toHaveBeenCalledOnce();
+    expect(onRetryResume).toHaveBeenCalledOnce();
   });
 
   // Pin the consolidation: the model-configuration CTA replaces the inline

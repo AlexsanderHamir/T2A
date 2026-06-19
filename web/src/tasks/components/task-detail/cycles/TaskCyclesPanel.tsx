@@ -38,6 +38,7 @@ import {
   useTaskCycleVerdicts,
   useTaskCycles,
 } from "../../../hooks/useTaskCycles";
+import { formatCycleLineageLabel } from "../../../cycleDisplay/cycleLineage";
 
 type Props = {
   taskId: string;
@@ -80,6 +81,11 @@ export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
   const { runningCycle, historyCycles } = useMemo(
     () => splitRunningAndHistory(cyclesQuery.data),
     [cyclesQuery.data],
+  );
+
+  const cyclesById = useMemo(
+    () => indexCyclesById(cyclesQuery.data?.cycles ?? []),
+    [cyclesQuery.data?.cycles],
   );
 
   return (
@@ -125,11 +131,16 @@ export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
       ) : (
         <>
           {runningCycle ? (
-            <CurrentPhaseTicker taskId={taskId} cycle={runningCycle} />
+            <CurrentPhaseTicker
+              taskId={taskId}
+              cycle={runningCycle}
+              cyclesById={cyclesById}
+            />
           ) : null}
           <CycleHistoryList
             taskId={taskId}
             cycles={historyCycles}
+            cyclesById={cyclesById}
             // The running cycle is also in history (newest), but we
             // already render its live phase strip above. Pass its id
             // so the list row can dedupe its phase preview to avoid
@@ -167,12 +178,15 @@ function CyclesLoading() {
 function CurrentPhaseTicker({
   taskId,
   cycle,
+  cyclesById,
 }: {
   taskId: string;
   cycle: TaskCycle;
+  cyclesById: ReadonlyMap<string, TaskCycle>;
 }) {
   const detailQuery = useTaskCycle(taskId, cycle.id);
   const now = useNow({ enabled: cycle.status === "running" });
+  const lineage = formatCycleLineageLabel(cycle, cyclesById);
 
   return (
     <div
@@ -189,6 +203,9 @@ function CurrentPhaseTicker({
         </span>
         <span className="task-cycle-ticker-attempt">
           Attempt #{cycle.attempt_seq}
+          {lineage ? (
+            <span className="task-cycle-lineage muted"> · {lineage}</span>
+          ) : null}
         </span>
         <span
           className={`cell-pill ${cycleRunnerChipClass()}`}
@@ -358,10 +375,12 @@ function CycleHistoryList({
   taskId,
   cycles,
   runningCycleId,
+  cyclesById,
 }: {
   taskId: string;
   cycles: TaskCycle[];
   runningCycleId: string | null;
+  cyclesById: ReadonlyMap<string, TaskCycle>;
 }) {
   if (cycles.length === 0) {
     // Defensive: parent already special-cased the "no history" empty
@@ -377,6 +396,7 @@ function CycleHistoryList({
           taskId={taskId}
           cycle={cycle}
           isLiveAbove={cycle.id === runningCycleId}
+          cyclesById={cyclesById}
         />
       ))}
     </ol>
@@ -394,10 +414,12 @@ function CycleRow({
   taskId,
   cycle,
   isLiveAbove,
+  cyclesById,
 }: {
   taskId: string;
   cycle: TaskCycle;
   isLiveAbove: boolean;
+  cyclesById: ReadonlyMap<string, TaskCycle>;
 }) {
   // We track open state in React (rather than letting the native
   // <details> open silently) so that we mount CycleRowPhases only
@@ -406,6 +428,7 @@ function CycleRow({
   // for tasks with long history where the operator only inspects
   // a couple of cycles.
   const [open, setOpen] = useState(false);
+  const lineage = formatCycleLineageLabel(cycle, cyclesById);
 
   return (
     <li className="task-cycle-row" data-cycle-status={cycle.status}>
@@ -422,6 +445,9 @@ function CycleRow({
           </span>
           <span className="task-cycle-row-attempt">
             Attempt #{cycle.attempt_seq}
+            {lineage ? (
+              <span className="task-cycle-lineage muted"> · {lineage}</span>
+            ) : null}
           </span>
           <span className="task-cycle-row-when muted">
             {formatStartedToEnded(cycle)}
@@ -869,6 +895,14 @@ function splitRunningAndHistory(
   if (!envelope) return { runningCycle: null, historyCycles: [] };
   const running = envelope.cycles.find((c) => c.status === "running") ?? null;
   return { runningCycle: running, historyCycles: envelope.cycles };
+}
+
+function indexCyclesById(cycles: ReadonlyArray<TaskCycle>): Map<string, TaskCycle> {
+  const map = new Map<string, TaskCycle>();
+  for (const cycle of cycles) {
+    map.set(cycle.id, cycle);
+  }
+  return map;
 }
 
 function pickRunningPhase(

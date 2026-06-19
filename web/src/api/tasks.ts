@@ -465,6 +465,30 @@ export async function patchTask(
   return parseTask(raw);
 }
 
+export type TaskRetryMode = "fresh" | "resume";
+
+export async function retryTask(
+  id: string,
+  input: { mode: TaskRetryMode; parent_cycle_id?: string },
+): Promise<Task> {
+  const tid = assertTaskPathId(id);
+  const body: Record<string, unknown> = { mode: input.mode };
+  if (input.parent_cycle_id !== undefined) {
+    body.parent_cycle_id = input.parent_cycle_id;
+  }
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/retry`,
+    {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  const raw: unknown = await res.json();
+  return parseTask(raw);
+}
+
 function parseDependsOnList(raw: unknown): TaskDependencyEdge[] {
   if (!Array.isArray(raw)) {
     return [];

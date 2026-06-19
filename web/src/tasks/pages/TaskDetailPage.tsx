@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getTask, listChecklist, patchTask } from "@/api";
+import { getTask, listChecklist, patchTask, retryTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { errorMessage } from "@/lib/errorMessage";
 import {
@@ -29,7 +29,8 @@ import {
   TaskModelConfigModal,
 } from "../components/task-detail";
 import type { TaskDetailOkTone } from "../components/task-detail/layout/TaskDetailAttentionBar";
-import { AutonomyConfirmDialog } from "../components/dialogs";
+import { AutonomyConfirmDialog, TaskRetryConfirmDialog } from "../components/dialogs";
+import type { TaskRetryMode } from "../components/dialogs/TaskRetryConfirmDialog";
 import { sanitizePromptHtml } from "../task-prompt";
 import { userAttention } from "../task-display";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
@@ -50,6 +51,9 @@ export function TaskDetailPage({ app }: Props) {
   const queryClient = useQueryClient();
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const [autonomyConfirmOpen, setAutonomyConfirmOpen] = useState(false);
+  const [retryConfirmMode, setRetryConfirmMode] = useState<TaskRetryMode | null>(
+    null,
+  );
   const {
     checklistModalOpen,
     newChecklistText,
@@ -97,16 +101,16 @@ export function TaskDetailPage({ app }: Props) {
   const toast = useOptionalToast();
   const scheduling = useTaskDetailScheduling(taskId);
   const { optimisticMutationsEnabled } = useRolloutFlags();
-  const requeueMutation = useMutation<
+  const retryMutation = useMutation<
     unknown,
     unknown,
-    void,
+    TaskRetryMode,
     { prev: Task | undefined; startedAtMs: number }
   >({
-    mutationFn: () => patchTask(taskId, { status: "ready" }),
+    mutationFn: (mode) => retryTask(taskId, { mode }),
     onMutate: async () => {
       const startedAtMs = performance.now();
-      rumMutationStarted("task_requeue");
+      rumMutationStarted("task_retry");
       if (!optimisticMutationsEnabled) {
         return { prev: undefined, startedAtMs };
       }
@@ -117,7 +121,7 @@ export function TaskDetailPage({ app }: Props) {
       if (prev) {
         queryClient.setQueryData<Task>(detailKey, { ...prev, status: "ready" });
       }
-      rumMutationOptimisticApplied("task_requeue", performance.now() - startedAtMs);
+      rumMutationOptimisticApplied("task_retry", performance.now() - startedAtMs);
       return { prev, startedAtMs };
     },
     onError: (_err, _vars, context) => {
@@ -127,24 +131,24 @@ export function TaskDetailPage({ app }: Props) {
       if (context) {
         if (context.prev !== undefined) {
           rumMutationRolledBack(
-            "task_requeue",
+            "task_retry",
             performance.now() - context.startedAtMs,
           );
         }
         rumMutationSettled(
-          "task_requeue",
+          "task_retry",
           performance.now() - context.startedAtMs,
           0,
         );
       }
-      toast.error("Couldn't requeue - reverted.");
     },
     onSuccess: async (_data, _vars, context) => {
+      setRetryConfirmMode(null);
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       if (context) {
         rumMutationSettled(
-          "task_requeue",
+          "task_retry",
           performance.now() - context.startedAtMs,
           200,
         );
@@ -302,14 +306,17 @@ export function TaskDetailPage({ app }: Props) {
           okTone={okTone}
           onEdit={() => app.openEdit(task)}
           onDelete={() => app.requestDelete(task)}
-          onRequeue={
+          onRetryFresh={
             task.status === "failed"
-              ? () => {
-                  requeueMutation.mutate();
-                }
+              ? () => setRetryConfirmMode("fresh")
               : undefined
           }
-          requeuePending={requeueMutation.isPending}
+          onRetryResume={
+            task.status === "failed"
+              ? () => setRetryConfirmMode("resume")
+              : undefined
+          }
+          retryPending={retryMutation.isPending}
           onConfigureModel={() => setModelConfigOpen(true)}
           showModelConfig={task.status === "failed"}
           autonomyMode={autonomyMode}
@@ -349,6 +356,30 @@ export function TaskDetailPage({ app }: Props) {
         />
       ) : null}
 
+      {retryConfirmMode ? (
+        <TaskRetryConfirmDialog
+          mode={retryConfirmMode}
+          taskTitle={task.title}
+          saving={app.saving}
+          pending={retryMutation.isPending}
+          error={
+            retryMutation.isError
+              ? errorMessage(
+                  retryMutation.error,
+                  retryConfirmMode === "fresh"
+                    ? "Couldn't start over."
+                    : "Couldn't resume from failure.",
+                )
+              : null
+          }
+          onCancel={() => {
+            setRetryConfirmMode(null);
+            if (retryMutation.isError) retryMutation.reset();
+          }}
+          onConfirm={() => retryMutation.mutate(retryConfirmMode)}
+        />
+      ) : null}
+
       {modelConfigOpen ? (
         <TaskModelConfigModal
           taskTitle={task.title}
@@ -356,15 +387,6 @@ export function TaskDetailPage({ app }: Props) {
           onChangeModel={() => app.openChangeModel(task)}
           onClose={() => setModelConfigOpen(false)}
         />
-      ) : null}
-
-      {requeueMutation.isError ? (
-        <p className="err" role="alert">
-          {errorMessage(
-            requeueMutation.error,
-            "Could not queue this task for the agent again.",
-          )}
-        </p>
       ) : null}
 
       <TaskDependenciesPanel dependencies={dependencySummaries} />

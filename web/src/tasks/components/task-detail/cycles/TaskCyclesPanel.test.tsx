@@ -684,4 +684,68 @@ describe("TaskCyclesPanel", () => {
       await within(row).findByTestId("task-cycle-verdicts-empty"),
     ).toHaveTextContent(/No verdicts captured/);
   });
+
+  it("shows retry lineage on cycle rows when parent_cycle_id and retry_mode are set", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = reqUrl(input);
+      if (url.endsWith("/tasks/task-1/cycles")) {
+        return okJSON({
+          task_id: "task-1",
+          cycles: [
+            {
+              id: "cyc-3",
+              task_id: "task-1",
+              attempt_seq: 3,
+              parent_cycle_id: "cyc-2",
+              status: "running",
+              started_at: "2026-04-18T12:00:00.000Z",
+              triggered_by: "agent",
+              meta: { retry_mode: "resume" },
+            },
+            {
+              id: "cyc-2",
+              task_id: "task-1",
+              attempt_seq: 2,
+              status: "failed",
+              started_at: "2026-04-18T11:00:00.000Z",
+              ended_at: "2026-04-18T11:01:00.000Z",
+              triggered_by: "agent",
+              meta: {},
+            },
+          ],
+          limit: 50,
+          has_more: false,
+        });
+      }
+      if (url.endsWith("/tasks/task-1/cycles/cyc-3")) {
+        return okJSON({
+          id: "cyc-3",
+          task_id: "task-1",
+          attempt_seq: 3,
+          parent_cycle_id: "cyc-2",
+          status: "running",
+          started_at: "2026-04-18T12:00:00.000Z",
+          triggered_by: "agent",
+          meta: { retry_mode: "resume" },
+          phases: [
+            {
+              id: "cyc-3-ph-1",
+              cycle_id: "cyc-3",
+              phase: "execute",
+              phase_seq: 1,
+              status: "running",
+              started_at: "2026-04-18T12:00:01.000Z",
+              details: {},
+              summary: "",
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPanel();
+    const matches = await screen.findAllByText(/resumed from attempt 2/i);
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
 });

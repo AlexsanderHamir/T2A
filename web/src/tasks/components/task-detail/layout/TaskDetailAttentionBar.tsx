@@ -42,9 +42,10 @@ type Props = {
    * still get a sensible grey.
    */
   okTone?: TaskDetailOkTone;
-  /** When set, shows "Run again" to requeue the task for the agent (PATCH status → ready). */
-  onRequeue?: () => void;
-  requeuePending?: boolean;
+  /** When set, shows retry actions for a failed task (POST /retry). */
+  onRetryFresh?: () => void;
+  onRetryResume?: () => void;
+  retryPending?: boolean;
   /**
    * When set, shows the "Model configuration" action which opens the
    * model-configuration modal (consolidates the failure-recovery hint
@@ -75,8 +76,9 @@ export function TaskDetailAttentionBar({
   onEdit,
   onDelete,
   okTone = "neutral",
-  onRequeue,
-  requeuePending,
+  onRetryFresh,
+  onRetryResume,
+  retryPending,
   onConfigureModel,
   showModelConfig,
   autonomyMode = "hidden",
@@ -114,14 +116,24 @@ export function TaskDetailAttentionBar({
       )}
 
       <div className="task-detail-actions">
-        {onRequeue ? (
+        {onRetryFresh ? (
           <button
             type="button"
-            className="task-detail-btn-requeue"
-            onClick={onRequeue}
-            disabled={saving || requeuePending}
+            className="task-detail-btn-retry-fresh"
+            onClick={onRetryFresh}
+            disabled={saving || retryPending}
           >
-            {requeuePending ? "Queueing…" : "Run again"}
+            {retryPending ? "Queueing…" : "Start over"}
+          </button>
+        ) : null}
+        {onRetryResume ? (
+          <button
+            type="button"
+            className="task-detail-btn-retry-resume"
+            onClick={onRetryResume}
+            disabled={saving || retryPending}
+          >
+            Resume from failure
           </button>
         ) : null}
         {showAutonomy ? (
