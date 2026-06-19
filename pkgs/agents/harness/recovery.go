@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -85,7 +86,7 @@ func (h *Harness) cleanupCycleReports(cycleID, reason string) {
 	if cycleID == "" {
 		return
 	}
-	if err := cleanupReportDir(h.opts.ReportDir, cycleID); err != nil {
+	if err := reports.CleanupReportDir(h.opts.ReportDir, cycleID); err != nil {
 		slog.Warn("agent harness cleanupCycleReports failed",
 			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.cleanupCycleReports.err",
 			"cycle_id", cycleID, "report_dir", h.opts.ReportDir, "reason", reason, "err", err)

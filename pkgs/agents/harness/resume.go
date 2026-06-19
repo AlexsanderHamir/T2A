@@ -27,17 +27,17 @@ func (h *Harness) Resume(parentCtx context.Context, task *domain.Task, cycle *do
 		cycleID:          cycle.ID,
 		cycleStarted:     true,
 		startedAt:        startedAt,
-		previouslyPassed: cp.previouslyPassed,
-		verifyAttempt:    cp.verifyAttempt,
-		verifyFeedback:   cp.verifyFeedback,
+		previouslyPassed: harnessVerdictsFromResume(cp.PreviouslyPassed),
+		verifyAttempt:    cp.VerifyAttempt,
+		verifyFeedback:   cp.VerifyFeedback,
 		effectiveModel:   effectiveModelFromCycleMeta(h.runner, task, cycle),
 	}
 	state.verifySnap, _ = h.loadVerificationSnapshot(parentCtx, task.ID)
 
 	defer h.recoverFromPanic(&state, *task)
 
-	opts := cycleLoopOpts{knownCommits: cp.knownCommits}
-	switch cp.entry {
+	opts := cycleLoopOpts{knownCommits: cp.KnownCommits}
+	switch cp.Entry {
 	case resumeEntryExecute:
 		opts.resumeNotice = true
 		opts.interruptedPhase = domain.PhaseExecute
@@ -52,8 +52,8 @@ func (h *Harness) Resume(parentCtx context.Context, task *domain.Task, cycle *do
 	slog.Info("agent harness resume branch", "cmd", harnessLogCmd,
 		"operation", "agent.harness.Harness.Resume.branch",
 		"task_id", task.ID, "cycle_id", cycle.ID,
-		"entry", cp.entry, "locked_count", len(cp.previouslyPassed),
-		"verify_attempt", cp.verifyAttempt)
+		"entry", cp.Entry, "locked_count", len(cp.PreviouslyPassed),
+		"verify_attempt", cp.VerifyAttempt)
 
 	h.runCycleLoop(parentCtx, task, cycle, &state, opts)
 }

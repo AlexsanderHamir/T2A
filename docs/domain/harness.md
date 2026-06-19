@@ -384,16 +384,18 @@ Task-level fields consumed in the loop: `cursor_model`, `automation_selections`,
 | [ADR-0006](../adr/ADR-0006-phase-boundary-resume.md) | Phase-boundary resume |
 | [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md) | Adversarial verify |
 | [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Shell verify commands |
+| [ADR-0017](../adr/ADR-0017-harness-internal-domains.md) | Internal domain packages |
 
 ### Code map
 
-| Concern | Files |
+| Concern | Location |
 | --- | --- |
 | Entry + cycle | [`cycle.go`](../../pkgs/agents/harness/cycle.go), [`cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go) |
-| Execute composition | [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go), [`automation_prompt.go`](../../pkgs/agents/harness/automation_prompt.go), [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go), [`project_context.go`](../../pkgs/agents/harness/project_context.go) |
-| Verify pipeline | [`verification.go`](../../pkgs/agents/harness/verification.go), [`verify_commands.go`](../../pkgs/agents/harness/verify_commands.go), [`verify_integrity.go`](../../pkgs/agents/harness/verify_integrity.go), [`verification_phase_details.go`](../../pkgs/agents/harness/verification_phase_details.go) |
-| Reports | [`criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go) |
-| Resume | [`resume.go`](../../pkgs/agents/harness/resume.go), [`resume_state.go`](../../pkgs/agents/harness/resume_state.go) |
+| Execute/verify prompts | [`internal/prompt/`](../../pkgs/agents/harness/internal/prompt/) |
+| Verify pipeline | [`internal/verify/`](../../pkgs/agents/harness/internal/verify/), [`verification.go`](../../pkgs/agents/harness/verification.go) (delegators) |
+| Reports | [`internal/reports/`](../../pkgs/agents/harness/internal/reports/) |
+| Git + integrity | [`internal/git/`](../../pkgs/agents/harness/internal/git/), [`git_alias.go`](../../pkgs/agents/harness/git_alias.go) |
+| Resume + retry | [`internal/resume/`](../../pkgs/agents/harness/internal/resume/), [`resume.go`](../../pkgs/agents/harness/resume.go), [`retry_run.go`](../../pkgs/agents/harness/retry_run.go) |
 | Recovery | [`recovery.go`](../../pkgs/agents/harness/recovery.go) |
 | Meta + metrics | [`meta.go`](../../pkgs/agents/harness/meta.go), [`metrics.go`](../../pkgs/agents/harness/metrics.go), [`effective_model.go`](../../pkgs/agents/harness/effective_model.go) |
 | Core | [`harness.go`](../../pkgs/agents/harness/harness.go), [`doc.go`](../../pkgs/agents/harness/doc.go) |

@@ -8,6 +8,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
@@ -50,7 +53,7 @@ type processState struct {
 	// task.CursorModel between StartCycle and TerminateCycle.
 	effectiveModel string
 	// gitSnap holds execute-start anchors for commit ingest on success.
-	gitSnap gitPhaseSnapshot
+	gitSnap git.PhaseSnapshot
 }
 
 // Run drives the harness cycle body for one task already in StatusRunning.
@@ -177,7 +180,7 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 		TaskID:      task.ID,
 		AttemptSeq:  cycle.AttemptSeq,
 		Phase:       domain.PhaseExecute,
-		Prompt:      promptWithProjectContext(task.InitialPrompt, projectContext.Text),
+		Prompt:      prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
 		WorkingDir:  h.opts.WorkingDir,
 		Timeout:     h.opts.RunTimeout,
 		CursorModel: task.CursorModel,
@@ -318,7 +321,7 @@ func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskI
 	// against a missing dir; logged at Debug because operators rarely
 	// care unless cleanup itself errors. Closes the unbounded-disk-
 	// growth gap that existed when files were written under RepoRoot/.t2a.
-	if err := cleanupReportDir(h.opts.ReportDir, state.cycleID); err != nil {
+	if err := reports.CleanupReportDir(h.opts.ReportDir, state.cycleID); err != nil {
 		slog.Warn("agent harness cleanupReportDir failed",
 			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.cleanup_err",
 			"cycle_id", state.cycleID, "report_dir", h.opts.ReportDir, "err", err)

@@ -6,6 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
@@ -21,7 +25,7 @@ type cycleLoopOpts struct {
 func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) string {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.composeExecutePrompt",
 		"task_id", task.ID, "cycle_id", cycle.ID, "resume_notice", opts.resumeNotice)
-	prompt := task.InitialPrompt
+	promptText := task.InitialPrompt
 	if len(task.AutomationSelections) > 0 {
 		resolved, err := h.store.ResolveAutomationsForTask(ctx, task.AutomationSelections)
 		if err != nil {
@@ -35,34 +39,33 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 					"task_id", task.ID, "cycle_id", cycle.ID,
 					"requested", len(task.AutomationSelections), "resolved", len(resolved))
 			}
-			prompt = injectAutomations(prompt, resolved)
+			promptText = prompt.InjectAutomations(promptText, resolved)
 		}
 	}
-	prompt = injectCriteria(
-		prompt,
-		state.verifySnap.criteria,
-		cycle.ID,
-		criteriaReportPath(h.opts.ReportDir, cycle.ID),
-		state.previouslyPassed,
+	promptText = prompt.InjectCriteria(
+		promptText,
+		checklistItemsForPrompt(state.verifySnap.Criteria),
+		reports.CriteriaReportPath(h.opts.ReportDir, cycle.ID),
+		verifiedCriterionIDs(state.previouslyPassed),
 	)
-	prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
+	promptText = prompt.AppendVerifyFeedback(promptText, state.verifyFeedback)
 	retryMode := retryModeFromCycleMeta(cycle)
 	if bundle := opts.continuation; bundle != nil {
-		prompt = composeContinuationPrompt(prompt, cycle, bundle)
+		promptText = prompt.ComposeContinuation(promptText, continuationInputFromBundle(cycle, bundle))
 		if bundle.ExecuteFeedback != "" {
-			prompt = appendExecuteHarnessFeedback(prompt, bundle.ExecuteFeedback)
+			promptText = prompt.AppendExecuteHarnessFeedback(promptText, bundle.ExecuteFeedback)
 		}
 	} else if opts.resumeNotice {
 		if retryMode == domain.RetryResume {
-			prompt = appendOperatorRetryResumeNotice(prompt, cycle, opts.knownCommits)
+			promptText = prompt.AppendOperatorRetryResumeNotice(promptText, cycle, opts.knownCommits)
 		} else {
-			prompt = appendResumeNotice(prompt, cycle, opts.interruptedPhase, opts.knownCommits)
+			promptText = prompt.AppendResumeNotice(promptText, cycle, opts.interruptedPhase, opts.knownCommits)
 		}
 	}
 	if !state.gitSnap.Skipped {
-		prompt = appendGitCommitPolicy(prompt, retryMode == domain.RetryResume)
+		promptText = prompt.AppendGitCommitPolicy(promptText, retryMode == domain.RetryResume)
 	}
-	return prompt
+	return promptText
 }
 
 func (h *Harness) repoRootForGit(ctx context.Context) string {
@@ -90,7 +93,7 @@ func applyOperatorCancelToRunResult(result runner.Result, operatorCancelled bool
 func applyExecuteCommitIngestOutcome(
 	runErr error,
 	operatorCancelled bool,
-	snap gitPhaseSnapshot,
+	snap git.PhaseSnapshot,
 	cycleID string,
 	ingestErr error,
 	outcome executeCommitIngestOutcome,
@@ -121,11 +124,11 @@ func applyExecuteCommitIngestOutcome(
 
 func recordPassedCriterionVerdicts(state *processState, verdicts []criterionVerdict) {
 	for _, v := range verdicts {
-		if !v.passed {
+		if !v.Passed {
 			continue
 		}
-		if _, exists := state.previouslyPassed[v.id]; !exists {
-			state.previouslyPassed[v.id] = v
+		if _, exists := state.previouslyPassed[v.ID]; !exists {
+			state.previouslyPassed[v.ID] = v
 		}
 	}
 }
@@ -158,7 +161,7 @@ func (h *Harness) runCycleLoopExecute(
 			"operation", "agent.harness.Harness.runCycleLoop.prior_cycle_base",
 			"cycle_id", cycle.ID, "err", err)
 	}
-	snap, err := captureExecuteGitSnapshot(parentCtx, h.repoRootForGit(parentCtx), h.opts.WorkingDir, priorBase)
+	snap, err := captureExecuteGitSnapshot(parentCtx, h.gitSvc().Repo(), h.repoRootForGit(parentCtx), h.opts.WorkingDir, priorBase)
 	if err != nil {
 		slog.Warn("agent harness git snapshot failed", "cmd", harnessLogCmd,
 			"operation", "agent.harness.Harness.runCycleLoop.git_snapshot",
@@ -168,8 +171,8 @@ func (h *Harness) runCycleLoopExecute(
 	}
 	state.gitSnap = snap
 
-	_ = scrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
-	_ = ensureReportCycleDir(h.opts.ReportDir, cycle.ID)
+	_ = reports.ScrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
+	_ = reports.EnsureReportCycleDir(h.opts.ReportDir, cycle.ID)
 	prompt := h.composeExecutePrompt(parentCtx, task, cycle, state, opts)
 	execTask := *task
 	execTask.InitialPrompt = prompt
@@ -228,7 +231,7 @@ func (h *Harness) runCycleLoopVerify(
 	cycle *domain.TaskCycle,
 	state *processState,
 ) (retryLoop bool, terminalFailure bool) {
-	if !state.verifySnap.enabled {
+	if !state.verifySnap.Enabled {
 		if err := h.completeChecklistLegacy(parentCtx, task.ID); err != nil {
 			slog.Warn("agent harness checklist completion failed",
 				"cmd", harnessLogCmd,
@@ -255,7 +258,7 @@ func (h *Harness) runCycleLoopVerify(
 		return false, false
 	}
 
-	var tampered *verifyTamperedError
+	var tampered *verify.TamperedError
 	if errors.As(verifyErr, &tampered) {
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
 			return false, true
@@ -263,7 +266,7 @@ func (h *Harness) runCycleLoopVerify(
 		_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
 		return false, true
 	}
-	if state.verifyAttempt < state.verifySnap.maxRetries {
+	if state.verifyAttempt < state.verifySnap.MaxRetries {
 		state.verifyAttempt++
 		return true, false
 	}

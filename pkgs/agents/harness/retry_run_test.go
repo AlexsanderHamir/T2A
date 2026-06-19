@@ -16,66 +16,6 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-func TestGitResetHardClean_resetsAndCleansUntracked(t *testing.T) {
-	skipIfNoGit(t)
-	dir := t.TempDir()
-	gitInit(t, dir)
-	ctx := context.Background()
-	base, err := runGit(ctx, dir, "rev-parse", "HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(dir, "dirty.txt")
-	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := gitResetHardClean(ctx, dir, base); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("untracked file should be removed, stat err=%v", err)
-	}
-}
-
-func TestResolveFreshRetryAnchor_fromExecutePhaseDetails(t *testing.T) {
-	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
-	tsk, err := st.Create(ctx, store.CreateTaskInput{
-		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusFailed,
-	}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cycle, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
-	if err != nil {
-		t.Fatal(err)
-	}
-	details, _ := json.Marshal(map[string]any{
-		"git": map[string]string{"cycle_base_sha": "abc123deadbeef"},
-	})
-	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
-		CycleID: cycle.ID, PhaseSeq: exec.PhaseSeq,
-		Status: domain.PhaseStatusSucceeded, Details: details, By: domain.ActorAgent,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := st.TerminateCycle(ctx, cycle.ID, domain.CycleStatusFailed, "x", domain.ActorAgent); err != nil {
-		t.Fatal(err)
-	}
-	h := New(st, runnerfake.New(), Options{WorkingDir: t.TempDir()})
-	anchor, err := h.resolveFreshRetryAnchor(ctx, cycle.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if anchor != "abc123deadbeef" {
-		t.Fatalf("anchor=%q", anchor)
-	}
-}
-
 func TestRunWithRetry_freshStartsNewCycleWithParent(t *testing.T) {
 	ctx := context.Background()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
@@ -246,8 +186,7 @@ func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := New(st, runnerfake.New(), Options{})
-	if err := h.seedCrossCycleExecuteFromParent(ctx, child, parent.ID); err != nil {
+	if err := New(st, runnerfake.New(), Options{}).seedCrossCycleExecuteFromParent(ctx, child, parent.ID); err != nil {
 		t.Fatal(err)
 	}
 	phases, err := st.ListPhasesForCycle(ctx, child.ID)
@@ -260,7 +199,6 @@ func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 }
 
 func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T) {
-	skipIfNoGit(t)
 	workDir := t.TempDir()
 	gitInit(t, workDir)
 	reportDir := t.TempDir()
@@ -327,8 +265,8 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cp.entry != resumeEntryVerifyOnly {
-		t.Fatalf("entry=%v want verify-only", cp.entry)
+	if cp.Entry != resumeEntryVerifyOnly {
+		t.Fatalf("entry=%v want verify-only", cp.Entry)
 	}
 
 	r := runnerfake.New()
@@ -340,8 +278,8 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 	})
 	state := processState{
 		startedAt:        h.opts.Clock(),
-		previouslyPassed: cp.previouslyPassed,
-		verifyFeedback:   cp.verifyFeedback,
+		previouslyPassed: harnessVerdictsFromResume(cp.PreviouslyPassed),
+		verifyFeedback:   cp.VerifyFeedback,
 	}
 	parentID := parent.ID
 	child, ok := h.startCycle(ctx, tsk, &state, startCycleOpts{parentCycleID: &parentID, retryMode: domain.RetryResume})
@@ -358,7 +296,7 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 	state.verifySnap, _ = h.loadVerificationSnapshot(ctx, tsk.ID)
 	h.runCycleLoop(ctx, tsk, child, &state, cycleLoopOpts{
 		skipFirstExecute: true,
-		continuation:     cp.continuation,
+		continuation:     cp.Continuation,
 	})
 
 	for _, call := range r.Calls() {

@@ -9,6 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/resume"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -85,6 +88,9 @@ type Harness struct {
 	store  *store.Store
 	runner runner.Runner
 	opts   Options
+	git    *git.Service
+	resume *resume.Service
+	verify *verify.Service
 
 	mu               sync.Mutex
 	currentRunCancel context.CancelFunc
@@ -104,7 +110,12 @@ func New(st *store.Store, r runner.Runner, opts Options) *Harness {
 	if opts.ReportDir == "" {
 		opts.ReportDir = filepath.Join(os.TempDir(), DefaultReportDirSubdir)
 	}
-	return &Harness{store: st, runner: r, opts: opts}
+	return &Harness{
+		store:  st,
+		runner: r,
+		opts:   opts,
+		git:    git.NewService(st, git.NewExecRepo(), opts.ReportDir),
+	}
 }
 
 // CancelCurrentRun cancels the in-flight runner.Run, if any.
