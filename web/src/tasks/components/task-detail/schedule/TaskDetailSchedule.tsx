@@ -8,7 +8,7 @@ type Props = {
 const TERMINAL_STATUSES: ReadonlySet<Status> = new Set(["done", "failed"]);
 
 /**
- * Read-only pickup schedule rows on the task detail toolbar card. Mutations
+ * Read-only pickup schedule line on the task detail toolbar. Mutations
  * live in the edit-task modal (`TaskCreateModal` edit mode + `SchedulePicker`).
  */
 export function TaskDetailSchedule({ task }: Props) {
@@ -30,39 +30,45 @@ export function TaskDetailSchedule({ task }: Props) {
     : null;
 
   return (
-    <ul
+    <div
       className="task-detail-schedule"
       data-testid="task-detail-schedule"
       data-state={hasSchedule ? "scheduled" : "unscheduled"}
     >
       {hasPhaseComplete ? (
-        <li
-          className="task-detail-fact-row task-detail-schedule-row"
+        <span
+          className="task-detail-schedule-badge task-detail-schedule-badge--phase"
           data-testid="task-detail-phase-complete"
         >
-          <span className="cell-pill cell-pill--commit-eligible">
+          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
+          <span className="task-detail-schedule-badge-text">
             Phase complete
+            <span className="task-detail-schedule-badge-sep" aria-hidden="true">
+              ·
+            </span>
+            <time>{phaseFormatted}</time>
           </span>
-          <time className="task-detail-fact-when muted">{phaseFormatted}</time>
-        </li>
+        </span>
       ) : null}
       {hasSchedule ? (
-        <li
-          className="task-detail-fact-row task-detail-schedule-row"
+        <span
+          className="task-detail-schedule-badge"
           data-testid="task-detail-schedule-badge"
         >
-          <span className="cell-pill task-detail-schedule-pill">
+          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
+          <span className="task-detail-schedule-badge-text">
             Scheduled for
+            <span className="task-detail-schedule-badge-sep" aria-hidden="true">
+              ·
+            </span>
+            <time>{formatted}</time>
           </span>
-          <time className="task-detail-fact-when muted">{formatted}</time>
-        </li>
+        </span>
       ) : !hasPhaseComplete ? (
-        <li className="task-detail-fact-row task-detail-schedule-row">
-          <span className="task-detail-schedule-empty muted">
-            No pickup scheduled.
-          </span>
-        </li>
+        <span className="task-detail-schedule-empty muted">
+          No pickup scheduled.
+        </span>
       ) : null}
-    </ul>
+    </div>
   );
 }

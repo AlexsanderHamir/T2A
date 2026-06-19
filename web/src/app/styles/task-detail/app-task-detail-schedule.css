@@ -1,18 +1,48 @@
-/* Schedule rows inside the toolbar card — same fact-row rhythm as cycles. */
+/* Schedule line — quiet metadata facts inside the hero toolbar, matching
+   the slim all-clear line above (dot + muted copy, no card chrome). */
 .task-detail-schedule {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
-.task-detail-schedule-row {
-  margin: 0;
+.task-detail-schedule-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-secondary);
 }
 
-.task-detail-schedule-pill {
-  background: color-mix(in srgb, var(--info-soft) 70%, var(--surface-1));
-  color: color-mix(in srgb, var(--info) 75%, var(--text-primary));
-  border: 1px solid color-mix(in srgb, var(--info) 22%, var(--border-chrome-hairline));
+.task-detail-schedule-badge-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: var(--radius-full);
+  background: var(--info);
+  box-shadow: 0 0 0 2px var(--info-soft);
+}
+
+.task-detail-schedule-badge--phase .task-detail-schedule-badge-dot {
+  background: var(--success);
+  box-shadow: 0 0 0 2px var(--success-soft);
+}
+
+.task-detail-schedule-badge-text time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-weight: 450;
+}
+
+.task-detail-schedule-badge-sep {
+  margin: 0 0.35rem;
+  color: var(--text-tertiary);
 }
 
 .task-detail-schedule-empty {

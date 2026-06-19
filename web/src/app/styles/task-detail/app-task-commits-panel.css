@@ -1,6 +1,6 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Task-wide git commits panel (TaskCommitsPanel)
-   Unified board: context strip + commit rows (matches screenshot layout).
+   Mirrors Execution cycles: section heading, card rows, filled status pills.
    ──────────────────────────────────────────────────────────────────────── */
 
 .task-commits-panel {
@@ -9,19 +9,11 @@
   gap: 0.75rem;
 }
 
-.task-commits-board {
+.task-commits-context {
+  padding: 0.55rem 0.75rem;
   border: 1px solid var(--border-soft);
   background: var(--surface-1);
   border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.task-commits-context {
-  padding: 0.55rem 0.75rem;
-  border: none;
-  border-radius: 0;
-  border-bottom: 1px solid var(--border-chrome-hairline);
-  background: transparent;
 }
 
 .task-commits-context-list {
@@ -60,7 +52,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.4rem;
 }
 
 .task-commits-list--loading {
@@ -68,15 +60,10 @@
 }
 
 .task-commit-row {
-  border: none;
-  border-bottom: 1px solid var(--border-chrome-hairline);
-  background: transparent;
-  border-radius: 0;
-  overflow: visible;
-}
-
-.task-commit-row:last-child {
-  border-bottom: none;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .task-commit-row--skeleton {
@@ -89,6 +76,7 @@
   );
   background-size: 200% 100%;
   animation: task-cycle-skeleton-shimmer 1.6s linear infinite;
+  border-color: var(--border-chrome-hairline);
 }
 
 .task-commit-row-inner {
@@ -154,13 +142,12 @@
 }
 
 /* Cycle-expanded commits reuse the same row chrome inside verdict blocks. */
-.task-cycle-commits .task-commits-board,
 .task-cycle-commits .task-commits-context {
   margin-bottom: 0.35rem;
 }
 
 .task-cycle-commits .task-commits-list {
-  gap: 0;
+  gap: 0.35rem;
 }
 
 .task-cycle-commits .task-commit-row-inner {
