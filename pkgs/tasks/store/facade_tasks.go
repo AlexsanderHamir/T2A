@@ -44,6 +44,9 @@ type ProjectFieldPatch = tasks.ProjectFieldPatch
 // PickupNotBeforePatch is the public re-export of the pickup_not_before patch helper.
 type PickupNotBeforePatch = tasks.PickupNotBeforePatch
 
+// RequestRetryInput is the public re-export of the operator retry payload.
+type RequestRetryInput = tasks.RequestRetryInput
+
 // AgentPickupResult is the public re-export of the worker pickup payload.
 type AgentPickupResult = tasks.AgentPickupResult
 
@@ -58,6 +61,32 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 func (s *Store) AgentPickup(ctx context.Context, taskID string, by domain.Actor) (*AgentPickupResult, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AgentPickup", "task_id", taskID)
 	return tasks.AgentPickup(ctx, s.db, taskID, by)
+}
+
+// RequestTaskRetry queues operator retry intent for a failed task.
+func (s *Store) RequestTaskRetry(ctx context.Context, in tasks.RequestRetryInput, by domain.Actor) (*domain.Task, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.RequestTaskRetry", "task_id", in.TaskID)
+	updated, prev, err := tasks.RequestTaskRetry(ctx, s.db, in, by)
+	if err != nil {
+		return nil, err
+	}
+	if updated == nil {
+		return nil, nil
+	}
+	if updated.Status != domain.StatusReady {
+		return updated, nil
+	}
+	now := time.Now().UTC()
+	if updated.PickupNotBefore != nil && updated.PickupNotBefore.After(now) {
+		s.schedulePickupWake(ctx, updated.ID, *updated.PickupNotBefore)
+		return updated, nil
+	}
+	s.cancelPickupWake(updated.ID)
+	transitionedToReady := prev != domain.StatusReady
+	if transitionedToReady {
+		s.notifyReadyTask(ctx, *updated)
+	}
+	return updated, nil
 }
 
 // Create inserts a new task row, links draft evaluations, removes the

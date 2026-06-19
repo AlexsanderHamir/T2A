@@ -46,3 +46,11 @@ func (p *PendingRetry) Clone() *PendingRetry {
 	cp := *p
 	return &cp
 }
+
+// Equal reports whether two pending retry payloads match for idempotency.
+func (p *PendingRetry) Equal(other *PendingRetry) bool {
+	if p == nil || other == nil {
+		return p == nil && other == nil
+	}
+	return p.Mode == other.Mode && p.ParentCycleID == other.ParentCycleID
+}

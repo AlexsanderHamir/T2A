@@ -20,6 +20,7 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `title` | string | Required after trim. |
 | `initial_prompt` | string (HTML) | TipTap rich text; validated for `@`-mentions when `app_settings.repo_root` is set. |
 | `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
+| `pending_retry` | JSON \| null | Ephemeral operator intent between `POST /tasks/{id}/retry` and worker pickup. `{ mode: fresh|resume, parent_cycle_id }`. Not exposed on the HTTP task JSON (`json:"-"`); consumed and cleared atomically when the worker transitions `ready→running`. |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
 | `project_id` | string \| null | Optional project membership. |
 | `project_context_item_ids` | string[] | Explicit allowlist of project context items for runner snapshots. Cleared on `project_id` change. |

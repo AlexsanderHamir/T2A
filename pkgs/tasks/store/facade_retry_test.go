@@ -94,3 +94,95 @@ func TestStore_Update_pendingRetrySetAndClearConflict(t *testing.T) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
 }
+
+func TestStore_RequestTaskRetry_freshAndResume(t *testing.T) {
+	ctx := context.Background()
+	db := tasktestdb.OpenSQLite(t)
+	s := store.NewStore(db)
+
+	tsk, err := s.Create(ctx, store.CreateTaskInput{
+		Title: "retry", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusFailed,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cycle, err := s.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.TerminateCycle(ctx, cycle.ID, domain.CycleStatusFailed, "x", domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.RequestTaskRetry(ctx, store.RequestRetryInput{
+		TaskID: tsk.ID, Mode: domain.RetryFresh,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != domain.StatusReady || got.PendingRetry == nil || got.PendingRetry.ParentCycleID != cycle.ID {
+		t.Fatalf("task=%+v", got)
+	}
+
+	got2, err := s.RequestTaskRetry(ctx, store.RequestRetryInput{
+		TaskID: tsk.ID, Mode: domain.RetryFresh,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got2.PendingRetry == nil || !got2.PendingRetry.Equal(got.PendingRetry) {
+		t.Fatalf("idempotent pending_retry=%+v", got2.PendingRetry)
+	}
+
+	failed := domain.StatusFailed
+	if _, err := s.Update(ctx, tsk.ID, store.UpdateTaskInput{Status: &failed}, domain.ActorUser); err != nil {
+		t.Fatal(err)
+	}
+	got3, err := s.RequestTaskRetry(ctx, store.RequestRetryInput{
+		TaskID: tsk.ID, Mode: domain.RetryResume,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got3.PendingRetry == nil || got3.PendingRetry.Mode != domain.RetryResume {
+		t.Fatalf("resume pending_retry=%+v", got3.PendingRetry)
+	}
+}
+
+func TestStore_RequestTaskRetry_rejectsNonFailed(t *testing.T) {
+	ctx := context.Background()
+	db := tasktestdb.OpenSQLite(t)
+	s := store.NewStore(db)
+
+	tsk, err := s.Create(ctx, store.CreateTaskInput{
+		Title: "ready", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusReady,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.RequestTaskRetry(ctx, store.RequestRetryInput{
+		TaskID: tsk.ID, Mode: domain.RetryFresh,
+	}, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestStore_RequestTaskRetry_noTerminalCycle(t *testing.T) {
+	ctx := context.Background()
+	db := tasktestdb.OpenSQLite(t)
+	s := store.NewStore(db)
+
+	tsk, err := s.Create(ctx, store.CreateTaskInput{
+		Title: "no-cycle", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusFailed,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.RequestTaskRetry(ctx, store.RequestRetryInput{
+		TaskID: tsk.ID, Mode: domain.RetryFresh,
+	}, domain.ActorUser)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}

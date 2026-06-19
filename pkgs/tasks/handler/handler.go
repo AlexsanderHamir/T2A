@@ -115,6 +115,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /tasks/{id}/dependencies", http.HandlerFunc(h.addTaskDependency))
 	m.Handle("DELETE /tasks/{id}/dependencies/{depId}", http.HandlerFunc(h.removeTaskDependency))
 	m.Handle("PATCH /tasks/{id}/gate", http.HandlerFunc(h.patchTaskGate))
+	m.Handle("POST /tasks/{id}/retry", http.HandlerFunc(h.postTaskRetry))
 	m.Handle("GET /tasks/{id}", http.HandlerFunc(h.get))
 	m.Handle("PATCH /tasks/{id}", http.HandlerFunc(h.patch))
 	m.Handle("DELETE /tasks/{id}", http.HandlerFunc(h.delete))

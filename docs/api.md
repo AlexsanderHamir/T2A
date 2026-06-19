@@ -79,6 +79,7 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 | POST | `/tasks/{id}/dependencies` | Body `{ depends_on_task_id, satisfies? }` (default `done`). Cycles / self-deps rejected. Publishes `task_dependency_changed`. |
 | DELETE | `/tasks/{id}/dependencies/{depId}` | `204`. Publishes `task_dependency_changed`. |
 | PATCH | `/tasks/{id}/gate` | Body `{ action: release | hold | clear_hold }`. Publishes `task_gate_changed` and `task_updated`. |
+| POST | `/tasks/{id}/retry` | Operator retry after task `failed`. Body `{ mode: fresh|resume, parent_cycle_id? }`. Requires `X-Actor: user`. Resolves `parent_cycle_id` to the latest terminal cycle (`failed` or `aborted`, max `attempt_seq`) when omitted. Sets ephemeral `pending_retry` on the task row and `status=ready`. `409` when already `ready` with a different pending intent; idempotent `200` when the same mode+parent is re-posted. Appends `task_retry_requested` audit event. Publishes `task_updated`. Bare `PATCH failed→ready` without this route leaves `pending_retry` null (legacy run). |
 
 ### Checklist
 

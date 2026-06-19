@@ -87,6 +87,7 @@ const (
 	EventApprovalGranted       EventType = "approval_granted"
 	EventTaskCompleted         EventType = "task_completed"
 	EventTaskFailed            EventType = "task_failed"
+	EventTaskRetryRequested    EventType = "task_retry_requested"
 	// Execution-cycle audit mirrors. Emitted in the same SQL transaction as writes to
 	// task_cycles / task_cycle_phases so GET /tasks/{id}/events stays a complete witness
 	// of cycle activity. See docs/data-model.md.
