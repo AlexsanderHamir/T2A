@@ -251,7 +251,7 @@ describe("TaskDetailPage", () => {
     expect(await screen.findByRole("heading", { name: /^testing$/i })).toBeInTheDocument();
     expect(document.title).toBe(`Testing · ${DEFAULT_DOCUMENT_TITLE}`);
     expect(
-      await screen.findByText(/no agent is waiting on you for this task right now/i),
+      screen.getByRole("button", { name: /edit task/i }),
     ).toBeInTheDocument();
 
     const details = document.querySelector(".task-detail-prompt-details");
@@ -305,10 +305,7 @@ describe("TaskDetailPage", () => {
     expect(empty).toHaveClass("task-detail-prompt-empty");
   });
 
-  it("surfaces the needs-user signal via the attention callout and pill", async () => {
-    // Redesign (2026-06-04): the header no longer carries a standalone
-    // stance line. A needs-user task is signalled by (a) the rich
-    // attention callout and (b) the highlighted status pill.
+  it("surfaces the needs-user signal via the status pill", async () => {
     mockTaskDetailFetch(taskDetail("tb", "Blocked task", {
       status: "blocked",
     }));
@@ -318,7 +315,6 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /^blocked task$/i }),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/the agent is blocked/i)).toBeInTheDocument();
     expect(
       screen.getByText("Blocked", { selector: ".ui-badge" }),
     ).toHaveAttribute(
@@ -326,27 +322,9 @@ describe("TaskDetailPage", () => {
       "true",
     );
     expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
-  });
-
-  // OK-line dot tone is derived from task.status on the page so two
-  // "all clear" tasks (e.g. done vs running) render the same copy but
-  // a distinct dot colour. Pin a couple of representative statuses.
-  it("colours the OK-line dot per task.status (done -> success, running -> active, on_hold -> caution)", async () => {
-    for (const { id, status, expectedTone } of [
-      { id: "td-done", status: "done", expectedTone: "success" },
-      { id: "td-run", status: "running", expectedTone: "active" },
-      { id: "td-hold", status: "on_hold", expectedTone: "caution" },
-    ] as const) {
-      mockTaskDetailFetch(taskDetail(id, `Task ${id}`, { status }));
-      const { unmount } = renderDetail(
-        `/tasks/${id}`,
-        mockApp(),
-      );
-
-      const ok = await screen.findByText(/no agent is waiting on you/i);
-      expect(ok).toHaveAttribute("data-tone", expectedTone);
-      unmount();
-    }
+    expect(
+      screen.queryByText(/the agent is blocked/i),
+    ).not.toBeInTheDocument();
   });
 
   // The Dependencies section is always present so the absence of upstream

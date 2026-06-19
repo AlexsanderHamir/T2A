@@ -1,48 +1,64 @@
-/* Schedule line — quiet metadata facts inside the hero toolbar, matching
-   the slim all-clear line above (dot + muted copy, no card chrome). */
+/* Schedule metadata — compact horizontal fact strip in the toolbar. */
 .task-detail-schedule {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-3);
+  min-height: 2.25rem;
   margin-top: 0;
   margin-bottom: 0;
 }
 
-.task-detail-schedule-badge {
+.task-detail-schedule-row {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 400;
-  line-height: 1.4;
-  color: var(--text-secondary);
+  min-height: 2.25rem;
 }
 
-.task-detail-schedule-badge-dot {
-  display: inline-block;
+.task-detail-schedule-row + .task-detail-schedule-row {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-hairline);
+}
+
+.task-detail-schedule-row-icon {
+  display: flex;
   flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: var(--radius-full);
-  background: var(--info);
-  box-shadow: 0 0 0 2px var(--info-soft);
 }
 
-.task-detail-schedule-badge--phase .task-detail-schedule-badge-dot {
-  background: var(--success);
-  box-shadow: 0 0 0 2px var(--success-soft);
+.task-detail-schedule-row--phase .task-detail-schedule-row-icon {
+  color: var(--success);
 }
 
-.task-detail-schedule-badge-text time {
+.task-detail-schedule-row--scheduled .task-detail-schedule-row-icon {
+  color: var(--info);
+}
+
+.task-detail-schedule-row-body {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.35;
+}
+
+.task-detail-schedule-row-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+
+.task-detail-schedule-row-sep {
+  color: var(--text-tertiary);
+}
+
+.task-detail-schedule-row-body time {
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   font-weight: 450;
-}
-
-.task-detail-schedule-badge-sep {
-  margin: 0 0.35rem;
-  color: var(--text-tertiary);
 }
 
 .task-detail-schedule-empty {
@@ -75,4 +91,17 @@
 
 .task-detail-schedule-modal-err {
   margin: 0.25rem 0;
+}
+
+@media (max-width: 540px) {
+  .task-detail-schedule {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .task-detail-schedule-row + .task-detail-schedule-row {
+    padding-left: 0;
+    border-left: none;
+  }
 }

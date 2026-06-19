@@ -72,135 +72,6 @@ a.task-create-agent-lock-notice-link:hover {
   }
 }
 
-/* "Agent needs input" callout. Left accent stripe + leading glyph push
-   the warning state forward visually so it reads as an alert even when
-   the operator only glances at the page. The stripe is implemented with
-   `border-left` (no extra DOM) and the icon is a pure CSS pseudo-element. */
-.task-detail-attention {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-1) var(--space-3);
-  align-items: start;
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
-  border-radius: var(--radius-md);
-  margin-top: var(--space-5);
-  margin-bottom: 0;
-  background: linear-gradient(
-    180deg,
-    var(--warning-attention-gradient-start) 0%,
-    var(--warning-attention-gradient-end) 100%
-  );
-  border: 1px solid var(--warning-attention-border);
-  border-left: 3px solid var(--warning-border);
-  box-shadow: var(--shadow-chrome-xs);
-  color: var(--warning-ink);
-}
-
-/* Leading exclamation glyph rendered in pure CSS — `!` inside a ring,
-   tinted with the warning ink. Aligns to the headline row of the grid. */
-.task-detail-attention::before {
-  content: "!";
-  grid-row: 1 / span 2;
-  grid-column: 1;
-  align-self: start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.4rem;
-  height: 1.4rem;
-  margin-top: 0.05rem;
-  border-radius: var(--radius-full);
-  background: var(--warning-soft);
-  color: var(--warning-ink);
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.task-detail-attention strong {
-  grid-column: 2;
-  grid-row: 1;
-  display: block;
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: 600;
-  letter-spacing: -0.005em;
-}
-
-.task-detail-attention p {
-  grid-column: 2;
-  grid-row: 2;
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  opacity: 0.92;
-}
-
-/* "All clear" state. Deliberately NOT a card — the happy path is the
-   common case and should recede. A single muted line with a small
-   coloured dot communicates "nothing for you here" without the visual
-   weight of the warning callout it sits in for. The leading dot keeps a
-   faint family resemblance to the alert glyph so the two states still
-   read as the same slot, just at very different urgencies.
-
-   The dot colour is driven by `data-tone` from the parent component
-   (TaskDetailOkTone, derived from task.status). The OK message is one
-   pre-defined line for several quiet statuses, so encoding the
-   *reason* the operator is off the hook into the dot colour lets two
-   OK-state tasks be told apart at a glance without reading the
-   status pill: green for done, brand for running, blue for ready,
-   amber for on-hold, neutral grey for anything else.
-
-   Each tone pairs a solid dot with a 2px soft halo in the same
-   colour family. The halo gives the 0.4rem dot enough visual weight
-   to read as an intentional indicator rather than a punctuation
-   speck, without the loud 3px glow the old schedule dot used to
-   carry. */
-.task-detail-ok {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
-  margin-bottom: 0;
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  color: var(--text-secondary);
-}
-
-.task-detail-ok::before {
-  content: "";
-  flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: var(--radius-full);
-  background: var(--text-tertiary);
-}
-
-.task-detail-ok[data-tone="success"]::before {
-  background: var(--success);
-  box-shadow: 0 0 0 2px var(--success-soft);
-}
-
-.task-detail-ok[data-tone="active"]::before {
-  background: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand-muted);
-}
-
-.task-detail-ok[data-tone="info"]::before {
-  background: var(--info);
-  box-shadow: 0 0 0 2px var(--info-soft);
-}
-
-.task-detail-ok[data-tone="caution"]::before {
-  background: var(--warning);
-  box-shadow: 0 0 0 2px var(--warning-soft);
-}
-
-.task-detail-ok[data-tone="neutral"]::before {
-  background: var(--text-tertiary);
-}
-
 /* Action row — a single tidy cluster, primary CTA leads. The previous
    `margin-left: auto` on Delete stranded it at the far panel edge,
    leaving a large dead gap between Edit and Delete that read as a
@@ -230,73 +101,39 @@ a.task-create-agent-lock-notice-link:hover {
 }
 
 /* === Hero toolbar =====================================================
-   Wraps the attention bar (ok line OR rich warning callout) + actions +
-   schedule line into ONE rhythmic strip beneath the title. Before this
-   wrapper the three pieces stacked as orphan rows with competing margins
-   and the action cluster split the metadata in half — facts above,
-   facts below, buttons stranded between. The grid below puts state
-   facts on the left and a right-anchored action cluster on the right,
-   with a single hairline separator at the bottom replacing the three
-   stray dividers that used to live below each row.
-
-   The grid uses two columns (facts | actions) and grows rows as needed:
-   - ok line + actions (single row, common case)
-   - schedule row sits below the ok line on the left, actions stay aligned
-   - warning callout spans both columns on row 1; everything else shifts
-     down so the alert gets full emphasis. ==================================== */
+   Single-row flex: schedule metadata grows on the left, actions pin
+   to the right, vertically centered. Task status lives in the header
+   pill — no duplicate status copy in this strip. */
 .task-detail-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-4);
-  row-gap: var(--space-2);
+  justify-content: flex-end;
+  gap: var(--space-3) var(--space-4);
   margin-top: var(--space-5);
   margin-bottom: 0;
   padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--border-hairline);
 }
 
-/* All toolbar children own zero outer margin — the grid owns spacing. */
-.task-detail-toolbar > .task-detail-ok,
-.task-detail-toolbar > .task-detail-attention,
 .task-detail-toolbar > .task-detail-schedule,
 .task-detail-toolbar > .task-detail-actions {
   margin: 0;
 }
 
-.task-detail-toolbar > .task-detail-ok {
-  grid-column: 1;
-  grid-row: 1;
-}
-
 .task-detail-toolbar > .task-detail-schedule {
-  grid-column: 1;
-  grid-row: 2;
+  flex: 1 1 auto;
+  min-width: min(100%, 12rem);
+  margin-right: auto;
 }
 
 .task-detail-toolbar > .task-detail-actions {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  justify-self: end;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
 }
 
-/* Rich warning callout takes the whole top row; the schedule and the
-   action cluster drop to row 2 underneath it so the message is the
-   loudest thing in the strip. */
-.task-detail-toolbar > .task-detail-attention {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule {
-  grid-row: 2;
-}
-
-.task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
-  grid-column: 2;
-  grid-row: 2;
+.task-detail-toolbar:not(:has(> .task-detail-schedule)) {
+  justify-content: flex-end;
 }
 
 /* The toolbar already carries its own bottom hairline, so the first
@@ -311,20 +148,17 @@ a.task-create-agent-lock-notice-link:hover {
    so Edit/Delete remain reachable as full-width touch targets. */
 @media (max-width: 720px) {
   .task-detail-toolbar {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
   }
 
-  .task-detail-toolbar > .task-detail-ok,
-  .task-detail-toolbar > .task-detail-schedule,
-  .task-detail-toolbar > .task-detail-actions,
-  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-schedule,
-  .task-detail-toolbar:has(> .task-detail-attention) > .task-detail-actions {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: stretch;
+  .task-detail-toolbar > .task-detail-schedule {
+    margin-right: 0;
   }
 
   .task-detail-toolbar > .task-detail-actions {
+    justify-content: flex-end;
     flex-wrap: wrap;
   }
 }

@@ -1,88 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { TaskDetailAttentionBar } from "./TaskDetailAttentionBar";
+import { TaskDetailToolbarActions } from "./TaskDetailAttentionBar";
 
-describe("TaskDetailAttentionBar", () => {
-  it("shows attention copy when attention.show is true", () => {
-    render(
-      <TaskDetailAttentionBar
-        attention={{
-          show: true,
-          headline: "Blocked",
-          body: "The agent is blocked.",
-        }}
-        saving={false}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("The agent is blocked.")).toBeInTheDocument();
-  });
-
-  it("shows informational ok state when attention.show is false", () => {
-    render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
-        saving={false}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByText(/no agent is waiting on you for this task right now/i),
-    ).toBeInTheDocument();
-  });
-
-  // The OK dot encodes the underlying status via `data-tone` on the
-  // <p class="task-detail-ok"> element. Same copy, different colour:
-  // a done task and a running task both render the OK line, but the
-  // dot tells you which is which at a glance.
-  it("defaults the OK dot to a neutral tone when no okTone is passed", () => {
-    const { container } = render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
-        saving={false}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-    expect(container.querySelector(".task-detail-ok")).toHaveAttribute(
-      "data-tone",
-      "neutral",
-    );
-  });
-
-  it("applies the requested okTone to the OK line element", () => {
-    const tones = ["success", "active", "info", "caution", "neutral"] as const;
-    for (const tone of tones) {
-      const { container, unmount } = render(
-        <TaskDetailAttentionBar
-          attention={{ show: false, headline: "", body: "" }}
-          saving={false}
-          okTone={tone}
-          onEdit={vi.fn()}
-          onDelete={vi.fn()}
-        />,
-      );
-      expect(container.querySelector(".task-detail-ok")).toHaveAttribute(
-        "data-tone",
-        tone,
-      );
-      unmount();
-    }
-  });
-
+describe("TaskDetailToolbarActions", () => {
   it("invokes edit and delete handlers", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving={false}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -97,8 +24,7 @@ describe("TaskDetailAttentionBar", () => {
 
   it("disables action buttons while saving", () => {
     render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -114,8 +40,7 @@ describe("TaskDetailAttentionBar", () => {
     const onRetryFresh = vi.fn();
     const onRetryResume = vi.fn();
     render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -132,16 +57,12 @@ describe("TaskDetailAttentionBar", () => {
     expect(onRetryResume).toHaveBeenCalledOnce();
   });
 
-  // Pin the consolidation: the model-configuration CTA replaces the inline
-  // "Model configuration" panel that used to render below the action row,
-  // and only shows up when showModelConfig is set (today: failed runs).
   it("renders Model configuration only when showModelConfig is true", async () => {
     const user = userEvent.setup();
     const onConfigureModel = vi.fn();
 
     const { rerender } = render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -153,8 +74,7 @@ describe("TaskDetailAttentionBar", () => {
     ).not.toBeInTheDocument();
 
     rerender(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -173,8 +93,7 @@ describe("TaskDetailAttentionBar", () => {
   describe("autonomy toggle", () => {
     it("does not render the toggle when autonomyMode is hidden / unset", () => {
       render(
-        <TaskDetailAttentionBar
-          attention={{ show: false, headline: "", body: "" }}
+        <TaskDetailToolbarActions
           saving={false}
           onEdit={vi.fn()}
           onDelete={vi.fn()}
@@ -189,8 +108,7 @@ describe("TaskDetailAttentionBar", () => {
       const user = userEvent.setup();
       const onToggleAutonomy = vi.fn();
       render(
-        <TaskDetailAttentionBar
-          attention={{ show: false, headline: "", body: "" }}
+        <TaskDetailToolbarActions
           saving={false}
           onEdit={vi.fn()}
           onDelete={vi.fn()}
@@ -207,8 +125,7 @@ describe("TaskDetailAttentionBar", () => {
       const user = userEvent.setup();
       const onToggleAutonomy = vi.fn();
       render(
-        <TaskDetailAttentionBar
-          attention={{ show: false, headline: "", body: "" }}
+        <TaskDetailToolbarActions
           saving={false}
           onEdit={vi.fn()}
           onDelete={vi.fn()}
@@ -223,8 +140,7 @@ describe("TaskDetailAttentionBar", () => {
 
     it("shows the pending label and disables the toggle while pending", () => {
       render(
-        <TaskDetailAttentionBar
-          attention={{ show: false, headline: "", body: "" }}
+        <TaskDetailToolbarActions
           saving={false}
           onEdit={vi.fn()}
           onDelete={vi.fn()}
@@ -240,8 +156,7 @@ describe("TaskDetailAttentionBar", () => {
 
   it("no longer renders the legacy inline model-config panel", () => {
     render(
-      <TaskDetailAttentionBar
-        attention={{ show: false, headline: "", body: "" }}
+      <TaskDetailToolbarActions
         saving={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}

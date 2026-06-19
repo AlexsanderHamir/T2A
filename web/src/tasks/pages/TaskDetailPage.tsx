@@ -20,8 +20,8 @@ import type { Task } from "@/types";
 import {
   TaskCyclesPanel,
   TaskCommitsPanel,
-  TaskDetailAttentionBar,
   TaskDetailChecklistSection,
+  TaskDetailToolbarActions,
   TaskDetailHeader,
   TaskDetailPromptSection,
   TaskDetailSchedule,
@@ -29,16 +29,13 @@ import {
   TaskGatePanel,
   TaskModelConfigModal,
 } from "../components/task-detail";
-import type { TaskDetailOkTone } from "../components/task-detail/layout/TaskDetailAttentionBar";
 import { AutonomyConfirmDialog, TaskRetryConfirmDialog } from "../components/dialogs";
 import type { TaskRetryMode } from "../components/dialogs/TaskRetryConfirmDialog";
 import { sanitizePromptHtml } from "../task-prompt";
-import { userAttention } from "../task-display";
 import { canMutateTaskCriteria } from "../task-display/canMutateTaskCriteria";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
-import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
 import { resolveTaskDependencySummaries, taskQueryKeys } from "../task-query";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useTaskDetailScheduling } from "../hooks/useTaskDetailScheduling";
@@ -91,8 +88,6 @@ export function TaskDetailPage({ app }: Props) {
     queryFn: ({ signal }) => getTask(taskId, { signal }),
     enabled: Boolean(taskId),
   });
-
-  const { approvalPending } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
 
   const checklistQuery = useQuery({
     queryKey: taskQueryKeys.checklist(taskId),
@@ -274,9 +269,6 @@ export function TaskDetailPage({ app }: Props) {
   const checklistItems = checklistQuery.data?.items ?? [];
   const checklistDoneCount = checklistItems.filter((i) => i.done).length;
   const checklistTotal = checklistItems.length;
-  const attention = userAttention(task, {
-    approvalPending,
-  });
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
   const autonomyMode: "hidden" | "ready" | "on_hold" =
     task.status === "ready"
@@ -286,26 +278,14 @@ export function TaskDetailPage({ app }: Props) {
       : "hidden";
   const autonomyEnable = autonomyMode === "on_hold";
 
-  const okTone: TaskDetailOkTone =
-    task.status === "done"
-      ? "success"
-      : task.status === "running"
-      ? "active"
-      : task.status === "on_hold"
-      ? "caution"
-      : task.status === "ready"
-      ? "info"
-      : "neutral";
-
   return (
     <section className="panel task-detail-panel task-detail-content--enter">
       <TaskDetailHeader task={task} />
 
       <div className="task-detail-toolbar">
-        <TaskDetailAttentionBar
-          attention={attention}
+        <TaskDetailSchedule task={task} />
+        <TaskDetailToolbarActions
           saving={app.saving}
-          okTone={okTone}
           onEdit={() => app.openEdit(task)}
           onDelete={() => app.requestDelete(task)}
           onRetryFresh={
@@ -329,7 +309,6 @@ export function TaskDetailPage({ app }: Props) {
           }
           autonomyPending={autonomyMutation.isPending}
         />
-        <TaskDetailSchedule task={task} />
       </div>
 
       {autonomyConfirmOpen && autonomyMode !== "hidden" ? (

@@ -36,39 +36,83 @@ export function TaskDetailSchedule({ task }: Props) {
       data-state={hasSchedule ? "scheduled" : "unscheduled"}
     >
       {hasPhaseComplete ? (
-        <span
-          className="task-detail-schedule-badge task-detail-schedule-badge--phase"
+        <div
+          className="task-detail-schedule-row task-detail-schedule-row--phase"
           data-testid="task-detail-phase-complete"
+          aria-label={`Phase completed, ${phaseFormatted}`}
         >
-          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
-          <span className="task-detail-schedule-badge-text">
-            Phase complete
-            <span className="task-detail-schedule-badge-sep" aria-hidden="true">
+          <span className="task-detail-schedule-row-icon" aria-hidden="true">
+            <PhaseCompleteGlyph />
+          </span>
+          <div className="task-detail-schedule-row-body">
+            <span className="task-detail-schedule-row-label">Completed</span>
+            <span className="task-detail-schedule-row-sep" aria-hidden="true">
               ·
             </span>
-            <time>{phaseFormatted}</time>
-          </span>
-        </span>
+            <time dateTime={phaseCompleteAt}>{phaseFormatted}</time>
+          </div>
+        </div>
       ) : null}
       {hasSchedule ? (
-        <span
-          className="task-detail-schedule-badge"
+        <div
+          className="task-detail-schedule-row task-detail-schedule-row--scheduled"
           data-testid="task-detail-schedule-badge"
+          aria-label={`Scheduled for pickup, ${formatted}`}
         >
-          <span aria-hidden="true" className="task-detail-schedule-badge-dot" />
-          <span className="task-detail-schedule-badge-text">
-            Scheduled for
-            <span className="task-detail-schedule-badge-sep" aria-hidden="true">
+          <span className="task-detail-schedule-row-icon" aria-hidden="true">
+            <ScheduleGlyph />
+          </span>
+          <div className="task-detail-schedule-row-body">
+            <span className="task-detail-schedule-row-label">Scheduled</span>
+            <span className="task-detail-schedule-row-sep" aria-hidden="true">
               ·
             </span>
-            <time>{formatted}</time>
-          </span>
-        </span>
+            <time dateTime={task.pickup_not_before}>{formatted}</time>
+          </div>
+        </div>
       ) : !hasPhaseComplete ? (
         <span className="task-detail-schedule-empty muted">
           No pickup scheduled.
         </span>
       ) : null}
     </div>
+  );
+}
+
+function PhaseCompleteGlyph() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="M5.25 8.25 7 10l3.75-4" />
+    </svg>
+  );
+}
+
+function ScheduleGlyph() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2.25" y="3.5" width="11.5" height="10.25" rx="2" />
+      <path d="M2.25 6.5h11.5" />
+      <path d="M5.5 2v3" />
+      <path d="M10.5 2v3" />
+    </svg>
   );
 }
