@@ -32,7 +32,7 @@ import {
   normalizeChecklistItems,
   normalizeVerifyCommands,
 } from "../task-compose/checklistRequirement";
-import type { ChecklistItemDraft, Task, TaskDraftChecklistItem } from "@/types";
+import type { ChecklistItemDraft, Task, TaskDraftChecklistItem, TaskDraftDetail } from "@/types";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -53,6 +53,106 @@ type CreateTaskMutationInput = {
   milestone?: string;
   depends_on: TaskDependencyEdge[];
 };
+
+type DraftEvaluationSnapshot = {
+  overallScore: number;
+  overallSummary: string;
+  sections: Array<{ key: string; score: number }>;
+};
+
+function generateTaskDraftID(): string {
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `draft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function defaultRunnerFromSettings(settings: AppSettings | undefined): string {
+  return (settings?.runner ?? "cursor").trim() || "cursor";
+}
+
+function defaultCursorModelFromSettings(settings: AppSettings | undefined): string {
+  return settings?.cursor_model ?? "";
+}
+
+function createSubmitStatusForAutonomy(autonomyEnabled: boolean): Status {
+  return autonomyEnabled ? DEFAULT_NEW_TASK_STATUS : "on_hold";
+}
+
+function parseTagsFromCsv(csv: string): string[] {
+  return csv
+    .split(/[,;\n]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function latestDraftEvaluationFromPayload(
+  evaluation: TaskDraftDetail["payload"]["latest_evaluation"],
+): DraftEvaluationSnapshot | null {
+  if (!evaluation) return null;
+  return {
+    overallScore: evaluation.overall_score,
+    overallSummary: evaluation.overall_summary,
+    sections: evaluation.sections,
+  };
+}
+
+function mapDraftChecklistItems(
+  items: TaskDraftChecklistItem[] | undefined,
+): ChecklistItemDraft[] {
+  return (items ?? []).map((item) => ({
+    text: item.text,
+    ...(item.verify_commands?.length ? { verify_commands: item.verify_commands } : {}),
+  }));
+}
+
+function resumedRunnerFromDraft(
+  draftRunner: unknown,
+  settings: AppSettings | undefined,
+): string {
+  if (typeof draftRunner === "string" && draftRunner.trim()) {
+    return draftRunner.trim();
+  }
+  return defaultRunnerFromSettings(settings);
+}
+
+function resumedCursorModelFromDraft(
+  draftModel: unknown,
+  settings: AppSettings | undefined,
+): string {
+  if (typeof draftModel === "string") {
+    return draftModel;
+  }
+  return defaultCursorModelFromSettings(settings);
+}
+
+function buildResumedDraftAutosaveBaseline(input: {
+  draftID: string;
+  title: string;
+  prompt: string;
+  priority: PriorityChoice;
+  runner: string;
+  cursorModel: string;
+  projectID: string;
+  projectContextItemIDs: string[];
+  automationSelections: AutomationSelection[];
+  checklistItems: TaskDraftChecklistItem[];
+  latestEvaluation: DraftEvaluationSnapshot | null;
+}): string {
+  return draftAutosaveSignature({
+    id: input.draftID,
+    name: input.title.trim() || TASK_DRAFTS.untitledDraftName,
+    title: input.title,
+    prompt: input.prompt,
+    priority: input.priority,
+    runner: input.runner,
+    cursorModel: input.cursorModel,
+    projectId: input.projectID,
+    projectContextItemIds: input.projectContextItemIDs,
+    automationSelections: input.automationSelections,
+    checklistItems: input.checklistItems,
+    latestEvaluation: input.latestEvaluation,
+  });
+}
 
 /**
  * Create-task modal, draft autosave, draft picker, and related mutations.
@@ -147,11 +247,7 @@ export function useTaskCreateFlow() {
   }, []);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
-  const [latestDraftEvaluation, setLatestDraftEvaluation] = useState<{
-    overallScore: number;
-    overallSummary: string;
-    sections: Array<{ key: string; score: number }>;
-  } | null>(null);
+  const [latestDraftEvaluation, setLatestDraftEvaluation] = useState<DraftEvaluationSnapshot | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   /** When set, the create modal is editing an existing task (same UI as create). */
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -211,16 +307,13 @@ export function useTaskCreateFlow() {
     // resolution would happily stamp the now-fresh form with B's
     // payload.
     requestedResumeRef.current = null;
-    const generatedID =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `draft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const generatedID = generateTaskDraftID();
     setNewTitle("");
     setNewPrompt("");
     setNewPriority("");
     const s = queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
-    setNewTaskRunner((s?.runner ?? "cursor").trim() || "cursor");
-    setNewTaskCursorModel(s?.cursor_model ?? "");
+    setNewTaskRunner(defaultRunnerFromSettings(s));
+    setNewTaskCursorModel(defaultCursorModelFromSettings(s));
     setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
     setNewAutomationSelections([]);
@@ -241,8 +334,8 @@ export function useTaskCreateFlow() {
         title: "",
         prompt: "",
         priority: "",
-        runner: (s?.runner ?? "cursor").trim() || "cursor",
-        cursorModel: s?.cursor_model ?? "",
+        runner: defaultRunnerFromSettings(s),
+        cursorModel: defaultCursorModelFromSettings(s),
         projectId: DEFAULT_PROJECT_ID,
         projectContextItemIds: [],
         automationSelections: [],
@@ -728,9 +821,7 @@ export function useTaskCreateFlow() {
     // resumes the task by flipping status back to ready from the
     // detail page, which goes through the standard PATCH /tasks/{id}
     // path.
-    const submitStatus: Status = newAutonomyEnabled
-      ? DEFAULT_NEW_TASK_STATUS
-      : "on_hold";
+    const submitStatus = createSubmitStatusForAutonomy(newAutonomyEnabled);
     createMutation.mutate({
       title: newTitle.trim(),
       initial_prompt: newPrompt,
@@ -744,10 +835,7 @@ export function useTaskCreateFlow() {
       project_context_item_ids: newProjectContextItemIDs,
       automation_selections: newAutomationSelections,
       pickup_not_before: newSchedule,
-      tags: newTagsCsv
-        .split(/[,;\n]+/)
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: parseTagsFromCsv(newTagsCsv),
       milestone: newMilestone.trim() || undefined,
       depends_on: newDependsOn.map((task_id) => ({ task_id, satisfies: "done" as const })),
     });
@@ -779,24 +867,17 @@ export function useTaskCreateFlow() {
       // `apiGetDraft` is a read, not a mutation.
       return;
     }
-    const latestEvaluation = draft.payload.latest_evaluation
-      ? {
-          overallScore: draft.payload.latest_evaluation.overall_score,
-          overallSummary: draft.payload.latest_evaluation.overall_summary,
-          sections: draft.payload.latest_evaluation.sections,
-        }
-      : null;
+    const latestEvaluation = latestDraftEvaluationFromPayload(
+      draft.payload.latest_evaluation,
+    );
     const settingsSnap = queryClient.getQueryData<AppSettings>(
       settingsQueryKeys.app(),
     );
-    const resumedRunner =
-      typeof draft.payload.runner === "string" && draft.payload.runner.trim()
-        ? draft.payload.runner.trim()
-        : (settingsSnap?.runner ?? "cursor").trim() || "cursor";
-    const resumedModel =
-      typeof draft.payload.cursor_model === "string"
-        ? draft.payload.cursor_model
-        : (settingsSnap?.cursor_model ?? "");
+    const resumedRunner = resumedRunnerFromDraft(draft.payload.runner, settingsSnap);
+    const resumedModel = resumedCursorModelFromDraft(
+      draft.payload.cursor_model,
+      settingsSnap,
+    );
     setNewTaskRunner(resumedRunner);
     setNewTaskCursorModel(resumedModel);
     // Resumed drafts never carry a schedule — see the doc on
@@ -808,14 +889,7 @@ export function useTaskCreateFlow() {
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
-    setNewChecklistItems(
-      (draft.payload.checklist_items ?? []).map((item) => ({
-        text: item.text,
-        ...(item.verify_commands?.length
-          ? { verify_commands: item.verify_commands }
-          : {}),
-      })),
-    );
+    setNewChecklistItems(mapDraftChecklistItems(draft.payload.checklist_items));
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
     // back to the default project / empty selection so the REFERENCES block
@@ -839,24 +913,15 @@ export function useTaskCreateFlow() {
     setNewAutomationSelections(resumedAutomationSelections);
     const resumedTitle = draft.payload.title ?? "";
     setDraftAutosaveBaseline(
-      draftAutosaveSignature({
-        id: draft.id,
-        // Draft name is derived from the title (with "Untitled draft"
-        // fallback) at save time, so the baseline must use the same
-        // derivation against the resumed title — not the persisted
-        // `draft.name` from the server, which may have been authored
-        // under the old standalone-name field. Without this, a draft
-        // whose stored name does not equal `title || "Untitled draft"`
-        // would immediately appear "dirty" on resume and fire an
-        // autosave that only updates the name.
-        name: resumedTitle.trim() || TASK_DRAFTS.untitledDraftName,
+      buildResumedDraftAutosaveBaseline({
+        draftID: draft.id,
         title: resumedTitle,
         prompt: draft.payload.initial_prompt ?? "",
         priority: draft.payload.priority ?? "",
         runner: resumedRunner,
         cursorModel: resumedModel,
-        projectId: resumedProjectID,
-        projectContextItemIds: resumedProjectContextIds,
+        projectID: resumedProjectID,
+        projectContextItemIDs: resumedProjectContextIds,
         automationSelections: resumedAutomationSelections,
         checklistItems: draft.payload.checklist_items ?? [],
         latestEvaluation,
