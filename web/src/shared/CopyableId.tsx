@@ -12,6 +12,10 @@ type CopyableIdProps = {
   value: string;
   /** When true (default), shorten long values in the layout; full string stays in title + copy. */
   truncate?: boolean;
+  /** Visible code text; full `value` is still copied. */
+  displayValue?: string;
+  /** Button label before copy succeeds. */
+  copyLabel?: string;
   className?: string;
 };
 
@@ -21,11 +25,14 @@ type CopyableIdProps = {
 export function CopyableId({
   value,
   truncate = true,
+  displayValue,
+  copyLabel = "Copy",
   className = "",
 }: CopyableIdProps) {
   const [copied, setCopied] = useState(false);
   const display =
-    truncate && value.length > 24 ? truncateMiddle(value, 22) : value;
+    displayValue ??
+    (truncate && value.length > 24 ? truncateMiddle(value, 22) : value);
 
   const copy = useCallback(async () => {
     try {
@@ -46,9 +53,15 @@ export function CopyableId({
         type="button"
         className="btn-utility copyable-id__btn"
         onClick={() => void copy()}
-        aria-label={copied ? "Copied to clipboard" : "Copy full value"}
+        aria-label={
+          copied
+            ? "Copied to clipboard"
+            : copyLabel === "Copy"
+              ? "Copy full value"
+              : copyLabel
+        }
       >
-        {copied ? "Copied" : "Copy"}
+        {copied ? "Copied" : copyLabel}
       </button>
     </span>
   );

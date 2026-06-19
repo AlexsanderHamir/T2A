@@ -83,9 +83,15 @@ export function TaskCommitDiffPage() {
           <span aria-hidden="true">&#8249;</span>
           Back to task
         </Link>
-        <p className="task-commit-diff-page-eyebrow">Commit diff</p>
-        <div className="task-commit-diff-page-title-row">
-          <CopyableId value={sha} className="task-commit-diff-page-sha" />
+
+        <div className="task-commit-diff-page-hero">
+          {commit?.message ? (
+            <h1 className="task-commit-diff-page-message">{commit.message}</h1>
+          ) : (
+            <h1 className="task-commit-diff-page-message muted">
+              {shortSha(sha)}
+            </h1>
+          )}
           {commit ? (
             <CommitStatusBadge
               status={commit.status}
@@ -93,51 +99,72 @@ export function TaskCommitDiffPage() {
             />
           ) : null}
         </div>
-        {commit?.message ? (
-          <h1 className="task-commit-diff-page-message">{commit.message}</h1>
-        ) : (
-          <h1 className="task-commit-diff-page-message muted">
-            {shortSha(sha)}
-          </h1>
-        )}
-        <div className="task-commit-diff-page-meta-group">
+
+        <p className="task-commit-diff-page-meta muted">
+          <CopyableId
+            value={sha}
+            displayValue={shortSha(sha)}
+            copyLabel="Copy SHA"
+            className="task-commit-diff-page-sha"
+          />
           {commit ? (
-            <p className="task-commit-diff-page-meta muted">
-              {formatRelativeTime(commit.committed_at, new Date(now))}
+            <>
+              <span className="task-commit-meta-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>{formatRelativeTime(commit.committed_at, new Date(now))}</span>
               {commit.branch ? (
                 <>
                   <span className="task-commit-meta-sep" aria-hidden="true">
                     ·
                   </span>
-                  {commit.branch}
+                  <span>{commit.branch}</span>
                 </>
               ) : null}
-            </p>
+            </>
           ) : commitsQuery.isError ? (
-            <p className="task-commit-diff-page-meta muted" role="status">
-              {errorMessage(commitsQuery.error, "Could not load commit metadata.")}
-            </p>
+            <>
+              <span className="task-commit-meta-sep" aria-hidden="true">
+                ·
+              </span>
+              <span role="status">
+                {errorMessage(commitsQuery.error, "Could not load commit metadata.")}
+              </span>
+            </>
           ) : null}
           {gitAuthor ? (
-            <p className="task-commit-diff-page-meta muted">
-              {gitAuthor}
-              {diffQuery.data?.author_email
-                ? ` <${diffQuery.data.author_email}>`
-                : ""}
-            </p>
+            <>
+              <span className="task-commit-meta-sep" aria-hidden="true">
+                ·
+              </span>
+              <span
+                title={
+                  diffQuery.data?.author_email
+                    ? diffQuery.data.author_email
+                    : undefined
+                }
+              >
+                {gitAuthor}
+              </span>
+            </>
           ) : null}
           {parentSha ? (
-            <p className="task-commit-diff-page-meta muted">
-              Parent{" "}
-              <Link
-                to={taskCommitDiffPath(taskId, parentSha)}
-                className="task-commit-diff-parent-link"
-              >
-                {shortSha(parentSha)}
-              </Link>
-            </p>
+            <>
+              <span className="task-commit-meta-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                Parent{" "}
+                <Link
+                  to={taskCommitDiffPath(taskId, parentSha)}
+                  className="task-commit-diff-parent-link"
+                >
+                  {shortSha(parentSha)}
+                </Link>
+              </span>
+            </>
           ) : null}
-        </div>
+        </p>
       </header>
       <CommitDiffPanel
         sha={sha}
