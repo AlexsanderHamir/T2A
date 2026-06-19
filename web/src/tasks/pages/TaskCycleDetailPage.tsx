@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type Dispatch, type SetStateAction } from "react";
 import { Link, useParams } from "react-router-dom";
 import { listTaskEvents } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
@@ -15,7 +15,14 @@ import {
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
-import type { TaskCyclePhase, TaskCycleStreamEvent, CycleStatus } from "@/types";
+import type {
+  CycleStatus,
+  TaskCycleDetail,
+  TaskCyclePhase,
+  TaskCycleStreamEvent,
+} from "@/types";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { UseTaskCycleStreamResult } from "../hooks/useTaskCycles";
 import { AttemptAuditTimeline } from "../components/task-detail/attempt/AttemptAuditTimeline";
 import { TaskTimelineSkeleton } from "../components/skeletons";
 import {
@@ -31,7 +38,63 @@ const LOAD_MORE_STEP = 6;
 
 type ActivityTab = "cursor" | "audit";
 
+type TaskCycleDetailPageState = {
+  taskId: string;
+  cycleId: string;
+  paramsValid: boolean;
+  activityTab: ActivityTab;
+  setActivityTab: (tab: ActivityTab) => void;
+  visibleStreamCount: number;
+  setVisibleStreamCount: Dispatch<SetStateAction<number>>;
+  visibleAuditCount: number;
+  setVisibleAuditCount: Dispatch<SetStateAction<number>>;
+  cursorTabId: string;
+  auditTabId: string;
+  cursorPanelId: string;
+  auditPanelId: string;
+  cycleQuery: UseQueryResult<TaskCycleDetail, Error>;
+  streamQuery: UseTaskCycleStreamResult;
+  auditQuery: UseQueryResult<
+    Awaited<ReturnType<typeof listTaskEvents>>,
+    Error
+  >;
+  now: number;
+};
+
+type AttemptTimelineDisplay = {
+  startedParts: ReturnType<typeof formatAttemptStartedParts>;
+  durationLabel: string;
+  showPhaseBadge: boolean;
+  endcapLabel: string | null;
+  showEndcap: boolean;
+  endcapTime: string | null;
+  showStartCap: boolean;
+  startCapTime: string | null;
+};
+
 export function TaskCycleDetailPage() {
+  const pageState = useTaskCycleDetailPageState();
+
+  if (!pageState.paramsValid) {
+    return <TaskCycleInvalidParamsSection />;
+  }
+  if (pageState.cycleQuery.isPending) {
+    return <TaskCycleLoadingSection />;
+  }
+  if (pageState.cycleQuery.isError) {
+    return (
+      <TaskCycleErrorSection
+        taskId={pageState.taskId}
+        error={pageState.cycleQuery.error}
+        onRetry={() => void pageState.cycleQuery.refetch()}
+      />
+    );
+  }
+
+  return <TaskCycleDetailLoadedSection pageState={pageState} cycle={pageState.cycleQuery.data} />;
+}
+
+function useTaskCycleDetailPageState(): TaskCycleDetailPageState {
   const { taskId = "", cycleId = "" } = useParams<{
     taskId: string;
     cycleId: string;
@@ -76,361 +139,547 @@ export function TaskCycleDetailPage() {
     enabled: cycleQuery.data?.status === "running" && !cycleQuery.data?.ended_at,
   });
 
-  if (!paramsValid) {
-    return (
-      <section className="panel task-detail-panel task-detail-content--enter">
-        <div className="err" role="alert">
-          <p>Missing task or attempt id in the URL.</p>
-          <div className="task-detail-error-actions">
-            <Link to="/" className="pd__back project-context-back-link">
-              <span aria-hidden="true">&#8249;</span>
-              All tasks
-            </Link>
-          </div>
+  return {
+    taskId,
+    cycleId,
+    paramsValid,
+    activityTab,
+    setActivityTab,
+    visibleStreamCount,
+    setVisibleStreamCount,
+    visibleAuditCount,
+    setVisibleAuditCount,
+    cursorTabId,
+    auditTabId,
+    cursorPanelId,
+    auditPanelId,
+    cycleQuery,
+    streamQuery,
+    auditQuery,
+    now,
+  };
+}
+
+function TaskCycleInvalidParamsSection() {
+  return (
+    <section className="panel task-detail-panel task-detail-content--enter">
+      <div className="err" role="alert">
+        <p>Missing task or attempt id in the URL.</p>
+        <div className="task-detail-error-actions">
+          <Link to="/" className="pd__back project-context-back-link">
+            <span aria-hidden="true">&#8249;</span>
+            All tasks
+          </Link>
         </div>
-      </section>
-    );
-  }
+      </div>
+    </section>
+  );
+}
 
-  if (cycleQuery.isPending) {
-    return (
-      <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
-        <p className="muted" role="status" aria-busy="true">
-          Loading attempt…
+function TaskCycleLoadingSection() {
+  return (
+    <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
+      <p className="muted" role="status" aria-busy="true">
+        Loading attempt…
+      </p>
+    </section>
+  );
+}
+
+function TaskCycleErrorSection({
+  taskId,
+  error,
+  onRetry,
+}: {
+  taskId: string;
+  error: Error;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="panel task-detail-panel task-detail-content--enter">
+      <div className="err" role="alert">
+        <p>{errorMessage(error, "Could not load attempt.")}</p>
+        <div className="task-detail-error-actions">
+          <button type="button" className="secondary" onClick={onRetry}>
+            Try again
+          </button>
+          <Link
+            to={`/tasks/${encodeURIComponent(taskId)}`}
+            className="pd__back project-context-back-link"
+          >
+            <span aria-hidden="true">&#8249;</span>
+            Task
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TaskCycleDetailLoadedSection({
+  pageState,
+  cycle,
+}: {
+  pageState: TaskCycleDetailPageState;
+  cycle: TaskCycleDetail;
+}) {
+  const streamEvents = sortStreamEventsNewestFirst(pageState.streamQuery.events);
+  const auditEvents = filterAuditEventsForCycle(
+    pageState.auditQuery.data?.events,
+    pageState.cycleId,
+  );
+  const timelineDisplay = buildAttemptTimelineDisplay(cycle, pageState.now);
+
+  return (
+    <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
+      <AttemptDetailNavigation taskId={pageState.taskId} />
+      <AttemptDetailHeader cycle={cycle} timelineDisplay={timelineDisplay} />
+      <AttemptPhasesSection
+        taskId={pageState.taskId}
+        cycleId={pageState.cycleId}
+        cycle={cycle}
+        timelineDisplay={timelineDisplay}
+      />
+      <AttemptActivitySection
+        pageState={pageState}
+        streamEvents={streamEvents}
+        auditEvents={auditEvents}
+        showPhaseBadge={timelineDisplay.showPhaseBadge}
+      />
+    </section>
+  );
+}
+
+function AttemptDetailNavigation({ taskId }: { taskId: string }) {
+  return (
+    <nav
+      className="task-detail-nav task-attempt-nav"
+      aria-label="Attempt navigation"
+    >
+      <Link
+        to="/"
+        className="pd__back project-context-back-link task-attempt-nav-link"
+      >
+        All tasks
+      </Link>
+      <span className="task-attempt-nav-separator" aria-hidden="true">
+        /
+      </span>
+      <Link
+        to={`/tasks/${encodeURIComponent(taskId)}`}
+        className="pd__back project-context-back-link task-attempt-nav-link"
+      >
+        Task
+      </Link>
+    </nav>
+  );
+}
+
+function AttemptDetailHeader({
+  cycle,
+  timelineDisplay,
+}: {
+  cycle: TaskCycleDetail;
+  timelineDisplay: AttemptTimelineDisplay;
+}) {
+  return (
+    <header className="task-attempt-header">
+      <div className="task-attempt-title-group">
+        <div className="task-attempt-title-row">
+          <h2 className="task-detail-title">Attempt #{cycle.attempt_seq}</h2>
+          <span className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}>
+            {cycleStatusLabel(cycle.status)}
+          </span>
+        </div>
+        <p className="task-attempt-meta-inline">
+          <span className="task-attempt-meta-inline-item">
+            {formatRunnerModel(cycle.cycle_meta)}
+          </span>
+          <time
+            className="task-attempt-meta-inline-item"
+            dateTime={cycle.started_at}
+          >
+            {timelineDisplay.startedParts.date} at {timelineDisplay.startedParts.time}
+          </time>
+          <span className="task-attempt-meta-inline-item">
+            {timelineDisplay.durationLabel}
+          </span>
         </p>
-      </section>
-    );
-  }
+      </div>
+    </header>
+  );
+}
 
-  if (cycleQuery.isError) {
-    return (
-      <section className="panel task-detail-panel task-detail-content--enter">
+function AttemptPhasesSection({
+  taskId,
+  cycleId,
+  cycle,
+  timelineDisplay,
+}: {
+  taskId: string;
+  cycleId: string;
+  cycle: TaskCycleDetail;
+  timelineDisplay: AttemptTimelineDisplay;
+}) {
+  const {
+    showPhaseBadge,
+    showEndcap,
+    endcapLabel,
+    endcapTime,
+    showStartCap,
+    startCapTime,
+  } = timelineDisplay;
+
+  return (
+    <section
+      className="task-attempt-section task-attempt-section--phases"
+      aria-labelledby="attempt-phases"
+    >
+      <h3 className="task-detail-subheading" id="attempt-phases">
+        <span>Phases</span>
+      </h3>
+      <div className="task-attempt-phase-timeline">
+        {showStartCap ? (
+          <AttemptStartCap
+            startedAt={cycle.started_at}
+            startedTime={startCapTime}
+          />
+        ) : null}
+        <ol
+          className={[
+            "task-attempt-phase-track",
+            showPhaseBadge && "task-attempt-phase-track--numbered",
+            showEndcap && "task-attempt-phase-track--with-endcap",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {cycle.phases.map((phase, index) => (
+            <li
+              key={phase.id}
+              className="task-attempt-phase-step"
+              data-status={phase.status}
+              data-last={
+                !showEndcap && index === cycle.phases.length - 1
+                  ? "true"
+                  : undefined
+              }
+            >
+              <span className="task-attempt-phase-step-marker" aria-hidden="true" />
+              <div className="task-attempt-phase-step-main">
+                <span className="task-attempt-phase-step-name">
+                  {phaseLabel(phase.phase)}
+                </span>
+                <span
+                  className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
+                >
+                  {phaseStatusLabel(phase.status)}
+                </span>
+                {showPhaseBadge ? <PhaseSeqBadge seq={phase.phase_seq} /> : null}
+              </div>
+              <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
+            </li>
+          ))}
+        </ol>
+        {showEndcap && endcapLabel ? (
+          <AttemptTerminalEndcap
+            status={cycle.status}
+            label={endcapLabel}
+            endedAt={cycle.ended_at}
+            endedTime={endcapTime}
+          />
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function AttemptActivitySection({
+  pageState,
+  streamEvents,
+  auditEvents,
+  showPhaseBadge,
+}: {
+  pageState: TaskCycleDetailPageState;
+  streamEvents: TaskCycleStreamEvent[];
+  auditEvents: NonNullable<
+    Awaited<ReturnType<typeof listTaskEvents>>["events"]
+  >;
+  showPhaseBadge: boolean;
+}) {
+  const {
+    activityTab,
+    setActivityTab,
+    cursorTabId,
+    auditTabId,
+    cursorPanelId,
+    auditPanelId,
+    visibleStreamCount,
+    setVisibleStreamCount,
+    visibleAuditCount,
+    setVisibleAuditCount,
+    streamQuery,
+    taskId,
+  } = pageState;
+  const visibleStreamEvents = streamEvents.slice(0, visibleStreamCount);
+  const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
+
+  return (
+    <section
+      className="task-attempt-section task-attempt-section--activity"
+      aria-labelledby="attempt-activity-heading"
+    >
+      <div className="task-attempt-section-heading-row">
+        <h3 className="task-detail-subheading" id="attempt-activity-heading">
+          <span>Activity</span>
+        </h3>
+        <div
+          className="task-attempt-activity-tabs"
+          role="tablist"
+          aria-label="Attempt activity views"
+        >
+          <button
+            type="button"
+            role="tab"
+            id={cursorTabId}
+            aria-selected={activityTab === "cursor"}
+            aria-controls={cursorPanelId}
+            className={
+              activityTab === "cursor"
+                ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+                : "task-attempt-activity-tab"
+            }
+            onClick={() => setActivityTab("cursor")}
+          >
+            Cursor
+            <span className="task-attempt-activity-tab-count">
+              {streamEvents.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id={auditTabId}
+            aria-selected={activityTab === "audit"}
+            aria-controls={auditPanelId}
+            className={
+              activityTab === "audit"
+                ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+                : "task-attempt-activity-tab"
+            }
+            onClick={() => setActivityTab("audit")}
+          >
+            Audit
+            <span className="task-attempt-activity-tab-count">
+              {auditEvents.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {activityTab === "cursor" ? (
+        <CursorActivityPanel
+          panelId={cursorPanelId}
+          tabId={cursorTabId}
+          streamQuery={streamQuery}
+          streamEvents={streamEvents}
+          visibleStreamEvents={visibleStreamEvents}
+          showPhaseBadge={showPhaseBadge}
+          onLoadMore={() => setVisibleStreamCount((n) => n + LOAD_MORE_STEP)}
+        />
+      ) : (
+        <AuditActivityPanel
+          panelId={auditPanelId}
+          tabId={auditTabId}
+          auditQuery={pageState.auditQuery}
+          auditEvents={auditEvents}
+          visibleAuditEvents={visibleAuditEvents}
+          taskId={taskId}
+          onLoadMore={() => setVisibleAuditCount((n) => n + LOAD_MORE_STEP)}
+        />
+      )}
+    </section>
+  );
+}
+
+function CursorActivityPanel({
+  panelId,
+  tabId,
+  streamQuery,
+  streamEvents,
+  visibleStreamEvents,
+  showPhaseBadge,
+  onLoadMore,
+}: {
+  panelId: string;
+  tabId: string;
+  streamQuery: UseTaskCycleStreamResult;
+  streamEvents: TaskCycleStreamEvent[];
+  visibleStreamEvents: TaskCycleStreamEvent[];
+  showPhaseBadge: boolean;
+  onLoadMore: () => void;
+}) {
+  return (
+    <div
+      role="tabpanel"
+      id={panelId}
+      aria-labelledby={tabId}
+      className="task-attempt-activity-panel"
+    >
+      {streamQuery.isError ? (
         <div className="err" role="alert">
-          <p>{errorMessage(cycleQuery.error, "Could not load attempt.")}</p>
+          <p>
+            {errorMessage(streamQuery.error, "Could not load stream events.")}
+          </p>
+        </div>
+      ) : streamEvents.length === 0 ? (
+        <EmptyState
+          title="No Cursor output yet"
+          description="Stream lines appear here as the agent runs."
+          density="compact"
+          hideIcon
+        />
+      ) : (
+        <>
+          <ol
+            className={
+              showPhaseBadge
+                ? "task-attempt-stream-list task-attempt-stream-list--numbered"
+                : "task-attempt-stream-list"
+            }
+          >
+            {visibleStreamEvents.map((ev) => (
+              <StreamEventRow
+                key={ev.id}
+                ev={ev}
+                showPhaseBadge={showPhaseBadge}
+              />
+            ))}
+          </ol>
+          <LoadMoreRows
+            shown={visibleStreamEvents.length}
+            total={streamEvents.length}
+            itemLabel="updates"
+            onLoadMore={onLoadMore}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function AuditActivityPanel({
+  panelId,
+  tabId,
+  auditQuery,
+  auditEvents,
+  visibleAuditEvents,
+  taskId,
+  onLoadMore,
+}: {
+  panelId: string;
+  tabId: string;
+  auditQuery: TaskCycleDetailPageState["auditQuery"];
+  auditEvents: NonNullable<
+    Awaited<ReturnType<typeof listTaskEvents>>["events"]
+  >;
+  visibleAuditEvents: NonNullable<
+    Awaited<ReturnType<typeof listTaskEvents>>["events"]
+  >;
+  taskId: string;
+  onLoadMore: () => void;
+}) {
+  return (
+    <div
+      role="tabpanel"
+      id={panelId}
+      aria-labelledby={tabId}
+      className="task-attempt-activity-panel"
+    >
+      {auditQuery.isPending ? (
+        <TaskTimelineSkeleton />
+      ) : auditQuery.isError ? (
+        <div className="err" role="alert">
+          <p>{errorMessage(auditQuery.error, "Could not load audit events.")}</p>
           <div className="task-detail-error-actions">
             <button
               type="button"
               className="secondary"
-              onClick={() => void cycleQuery.refetch()}
+              onClick={() => void auditQuery.refetch()}
             >
               Try again
             </button>
-            <Link
-              to={`/tasks/${encodeURIComponent(taskId)}`}
-              className="pd__back project-context-back-link"
-            >
-              <span aria-hidden="true">&#8249;</span>
-              Task
-            </Link>
           </div>
         </div>
-      </section>
-    );
-  }
+      ) : auditEvents.length === 0 ? (
+        <EmptyState
+          title="No audit events yet"
+          description="System events for this attempt appear here."
+          density="compact"
+          hideIcon
+        />
+      ) : (
+        <>
+          <AttemptAuditTimeline
+            events={visibleAuditEvents}
+            taskId={taskId}
+            ariaLabelledBy={tabId}
+          />
+          <LoadMoreRows
+            shown={visibleAuditEvents.length}
+            total={auditEvents.length}
+            itemLabel="events"
+            onLoadMore={onLoadMore}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
-  const cycle = cycleQuery.data;
-  // The infinite-query variant exposes `events` flattened across all
-  // loaded pages; the spread + sort below produces a stable newest-
-  // first view independent of fetch order.
-  const streamEvents = [...streamQuery.events].sort(
-    (a, b) => b.stream_seq - a.stream_seq,
+function sortStreamEventsNewestFirst(
+  events: readonly TaskCycleStreamEvent[],
+): TaskCycleStreamEvent[] {
+  return [...events].sort((a, b) => b.stream_seq - a.stream_seq);
+}
+
+function filterAuditEventsForCycle(
+  events: Awaited<ReturnType<typeof listTaskEvents>>["events"] | undefined,
+  cycleId: string,
+) {
+  return (events?.filter((ev) => ev.data.cycle_id === cycleId) ?? []).sort(
+    (a, b) => b.seq - a.seq,
   );
-  const visibleStreamEvents = streamEvents.slice(0, visibleStreamCount);
-  const auditEvents = (
-    auditQuery.data?.events.filter((ev) => ev.data.cycle_id === cycleId) ?? []
-  ).sort((a, b) => b.seq - a.seq);
-  const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
-  const startedParts = formatAttemptStartedParts(cycle.started_at);
-  const durationLabel = formatAttemptDurationMeta(
-    cycle.started_at,
-    cycle.ended_at,
-    cycle.status,
-    now,
-  );
+}
+
+function buildAttemptTimelineDisplay(
+  cycle: TaskCycleDetail,
+  now: number,
+): AttemptTimelineDisplay {
   const showPhaseBadge = cycle.phases.length > 1;
-  // Terminal-only endcap: the running case keeps the rail visually open
-  // (the running phase's brand-colored marker already conveys liveness),
-  // so we only close the rail with a status marker once the attempt has
-  // actually reached a terminal state. See AttemptTerminalEndcap below.
   const endcapLabel = attemptEndcapLabel(cycle.status);
   const showEndcap = endcapLabel !== null && cycle.phases.length > 0;
   const endcapTime = showEndcap ? formatAttemptEndedTime(cycle.ended_at) : null;
-  // Top bookend: pairs with the terminal endcap so the rail reads
-  // "Attempt started → phases → Attempt {completed/failed/aborted}".
-  // See AttemptStartCap below.
   const showStartCap = cycle.phases.length > 0;
   const startCapTime = showStartCap
     ? formatAttemptEndedTime(cycle.started_at)
     : null;
 
-  return (
-    <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
-      <nav
-        className="task-detail-nav task-attempt-nav"
-        aria-label="Attempt navigation"
-      >
-        <Link
-          to="/"
-          className="pd__back project-context-back-link task-attempt-nav-link"
-        >
-          All tasks
-        </Link>
-        <span className="task-attempt-nav-separator" aria-hidden="true">
-          /
-        </span>
-        <Link
-          to={`/tasks/${encodeURIComponent(taskId)}`}
-          className="pd__back project-context-back-link task-attempt-nav-link"
-        >
-          Task
-        </Link>
-      </nav>
-
-      <header className="task-attempt-header">
-        <div className="task-attempt-title-group">
-          <div className="task-attempt-title-row">
-            <h2 className="task-detail-title">
-              Attempt #{cycle.attempt_seq}
-            </h2>
-            <span className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}>
-              {cycleStatusLabel(cycle.status)}
-            </span>
-          </div>
-          <p className="task-attempt-meta-inline">
-            <span className="task-attempt-meta-inline-item">
-              {formatRunnerModel(cycle.cycle_meta)}
-            </span>
-            <time
-              className="task-attempt-meta-inline-item"
-              dateTime={cycle.started_at}
-            >
-              {startedParts.date} at {startedParts.time}
-            </time>
-            <span className="task-attempt-meta-inline-item">{durationLabel}</span>
-          </p>
-        </div>
-      </header>
-
-      <section className="task-attempt-section task-attempt-section--phases" aria-labelledby="attempt-phases">
-        <h3 className="task-detail-subheading" id="attempt-phases">
-          <span>Phases</span>
-        </h3>
-        <div className="task-attempt-phase-timeline">
-          {showStartCap ? (
-            <AttemptStartCap
-              startedAt={cycle.started_at}
-              startedTime={startCapTime}
-            />
-          ) : null}
-          <ol
-            className={[
-              "task-attempt-phase-track",
-              showPhaseBadge && "task-attempt-phase-track--numbered",
-              showEndcap && "task-attempt-phase-track--with-endcap",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {cycle.phases.map((phase, index) => (
-              <li
-                key={phase.id}
-                className="task-attempt-phase-step"
-                data-status={phase.status}
-                // data-last suppresses the row's outgoing rail connector.
-                // When the terminal endcap is rendered below, the last
-                // phase row must keep its connector so the rail flows
-                // continuously into the endcap marker.
-                data-last={
-                  !showEndcap && index === cycle.phases.length - 1
-                    ? "true"
-                    : undefined
-                }
-              >
-                <span className="task-attempt-phase-step-marker" aria-hidden="true" />
-                <div className="task-attempt-phase-step-main">
-                  <span className="task-attempt-phase-step-name">
-                    {phaseLabel(phase.phase)}
-                  </span>
-                  <span
-                    className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
-                  >
-                    {phaseStatusLabel(phase.status)}
-                  </span>
-                  {showPhaseBadge ? (
-                    <PhaseSeqBadge seq={phase.phase_seq} />
-                  ) : null}
-                </div>
-                <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
-              </li>
-            ))}
-          </ol>
-          {showEndcap && endcapLabel ? (
-            <AttemptTerminalEndcap
-              status={cycle.status}
-              label={endcapLabel}
-              endedAt={cycle.ended_at}
-              endedTime={endcapTime}
-            />
-          ) : null}
-        </div>
-      </section>
-
-      <section
-        className="task-attempt-section task-attempt-section--activity"
-        aria-labelledby="attempt-activity-heading"
-      >
-        <div className="task-attempt-section-heading-row">
-          <h3 className="task-detail-subheading" id="attempt-activity-heading">
-            <span>Activity</span>
-          </h3>
-          <div
-            className="task-attempt-activity-tabs"
-            role="tablist"
-            aria-label="Attempt activity views"
-          >
-            <button
-              type="button"
-              role="tab"
-              id={cursorTabId}
-              aria-selected={activityTab === "cursor"}
-              aria-controls={cursorPanelId}
-              className={
-                activityTab === "cursor"
-                  ? "task-attempt-activity-tab task-attempt-activity-tab--active"
-                  : "task-attempt-activity-tab"
-              }
-              onClick={() => setActivityTab("cursor")}
-            >
-              Cursor
-              <span className="task-attempt-activity-tab-count">
-                {streamEvents.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id={auditTabId}
-              aria-selected={activityTab === "audit"}
-              aria-controls={auditPanelId}
-              className={
-                activityTab === "audit"
-                  ? "task-attempt-activity-tab task-attempt-activity-tab--active"
-                  : "task-attempt-activity-tab"
-              }
-              onClick={() => setActivityTab("audit")}
-            >
-              Audit
-              <span className="task-attempt-activity-tab-count">
-                {auditEvents.length}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {activityTab === "cursor" ? (
-          <div
-            role="tabpanel"
-            id={cursorPanelId}
-            aria-labelledby={cursorTabId}
-            className="task-attempt-activity-panel"
-          >
-            {streamQuery.isError ? (
-              <div className="err" role="alert">
-                <p>
-                  {errorMessage(
-                    streamQuery.error,
-                    "Could not load stream events.",
-                  )}
-                </p>
-              </div>
-            ) : streamEvents.length === 0 ? (
-              <EmptyState
-                title="No Cursor output yet"
-                description="Stream lines appear here as the agent runs."
-                density="compact"
-                hideIcon
-              />
-            ) : (
-              <>
-                <ol
-                  className={
-                    showPhaseBadge
-                      ? "task-attempt-stream-list task-attempt-stream-list--numbered"
-                      : "task-attempt-stream-list"
-                  }
-                >
-                  {visibleStreamEvents.map((ev) => (
-                    <StreamEventRow
-                      key={ev.id}
-                      ev={ev}
-                      showPhaseBadge={showPhaseBadge}
-                    />
-                  ))}
-                </ol>
-                <LoadMoreRows
-                  shown={visibleStreamEvents.length}
-                  total={streamEvents.length}
-                  itemLabel="updates"
-                  onLoadMore={() =>
-                    setVisibleStreamCount((n) => n + LOAD_MORE_STEP)
-                  }
-                />
-              </>
-            )}
-          </div>
-        ) : (
-          <div
-            role="tabpanel"
-            id={auditPanelId}
-            aria-labelledby={auditTabId}
-            className="task-attempt-activity-panel"
-          >
-            {auditQuery.isPending ? (
-              <TaskTimelineSkeleton />
-            ) : auditQuery.isError ? (
-              <div className="err" role="alert">
-                <p>
-                  {errorMessage(auditQuery.error, "Could not load audit events.")}
-                </p>
-                <div className="task-detail-error-actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => void auditQuery.refetch()}
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            ) : auditEvents.length === 0 ? (
-              <EmptyState
-                title="No audit events yet"
-                description="System events for this attempt appear here."
-                density="compact"
-                hideIcon
-              />
-            ) : (
-              <>
-                <AttemptAuditTimeline
-                  events={visibleAuditEvents}
-                  taskId={taskId}
-                  ariaLabelledBy={auditTabId}
-                />
-                <LoadMoreRows
-                  shown={visibleAuditEvents.length}
-                  total={auditEvents.length}
-                  itemLabel="events"
-                  onLoadMore={() =>
-                    setVisibleAuditCount((n) => n + LOAD_MORE_STEP)
-                  }
-                />
-              </>
-            )}
-          </div>
-        )}
-      </section>
-    </section>
-  );
+  return {
+    startedParts: formatAttemptStartedParts(cycle.started_at),
+    durationLabel: formatAttemptDurationMeta(
+      cycle.started_at,
+      cycle.ended_at,
+      cycle.status,
+      now,
+    ),
+    showPhaseBadge,
+    endcapLabel,
+    showEndcap,
+    endcapTime,
+    showStartCap,
+    startCapTime,
+  };
 }
 
 function LivePhaseTail({
