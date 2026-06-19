@@ -912,12 +912,6 @@ time.task-attempt-meta-inline-item {
   color: var(--text-primary);
 }
 
-.attempt-audit-verification {
-  padding: 0 0.85rem 0.75rem;
-  border-top: 1px solid var(--border-chrome-hairline);
-  background: var(--surface-soft);
-}
-
 .task-attempt-live-tail {
   display: grid;
   gap: 0.45rem;
