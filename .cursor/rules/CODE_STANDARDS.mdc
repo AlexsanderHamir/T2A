@@ -1,10 +1,8 @@
 ---
 description: >-
-  Canonical file-size limits and folder structure standards for large-scale
-  Go + React/TypeScript monorepo. Governs every directory, file, and module
-  boundary decision across backend (Go), frontend (React/TS), shared tooling,
-  and documentation. Apply when creating, moving, splitting, or reviewing any
-  file or package. Enforced by the backend and frontend improvement agents.
+  File-size limits and folder structure for this Go + TypeScript monorepo.
+  Governs directory layout, module boundaries, and when to split files.
+  Apply when creating, moving, splitting, or reviewing any file or package.
 globs:
   - "**/*.go"
   - "**/*.ts"
@@ -16,27 +14,27 @@ globs:
 alwaysApply: true
 ---
 
-# Project Scale Architecture — File Size & Folder Structure
+# Project Structure — File Size & Layout
 
-You are building a production-grade system intended to grow to hundreds of thousands of lines of code across Go and TypeScript. Every structural decision you make today is either an asset or a debt at scale. This rule is the single source of truth for where things live, how large they may grow, and when and how to split them.
+This repo is a Go + TypeScript monorepo. These rules define where files live, how large they may grow, and when to split them.
 
-**Companion rules:** `backend-engineering-bar.mdc` (Go quality bar), `web-ui-engineering-bar.mdc` (UI quality bar), `component-architecture.mdc` (React decomposition). When this rule conflicts with those on structure, this rule wins. When those rules address quality within a file, they win.
+**Companion rules:** `backend-engineering-bar.mdc` (Go quality), `frontend_bar.mdc` (UI quality). This file wins on structure; those files win on quality within a file.
 
 ---
 
-## PART 1 — PHILOSOPHY
+## PART 1 — PRINCIPLES
 
-### 1.1 Structure Is the First API
+### 1.1 Structure is the first API
 
-A folder structure is a public API for contributors. Every directory name communicates ownership, scope, and dependency direction. A well-structured repo lets a new engineer find any piece of logic in under 60 seconds without grep.
+A folder structure is a public API for contributors. Directory names communicate ownership, scope, and dependency direction. A contributor should find any piece of logic quickly without guessing.
 
-### 1.2 The Three Laws of Scale
+### 1.2 Core principles
 
-1. **Dependency direction is sacred.** Dependencies flow inward: `cmd → internal → pkgs → domain`. Nothing in the inner ring imports from the outer ring. Violations are architectural debt that compounds.
+1. **Dependency direction is fixed.** Dependencies flow inward: `cmd → internal → pkgs → domain`. Nothing in the inner ring imports from the outer ring. Violations are hard to unwind later.
 
-2. **Cohesion over collocation.** Files that change together belong together. Files that serve different masters must be separated even if they feel related today.
+2. **Cohesion over collocation.** Files that change together belong together. Files that serve different purposes should be separated even if they feel related today.
 
-3. **Every boundary must be enforceable.** If a module boundary cannot be enforced by the language (Go's `internal/`, TypeScript's barrel exports, build system rules), document and lint it. Unenforced boundaries dissolve under deadline pressure.
+3. **Boundaries must be enforceable.** If a module boundary cannot be enforced by the language (Go's `internal/`, TypeScript barrel exports, build rules), document and lint it. Unenforced boundaries erode under deadline pressure.
 
 ### 1.3 The File-Size Instinct
 

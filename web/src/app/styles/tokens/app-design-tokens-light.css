@@ -118,7 +118,7 @@
      leaves the page plane — kept consistent so depth = "this overlays". */
   --shadow-overlay-float: 0 4px 16px rgb(0 0 0 / 8%);
   --shadow-overlay-float-hover: 0 4px 16px rgb(0 0 0 / 10%);
-  /* Cards stay flat (redesign.mdc — border + bg contrast, NOT shadow).
+  /* Cards stay flat (frontend_bar.mdc — border + bg contrast, NOT shadow).
      The previous `var(--shadow-sm)` made every panel float on the page,
      which was the dominant "panel-in-panel" tell. */
   --shadow-card: none;

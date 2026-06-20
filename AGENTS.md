@@ -19,7 +19,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 | — | [docs/omitted-features.md](docs/omitted-features.md) | Launch-time UI omissions (feature in code, hidden in SPA). |
 | — | [docs/adr/](docs/adr/) | Historical architecture decisions. |
 
-Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and comments (`CODE_STANDARDS.mdc`, `codebase_comments.mdc`), backend automation (`BACKEND_AUTOMATION/`), UI automation (`UI_AUTOMATION/`), bug hunting (`BUG_HUNTING/`), and feature/product guidance (`FEATURE_IMPLEMENTATION/`). API contracts remain authoritative in `docs/api.md`; web structure and testing expectations live in `docs/web.md` plus `UI_AUTOMATION/testing-recipes.mdc`. Test failure triage: `docs/contributing.md` (**Local checks fail — quick playbook**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run check:standards`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` combine both locally.
+Cursor rules live in `.cursor/rules/`: structure and boundaries (`CODE_STANDARDS.mdc`), comments (`codebase_comments.mdc`), Go quality (`backend-engineering-bar.mdc`), and UI quality (`frontend_bar.mdc`). API contracts remain authoritative in `docs/api.md`; web structure and testing expectations live in `docs/web.md` and [docs/contributing.md](docs/contributing.md) (**Tests**). Test failure triage: `docs/contributing.md` (**Local checks fail — quick playbook**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run check:standards`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` combine both locally.
 
 ## Repository map
 
@@ -71,13 +71,13 @@ API contracts (paths, query params, JSON shapes) are authoritative in [docs/api.
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt` or `go fmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
 
-Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc`).
+Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [docs/contributing.md](docs/contributing.md) **Tests** and `.cursor/rules/backend-engineering-bar.mdc` §11).
 
 **TDD default for agents:** for bugs and features, add or adjust a **failing** test first, then implement until green.
 
 ## Conventions worth remembering
 
-- New tasks API features: follow [docs/contributing.md](docs/contributing.md) (domain → store → handler → optional `web/`) and the backend rules under `.cursor/rules/BACKEND_AUTOMATION/`.
+- New tasks API features: follow [docs/contributing.md](docs/contributing.md) (domain → store → handler → optional `web/`) and `.cursor/rules/backend-engineering-bar.mdc`.
 - JSON at the boundary: Web treats responses as `unknown` until `parseTaskApi` validates; keep that pipeline when adding fields.
 - Same-origin in prod: `taskapi` does not add CORS; dev uses Vite proxy (`web/vite.config.ts`).
 - Commits: when the user asks for a commit, keep it to one logical concern with a conventional message and push only when requested.

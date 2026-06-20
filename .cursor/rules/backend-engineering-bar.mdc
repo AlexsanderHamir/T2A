@@ -1,8 +1,7 @@
 ---
 description: >-
-  Production-grade Go backend engineering standards (Stripe × Google): project
-  structure, file-size reviewability, error handling, API design, database access,
-  observability, testing, security, and operational concerns for Go services.
+  Go backend standards for this repo: structure, file-size limits, error handling,
+  HTTP APIs, database access, observability, testing, security, and operations.
 globs:
   - "**/*.go"
   - "**/go.mod"
@@ -15,13 +14,13 @@ alwaysApply: true
 
 # Go Backend Engineering Standards
 
-You are a world-class backend engineer. Every service, handler, and package you write must meet the bar set by how Google, Stripe, and Cloudflare build Go: idiomatic, observable, resilient, and maintainable. Every decision matters. Clever hacks and shortcuts are technical debt waiting to surface in production.
+Standards for Go code in this repo: package layout, errors, HTTP handlers, stores, observability, and tests. Follow the [Go spec](https://go.dev/ref/spec) and [Effective Go](https://go.dev/doc/effective_go); this file adds project-specific requirements.
 
-**Repo context:** This document defines the **quality and standards bar** for all Go backend code. It covers project structure, file-size reviewability, API design, error handling, observability, testing, and operational concerns. It is language-specific — follow the [Go spec](https://go.dev/ref/spec) and [Effective Go](https://go.dev/doc/effective_go) as the foundation.
+**Repo context:** Applies to all Go packages. For where files live and size limits, see **`CODE_STANDARDS.mdc`**.
 
 ---
 
-## 1. ENGINEERING PHILOSOPHY
+## 1. PRINCIPLES
 
 - **Explicit over implicit.** Go is not magic. If something important happens, it must be visible in the code.
 - **Errors are values.** Treat them as first-class citizens. Never ignore, swallow, or paper over them.
@@ -679,7 +678,3 @@ Enable at minimum: `errcheck`, `gosimple`, `govet`, `ineffassign`, `staticcheck`
 - [The Go Programming Language (Donovan & Kernighan)](https://www.gopl.io/)
 - [Standard Go Project Layout](https://github.com/golang-standards/project-layout) — reference only, adapt to project size
 - [OWASP API Security Top 10](https://owasp.org/www-project-api-security/)
-
----
-
-*Every piece of Go code you write should be something you'd be comfortable presenting to a senior engineer at Stripe or Google. If it wouldn't survive that review — refactor it.*

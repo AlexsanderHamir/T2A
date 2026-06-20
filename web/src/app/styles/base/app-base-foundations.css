@@ -3,7 +3,7 @@
 /*
  * Legacy "console" prompt classes — the previous design prefixed page and
  * section titles with `$` / `>` glyphs to evoke a terminal. Per the
- * redesign brief (`.cursor/rules/redesign.mdc`): "Remove all CLI-style
+ * redesign brief (`.cursor/rules/frontend_bar.mdc`): "Remove all CLI-style
  * decorative copy unless it appears in actual terminal or code contexts."
  *
  * The classes still exist so we don't have to migrate ~6 component files

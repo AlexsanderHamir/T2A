@@ -1,8 +1,7 @@
 ---
 description: >-
-  Professional UI/UX design standards (Stripe × Apple): typography, color,
-  spacing, motion, components, accessibility, and interaction design for
-  production-grade interfaces. Complements CODE_STANDARDS and UI_AUTOMATION/testing-recipes (structure, API, tests).
+  UI/UX standards for web/: typography, color, spacing, motion, components,
+  and accessibility. Complements CODE_STANDARDS (structure, API) and docs/web.md (Vitest patterns).
 globs:
   - "**/*.tsx"
   - "**/*.jsx"
@@ -14,19 +13,19 @@ globs:
 alwaysApply: true
 ---
 
-# UI/UX Design System — Industry Standard (Stripe × Apple)
+# UI/UX Design Standards
 
-You are a world-class UI/UX engineer and product designer. Every interface you create or modify must meet the bar set by Stripe and Apple: pixel-perfect, purposeful, and deeply considered. Every detail matters. Mediocrity is not acceptable.
+These rules define how UI in `web/` should look and behave. Use design tokens and existing patterns before adding one-off styles. When a choice is ambiguous, prefer clarity, consistency, and accessibility over novelty.
 
-**Repo context:** For **`web/`**, also follow **`CODE_STANDARDS.mdc`** (Vite/React structure, **`src/api/`**) and **`UI_AUTOMATION/testing-recipes.mdc`** (Vitest and accessibility testing). This file is the **visual and interaction quality bar**; those files are the **codebase and test bar**.
+**Repo context:** For **`web/`**, also follow **`CODE_STANDARDS.mdc`** (Vite/React structure, **`src/api/`**) and co-located Vitest tests per **`docs/web.md`**. This file covers visual and interaction quality; those files cover structure and tests.
 
 ---
 
-## 1. DESIGN PHILOSOPHY
+## 1. PRINCIPLES
 
 - **Clarity over cleverness.** Every element must earn its place. If it doesn't communicate, remove it.
 - **Intentional restraint.** Whitespace is not empty space — it is structure, emphasis, and breathing room.
-- **Functional beauty.** Aesthetics serve the user's goals, not the designer's ego.
+- **Functional over decorative.** Aesthetics should serve user goals.
 - **Systematic thinking.** Design in systems, not one-off solutions. Every component should feel like it belongs to the same family.
 - **Trust through polish.** Users trust products that feel finished. Unresolved edges, inconsistent spacing, and unclear hierarchy destroy confidence.
 - **Motion with purpose.** Animation should communicate state changes and guide attention — never decorate.
@@ -82,7 +81,7 @@ You are a world-class UI/UX engineer and product designer. Every interface you c
 
 - Color communicates **meaning**, not decoration.
 - Every color decision must answer: what does this communicate to the user?
-- Stripe uses color sparingly — primary purple only for actions; Apple uses blue for interactivity.
+- Use brand color sparingly — one primary action color; semantic colors for status.
 
 ### Palette Structure
 
@@ -470,7 +469,7 @@ Rules:
 
 ---
 
-## 13. ACCESSIBILITY (NON-NEGOTIABLE)
+## 13. ACCESSIBILITY (required)
 
 - **WCAG 2.1 AA minimum** for all shipped UI.
 - All interactive elements reachable and operable via keyboard.
@@ -597,4 +596,4 @@ Rules:
 
 ---
 
-*This rule file defines the non-negotiable quality bar for every UI surface in this codebase. When in doubt, ask: would this ship at Stripe or Apple? If not, refine it.*
+When unsure, match existing components and tokens before inventing new patterns.

@@ -79,7 +79,7 @@ Default Go tests must use SQLite helpers (`tasktestdb.OpenSQLite`), not real Pos
 - `(cd web && npm ci && npm test -- --run && npm run lint && npm run check:standards && npm run build)`
 - Full local bar: `./scripts/check.sh` (Unix) or `.\scripts\check.ps1` (Windows). Go-only fast path: `CHECK_SKIP_WEB=1`.
 
-**TDD default for agents:** for bugs and features, add or adjust a failing test first, then implement until green. Recipes live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`).
+**TDD default for agents:** for bugs and features, add or adjust a failing test first, then implement until green. Go: `.cursor/rules/backend-engineering-bar.mdc` §11 and SQLite helpers above; web: co-located Vitest files and [web.md](./web.md).
 
 ## Troubleshooting
 

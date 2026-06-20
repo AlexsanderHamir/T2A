@@ -44,7 +44,7 @@
     --shadow-modal-sheet: 0 -8px 36px rgb(0 0 0 / 45%);
     --shadow-overlay-float: 0 4px 24px rgb(0 0 0 / 55%);
     --shadow-overlay-float-hover: 0 4px 28px rgb(0 0 0 / 58%);
-    /* Cards stay flat in dark mode too (redesign.mdc — border, not shadow). */
+    /* Cards stay flat in dark mode too (frontend_bar.mdc — border, not shadow). */
     --shadow-card: none;
     --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 35%);
     --shadow-inset-field: inset 0 1px 2px rgb(0 0 0 / 42%);

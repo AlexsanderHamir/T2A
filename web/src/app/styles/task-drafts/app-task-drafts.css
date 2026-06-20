@@ -39,7 +39,7 @@
    Flat list of rows separated by hairlines, not stacked cards. The previous
    "card-style row" treatment (border + shadow + brand left-rail) layered a
    second card chrome on top of the panel, which read as panel-in-panel.
-   Per redesign.mdc: "Rows separated by a hairline border. No card shadows."
+   Per frontend_bar.mdc: "Rows separated by a hairline border. No card shadows."
    The row itself resumes on click; delete uses the task-list icon button in
    `.task-list-row-actions`, revealed on row hover/focus. */
 .draft-row-list {

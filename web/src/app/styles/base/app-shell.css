@@ -92,7 +92,7 @@
   padding: var(--space-4) var(--layout-gutter-x);
   /* Frosted-glass strip — Stripe/Apple top-nav cue. The translucent fill
      lets the page wash show through; the bottom hairline is what actually
-     separates the header from content (redesign.mdc — border, not shadow).
+     separates the header from content (frontend_bar.mdc — border, not shadow).
      Color tokens live in app-design-tokens-{light,dark}.css. */
   background: var(--surface-glass-strip);
   backdrop-filter: blur(14px) saturate(160%);

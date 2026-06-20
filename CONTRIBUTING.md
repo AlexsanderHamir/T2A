@@ -30,7 +30,7 @@ From the repo root, run the full bar from [AGENTS.md](AGENTS.md#commands-to-run-
 
 Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when needed). Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
-**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see [docs/contributing.md](docs/contributing.md).
+**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); Go patterns in `.cursor/rules/backend-engineering-bar.mdc` §11, web patterns in [docs/web.md](docs/web.md) and co-located `*.test.tsx` files. For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see [docs/contributing.md](docs/contributing.md).
 
 **Observability:** Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
 
@@ -51,7 +51,7 @@ For **task UI** under `web/src/tasks/`, keep new pieces in the right family fold
 
 ## Cursor / AI rules
 
-Rules under `.cursor/rules/` cover shared structure (`CODE_STANDARDS.mdc`, `codebase_comments.mdc`), backend automation, UI automation, bug hunting, and feature/product guidance.
+Rules under `.cursor/rules/` cover structure (`CODE_STANDARDS.mdc`), comments (`codebase_comments.mdc`), Go quality (`backend-engineering-bar.mdc`), and UI quality (`frontend_bar.mdc`).
 
 **Full pass:** For cross-cutting or high-risk changes, run the same local bar as CI with `.\scripts\check.ps1` or `./scripts/check.sh`. Narrow only when all touched files fit Go-only, `web/`-only, or docs-only scope.
 

@@ -1,9 +1,8 @@
 ---
 description: >-
-  Code commenting standards for Go and TypeScript/React. Comments explain why,
-  not what. Required for complex logic, edge cases, non-obvious decisions, and
-  public APIs. Forbidden on self-explanatory code. Enforced across all agents
-  and manual review.
+  Comment standards for Go and TypeScript/React. Comments explain why, not what.
+  Required for non-obvious logic, edge cases, and public APIs. Omit on
+  self-explanatory code.
 globs:
   - "**/*.go"
   - "**/*.ts"

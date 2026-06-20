@@ -83,7 +83,7 @@
   --z-skip-link: 100001;
 
   /*
-   * Type ramp capped to four visual sizes (redesign.mdc): 13 / 14 / 16 / 24px.
+   * Type ramp capped to four visual sizes (frontend_bar.mdc): 13 / 14 / 16 / 24px.
    * Larger token names alias onto those four so existing consumers keep working.
    */
   --text-xs: 0.8125rem;
@@ -103,7 +103,7 @@
   /* Primary buttons, skip link, empty-state CTAs (DS §7) */
   --text-button-tracking: 0.01em;
 
-  /* Motion (see .cursor/rules/16-ui-ux-iteration.mdc §8) */
+  /* Motion (see .cursor/rules/frontend_bar.mdc §8) */
   --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
