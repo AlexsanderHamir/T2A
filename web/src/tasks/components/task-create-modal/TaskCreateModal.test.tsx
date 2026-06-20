@@ -4,12 +4,23 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskCreateModal } from "./TaskCreateModal";
+
+const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
+
+vi.mock("@/launch/omittedFeatures", () => ({
+  OMITTED_UI_FEATURES: {
+    projects: true,
+    tagsAndDependencies: true,
+    schedule: true,
+  },
+  isUiFeatureOmitted: (feature: string) => isUiFeatureOmitted(feature),
+}));
 
 const testAppSettings: AppSettings = {
   ...APP_SETTINGS_DEFAULTS,
@@ -86,6 +97,10 @@ async function expandMoreOptions(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TaskCreateModal", () => {
+  beforeEach(() => {
+    isUiFeatureOmitted.mockImplementation(() => false);
+  });
+
   it("disables Create until at least one done criterion exists", () => {
     renderModal({ checklistItems: [] });
     expect(screen.getByRole("button", { name: /^create task$/i })).toBeDisabled();
@@ -274,6 +289,26 @@ describe("TaskCreateModal", () => {
     expect(toggle).toHaveTextContent(/Scheduled/);
     expect(toggle).toHaveTextContent(/2 tags/);
     expect(toggle).toHaveTextContent(/Milestone/);
+  });
+
+  describe("launch omissions", () => {
+    it("hides schedule and tags from More options when launch flags omit them", async () => {
+      isUiFeatureOmitted.mockImplementation(
+        (feature) => feature === "schedule" || feature === "tagsAndDependencies",
+      );
+      const user = userEvent.setup();
+      renderModal({
+        tagsCsv: "backend, api",
+        milestone: "M1",
+        schedule: "2026-04-19T13:00:00Z",
+      });
+      const toggle = screen.getByTestId("task-create-more-options-toggle");
+      expect(toggle).not.toHaveTextContent(/2 tags/);
+      expect(toggle).not.toHaveTextContent(/Scheduled/);
+      await expandMoreOptions(user);
+      expect(screen.queryByTestId("schedule-picker-input")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/^tags$/i)).not.toBeInTheDocument();
+    });
   });
 
   describe("autonomy toggle", () => {
