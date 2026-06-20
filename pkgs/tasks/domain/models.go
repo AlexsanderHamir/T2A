@@ -207,6 +207,15 @@ type TaskDraft struct {
 	UpdatedAt   time.Time      `gorm:"not null;index"`
 }
 
+// TaskTemplate stores a reusable task compose blueprint (not a runnable task).
+type TaskTemplate struct {
+	ID          string         `gorm:"primaryKey"`
+	Name        string         `gorm:"not null;index"`
+	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
+	CreatedAt   time.Time      `gorm:"not null;index"`
+	UpdatedAt   time.Time      `gorm:"not null;index"`
+}
+
 // TaskCycle is one execution attempt for a task. The (TaskID, AttemptSeq) pair
 // gives a stable monotonic ordering of attempts. A cycle's lifecycle is enforced
 // at the store boundary: at most one Running cycle per task at any time, and

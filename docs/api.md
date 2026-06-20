@@ -84,6 +84,19 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 | GET | `/task-drafts/{id}` | Full draft with `payload` defaulted to `{}`. |
 | DELETE | `/task-drafts/{id}` | `204`. |
 
+### Task templates
+
+Named, durable task compose blueprints. Payload shape matches task create fields (title, prompt, status, priority, checklist, runner, project, schedule, tags, milestone, `depends_on`). Never publishes on SSE for CRUD; instantiate publishes `task_created` per success (same as `POST /tasks`).
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/task-templates` | Upsert. Body `{ id?, name?, payload }`. `name` defaults to trimmed `payload.title`. Validates like `POST /tasks` (title, priority, checklist, runner/model, prompt @-mentions when repo enabled). **201** summary `{ id, name, created_at, updated_at }`. |
+| GET | `/task-templates` | List summaries (without `payload`). `?limit` (0–100, default 50). `?q=` ILIKE search on `name`. |
+| GET | `/task-templates/{id}` | Full template with `payload`. |
+| PATCH | `/task-templates/{id}` | Partial `{ name?, payload? }`. **200** full detail. |
+| DELETE | `/task-templates/{id}` | `204`. |
+| POST | `/task-templates/instantiate` | Body `{ template_ids: string[] }`. Processes IDs in request order (duplicates allowed). **200** `{ tasks: Task[], errors: { template_id, error }[] }`. Strips `depends_on`; omits past `pickup_not_before`. **400** when `template_ids` is empty. |
+
 ### Execution cycles
 
 See [data-model.md](./data-model.md) for state machine and substrate semantics.
@@ -168,7 +181,7 @@ Lossless reconnects via `Last-Event-ID`: a ring buffer (default 1024 entries) re
 | `agent_run_cancelled` | `POST /settings/cancel-current-run` actually cancelled something. | `{ type }` (no id) |
 | `resync` | Hub-emitted. Out-of-window reconnect or slow-consumer eviction. No `id:` line on wire (preserves `Last-Event-ID` cursor). | `{ type }` |
 
-Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts/*`) and `POST /settings/probe-cursor` are not part of the SSE surface.
+Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts/*`), task templates CRUD (`/task-templates` except instantiate), and `POST /settings/probe-cursor` are not part of the SSE surface.
 
 ### Dev synthetic SSE (`T2A_SSE_TEST=1`)
 

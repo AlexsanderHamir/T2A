@@ -315,6 +315,20 @@ Both verdict tables enforce a composite unique index on `(cycle_id, attempt_seq,
 
 Pre-PR2 cycles return zero rows from these tables; the handler returns empty arrays, never 404. Cleanup is FK-driven: deleting a cycle (which itself cascades from task deletion) cascades to the verdict rows; `criterion_id` is intentionally `NO ACTION` so that historical cycles remain readable after a checklist edit.
 
+## Task templates (`task_templates`)
+
+Named, durable compose blueprints — same field set as task create JSON (without runtime-only `id`, `draft_id`, `gate`). Distinct from `task_drafts` (ephemeral autosave, deleted on task submit) and from executable `tasks`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | string pk (UUID) | Server-assigned when omitted on save. |
+| `name` | string | Display + search key; defaults to trimmed `payload.title` at save. |
+| `payload_json` | jsonb | `TaskComposePayload` — title, prompt, status, priority, checklist, runner, project, schedule, tags, milestone, `depends_on`. |
+| `created_at` | timestamptz | indexed. |
+| `updated_at` | timestamptz | indexed; list order DESC. |
+
+Instantiate (`POST /task-templates/instantiate`) maps payload → `POST /tasks` via the shared compose pipeline: `depends_on` stripped (stale UUIDs); past `pickup_not_before` omitted; no draft row linkage.
+
 ## Project context
 
 Curated context nodes (`project_context_items`) and user-curated relationships (`project_context_edges`, typed `relation` + `1..5 strength`) owned by a project. A task's run captures the user-selected bundle in `task_context_snapshots` — immutable, cycle-scoped.
