@@ -321,3 +321,50 @@ func TestHTTP_createTask_checklistItemsPersisted(t *testing.T) {
 		t.Fatalf("items=%v", clBody.Items)
 	}
 }
+
+// TestHTTP_createTask_checklistVerifyCommandsPersisted pins POST /tasks accepting
+// verify_commands on checklist_items (docs/api.md).
+func TestHTTP_createTask_checklistVerifyCommandsPersisted(t *testing.T) {
+	srv := newTaskTestServer(t)
+	defer srv.Close()
+
+	body := `{"title":"with-verify","priority":"medium","checklist_items":[{"text":"Ship feature","verify_commands":[{"command":"go test ./...","expected_outcome":"pass"}]}]}`
+	res, raw := postCreateRaw(t, srv.URL, body)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	var task domain.Task
+	if err := json.Unmarshal(raw, &task); err != nil {
+		t.Fatal(err)
+	}
+	clRes, err := http.Get(srv.URL + "/tasks/" + task.ID + "/checklist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clRaw, _ := io.ReadAll(clRes.Body)
+	_ = clRes.Body.Close()
+	if clRes.StatusCode != http.StatusOK {
+		t.Fatalf("checklist GET status %d body=%s", clRes.StatusCode, clRaw)
+	}
+	var clBody struct {
+		Items []struct {
+			Text           string `json:"text"`
+			VerifyCommands []struct {
+				Command         string `json:"command"`
+				ExpectedOutcome string `json:"expected_outcome"`
+			} `json:"verify_commands"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(clRaw, &clBody); err != nil {
+		t.Fatalf("decode checklist: %v body=%s", err, clRaw)
+	}
+	if len(clBody.Items) != 1 {
+		t.Fatalf("items=%d want 1: %s", len(clBody.Items), clRaw)
+	}
+	if len(clBody.Items[0].VerifyCommands) != 1 {
+		t.Fatalf("verify_commands=%v", clBody.Items[0].VerifyCommands)
+	}
+	if clBody.Items[0].VerifyCommands[0].Command != "go test ./..." {
+		t.Fatalf("command=%q", clBody.Items[0].VerifyCommands[0].Command)
+	}
+}

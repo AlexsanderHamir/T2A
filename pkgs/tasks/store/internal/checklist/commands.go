@@ -15,8 +15,8 @@ import (
 
 // CreateChecklistItemInput is one criterion seeded at task create.
 type CreateChecklistItemInput struct {
-	Text           string
-	VerifyCommands []VerifyCommandInput
+	Text           string               `json:"text"`
+	VerifyCommands []VerifyCommandInput `json:"verify_commands,omitempty"`
 }
 type VerifyCommandInput struct {
 	Command         string `json:"command"`
