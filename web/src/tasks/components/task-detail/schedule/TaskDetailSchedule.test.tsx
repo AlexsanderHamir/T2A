@@ -89,8 +89,45 @@ describe("TaskDetailSchedule (read-only)", () => {
       status: "running",
       pickup: "2026-04-22T13:00:00Z",
     });
+    expect(screen.getByTestId("task-detail-phase-complete-pending")).toBeInTheDocument();
     expect(screen.getByTestId("task-detail-schedule-badge")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("shows a pending completed placeholder while the task is running", () => {
+    renderPanel({ status: "running", pickup: null });
+    const row = screen.getByTestId("task-detail-phase-complete-pending");
+    expect(row).toHaveClass("task-detail-schedule-row--phase-pending");
+    expect(row).toHaveTextContent(/completed/i);
+    expect(row).toHaveTextContent("—");
+    expect(screen.queryByTestId("task-detail-phase-complete")).toBeNull();
+  });
+
+  it("replaces the pending placeholder with the timestamp when criteria are satisfied", () => {
+    const { Wrapper } = createWrapper();
+    render(
+      <Wrapper>
+        <TaskDetailSchedule
+          task={{
+            status: "running",
+            pickup_not_before: undefined,
+            criteria_satisfied_at: "2026-04-22T13:00:00Z",
+          }}
+        />
+      </Wrapper>,
+    );
+    expect(screen.getByTestId("task-detail-phase-complete")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-detail-phase-complete-pending")).toBeNull();
+    expect(screen.getByTestId("task-detail-phase-complete")).toHaveTextContent(
+      /09:00/,
+    );
+  });
+
+  it("does not show a completed placeholder for a ready task", () => {
+    renderPanel({ status: "ready", pickup: null });
+    expect(
+      screen.queryByTestId("task-detail-phase-complete-pending"),
+    ).toBeNull();
   });
 
   it("hides pickup schedule UI when launch omits schedule", () => {

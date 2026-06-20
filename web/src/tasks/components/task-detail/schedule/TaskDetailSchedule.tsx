@@ -8,6 +8,11 @@ type Props = {
 
 const TERMINAL_STATUSES: ReadonlySet<Status> = new Set(["done", "failed"]);
 
+/** Task is executing; completion time is not known until criteria are satisfied. */
+const PHASE_COMPLETE_PLACEHOLDER_STATUSES: ReadonlySet<Status> = new Set([
+  "running",
+]);
+
 /**
  * Read-only pickup schedule line on the task detail toolbar. Mutations
  * live in the edit-task modal (`TaskCreateModal` edit mode + `SchedulePicker`).
@@ -19,8 +24,10 @@ export function TaskDetailSchedule({ task }: Props) {
   const hasSchedule = Boolean(task.pickup_not_before);
   const phaseCompleteAt = (task.criteria_satisfied_at ?? "").trim();
   const hasPhaseComplete = phaseCompleteAt !== "";
+  const showPhaseCompletePlaceholder =
+    !hasPhaseComplete && PHASE_COMPLETE_PLACEHOLDER_STATUSES.has(task.status);
 
-  if (!hasPhaseComplete && !scheduleUiEnabled) {
+  if (!hasPhaseComplete && !scheduleUiEnabled && !showPhaseCompletePlaceholder) {
     return null;
   }
 
@@ -56,6 +63,23 @@ export function TaskDetailSchedule({ task }: Props) {
               ·
             </span>
             <time dateTime={phaseCompleteAt}>{phaseFormatted}</time>
+          </div>
+        </div>
+      ) : showPhaseCompletePlaceholder ? (
+        <div
+          className="task-detail-schedule-row task-detail-schedule-row--phase task-detail-schedule-row--phase-pending"
+          data-testid="task-detail-phase-complete-pending"
+          aria-label="Completed, pending"
+        >
+          <span className="task-detail-schedule-row-icon" aria-hidden="true">
+            <PhaseCompleteGlyph />
+          </span>
+          <div className="task-detail-schedule-row-body">
+            <span className="task-detail-schedule-row-label">Completed</span>
+            <span className="task-detail-schedule-row-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="task-detail-schedule-row-pending">—</span>
           </div>
         </div>
       ) : null}

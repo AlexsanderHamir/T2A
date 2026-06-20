@@ -31,6 +31,17 @@
   color: var(--success);
 }
 
+.task-detail-schedule-row--phase-pending .task-detail-schedule-row-icon {
+  color: var(--text-tertiary);
+}
+
+.task-detail-schedule-row-pending {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  font-weight: 450;
+}
+
 .task-detail-schedule-row--scheduled .task-detail-schedule-row-icon {
   color: var(--info);
 }
