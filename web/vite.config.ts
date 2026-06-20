@@ -61,6 +61,7 @@ export default mergeConfig(
           },
         },
         "/task-drafts": { target: api, changeOrigin: true },
+        "/task-templates": { target: api, changeOrigin: true },
         "/events": { target: api, changeOrigin: true },
         "/repo": { target: api, changeOrigin: true },
         // GET/PATCH /settings + POST /settings/probe-cursor + POST /settings/cancel-current-run.

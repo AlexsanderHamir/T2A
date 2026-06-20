@@ -160,15 +160,15 @@ export function TaskTemplatesPage() {
         </div>
       </header>
 
-      <div className="task-templates-search">
+      <div className="task-templates-search field grow task-list-search-field">
         <label htmlFor="task-templates-search" className="visually-hidden">
           Search templates
         </label>
         <input
           id="task-templates-search"
-          className="input"
           type="search"
-          placeholder="Search by title"
+          placeholder="Search by title…"
+          autoComplete="off"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />

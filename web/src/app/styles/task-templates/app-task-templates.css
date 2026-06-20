@@ -1,9 +1,8 @@
 .task-templates-search {
   margin: 0 0 var(--space-4);
-}
-
-.task-templates-search .input {
-  max-width: 28rem;
+  margin-left: 0;
+  flex: none;
+  max-width: 22rem;
 }
 
 .template-list-toolbar {
