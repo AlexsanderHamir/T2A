@@ -187,6 +187,47 @@ func TestLoadContinuationBundle_verifyOnlyWhenExecuteSucceeded(t *testing.T) {
 	}
 }
 
+func TestLoadContinuationBundle_carriesCriteriaReportProbeErr(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	tsk, err := st.Create(ctx, store.CreateTaskInput{
+		Title: "criteria probe parent", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	cycle, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("start cycle: %v", err)
+	}
+	exec, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+	probeErr := "criteria report invalid: unknown field function"
+	details := git.MergeCriteriaReportProbeErr([]byte(`{"summary":"runner failed"}`), probeErr)
+	summary := git.ExecuteInvalidCommitReason
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: cycle.ID, PhaseSeq: exec.PhaseSeq,
+		Status: domain.PhaseStatusFailed, Summary: &summary, Details: details, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("complete execute: %v", err)
+	}
+	if _, err := st.TerminateCycle(ctx, cycle.ID, domain.CycleStatusFailed, git.ExecuteInvalidCommitReason, domain.ActorAgent); err != nil {
+		t.Fatalf("terminate: %v", err)
+	}
+
+	svc := NewService(st, Options{WorkingDir: t.TempDir()})
+	bundle, err := svc.LoadContinuationBundle(ctx, cycle.ID)
+	if err != nil {
+		t.Fatalf("load bundle: %v", err)
+	}
+	if bundle.CriteriaReportProbeErr != probeErr {
+		t.Fatalf("CriteriaReportProbeErr=%q want %q", bundle.CriteriaReportProbeErr, probeErr)
+	}
+}
+
 func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 	ctx := context.Background()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))

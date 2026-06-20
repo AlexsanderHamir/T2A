@@ -2,11 +2,15 @@ package git
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -304,6 +308,7 @@ func (s *Service) IngestExecuteCommits(
 		return ExecuteCommitIngestOutcome{}, nil
 	}
 	g := phaseContextFromSnapshot(snap)
+	warnStrictCriteriaReportDecode(s.reportDir, cycle.ID)
 	entries, err := s.resolvePhaseCommits(ctx, g)
 	if err != nil {
 		return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
@@ -373,4 +378,55 @@ func (s *Service) PriorCycleBaseSHA(ctx context.Context, cycleID string, current
 		return "", nil
 	}
 	return CycleBaseFromPhaseDetails(first.DetailsJSON), nil
+}
+
+const maxCriteriaReportProbeBytes = 256 * 1024
+
+// warnStrictCriteriaReportDecode logs criteria-report strict-decode issues without
+// blocking commit ingest — git rev-list remains the sole source of truth (ADR-0016).
+//
+//funclogmeasure:skip category=hot-path reason="Non-fatal probe; IngestExecuteCommits emits the operation trace."
+func warnStrictCriteriaReportDecode(reportDir, cycleID string) {
+	reportDir = strings.TrimSpace(reportDir)
+	cycleID = strings.TrimSpace(cycleID)
+	if reportDir == "" || cycleID == "" {
+		return
+	}
+	path := reports.CriteriaReportPath(reportDir, cycleID)
+	info, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		slog.Warn("criteria report probe failed; ingesting commits from git only",
+			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
+			"cycle_id", cycleID, "err", err)
+		return
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		slog.Warn("criteria report probe failed; ingesting commits from git only",
+			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
+			"cycle_id", cycleID, "err", "symlink not permitted")
+		return
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		slog.Warn("criteria report probe failed; ingesting commits from git only",
+			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
+			"cycle_id", cycleID, "err", err)
+		return
+	}
+	defer f.Close()
+	dec := json.NewDecoder(io.LimitReader(f, maxCriteriaReportProbeBytes))
+	dec.DisallowUnknownFields()
+	var rep struct {
+		SchemaVersion int               `json:"schema_version"`
+		Criteria      []json.RawMessage `json:"criteria"`
+		Commits       []json.RawMessage `json:"commits,omitempty"`
+	}
+	if err := dec.Decode(&rep); err != nil {
+		slog.Warn("criteria report parse failed; ingesting commits from git only",
+			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
+			"cycle_id", cycleID, "err", err)
+	}
 }
