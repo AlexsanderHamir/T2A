@@ -391,6 +391,19 @@ export function demoTaskDraftsWire(): unknown {
   };
 }
 
+export function demoTaskTemplatesWire(): unknown {
+  return {
+    templates: [
+      {
+        id: "t1111111-1111-4111-8111-111111111111",
+        name: "Template: incident runbook",
+        created_at: ISO,
+        updated_at: ISO,
+      },
+    ],
+  };
+}
+
 export function demoTaskEventsWire(taskId: string): unknown {
   return {
     task_id: taskId,

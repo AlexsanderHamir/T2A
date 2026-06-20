@@ -80,9 +80,14 @@ describe("taskQueryKeys", () => {
     ]);
   });
 
-  it("defines stats and drafts keys for invalidation outside tasks tree", () => {
+  it("defines stats, drafts, and templates keys for invalidation outside tasks tree", () => {
     expect(taskQueryKeys.stats()).toEqual(["task-stats"]);
     expect(taskQueryKeys.drafts()).toEqual(["task-drafts"]);
+    expect(taskQueryKeys.templates()).toEqual(["task-templates"]);
+    expect(taskQueryKeys.templates({ q: "alpha" })).toEqual([
+      "task-templates",
+      { q: "alpha" },
+    ]);
   });
 
   it("scopes cycle failures list queries for pagination and sort", () => {

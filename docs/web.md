@@ -7,13 +7,14 @@ Vite + React client under `web/`. All `fetch` calls live in `web/src/api/`; resp
 | Path | Module | Notes |
 | --- | --- | --- |
 | `/` | `web/src/tasks/` | Task home list |
+| `/templates` | `web/src/tasks/` | Saved task templates (search, batch instantiate) |
 | `/drafts` | `web/src/tasks/` | Saved create-task drafts |
 | `/projects` | `web/src/projects/` | Project list |
 | `/projects/:id` | `web/src/projects/` | Project detail |
 | `/settings` | `web/src/settings/` | App settings |
 | `/tasks/:id` | `web/src/tasks/pages/` | Task detail |
 
-Primary nav links: Tasks, Drafts, Projects (Settings is header gear).
+Primary nav links: Tasks, Templates, Drafts, Projects (Settings is header gear).
 
 ## Cold start
 
@@ -36,11 +37,11 @@ Create-task policy and hook composition live in [`web/src/tasks/create/`](../web
 
 1. [ADR-0024](./adr/ADR-0024-task-create-flow-slice.md) — Decide vs Apply boundaries, invariants I1–I7
 2. `decideCreateEntry.ts` — `openCreateModal` routing (loading / error / drafts / fresh)
-3. `validateCreateForm.ts`, `draftPayload.ts`, `buildCreateMutationInput.ts` — pure validation and wire payloads
+3. `composePayload.ts`, `validateCreateForm.ts`, `draftPayload.ts`, `buildCreateMutationInput.ts` — shared compose payload, validation, and wire shapes
 4. `mapCreateFlowViewModel.ts` — flat public return shape for `useTasksApp`
 5. `hooks/useTaskCreateFlow.ts` — composer; shim at `web/src/tasks/hooks/useTaskCreateFlow.ts`
 
-Modal UI stays in `web/src/tasks/components/task-create-modal/` for V1. Race contracts: `useTasksApp.test.tsx`.
+Modal UI stays in `web/src/tasks/components/task-create-modal/` for V1. **`composeTarget`** (`task` | `template`) and **`composeOperation`** (`create` | `edit`) drive one modal for task create/edit and template save/edit. Templates list and batch create: `web/src/tasks/pages/TaskTemplatesPage.tsx` (`GET /task-templates`, `POST /task-templates/instantiate`). API client: `web/src/api/taskTemplates.ts`. Race contracts: `useTasksApp.test.tsx`.
 
 ## Query policy
 

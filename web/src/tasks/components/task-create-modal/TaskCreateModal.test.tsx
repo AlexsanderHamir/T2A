@@ -455,4 +455,44 @@ describe("TaskCreateModal", () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe("template compose mode", () => {
+    function renderTemplateModal(
+      props?: Partial<ComponentProps<typeof TaskCreateModal>>,
+    ) {
+      return renderModal({
+        composeTarget: "template",
+        composeOperation: "create",
+        checklistItems: [{ text: "Done when shipped" }],
+        ...props,
+      });
+    }
+
+    it("shows Save template as the primary action without a Save draft button", () => {
+      renderTemplateModal();
+      expect(
+        screen.getByRole("button", { name: /^save template$/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /save draft/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("uses the New template dialog title in create mode", () => {
+      renderTemplateModal();
+      expect(
+        screen.getByRole("dialog", { name: /new template/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("uses the Edit template dialog title when editing", () => {
+      renderTemplateModal({ composeOperation: "edit" });
+      expect(
+        screen.getByRole("dialog", { name: /edit template/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /^save$/i }),
+      ).toBeInTheDocument();
+    });
+  });
 });

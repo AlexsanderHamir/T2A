@@ -7,6 +7,7 @@ import {
   demoTaskChecklistWire,
   demoTaskCyclesListWire,
   demoTaskDraftsWire,
+  demoTaskTemplatesWire,
   demoTaskEventsWire,
   demoTaskStatsWire,
   demoTasksListWire,
@@ -87,6 +88,10 @@ export function interceptUiTestModeFetch(
 
   if (path.startsWith("/task-drafts")) {
     return jsonResponse(demoTaskDraftsWire());
+  }
+
+  if (path.startsWith("/task-templates")) {
+    return jsonResponse(demoTaskTemplatesWire());
   }
 
   const checklist = path.match(/^\/tasks\/([^/]+)\/checklist$/);
