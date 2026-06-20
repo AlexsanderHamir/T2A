@@ -76,7 +76,7 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 **Operator-visible behavior**
 
 - Create / edit task modal **More options**: no **Tags & dependencies** fieldset (tags, milestone, depends-on picker).
-- Collapsed **More options** summary no longer mentions tags or dependencies (shows agent + schedule only when empty).
+- Collapsed **More options** summary no longer mentions tags or dependencies (shows agent only when schedule is also omitted).
 - New tasks still submit with empty tags, no milestone, and no `depends_on` edges unless set via API.
 
 **Still implemented (intentionally not deleted)**
@@ -96,6 +96,41 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 
 - [ ] Set `tagsAndDependencies: false` in `web/src/launch/omittedFeatures.ts`.
 - [ ] Smoke-test create and edit modals: tags, milestone, depends-on picker.
+- [ ] Move this section to **Restored** below with the release name/date.
+
+---
+
+### Schedule for (create/edit modal)
+
+| Field | Value |
+| --- | --- |
+| **Status** | Omitted (initial launch) |
+| **Since** | 2026-06-20 |
+| **Target restore** | TBD — when deferred pickup scheduling is launch-ready |
+
+**Operator-visible behavior**
+
+- Create / edit task modal **More options**: no **Schedule for** fieldset (`SchedulePicker` / pickup schedule field).
+- Collapsed **More options** summary no longer mentions schedule (shows agent only when all secondary fields are omitted).
+- New tasks omit `pickup_not_before` on create — worker picks up when free (same as “Picks up immediately”).
+
+**Still implemented (intentionally not deleted)**
+
+- `pickup_not_before` on tasks and scheduling predicates — [data-model.md](./data-model.md), [docs/domain/task-scheduling.md](./domain/task-scheduling.md).
+- Task detail schedule UI and bulk reschedule on the list unchanged.
+- REST PATCH/POST still accept `pickup_not_before` — [api.md](./api.md).
+
+**UI gates**
+
+| Surface | File |
+| --- | --- |
+| Modal schedule fieldset | `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx` |
+| Summary line copy | `web/src/tasks/components/task-create-modal/advancedSummaryLine.ts` |
+
+**Restore checklist**
+
+- [ ] Set `schedule: false` in `web/src/launch/omittedFeatures.ts`.
+- [ ] Smoke-test create and edit modals: schedule picker and deferred pickup copy.
 - [ ] Move this section to **Restored** below with the release name/date.
 
 ---

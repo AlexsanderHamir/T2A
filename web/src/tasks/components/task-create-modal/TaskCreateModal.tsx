@@ -127,6 +127,7 @@ export function TaskCreateModal({
   const isEdit = editingTaskId != null;
   const disabled = pending || saving;
   const tagsAndDependenciesUiEnabled = !isUiFeatureOmitted("tagsAndDependencies");
+  const scheduleUiEnabled = !isUiFeatureOmitted("schedule");
   const modalBusy = isEdit ? patchPending : pending;
   const modalTitle = isEdit ? "Edit task" : "New task";
   const modalTitleId = isEdit ? "task-edit-modal-title" : "task-create-modal-title";
@@ -268,6 +269,7 @@ export function TaskCreateModal({
                         tagsCsv,
                         milestone,
                         dependsOn,
+                        includeSchedule: scheduleUiEnabled,
                         includeTagsAndDependencies: tagsAndDependenciesUiEnabled,
                       })}
                     </span>
@@ -292,24 +294,26 @@ export function TaskCreateModal({
                       onCursorModelChange={onTaskCursorModelChange}
                     />
 
-                    {isEdit ? (
-                      <TaskCreateModalPickupScheduleField
-                        status={status}
-                        value={schedule}
-                        onChange={onScheduleChange}
-                        appTimezone={appTimezone}
-                        disabled={disabled}
-                        idPrefix={`${idsPrefix}-modal`}
-                      />
-                    ) : (
-                      <SchedulePicker
-                        value={schedule}
-                        onChange={onScheduleChange}
-                        appTimezone={appTimezone}
-                        disabled={disabled}
-                        idPrefix="task-create-modal"
-                      />
-                    )}
+                    {scheduleUiEnabled ? (
+                      isEdit ? (
+                        <TaskCreateModalPickupScheduleField
+                          status={status}
+                          value={schedule}
+                          onChange={onScheduleChange}
+                          appTimezone={appTimezone}
+                          disabled={disabled}
+                          idPrefix={`${idsPrefix}-modal`}
+                        />
+                      ) : (
+                        <SchedulePicker
+                          value={schedule}
+                          onChange={onScheduleChange}
+                          appTimezone={appTimezone}
+                          disabled={disabled}
+                          idPrefix="task-create-modal"
+                        />
+                      )
+                    ) : null}
 
                     {tagsAndDependenciesUiEnabled ? (
                       <TaskCreateModalSchedulingFields

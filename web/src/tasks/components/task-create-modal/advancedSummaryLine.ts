@@ -4,9 +4,9 @@
  * operator see the effective values for the secondary fields (agent,
  * schedule, tags, milestone, dependencies) without expanding the panel.
  *
- * Returns a stable fallback ("Agent, schedule, tags, dependencies") when
- * every input is at its default — that copy doubles as the affordance
- * description so the disclosure never reads as empty chrome.
+ * Returns a stable fallback when every input is at its default — that
+ * copy doubles as the affordance description so the disclosure never
+ * reads as empty chrome.
  */
 export function advancedSummaryLine(input: {
   runner: string;
@@ -15,10 +15,13 @@ export function advancedSummaryLine(input: {
   tagsCsv: string;
   milestone: string;
   dependsOn: string[];
+  /** When false, schedule is omitted from the collapsed summary (launch gate). */
+  includeSchedule?: boolean;
   /** When false, tags/milestone/deps are omitted from the collapsed summary (launch gate). */
   includeTagsAndDependencies?: boolean;
 }): string {
   const parts: string[] = [];
+  const includeSchedule = input.includeSchedule ?? true;
   const includeTagsAndDependencies = input.includeTagsAndDependencies ?? true;
 
   const runnerLabel = runnerDisplayLabel(input.runner);
@@ -27,7 +30,7 @@ export function advancedSummaryLine(input: {
     parts.push(`${runnerLabel} · ${modelLabel}`);
   }
 
-  if (input.schedule) {
+  if (includeSchedule && input.schedule) {
     parts.push("Scheduled");
   }
 
@@ -48,12 +51,20 @@ export function advancedSummaryLine(input: {
   }
 
   if (parts.length === 0) {
-    return includeTagsAndDependencies
-      ? "Agent, schedule, tags, dependencies"
-      : "Agent, schedule";
+    return advancedSummaryFallback(includeSchedule, includeTagsAndDependencies);
   }
 
   return parts.join(" · ");
+}
+
+function advancedSummaryFallback(
+  includeSchedule: boolean,
+  includeTagsAndDependencies: boolean,
+): string {
+  const labels = ["Agent"];
+  if (includeSchedule) labels.push("schedule");
+  if (includeTagsAndDependencies) labels.push("tags", "dependencies");
+  return labels.join(", ");
 }
 
 function runnerDisplayLabel(id: string): string {

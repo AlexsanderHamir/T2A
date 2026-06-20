@@ -7,6 +7,8 @@ export const OMITTED_UI_FEATURES = {
   projects: true,
   /** Tags, milestone, and depends-on fields in the create/edit task modal. */
   tagsAndDependencies: true,
+  /** Schedule for / pickup-not-before in the create/edit task modal. */
+  schedule: true,
 } as const;
 
 export type OmittedUiFeature = keyof typeof OMITTED_UI_FEATURES;

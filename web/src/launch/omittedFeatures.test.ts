@@ -11,4 +11,9 @@ describe("omittedFeatures", () => {
     expect(OMITTED_UI_FEATURES.tagsAndDependencies).toBe(true);
     expect(isUiFeatureOmitted("tagsAndDependencies")).toBe(true);
   });
+
+  it("documents schedule as omitted for the current launch", () => {
+    expect(OMITTED_UI_FEATURES.schedule).toBe(true);
+    expect(isUiFeatureOmitted("schedule")).toBe(true);
+  });
 });
