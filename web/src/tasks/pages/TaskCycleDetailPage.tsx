@@ -80,6 +80,13 @@ type AttemptTimelineDisplay = {
   startCapTime: string | null;
 };
 
+/**
+ * Route page for a single task execution attempt. Reads `taskId` and `cycleId`
+ * from the URL, loads attempt metadata, Cursor stream events, and audit
+ * timeline data, and renders the phase rail plus tabbed activity panels.
+ * Takes no props; returns loading, error, invalid-params, or the loaded attempt
+ * detail section depending on route params and query state.
+ */
 export function TaskCycleDetailPage() {
   const pageState = useTaskCycleDetailPageState();
 
