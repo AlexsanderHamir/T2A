@@ -32,11 +32,17 @@ API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops b
 
 Setting up to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Important
+## Important / Limitations
 
-Every task runs an **execute** agent and a **verify** agent. Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria. The worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
+### Important
 
-Do not edit, commit, or checkout files in the workspace repo while a task is in the **verify** phase — the worker treats any git change during verify as tampering and terminates the cycle as `verify_tampered` (no retry). Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout; see [docs/execute-and-verify.md](docs/execute-and-verify.md#dedicated-worktree-recommended).
+1. Every task runs an **execute** agent and a **verify** agent. Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria.
+2. The worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
+
+### Limitations
+
+1. Do not edit, commit, or checkout files in the workspace repo while a task is in the **verify** phase — the worker treats any git change during verify as tampering and terminates the cycle as `verify_tampered` (no retry).
+2. Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout; see [docs/execute-and-verify.md](docs/execute-and-verify.md#dedicated-worktree-recommended).
 
 ## Docs
 
