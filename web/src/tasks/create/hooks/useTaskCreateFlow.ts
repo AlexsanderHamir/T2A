@@ -36,7 +36,6 @@ export function useTaskCreateFlow() {
     newDraftID: form.newDraftID,
     closeCreateModal: modal.closeCreateModal,
     setNewDraftID: form.setNewDraftID,
-    setLatestDraftEvaluation: form.setLatestDraftEvaluation,
     setDraftAutosaveBaseline: form.setDraftAutosaveBaseline,
     setDraftAutosaveBaselineID: form.setDraftAutosaveBaselineID,
     setLastDraftSavedAt: form.setLastDraftSavedAt,
@@ -44,7 +43,6 @@ export function useTaskCreateFlow() {
   });
   const autosave = useTaskCreateDraftAutosave({
     formFields: form.formFields,
-    latestDraftEvaluation: form.latestDraftEvaluation,
     draftAutosaveBaseline: form.draftAutosaveBaseline,
     draftAutosaveBaselineID: form.draftAutosaveBaselineID,
     editingTaskId: modal.editingTaskId,
@@ -63,15 +61,10 @@ export function useTaskCreateFlow() {
   const submitActions = useTaskCreateSubmitActions({ form, mutations });
   const checklistActions = useTaskCreateChecklistActions({ form });
   const actions = { ...entryActions, ...submitActions, ...checklistActions };
-  const { createMutation, evaluateDraftMutation } = mutations;
+  const { createMutation } = mutations;
   const createFlowError = useMemo(
     () => deriveCreateFlowError(mutations),
-    [
-      createMutation.error,
-      createMutation.isError,
-      evaluateDraftMutation.error,
-      evaluateDraftMutation.isError,
-    ],
+    [createMutation.error, createMutation.isError],
   );
 
   return mapCreateFlowViewModel({

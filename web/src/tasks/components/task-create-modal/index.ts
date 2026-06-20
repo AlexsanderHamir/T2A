@@ -5,6 +5,5 @@ export * from "./fields/TaskCreateModalFooterActions";
 export * from "./fields/TaskCreateModalAgentSection";
 export * from "./fields/TaskCreateModalAutonomyToggle";
 export * from "./fields/TaskCreateModalSchedulingFields";
-export * from "./fields/TaskCreateModalEvaluationSummary";
 export * from "./TestScenariosTrigger";
 export * from "./TestScenariosPopover";

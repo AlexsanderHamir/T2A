@@ -8,7 +8,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 
 - Mux is mounted at `/` (no `/api` prefix).
 - All routes return `application/json`. Error bodies are `{"error":"<message>"}`; some responses include `request_id` for correlation with `X-Request-ID` / `http.access` logs.
-- Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners, evaluate) return `Cache-Control: no-store` and do not participate in revalidation.
+- Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners) return `Cache-Control: no-store` and do not participate in revalidation.
 - `X-Actor` header: `user` (default) or `agent`. The handler ignores any body `triggered_by` and uses this header.
 - `Idempotency-Key` (≤ 128 bytes) caches successful (2xx) `POST`/`PATCH`/`DELETE` responses for `T2A_IDEMPOTENCY_TTL` (default 24h, in-process only). Replays are byte-identical.
 - Rate limit: `T2A_RATE_LIMIT_PER_MIN` per `RemoteAddr` (default 120; `0` disables). `429` returns `Retry-After: 60`.
@@ -51,7 +51,6 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
-| POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
 | GET | `/tasks/cycle-failures` | Paginated terminal cycle failures. `?limit`, `?offset`, `?sort ∈ at_desc | at_asc | reason_asc | reason_desc`. |
@@ -169,7 +168,7 @@ Lossless reconnects via `Last-Event-ID`: a ring buffer (default 1024 entries) re
 | `agent_run_cancelled` | `POST /settings/cancel-current-run` actually cancelled something. | `{ type }` (no id) |
 | `resync` | Hub-emitted. Out-of-window reconnect or slow-consumer eviction. No `id:` line on wire (preserves `Last-Event-ID` cursor). | `{ type }` |
 
-Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts/*`), the evaluator (`POST /tasks/evaluate`), and `POST /settings/probe-cursor` are not part of the SSE surface.
+Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts/*`) and `POST /settings/probe-cursor` are not part of the SSE surface.
 
 ### Dev synthetic SSE (`T2A_SSE_TEST=1`)
 

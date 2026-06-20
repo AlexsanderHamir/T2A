@@ -335,7 +335,6 @@ Multi-table writes compose by calling exported `…InTx` helpers from sibling pa
 err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
     if err := tasks.CreateCoreInTx(tx, ...); err != nil { return err }
     if err := checklist.InsertItemsInTx(tx, ...); err != nil { return err }
-    if err := eval.AttachDraftEvaluationsInTx(tx, draftID, taskID); err != nil { return err }
     return nil
 })
 ```
@@ -344,7 +343,7 @@ Examples in production code:
 
 | Flow | Composed helpers |
 | --- | --- |
-| Create task from draft | `tasks` + `drafts.DeleteByIDInTx` + `eval.AttachDraftEvaluationsInTx` + checklist seed |
+| Create task from draft | `tasks` + `drafts.DeleteByIDInTx` + checklist seed |
 | Mark task done | `checklist.ValidateCanMarkDoneInTx` + status update + audit event |
 | Create with checklist | task insert + checklist rows + `task_events` in one tx |
 

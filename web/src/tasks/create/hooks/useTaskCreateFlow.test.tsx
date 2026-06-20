@@ -10,7 +10,6 @@ import { useTaskCreateFlow } from "./useTaskCreateFlow";
 vi.mock("@/api", () => ({
   createTask: vi.fn(),
   deleteTaskDraft: vi.fn(),
-  evaluateDraftTask: vi.fn(),
   getTaskDraft: vi.fn(),
   listTaskDrafts: vi.fn(),
   patchTask: vi.fn(),

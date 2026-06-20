@@ -43,7 +43,6 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 | Checklist | `handler_checklist.go` |
 | Task audit / events | `handler_task_events.go` |
 | Execution cycles + phases | `handler_cycles.go`, `handler_cycles_query.go`, `handler_cycles_response.go` (DTOs in `handler_cycles_json.go`); see [`docs/data-model.md`](../../docs/data-model.md) |
-| Draft evaluation (`POST /tasks/evaluate`) | `handler_task_evaluation.go` |
 | Saved task drafts (`/task-drafts`) | `handler_task_drafts.go` |
 | Workspace `/repo/*` | `repo_handlers.go` |
 | App settings | `handler_settings.go` |

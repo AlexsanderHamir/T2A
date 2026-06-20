@@ -76,8 +76,6 @@ export function TaskCreateModalsLayer() {
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
           onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}
-          evaluatePending={isEditing ? false : app.evaluatePending}
-          evaluation={isEditing ? null : app.latestDraftEvaluation}
           taskRunner={isEditing ? app.editingTaskRunner : app.newTaskRunner}
           taskCursorModel={app.newTaskCursorModel}
           onTaskRunnerChange={app.setNewTaskRunner}
@@ -126,13 +124,9 @@ export function TaskCreateModalsLayer() {
           onSaveDraft={() => {
             if (!isEditing) void app.saveDraftNow();
           }}
-          onEvaluate={() => {
-            if (!isEditing) void app.evaluateDraftBeforeCreate();
-          }}
           onSubmit={(e) => void app.submitComposeModal(e)}
           createError={isEditing ? null : app.createError}
           createFormError={isEditing ? null : app.createFormError}
-          evaluateError={isEditing ? null : app.evaluateError}
           onApplyTestScenario={isEditing ? undefined : app.applyTestScenario}
         />
       ) : null}

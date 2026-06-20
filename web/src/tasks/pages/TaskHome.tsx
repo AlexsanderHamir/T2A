@@ -23,7 +23,7 @@ export function TaskHome() {
     setSearchParams({}, { replace: true });
   }, [openCreateModal, createIntent, projectIntent, setSearchParams]);
 
-  /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
+  /** Row-level busy state for the list only; excludes create so modal typing does not re-render the table. */
   const listSaving = list.patchPending || list.deletePending;
 
   const listSectionProps = useMemo(

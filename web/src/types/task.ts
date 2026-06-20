@@ -349,37 +349,6 @@ export const CHECKLIST_EVIDENCE_DISPLAY_CAP = 12 * 1024;
 /** Defaults aligned with pkgs/tasks/domain/app_settings.go. */
 export const DEFAULT_VERIFY_MAX_RETRIES = 2;
 
-export type DraftTaskEvaluationInput = {
-  id?: string;
-  title: string;
-  initial_prompt?: string;
-  status?: Status;
-  priority?: Priority;
-  checklist_items?: Array<{
-    text: string;
-    verify_commands?: ChecklistVerifyCommandInput[];
-  }>;
-};
-
-export type DraftTaskEvaluationSection = {
-  key: string;
-  label: string;
-  score: number;
-  summary: string;
-  suggestions: string[];
-};
-
-export type DraftTaskEvaluation = {
-  evaluation_id: string;
-  created_at: string;
-  overall_score: number;
-  overall_summary: string;
-  sections: DraftTaskEvaluationSection[];
-  cohesion_score: number;
-  cohesion_summary: string;
-  cohesion_suggestions: string[];
-};
-
 export type TaskDraftChecklistItem = {
   text: string;
   verify_commands?: ChecklistVerifyCommandInput[];
@@ -409,11 +378,6 @@ export type TaskDraftPayload = {
    * memory nodes the operator selected before closing the modal.
    */
   project_context_item_ids?: string[];
-  latest_evaluation?: {
-    overall_score: number;
-    overall_summary: string;
-    sections: Array<{ key: string; score: number }>;
-  };
 };
 
 export type TaskDraftSummary = {

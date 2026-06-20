@@ -21,14 +21,14 @@ const baseFields: TaskCreateFormFields = {
 
 describe("computeDraftAutosaveSignature", () => {
   it("changes when draft id changes", () => {
-    const a = computeDraftAutosaveSignature(baseFields, null);
-    const b = computeDraftAutosaveSignature({ ...baseFields, newDraftID: "draft-b" }, null);
+    const a = computeDraftAutosaveSignature(baseFields);
+    const b = computeDraftAutosaveSignature({ ...baseFields, newDraftID: "draft-b" });
     expect(a).not.toBe(b);
   });
 
   it("is stable for identical fields", () => {
-    const a = computeDraftAutosaveSignature(baseFields, null);
-    const b = computeDraftAutosaveSignature({ ...baseFields }, null);
+    const a = computeDraftAutosaveSignature(baseFields);
+    const b = computeDraftAutosaveSignature({ ...baseFields });
     expect(a).toBe(b);
   });
 });

@@ -71,20 +71,20 @@ describe("MutationErrorBanner", () => {
   });
 
   it("appends a custom className alongside the canonical 'err' class", () => {
-    // Per-site visual hooks (e.g. `task-create-modal-err--evaluate`
-    // for positioning the callout next to the evaluate action). The
+    // Per-site visual hooks (e.g. `task-create-modal-err--create`
+    // for positioning the callout next to the create action). The
     // canonical `err` selector must always be present so the
     // app-base styling (`.err > p { margin: 0 }`, danger background)
     // applies everywhere.
     render(
       <MutationErrorBanner
         error={new Error("boom")}
-        className="task-create-modal-err--evaluate"
+        className="task-create-modal-err--create"
       />,
     );
     const alert = screen.getByRole("alert");
     expect(alert).toHaveClass("err");
-    expect(alert).toHaveClass("task-create-modal-err--evaluate");
+    expect(alert).toHaveClass("task-create-modal-err--create");
   });
 
   it("renders only the canonical 'err' class when no className is provided", () => {

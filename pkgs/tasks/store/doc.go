@@ -1,6 +1,6 @@
 // Package store is the GORM-backed persistence facade for domain.Task,
-// domain.TaskEvent, checklists, drafts, draft evaluations, cycles and
-// phases, the ready-task queue, dev-mirror, and DB health probes.
+// domain.TaskEvent, checklists, drafts, cycles and phases, the ready-task
+// queue, dev-mirror, and DB health probes.
 //
 // Architecture (post-split): the public surface area lives in
 // `facade_*.go` files and consists of type aliases plus thin (*Store)
@@ -12,9 +12,8 @@
 //
 // Cross-domain transactions are composed by calling the exported
 // InTx helpers on sibling internal packages (for example,
-// internal/tasks.Create calls internal/eval.AttachDraftEvaluationsInTx,
-// internal/drafts.DeleteByIDInTx, and internal/checklist.
-// ValidateCanMarkDoneInTx inside the same gorm transaction). This
+// internal/tasks.Create calls internal/drafts.DeleteByIDInTx and
+// internal/checklist.ValidateCanMarkDoneInTx inside the same gorm transaction). This
 // keeps every multi-table write atomic without adding a circular
 // dependency on the public store package.
 //

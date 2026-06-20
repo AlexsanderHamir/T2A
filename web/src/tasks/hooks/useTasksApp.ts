@@ -164,7 +164,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
 
   const saving =
     createFlow.createPending ||
-    createFlow.evaluatePending ||
     patchPending ||
     deletePending;
 

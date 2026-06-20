@@ -79,7 +79,7 @@ func (s *Store) RequestTaskRetry(ctx context.Context, in tasks.RequestRetryInput
 	return updated, nil
 }
 
-// Create inserts a new task row, links draft evaluations, removes the
+// Create inserts a new task row, removes the
 // source draft, appends task_created, and runs the checklist guard when
 // the initial status is StatusDone — all in one transaction.
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {

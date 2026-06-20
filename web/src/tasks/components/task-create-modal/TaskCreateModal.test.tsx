@@ -41,8 +41,6 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onAppendChecklistCriterion: vi.fn(),
     onUpdateChecklistRow: vi.fn(),
     onRemoveChecklistRow: vi.fn(),
-    evaluatePending: false,
-    evaluation: null,
     taskRunner: TASK_TEST_DEFAULTS.runner,
     taskCursorModel: TASK_TEST_DEFAULTS.cursor_model,
     onTaskRunnerChange: vi.fn(),
@@ -60,7 +58,6 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onDependsOnChange: vi.fn(),
     appTimezone: "UTC",
     onSaveDraft: vi.fn(),
-    onEvaluate: vi.fn(),
     onSubmit: vi.fn(),
   };
   const client = new QueryClient({
@@ -89,18 +86,9 @@ async function expandMoreOptions(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TaskCreateModal", () => {
-  it("shows Evaluate action and calls onEvaluate", async () => {
-    const user = userEvent.setup();
-    const onEvaluate = vi.fn();
-    renderModal({ onEvaluate, checklistItems: [{ text: "Ship it" }] });
-    await user.click(screen.getByRole("button", { name: /^evaluate$/i }));
-    expect(onEvaluate).toHaveBeenCalledTimes(1);
-  });
-
-  it("disables Create and Evaluate until at least one done criterion exists", () => {
+  it("disables Create until at least one done criterion exists", () => {
     renderModal({ checklistItems: [] });
     expect(screen.getByRole("button", { name: /^create task$/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^evaluate$/i })).toBeDisabled();
     expect(screen.getByText(/add at least one done criterion/i)).toBeInTheDocument();
   });
 
@@ -110,40 +98,6 @@ describe("TaskCreateModal", () => {
     const row = heading.closest(".task-create-checklist-title-row");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText("*")).toBeInTheDocument();
-  });
-
-  it("renders evaluation summary when available", () => {
-    renderModal({
-      evaluation: {
-        overallScore: 86,
-        overallSummary: "Strong draft, likely ready for creation.",
-        sections: [
-          { key: "title", score: 90 },
-          { key: "initial_prompt", score: 84 },
-        ],
-      },
-    });
-    const panel = screen.getByRole("region", {
-      name: /draft evaluation summary/i,
-    });
-    expect(
-      within(panel).getByRole("heading", { name: /latest evaluation score/i }),
-    ).toBeInTheDocument();
-    expect(within(panel).getByText(/86/i)).toBeInTheDocument();
-    expect(within(panel).getByText(/title/i)).toBeInTheDocument();
-  });
-
-  it("keeps the evaluation live region mounted but visually silent before any score", () => {
-    renderModal({ evaluation: null });
-    // Region stays in the DOM so the first evaluation result is
-    // announced by assistive tech, but it renders no visible chrome
-    // (the Evaluate button in the footer is the affordance, not a
-    // boxed empty-state panel).
-    const panel = screen.getByRole("region", {
-      name: /draft evaluation summary/i,
-    });
-    expect(panel).toBeEmptyDOMElement();
-    expect(panel).toHaveClass("task-create-evaluation-summary--empty");
   });
 
   it("shows Save draft action and calls onSaveDraft", async () => {
@@ -228,7 +182,7 @@ describe("TaskCreateModal", () => {
   it("does not render mutation error callouts on the happy path", () => {
     renderModal();
     expect(
-      screen.queryByText(/could not (create task|evaluate draft)/i),
+      screen.queryByText(/could not create task/i),
     ).not.toBeInTheDocument();
   });
 
@@ -239,33 +193,12 @@ describe("TaskCreateModal", () => {
     expect(callout).toHaveTextContent(/server returned 500/i);
   });
 
-  it("renders the underlying evaluateError message inside the modal", () => {
-    renderModal({ evaluateError: new Error("LLM timeout") });
-    const callout = document.querySelector(".task-create-modal-err--evaluate");
-    expect(callout).not.toBeNull();
-    expect(callout).toHaveTextContent(/LLM timeout/i);
-  });
-
-  it("can render both create + evaluate errors simultaneously", () => {
-    renderModal({
-      createError: new Error("create boom"),
-      evaluateError: new Error("eval boom"),
-    });
-    expect(
-      document.querySelector(".task-create-modal-err--create"),
-    ).toHaveTextContent(/create boom/i);
-    expect(
-      document.querySelector(".task-create-modal-err--evaluate"),
-    ).toHaveTextContent(/eval boom/i);
-  });
-
-  it("keeps Create / Evaluate buttons reachable while an error is showing", () => {
+  it("keeps Create button reachable while an error is showing", () => {
     renderModal({
       title: "Reproduce me",
       checklistItems: [{ text: "Ship it" }],
       createError: new Error("boom"),
     });
-    expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /^create task$/i })).not.toBeDisabled();
   });
 

@@ -306,8 +306,8 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		// same event; this is the cross-route trigger surface guarantee.
 		// The negative branch (no run to cancel) is covered in the
 		// "non-publishing write routes" subtest below alongside probe-cursor
-		// and tasks/evaluate so all three "documented as never publishing"
-		// settings/evaluate paths share one drain-and-assert-empty fixture.
+		// and probe-cursor so all documented non-publishing settings paths
+		// settings paths share one drain-and-assert-empty fixture.
 		srv, _, hub, ctrl := settingsTestServer(t)
 		ctrl.cancelResult.Store(true)
 		ch, cancel := hub.Subscribe()
@@ -321,24 +321,21 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 	})
 
 	t.Run("non-publishing write routes", func(t *testing.T) {
-		// Cross-route pin for the four documented "write but never
-		// publish" routes. docs/api.md trigger table omits these by
-		// design (the trailing prose at the bottom of docs/api.md spells
-		// it out for /task-drafts/* and POST /tasks/evaluate; this
-		// session adds POST /settings/probe-cursor to the same prose so
-		// docs and code agree). Per-route SSE pins exist for each in
-		// their own contract files — this row catches a global middleware
-		// regression that would route around the per-route silence:
+		// Cross-route pin for the documented "write but never publish"
+		// routes. docs/api.md trigger table omits these by design (the
+		// trailing prose at the bottom of docs/api.md spells it out for
+		// /task-drafts/* and POST /settings/probe-cursor). Per-route SSE
+		// pins exist for each in their own contract files — this row
+		// catches a global middleware regression that would route around
+		// the per-route silence:
 		//
 		//   POST /settings/probe-cursor       — tested per-route in
 		//                                       handler_http_settings_contract_test.go
 		//                                       (no SSE assertion until this row)
 		//   POST /settings/cancel-current-run — TestHTTP_CancelCurrentRun_noopReturnsFalseAndNoSSE
 		//                                       (per-route, ctrl.cancelResult=false branch)
-		//   POST /tasks/evaluate              — TestHTTP_evaluateDraft_doesNotPublishSSE
-		//                                       (per-route)
 		//
-		// All four hit the same single subscription; we drain once with
+		// All three hit the same single subscription; we drain once with
 		// want=1 and assert zero events. Mirrors the read-only block's
 		// drain pattern. Probe-cursor exercises both happy (probeVersion
 		// set) and failure (probeErr set) branches because the failure
@@ -363,20 +360,6 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		ctrl.cancelResult.Store(false)
 		mustSettingsHTTP(t, http.MethodPost, srv.URL+"/settings/cancel-current-run",
 			"", http.StatusOK)
-
-		// POST /tasks/evaluate goes through the same handler mux on the
-		// same fixture (settingsTestServer wires the full handler tree
-		// via NewHandler; the agent control option only affects the
-		// /settings routes). 201 is the documented happy path.
-		res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json",
-			strings.NewReader(`{"title":"sse-trigger-evaluate","priority":"high"}`))
-		if err != nil {
-			t.Fatal(err)
-		}
-		_ = res.Body.Close()
-		if res.StatusCode != http.StatusCreated {
-			t.Fatalf("POST /tasks/evaluate status=%d want=201", res.StatusCode)
-		}
 
 		got := summarize(drainSSE(t, ch, 1, 200*time.Millisecond))
 		if len(got) != 0 {

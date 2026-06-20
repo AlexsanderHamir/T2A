@@ -83,7 +83,6 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("PATCH /projects/{id}/context/{contextId}", http.HandlerFunc(h.patchProjectContext))
 	m.Handle("DELETE /projects/{id}/context/{contextId}", http.HandlerFunc(h.deleteProjectContext))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
-	m.Handle("POST /tasks/evaluate", http.HandlerFunc(h.evaluateDraft))
 	m.Handle("GET /task-drafts", http.HandlerFunc(h.listTaskDrafts))
 	m.Handle("POST /task-drafts", http.HandlerFunc(h.saveTaskDraft))
 	m.Handle("GET /task-drafts/{id}", http.HandlerFunc(h.getTaskDraft))

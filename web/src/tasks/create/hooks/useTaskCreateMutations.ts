@@ -3,14 +3,13 @@ import { useEffect, type MutableRefObject } from "react";
 import {
   createTask as apiCreate,
   deleteTaskDraft as apiDeleteDraft,
-  evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
   saveTaskDraft as apiSaveDraft,
 } from "@/api";
-import type { ChecklistItemDraft, Priority, PriorityChoice } from "@/types";
+import type { PriorityChoice } from "@/types";
 import { normalizeChecklistItems } from "../../task-compose/checklistRequirement";
 import { taskQueryKeys } from "../../task-query";
-import type { CreateTaskMutationInput, DraftEvaluationSnapshot } from "../types";
+import type { CreateTaskMutationInput } from "../types";
 
 export function useTaskCreateMutations(input: {
   queryClient: ReturnType<typeof useQueryClient>;
@@ -18,7 +17,6 @@ export function useTaskCreateMutations(input: {
   newDraftID: string;
   closeCreateModal: () => void;
   setNewDraftID: (id: string) => void;
-  setLatestDraftEvaluation: (evaluation: DraftEvaluationSnapshot | null) => void;
   setDraftAutosaveBaseline: (baseline: string) => void;
   setDraftAutosaveBaselineID: (id: string) => void;
   setLastDraftSavedAt: (timestamp: number | null) => void;
@@ -61,38 +59,6 @@ export function useTaskCreateMutations(input: {
     },
   });
 
-  const evaluateDraftMutation = useMutation({
-    mutationFn: async (mutationInput: {
-      id: string;
-      title: string;
-      initial_prompt: string;
-      status: import("@/types").Status;
-      priority: Priority;
-      checklistItems: ChecklistItemDraft[];
-    }) => {
-      return apiEvaluateDraft({
-        id: mutationInput.id,
-        title: mutationInput.title,
-        initial_prompt: mutationInput.initial_prompt,
-        status: mutationInput.status,
-        priority: mutationInput.priority,
-        checklist_items: normalizeChecklistItems(mutationInput.checklistItems),
-      });
-    },
-    onSuccess: (evaluation, variables) => {
-      // I5 — evaluation snapshot applies only to the active draft.
-      if (input.newDraftIDRef.current !== variables.id) return;
-      input.setLatestDraftEvaluation({
-        overallScore: evaluation.overall_score,
-        overallSummary: evaluation.overall_summary,
-        sections: evaluation.sections.map((section) => ({
-          key: section.key,
-          score: section.score,
-        })),
-      });
-    },
-  });
-
   const saveDraftMutation = useMutation({
     mutationFn: (mutationInput: {
       id: string;
@@ -106,11 +72,6 @@ export function useTaskCreateMutations(input: {
         project_id: string;
         project_context_item_ids: string[];
         checklist_items: import("@/types").TaskDraftChecklistItem[];
-        latest_evaluation?: {
-          overall_score: number;
-          overall_summary: string;
-          sections: Array<{ key: string; score: number }>;
-        };
       };
       signature: string;
     }) => apiSaveDraft(mutationInput),
@@ -148,15 +109,13 @@ export function useTaskCreateMutations(input: {
   }, [input.createModalOpen, saveDraftMutation]);
 
   useEffect(() => {
-    if (!input.createModalOpen) {
-      if (!createMutation.isIdle) createMutation.reset();
-      if (!evaluateDraftMutation.isIdle) evaluateDraftMutation.reset();
+    if (!input.createModalOpen && !createMutation.isIdle) {
+      createMutation.reset();
     }
-  }, [input.createModalOpen, createMutation, evaluateDraftMutation]);
+  }, [input.createModalOpen, createMutation]);
 
   return {
     createMutation,
-    evaluateDraftMutation,
     saveDraftMutation,
     deleteDraftMutation,
     resumeDraftMutation,

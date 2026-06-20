@@ -28,12 +28,6 @@ export type CreateTaskMutationInput = {
   depends_on: TaskDependencyEdge[];
 };
 
-export type DraftEvaluationSnapshot = {
-  overallScore: number;
-  overallSummary: string;
-  sections: Array<{ key: string; score: number }>;
-};
-
 export type CreateModalPrefill = {
   projectID: string;
   lockProjectAssignment: boolean;
@@ -68,10 +62,5 @@ export type DraftSavePayload = {
     project_id: string;
     project_context_item_ids: string[];
     checklist_items: TaskDraftChecklistItem[];
-    latest_evaluation?: {
-      overall_score: number;
-      overall_summary: string;
-      sections: Array<{ key: string; score: number }>;
-    };
   };
 };

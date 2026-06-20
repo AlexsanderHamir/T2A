@@ -35,8 +35,6 @@ const (
 	OpListDrafts                  = "list_drafts"
 	OpGetDraft                    = "get_draft"
 	OpDeleteDraft                 = "delete_draft"
-	OpEvaluateDraft               = "evaluate_draft"
-	OpListDraftEvaluations        = "list_draft_evaluations"
 	OpTaskStats                   = "task_stats"
 	OpPing                        = "ping"
 	OpReady                       = "ready"

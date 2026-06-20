@@ -78,7 +78,6 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.TaskChecklistItem{},
 		&domain.TaskChecklistItemCommand{},
 		&domain.TaskChecklistCompletion{},
-		&domain.TaskDraftEvaluation{},
 		&domain.TaskDraft{},
 		&domain.TaskCycle{},
 		&domain.TaskCyclePhase{},
@@ -99,6 +98,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := migrateRemoveTaskType(ctx, db); err != nil {
 		return fmt.Errorf("migrate remove task type: %w", err)
+	}
+	if err := migrateRemoveDraftEvaluations(ctx, db); err != nil {
+		return fmt.Errorf("migrate remove draft evaluations: %w", err)
 	}
 	defaultProject := domain.DefaultProject(time.Now().UTC())
 	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&defaultProject).Error; err != nil {

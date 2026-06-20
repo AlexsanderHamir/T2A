@@ -15,7 +15,7 @@ import {
   defaultRunnerFromSettings,
   generateTaskDraftID,
 } from "../defaults";
-import type { DraftEvaluationSnapshot, TaskCreateFormFields } from "../types";
+import type { TaskCreateFormFields } from "../types";
 
 export function useTaskCreateFormState(queryClient: QueryClient) {
   const [newTitle, setNewTitle] = useState("");
@@ -49,7 +49,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewDraftIDState(id);
   }, []);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
-  const [latestDraftEvaluation, setLatestDraftEvaluation] = useState<DraftEvaluationSnapshot | null>(null);
   const [draftAutosaveBaseline, setDraftAutosaveBaseline] = useState("");
   const [draftAutosaveBaselineID, setDraftAutosaveBaselineID] = useState("");
   const requestedResumeRef = useRef<string | null>(null);
@@ -73,7 +72,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewDependsOn([]);
     setNewChecklistItems([]);
     setCreateFormError(null);
-    setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
     setLastDraftSavedAt(null);
     setDraftAutosaveBaseline(buildFreshDraftAutosaveBaseline(settings, generatedID));
@@ -94,7 +92,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTagsCsv((t.tags ?? []).join(", "));
     setNewMilestone(t.milestone ?? "");
     setNewDependsOn((t.depends_on ?? []).map((edge) => edge.task_id));
-    setLatestDraftEvaluation(null);
     setCreateFormError(null);
   }, []);
 
@@ -139,8 +136,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setCreateFormError,
     lastDraftSavedAt,
     setLastDraftSavedAt,
-    latestDraftEvaluation,
-    setLatestDraftEvaluation,
     draftAutosaveBaseline,
     setDraftAutosaveBaseline,
     draftAutosaveBaselineID,

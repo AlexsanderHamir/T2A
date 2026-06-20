@@ -220,7 +220,6 @@ Errors wrap **`domain.ErrInvalidInput`** with label `mention @<path>` or `mentio
 | --- | --- |
 | `POST /tasks` | Always on `body.initial_prompt` (may be empty — zero mentions) |
 | `PATCH /tasks/{id}` | Only when `initial_prompt` is **present** in JSON (`*string` patch field) |
-| Task evaluation (`POST` evaluate endpoints) | On submitted `initial_prompt` |
 
 **Skipped** when:
 

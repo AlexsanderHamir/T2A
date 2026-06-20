@@ -1,14 +1,13 @@
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { useCallback, useEffect, useMemo, type MutableRefObject } from "react";
 import { buildDraftSavePayload, computeDraftAutosaveSignature } from "../draftPayload";
-import type { DraftEvaluationSnapshot, TaskCreateFormFields } from "../types";
+import type { TaskCreateFormFields } from "../types";
 import type { useTaskCreateMutations } from "./useTaskCreateMutations";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
 export function useTaskCreateDraftAutosave(input: {
   formFields: TaskCreateFormFields;
-  latestDraftEvaluation: DraftEvaluationSnapshot | null;
   draftAutosaveBaseline: string;
   draftAutosaveBaselineID: string;
   editingTaskId: string | null;
@@ -18,13 +17,13 @@ export function useTaskCreateDraftAutosave(input: {
   lastDraftSavedAt: number | null;
 }) {
   const currentDraftAutosaveSignature = useMemo(
-    () => computeDraftAutosaveSignature(input.formFields, input.latestDraftEvaluation),
-    [input.formFields, input.latestDraftEvaluation],
+    () => computeDraftAutosaveSignature(input.formFields),
+    [input.formFields],
   );
 
   const buildDraftSaveInput = useCallback(
-    () => buildDraftSavePayload(input.formFields, input.latestDraftEvaluation),
-    [input.formFields, input.latestDraftEvaluation],
+    () => buildDraftSavePayload(input.formFields),
+    [input.formFields],
   );
 
   const saveDraftNow = useCallback(() => {

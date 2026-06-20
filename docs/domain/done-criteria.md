@@ -278,7 +278,6 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | Ephemeral agent reports | Report JSON files GC'd at cycle end; forensics rely on verdict tables and events. |
 | Truncated failure reasons | `verification_failed:<ids>` capped at 256 characters. |
 | `human_override` unused | Schema supports operator override; no handler/worker path writes it today. |
-| Draft eval is advisory | [`pkgs/tasks/store/internal/eval/`](../../pkgs/tasks/store/internal/eval/) scores criterion quality at compose time only. |
 | Verdict upsert errors are non-gating | Failure to mirror reports to DB is logged but verify continues. |
 | Stale package comments | [`checklist/doc.go`](../../pkgs/tasks/store/internal/checklist/doc.go) still references removed subtask inheritance; runtime is flat per ADR-0010. |
 

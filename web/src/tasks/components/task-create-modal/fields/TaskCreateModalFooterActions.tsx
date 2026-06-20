@@ -7,10 +7,8 @@ type Props = {
   title: string;
   priority: PriorityChoice;
   checklistItems: ChecklistItemDraft[];
-  evaluatePending: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
-  onEvaluate: () => void;
 };
 
 export function TaskCreateModalFooterActions({
@@ -19,12 +17,10 @@ export function TaskCreateModalFooterActions({
   title,
   priority,
   checklistItems,
-  evaluatePending,
   onClose,
   onSaveDraft,
-  onEvaluate,
 }: Props) {
-  const evalAndSubmitDisabled =
+  const submitDisabled =
     !title.trim() ||
     !priority ||
     nonEmptyChecklistCount(checklistItems) < 1 ||
@@ -52,17 +48,9 @@ export function TaskCreateModalFooterActions({
           {draftSaving ? "Saving draft…" : "Save draft"}
         </button>
         <button
-          type="button"
-          className="secondary task-create-evaluate-btn"
-          disabled={evalAndSubmitDisabled}
-          onClick={onEvaluate}
-        >
-          {evaluatePending ? "Evaluating…" : "Evaluate"}
-        </button>
-        <button
           type="submit"
           className="task-create-submit"
-          disabled={evalAndSubmitDisabled}
+          disabled={submitDisabled}
         >
           Create task
         </button>

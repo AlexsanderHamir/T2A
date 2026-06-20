@@ -1,5 +1,4 @@
 import {
-  type DraftTaskEvaluation,
   type TaskDraftChecklistItem,
   type TaskDraftDetail,
   type TaskDraftPayload,
@@ -8,64 +7,10 @@ import {
 import { parseChecklistVerifyCommand } from "./parseTaskApiTasks";
 import {
   isRecord,
-  parseFiniteNumber,
   parseNonEmptyString,
   parsePriorityChoice,
   parseString,
 } from "./parseTaskApiCore";
-
-/** Validates POST /tasks/evaluate JSON. */
-export function parseDraftTaskEvaluation(value: unknown): DraftTaskEvaluation {
-  if (!isRecord(value)) {
-    throw new Error("Invalid API response: draft evaluation must be an object");
-  }
-  const sectionsRaw = value.sections;
-  if (!Array.isArray(sectionsRaw)) {
-    throw new Error("Invalid API response: sections must be an array");
-  }
-  const sections = sectionsRaw.map((row, i) => {
-    if (!isRecord(row)) {
-      throw new Error(`Invalid API response: sections[${i}] must be an object`);
-    }
-    const suggestionsRaw = row.suggestions;
-    if (!Array.isArray(suggestionsRaw)) {
-      throw new Error(
-        `Invalid API response: sections[${i}].suggestions must be an array`,
-      );
-    }
-    return {
-      key: parseNonEmptyString(row.key, `sections[${i}].key`),
-      label: parseString(row.label, `sections[${i}].label`),
-      score: parseFiniteNumber(row.score, `sections[${i}].score`),
-      summary: parseString(row.summary, `sections[${i}].summary`),
-      suggestions: suggestionsRaw.map((s, j) =>
-        parseString(s, `sections[${i}].suggestions[${j}]`),
-      ),
-    };
-  });
-  const cohesionSuggestionsRaw = value.cohesion_suggestions;
-  if (!Array.isArray(cohesionSuggestionsRaw)) {
-    throw new Error(
-      "Invalid API response: cohesion_suggestions must be an array",
-    );
-  }
-  const createdAt = parseString(value.created_at, "created_at");
-  if (Number.isNaN(Date.parse(createdAt))) {
-    throw new Error("Invalid API response: created_at must be a parseable date");
-  }
-  return {
-    evaluation_id: parseNonEmptyString(value.evaluation_id, "evaluation_id"),
-    created_at: createdAt,
-    overall_score: parseFiniteNumber(value.overall_score, "overall_score"),
-    overall_summary: parseString(value.overall_summary, "overall_summary"),
-    sections,
-    cohesion_score: parseFiniteNumber(value.cohesion_score, "cohesion_score"),
-    cohesion_summary: parseString(value.cohesion_summary, "cohesion_summary"),
-    cohesion_suggestions: cohesionSuggestionsRaw.map((s, i) =>
-      parseString(s, `cohesion_suggestions[${i}]`),
-    ),
-  };
-}
 
 function parseDraftChecklistItem(
   value: unknown,
@@ -107,31 +52,6 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
     checklist_items: checklistRaw.map((row, i) =>
       parseDraftChecklistItem(row, `payload.checklist_items[${i}]`),
     ),
-    ...(isRecord(value.latest_evaluation)
-      ? {
-          latest_evaluation: {
-            overall_score: parseFiniteNumber(
-              value.latest_evaluation.overall_score,
-              "payload.latest_evaluation.overall_score",
-            ),
-            overall_summary: parseString(
-              value.latest_evaluation.overall_summary,
-              "payload.latest_evaluation.overall_summary",
-            ),
-            sections: Array.isArray(value.latest_evaluation.sections)
-              ? value.latest_evaluation.sections
-                  .filter((s): s is Record<string, unknown> => isRecord(s))
-                  .map((s) => ({
-                    key: parseString(s.key, "payload.latest_evaluation.sections[].key"),
-                    score: parseFiniteNumber(
-                      s.score,
-                      "payload.latest_evaluation.sections[].score",
-                    ),
-                  }))
-              : [],
-          },
-        }
-      : {}),
     ...(typeof value.runner === "string"
       ? { runner: parseString(value.runner, "payload.runner") }
       : {}),

@@ -1,8 +1,6 @@
 import {
   DEFAULT_NEW_TASK_STATUS,
   type Priority,
-  type DraftTaskEvaluation,
-  type DraftTaskEvaluationInput,
   type Status,
   type Task,
   type TaskDraftDetail,
@@ -23,7 +21,6 @@ import {
   parseTask,
   parseTaskDraftDetail,
   parseTaskDraftSummaryList,
-  parseDraftTaskEvaluation,
   parseTaskChecklistResponse,
   parseTaskEventDetail,
   parseTaskEventsResponse,
@@ -301,36 +298,6 @@ export async function createTask(input: {
   if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTask(raw);
-}
-
-export async function evaluateDraftTask(
-  input: DraftTaskEvaluationInput,
-): Promise<DraftTaskEvaluation> {
-  const payload: Record<string, unknown> = {
-    title: input.title,
-    initial_prompt: input.initial_prompt ?? "",
-  };
-  const eid = assertOptionalTaskPathId(input.id, "id");
-  if (eid !== undefined) {
-    payload.id = eid;
-  }
-  if (input.status) {
-    payload.status = input.status;
-  }
-  if (input.priority) {
-    payload.priority = input.priority;
-  }
-  if (input.checklist_items) {
-    payload.checklist_items = input.checklist_items;
-  }
-  const res = await fetchWithTimeout("/tasks/evaluate", {
-    method: "POST",
-    headers: jsonHeaders,
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw await apiErrorFromResponse(res);
-  const raw: unknown = await res.json();
-  return parseDraftTaskEvaluation(raw);
 }
 
 export async function listTaskDrafts(

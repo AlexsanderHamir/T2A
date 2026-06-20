@@ -41,11 +41,6 @@ export type DraftAutosaveSignatureInput = {
     text: string;
     verify_commands?: ChecklistVerifyCommandInput[];
   }>;
-  latestEvaluation: {
-    overallScore: number;
-    overallSummary: string;
-    sections: Array<{ key: string; score: number }>;
-  } | null;
 };
 
 /**
@@ -71,7 +66,6 @@ export function draftAutosaveSignature(
       project_id: input.projectId,
       project_context_item_ids: input.projectContextItemIds,
       checklist_items: input.checklistItems,
-      latest_evaluation: input.latestEvaluation,
     },
   });
 }

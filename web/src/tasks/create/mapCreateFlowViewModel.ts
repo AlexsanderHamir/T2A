@@ -12,9 +12,6 @@ export function deriveCreateFlowError(
   if (mutations.createMutation.isError) {
     return errorMessage(mutations.createMutation.error);
   }
-  if (mutations.evaluateDraftMutation.isError) {
-    return errorMessage(mutations.evaluateDraftMutation.error);
-  }
   return null;
 }
 
@@ -27,7 +24,7 @@ export function mapCreateFlowViewModel(input: {
   actions: ReturnType<typeof useTaskCreateEntryActions> &
     Pick<
       ReturnType<typeof import("./hooks/useTaskCreateSubmitActions").useTaskCreateSubmitActions>,
-      "submitCreate" | "evaluateDraftBeforeCreate"
+      "submitCreate"
     > &
     Pick<
       ReturnType<typeof import("./hooks/useTaskCreateChecklistActions").useTaskCreateChecklistActions>,
@@ -41,10 +38,8 @@ export function mapCreateFlowViewModel(input: {
     draftSaveLabel: input.autosave.draftSaveLabel,
     draftSaveError: input.autosave.draftSaveError,
     createPending: input.mutations.createMutation.isPending,
-    evaluatePending: input.mutations.evaluateDraftMutation.isPending,
     createError: input.mutations.createMutation.error,
     createFormError: input.form.createFormError,
-    evaluateError: input.mutations.evaluateDraftMutation.error,
     draftPickerOpen: input.modal.draftPickerOpen,
     setDraftPickerOpen: input.modal.setDraftPickerOpen,
     taskDrafts: input.draftsQuery.data ?? [],
@@ -89,12 +84,10 @@ export function mapCreateFlowViewModel(input: {
     newDependsOn: input.form.newDependsOn,
     setNewDependsOn: input.form.setNewDependsOn,
     newChecklistItems: input.form.newChecklistItems,
-    latestDraftEvaluation: input.form.latestDraftEvaluation,
     appendNewChecklistCriterion: input.actions.appendNewChecklistCriterion,
     updateNewChecklistRow: input.actions.updateNewChecklistRow,
     removeNewChecklistRow: input.actions.removeNewChecklistRow,
     submitCreate: input.actions.submitCreate,
-    evaluateDraftBeforeCreate: input.actions.evaluateDraftBeforeCreate,
     startFreshDraft: input.actions.startFreshDraft,
     saveDraftNow: input.autosave.saveDraftNow,
     resumeDraftByID: input.actions.resumeDraftByID,

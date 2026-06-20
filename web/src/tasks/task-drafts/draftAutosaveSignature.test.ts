@@ -18,7 +18,6 @@ function baseInput(): DraftAutosaveSignatureInput {
     projectId: "",
     projectContextItemIds: [],
     checklistItems: [],
-    latestEvaluation: null,
   };
 }
 
@@ -106,7 +105,6 @@ describe("draftAutosaveSignature", () => {
         project_id: "",
         project_context_item_ids: [],
         checklist_items: [],
-        latest_evaluation: null,
       },
     });
   });

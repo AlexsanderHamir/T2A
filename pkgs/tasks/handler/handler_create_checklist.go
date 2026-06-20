@@ -12,7 +12,7 @@ import (
 // drops blanks, and requires at least one surviving criterion.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func parseCreateChecklistItems(items []store.EvaluateDraftChecklistItemInput) ([]store.CreateChecklistItemInput, error) {
+func parseCreateChecklistItems(items []store.CreateChecklistItemInput) ([]store.CreateChecklistItemInput, error) {
 	var out []store.CreateChecklistItemInput
 	for _, it := range items {
 		t := strings.TrimSpace(it.Text)

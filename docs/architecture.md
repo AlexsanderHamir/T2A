@@ -134,7 +134,6 @@ GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migrati
 | `task_checklist_items` / `task_checklist_completions` | Per-task done criteria. See [domain/done-criteria.md](./domain/done-criteria.md). |
 | `task_dependencies` | Directed acyclic graph between tasks. |
 | `task_drafts` | Persisted create-form state (autosave + named drafts). |
-| `task_draft_evaluations` | Snapshots from `POST /tasks/evaluate`. |
 | `projects` / `project_context_items` / `project_context_edges` | Long-lived projects and curated shared context. |
 | `task_context_snapshots` | Immutable cycle-scoped copies of the context bundle handed to a runner. |
 | `app_settings` | Singleton (`id=1`) UI-driven configuration (see [configuration.md](./configuration.md)). |

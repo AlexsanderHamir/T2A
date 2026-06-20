@@ -27,21 +27,12 @@ type taskCreateJSON struct {
 	// as soon as the global agent_pickup_delay_seconds elapses. The
 	// pre-2000 sentinel is rejected to guard against accidental
 	// zero-value timestamps.
-	PickupNotBefore *string                                 `json:"pickup_not_before,omitempty"`
-	Tags            []string                                `json:"tags,omitempty"`
-	Milestone       *string                                 `json:"milestone,omitempty"`
-	Gate            *domain.TaskGate                        `json:"gate,omitempty"`
-	DependsOn       dependsOnWire                           `json:"depends_on,omitempty"`
-	ChecklistItems  []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
-}
-
-type taskEvaluateJSON struct {
-	ID             string                                  `json:"id"`
-	Title          string                                  `json:"title"`
-	InitialPrompt  string                                  `json:"initial_prompt"`
-	Status         domain.Status                           `json:"status"`
-	Priority       domain.Priority                         `json:"priority"`
-	ChecklistItems []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
+	PickupNotBefore *string                          `json:"pickup_not_before,omitempty"`
+	Tags            []string                         `json:"tags,omitempty"`
+	Milestone       *string                          `json:"milestone,omitempty"`
+	Gate            *domain.TaskGate                 `json:"gate,omitempty"`
+	DependsOn       dependsOnWire                    `json:"depends_on,omitempty"`
+	ChecklistItems  []store.CreateChecklistItemInput `json:"checklist_items"`
 }
 
 type taskDraftSaveJSON struct {

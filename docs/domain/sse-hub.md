@@ -203,7 +203,7 @@ Constants: [`TaskChangeType`](../../pkgs/tasks/handler/sse.go). Authoritative li
 | `agent_run_cancelled` | Cancel-current-run | Yes | No |
 | `resync` | Hub on gap or eviction | N/A | No |
 
-**Never publishes:** failed writes, `/task-drafts/*`, `POST /tasks/evaluate`, probe/list-models routes ([api.md](../api.md)).
+**Never publishes:** failed writes, `/task-drafts/*`, probe/list-models routes ([api.md](../api.md)).
 
 ## Wire contracts
 

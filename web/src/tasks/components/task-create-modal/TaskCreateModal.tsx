@@ -15,10 +15,6 @@ import { TaskCreateModalSection } from "./fields/TaskCreateModalSection";
 import { TaskCreateModalStatusField } from "./fields/TaskCreateModalStatusField";
 import { TaskCreateModalPickupScheduleField } from "./fields/TaskCreateModalPickupScheduleField";
 import { SchedulePicker } from "@/shared/time/SchedulePicker";
-import {
-  TaskCreateModalEvaluationSummary,
-  type TaskCreateModalEvaluation,
-} from "./fields/TaskCreateModalEvaluationSummary";
 import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
 import { advancedSummaryLine } from "./advancedSummaryLine";
@@ -52,8 +48,6 @@ type Props = {
   onAppendChecklistCriterion: (item: ChecklistItemDraft | string) => void;
   onUpdateChecklistRow: (index: number, item: ChecklistItemDraft) => void;
   onRemoveChecklistRow: (index: number) => void;
-  evaluatePending: boolean;
-  evaluation: TaskCreateModalEvaluation | null;
   taskRunner: string;
   taskCursorModel: string;
   onTaskRunnerChange: (runner: string) => void;
@@ -74,11 +68,9 @@ type Props = {
   onDependsOnChange: (value: string[]) => void;
   appTimezone: string;
   onSaveDraft: () => void;
-  onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
   createError?: Error | null;
   createFormError?: string | null;
-  evaluateError?: Error | null;
   onApplyTestScenario?: (scenario: TestScenario) => void;
 };
 
@@ -106,8 +98,6 @@ export function TaskCreateModal({
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
-  evaluatePending,
-  evaluation,
   taskRunner,
   taskCursorModel,
   onTaskRunnerChange,
@@ -128,11 +118,9 @@ export function TaskCreateModal({
   onDependsOnChange,
   appTimezone,
   onSaveDraft,
-  onEvaluate,
   onSubmit,
   createError = null,
   createFormError = null,
-  evaluateError = null,
   onApplyTestScenario,
 }: Props) {
   const isEdit = editingTaskId != null;
@@ -340,18 +328,6 @@ export function TaskCreateModal({
             </div>
 
             {!isEdit ? (
-              <TaskCreateModalEvaluationSummary evaluation={evaluation} />
-            ) : null}
-
-            {!isEdit ? (
-              <MutationErrorBanner
-                error={evaluateError}
-                fallback="Could not evaluate draft."
-                className="task-create-modal-err task-create-modal-err--evaluate"
-              />
-            ) : null}
-
-            {!isEdit ? (
               <>
                 <MutationErrorBanner
                   error={createFormError}
@@ -390,10 +366,8 @@ export function TaskCreateModal({
                 title={title}
                 priority={priority}
                 checklistItems={checklistItems}
-                evaluatePending={evaluatePending}
                 onClose={onClose}
                 onSaveDraft={onSaveDraft}
-                onEvaluate={onEvaluate}
               />
             )}
           </form>

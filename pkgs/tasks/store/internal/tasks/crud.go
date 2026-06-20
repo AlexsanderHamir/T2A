@@ -10,7 +10,6 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/drafts"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/eval"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -41,7 +40,7 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 	return &t, nil
 }
 
-// Create inserts a new task row, links any draft evaluations, deletes
+// Create inserts a new task row, deletes
 // the source draft (if any), appends the task_created (and parent
 // subtask_added) audit events, and runs the checklist guard when the
 // initial status is StatusDone — all in one transaction. The caller
@@ -242,9 +241,6 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		t.DependsOn = append([]domain.DependencyEdge(nil), in.DependsOn...)
 	}
 	seq := int64(1)
-	if err := eval.AttachDraftEvaluationsInTx(tx, in.DraftID, t.ID); err != nil {
-		return err
-	}
 	if err := drafts.DeleteByIDInTx(tx, in.DraftID); err != nil {
 		return err
 	}

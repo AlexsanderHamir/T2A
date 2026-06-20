@@ -198,17 +198,6 @@ type TaskEvent struct {
 	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-// TaskDraftEvaluation stores one scoring snapshot for a draft task before creation.
-type TaskDraftEvaluation struct {
-	ID         string         `gorm:"primaryKey"`
-	DraftID    *string        `gorm:"index"`
-	TaskID     *string        `gorm:"index"`
-	By         Actor          `gorm:"column:by;not null"`
-	InputJSON  datatypes.JSON `gorm:"column:input_json;type:jsonb;not null;default:'{}'"`
-	ResultJSON datatypes.JSON `gorm:"column:result_json;type:jsonb;not null;default:'{}'"`
-	CreatedAt  time.Time      `gorm:"not null;index"`
-}
-
 // TaskDraft stores a resumable create-task draft payload.
 type TaskDraft struct {
 	ID          string         `gorm:"primaryKey"`

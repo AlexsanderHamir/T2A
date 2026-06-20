@@ -36,6 +36,5 @@ export function buildFreshDraftAutosaveBaseline(
     projectId: DEFAULT_PROJECT_ID,
     projectContextItemIds: [],
     checklistItems: [],
-    latestEvaluation: null,
   });
 }

@@ -248,7 +248,7 @@ export function SettingsPage() {
     // user's typing) — silent data loss with no feedback.
     //
     // Same race-hardening shape used by `useTaskPatchFlow` /
-    // `useTaskDeleteFlow` / `evaluateDraftMutation` — capture the
+    // `useTaskDeleteFlow` — capture the
     // freshest known good snapshot at call time, then per-field
     // compare at resolve time and only apply server truth for
     // fields the user hasn't subsequently edited. Fields the user

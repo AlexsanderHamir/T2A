@@ -9,7 +9,7 @@ Vertical slice for create-task modal policy, draft autosave, and mutations. UI l
 3. Hooks under `hooks/` — Apply layer composed by `useTaskCreateFlow`
 4. Public API: [`index.ts`](index.ts) (shim at [`../hooks/useTaskCreateFlow.ts`](../hooks/useTaskCreateFlow.ts))
 
-## Invariants (I1–I7)
+## Invariants (I1–I4, I6–I7)
 
 | ID | Rule | Where enforced |
 |----|------|----------------|
@@ -17,7 +17,6 @@ Vertical slice for create-task modal policy, draft autosave, and mutations. UI l
 | I2 | Baseline stamp only for active draft | `useTaskCreateMutations` save `onSuccess` |
 | I3 | Close modal on create only for active draft | `useTaskCreateMutations` create `onSuccess` |
 | I4 | Resume last-wins | `useTaskCreateEntryActions` + `requestedResumeRef` |
-| I5 | Evaluate snapshot for active draft only | `useTaskCreateMutations` evaluate `onSuccess` |
 | I6 | Default project on unchanged dropdown | `buildCreateMutationInput` |
 | I7 | Entry routing (loading/error/drafts/fresh) | `decideCreateEntry` + `useTaskCreateEntryActions` |
 
@@ -27,5 +26,4 @@ Race integration tests: [`../hooks/useTasksApp.test.tsx`](../hooks/useTasksApp.t
 
 - **Stale "Draft saved" after switching drafts:** check `newDraftIDRef` vs save response `id` (I2).
 - **Modal closed but wrong task created:** check create `variables.draft_id` vs ref (I3).
-- **Wrong evaluation score after resume:** check evaluate `variables.id` vs ref (I5).
 - **Wrong draft fields after rapid resume clicks:** check `requestedResumeRef` (I4).
