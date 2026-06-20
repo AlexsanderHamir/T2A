@@ -144,6 +144,175 @@ func (a *Adapter) EffectiveModel(req runner.Request) string {
 	return a.defaultCursorModel
 }
 
+type cursorProcessOutput struct {
+	stdout   []byte
+	stderr   []byte
+	exitCode int
+	execErr  error
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (a *Adapter) invokeCursorProcess(
+	runCtx context.Context,
+	req runner.Request,
+	cancel context.CancelCauseFunc,
+	env []string,
+	argv []string,
+) cursorProcessOutput {
+	var out cursorProcessOutput
+	lineCallback := func(line []byte) {
+		emitProgressFromLine(req.OnProgress, line, a.homePaths)
+	}
+	if a.streamExec != nil {
+		if req.StreamIdleStuck > 0 {
+			out.stdout, out.stderr, out.exitCode, out.execErr = adapterkit.DefaultStreamExecWithIdle(
+				runCtx,
+				req.WorkingDir,
+				env,
+				[]byte(req.Prompt),
+				a.binaryPath,
+				lineCallback,
+				adapterkit.StreamIdleConfig{
+					Stuck:  req.StreamIdleStuck,
+					Cancel: cancel,
+					OnIdle: mapStreamIdleCallback(req.OnStreamIdle),
+				},
+				argv...,
+			)
+		} else {
+			out.stdout, out.stderr, out.exitCode, out.execErr = a.streamExec(
+				runCtx,
+				req.WorkingDir,
+				env,
+				[]byte(req.Prompt),
+				a.binaryPath,
+				lineCallback,
+				argv...,
+			)
+		}
+		return out
+	}
+	out.stdout, out.stderr, out.exitCode, out.execErr = a.exec(
+		runCtx,
+		req.WorkingDir,
+		env,
+		[]byte(req.Prompt),
+		a.binaryPath,
+		argv...,
+	)
+	return out
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func clearClosedPipeAfterStdout(
+	runCtx context.Context,
+	stdout, stderr []byte,
+	execErr error,
+) error {
+	if execErr == nil || isCtxErr(runCtx) || !isClosedPipeReadError(execErr) || len(bytes.TrimSpace(stdout)) == 0 {
+		return execErr
+	}
+	slog.Debug("ignoring closed stdout pipe after cursor output",
+		"cmd", cursorLogCmd, "operation", "cursor.Adapter.Run.closed_pipe_with_stdout",
+		"stdout_bytes", len(stdout), "stderr_bytes", len(stderr), "err", execErr)
+	return nil
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (a *Adapter) resultForProcessError(
+	runCtx context.Context,
+	req runner.Request,
+	argv []string,
+	out cursorProcessOutput,
+	rawOutput string,
+) (runner.Result, error) {
+	if errors.Is(context.Cause(runCtx), adapterkit.ErrStreamIdle) {
+		return runner.NewResult(domain.PhaseStatusFailed, staleSummary(req.StreamIdleStuck),
+				failureDetails("stream_idle", out.execErr, out.stdout, out.stderr, a.homePaths, map[string]any{
+					"stream_idle_stuck_ns": int64(req.StreamIdleStuck),
+				}), rawOutput),
+			fmt.Errorf("cursor: %w: %v", runner.ErrStale, out.execErr)
+	}
+	if isCtxErr(runCtx) {
+		return runner.NewResult(domain.PhaseStatusFailed, timeoutSummary(req.Timeout),
+				failureDetails("timeout", out.execErr, out.stdout, out.stderr, a.homePaths, map[string]any{
+					"timeout_ns":         int64(req.Timeout),
+					"timeout_configured": req.Timeout > 0,
+				}), rawOutput),
+			fmt.Errorf("cursor: %w: %v", runner.ErrTimeout, out.execErr)
+	}
+	return runner.NewResult(domain.PhaseStatusFailed, execFailedSummary(out.execErr, a.homePaths),
+			failureDetails("exec", out.execErr, out.stdout, out.stderr, a.homePaths, map[string]any{
+				"binary":      redact(a.binaryPath, a.homePaths),
+				"argv":        argv,
+				"working_dir": redact(req.WorkingDir, a.homePaths),
+			}), rawOutput),
+		fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, out.execErr)
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (a *Adapter) resultForNonZeroExit(
+	req runner.Request,
+	exitCode int,
+	stdout, stderr []byte,
+	rawOutput string,
+) (runner.Result, error) {
+	details := stderrTailDetails(stderr, a.homePaths)
+	combined := string(stderr) + "\n" + string(stdout)
+	kind, stdMsg := classifyCursorFailure(combined)
+	if kind != "" {
+		details = mergeDetailsJSON(details, map[string]any{
+			"failure_kind":         kind,
+			"standardized_message": stdMsg,
+		})
+	}
+	summary := fmt.Sprintf("cursor: exit %d", exitCode)
+	switch kind {
+	case FailureKindCursorUsageLimit:
+		summary = titleForFailureKind(kind)
+	case FailureKindResumeSession:
+		if stdMsg != "" {
+			summary = stdMsg
+		}
+		if req.ResumeSessionID != "" {
+			return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
+				fmt.Errorf("cursor: %w: exit %d", runner.ErrResumeSession, exitCode)
+		}
+	default:
+		if hint := stderrFirstLineHint(stderr, a.homePaths); hint != "" {
+			summary = summary + ": " + hint
+		}
+	}
+	return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
+		fmt.Errorf("cursor: %w: exit %d", runner.ErrNonZeroExit, exitCode)
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (a *Adapter) resultFromParsedStdout(stdout, stderr []byte, rawOutput string) (runner.Result, error) {
+	parsed, parseErr := parseStdout(stdout)
+	if parseErr != nil {
+		return runner.NewResult(domain.PhaseStatusFailed, invalidOutputSummary(parseErr, a.homePaths),
+				failureDetails("parse_stdout", parseErr, stdout, stderr, a.homePaths, nil), rawOutput),
+			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, parseErr)
+	}
+
+	summary := redact(parsed.Result, a.homePaths)
+	details := buildDetails(parsed)
+
+	if parsed.IsError {
+		if summary == "" {
+			summary = "cursor: agent reported is_error=true"
+		}
+		res := runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput)
+		res.ResolvedModel = parsed.ResolvedModel
+		return res, fmt.Errorf("cursor: %w: agent reported is_error=true", runner.ErrNonZeroExit)
+	}
+
+	res := runner.NewResult(domain.PhaseStatusSucceeded, summary, details, rawOutput)
+	res.ResolvedModel = parsed.ResolvedModel
+	return res, nil
+}
+
 // Run implements runner.Runner. See package documentation for the full
 // invocation contract, env policy, redaction guarantees, and error mapping.
 func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
@@ -167,137 +336,17 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 
 	env := buildEnv(req.Env, a.extraKeys)
 	argv := a.argvFor(req)
-	var stdout, stderr []byte
-	var exitCode int
-	var execErr error
-	lineCallback := func(line []byte) {
-		emitProgressFromLine(req.OnProgress, line, a.homePaths)
+	out := a.invokeCursorProcess(runCtx, req, cancel, env, argv)
+	rawOutput := redact(combineStreams(out.stdout, out.stderr), a.homePaths)
+	out.execErr = clearClosedPipeAfterStdout(runCtx, out.stdout, out.stderr, out.execErr)
+
+	if out.execErr != nil {
+		return a.resultForProcessError(runCtx, req, argv, out, rawOutput)
 	}
-	if a.streamExec != nil {
-		if req.StreamIdleStuck > 0 {
-			stdout, stderr, exitCode, execErr = adapterkit.DefaultStreamExecWithIdle(
-				runCtx,
-				req.WorkingDir,
-				env,
-				[]byte(req.Prompt),
-				a.binaryPath,
-				lineCallback,
-				adapterkit.StreamIdleConfig{
-					Stuck:  req.StreamIdleStuck,
-					Cancel: cancel,
-					OnIdle: mapStreamIdleCallback(req.OnStreamIdle),
-				},
-				argv...,
-			)
-		} else {
-			stdout, stderr, exitCode, execErr = a.streamExec(
-				runCtx,
-				req.WorkingDir,
-				env,
-				[]byte(req.Prompt),
-				a.binaryPath,
-				lineCallback,
-				argv...,
-			)
-		}
-	} else {
-		stdout, stderr, exitCode, execErr = a.exec(
-			runCtx,
-			req.WorkingDir,
-			env,
-			[]byte(req.Prompt),
-			a.binaryPath,
-			argv...,
-		)
+	if out.exitCode != 0 {
+		return a.resultForNonZeroExit(req, out.exitCode, out.stdout, out.stderr, rawOutput)
 	}
-
-	rawOutput := redact(combineStreams(stdout, stderr), a.homePaths)
-
-	if execErr != nil && !isCtxErr(runCtx) && isClosedPipeReadError(execErr) && len(bytes.TrimSpace(stdout)) > 0 {
-		slog.Debug("ignoring closed stdout pipe after cursor output",
-			"cmd", cursorLogCmd, "operation", "cursor.Adapter.Run.closed_pipe_with_stdout",
-			"stdout_bytes", len(stdout), "stderr_bytes", len(stderr), "err", execErr)
-		execErr = nil
-	}
-
-	if execErr != nil {
-		if errors.Is(context.Cause(runCtx), adapterkit.ErrStreamIdle) {
-			return runner.NewResult(domain.PhaseStatusFailed, staleSummary(req.StreamIdleStuck),
-					failureDetails("stream_idle", execErr, stdout, stderr, a.homePaths, map[string]any{
-						"stream_idle_stuck_ns": int64(req.StreamIdleStuck),
-					}), rawOutput),
-				fmt.Errorf("cursor: %w: %v", runner.ErrStale, execErr)
-		}
-		if isCtxErr(runCtx) {
-			return runner.NewResult(domain.PhaseStatusFailed, timeoutSummary(req.Timeout),
-					failureDetails("timeout", execErr, stdout, stderr, a.homePaths, map[string]any{
-						"timeout_ns":         int64(req.Timeout),
-						"timeout_configured": req.Timeout > 0,
-					}), rawOutput),
-				fmt.Errorf("cursor: %w: %v", runner.ErrTimeout, execErr)
-		}
-		return runner.NewResult(domain.PhaseStatusFailed, execFailedSummary(execErr, a.homePaths),
-				failureDetails("exec", execErr, stdout, stderr, a.homePaths, map[string]any{
-					"binary":      redact(a.binaryPath, a.homePaths),
-					"argv":        argv,
-					"working_dir": redact(req.WorkingDir, a.homePaths),
-				}), rawOutput),
-			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, execErr)
-	}
-
-	if exitCode != 0 {
-		details := stderrTailDetails(stderr, a.homePaths)
-		combined := string(stderr) + "\n" + string(stdout)
-		kind, stdMsg := classifyCursorFailure(combined)
-		if kind != "" {
-			details = mergeDetailsJSON(details, map[string]any{
-				"failure_kind":         kind,
-				"standardized_message": stdMsg,
-			})
-		}
-		summary := fmt.Sprintf("cursor: exit %d", exitCode)
-		switch kind {
-		case FailureKindCursorUsageLimit:
-			summary = titleForFailureKind(kind)
-		case FailureKindResumeSession:
-			if stdMsg != "" {
-				summary = stdMsg
-			}
-			if req.ResumeSessionID != "" {
-				return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
-					fmt.Errorf("cursor: %w: exit %d", runner.ErrResumeSession, exitCode)
-			}
-		default:
-			if hint := stderrFirstLineHint(stderr, a.homePaths); hint != "" {
-				summary = summary + ": " + hint
-			}
-		}
-		return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
-			fmt.Errorf("cursor: %w: exit %d", runner.ErrNonZeroExit, exitCode)
-	}
-
-	parsed, parseErr := parseStdout(stdout)
-	if parseErr != nil {
-		return runner.NewResult(domain.PhaseStatusFailed, invalidOutputSummary(parseErr, a.homePaths),
-				failureDetails("parse_stdout", parseErr, stdout, stderr, a.homePaths, nil), rawOutput),
-			fmt.Errorf("cursor: %w: %v", runner.ErrInvalidOutput, parseErr)
-	}
-
-	summary := redact(parsed.Result, a.homePaths)
-	details := buildDetails(parsed)
-
-	if parsed.IsError {
-		if summary == "" {
-			summary = "cursor: agent reported is_error=true"
-		}
-		res := runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput)
-		res.ResolvedModel = parsed.ResolvedModel
-		return res, fmt.Errorf("cursor: %w: agent reported is_error=true", runner.ErrNonZeroExit)
-	}
-
-	res := runner.NewResult(domain.PhaseStatusSucceeded, summary, details, rawOutput)
-	res.ResolvedModel = parsed.ResolvedModel
-	return res, nil
+	return a.resultFromParsedStdout(out.stdout, out.stderr, rawOutput)
 }
 
 // Compile-time assertion that *Adapter implements runner.Runner.
