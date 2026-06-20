@@ -10,6 +10,7 @@ import {
   rumNavigationTiming,
 } from "@/observability";
 import { rememberPersistedDetailId } from "@/lib/queryPersist";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { useOptionalToast } from "@/shared/toast";
 import { useRolloutFlags } from "@/settings";
 import {
@@ -323,6 +324,8 @@ function renderTaskDetailLoadedView({
   const { doneCount, totalCount } = countChecklistProgress(checklistItems);
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
   const autonomyEnable = autonomyMode === "on_hold";
+  const dependenciesUiEnabled = !isUiFeatureOmitted("tagsAndDependencies");
+  const releaseGatesUiEnabled = !isUiFeatureOmitted("releaseGates");
 
   return (
     <section className="panel task-detail-panel task-detail-content--enter">
@@ -416,15 +419,19 @@ function renderTaskDetailLoadedView({
         />
       ) : null}
 
-      <TaskDependenciesPanel dependencies={dependencySummaries} />
+      {dependenciesUiEnabled ? (
+        <TaskDependenciesPanel dependencies={dependencySummaries} />
+      ) : null}
 
-      <TaskGatePanel
-        gate={task.gate}
-        editable
-        onAction={(action) => scheduling.gateMutation.mutate(action)}
-        actionPending={scheduling.gateMutation.isPending}
-        error={scheduling.gateMutation.error ? scheduling.schedulingError : null}
-      />
+      {releaseGatesUiEnabled ? (
+        <TaskGatePanel
+          gate={task.gate}
+          editable
+          onAction={(action) => scheduling.gateMutation.mutate(action)}
+          actionPending={scheduling.gateMutation.isPending}
+          error={scheduling.gateMutation.error ? scheduling.schedulingError : null}
+        />
+      ) : null}
 
       <TaskDetailChecklistSection
         saving={saving}

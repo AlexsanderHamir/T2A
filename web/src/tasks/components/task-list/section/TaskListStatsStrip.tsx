@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import type { TaskStatsResponse } from "@/types";
 
 type Props = {
@@ -34,6 +35,7 @@ type Pill = {
  * pure projection that hides itself when there is nothing useful to show.
  */
 export function TaskListStatsStrip({ stats }: Props) {
+  const scheduleUiEnabled = !isUiFeatureOmitted("schedule");
   const pills = useMemo<Pill[]>(() => {
     if (!stats || stats.total <= 0) return [];
     const ready = stats.ready ?? 0;
@@ -53,7 +55,7 @@ export function TaskListStatsStrip({ stats }: Props) {
         tone: "warn",
       });
     }
-    if (scheduled > 0) {
+    if (scheduleUiEnabled && scheduled > 0) {
       next.push({
         key: "scheduled",
         value: scheduled,
@@ -78,7 +80,7 @@ export function TaskListStatsStrip({ stats }: Props) {
       });
     }
     return next;
-  }, [stats]);
+  }, [scheduleUiEnabled, stats]);
 
   if (pills.length === 0) return null;
 

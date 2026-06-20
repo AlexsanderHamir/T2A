@@ -25,6 +25,7 @@ import {
 import { taskListPagerSummary } from "../pager/taskListPagerSummary";
 import { TaskListTableSkeleton } from "../table/TaskListTableSkeleton";
 import { useAppTimezone } from "@/shared/time/appTimezone";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import {
   TaskBulkDeleteConfirmModal,
   TaskBulkRescheduleModal,
@@ -110,6 +111,7 @@ export const TaskListSection = memo(function TaskListSection({
   actions,
   taskStats,
 }: Props) {
+  const scheduleUiEnabled = !isUiFeatureOmitted("schedule");
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
 
@@ -386,6 +388,7 @@ export const TaskListSection = memo(function TaskListSection({
         selectedCount={selection.selectedVisibleIds.length}
         scheduledCount={selectedScheduledIds.length}
         rescheduleDisabled={selectedIncludesDone}
+        showScheduleActions={scheduleUiEnabled}
         busy={bulkSchedule.isPending || bulkDelete.isPending}
         onReschedule={() => {
           setBulkDeleteModalOpen(false);
@@ -413,7 +416,7 @@ export const TaskListSection = memo(function TaskListSection({
           onConfirm={handleBulkDeleteConfirm}
         />
       ) : null}
-      {rescheduleModalOpen ? (
+      {scheduleUiEnabled && rescheduleModalOpen ? (
         <TaskBulkRescheduleModal
           selectedCount={selection.selectedVisibleIds.length}
           appTimezone={appTimezone}

@@ -1,3 +1,4 @@
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import type { Status, Task } from "@/types";
 import { useAppTimezone, formatInAppTimezone } from "@/shared/time/appTimezone";
 
@@ -13,10 +14,15 @@ const TERMINAL_STATUSES: ReadonlySet<Status> = new Set(["done", "failed"]);
  */
 export function TaskDetailSchedule({ task }: Props) {
   const tz = useAppTimezone();
+  const scheduleUiEnabled = !isUiFeatureOmitted("schedule");
   const isTerminal = TERMINAL_STATUSES.has(task.status);
   const hasSchedule = Boolean(task.pickup_not_before);
   const phaseCompleteAt = (task.criteria_satisfied_at ?? "").trim();
   const hasPhaseComplete = phaseCompleteAt !== "";
+
+  if (!hasPhaseComplete && !scheduleUiEnabled) {
+    return null;
+  }
 
   if (!hasSchedule && isTerminal && !hasPhaseComplete) {
     return null;
@@ -53,7 +59,7 @@ export function TaskDetailSchedule({ task }: Props) {
           </div>
         </div>
       ) : null}
-      {hasSchedule ? (
+      {scheduleUiEnabled && hasSchedule ? (
         <div
           className="task-detail-schedule-row task-detail-schedule-row--scheduled"
           data-testid="task-detail-schedule-badge"
@@ -70,7 +76,7 @@ export function TaskDetailSchedule({ task }: Props) {
             <time dateTime={task.pickup_not_before}>{formatted}</time>
           </div>
         </div>
-      ) : !hasPhaseComplete ? (
+      ) : scheduleUiEnabled && !hasPhaseComplete ? (
         <span className="task-detail-schedule-empty muted">
           No pickup scheduled.
         </span>

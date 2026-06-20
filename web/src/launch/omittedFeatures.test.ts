@@ -16,4 +16,9 @@ describe("omittedFeatures", () => {
     expect(OMITTED_UI_FEATURES.schedule).toBe(true);
     expect(isUiFeatureOmitted("schedule")).toBe(true);
   });
+
+  it("documents release gates as omitted for the current launch", () => {
+    expect(OMITTED_UI_FEATURES.releaseGates).toBe(true);
+    expect(isUiFeatureOmitted("releaseGates")).toBe(true);
+  });
 });

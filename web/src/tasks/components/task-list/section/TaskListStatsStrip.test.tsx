@@ -1,7 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskStatsResponse } from "@/types";
 import { TaskListStatsStrip } from "./TaskListStatsStrip";
+
+const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
+
+vi.mock("@/launch/omittedFeatures", () => ({
+  isUiFeatureOmitted: (feature: string) => isUiFeatureOmitted(feature),
+}));
 
 function makeStats(
   overrides: Partial<TaskStatsResponse> = {},
@@ -32,6 +38,10 @@ function makeStats(
 }
 
 describe("TaskListStatsStrip", () => {
+  beforeEach(() => {
+    isUiFeatureOmitted.mockImplementation(() => false);
+  });
+
   it("renders nothing when stats is null", () => {
     render(<TaskListStatsStrip stats={null} />);
     expect(
@@ -91,5 +101,21 @@ describe("TaskListStatsStrip", () => {
     expect(within(strip).getByText("Scheduled")).toBeInTheDocument();
     expect(within(strip).getByText("Review")).toBeInTheDocument();
     expect(within(strip).getByText("Blocked")).toBeInTheDocument();
+  });
+
+  it("hides the scheduled pill when launch omits schedule", () => {
+    isUiFeatureOmitted.mockImplementation((feature) => feature === "schedule");
+    render(
+      <TaskListStatsStrip
+        stats={makeStats({
+          total: 9,
+          ready: 3,
+          scheduled: 2,
+        })}
+      />,
+    );
+    expect(
+      screen.queryByTestId("task-list-stats-scheduled"),
+    ).not.toBeInTheDocument();
   });
 });

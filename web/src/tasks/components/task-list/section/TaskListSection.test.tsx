@@ -13,6 +13,12 @@ const { mockPatchTask, mockDeleteTask } = vi.hoisted(() => ({
   mockDeleteTask: vi.fn(),
 }));
 
+const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
+
+vi.mock("@/launch/omittedFeatures", () => ({
+  isUiFeatureOmitted: (feature: string) => isUiFeatureOmitted(feature),
+}));
+
 vi.mock("@/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/api")>();
   return {
@@ -26,6 +32,7 @@ beforeEach(() => {
   mockPatchTask.mockReset();
   mockDeleteTask.mockReset();
   mockDeleteTask.mockResolvedValue(undefined);
+  isUiFeatureOmitted.mockImplementation(() => false);
 });
 
 afterEach(() => {

@@ -13,6 +13,12 @@ import { TaskDetailPage } from "./TaskDetailPage";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 
+const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
+
+vi.mock("@/launch/omittedFeatures", () => ({
+  isUiFeatureOmitted: (feature: string) => isUiFeatureOmitted(feature),
+}));
+
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
   return {
@@ -181,6 +187,7 @@ describe("TaskDetailPage", () => {
   beforeEach(() => {
     stubEventSource();
     mockNavigate.mockClear();
+    isUiFeatureOmitted.mockImplementation(() => false);
   });
 
   afterEach(() => {
@@ -327,10 +334,7 @@ describe("TaskDetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  // The Dependencies section is always present so the absence of upstream
-  // tasks is stated explicitly rather than rendering nothing. (2026-06-04:
-  // reverted an earlier "hide when empty" pass per product feedback.)
-  it("always renders the Dependencies section, with an empty state when there are none", async () => {
+  it("renders the Dependencies section with an empty state when there are none", async () => {
     mockTaskDetailFetch(taskDetail("tnd", "No deps task"));
 
     renderDetail("/tasks/tnd", mockApp());
@@ -342,6 +346,22 @@ describe("TaskDetailPage", () => {
     expect(
       screen.getByText(/no upstream dependencies/i),
     ).toBeInTheDocument();
+  });
+
+  it("hides Dependencies and Release gate when launch omits them", async () => {
+    isUiFeatureOmitted.mockImplementation(
+      (feature) => feature === "tagsAndDependencies" || feature === "releaseGates",
+    );
+    mockTaskDetailFetch(taskDetail("tnd", "No deps task"));
+
+    renderDetail("/tasks/tnd", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^no deps task$/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("task-deps-empty")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("task-gate-empty")).not.toBeInTheDocument();
+    expect(screen.queryByText(/release gate/i)).not.toBeInTheDocument();
   });
 
   it("shows done criteria as read-only with progress counts", async () => {

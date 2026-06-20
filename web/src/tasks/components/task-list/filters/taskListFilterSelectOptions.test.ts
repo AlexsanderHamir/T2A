@@ -7,6 +7,7 @@ import {
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   TASK_LIST_STATUS_FILTER_OPTIONS,
+  taskListStatusFilterOptions,
 } from "./taskListFilterSelectOptions";
 import { statusNeedsUserInput } from "../../../task-display";
 
@@ -56,6 +57,16 @@ describe("taskListFilterSelectOptions", () => {
           `cell-pill cell-pill--status cell-pill--status-${s}`,
         );
       }
+    });
+  });
+
+  describe("taskListStatusFilterOptions", () => {
+    it("drops the synthetic scheduled bucket when includeScheduled is false", () => {
+      const values = optionValues(
+        taskListStatusFilterOptions({ includeScheduled: false }),
+      );
+      expect(values).not.toContain("scheduled");
+      expect(values.sort()).toEqual(["all", ...STATUSES].sort());
     });
   });
 

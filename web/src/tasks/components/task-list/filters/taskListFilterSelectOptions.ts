@@ -41,6 +41,18 @@ export const TASK_LIST_STATUS_FILTER_OPTIONS: CustomSelectOption[] = [
   })),
 ];
 
+/** Status filter options, optionally omitting the synthetic scheduled bucket. */
+export function taskListStatusFilterOptions(opts?: {
+  includeScheduled?: boolean;
+}): CustomSelectOption[] {
+  if (opts?.includeScheduled !== false) {
+    return TASK_LIST_STATUS_FILTER_OPTIONS;
+  }
+  return TASK_LIST_STATUS_FILTER_OPTIONS.filter(
+    (option) => !("value" in option) || option.value !== "scheduled",
+  );
+}
+
 /** Options for the task list priority filter `CustomSelect`. */
 export const TASK_LIST_PRIORITY_FILTER_OPTIONS: CustomSelectOption[] = [
   { value: "all", label: "All priorities" },

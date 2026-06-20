@@ -1,13 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import type { Status } from "@/types";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskDetailSchedule } from "./TaskDetailSchedule";
+
+const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
+
+vi.mock("@/launch/omittedFeatures", () => ({
+  isUiFeatureOmitted: (feature: string) => isUiFeatureOmitted(feature),
+}));
 
 const NY_SETTINGS: AppSettings = {
   ...APP_SETTINGS_DEFAULTS,
@@ -46,6 +52,10 @@ function renderPanel(opts: {
 }
 
 describe("TaskDetailSchedule (read-only)", () => {
+  beforeEach(() => {
+    isUiFeatureOmitted.mockImplementation(() => false);
+  });
+
   it("renders nothing when the task is terminal and has no schedule", () => {
     renderPanel({ status: "done", pickup: null });
     expect(screen.queryByTestId("task-detail-schedule")).toBeNull();
@@ -81,6 +91,33 @@ describe("TaskDetailSchedule (read-only)", () => {
     });
     expect(screen.getByTestId("task-detail-schedule-badge")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("hides pickup schedule UI when launch omits schedule", () => {
+    isUiFeatureOmitted.mockImplementation((feature) => feature === "schedule");
+    renderPanel({
+      status: "ready",
+      pickup: "2026-04-22T13:00:00Z",
+    });
+    expect(screen.queryByTestId("task-detail-schedule")).toBeNull();
+  });
+
+  it("still shows phase complete when launch omits schedule", () => {
+    isUiFeatureOmitted.mockImplementation((feature) => feature === "schedule");
+    const { Wrapper } = createWrapper();
+    render(
+      <Wrapper>
+        <TaskDetailSchedule
+          task={{
+            status: "done",
+            pickup_not_before: "2026-04-22T13:00:00Z",
+            criteria_satisfied_at: "2026-04-22T13:00:00Z",
+          }}
+        />
+      </Wrapper>,
+    );
+    expect(screen.getByTestId("task-detail-phase-complete")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-detail-schedule-badge")).toBeNull();
   });
 
   it("shows phase complete timestamp when criteria_satisfied_at is set", () => {

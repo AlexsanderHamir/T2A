@@ -1,7 +1,8 @@
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { CustomSelect } from "../../custom-select";
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
-  TASK_LIST_STATUS_FILTER_OPTIONS,
+  taskListStatusFilterOptions,
 } from "./taskListFilterSelectOptions";
 
 type Props = {
@@ -27,6 +28,9 @@ export function TaskListFilters({
   titleSearch,
   onTitleSearchChange,
 }: Props) {
+  const statusFilterOptions = taskListStatusFilterOptions({
+    includeScheduled: !isUiFeatureOmitted("schedule"),
+  });
   const projectFilterOptions = [
     { value: "all", label: "All projects" },
     ...projectOptions.map((project) => ({
@@ -51,7 +55,7 @@ export function TaskListFilters({
             dropdownMinWidth={240}
             listboxName="Filter by status"
             value={statusFilter}
-            options={TASK_LIST_STATUS_FILTER_OPTIONS}
+            options={statusFilterOptions}
             onChange={onStatusFilterChange}
           />
         </div>

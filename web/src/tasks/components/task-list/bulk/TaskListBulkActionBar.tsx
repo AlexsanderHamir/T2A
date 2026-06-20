@@ -14,6 +14,10 @@ type Props = {
    * panel (terminal tasks are not schedulable).
    */
   rescheduleDisabled: boolean;
+  /**
+   * When false, hides bulk reschedule / clear-schedule actions (launch omission).
+   */
+  showScheduleActions?: boolean;
   busy: boolean;
   onReschedule: () => void;
   onClearSchedule: () => void;
@@ -50,6 +54,7 @@ export function TaskListBulkActionBar({
   selectedCount,
   scheduledCount,
   rescheduleDisabled,
+  showScheduleActions = true,
   busy,
   onReschedule,
   onClearSchedule,
@@ -73,36 +78,40 @@ export function TaskListBulkActionBar({
         {selectedCount} {noun} selected
       </span>
       <div className="task-list-bulk-bar-actions">
-        <button
-          type="button"
-          className="task-create-submit"
-          onClick={onReschedule}
-          disabled={busy || rescheduleDisabled}
-          title={
-            rescheduleDisabled
-              ? "Completed tasks cannot be rescheduled from the list."
-              : undefined
-          }
-          data-testid="task-list-bulk-bar-reschedule"
-        >
-          Reschedule
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          onClick={onClearSchedule}
-          disabled={busy || scheduledCount === 0}
-          title={
-            scheduledCount === 0
-              ? "None of the selected tasks have a schedule to clear."
-              : `Clear scheduled pickup on ${scheduledCount} selected ${
-                  scheduledCount === 1 ? "task" : "tasks"
-                }.`
-          }
-          data-testid="task-list-bulk-bar-clear"
-        >
-          Clear schedule
-        </button>
+        {showScheduleActions ? (
+          <>
+            <button
+              type="button"
+              className="task-create-submit"
+              onClick={onReschedule}
+              disabled={busy || rescheduleDisabled}
+              title={
+                rescheduleDisabled
+                  ? "Completed tasks cannot be rescheduled from the list."
+                  : undefined
+              }
+              data-testid="task-list-bulk-bar-reschedule"
+            >
+              Reschedule
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={onClearSchedule}
+              disabled={busy || scheduledCount === 0}
+              title={
+                scheduledCount === 0
+                  ? "None of the selected tasks have a schedule to clear."
+                  : `Clear scheduled pickup on ${scheduledCount} selected ${
+                      scheduledCount === 1 ? "task" : "tasks"
+                    }.`
+              }
+              data-testid="task-list-bulk-bar-clear"
+            >
+              Clear schedule
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
           className="danger"

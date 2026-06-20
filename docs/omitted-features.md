@@ -76,6 +76,7 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 **Operator-visible behavior**
 
 - Create / edit task modal **More options**: no **Tags & dependencies** fieldset (tags, milestone, depends-on picker).
+- Task detail: no **Dependencies** section (upstream list or empty state).
 - Collapsed **More options** summary no longer mentions tags or dependencies (shows agent only when schedule is also omitted).
 - New tasks still submit with empty tags, no milestone, and no `depends_on` edges unless set via API.
 
@@ -83,7 +84,7 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 
 - Task fields `tags`, `milestone`, and dependency edges in the data model — [data-model.md](./data-model.md).
 - REST dependency routes and task PATCH fields — [api.md](./api.md).
-- Task detail scheduling UI (if present) and store logic unchanged.
+- Store logic unchanged.
 
 **UI gates**
 
@@ -91,11 +92,44 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 | --- | --- |
 | Modal fieldset + summary hint | `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx` |
 | Summary line copy | `web/src/tasks/components/task-create-modal/advancedSummaryLine.ts` |
+| Task detail dependencies | `web/src/tasks/pages/TaskDetailPage.tsx` |
 
 **Restore checklist**
 
 - [ ] Set `tagsAndDependencies: false` in `web/src/launch/omittedFeatures.ts`.
 - [ ] Smoke-test create and edit modals: tags, milestone, depends-on picker.
+- [ ] Smoke-test task detail: dependencies section with and without upstream tasks.
+- [ ] Move this section to **Restored** below with the release name/date.
+
+---
+
+### Release gates (task detail)
+
+| Field | Value |
+| --- | --- |
+| **Status** | Omitted (initial launch) |
+| **Since** | 2026-06-20 |
+| **Target restore** | TBD — when human approval gates are launch-ready |
+
+**Operator-visible behavior**
+
+- Task detail: no **Release gate** section (status, criteria, release action, or empty state).
+
+**Still implemented (intentionally not deleted)**
+
+- `gate` on tasks and gate PATCH routes — [data-model.md](./data-model.md), [api.md](./api.md).
+- Scheduling predicates and worker behavior unchanged.
+
+**UI gates**
+
+| Surface | File |
+| --- | --- |
+| Task detail gate panel | `web/src/tasks/pages/TaskDetailPage.tsx` |
+
+**Restore checklist**
+
+- [ ] Set `releaseGates: false` in `web/src/launch/omittedFeatures.ts`.
+- [ ] Smoke-test task detail: empty gate, active gate, release action.
 - [ ] Move this section to **Restored** below with the release name/date.
 
 ---
@@ -112,12 +146,14 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 
 - Create / edit task modal **More options**: no **Schedule for** fieldset (`SchedulePicker` / pickup schedule field).
 - Collapsed **More options** summary no longer mentions schedule (shows agent only when all secondary fields are omitted).
+- Task detail toolbar: no pickup schedule badge or “No pickup scheduled” line.
+- Task list: no **Scheduled (deferred)** status filter, no scheduled count pill, no bulk **Reschedule** / **Clear schedule** actions.
 - New tasks omit `pickup_not_before` on create — worker picks up when free (same as “Picks up immediately”).
 
 **Still implemented (intentionally not deleted)**
 
 - `pickup_not_before` on tasks and scheduling predicates — [data-model.md](./data-model.md), [docs/domain/task-scheduling.md](./domain/task-scheduling.md).
-- Task detail schedule UI and bulk reschedule on the list unchanged.
+- Task detail **phase completed** timestamp (when present) remains visible — it is not pickup scheduling.
 - REST PATCH/POST still accept `pickup_not_before` — [api.md](./api.md).
 
 **UI gates**
@@ -126,6 +162,10 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 | --- | --- |
 | Modal schedule fieldset | `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx` |
 | Summary line copy | `web/src/tasks/components/task-create-modal/advancedSummaryLine.ts` |
+| Task detail pickup schedule | `web/src/tasks/components/task-detail/schedule/TaskDetailSchedule.tsx` |
+| List status filter | `web/src/tasks/components/task-list/filters/TaskListFilters.tsx`, `.../taskListFilterSelectOptions.ts` |
+| List stats pill | `web/src/tasks/components/task-list/section/TaskListStatsStrip.tsx` |
+| Bulk reschedule / clear | `web/src/tasks/components/task-list/bulk/TaskListBulkActionBar.tsx`, `.../section/TaskListSection.tsx` |
 
 **Restore checklist**
 
