@@ -36,12 +36,11 @@ type bootstrapDraftsPayload struct {
 // GET /settings, etc. — bootstrap clients must tolerate its absence
 // (older or stripped-down servers) and gracefully fall back.
 type bootstrapResponse struct {
-	Settings    settingsResponse        `json:"settings"`
-	Tasks       bootstrapTasksPayload   `json:"tasks"`
-	Stats       taskStatsResponse       `json:"stats"`
-	Projects    projectsListResponse    `json:"projects"`
-	Automations automationsListResponse `json:"automations"`
-	Drafts      bootstrapDraftsPayload  `json:"drafts"`
+	Settings settingsResponse       `json:"settings"`
+	Tasks    bootstrapTasksPayload  `json:"tasks"`
+	Stats    taskStatsResponse      `json:"stats"`
+	Projects projectsListResponse   `json:"projects"`
+	Drafts   bootstrapDraftsPayload `json:"drafts"`
 }
 
 // bootstrap serves GET /v1/bootstrap. It composes the five cold-start
@@ -57,13 +56,12 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	var (
-		settings       store.AppSettings
-		taskRows       []domain.Task
-		hasMore        bool
-		stats          store.TaskStats
-		projects       []domain.Project
-		automationRows []domain.Automation
-		drafts         any
+		settings store.AppSettings
+		taskRows []domain.Task
+		hasMore  bool
+		stats    store.TaskStats
+		projects []domain.Project
+		drafts   any
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -97,13 +95,6 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	g.Go(func() error {
-		v, err := h.store.ListAutomations(gctx, false, readpolicy.BootstrapAutomationsLimit)
-		if err == nil {
-			automationRows = v
-		}
-		return err
-	})
-	g.Go(func() error {
 		v, err := h.store.ListDrafts(gctx, readpolicy.BootstrapDraftsLimit)
 		if err == nil {
 			drafts = v
@@ -122,10 +113,6 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 		Projects: projectsListResponse{
 			Projects: projects,
 			Limit:    readpolicy.BootstrapProjectsLimit,
-		},
-		Automations: automationsListResponse{
-			Automations: automationRows,
-			Limit:       readpolicy.BootstrapAutomationsLimit,
 		},
 		Drafts: bootstrapDraftsPayload{Drafts: drafts},
 	}

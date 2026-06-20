@@ -19,7 +19,6 @@ Centralize bootstrap (and future shell) limits in [`pkgs/tasks/handler/readpolic
 | `BootstrapListLimit` | 20 | `TASK_LIST_PAGE_SIZE` |
 | `BootstrapProjectsLimit` | 100 | `useProjects({ limit: 100 })` |
 | `BootstrapDraftsLimit` | 50 | create-flow drafts |
-| `BootstrapAutomationsLimit` | 200 | automations library |
 
 ### Write / publish policy
 

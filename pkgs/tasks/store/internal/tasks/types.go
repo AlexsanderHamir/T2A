@@ -19,7 +19,6 @@ type CreateInput struct {
 	Priority              domain.Priority
 	ProjectID             *string
 	ProjectContextItemIDs []string
-	AutomationSelections  []domain.AutomationSelection
 	Runner                string
 	CursorModel           string
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
@@ -50,7 +49,6 @@ type UpdateInput struct {
 	Priority              *domain.Priority
 	Project               *ProjectFieldPatch
 	ProjectContextItemIDs *[]string
-	AutomationSelections  *[]domain.AutomationSelection
 	PickupNotBefore       *PickupNotBeforePatch
 	CursorModel           *string
 	Tags                  *[]string

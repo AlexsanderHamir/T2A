@@ -5,7 +5,6 @@ export * from "./repo";
 export * from "./tasks";
 export * from "./cycles";
 export * from "./projects";
-export * from "./automations";
 export * from "./settings";
 export * from "./runners";
 export * from "./rum";

@@ -27,13 +27,12 @@ type taskCreateJSON struct {
 	// as soon as the global agent_pickup_delay_seconds elapses. The
 	// pre-2000 sentinel is rejected to guard against accidental
 	// zero-value timestamps.
-	PickupNotBefore      *string                                 `json:"pickup_not_before,omitempty"`
-	Tags                 []string                                `json:"tags,omitempty"`
-	Milestone            *string                                 `json:"milestone,omitempty"`
-	Gate                 *domain.TaskGate                        `json:"gate,omitempty"`
-	DependsOn            dependsOnWire                           `json:"depends_on,omitempty"`
-	AutomationSelections []automationSelectionJSON               `json:"automation_selections,omitempty"`
-	ChecklistItems       []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
+	PickupNotBefore *string                                 `json:"pickup_not_before,omitempty"`
+	Tags            []string                                `json:"tags,omitempty"`
+	Milestone       *string                                 `json:"milestone,omitempty"`
+	Gate            *domain.TaskGate                        `json:"gate,omitempty"`
+	DependsOn       dependsOnWire                           `json:"depends_on,omitempty"`
+	ChecklistItems  []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
 }
 
 type taskEvaluateJSON struct {
@@ -62,12 +61,11 @@ type taskPatchJSON struct {
 	// CursorModel sets tasks.cursor_model when the key is present (including
 	// the empty string, which clears per-task override). JSON null is decoded
 	// as nil and means "no change", same as omitting the key.
-	CursorModel          *string                    `json:"cursor_model"`
-	Tags                 *[]string                  `json:"tags,omitempty"`
-	Milestone            *string                    `json:"milestone,omitempty"`
-	Gate                 patchGateField             `json:"gate"`
-	DependsOn            *dependsOnPatchWire        `json:"depends_on,omitempty"`
-	AutomationSelections *[]automationSelectionJSON `json:"automation_selections,omitempty"`
+	CursorModel *string             `json:"cursor_model"`
+	Tags        *[]string           `json:"tags,omitempty"`
+	Milestone   *string             `json:"milestone,omitempty"`
+	Gate        patchGateField      `json:"gate"`
+	DependsOn   *dependsOnPatchWire `json:"depends_on,omitempty"`
 }
 
 type taskGateActionJSON struct {

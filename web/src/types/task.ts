@@ -9,7 +9,6 @@ export type Status =
 
 export type { GateCriterion, GateStatus, TaskGate } from "./gate";
 import type { TaskGate } from "./gate";
-import type { AutomationSelection } from "./automation";
 
 export type Priority = "low" | "medium" | "high" | "critical";
 
@@ -45,8 +44,6 @@ export type Task = {
   project_id?: string;
   /** User-selected project context items passed to agent runs for this task. */
   project_context_item_ids?: string[];
-  /** Per-task yes/no toggles for global prompt automations. Omit = not listed. */
-  automation_selections?: AutomationSelection[];
   tags?: string[];
   milestone?: string | null;
   depends_on?: TaskDependencyEdge[];
@@ -412,8 +409,6 @@ export type TaskDraftPayload = {
    * memory nodes the operator selected before closing the modal.
    */
   project_context_item_ids?: string[];
-  /** Optional in older drafts. Mirrors task `automation_selections`. */
-  automation_selections?: AutomationSelection[];
   latest_evaluation?: {
     overall_score: number;
     overall_summary: string;

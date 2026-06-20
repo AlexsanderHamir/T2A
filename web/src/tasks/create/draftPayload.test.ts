@@ -10,7 +10,6 @@ const baseFields: TaskCreateFormFields = {
   newTaskCursorModel: "",
   newProjectID: "default",
   newProjectContextItemIDs: [],
-  newAutomationSelections: [],
   newSchedule: null,
   newAutonomyEnabled: true,
   newTagsCsv: "",

@@ -28,7 +28,6 @@ describe("buildCreateTaskMutationInput", () => {
       newTaskCursorModel: "",
       newProjectID: DEFAULT_PROJECT_ID,
       newProjectContextItemIDs: [],
-      newAutomationSelections: [],
       newSchedule: null,
       newAutonomyEnabled: true,
       newTagsCsv: "",

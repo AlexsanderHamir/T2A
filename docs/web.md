@@ -10,28 +10,14 @@ Vite + React client under `web/`. All `fetch` calls live in `web/src/api/`; resp
 | `/drafts` | `web/src/tasks/` | Saved create-task drafts |
 | `/projects` | `web/src/projects/` | Project list |
 | `/projects/:id` | `web/src/projects/` | Project detail |
-| `/automations` | `web/src/automations/` | Global prompt-automation library CRUD |
 | `/settings` | `web/src/settings/` | App settings |
 | `/tasks/:id` | `web/src/tasks/pages/` | Task detail |
 
-Primary nav links: Tasks, Drafts, Projects, Automations (Settings is header gear).
+Primary nav links: Tasks, Drafts, Projects (Settings is header gear).
 
 ## Cold start
 
-`web/src/app/hooks/useBootstrap.ts` seeds TanStack Query from `GET /v1/bootstrap` (settings, root task list, stats, projects, automations catalog, draft head). Per-page hooks fall back to individual GETs when bootstrap is absent.
-
-## Prompt automations (UI)
-
-- **Library:** `AutomationsPage` — list + modal create/edit; archives via `DELETE /automations/{id}`.
-- **Create task:** `AutomationPicker` in the create modal (Behaviors section) — browse modal with search, segmented **Yes / Omit / No** per row. Omit removes the selection from `automation_selections`; only yes/no are sent to `POST /tasks`.
-- **API:** `web/src/api/automations.ts`, types in `web/src/types/automation.ts`.
-- **Query keys:** `web/src/automations/queryKeys.ts` (`automationQueryKeys.list(includeArchived, limit)`).
-
-Draft autosave persists `automation_selections` in `TaskDraftPayload` via `draftAutosaveSignature`.
-
-Task detail edit UI for automations is not in V1; PATCH `/tasks/{id}` accepts `automation_selections` for follow-up work.
-
-See [ADR-0013](./adr/ADR-0013-prompt-automations.md).
+`web/src/app/hooks/useBootstrap.ts` seeds TanStack Query from `GET /v1/bootstrap` (settings, root task list, stats, projects, draft head). Per-page hooks fall back to individual GETs when bootstrap is absent.
 
 ## Task sync (SSE cache coherence)
 

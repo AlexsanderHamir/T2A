@@ -1,6 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type {
-  AutomationSelection,
   ChecklistItemDraft,
   Priority,
   PriorityChoice,
@@ -24,7 +23,6 @@ export type CreateTaskMutationInput = {
   pickup_not_before: string | null;
   project_id: string;
   project_context_item_ids: string[];
-  automation_selections: AutomationSelection[];
   tags: string[];
   milestone?: string;
   depends_on: TaskDependencyEdge[];
@@ -49,7 +47,6 @@ export type TaskCreateFormFields = {
   newTaskCursorModel: string;
   newProjectID: string;
   newProjectContextItemIDs: string[];
-  newAutomationSelections: AutomationSelection[];
   newSchedule: string | null;
   newAutonomyEnabled: boolean;
   newTagsCsv: string;
@@ -70,7 +67,6 @@ export type DraftSavePayload = {
     cursor_model: string;
     project_id: string;
     project_context_item_ids: string[];
-    automation_selections: AutomationSelection[];
     checklist_items: TaskDraftChecklistItem[];
     latest_evaluation?: {
       overall_score: number;

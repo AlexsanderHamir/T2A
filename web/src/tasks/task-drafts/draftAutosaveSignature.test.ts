@@ -17,7 +17,6 @@ function baseInput(): DraftAutosaveSignatureInput {
     cursorModel: TASK_TEST_DEFAULTS.cursor_model,
     projectId: "",
     projectContextItemIds: [],
-    automationSelections: [],
     checklistItems: [],
     latestEvaluation: null,
   };
@@ -106,7 +105,6 @@ describe("draftAutosaveSignature", () => {
         cursor_model: TASK_TEST_DEFAULTS.cursor_model,
         project_id: "",
         project_context_item_ids: [],
-        automation_selections: [],
         checklist_items: [],
         latest_evaluation: null,
       },

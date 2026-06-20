@@ -38,9 +38,6 @@ export function useTaskCreateMutations(input: {
         ...(mutationInput.project_context_item_ids.length > 0
           ? { project_context_item_ids: mutationInput.project_context_item_ids }
           : {}),
-        ...(mutationInput.automation_selections.length > 0
-          ? { automation_selections: mutationInput.automation_selections }
-          : {}),
         ...(mutationInput.pickup_not_before !== null
           ? { pickup_not_before: mutationInput.pickup_not_before }
           : {}),

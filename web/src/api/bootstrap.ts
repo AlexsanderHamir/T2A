@@ -17,7 +17,6 @@
  */
 import { fetchWithTimeout, apiErrorFromResponse } from "./shared";
 import { parseProjectListResponse } from "./projects";
-import { parseAutomationListResponse } from "./automations";
 import {
   parseTaskListResponse,
   parseTaskStatsResponse,
@@ -29,7 +28,6 @@ import type {
   TaskStatsResponse,
 } from "@/types/task";
 import type { ProjectListResponse } from "@/types/project";
-import type { AutomationListResponse } from "@/types/automation";
 import type { TaskDraftSummary } from "@/types/task";
 
 export type Bootstrap = {
@@ -37,7 +35,6 @@ export type Bootstrap = {
   tasks: TaskListResponse;
   stats: TaskStatsResponse;
   projects: ProjectListResponse;
-  automations: AutomationListResponse;
   drafts: TaskDraftSummary[];
 };
 
@@ -123,7 +120,6 @@ function parseBootstrap(value: unknown): Bootstrap {
     tasks: parseTaskListResponse(value.tasks),
     stats: parseTaskStatsResponse(value.stats),
     projects: parseProjectListResponse(value.projects),
-    automations: parseAutomationListResponse(value.automations),
     drafts: parseTaskDraftSummaryList(value.drafts),
   };
 }

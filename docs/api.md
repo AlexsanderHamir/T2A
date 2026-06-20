@@ -8,7 +8,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 
 - Mux is mounted at `/` (no `/api` prefix).
 - All routes return `application/json`. Error bodies are `{"error":"<message>"}`; some responses include `request_id` for correlation with `X-Request-ID` / `http.access` logs.
-- Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /automations`, `GET /automations/{id}`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners, evaluate) return `Cache-Control: no-store` and do not participate in revalidation.
+- Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners, evaluate) return `Cache-Control: no-store` and do not participate in revalidation.
 - `X-Actor` header: `user` (default) or `agent`. The handler ignores any body `triggered_by` and uses this header.
 - `Idempotency-Key` (≤ 128 bytes) caches successful (2xx) `POST`/`PATCH`/`DELETE` responses for `T2A_IDEMPOTENCY_TTL` (default 24h, in-process only). Replays are byte-identical.
 - Rate limit: `T2A_RATE_LIMIT_PER_MIN` per `RemoteAddr` (default 120; `0` disables). `429` returns `Retry-After: 60`.
@@ -25,7 +25,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `t2a_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |
-| GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, automations: {automations, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Default limits match [`readpolicy`](../../pkgs/tasks/handler/readpolicy/readpolicy.go) (`BootstrapListLimit` 20, `BootstrapProjectsLimit` 100, `BootstrapDraftsLimit` 50, `BootstrapAutomationsLimit` 200). Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
+| GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Default limits match [`readpolicy`](../../pkgs/tasks/handler/readpolicy/readpolicy.go) (`BootstrapListLimit` 20, `BootstrapProjectsLimit` 100, `BootstrapDraftsLimit` 50). Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
 
 ## Projects
 
@@ -44,33 +44,19 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | PATCH | `/projects/{id}/context/edges/{edgeId}` | Partial. Publishes `project_context_changed`. |
 | DELETE | `/projects/{id}/context/edges/{edgeId}` | `204`. Publishes `project_context_changed`. |
 
-## Automations
-
-Global prompt-behavior library. Soft-deleted rows use `archived_at`; list omits archived unless `?include_archived=true`.
-
-| Method | Path | Notes |
-|---|---|---|
-| POST | `/automations` | Create. Body `{ id?, title, description }`. Title unique among non-archived rows (trimmed). Description max 2000 chars; must not start with "Do not" / "Don't". `201` returns `domain.Automation`. |
-| GET | `/automations` | List. `?limit` (0–200, default 100), `?include_archived=true`. Envelope `{ automations, limit }`. |
-| GET | `/automations/{id}` | Single automation. `404` when missing or archived. |
-| PATCH | `/automations/{id}` | Partial `{ title?, description? }`. At least one field required. |
-| DELETE | `/automations/{id}` | `204` soft archive. |
-
-Task bindings: optional `automation_selections` on `POST /tasks` and `PATCH /tasks/{id}` — `[{ "automation_id": "<uuid>", "state": "yes"|"no" }]`, max 20 rows, unique IDs, all IDs must reference active library rows. See [ADR-0013](./adr/ADR-0013-prompt-automations.md).
-
 ## Tasks
 
 Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-model.md](./data-model.md).
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`), `automation_selections` (`[{ automation_id, state: yes|no }]`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
+| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
 | GET | `/tasks/cycle-failures` | Paginated terminal cycle failures. `?limit`, `?offset`, `?sort ∈ at_desc | at_asc | reason_asc | reason_desc`. |
 | GET | `/tasks/{id}` | Single flat `domain.Task`. |
-| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `project_context_item_ids`, `automation_selections`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
+| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
 | DELETE | `/tasks/{id}` | `204` empty body. Publishes `task_deleted`. |
 | GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. Deep dive: [domain/task-events.md](./domain/task-events.md). |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |

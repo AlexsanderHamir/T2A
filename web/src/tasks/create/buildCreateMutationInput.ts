@@ -23,7 +23,6 @@ export function buildCreateTaskMutationInput(
     cursor_model: fields.newTaskCursorModel.trim(),
     project_id: fields.newProjectID.trim(),
     project_context_item_ids: fields.newProjectContextItemIDs,
-    automation_selections: fields.newAutomationSelections,
     pickup_not_before: fields.newSchedule,
     tags: parseTagsFromCsv(fields.newTagsCsv),
     milestone: fields.newMilestone.trim() || undefined,

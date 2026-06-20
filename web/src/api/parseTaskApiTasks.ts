@@ -25,7 +25,6 @@ import {
   type TaskStatsRunner,
   type TaskStatsRunnerBucket,
 } from "@/types";
-import { parseAutomationSelection } from "./automations";
 import {
   isRecord,
   parseBooleanField,
@@ -386,17 +385,6 @@ export function parseTask(value: unknown): Task {
     base.project_context_item_ids = value.project_context_item_ids.map((raw, i) =>
       parseNonEmptyString(raw, `project_context_item_ids[${i}]`),
     );
-  }
-  if (Array.isArray(value.automation_selections)) {
-    base.automation_selections = value.automation_selections.map((raw, i) => {
-      try {
-        return parseAutomationSelection(raw);
-      } catch (e) {
-        throw new Error(
-          `Invalid API response: automation_selections[${i}]: ${errorMessage(e)}`,
-        );
-      }
-    });
   }
   if (Array.isArray(value.tags)) {
     base.tags = value.tags.map((raw, i) => parseNonEmptyString(raw, `tags[${i}]`));

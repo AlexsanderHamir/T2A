@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import type { QueryClient } from "@tanstack/react-query";
-import { DEFAULT_PROJECT_ID, type AutomationSelection, type ChecklistItemDraft, type PriorityChoice, type Task } from "@/types";
+import { DEFAULT_PROJECT_ID, type ChecklistItemDraft, type PriorityChoice, type Task } from "@/types";
 import { settingsQueryKeys } from "../../task-query";
 import {
   buildFreshDraftAutosaveBaseline,
@@ -25,9 +25,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
   const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
-  const [newAutomationSelections, setNewAutomationSelections] = useState<
-    AutomationSelection[]
-  >([]);
   const [newSchedule, setNewSchedule] = useState<string | null>(null);
   const [newAutonomyEnabled, setNewAutonomyEnabled] = useState(true);
   const [newTagsCsv, setNewTagsCsv] = useState("");
@@ -69,7 +66,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTaskCursorModel(defaultCursorModelFromSettings(settings));
     setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
-    setNewAutomationSelections([]);
     setNewSchedule(null);
     setNewAutonomyEnabled(true);
     setNewTagsCsv("");
@@ -93,7 +89,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTaskCursorModel(t.cursor_model ?? "");
     setNewProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs(t.project_context_item_ids ?? []);
-    setNewAutomationSelections(t.automation_selections ?? []);
     setNewSchedule(t.pickup_not_before ?? null);
     setNewAutonomyEnabled(t.status === "ready");
     setNewTagsCsv((t.tags ?? []).join(", "));
@@ -112,7 +107,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
       newTaskCursorModel,
       newProjectID,
       newProjectContextItemIDs,
-      newAutomationSelections,
       newSchedule,
       newAutonomyEnabled,
       newTagsCsv,
@@ -122,7 +116,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
       newDraftID,
     }),
     [
-      newAutomationSelections,
       newAutonomyEnabled,
       newChecklistItems,
       newDependsOn,
@@ -164,7 +157,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTaskCursorModel,
     setNewProjectID,
     setNewProjectContextItemIDs,
-    setNewAutomationSelections,
     setNewSchedule,
     setNewAutonomyEnabled,
     setNewTagsCsv,
@@ -179,7 +171,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     newTaskCursorModel,
     newProjectID,
     newProjectContextItemIDs,
-    newAutomationSelections,
     newSchedule,
     newAutonomyEnabled,
     newTagsCsv,

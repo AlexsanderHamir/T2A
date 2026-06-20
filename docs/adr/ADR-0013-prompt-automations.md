@@ -1,7 +1,7 @@
 # ADR-0013: Prompt automations library and harness injection
 
 **Date:** 2026-06-15  
-**Status:** Accepted  
+**Status:** Superseded (2026-06-20) — prompt automations removed; see commit removing `/automations`, `automation_selections`, and harness injection.  
 **Deciders:** T2A maintainers
 
 ## Context

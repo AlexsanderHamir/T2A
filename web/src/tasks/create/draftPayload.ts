@@ -2,7 +2,6 @@ import type { AppSettings } from "@/api/settings";
 import { TASK_DRAFTS } from "@/constants/tasks";
 import {
   DEFAULT_PROJECT_ID,
-  type AutomationSelection,
   type ChecklistItemDraft,
   type PriorityChoice,
   type TaskDraftChecklistItem,
@@ -62,7 +61,6 @@ export function buildResumedDraftAutosaveBaseline(input: {
   cursorModel: string;
   projectID: string;
   projectContextItemIDs: string[];
-  automationSelections: AutomationSelection[];
   checklistItems: TaskDraftChecklistItem[];
   latestEvaluation: DraftEvaluationSnapshot | null;
 }): string {
@@ -76,7 +74,6 @@ export function buildResumedDraftAutosaveBaseline(input: {
     cursorModel: input.cursorModel,
     projectId: input.projectID,
     projectContextItemIds: input.projectContextItemIDs,
-    automationSelections: input.automationSelections,
     checklistItems: input.checklistItems,
     latestEvaluation: input.latestEvaluation,
   });
@@ -94,7 +91,6 @@ export function computeDraftAutosaveSignature(
     priority: fields.newPriority,
     projectId: fields.newProjectID,
     projectContextItemIds: fields.newProjectContextItemIDs,
-    automationSelections: fields.newAutomationSelections,
     checklistItems: normalizeChecklistItems(fields.newChecklistItems),
     latestEvaluation,
     runner: fields.newTaskRunner,
@@ -117,7 +113,6 @@ export function buildDraftSavePayload(
       cursor_model: fields.newTaskCursorModel,
       project_id: fields.newProjectID,
       project_context_item_ids: fields.newProjectContextItemIDs,
-      automation_selections: fields.newAutomationSelections,
       checklist_items: normalizeChecklistItems(fields.newChecklistItems),
       ...(latestEvaluation
         ? {
@@ -147,7 +142,6 @@ export function applyResumedDraftToForm(input: {
   setLatestDraftEvaluation: (evaluation: DraftEvaluationSnapshot | null) => void;
   setNewProjectID: (id: string) => void;
   setNewProjectContextItemIDs: (ids: string[]) => void;
-  setNewAutomationSelections: (selections: AutomationSelection[]) => void;
   setDraftAutosaveBaseline: (baseline: string) => void;
   setDraftAutosaveBaselineID: (id: string) => void;
 }) {
@@ -176,12 +170,8 @@ export function applyResumedDraftToForm(input: {
   const resumedProjectContextIds = Array.isArray(input.draft.payload.project_context_item_ids)
     ? input.draft.payload.project_context_item_ids
     : [];
-  const resumedAutomationSelections = Array.isArray(input.draft.payload.automation_selections)
-    ? input.draft.payload.automation_selections
-    : [];
   input.setNewProjectID(resumedProjectID);
   input.setNewProjectContextItemIDs(resumedProjectContextIds);
-  input.setNewAutomationSelections(resumedAutomationSelections);
   const resumedTitle = input.draft.payload.title ?? "";
   input.setDraftAutosaveBaseline(
     buildResumedDraftAutosaveBaseline({
@@ -193,7 +183,6 @@ export function applyResumedDraftToForm(input: {
       cursorModel: resumedModel,
       projectID: resumedProjectID,
       projectContextItemIDs: resumedProjectContextIds,
-      automationSelections: resumedAutomationSelections,
       checklistItems: input.draft.payload.checklist_items ?? [],
       latestEvaluation,
     }),

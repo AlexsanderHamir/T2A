@@ -4,7 +4,7 @@ How the execute phase implements task work via the configured runner, composed p
 
 | | |
 | --- | --- |
-| **Applies to** | Agent worker harness, execute runner, task create/edit (prompt, automations, project context), cycle progress UI |
+| **Applies to** | Agent worker harness, execute runner, task create/edit (prompt, project context), cycle progress UI |
 | **Audience** | Contributors touching `pkgs/agents/harness`, runner adapters, or execute-phase settings |
 | **Prerequisite** | [done-criteria.md](./done-criteria.md) — criteria vocabulary and lifecycle |
 | **Companion article** | [verify-agent.md](./verify-agent.md) — adversarial judge that runs after execute; [harness.md](./harness.md) — cycle loop and worker boundary |
@@ -29,7 +29,7 @@ The **execute agent** is the LLM pass during `PhaseExecute`. The harness invokes
 
 ### In scope
 
-- Prompt composition (criteria, automations, resume, git policy, project context)
+- Prompt composition (criteria, resume, git policy, project context)
 - Runner invocation, progress streaming, and phase persistence
 - Criteria self-report wire format and parser expectations
 - Retry inputs (locked criteria, verify feedback) and resume branches
@@ -64,7 +64,7 @@ Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTT
 
 | Actor | Role | Trust |
 | --- | --- | --- |
-| **Operator** | Authors `initial_prompt`, criteria, automations, and project context selection. | Trusted to define intent. |
+| **Operator** | Authors `initial_prompt`, criteria, and project context selection. | Trusted to define intent. |
 | **Worker (harness)** | Composes prompt, invokes runner, parses criteria report after execute, hands off to verify. | Trusted orchestrator. |
 | **Execute agent** | Implements work in `repo_root`; writes `criteria-report.json`. | **Not trusted** for final acceptance — self-claim is an assertion. |
 | **Verify agent** | Judges criteria after execute (downstream). | Trusted verdict when integrity holds — see [verify-agent.md](./verify-agent.md). |
@@ -74,12 +74,11 @@ Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTT
 ```mermaid
 flowchart TD
   subgraph compose [Prompt composition]
-    Auto[injectAutomations]
     Crit[injectCriteria]
     Feed[appendVerifyFeedback]
     Resume[appendResumeNotice]
     Git[appendGitCommitPolicy]
-    Auto --> Crit --> Feed --> Resume --> Git
+    Crit --> Feed --> Resume --> Git
   end
   subgraph runPhase [Execute phase]
     Start[startExecutePhase]
@@ -133,9 +132,8 @@ Each execute attempt follows this sequence in [`cycle_loop.go`](../../pkgs/agent
 | 1 | Git commits (required) | [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go) | Git worktree only — skipped when `WorkingDir` is empty or not a git repo |
 | 2 | Worker resume notice | `appendResumeNotice` | Resume after `process_restart` during execute |
 | 3 | Done criteria + Already verified | [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go) | Task has checklist items |
-| 4 | Agent behaviors | [`automation_prompt.go`](../../pkgs/agents/harness/automation_prompt.go) | Task has resolved `automation_selections` |
-| 5 | Operator `initial_prompt` | Task row | Always |
-| 6 | Previous verification feedback | `appendVerifyFeedback` | Retry after verify failure |
+| 4 | Operator `initial_prompt` | Task row | Always |
+| 5 | Previous verification feedback | `appendVerifyFeedback` | Retry after verify failure |
 
 At invoke time, **project context** wraps the composed body ([`project_context.go`](../../pkgs/agents/harness/project_context.go)):
 
@@ -170,15 +168,6 @@ On resume, the resume notice lists **known commits from the DB** (`ListCommitsFo
 
 See [cycle-commits.md](./cycle-commits.md) for worker ingest and schema.
 
-### Automation injection
-
-Per [ADR-0013](../adr/ADR-0013-prompt-automations.md), resolved library rows render under `## Agent behaviors`:
-
-- **Yes:** `- [YES] {title}: {description}`
-- **No:** `- [NO] {title}: Do NOT {description}`
-
-Missing or archived library rows referenced by the task are skipped with a structured warn log; the cycle continues.
-
 ### Criteria block
 
 When the task has checklist items, [`injectCriteria`](../../pkgs/agents/harness/criteria_prompt.go) prepends:
@@ -209,10 +198,6 @@ claimed_done is your assertion that you completed the work; the verification age
 
 - [crit-001] Add a health check endpoint that returns 200 with {"status":"ok"}
 - [crit-002] All existing tests pass
-
-## Agent behaviors
-
-- [YES] Run tests before finishing: Run the project test suite and fix failures before claiming done.
 
 Implement the feature described below.
 
@@ -263,7 +248,7 @@ See [`runner.Request`](../../pkgs/agents/runner/runner.go) and [architecture.md]
 | `task_cycle_stream_events` | Durable normalized progress lines from the runner adapter |
 | `task_cycle_criteria_reports` | Durable mirror of execute self-claims (written during verify pipeline, not at execute complete) |
 
-> **Important** — `prompt_hash` correlates the operator's original prompt across replays. It does **not** hash injected criteria, automations, resume blocks, or verify feedback.
+> **Important** — `prompt_hash` correlates the operator's original prompt across replays. It does **not** hash injected criteria, resume blocks, or verify feedback.
 
 ## Resume behavior
 
@@ -291,7 +276,6 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 | Task `cursor_model` | task row | Per-run model override forwarded to runner |
 | `max_run_duration_seconds` | `app_settings` | Wall-clock cap on execute (and verify LLM) runs; `0` = no limit |
 | `T2A_WORKER_REPORT_DIR` | env | Scratch root for `criteria-report.json` |
-| `automation_selections` | task row | Yes/No toggles resolved into Agent behaviors block |
 | `project_id` + `project_context_item_ids` | task row | Project context snapshot for the cycle |
 
 See [configuration.md](../configuration.md) for validation rules and supervisor hot-reload behavior.
@@ -310,7 +294,6 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | --- | --- |
 | Self-claim not trusted | Verify must affirm each criterion; `claimed_done: false` fails immediately at the self-claim gate |
 | Composed prompt not hashed | Audit trail correlates operator prompt only via `prompt_hash` |
-| Automations not snapshotted on task | Library edits affect future runs ([ADR-0013](../adr/ADR-0013-prompt-automations.md)) |
 | Runner is stateless | No mid-CLI session resume ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)) |
 | Report files ephemeral | GC at cycle terminate; durable criteria mirror written during verify pipeline |
 | Project context snapshot once per cycle | Changing selected context items mid-cycle requires a new cycle |
@@ -332,7 +315,6 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | [configuration.md](../configuration.md) | Execute and runner settings |
 | [ADR-0005](../adr/ADR-0005-extract-agent-harness.md) | Harness extraction |
 | [ADR-0006](../adr/ADR-0006-phase-boundary-resume.md) | Phase-boundary resume and commit policy |
-| [ADR-0013](../adr/ADR-0013-prompt-automations.md) | Automation library injection |
 
 ### Code
 
@@ -341,7 +323,6 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | [`pkgs/agents/harness/cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go) | Execute/verify loop, `composeExecutePrompt` |
 | [`pkgs/agents/harness/cycle.go`](../../pkgs/agents/harness/cycle.go) | `startExecutePhase`, `invokeRunner`, `completeExecutePhase`, `classifyRunOutcome` |
 | [`pkgs/agents/harness/criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go) | Criteria + verify feedback injection |
-| [`pkgs/agents/harness/automation_prompt.go`](../../pkgs/agents/harness/automation_prompt.go) | Agent behaviors block |
 | [`pkgs/agents/harness/resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go) | Resume notice, git commit policy |
 | [`pkgs/agents/harness/project_context.go`](../../pkgs/agents/harness/project_context.go) | Context snapshot + prompt wrapping |
 | [`pkgs/agents/harness/criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go) | Report paths, parse limits |

@@ -14,9 +14,6 @@ const (
 	// BootstrapDraftsLimit matches useTaskCreateFlow drafts query.
 	BootstrapDraftsLimit = 50
 
-	// BootstrapAutomationsLimit seeds the SPA automation library cache.
-	BootstrapAutomationsLimit = 200
-
 	// ShellChecklistIncluded documents that GET /v1/tasks/{id}/shell (when
 	// shipped) embeds checklist items alongside the task row.
 	ShellChecklistIncluded = true

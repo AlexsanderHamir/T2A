@@ -1,5 +1,4 @@
 import type { PriorityChoice, ChecklistVerifyCommandInput } from "@/types";
-import type { AutomationSelection } from "@/types";
 
 /**
  * Treat editor-empty TipTap markup as the empty string when computing the
@@ -38,8 +37,6 @@ export type DraftAutosaveSignatureInput = {
   projectId: string;
   /** User-selected project context item ids. Order matters and is preserved. */
   projectContextItemIds: string[];
-  /** Per-task automation yes/no selections. Omit rows are not stored. */
-  automationSelections: AutomationSelection[];
   checklistItems: Array<{
     text: string;
     verify_commands?: ChecklistVerifyCommandInput[];
@@ -73,7 +70,6 @@ export function draftAutosaveSignature(
       cursor_model: input.cursorModel,
       project_id: input.projectId,
       project_context_item_ids: input.projectContextItemIds,
-      automation_selections: input.automationSelections,
       checklist_items: input.checklistItems,
       latest_evaluation: input.latestEvaluation,
     },

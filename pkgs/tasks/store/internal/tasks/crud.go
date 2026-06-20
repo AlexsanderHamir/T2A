@@ -80,7 +80,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	if id == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.AutomationSelections == nil && in.PickupNotBefore == nil && in.CursorModel == nil && in.Tags == nil && in.Milestone == nil && in.Gate == nil && in.DependsOn == nil && in.PendingRetry == nil && !in.ClearPendingRetry {
+	if in.Title == nil && in.InitialPrompt == nil && in.Status == nil && in.Priority == nil && in.Project == nil && in.ProjectContextItemIDs == nil && in.PickupNotBefore == nil && in.CursorModel == nil && in.Tags == nil && in.Milestone == nil && in.Gate == nil && in.DependsOn == nil && in.PendingRetry == nil && !in.ClearPendingRetry {
 		return nil, "", fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var updated *domain.Task
@@ -229,9 +229,6 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		}
 	}
 	t.ProjectContextItemIDs = contextIDs
-	if err := applyAutomationSelectionsOnCreate(tx, t, in.AutomationSelections); err != nil {
-		return err
-	}
 	if err := tx.Create(t).Error; err != nil {
 		if isDuplicatePrimaryKey(err) {
 			return fmt.Errorf("%w: task id already exists", domain.ErrConflict)

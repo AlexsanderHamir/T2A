@@ -382,7 +382,7 @@ Read at runtime from store inside harness methods:
 | `verify_command_timeout_seconds` | Per-command wall clock during verify |
 | `verify_command_timeout_seconds` | Per shell verify command |
 
-Task-level fields consumed in the loop: `cursor_model`, `automation_selections`, `project_id`, `project_context_item_ids`.
+Task-level fields consumed in the loop: `cursor_model`, `project_id`, `project_context_item_ids`.
 
 ### Stream-idle evidence recovery
 

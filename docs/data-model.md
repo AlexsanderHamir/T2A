@@ -24,7 +24,6 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
 | `project_id` | string \| null | Optional project membership. |
 | `project_context_item_ids` | string[] | Explicit allowlist of project context items for runner snapshots. Cleared on `project_id` change. |
-| `automation_selections` | object[] | Per-task yes/no toggles for global prompt automations: `{ automation_id, state: yes|no }`. Omit = row absent. Max 20. Injected at harness compose time — see [ADR-0013](./adr/ADR-0013-prompt-automations.md). |
 | `tags` | string[] | Free-form, `^[a-z0-9][a-z0-9._-]{0,31}$`. |
 | `milestone` | string \| null | Single anchor per task, `^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$` when set. |
 | `depends_on` | object[] | Hydrated from `task_dependencies`: `{ task_id, satisfies }` where `satisfies` is `done` (default and only value). |
@@ -315,14 +314,6 @@ Stdout/stderr bytes live only in temp files under the worker report dir (see `<w
 Both verdict tables enforce a composite unique index on `(cycle_id, attempt_seq, criterion_id)`. Command runs enforce `(cycle_id, attempt_seq, criterion_id, command_seq)`.
 
 Pre-PR2 cycles return zero rows from these tables; the handler returns empty arrays, never 404. Cleanup is FK-driven: deleting a cycle (which itself cascades from task deletion) cascades to the verdict rows; `criterion_id` is intentionally `NO ACTION` so that historical cycles remain readable after a checklist edit.
-
-## Prompt automations
-
-Global reusable behavioral instructions stored in `automations` (`id`, `title`, `description`, timestamps, optional `archived_at` soft delete). Not scoped to a project.
-
-Tasks bind toggles in `automation_selections` JSONB (max 20): `{ automation_id, state: yes|no }`. **Omit** means the automation id is absent from the array. The harness resolves library text at compose time and injects a `## Agent behaviors` block into the execute prompt (see [ADR-0013](./adr/ADR-0013-prompt-automations.md)).
-
-The SPA exposes library CRUD on `/automations` and Yes / Omit / No pickers in the create-task modal. `GET /v1/bootstrap` seeds the automation catalog for cold start.
 
 ## Project context
 

@@ -17,7 +17,6 @@ import {
   type CycleFailuresListResponse,
   type TaskDependencyEdge,
   type TaskGate,
-  type AutomationSelection,
 } from "@/types";
 import { parseNonEmptyString } from "./parseTaskApiCore";
 import {
@@ -249,7 +248,6 @@ export async function createTask(input: {
   milestone?: string;
   gate?: TaskGate;
   depends_on?: TaskDependencyEdge[];
-  automation_selections?: AutomationSelection[];
   checklist_items: Array<{ text: string; verify_commands?: ChecklistVerifyCommandInput[] }>;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
@@ -293,9 +291,6 @@ export async function createTask(input: {
   }
   if (input.depends_on !== undefined) {
     body.depends_on = input.depends_on;
-  }
-  if (input.automation_selections !== undefined && input.automation_selections.length > 0) {
-    body.automation_selections = input.automation_selections;
   }
   body.checklist_items = input.checklist_items;
   const res = await fetchWithTimeout("/tasks", {

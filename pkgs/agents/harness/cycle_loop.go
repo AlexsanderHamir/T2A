@@ -26,22 +26,6 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.composeExecutePrompt",
 		"task_id", task.ID, "cycle_id", cycle.ID, "resume_notice", opts.resumeNotice)
 	promptText := task.InitialPrompt
-	if len(task.AutomationSelections) > 0 {
-		resolved, err := h.store.ResolveAutomationsForTask(ctx, task.AutomationSelections)
-		if err != nil {
-			slog.Warn("agent harness resolve automations failed", "cmd", harnessLogCmd,
-				"operation", "agent.harness.Harness.composeExecutePrompt.resolveAutomations",
-				"task_id", task.ID, "cycle_id", cycle.ID, "err", err)
-		} else {
-			if len(resolved) < len(task.AutomationSelections) {
-				slog.Warn("agent harness skipped missing or archived automations", "cmd", harnessLogCmd,
-					"operation", "agent.harness.Harness.composeExecutePrompt.resolveAutomations",
-					"task_id", task.ID, "cycle_id", cycle.ID,
-					"requested", len(task.AutomationSelections), "resolved", len(resolved))
-			}
-			promptText = prompt.InjectAutomations(promptText, resolved)
-		}
-	}
 	promptText = prompt.InjectCriteria(
 		promptText,
 		checklistItemsForPrompt(state.verifySnap.Criteria),

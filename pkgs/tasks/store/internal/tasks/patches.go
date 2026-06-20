@@ -29,9 +29,6 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyProjectContextSelectionPatch(tx, cur, in.ProjectContextItemIDs); err != nil {
 		return err
 	}
-	if err := applyAutomationSelectionsPatch(tx, cur, in.AutomationSelections); err != nil {
-		return err
-	}
 	if err := applyStatusPatch(tx, taskID, cur, in.Status, by, &seqPtr); err != nil {
 		return err
 	}

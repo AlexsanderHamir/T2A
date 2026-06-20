@@ -35,7 +35,6 @@ export function buildFreshDraftAutosaveBaseline(
     cursorModel: defaultCursorModelFromSettings(settings),
     projectId: DEFAULT_PROJECT_ID,
     projectContextItemIds: [],
-    automationSelections: [],
     checklistItems: [],
     latestEvaluation: null,
   });

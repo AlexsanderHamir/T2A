@@ -4,7 +4,6 @@ import {
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
-import { AutomationPicker } from "@/automations/AutomationPicker";
 import { useAppTimezone } from "@/shared/time/appTimezone";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
@@ -107,14 +106,6 @@ export function TaskCreateModalsLayer() {
                 onChange={app.setNewProjectContextItemIDs}
               />
             </section>
-          }
-          automationAssignment={
-            <AutomationPicker
-              selections={app.newAutomationSelections}
-              disabled={app.saving || isEditing}
-              compact
-              onChange={app.setNewAutomationSelections}
-            />
           }
           promptProjectContext={promptProjectContext ?? undefined}
           schedule={app.newSchedule}

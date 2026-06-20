@@ -16,7 +16,7 @@ Centralize tiers in [`web/src/tasks/queryPolicy.ts`](../../web/src/tasks/queryPo
 
 | Tier | staleTime | Keys |
 |------|-----------|------|
-| Shell | 5 min | settings, projects, automations |
+| Shell | 5 min | settings, projects |
 | List | 60s | task list pages, stats |
 | Detail | 30s | task detail, checklist, cycles, commits |
 | Prefetch | 30s | hover detail prefetch |

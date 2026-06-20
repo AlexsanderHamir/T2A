@@ -204,57 +204,6 @@ describe("useTaskCreateFlow", () => {
     expect(last?.payload.project_context_item_ids).toEqual(["ctx-3"]);
   });
 
-  it("forwards automation_selections on create and draft autosave", async () => {
-    mockedSaveDraft.mockResolvedValue({ id: "draft-saved", name: "Untitled" });
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTaskCreateFlow(), {
-      wrapper: Wrapper,
-    });
-
-    await waitFor(() => {
-      expect(result.current.draftListLoading).toBe(false);
-    });
-
-    act(() => {
-      result.current.openCreateModal();
-      result.current.setNewTitle("With automations");
-      result.current.setNewPriority("medium");
-      result.current.setNewAutomationSelections([
-        { automation_id: "auto-1", state: "yes" },
-        { automation_id: "auto-2", state: "no" },
-      ]);
-      result.current.appendNewChecklistCriterion("Ship it");
-    });
-
-    await act(async () => {
-      await result.current.saveDraftNow();
-    });
-
-    const draftPayload = mockedSaveDraft.mock.calls.at(-1)?.[0]?.payload;
-    expect(draftPayload?.automation_selections).toEqual([
-      { automation_id: "auto-1", state: "yes" },
-      { automation_id: "auto-2", state: "no" },
-    ]);
-
-    act(() => {
-      result.current.submitCreate({
-        preventDefault: vi.fn(),
-      } as unknown as FormEvent);
-    });
-
-    await waitFor(() => {
-      expect(mockedCreateTask).toHaveBeenCalledTimes(1);
-    });
-    expect(mockedCreateTask).toHaveBeenCalledWith(
-      expect.objectContaining({
-        automation_selections: [
-          { automation_id: "auto-1", state: "yes" },
-          { automation_id: "auto-2", state: "no" },
-        ],
-      }),
-    );
-  });
-
   it("applyTestScenario fills title / prompt / priority / criteria with zero typing", async () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useTaskCreateFlow(), {

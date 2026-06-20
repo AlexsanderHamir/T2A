@@ -3,7 +3,7 @@ export const QUERY_POLICY = {
   /** Default for queries without an explicit tier. */
   defaultStaleTimeMs: 15_000,
   gcTimeMs: 5 * 60_000,
-  /** Settings, project list, automations — bootstrap-seeded shell data. */
+  /** Settings, project list — bootstrap-seeded shell data. */
   shellStaleTimeMs: 5 * 60_000,
   /** Home list + stats while SSE may invalidate. */
   listStaleTimeMs: 60_000,

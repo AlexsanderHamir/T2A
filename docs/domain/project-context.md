@@ -195,7 +195,7 @@ Phase-boundary resume ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md), [ha
 | `resumeEntryAfterExecuteSuccess` | Execute skipped; snapshot already written on prior execute |
 | `resumeEntryVerifyOnly` | Execute skipped; verify does not re-read or re-inject project context |
 
-On resume execute, the harness still rebuilds criteria, automations, resume notice, and verify feedback from current task state — only the **project context block** is frozen to the snapshot. The runner remains stateless; checkpoint is encoded in composed prompts, not runner session state.
+On resume execute, the harness still rebuilds criteria, resume notice, and verify feedback from current task state — only the **project context block** is frozen to the snapshot. The runner remains stateless; checkpoint is encoded in composed prompts, not runner session state.
 
 To change which context items a run sees, start a **new cycle** (new `cycle_id` → new snapshot row).
 
@@ -225,7 +225,7 @@ At invoke time, the harness concatenates:
 {rendered project_context block}
 
 <task_prompt>
-{composed execute prompt — criteria, automations, initial_prompt, etc.}
+{composed execute prompt — criteria, initial_prompt, etc.}
 </task_prompt>
 ```
 

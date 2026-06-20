@@ -14,12 +14,10 @@ type Task struct {
 	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
-	ProjectContextItemIDs []string `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
-	// AutomationSelections are global library behavior toggles (yes/no) injected at execute time.
-	AutomationSelections []AutomationSelection `json:"automation_selections,omitempty" gorm:"column:automation_selections;serializer:json;type:jsonb;not null;default:'[]'"`
-	Tags                 []string              `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
-	Milestone            *string               `json:"milestone,omitempty" gorm:"index"`
-	Gate                 *TaskGate             `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
+	ProjectContextItemIDs []string  `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
+	Tags                  []string  `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
+	Milestone             *string   `json:"milestone,omitempty" gorm:"index"`
+	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
 	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
 	DependsOn []DependencyEdge `json:"depends_on,omitempty" gorm:"-"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at

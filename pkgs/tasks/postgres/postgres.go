@@ -91,7 +91,6 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.ProjectContextEdge{},
 		&domain.TaskContextSnapshot{},
 		&domain.AppSettings{},
-		&domain.Automation{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}
@@ -110,6 +109,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := migrateChecklistCheckToText(ctx, db); err != nil {
 		return fmt.Errorf("migrate checklist check column: %w", err)
+	}
+	if err := migrateDropPromptAutomations(ctx, db); err != nil {
+		return fmt.Errorf("migrate drop prompt automations: %w", err)
 	}
 	if err := dropLegacyGoalStepTables(ctx, db); err != nil {
 		return fmt.Errorf("drop legacy goal/step tables: %w", err)
@@ -189,6 +191,23 @@ UPDATE task_checklist_items
 	}
 	if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings DROP COLUMN IF EXISTS check_command_timeout_seconds`).Error; err != nil {
 		return fmt.Errorf("drop app_settings.check_command_timeout_seconds: %w", err)
+	}
+	return nil
+}
+
+// migrateDropPromptAutomations removes the prompt-automations feature schema.
+// Postgres only; SQLite test DBs rely on AutoMigrate after domain field removal.
+// Idempotent: safe on fresh and upgraded DBs.
+func migrateDropPromptAutomations(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.migrateDropPromptAutomations")
+	if db.Dialector == nil || db.Dialector.Name() != "postgres" {
+		return nil
+	}
+	if err := db.WithContext(ctx).Exec(`ALTER TABLE tasks DROP COLUMN IF EXISTS automation_selections`).Error; err != nil {
+		return fmt.Errorf("drop tasks.automation_selections: %w", err)
+	}
+	if err := db.WithContext(ctx).Exec(`DROP TABLE IF EXISTS automations`).Error; err != nil {
+		return fmt.Errorf("drop automations table: %w", err)
 	}
 	return nil
 }

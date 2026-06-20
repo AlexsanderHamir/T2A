@@ -79,7 +79,6 @@ export function useTaskCreateEntryActions(input: {
         setLatestDraftEvaluation: input.form.setLatestDraftEvaluation,
         setNewProjectID: input.form.setNewProjectID,
         setNewProjectContextItemIDs: input.form.setNewProjectContextItemIDs,
-        setNewAutomationSelections: input.form.setNewAutomationSelections,
         setDraftAutosaveBaseline: input.form.setDraftAutosaveBaseline,
         setDraftAutosaveBaselineID: input.form.setDraftAutosaveBaselineID,
       });

@@ -4,7 +4,6 @@ import { fetchBootstrap, type Bootstrap } from "@/api";
 import { settingsQueryKeys, taskQueryKeys } from "@/tasks/task-query";
 import { TASK_LIST_PAGE_SIZE } from "@/tasks/task-paging";
 import { projectQueryKeys } from "@/projects/queryKeys";
-import { automationQueryKeys } from "@/automations/queryKeys";
 
 /**
  * Bootstrap aggregate cache seeding hook.
@@ -77,10 +76,6 @@ export function useBootstrap(): void {
       queryClient.setQueryData(
         projectQueryKeys.list(false, 100),
         payload.projects,
-      );
-      queryClient.setQueryData(
-        automationQueryKeys.list(false, 200),
-        payload.automations,
       );
       queryClient.setQueryData(taskQueryKeys.drafts(), payload.drafts);
     })();
