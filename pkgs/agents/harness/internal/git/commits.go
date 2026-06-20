@@ -101,6 +101,7 @@ func (s *Service) branchContaining(ctx context.Context, worktree, sha string) (s
 	return "", nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Git sub-step; operation trace is emitted by IngestExecuteCommits."
 func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext) ([]store.CycleCommitEntry, error) {
 	shas, err := s.revListRange(ctx, g.Worktree, g.CycleBaseSHA)
 	if err != nil {
