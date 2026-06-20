@@ -82,16 +82,29 @@ func TestDecideExecutePostRun_commitIngestErr(t *testing.T) {
 	}
 }
 
-func TestDecideExecutePostRun_commitIngestFailReason(t *testing.T) {
+func TestDecideExecutePostRun_commitIngestFailReasonOnlyIO(t *testing.T) {
 	t.Parallel()
 	e := DecideExecutePostRun(ExecutePostRunInput{
 		RunnerOutcome: ExecuteRunnerOutcomeOK,
 		CommitIngest: ExecuteCommitIngestSummary{
 			IngestAttempted: true,
-			FailReason:      "execute_no_commits",
+			FailReason:      "execute_invalid_commit",
 		},
 	})
-	if !e.TerminateFailed || string(e.Reason) != "execute_no_commits" {
+	if !e.TerminateFailed || string(e.Reason) != "execute_invalid_commit" {
+		t.Fatalf("got %+v", e)
+	}
+}
+
+func TestDecideExecutePostRun_emptyClaimsContinue(t *testing.T) {
+	t.Parallel()
+	e := DecideExecutePostRun(ExecutePostRunInput{
+		RunnerOutcome: ExecuteRunnerOutcomeOK,
+		CommitIngest: ExecuteCommitIngestSummary{
+			IngestAttempted: true,
+		},
+	})
+	if !e.ContinueToVerify || e.TerminateFailed {
 		t.Fatalf("got %+v", e)
 	}
 }
@@ -122,16 +135,15 @@ func TestDecideExecutePostRun_evidenceRecoveryContinue(t *testing.T) {
 	}
 }
 
-func TestDecideExecutePostRun_evidenceRecoveryNoCommits(t *testing.T) {
+func TestDecideExecutePostRun_evidenceRecoveryContinueWithEmptyClaims(t *testing.T) {
 	t.Parallel()
 	e := DecideExecutePostRun(ExecutePostRunInput{
 		EvidenceRecovery: true,
 		CommitIngest: ExecuteCommitIngestSummary{
 			IngestAttempted: true,
-			FailReason:      "execute_no_commits",
 		},
 	})
-	if !e.TerminateFailed || string(e.Reason) != "execute_no_commits" {
+	if !e.ContinueToVerify || e.TerminateFailed {
 		t.Fatalf("got %+v", e)
 	}
 }

@@ -102,11 +102,11 @@ func (h *Harness) planVerifyRun(
 			"cycle_id", cycle.ID, "err", err)
 		decision = CursorResumeDecision{
 			Mode:       CursorResumeFresh,
-			Prompt:     h.verifySvc().BuildVerifyPrompt(ctx, snap, cycle.ID, state.previouslyPassed, selfReport, feedback, cmdEvidence),
+			Prompt:     h.verifySvc().BuildVerifyPrompt(ctx, task.ID, snap, cycle.ID, state.previouslyPassed, selfReport, feedback, cmdEvidence),
 			DenyReason: "policy_error",
 		}
 	} else if decision.Mode == CursorResumeFresh || decision.Mode == CursorResumeFallback {
-		decision.Prompt = h.verifySvc().BuildVerifyPrompt(ctx, snap, cycle.ID, state.previouslyPassed, selfReport, feedback, cmdEvidence)
+		decision.Prompt = h.verifySvc().BuildVerifyPrompt(ctx, task.ID, snap, cycle.ID, state.previouslyPassed, selfReport, feedback, cmdEvidence)
 	} else {
 		rc := h.buildRecoveryContext(domain.PhaseVerify, task, cycle, state, opts, retryModeFromCycleMeta(cycle))
 		rc.CommandEvidenceDelta = commandEvidenceLines(cmdEvidence)

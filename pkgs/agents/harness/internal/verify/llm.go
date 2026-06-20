@@ -36,7 +36,7 @@ func (s *Service) runLLMVerifyAgent(
 ) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
-	promptText := buildVerifyPrompt(ctx, s, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
+	promptText := buildVerifyPrompt(ctx, s, task.ID, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
 	resumeSessionID := ""
 	if s.hooks.PlanVerifyRun != nil {
 		plan, err := s.hooks.PlanVerifyRun(ctx, PlanVerifyRunInput{
@@ -57,7 +57,7 @@ func (s *Service) runLLMVerifyAgent(
 	}
 	_, err := s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, promptText, resumeSessionID)
 	if errors.Is(err, runner.ErrResumeSession) {
-		full := buildVerifyPrompt(ctx, s, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
+		full := buildVerifyPrompt(ctx, s, task.ID, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
 		_, err = s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, full, "")
 	}
 	return err
@@ -66,6 +66,7 @@ func (s *Service) runLLMVerifyAgent(
 // BuildVerifyPrompt exports the full verify prompt composer for harness fallback paths.
 func (s *Service) BuildVerifyPrompt(
 	ctx context.Context,
+	taskID string,
 	snap Snapshot,
 	cycleID string,
 	previouslyPassed map[string]Verdict,
@@ -73,12 +74,13 @@ func (s *Service) BuildVerifyPrompt(
 	feedback string,
 	cmdEvidence []CommandEvidence,
 ) string {
-	return buildVerifyPrompt(ctx, s, snap, cycleID, previouslyPassed, selfReport, feedback, cmdEvidence)
+	return buildVerifyPrompt(ctx, s, taskID, snap, cycleID, previouslyPassed, selfReport, feedback, cmdEvidence)
 }
 
 func buildVerifyPrompt(
 	ctx context.Context,
 	s *Service,
+	taskID string,
 	snap Snapshot,
 	cycleID string,
 	previouslyPassed map[string]Verdict,
@@ -87,8 +89,8 @@ func buildVerifyPrompt(
 	cmdEvidence []CommandEvidence,
 ) string {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.buildVerifyPrompt",
-		"cycle_id", cycleID, "locked_passes", len(previouslyPassed))
-	commits := s.loadEligibleCommits(ctx, cycleID)
+		"task_id", taskID, "cycle_id", cycleID, "locked_passes", len(previouslyPassed))
+	commits := s.loadTaskCommits(ctx, taskID)
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
 	b.WriteString(fmt.Sprintf("Write `%s` only.\n\n", reports.VerifyReportPath(s.reportDir, cycleID)))

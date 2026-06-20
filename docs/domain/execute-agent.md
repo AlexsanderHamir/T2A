@@ -161,14 +161,14 @@ Always required in git worktrees ([ADR-0014](../adr/ADR-0014-cycle-commit-tracki
 - The agent must commit all work that satisfies claimed criteria before finishing execute.
 - List every commit SHA and branch in `criteria-report.json` under `commits` — **no** `t2a:` markers in commit messages.
 - Create **new commits only**; never amend, rebase, or rewrite SHAs from this cycle.
-- **Observe-first (ADR-0016):** after runner exit the harness always upserts ancestry into `task_cycle_commits`. Gate failures (`execute_uncommitted_work`, etc.) fail the execute phase but rows persist as `observed` with `gate_reason`. Only `eligible` commits count toward verify admission.
+- **Agent-claimed ingest (ADR-0032):** after runner exit the harness ingests SHAs from `criteria-report.json` `commits[]` via `cat-file` + `git log`. Hygiene (empty claims, dirty tree, rewritten history) does **not** fail execute — additive-only policy is enforced in prompts and verify.
 - Do not push.
 
 When `WorkingDir` is empty or not a git repo, snapshot/ingest/gates are skipped.
 
 On resume, the resume notice lists **known commits from the DB** (`ListCommitsForCycle`) rather than grepping git log. A clean tree does **not** mean the task succeeded.
 
-See [cycle-commits.md](./cycle-commits.md) for worker ingest, gates, and schema.
+See [cycle-commits.md](./cycle-commits.md) for worker ingest and schema.
 
 ### Automation injection
 
@@ -279,7 +279,7 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 
 > **Note** — The runner is stateless. Resume does not continue a mid-CLI session; it starts a fresh `runner.Run` with a rehydrated prompt.
 
-**Operator cross-cycle resume** (task `failed`, new cycle): `RunWithRetry` resume mode loads a **ContinuationBundle** from the parent ([resume-continuation.md](./resume-continuation.md)). When parent execute succeeded, verify failed, and eligible commits exist, the child skips execute (`verifyOnly`). Otherwise the continuation prompt carries scope lock, status-grouped commits, and anti-discovery rules — see [retry-resume.md](./retry-resume.md) and [commit-eligibility.md](./commit-eligibility.md).
+**Operator cross-cycle resume** (task `failed`, new cycle): `RunWithRetry` resume mode loads a **ContinuationBundle** from the parent ([resume-continuation.md](./resume-continuation.md)). When parent execute succeeded, verify failed, and the task-wide ledger has indexed commits, the child skips execute (`verifyOnly`). Otherwise the continuation prompt carries scope lock, known commits, and additive-only git policy — see [retry-resume.md](./retry-resume.md) and [cycle-commits.md](./cycle-commits.md).
 
 ## Configuration
 

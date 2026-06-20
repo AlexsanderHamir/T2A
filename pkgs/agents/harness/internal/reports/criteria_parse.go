@@ -219,6 +219,50 @@ func ParseCriteriaReport(reportDir, cycleID string, expectedIDs map[string]struc
 	return out, nil
 }
 
+// CriteriaCommitClaim is one agent-declared commit in criteria-report.json.
+type CriteriaCommitClaim struct {
+	SHA    string
+	Branch string
+}
+
+// ParseCriteriaReportCommits reads commits[] from criteria-report.json for execute ingest.
+// Missing report returns nil claims without error.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func ParseCriteriaReportCommits(reportDir, cycleID string) ([]CriteriaCommitClaim, error) {
+	path := CriteriaReportPath(reportDir, cycleID)
+	var rep criteriaReport
+	if err := readJSONFile(path, &rep); err != nil {
+		if errors.Is(err, ErrCriteriaReportMissing) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if err := validateCriteriaReportSchema(&rep); err != nil {
+		return nil, err
+	}
+	if len(rep.Commits) == 0 {
+		return nil, nil
+	}
+	out := make([]CriteriaCommitClaim, 0, len(rep.Commits))
+	seen := make(map[string]struct{}, len(rep.Commits))
+	for _, c := range rep.Commits {
+		sha := strings.TrimSpace(c.SHA)
+		if sha == "" {
+			return nil, fmt.Errorf("%w: empty commit sha", ErrCriteriaReportInvalid)
+		}
+		if _, dup := seen[sha]; dup {
+			return nil, fmt.Errorf("%w: duplicate commit sha %s", ErrCriteriaReportInvalid, sha)
+		}
+		seen[sha] = struct{}{}
+		out = append(out, CriteriaCommitClaim{
+			SHA:    sha,
+			Branch: strings.TrimSpace(c.Branch),
+		})
+	}
+	return out, nil
+}
+
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ParseVerifyReport(reportDir, cycleID string, expectedIDs map[string]struct{}) (map[string]VerifyEntry, error) {
 	path := VerifyReportPath(reportDir, cycleID)

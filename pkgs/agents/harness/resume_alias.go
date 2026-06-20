@@ -1,7 +1,8 @@
 package harness
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"strings"
+
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/resume"
 )
 
@@ -62,5 +63,9 @@ func harnessVerdictsFromResume(m map[string]resume.CriterionVerdict) map[string]
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func reasonRemediation(reason string) string {
-	return git.ReasonRemediation(reason)
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return ""
+	}
+	return "Prior attempt failed: " + reason
 }

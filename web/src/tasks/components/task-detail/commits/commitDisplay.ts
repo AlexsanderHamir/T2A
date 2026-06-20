@@ -1,5 +1,3 @@
-import type { CommitStatus } from "@/types";
-
 export type GitContextFields = {
   repo: string;
   worktree: string;
@@ -69,34 +67,4 @@ export function buildGitContextItems(ctx: GitContextFields): GitContextItem[] {
   }
 
   return items;
-}
-
-export function commitStatusLabel(status: CommitStatus): string {
-  switch (status) {
-    case "eligible":
-      return "Eligible";
-    case "observed":
-      return "Observed";
-    case "inherited":
-      return "Inherited";
-    case "superseded":
-      return "Superseded";
-    default:
-      return status;
-  }
-}
-
-export function commitStatusPillClass(status: CommitStatus): string {
-  switch (status) {
-    case "eligible":
-      return "cell-pill cell-pill--commit-eligible";
-    case "observed":
-      return "cell-pill cell-pill--commit-observed";
-    case "inherited":
-      return "cell-pill cell-pill--commit-inherited";
-    case "superseded":
-      return "cell-pill cell-pill--commit-superseded";
-    default:
-      return "cell-pill";
-  }
 }

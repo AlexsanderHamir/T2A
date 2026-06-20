@@ -242,7 +242,7 @@ When the working dir is not a git repo, the check is bypassed (logged once at st
 | `max_run_duration_seconds` | LLM verify call wall clock (`0` = no limit) |
 | `T2A_WORKER_REPORT_DIR` | Scratch root for report files and command evidence |
 
-Verify prompts include a worker-indexed git context block from **`ListEligibleCommitsForCycle`** (eligible rows only) plus live `git diff HEAD`. Observed commits from failed execute gates appear in the UI and continuation prompts but not in verify git context. See [cycle-commits.md](./cycle-commits.md) and [commit-eligibility.md](./commit-eligibility.md).
+Verify prompts include a worker-indexed git context block from **`ListCommitsForTask(task_id)`** plus live `git diff HEAD`. See [cycle-commits.md](./cycle-commits.md).
 
 Full reference: [configuration.md](../configuration.md).
 

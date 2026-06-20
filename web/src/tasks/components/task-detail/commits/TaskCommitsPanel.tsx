@@ -95,5 +95,3 @@ function CommitsLoading() {
     </div>
   );
 }
-
-export { CommitStatusBadge } from "./CommitStatusBadge";

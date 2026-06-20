@@ -54,7 +54,8 @@ func ComposeContinuation(base string, in ContinuationInput) string {
 		}
 		b.WriteString("\n")
 	}
-	if block := FormatCommitsByStatusForResume(in.Commits); block != "" {
+	if block := FormatKnownCommitsForResume(in.Commits); block != "" {
+		b.WriteString("### Known commits (indexed for this task)\n\n")
 		b.WriteString(block)
 	}
 	if in.ExecuteFeedback != "" {
@@ -81,59 +82,4 @@ func ComposeContinuation(base string, in ContinuationInput) string {
 		b.WriteByte('\n')
 	}
 	return b.String() + base
-}
-
-// FormatCommitsByStatusForResume groups known commits by eligibility status.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func FormatCommitsByStatusForResume(commits []domain.TaskCycleCommit) string {
-	if len(commits) == 0 {
-		return ""
-	}
-	var eligible, observed, inherited, other []domain.TaskCycleCommit
-	for _, c := range commits {
-		switch c.Status {
-		case domain.CommitEligible:
-			eligible = append(eligible, c)
-		case domain.CommitObserved:
-			observed = append(observed, c)
-		case domain.CommitInherited:
-			inherited = append(inherited, c)
-		default:
-			other = append(other, c)
-		}
-	}
-	var b strings.Builder
-	b.WriteString("### Known commits (by status)\n\n")
-	writeCommitGroup := func(title string, rows []domain.TaskCycleCommit) {
-		if len(rows) == 0 {
-			return
-		}
-		b.WriteString("**")
-		b.WriteString(title)
-		b.WriteString(":**\n")
-		for _, c := range rows {
-			short := c.SHA
-			if len(short) > 12 {
-				short = short[:12]
-			}
-			b.WriteString("- ")
-			b.WriteString(short)
-			b.WriteString(" — ")
-			b.WriteString(c.Message)
-			if c.GateReason != "" {
-				b.WriteString(" (")
-				b.WriteString(c.GateReason)
-				b.WriteString(")")
-			}
-			b.WriteByte('\n')
-		}
-		b.WriteByte('\n')
-	}
-	writeCommitGroup("Eligible (verify-ready)", eligible)
-	writeCommitGroup("Observed (blocked by gates)", observed)
-	writeCommitGroup("Inherited", inherited)
-	writeCommitGroup("Other", other)
-	b.WriteString("Do **not** re-discover targets when scope files or eligible commits exist above.\n\n")
-	return b.String()
 }

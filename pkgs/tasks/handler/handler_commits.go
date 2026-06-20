@@ -6,22 +6,18 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 type taskCommitEntry struct {
-	CycleID       string              `json:"cycle_id"`
-	AttemptSeq    int64               `json:"attempt_seq"`
-	Seq           int64               `json:"seq"`
-	Repo          string              `json:"repo"`
-	Worktree      string              `json:"worktree"`
-	Branch        string              `json:"branch"`
-	SHA           string              `json:"sha"`
-	CommittedAt   string              `json:"committed_at"`
-	Message       string              `json:"message"`
-	Status        domain.CommitStatus `json:"status"`
-	GateReason    string              `json:"gate_reason,omitempty"`
-	SourceCycleID string              `json:"source_cycle_id,omitempty"`
+	CycleID     string `json:"cycle_id"`
+	AttemptSeq  int64  `json:"attempt_seq"`
+	Seq         int64  `json:"seq"`
+	Repo        string `json:"repo"`
+	Worktree    string `json:"worktree"`
+	Branch      string `json:"branch"`
+	SHA         string `json:"sha"`
+	CommittedAt string `json:"committed_at"`
+	Message     string `json:"message"`
 }
 
 type taskCommitsResponse struct {
@@ -64,18 +60,15 @@ func (h *Handler) getTaskCommits(w http.ResponseWriter, r *http.Request) {
 	for i := range rows {
 		row := &rows[i]
 		resp.Commits = append(resp.Commits, taskCommitEntry{
-			CycleID:       row.CycleID,
-			AttemptSeq:    attemptByCycle[row.CycleID],
-			Seq:           row.Seq,
-			Repo:          row.Repo,
-			Worktree:      row.Worktree,
-			Branch:        row.Branch,
-			SHA:           row.SHA,
-			CommittedAt:   row.CommittedAt.UTC().Format(time.RFC3339),
-			Message:       row.Message,
-			Status:        row.Status,
-			GateReason:    row.GateReason,
-			SourceCycleID: row.SourceCycleID,
+			CycleID:     row.CycleID,
+			AttemptSeq:  attemptByCycle[row.CycleID],
+			Seq:         row.Seq,
+			Repo:        row.Repo,
+			Worktree:    row.Worktree,
+			Branch:      row.Branch,
+			SHA:         row.SHA,
+			CommittedAt: row.CommittedAt.UTC().Format(time.RFC3339),
+			Message:     row.Message,
 		})
 	}
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.getTaskCommits",

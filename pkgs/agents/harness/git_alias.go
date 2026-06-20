@@ -8,10 +8,7 @@ import (
 )
 
 const (
-	executeNoCommitsReason            = git.ExecuteNoCommitsReason
-	executeUncommittedWorkReason      = git.ExecuteUncommittedWorkReason
 	executeInvalidCommitReason        = git.ExecuteInvalidCommitReason
-	executeRewrittenHistoryReason     = git.ExecuteRewrittenHistoryReason
 	verifyTamperedReason              = git.VerifyTamperedReason
 	verifyIntegrityCheckTimeoutReason = git.VerifyIntegrityCheckTimeoutReason
 	retryResetAnchorMissing           = git.RetryResetAnchorMissing
@@ -41,10 +38,8 @@ func (h *Harness) ingestExecuteCommits(
 	cycle *domain.TaskCycle,
 	execPhaseSeq int64,
 	snap git.PhaseSnapshot,
-	inherited []domain.TaskCycleCommit,
-	retryMode domain.RetryMode,
 ) (executeCommitIngestOutcome, error) {
-	return h.gitSvc().IngestExecuteCommits(ctx, taskID, cycle, execPhaseSeq, snap, inherited, retryMode, h.publish)
+	return h.gitSvc().IngestExecuteCommits(ctx, taskID, cycle, execPhaseSeq, snap, h.publish)
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

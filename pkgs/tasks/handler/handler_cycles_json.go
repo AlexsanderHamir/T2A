@@ -196,16 +196,13 @@ type cycleGitContextResponse struct {
 
 // cycleCommitEntry is one row from task_cycle_commits.
 type cycleCommitEntry struct {
-	Seq           int64               `json:"seq"`
-	Repo          string              `json:"repo"`
-	Worktree      string              `json:"worktree"`
-	Branch        string              `json:"branch"`
-	SHA           string              `json:"sha"`
-	CommittedAt   time.Time           `json:"committed_at"`
-	Message       string              `json:"message"`
-	Status        domain.CommitStatus `json:"status"`
-	GateReason    string              `json:"gate_reason,omitempty"`
-	SourceCycleID string              `json:"source_cycle_id,omitempty"`
+	Seq         int64     `json:"seq"`
+	Repo        string    `json:"repo"`
+	Worktree    string    `json:"worktree"`
+	Branch      string    `json:"branch"`
+	SHA         string    `json:"sha"`
+	CommittedAt time.Time `json:"committed_at"`
+	Message     string    `json:"message"`
 }
 
 type cycleVerdictsResponse struct {

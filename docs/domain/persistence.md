@@ -296,10 +296,9 @@ Execute-phase git commits are indexed in **`task_cycle_commits`** after successf
 | --- | --- | --- |
 | `UpsertCycleCommits` | `internal/commits` via `facade_commits.go` | Idempotent on `(cycle_id, sha)`; append-only semantics |
 | `ListCommitsForCycle` | same | Ordered by `seq`; consumed by resume prompts and verdicts API |
-| `ListEligibleCommitsForCycle` | same | Subset with `status=eligible` — verify git context reads this only (ADR-0016) |
-| `ListCommitsForTask` | same | Task-wide dedupe by SHA (highest status rank wins); powers `GET /tasks/{id}/commits` |
+| `ListCommitsForTask` | same | Task-wide deduped ledger — verify git context reads this (ADR-0032); powers `GET /tasks/{id}/commits` |
 
-Rows carry the full **repo → worktree → branch → commit** chain plus **`status`**, optional **`gate_reason`**, and **`source_cycle_id`** for inherited rows. Observe-first ingest persists rows even when execute gates fail ([commit-eligibility.md](./commit-eligibility.md)).
+Rows carry the full **repo → worktree → branch → commit** chain. Ingest is append-only from agent `commits[]` claims ([cycle-commits.md](./cycle-commits.md)).
 
 ## Facade-only side effects
 

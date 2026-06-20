@@ -1,7 +1,7 @@
 # ADR-0016: Observe-vs-admit commit statuses
 
 **Date:** 2026-06-18
-**Status:** Accepted
+**Status:** Superseded by [ADR-0032](./ADR-0032-agent-claimed-commit-index.md)
 **Deciders:** Engineering
 **Supersedes:** ADR-0014 ingest timing (partial — observation always persists)
 

@@ -151,7 +151,6 @@ func (h *Harness) runCycleLoopExecute(
 		ingestAttempted = true
 		ingestOutcome, ingestErr = h.ingestExecuteCommits(
 			parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap,
-			opts.knownCommits, retryModeFromCycleMeta(cycle),
 		)
 		if ingestErr != nil {
 			slog.Warn("agent harness commit ingest error", "cmd", harnessLogCmd,

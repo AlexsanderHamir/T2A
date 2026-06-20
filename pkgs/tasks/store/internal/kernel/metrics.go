@@ -61,8 +61,6 @@ const (
 	OpListVerifyReportsForCycle   = "list_verify_reports_for_cycle"
 	OpUpsertCycleCommits          = "upsert_cycle_commits"
 	OpListCommitsForCycle         = "list_commits_for_cycle"
-	OpListEligibleCommitsForCycle = "list_eligible_commits_for_cycle"
-	OpMarkCycleCommitsSuperseded  = "mark_cycle_commits_superseded"
 	OpListCommitsForTask          = "list_commits_for_task"
 	OpGetAppSettings              = "get_app_settings"
 	OpUpdateAppSettings           = "update_app_settings"

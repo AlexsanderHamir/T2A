@@ -36,8 +36,16 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 		return bundle, err
 	}
 	bundle.FailureReason = parentFailureReason(phases, cycle)
+
+	commits, err := s.loadKnownCommitsForTask(ctx, cycle.TaskID)
+	if err != nil {
+		return bundle, err
+	}
+	bundle.Commits = commits
+
 	if len(phases) == 0 {
 		bundle.Warnings = append(bundle.Warnings, "parent cycle has no phases")
+		bundle.Entry = EntryExecute
 	} else {
 		lastPhase := phases[len(phases)-1]
 		bundle.FailurePhase = lastPhase.Phase
@@ -48,25 +56,12 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 			bundle.RunnerFeedback = runnerFeedbackFromPhase(lastExecute)
 			bundle.CriteriaReportProbeErr = git.CriteriaReportProbeErrFromPhaseDetails(lastExecute.DetailsJSON)
 			if lastExecute.Status == domain.PhaseStatusFailed {
-				summary := phaseSummary(*lastExecute)
-				if git.IsExecuteGateReason(summary) {
-					bundle.ExecuteFeedback = git.ReasonRemediation(summary)
+				if summary := phaseSummary(*lastExecute); summary != "" {
+					bundle.ExecuteFeedback = "Prior execute attempt failed: " + summary
 				}
 			}
 		}
-		if bundle.ExecuteFeedback == "" && bundle.FailureClass == FailureClassExecuteGate {
-			bundle.ExecuteFeedback = git.ReasonRemediation(bundle.FailureReason)
-		}
-		if bundle.FailureClass == FailureClassExecuteGate && strings.Contains(bundle.FailureReason, git.ExecuteUncommittedWorkReason) {
-			if diag, derr := git.StatusPorcelain(ctx, s.gitRepo(), s.opts.WorkingDir); derr == nil && diag != "" {
-				bundle.GitDiagnostics = diag
-			}
-		}
-		eligible, err := s.store.ListEligibleCommitsForCycle(ctx, parentCycleID)
-		if err != nil {
-			return bundle, err
-		}
-		bundle.Entry = routeResumeEntry(phases, lastExecute, lastPhase, cycle, len(eligible) > 0)
+		bundle.Entry = routeResumeEntry(phases, lastExecute, lastPhase, cycle, len(bundle.Commits) > 0)
 	}
 
 	previouslyPassed, _, verifyFeedback, err := s.loadVerifyCheckpointData(ctx, parentCycleID)
@@ -76,12 +71,6 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 	bundle.PreviouslyPassed = previouslyPassed
 	bundle.VerifyFeedback = verifyFeedback
 
-	commits, err := s.loadKnownCommitsForTask(ctx, cycle.TaskID)
-	if err != nil {
-		return bundle, err
-	}
-	bundle.Commits = commits
-
 	criteriaRows, err := s.store.ListCriteriaReportsForCycle(ctx, parentCycleID)
 	if err != nil {
 		return bundle, err
@@ -90,18 +79,6 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 		if criteriaRows[i].AttemptSeq == domain.ExecuteCriteriaReportAttemptSeq {
 			bundle.CriteriaEvidence = append(bundle.CriteriaEvidence, criteriaRows[i])
 		}
-	}
-
-	if len(phases) == 0 {
-		bundle.Entry = EntryExecute
-	} else {
-		lastPhase := phases[len(phases)-1]
-		lastExecute := lastExecutePhase(phases)
-		eligible, err := s.store.ListEligibleCommitsForCycle(ctx, parentCycleID)
-		if err != nil {
-			return bundle, err
-		}
-		bundle.Entry = routeResumeEntry(phases, lastExecute, lastPhase, cycle, len(eligible) > 0)
 	}
 
 	bundle.Sufficient = continuationSufficient(bundle, cycle)
@@ -123,11 +100,6 @@ func classifyParentFailure(phases []domain.TaskCyclePhase, cycle *domain.TaskCyc
 	if strings.HasPrefix(reason, verificationFailedReason) || lastPhase.Phase == domain.PhaseVerify {
 		return FailureClassVerify
 	}
-	if git.IsExecuteGateReason(reason) || (lastPhase.Phase == domain.PhaseExecute && lastPhase.Status == domain.PhaseStatusFailed) {
-		if git.IsExecuteGateReason(phaseSummary(lastPhase)) || git.IsExecuteGateReason(reason) {
-			return FailureClassExecuteGate
-		}
-	}
 	if strings.HasPrefix(reason, "runner_") || strings.Contains(reason, "runner_") {
 		return FailureClassRunner
 	}
@@ -141,7 +113,7 @@ func classifyParentFailure(phases []domain.TaskCyclePhase, cycle *domain.TaskCyc
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func routeResumeEntry(phases []domain.TaskCyclePhase, lastExecute *domain.TaskCyclePhase, lastPhase domain.TaskCyclePhase, cycle *domain.TaskCycle, hasEligible bool) Entry {
+func routeResumeEntry(phases []domain.TaskCyclePhase, lastExecute *domain.TaskCyclePhase, lastPhase domain.TaskCyclePhase, cycle *domain.TaskCycle, hasCommits bool) Entry {
 	reason := parentFailureReason(phases, cycle)
 	if reason == "" {
 		reason = phaseSummary(lastPhase)
@@ -150,7 +122,7 @@ func routeResumeEntry(phases []domain.TaskCyclePhase, lastExecute *domain.TaskCy
 		lastExecute.Status == domain.PhaseStatusSucceeded &&
 		cycle.Status == domain.CycleStatusFailed &&
 		(lastPhase.Phase == domain.PhaseVerify || strings.HasPrefix(reason, verificationFailedReason)) &&
-		hasEligible {
+		hasCommits {
 		return EntryVerifyOnly
 	}
 	return EntryExecute

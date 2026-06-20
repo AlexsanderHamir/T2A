@@ -26,7 +26,7 @@ func AppendOperatorRetryResumeNotice(prompt string, cycle *domain.TaskCycle, par
 	if block := FormatKnownCommitsForResume(parentCommits); block != "" {
 		b.WriteString("3. ")
 		b.WriteString(strings.TrimSpace(block))
-		b.WriteString("Those commits are already indexed for this task — the worker discovers new commits from git; do not re-list prior SHAs.\n")
+		b.WriteString("Those commits are already indexed for this task — list only **new** commits you create in `commits[]` on your criteria report.\n")
 		b.WriteString("4. A clean tree does **not** mean the task succeeded — complete remaining criteria and write the criteria report.\n")
 	} else {
 		b.WriteString("3. A clean tree does **not** mean the task succeeded — complete remaining criteria and write the criteria report.\n")
@@ -67,13 +67,12 @@ func AppendResumeNotice(prompt string, cycle *domain.TaskCycle, interruptedPhase
 func AppendGitCommitPolicy(prompt string, operatorResume bool) string {
 	var b strings.Builder
 	b.WriteString("## Git commits (required)\n\n")
-	b.WriteString("Before you finish this execute phase, commit work that satisfies criteria you are claiming. ")
-	b.WriteString("The worker discovers commits via `git rev-list cycle_base_sha..HEAD` — you do not need to list SHAs in `criteria-report.json`.\n\n")
+	b.WriteString("Before you finish this execute phase, commit work that satisfies criteria you are claiming, and list new commits in `commits[]` on your criteria report.\n\n")
 	if operatorResume {
 		b.WriteString("Create **new** commits only in this attempt; prior attempt SHAs are already indexed.\n\n")
 	}
 	b.WriteString("Use normal descriptive commit messages only — do **not** embed task IDs, cycle IDs, or `t2a:` markers.\n")
-	b.WriteString("Create **new commits only** — fix mistakes with a follow-up commit; never amend, rebase, or squash work from this cycle.\n")
+	b.WriteString("Create **new commits only** — fix mistakes with a follow-up commit; never amend, rebase, squash, or delete history.\n")
 	b.WriteString("You may commit incrementally during the run. Uncommitted local changes are allowed if you already committed the work you are claiming.\n")
 	b.WriteString("Do not push.\n\n")
 	return b.String() + prompt

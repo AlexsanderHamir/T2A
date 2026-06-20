@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
 import type { CycleCommit, TaskCommit } from "@/types";
-import { CommitStatusBadge } from "./CommitStatusBadge";
 import { shortSha, taskCommitDiffPath } from "./commitDisplay";
 
 function attemptSeqForRow(commit: CycleCommit): number | undefined {
@@ -31,10 +30,6 @@ export function CommitRow({ taskId, commit, showAttempt = false }: Props) {
         aria-label={ariaLabel}
       >
         <span className="task-commit-row-inner">
-          <CommitStatusBadge
-            status={commit.status}
-            gateReason={commit.gate_reason}
-          />
           <code className="task-commit-sha" title={commit.sha}>
             {shortSha(commit.sha)}
           </code>

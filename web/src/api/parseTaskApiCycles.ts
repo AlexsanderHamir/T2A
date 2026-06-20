@@ -1,6 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
 import {
-  type CommitStatus,
   type CycleCommandRun,
   type CycleCommit,
   type CycleCriteriaReport,
@@ -252,33 +251,10 @@ function parseCycleGitContext(value: unknown): CycleGitContext | undefined {
   };
 }
 
-const COMMIT_STATUSES = new Set([
-  "eligible",
-  "observed",
-  "inherited",
-  "superseded",
-]);
-
-function parseCommitStatus(value: unknown): CommitStatus {
-  if (typeof value !== "string" || !COMMIT_STATUSES.has(value)) {
-    return "eligible";
-  }
-  return value as CommitStatus;
-}
-
 export function parseCycleCommit(value: unknown): CycleCommit {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: commit must be an object");
   }
-  const gateReason =
-    typeof value.gate_reason === "string" && value.gate_reason.trim() !== ""
-      ? value.gate_reason
-      : undefined;
-  const sourceCycleId =
-    typeof value.source_cycle_id === "string" &&
-    value.source_cycle_id.trim() !== ""
-      ? value.source_cycle_id
-      : undefined;
   return {
     seq: parseFiniteNumber(value.seq, "seq"),
     repo: typeof value.repo === "string" ? value.repo : "",
@@ -287,9 +263,6 @@ export function parseCycleCommit(value: unknown): CycleCommit {
     sha: parseNonEmptyString(value.sha, "sha"),
     committed_at: parseISO8601Required(value.committed_at, "committed_at"),
     message: typeof value.message === "string" ? value.message : "",
-    status: parseCommitStatus(value.status),
-    ...(gateReason !== undefined ? { gate_reason: gateReason } : {}),
-    ...(sourceCycleId !== undefined ? { source_cycle_id: sourceCycleId } : {}),
   };
 }
 

@@ -15,15 +15,14 @@ import (
 type taskCommitsResponse struct {
 	TaskID  string `json:"task_id"`
 	Commits []struct {
-		CycleID    string              `json:"cycle_id"`
-		AttemptSeq int64               `json:"attempt_seq"`
-		SHA        string              `json:"sha"`
-		Status     domain.CommitStatus `json:"status"`
-		GateReason string              `json:"gate_reason,omitempty"`
+		CycleID    string `json:"cycle_id"`
+		AttemptSeq int64  `json:"attempt_seq"`
+		SHA        string `json:"sha"`
+		Message    string `json:"message"`
 	} `json:"commits"`
 }
 
-func TestHandler_GetTaskCommits_returnsStatusGroupedRows(t *testing.T) {
+func TestHandler_GetTaskCommits_returnsRows(t *testing.T) {
 	t.Parallel()
 	srv, st := NewServerWithStore(t)
 	defer srv.Close()
@@ -44,12 +43,10 @@ func TestHandler_GetTaskCommits_returnsStatusGroupedRows(t *testing.T) {
 		{
 			PhaseSeq: 1, Seq: 1, Repo: "/repo", Worktree: "/repo", Branch: "main",
 			SHA: "abc1234567890abcdef1234567890abcdef1234", CommittedAt: when, Message: "feat",
-			Status: domain.CommitEligible,
 		},
 		{
 			PhaseSeq: 1, Seq: 2, Repo: "/repo", Worktree: "/repo", Branch: "main",
-			SHA: "def1234567890abcdef1234567890abcdef12345", CommittedAt: when.Add(time.Minute), Message: "blocked",
-			Status: domain.CommitObserved, GateReason: "execute_uncommitted_work",
+			SHA: "def1234567890abcdef1234567890abcdef12345", CommittedAt: when.Add(time.Minute), Message: "fix",
 		},
 	}); err != nil {
 		t.Fatalf("upsert commits: %v", err)
@@ -62,11 +59,8 @@ func TestHandler_GetTaskCommits_returnsStatusGroupedRows(t *testing.T) {
 	if len(resp.Commits) != 2 {
 		t.Fatalf("len(commits)=%d want 2", len(resp.Commits))
 	}
-	if resp.Commits[0].Status != domain.CommitEligible || resp.Commits[0].AttemptSeq != cycle.AttemptSeq {
+	if resp.Commits[0].SHA != "abc1234567890abcdef1234567890abcdef1234" || resp.Commits[0].AttemptSeq != cycle.AttemptSeq {
 		t.Fatalf("first commit=%+v", resp.Commits[0])
-	}
-	if resp.Commits[1].Status != domain.CommitObserved || resp.Commits[1].GateReason != "execute_uncommitted_work" {
-		t.Fatalf("second commit=%+v", resp.Commits[1])
 	}
 }
 

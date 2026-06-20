@@ -7,7 +7,6 @@ import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
 import { CommitDiffPanel } from "../components/task-detail/commits/CommitDiffPanel";
-import { CommitStatusBadge } from "../components/task-detail/commits/CommitStatusBadge";
 import {
   commitShaParamPattern,
   shortSha,
@@ -90,12 +89,6 @@ export function TaskCommitDiffPage() {
               {shortSha(sha)}
             </h1>
           )}
-          {commit ? (
-            <CommitStatusBadge
-              status={commit.status}
-              gateReason={commit.gate_reason}
-            />
-          ) : null}
         </div>
 
         <p className="task-commit-diff-page-meta muted">

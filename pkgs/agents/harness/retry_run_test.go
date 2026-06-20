@@ -251,7 +251,6 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 	if err := st.UpsertCycleCommits(ctx, tsk.ID, parent.ID, []store.CycleCommitEntry{{
 		PhaseSeq: 1, Seq: 1, Repo: "/repo", Worktree: "/repo", Branch: "main",
 		SHA: "abc1234567890abcdef1234567890abcdef1234", CommittedAt: when, Message: "feat",
-		Status: domain.CommitEligible,
 	}}); err != nil {
 		t.Fatal(err)
 	}

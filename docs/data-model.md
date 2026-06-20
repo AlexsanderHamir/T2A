@@ -278,25 +278,22 @@ The two report files above are the agent ↔ worker wire format. They are GC'd a
 
 `task_cycle_commits`
 
-Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md), statuses [ADR-0016](adr/ADR-0016-observe-vs-admit-commits.md)). Upserted after a successful execute run (observe-first: before `CompletePhase(execute)`) from ancestry `cycle_base_sha..HEAD`. Not dual-written to `task_events`.
+Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md), [ADR-0032](adr/ADR-0032-agent-claimed-commit-index.md)). Upserted after a successful execute run from agent-declared `commits[]` in `criteria-report.json`. Not dual-written to `task_events`.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid pk | server-assigned at upsert. |
 | `task_id` | string fk → `tasks.id` (`ON DELETE CASCADE`) | denormalized for list-by-task. |
 | `cycle_id` | string fk → `task_cycles.id` (`ON DELETE CASCADE`) | indexed. |
-| `phase_seq` | int (>0) | execute phase that last ingested this SHA. |
-| `seq` | int (>0) | order within cycle ancestry (`1..N`); unique index with `cycle_id` for ordering. |
+| `phase_seq` | int (>0) | execute phase that ingested this SHA. |
+| `seq` | int (>0) | order within ingest batch; unique index with `cycle_id` for ordering. |
 | `repo` | text | `app_settings.repo_root` at snapshot. |
 | `worktree` | text | `git rev-parse --show-toplevel`. |
 | `branch` | string | from agent report, `git branch --contains`, or snapshot `base_branch`. |
 | `sha` | string | full commit hash; unique with `cycle_id`. |
 | `committed_at` | timestamptz | from `git log -1`. |
 | `message` | text | subject line from `git log -1`. |
-| `status` | string | `eligible` \| `observed` \| `inherited` \| `superseded`; default `eligible`. |
-| `gate_reason` | string | harness reason when not eligible (e.g. `execute_uncommitted_work`). |
-| `source_cycle_id` | string | provenance when `inherited` from parent attempt. |
-| `recorded_at` | timestamptz | worker upsert time. |
+| `recorded_at` | timestamptz | worker ingest time. |
 
 Unique index: `(cycle_id, sha)`. List order: `seq ASC`. Pre-ADR-0014 cycles return zero rows.
 

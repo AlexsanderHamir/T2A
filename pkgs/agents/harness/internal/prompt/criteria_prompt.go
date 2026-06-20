@@ -54,8 +54,10 @@ func InjectCriteria(prompt string, items []ChecklistItem, reportPath string, alr
 	criteria.WriteString("\n\n## Done criteria (required)\n\n")
 	criteria.WriteString("You must satisfy every criterion below. When finished, write a JSON report at:\n")
 	criteria.WriteString(fmt.Sprintf("`%s`\n\n", reportPath))
-	criteria.WriteString("Schema:\n```json\n{\"schema_version\":1,\"criteria\":[{\"id\":\"<id>\",\"claimed_done\":true,\"evidence\":\"...\"}]}\n```\n")
-	criteria.WriteString("Use only `schema_version` and `criteria` top-level fields — no extra keys; put metadata in `evidence`.\n")
+	criteria.WriteString("Schema:\n```json\n{\"schema_version\":1,\"criteria\":[{\"id\":\"<id>\",\"claimed_done\":true,\"evidence\":\"...\"}],\"commits\":[{\"sha\":\"<full-or-abbrev>\",\"branch\":\"optional\"}]}\n```\n")
+	criteria.WriteString("Use only `schema_version`, `criteria`, and `commits` top-level fields — no extra keys; put metadata in `evidence`.\n")
+	criteria.WriteString("List commits **created in this execute visit** under `commits` (incremental is fine — the worker accumulates them).\n")
+	criteria.WriteString("Git discipline: create **new commits only** — never amend, rebase, squash, or delete history; fix mistakes with a follow-up commit.\n")
 	criteria.WriteString("claimed_done is your assertion that you completed the work; the verification agent independently decides whether each criterion is satisfied.\n")
 	if len(locked) > 0 {
 		criteria.WriteString("(Report only the criteria below; do NOT include already-verified IDs.)\n")

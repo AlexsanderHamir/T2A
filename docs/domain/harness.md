@@ -234,9 +234,9 @@ Phase-specific behavior:
 | `task_cycle_verify_reports` | Locked passes, verify attempt, retry feedback |
 | Task row | Base prompt |
 | `task_context_snapshots` | Project context block |
-| `task_cycle_commits` | Worker-indexed SHAs for resume/verify prompts; **status** (`eligible`, `observed`, `inherited`, `superseded`) per [commit-eligibility.md](./commit-eligibility.md) |
+| `task_cycle_commits` | Worker-indexed SHAs from agent `commits[]` claims; verify reads task-wide ledger per [cycle-commits.md](./cycle-commits.md) |
 
-Cross-cycle operator resume loads a **ContinuationBundle** from the parent attempt ([resume-continuation.md](./resume-continuation.md)): scope lock, status-grouped commits, verify-only routing when execute succeeded and eligible commits exist.
+Cross-cycle operator resume loads a **ContinuationBundle** from the parent attempt ([resume-continuation.md](./resume-continuation.md)): scope lock, known commits, verify-only routing when execute succeeded and task has indexed commits.
 
 | Branch | Harness behavior |
 | --- | --- |

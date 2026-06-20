@@ -2,11 +2,9 @@ package git
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -16,20 +14,14 @@ import (
 )
 
 const (
-	// ExecuteNoCommitsReason is recorded when execute produced no commits in range.
-	ExecuteNoCommitsReason = "execute_no_commits"
-	// ExecuteUncommittedWorkReason is recorded when the worktree is dirty after execute.
-	ExecuteUncommittedWorkReason = "execute_uncommitted_work"
-	// ExecuteInvalidCommitReason is recorded when inherited or resolved commits are invalid.
+	// ExecuteInvalidCommitReason is recorded when claimed commits cannot be resolved in git.
 	ExecuteInvalidCommitReason = "execute_invalid_commit"
-	// ExecuteRewrittenHistoryReason is recorded when stored SHAs disappear from ancestry.
-	ExecuteRewrittenHistoryReason = "execute_rewritten_history"
 
 	RetryResetAnchorMissing = "retry_reset_anchor_missing"
 	RetryGitResetFailed     = "retry_git_reset_failed"
 )
 
-// ExecuteCommitIngestOutcome summarizes commit observe/admit after execute.
+// ExecuteCommitIngestOutcome summarizes commit indexing after execute.
 type ExecuteCommitIngestOutcome struct {
 	FailReason  string
 	CommitCount int
@@ -46,23 +38,6 @@ type phaseContext struct {
 	BaseSHA      string
 	CycleBaseSHA string
 	BaseBranch   string
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Service) revListRange(ctx context.Context, worktree, baseSHA string) ([]string, error) {
-	baseSHA = strings.TrimSpace(baseSHA)
-	if baseSHA == "" {
-		return nil, fmt.Errorf("empty base sha")
-	}
-	out, err := s.repo().Run(ctx, worktree, "rev-list", "--reverse", baseSHA+"..HEAD")
-	if err != nil {
-		return nil, err
-	}
-	out = strings.TrimSpace(out)
-	if out == "" {
-		return nil, nil
-	}
-	return strings.Split(out, "\n"), nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -105,23 +80,63 @@ func (s *Service) branchContaining(ctx context.Context, worktree, sha string) (s
 	return "", nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Git sub-step; operation trace is emitted by IngestExecuteCommits."
-func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext) ([]store.CycleCommitEntry, error) {
-	shas, err := s.revListRange(ctx, g.Worktree, g.CycleBaseSHA)
-	if err != nil {
-		return nil, err
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (s *Service) commitExists(ctx context.Context, worktree, sha string) bool {
+	sha = strings.TrimSpace(sha)
+	if sha == "" {
+		return false
 	}
-	if len(shas) == 0 {
+	_, err := s.repo().Run(ctx, worktree, "cat-file", "-e", sha+"^{commit}")
+	return err == nil
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (s *Service) commitInRange(ctx context.Context, worktree, cycleBaseSHA, sha string) bool {
+	cycleBaseSHA = strings.TrimSpace(cycleBaseSHA)
+	sha = strings.TrimSpace(sha)
+	if cycleBaseSHA == "" || sha == "" {
+		return false
+	}
+	baseAncestor, err := s.repo().Run(ctx, worktree, "merge-base", "--is-ancestor", cycleBaseSHA, sha)
+	if err != nil || strings.TrimSpace(baseAncestor) != "yes" {
+		return false
+	}
+	if cycleBaseSHA == sha {
+		return false
+	}
+	headAncestor, err := s.repo().Run(ctx, worktree, "merge-base", "--is-ancestor", sha, "HEAD")
+	return err == nil && strings.TrimSpace(headAncestor) == "yes"
+}
+
+//funclogmeasure:skip category=hot-path reason="Git sub-step; operation trace is emitted by IngestExecuteCommits."
+func (s *Service) resolveClaimedCommits(
+	ctx context.Context,
+	g phaseContext,
+	claims []reports.CriteriaCommitClaim,
+	execPhaseSeq int64,
+) ([]store.CycleCommitEntry, error) {
+	if len(claims) == 0 {
 		return nil, nil
 	}
-	out := make([]store.CycleCommitEntry, 0, len(shas))
-	for i, sha := range shas {
-		sha = strings.TrimSpace(sha)
+	out := make([]store.CycleCommitEntry, 0, len(claims))
+	for i, claim := range claims {
+		sha := strings.TrimSpace(claim.SHA)
+		if !s.commitExists(ctx, g.Worktree, sha) {
+			return nil, fmt.Errorf("%w: commit %s not found in repository", domain.ErrInvalidInput, sha)
+		}
+		if g.CycleBaseSHA != "" && !s.commitInRange(ctx, g.Worktree, g.CycleBaseSHA, sha) {
+			slog.Warn("claimed commit outside cycle_base_sha..HEAD; indexing anyway",
+				"cmd", logCmd, "operation", "agent.harness.git.resolveClaimedCommits.out_of_range",
+				"sha", sha, "cycle_base_sha", g.CycleBaseSHA)
+		}
 		msg, at, err := s.commitDetails(ctx, g.Worktree, sha)
 		if err != nil {
 			return nil, err
 		}
-		branch, _ := s.branchContaining(ctx, g.Worktree, sha)
+		branch := strings.TrimSpace(claim.Branch)
+		if branch == "" {
+			branch, _ = s.branchContaining(ctx, g.Worktree, sha)
+		}
 		if branch == "" {
 			branch = g.BaseBranch
 		}
@@ -133,143 +148,23 @@ func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext) ([]st
 			SHA:         sha,
 			CommittedAt: at,
 			Message:     msg,
+			PhaseSeq:    execPhaseSeq,
 		})
 	}
 	return out, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Service) commitExists(ctx context.Context, worktree, sha string) bool {
-	sha = strings.TrimSpace(sha)
-	if sha == "" {
-		return false
-	}
-	_, err := s.repo().Run(ctx, worktree, "cat-file", "-e", sha+"^{commit}")
-	return err == nil
-}
-
-// BuildInheritedCommitEntries copies parent-cycle commits when resume made no new commits.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Service) BuildInheritedCommitEntries(
-	ctx context.Context,
-	g phaseContext,
-	inherited []domain.TaskCycleCommit,
-	execPhaseSeq int64,
-) ([]store.CycleCommitEntry, error) {
-	if len(inherited) == 0 {
-		return nil, nil
-	}
-	out := make([]store.CycleCommitEntry, 0, len(inherited))
-	seq := int64(0)
-	for _, c := range inherited {
-		sha := strings.TrimSpace(c.SHA)
-		if sha == "" {
-			continue
-		}
-		if !s.commitExists(ctx, g.Worktree, sha) {
-			return nil, fmt.Errorf("%w: inherited commit %s no longer in repository", domain.ErrInvalidInput, sha)
-		}
-		seq++
-		msg := c.Message
-		at := c.CommittedAt
-		if refreshedMsg, refreshedAt, err := s.commitDetails(ctx, g.Worktree, sha); err == nil {
-			if refreshedMsg != "" {
-				msg = refreshedMsg
-			}
-			if !refreshedAt.IsZero() {
-				at = refreshedAt
-			}
-		}
-		branch := strings.TrimSpace(c.Branch)
-		if branch == "" {
-			branch, _ = s.branchContaining(ctx, g.Worktree, sha)
-		}
-		if branch == "" {
-			branch = g.BaseBranch
-		}
-		repo := strings.TrimSpace(c.Repo)
-		if repo == "" {
-			repo = g.Repo
-		}
-		worktree := strings.TrimSpace(c.Worktree)
-		if worktree == "" {
-			worktree = g.Worktree
-		}
-		out = append(out, store.CycleCommitEntry{
-			Seq:           seq,
-			Repo:          repo,
-			Worktree:      worktree,
-			Branch:        branch,
-			SHA:           sha,
-			CommittedAt:   at,
-			Message:       msg,
-			PhaseSeq:      execPhaseSeq,
-			Status:        domain.CommitInherited,
-			SourceCycleID: strings.TrimSpace(c.CycleID),
-		})
-	}
-	return out, nil
-}
-
-func (s *Service) evaluateExecuteCommitGates(
-	ctx context.Context,
-	snap PhaseSnapshot,
-	cycleID string,
-	entries []store.CycleCommitEntry,
-) (failReason string, err error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.evaluateExecuteCommitGates",
-		"cycle_id", cycleID, "entry_count", len(entries))
-	dirty, err := WorkingTreeDirty(ctx, s.repo(), snap.Worktree)
+func (s *Service) warnMissingIndexedCommits(ctx context.Context, taskID string, worktree string) {
+	prior, err := s.store.ListCommitsForTask(ctx, taskID)
 	if err != nil {
-		return "", err
+		return
 	}
-	if dirty {
-		if len(entries) == 0 {
-			return ExecuteUncommittedWorkReason, nil
+	for _, row := range prior {
+		if !s.commitExists(ctx, worktree, row.SHA) {
+			slog.Warn("indexed commit no longer in repository",
+				"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.missing_prior_sha",
+				"task_id", taskID, "sha", row.SHA)
 		}
-		slog.Warn("working tree dirty after execute but cycle has commits; admitting commits",
-			"cmd", logCmd, "operation", "agent.harness.git.evaluateExecuteCommitGates.dirty_with_commits",
-			"cycle_id", cycleID, "commit_count", len(entries))
-	}
-	stored, err := s.store.ListCommitsForCycle(ctx, cycleID)
-	if err != nil {
-		return "", err
-	}
-	current := make(map[string]struct{}, len(entries))
-	for _, e := range entries {
-		current[e.SHA] = struct{}{}
-	}
-	for _, row := range stored {
-		if _, ok := current[row.SHA]; !ok {
-			return ExecuteRewrittenHistoryReason, nil
-		}
-	}
-	return "", nil
-}
-
-// AssignCommitAdmissionStatuses sets observe/eligible status from gate outcome.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func AssignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason string) {
-	assignCommitAdmissionStatuses(entries, failReason)
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func assignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason string) {
-	for i := range entries {
-		if failReason != "" {
-			entries[i].Status = domain.CommitObserved
-			entries[i].GateReason = failReason
-			continue
-		}
-		if entries[i].Status == domain.CommitInherited {
-			entries[i].Status = domain.CommitEligible
-			entries[i].GateReason = ""
-			continue
-		}
-		entries[i].Status = domain.CommitEligible
-		entries[i].GateReason = ""
 	}
 }
 
@@ -293,65 +188,42 @@ func phaseContextFromSnapshot(snap PhaseSnapshot) phaseContext {
 	}
 }
 
-// IngestExecuteCommits observes git ancestry after execute, upserts commits, evaluates gates.
+// IngestExecuteCommits indexes agent-declared commits from criteria-report.json.
 func (s *Service) IngestExecuteCommits(
 	ctx context.Context,
 	taskID string,
 	cycle *domain.TaskCycle,
 	execPhaseSeq int64,
 	snap PhaseSnapshot,
-	inherited []domain.TaskCycleCommit,
-	retryMode domain.RetryMode,
 	publish func(taskID, cycleID string),
 ) (ExecuteCommitIngestOutcome, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits",
+		"task_id", taskID, "cycle_id", cycle.ID, "phase_seq", execPhaseSeq)
 	if snap.Skipped {
 		return ExecuteCommitIngestOutcome{}, nil
 	}
 	g := phaseContextFromSnapshot(snap)
-	warnStrictCriteriaReportDecode(s.reportDir, cycle.ID)
-	entries, err := s.resolvePhaseCommits(ctx, g)
+	s.warnMissingIndexedCommits(ctx, taskID, g.Worktree)
+
+	claims, err := reports.ParseCriteriaReportCommits(s.reportDir, cycle.ID)
+	if err != nil {
+		if errors.Is(err, reports.ErrCriteriaReportInvalid) {
+			return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
+		}
+		return ExecuteCommitIngestOutcome{}, err
+	}
+	entries, err := s.resolveClaimedCommits(ctx, g, claims, execPhaseSeq)
 	if err != nil {
 		return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
 	}
-	if len(entries) == 0 && retryMode == domain.RetryResume && len(inherited) > 0 {
-		entries, err = s.BuildInheritedCommitEntries(ctx, g, inherited, execPhaseSeq)
-		if err != nil {
-			return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
-		}
-		if len(entries) > 0 {
-			slog.Info("agent harness inherited parent commits for resume attempt",
-				"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.inherit",
-				"cycle_id", cycle.ID, "commit_count", len(entries))
-		}
-	}
 	if len(entries) == 0 {
-		return ExecuteCommitIngestOutcome{FailReason: ExecuteNoCommitsReason}, nil
+		return ExecuteCommitIngestOutcome{}, nil
 	}
-	for i := range entries {
-		if entries[i].PhaseSeq == 0 {
-			entries[i].PhaseSeq = execPhaseSeq
-		}
-	}
-	failReason, err := s.evaluateExecuteCommitGates(ctx, snap, cycle.ID, entries)
-	if err != nil {
-		return ExecuteCommitIngestOutcome{}, err
-	}
-	assignCommitAdmissionStatuses(entries, failReason)
 	if err := s.store.UpsertCycleCommits(ctx, taskID, cycle.ID, entries); err != nil {
-		return ExecuteCommitIngestOutcome{}, err
-	}
-	keepSHAs := make(map[string]struct{}, len(entries))
-	for _, e := range entries {
-		keepSHAs[e.SHA] = struct{}{}
-	}
-	if err := s.store.MarkCycleCommitsSuperseded(ctx, cycle.ID, keepSHAs); err != nil {
 		return ExecuteCommitIngestOutcome{}, err
 	}
 	if publish != nil {
 		publish(taskID, cycle.ID)
-	}
-	if failReason != "" {
-		return ExecuteCommitIngestOutcome{FailReason: failReason, CommitCount: len(entries)}, nil
 	}
 	return ExecuteCommitIngestOutcome{CommitCount: len(entries)}, nil
 }
@@ -378,55 +250,4 @@ func (s *Service) PriorCycleBaseSHA(ctx context.Context, cycleID string, current
 		return "", nil
 	}
 	return CycleBaseFromPhaseDetails(first.DetailsJSON), nil
-}
-
-const maxCriteriaReportProbeBytes = 256 * 1024
-
-// warnStrictCriteriaReportDecode logs criteria-report strict-decode issues without
-// blocking commit ingest — git rev-list remains the sole source of truth (ADR-0016).
-//
-//funclogmeasure:skip category=hot-path reason="Non-fatal probe; IngestExecuteCommits emits the operation trace."
-func warnStrictCriteriaReportDecode(reportDir, cycleID string) {
-	reportDir = strings.TrimSpace(reportDir)
-	cycleID = strings.TrimSpace(cycleID)
-	if reportDir == "" || cycleID == "" {
-		return
-	}
-	path := reports.CriteriaReportPath(reportDir, cycleID)
-	info, err := os.Lstat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return
-		}
-		slog.Warn("criteria report probe failed; ingesting commits from git only",
-			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
-			"cycle_id", cycleID, "err", err)
-		return
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		slog.Warn("criteria report probe failed; ingesting commits from git only",
-			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
-			"cycle_id", cycleID, "err", "symlink not permitted")
-		return
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		slog.Warn("criteria report probe failed; ingesting commits from git only",
-			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
-			"cycle_id", cycleID, "err", err)
-		return
-	}
-	defer f.Close()
-	dec := json.NewDecoder(io.LimitReader(f, maxCriteriaReportProbeBytes))
-	dec.DisallowUnknownFields()
-	var rep struct {
-		SchemaVersion int               `json:"schema_version"`
-		Criteria      []json.RawMessage `json:"criteria"`
-		Commits       []json.RawMessage `json:"commits,omitempty"`
-	}
-	if err := dec.Decode(&rep); err != nil {
-		slog.Warn("criteria report parse failed; ingesting commits from git only",
-			"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.criteria_report",
-			"cycle_id", cycleID, "err", err)
-	}
 }

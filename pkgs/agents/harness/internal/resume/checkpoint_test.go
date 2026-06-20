@@ -8,7 +8,6 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -164,7 +163,6 @@ func TestLoadContinuationBundle_verifyOnlyWhenExecuteSucceeded(t *testing.T) {
 	if err := st.UpsertCycleCommits(ctx, tsk.ID, cycle.ID, []store.CycleCommitEntry{{
 		PhaseSeq: 1, Seq: 1, Repo: "/repo", Worktree: "/repo", Branch: "main",
 		SHA: "abc1234567890abcdef1234567890abcdef1234", CommittedAt: when, Message: "feat",
-		Status: domain.CommitEligible,
 	}}); err != nil {
 		t.Fatalf("upsert commits: %v", err)
 	}
@@ -287,42 +285,6 @@ func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 	}
 	if len(phases) != 1 || phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusSucceeded {
 		t.Fatalf("phases=%+v", phases)
-	}
-}
-
-func TestReasonRemediation_executeGates(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		reason string
-		want   string
-	}{
-		{git.ExecuteUncommittedWorkReason, "uncommitted"},
-		{git.ExecuteNoCommitsReason, "at least one"},
-		{git.ExecuteInvalidCommitReason, "repository"},
-		{git.ExecuteRewrittenHistoryReason, "amend"},
-	}
-	for _, tc := range tests {
-		got := git.ReasonRemediation(tc.reason)
-		if got == "" {
-			t.Fatalf("reason=%q got empty", tc.reason)
-		}
-		if tc.want != "" && !containsSubstr(got, tc.want) {
-			t.Fatalf("reason=%q got=%q want substring %q", tc.reason, got, tc.want)
-		}
-	}
-}
-
-func TestFormatCommitsByStatusForResume_groups(t *testing.T) {
-	t.Parallel()
-	got := prompt.FormatCommitsByStatusForResume([]domain.TaskCycleCommit{
-		{SHA: "abc", Status: domain.CommitEligible, Message: "ok"},
-		{SHA: "def", Status: domain.CommitObserved, Message: "blocked", GateReason: git.ExecuteUncommittedWorkReason},
-	})
-	if !containsSubstr(got, "Eligible") || !containsSubstr(got, "Observed") {
-		t.Fatalf("got=%q", got)
-	}
-	if !containsSubstr(got, "re-discover") {
-		t.Fatalf("missing anti-discovery: %q", got)
 	}
 }
 

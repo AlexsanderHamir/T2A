@@ -170,16 +170,13 @@ func cycleCommandRunFromDomain(r *domain.TaskCycleCommandRun) cycleCommandRunEnt
 func cycleCommitFromDomain(r *domain.TaskCycleCommit) cycleCommitEntry {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.cycleCommitFromDomain")
 	return cycleCommitEntry{
-		Seq:           r.Seq,
-		Repo:          r.Repo,
-		Worktree:      r.Worktree,
-		Branch:        r.Branch,
-		SHA:           r.SHA,
-		CommittedAt:   r.CommittedAt,
-		Message:       r.Message,
-		Status:        r.Status,
-		GateReason:    r.GateReason,
-		SourceCycleID: r.SourceCycleID,
+		Seq:         r.Seq,
+		Repo:        r.Repo,
+		Worktree:    r.Worktree,
+		Branch:      r.Branch,
+		SHA:         r.SHA,
+		CommittedAt: r.CommittedAt,
+		Message:     r.Message,
 	}
 }
 

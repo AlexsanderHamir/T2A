@@ -21,12 +21,12 @@ func TestComposeContinuationPrompt_scopeLockAndAntiDiscovery(t *testing.T) {
 		FailurePhase:   domain.PhaseVerify,
 		ScopeFiles:     []string{"pkgs/foo/bar.go"},
 		Commits: []domain.TaskCycleCommit{
-			{SHA: "abc1234567890abcdef1234567890abcdef1234", Status: domain.CommitEligible, Message: "prior work"},
+			{SHA: "abc1234567890abcdef1234567890abcdef1234", Message: "prior work"},
 		},
 	}
 	got := prompt.ComposeContinuation("base prompt", continuationInputFromBundle(cycle, bundle))
 	for _, frag := range []string{
-		"Continuation", "Scope lock", "pkgs/foo/bar.go", "Eligible", "re-discover", "base prompt",
+		"Continuation", "Scope lock", "pkgs/foo/bar.go", "abc123456789", "base prompt",
 	} {
 		if !containsSubstr(got, frag) {
 			t.Fatalf("missing %q in prompt:\n%s", frag, got)
@@ -48,11 +48,11 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 		}
 	}
 	withCommit := prompt.AppendGitCommitPolicy("", false)
-	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "git rev-list") {
+	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "commits[]") {
 		t.Fatalf("commit policy missing required block: %q", withCommit)
 	}
-	if containsSubstr(withCommit, "criteria-report.json") && containsSubstr(withCommit, "list every commit SHA") {
-		t.Fatalf("commit policy must not require SHA listing in criteria-report: %q", withCommit)
+	if containsSubstr(withCommit, "git rev-list") {
+		t.Fatalf("commit policy must not mention rev-list discovery: %q", withCommit)
 	}
 	if containsSubstr(withCommit, "t2a:cycle") {
 		t.Fatalf("commit policy must not mention t2a markers: %q", withCommit)
@@ -64,7 +64,7 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 		}
 	}
 	opRetry := prompt.AppendOperatorRetryResumeNotice("base", cycle, known)
-	for _, frag := range []string{"Operator retry", "cycle-1", "abc123def456", "worker discovers", "base"} {
+	for _, frag := range []string{"Operator retry", "cycle-1", "abc123def456", "commits[]", "base"} {
 		if !containsSubstr(opRetry, frag) {
 			t.Fatalf("operator retry notice missing %q in %q", frag, opRetry)
 		}
