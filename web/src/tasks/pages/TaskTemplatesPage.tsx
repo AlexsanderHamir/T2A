@@ -7,7 +7,7 @@ import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
-import { TaskListDeleteGlyph } from "../components/task-list/table/TaskListRowActionIcons";
+import { TaskListDeleteGlyph, TaskListEditGlyph } from "../components/task-list/table/TaskListRowActionIcons";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
 import { useTasksAppContext } from "../app/TasksAppProvider";
 import { taskQueryKeys } from "../task-query";
@@ -290,14 +290,15 @@ export function TaskTemplatesPage() {
                           <div className="task-list-row-actions">
                             <button
                               type="button"
-                              className="secondary"
+                              className="task-list-icon-btn task-list-icon-btn--edit"
+                              aria-label={`Edit template "${template.name}"`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void app.editTemplateByID(template.id);
                               }}
                               disabled={rowDisabled}
                             >
-                              Edit
+                              <TaskListEditGlyph />
                             </button>
                             <button
                               type="button"
