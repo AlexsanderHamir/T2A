@@ -83,6 +83,7 @@ Open [adr/](./adr/) when you need the historical **why** behind a design, not fo
 | Domain deep dives | [domain/README.md](./domain/README.md) |
 | Repository paths | [agent-map.md](./agent-map.md) |
 | Scoped paths when editing | [AGENTS.md](../AGENTS.md) |
+| Specific edit task (route, harness, sync…) | [AGENTS.md](../AGENTS.md) §Where to find X |
 | PR checklist and local setup | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 
 ## See also

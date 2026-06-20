@@ -26,32 +26,101 @@ Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md]
 
 ## Where to find X
 
+Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent-map.md). When landing a new vertical slice, add one row here **or** one row in agent-map — not both unless the feature is high-traffic.
+
+### Navigation
+
+| I need to… | Go to |
+| --- | --- |
+| Find any subsystem code path | [docs/agent-map.md](docs/agent-map.md) |
+| Understand doc structure | [docs/guide.md](docs/guide.md) |
+| Pick a doc by topic | [docs/README.md](docs/README.md) |
+| PR checklist | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Test failure triage | [docs/contributing.md](docs/contributing.md) §Troubleshooting |
+| Local dev / install | [README.md](README.md) |
+
+### Backend — API, domain, persistence
+
 | I need to… | Go to |
 | --- | --- |
 | Add or change a REST route | `pkgs/tasks/handler/handler_*.go`, [docs/api.md](docs/api.md) |
 | Add DB persistence | `pkgs/tasks/store/`, [docs/domain/persistence.md](docs/domain/persistence.md) |
 | Change task JSON shape | `pkgs/tasks/domain/`, `handler_*_json.go`, `web/src/api/parseTaskApi*.ts` |
 | Wire SSE after a write | handler `notifyChange`, [docs/domain/sse-hub.md](docs/domain/sse-hub.md) |
+| Middleware change | `pkgs/tasks/middleware/`, `internal/middlewaretest/` |
+| Change task status or transitions | `pkgs/tasks/domain/`, [docs/data-model.md](docs/data-model.md) |
+| Task scheduling / when worker picks up | `pkgs/tasks/scheduling/`, [docs/domain/task-scheduling.md](docs/domain/task-scheduling.md) |
+| Checklist API | `handler_checklist.go`, `handler_create_checklist.go`, [docs/domain/done-criteria.md](docs/domain/done-criteria.md) |
+| Task dependencies or release gates | `handler_task_dependencies.go`, `handler_depends_on_json.go`, `handler_task_gate.go`, [docs/data-model.md](docs/data-model.md) |
+| Bootstrap / list read limits | `handler_bootstrap.go`, `readpolicy/`, [ADR-0026](docs/adr/ADR-0026-backend-data-coherence.md) |
+| Execution cycles API | `handler_cycles.go`, `handler_cycles_json.go`, [docs/api.md](docs/api.md) |
+| Commits or repo diff API | `handler_commits.go`, `handler_http_repo*.go`, [docs/domain/cycle-commits.md](docs/domain/cycle-commits.md) |
+| Task drafts API | `handler_task_drafts.go`, [docs/api.md](docs/api.md) |
+| Projects API | `handler_projects.go`, `handler_projects_json.go` |
+| Workspace repo / `@`-mentions | `pkgs/repo/`, [docs/domain/workspace-repo.md](docs/domain/workspace-repo.md) |
+| Schema migration | `pkgs/tasks/postgres/migrate.go`, `go run ./cmd/dbcheck -migrate` |
+| Write policy / enriched SSE payload | `writepolicy/`, `handler_writepolicy.go`, [ADR-0026](docs/adr/ADR-0026-backend-data-coherence.md) |
+
+### Agents and worker
+
+| I need to… | Go to |
+| --- | --- |
+| Agent run / verify loop | `pkgs/agents/harness/`, [docs/domain/harness.md](docs/domain/harness.md) |
+| Worker queue / pickup | `pkgs/agents/worker/`, [docs/domain/agent-queue.md](docs/domain/agent-queue.md) |
+| Execute agent prompt / criteria report | [docs/domain/execute-agent.md](docs/domain/execute-agent.md), `pkgs/agents/harness/` execute paths |
+| Verify agent / judge pipeline | [docs/domain/verify-agent.md](docs/domain/verify-agent.md), harness verify paths |
+| Cursor CLI runner adapter | `pkgs/agents/runner/cursor/`, [docs/domain/runner-adapters.md](docs/domain/runner-adapters.md) |
+| Add or register a runner | `pkgs/agents/runner/registry/`, [docs/domain/runner-adapters.md](docs/domain/runner-adapters.md) |
+| Operator retry (Start over / Resume) | `handler_tasks_retry.go`, `harness/retry_run.go`, [retry-start-over.md](docs/domain/retry-start-over.md) / [retry-resume.md](docs/domain/retry-resume.md) |
+| Cycle commit indexing | `harness/internal/git/commits.go`, [docs/domain/cycle-commits.md](docs/domain/cycle-commits.md) |
+| Cursor session `--resume` | `harness/cursor_resume.go`, [docs/domain/cursor-session-resume.md](docs/domain/cursor-session-resume.md) |
+| Worker supervisor / hot reload | `internal/taskapi/agentworker/`, [docs/domain/agent-supervisor.md](docs/domain/agent-supervisor.md) |
+| Project context in harness | [docs/domain/project-context.md](docs/domain/project-context.md) |
+| Audit timeline / task events | `handler_task_events.go`, [docs/domain/task-events.md](docs/domain/task-events.md) |
+
+### Web — data and UI
+
+| I need to… | Go to |
+| --- | --- |
 | Fix live UI not updating | `web/src/tasks/sync/`, [docs/web.md](docs/web.md) §Task sync |
 | Add a fetch call | `web/src/api/` only — never components |
 | Add a page or route | `web/src/app/Router.tsx`, `web/src/tasks/pages/` |
 | Task templates UI or API | `web/src/api/taskTemplates.ts`, `TaskTemplatesPage.tsx`, `handler_task_templates*.go` |
 | Create or edit task modal | `web/src/tasks/create/`, `task-create-modal/` |
 | Execution cycles UI | `web/src/tasks/components/task-detail/` (cycles panel) |
-| Agent run / verify loop | `pkgs/agents/harness/`, [docs/domain/harness.md](docs/domain/harness.md) |
-| Worker queue / pickup | `pkgs/agents/worker/`, [docs/domain/agent-queue.md](docs/domain/agent-queue.md) |
-| Env or app settings | [docs/configuration.md](docs/configuration.md), Settings SPA |
-| Default Go tests | `internal/tasktestdb/`, [docs/contributing.md](docs/contributing.md) §Tests |
-| Middleware change | `pkgs/tasks/middleware/`, `internal/middlewaretest/` |
-| Where a new file goes | `.cursor/rules/CODE_STANDARDS.mdc` Part 12 |
-| Handler file too large | [docs/contributing.md](docs/contributing.md) §Splitting handler |
+| Checklist UI mutations | `web/src/tasks/checklist/`, [docs/web.md](docs/web.md) §Query policy |
+| Optimistic task writes / mutation guard | `web/src/tasks/mutations/`, `web/src/tasks/sync/mutationGuard.ts`, [ADR-0025](docs/adr/ADR-0025-frontend-data-coherence.md) |
+| Task list / home table | `web/src/tasks/components/task-list/` |
+| When task fields are editable | `web/src/tasks/task-display/` (`canEditTask`, etc.) |
+| Commit diff page | `TaskCommitDiffPage.tsx`, [docs/web.md](docs/web.md) §Task detail |
+| Cold start / bootstrap query | `web/src/app/hooks/useBootstrap.ts`, [docs/web.md](docs/web.md) §Cold start |
+| Task drafts UI | `TaskDraftsPage.tsx`, `web/src/api/parseTaskApiDrafts.ts` |
+| Projects UI | `web/src/projects/` |
+| Settings page | `web/src/settings/` |
+| SSE transport hook (not sync policy) | `web/src/tasks/hooks/useTaskEventStream.ts`, [docs/domain/sse-hub.md](docs/domain/sse-hub.md) |
+| Vitest / MSW test setup | `web/src/test/`, `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` |
+| Write operator / checklist copy | [docs/execute-and-verify.md](docs/execute-and-verify.md), [docs/domain/done-criteria.md](docs/domain/done-criteria.md) |
 | UI tokens or spacing | `web/src/app/styles/tokens/`, `frontend_bar.mdc` |
 | Hidden launch features | [docs/omitted-features.md](docs/omitted-features.md) |
-| Local dev / install | [README.md](README.md) |
-| Understand doc structure | [docs/guide.md](docs/guide.md) |
-| Pick a doc by topic | [docs/README.md](docs/README.md) |
-| PR checklist | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Test failure triage | [docs/contributing.md](docs/contributing.md) §Troubleshooting |
+
+### Observability and local ops
+
+| I need to… | Go to |
+| --- | --- |
+| Structured logs / `request_id` | `pkgs/tasks/logctx/`, `pkgs/tasks/calltrace/` |
+| Fix `funclogmeasure -enforce` failure | [docs/domain/observability-trace-lines.md](docs/domain/observability-trace-lines.md) |
+| Match a failing request in logs | [docs/contributing.md](docs/contributing.md) §Matching a failing request |
+| Dev SSE ticker for local UI | `pkgs/tasks/devsim/`, `T2A_SSE_TEST` in [docs/configuration.md](docs/configuration.md) |
+| Why a design was chosen | [docs/adr/](docs/adr/) (not for day-to-day routes) |
+
+### Engineering meta
+
+| I need to… | Go to |
+| --- | --- |
+| Where a new file goes | `.cursor/rules/CODE_STANDARDS.mdc` Part 12 |
+| Handler file too large | [docs/contributing.md](docs/contributing.md) §Splitting handler |
+| Default Go tests | `internal/tasktestdb/`, [docs/contributing.md](docs/contributing.md) §Tests |
+| Env or app settings | [docs/configuration.md](docs/configuration.md), Settings SPA |
 
 ## Tooling and rules
 

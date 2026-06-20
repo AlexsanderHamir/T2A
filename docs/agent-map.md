@@ -79,3 +79,4 @@ Repository paths grouped by subsystem. Read only the rows relevant to your task.
 - [guide.md](./guide.md) — documentation layers and learning paths
 - [README.md](./README.md) — doc index by topic
 - [AGENTS.md](../AGENTS.md) — scoped paths when editing
+- [AGENTS.md](../AGENTS.md) §Where to find X — intent-based lookup (route, harness, sync, …)
