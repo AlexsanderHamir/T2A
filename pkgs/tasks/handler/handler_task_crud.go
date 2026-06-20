@@ -132,8 +132,10 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 //   - Store/persistence errors (closed DB, driver faults) → 500 with
 //     failure_stage=store_list plus resolved limit/offset/after_id/pagination_mode.
 //   - Request context canceled or deadline exceeded → 408/504 via storeErrHTTPResponse.
-//   - JSON encode or response-body write failures → 500 or truncated body with
-//     "response encode failed" / "response write failed" error logs (never silent).
+//   - JSON encode failures → 500 with error log msg=response encode failed and
+//     failure_stage=response_encode (includes request_id and route when available).
+//   - Response-body write failures after headers → truncated body with
+//     msg=response write failed and failure_stage body or newline (never silent).
 //
 // Successful responses never publish SSE events.
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {

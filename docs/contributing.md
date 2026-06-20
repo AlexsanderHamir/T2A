@@ -108,9 +108,11 @@ JSON error bodies may include `request_id` (and the response echoes `X-Request-I
 | `failure_stage` | Meaning | Typical `http_status` |
 |-----------------|---------|----------------------|
 | `parse_list_params` | Bad `limit`, `offset`, or `after_id` query | 400 |
-| `store_list` | Persistence read failed after params validated | 500 |
+| `store_list` | Persistence read failed after params validated | 500 (408 when the request context is canceled; 504 on deadline exceeded) |
+| `response_encode` | JSON marshal failed before headers were sent | 500 |
+| `body` / `newline` | Client disconnected or write failed after 200 headers | Truncated or empty 200 body |
 
-`parse_list_params` logs include raw query echoes (`limit_q`, `offset_q`, `after_id_q`). `store_list` logs include resolved `limit`, `offset`, `after_id`, and `pagination_mode` (`offset` or `keyset`). Truncated or empty 200 bodies on an otherwise successful list may show `msg=response write failed` with `failure_stage` `body` or `newline` (client disconnect mid-write).
+`parse_list_params` logs include raw query echoes (`limit_q`, `offset_q`, `after_id_q`). `store_list` logs include resolved `limit`, `offset`, `after_id`, and `pagination_mode` (`offset` or `keyset`). Encode failures log `msg=response encode failed` with `failure_stage=response_encode`. Truncated or empty 200 bodies on an otherwise successful list may show `msg=response write failed` with `failure_stage` `body` or `newline` (client disconnect mid-write).
 
 ### Tests fail with "database" or connection errors
 

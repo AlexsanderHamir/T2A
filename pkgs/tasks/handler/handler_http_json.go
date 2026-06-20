@@ -100,9 +100,11 @@ func writeJSON(w http.ResponseWriter, r *http.Request, op string, code int, v an
 			rid := logctx.RequestIDFromContext(ctx)
 			route := requestRouteLabel(r)
 			slog.Log(ctx, slog.LevelError, "response encode failed",
-				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route, "err", err)
+				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route,
+				"failure_stage", "response_encode", "err", err)
 		} else {
-			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
+			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op,
+				"failure_stage", "response_encode", "err", err)
 		}
 		writeJSONError(w, r, op, http.StatusInternalServerError, "internal server error")
 		return
@@ -156,9 +158,11 @@ func writeJSONWithETag(w http.ResponseWriter, r *http.Request, op string, code i
 			rid := logctx.RequestIDFromContext(ctx)
 			route := requestRouteLabel(r)
 			slog.Log(ctx, slog.LevelError, "response encode failed",
-				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route, "err", err)
+				"cmd", calltrace.LogCmd, "operation", op, "request_id", rid, "route", route,
+				"failure_stage", "response_encode", "err", err)
 		} else {
-			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op, "err", err)
+			slog.Error("response encode failed", "cmd", calltrace.LogCmd, "operation", op,
+				"failure_stage", "response_encode", "err", err)
 		}
 		writeJSONError(w, r, op, http.StatusInternalServerError, "internal server error")
 		return
