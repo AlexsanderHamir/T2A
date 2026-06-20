@@ -32,78 +32,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	by := actorFromRequest(r)
 	debugHTTPRequest(r, op, taskCreateInputFields(&body, string(by))...)
-	if err := h.validatePromptMentionsIfRepo(r, body.InitialPrompt); err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	settings, err := h.store.GetSettings(r.Context())
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	runner, cursorModel, err := resolveTaskRunnerModel(&body, settings)
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	pickupNotBefore, err := resolvePickupNotBeforeForCreate(body.PickupNotBefore, body.Status, settings)
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	dependsOn, err := parseDependsOnWire(body.DependsOn)
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	if strings.TrimSpace(body.Title) == "" {
-		writeStoreError(w, r, op, fmt.Errorf("%w: title required", domain.ErrInvalidInput))
-		return
-	}
-	if body.Priority == "" {
-		writeStoreError(w, r, op, fmt.Errorf("%w: priority required", domain.ErrInvalidInput))
-		return
-	}
-	checklistItems, err := parseCreateChecklistItems(body.ChecklistItems)
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
-		ID:                    body.ID,
-		DraftID:               body.DraftID,
-		Title:                 body.Title,
-		InitialPrompt:         body.InitialPrompt,
-		Status:                body.Status,
-		Priority:              body.Priority,
-		ProjectID:             body.ProjectID,
-		ProjectContextItemIDs: body.ProjectContextItemIDs,
-		Runner:                runner,
-		CursorModel:           cursorModel,
-		PickupNotBefore:       pickupNotBefore,
-		Tags:                  body.Tags,
-		Milestone:             body.Milestone,
-		Gate:                  body.Gate,
-		DependsOn:             dependsOn,
-		ChecklistItems:        checklistItems,
+	task, err := h.createTaskFromComposeJSON(r.Context(), r, op, taskCreateJSONToCompose(body), createTaskComposeOpts{
+		ID:      body.ID,
+		DraftID: body.DraftID,
+		Gate:    body.Gate,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	task, err := h.store.Get(r.Context(), t.ID)
-	if err != nil {
-		writeStoreError(w, r, op, err)
-		return
-	}
-	h.notifyTaskChanged(TaskCreated, t.ID, task)
-	if t.Gate != nil {
-		h.notifyChange(TaskGateChanged, t.ID)
-	}
-	if len(t.DependsOn) > 0 {
-		h.notifyChange(TaskDependencyChanged, t.ID)
-	}
-	taskapiDomainTasksCreatedTotal.Inc()
 	writeJSON(w, r, op, http.StatusCreated, task)
 }
 
