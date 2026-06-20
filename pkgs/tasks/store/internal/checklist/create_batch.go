@@ -37,6 +37,10 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, items []CreateC
 	if err := row.Scan(&maxOrder).Error; err != nil {
 		return fmt.Errorf("checklist order: %w", err)
 	}
+	seq, err := kernel.NextEventSeq(tx, taskID)
+	if err != nil {
+		return err
+	}
 	for _, raw := range items {
 		text := strings.TrimSpace(raw.Text)
 		if text == "" {
@@ -56,17 +60,16 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, items []CreateC
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
 		}
-		if err := replaceCommandsInTx(tx, it.ID, cmds); err != nil {
-			return err
-		}
-		seq, err := kernel.NextEventSeq(tx, taskID)
-		if err != nil {
-			return err
+		if len(cmds) > 0 {
+			if err := replaceCommandsInTx(tx, it.ID, cmds); err != nil {
+				return err
+			}
 		}
 		b, _ := json.Marshal(map[string]string{"item_id": it.ID, "text": it.Text})
 		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemAdded, by, b); err != nil {
 			return err
 		}
+		seq++
 	}
 	return nil
 }

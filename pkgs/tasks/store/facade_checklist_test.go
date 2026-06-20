@@ -7,7 +7,58 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 )
+
+func TestStore_CreateWithChecklistItems_consecutiveEventSeqs(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{
+		Title:    "seeded checklist",
+		Priority: domain.PriorityMedium,
+		ChecklistItems: []checklist.CreateChecklistItemInput{
+			{Text: "one"},
+			{Text: "two"},
+			{Text: "three"},
+		},
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := s.ListChecklistForSubject(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("checklist len=%d want 3", len(items))
+	}
+	evs, err := s.ListTaskEvents(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var createdSeq int64
+	var addedSeqs []int64
+	for _, e := range evs {
+		switch e.Type {
+		case domain.EventTaskCreated:
+			createdSeq = e.Seq
+		case domain.EventChecklistItemAdded:
+			addedSeqs = append(addedSeqs, e.Seq)
+		}
+	}
+	if createdSeq == 0 {
+		t.Fatal("missing task_created event")
+	}
+	if len(addedSeqs) != 3 {
+		t.Fatalf("checklist_item_added count=%d want 3", len(addedSeqs))
+	}
+	for i, seq := range addedSeqs {
+		want := createdSeq + int64(i) + 1
+		if seq != want {
+			t.Fatalf("added[%d] seq=%d want %d (consecutive after task_created)", i, seq, want)
+		}
+	}
+}
 
 func TestStore_AddChecklistItem_rejects_running(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
