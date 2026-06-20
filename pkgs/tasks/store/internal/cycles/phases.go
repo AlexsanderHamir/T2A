@@ -236,6 +236,31 @@ func ListPhasesForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]dom
 	return out, nil
 }
 
+// LastSessionID returns the session_id from the latest terminal phase row
+// of the given phase type in cycleID. Empty string means no usable id.
+func LastSessionID(ctx context.Context, db *gorm.DB, cycleID string, phase domain.Phase) (string, error) {
+	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.LastSessionID",
+		"cycle_id", cycleID, "phase", string(phase))
+	phases, err := ListPhasesForCycle(ctx, db, cycleID)
+	if err != nil {
+		return "", err
+	}
+	for i := len(phases) - 1; i >= 0; i-- {
+		p := phases[i]
+		if p.Phase != phase {
+			continue
+		}
+		if !domain.TerminalPhaseStatus(p.Status) {
+			continue
+		}
+		if id := domain.SessionIDFromDetailsJSON(p.DetailsJSON); id != "" {
+			return id, nil
+		}
+	}
+	return "", nil
+}
+
 func loadPhaseByCycleSeqInTx(tx *gorm.DB, cycleID string, phaseSeq int64) (*domain.TaskCyclePhase, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.loadPhaseByCycleSeqInTx")
 	var p domain.TaskCyclePhase

@@ -85,6 +85,14 @@ func (s *Store) ListPhasesForCycle(ctx context.Context, cycleID string) ([]domai
 	return cycles.ListPhasesForCycle(ctx, s.db, cycleID)
 }
 
+// LastSessionID returns the Cursor session_id from the latest completed
+// phase row of the given type within cycleID.
+func (s *Store) LastSessionID(ctx context.Context, cycleID string, phase domain.Phase) (string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.LastSessionID",
+		"cycle_id", cycleID, "phase", string(phase))
+	return cycles.LastSessionID(ctx, s.db, cycleID, phase)
+}
+
 // AppendCycleStreamEvent persists one normalized runner progress event for a cycle.
 func (s *Store) AppendCycleStreamEvent(ctx context.Context, in AppendCycleStreamEventInput) (*domain.TaskCycleStreamEvent, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AppendCycleStreamEvent")

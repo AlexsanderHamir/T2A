@@ -653,6 +653,51 @@ func TestStore_ListPhasesForCycle_returns_in_seq_order(t *testing.T) {
 	}
 }
 
+func TestStore_LastSessionID_returns_latest_completed(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	c, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e1, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: c.ID, PhaseSeq: e1.PhaseSeq, Status: domain.PhaseStatusSucceeded,
+		Details: []byte(`{"session_id":"sess-old"}`), By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	v1, err := s.StartPhase(ctx, c.ID, domain.PhaseVerify, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: c.ID, PhaseSeq: v1.PhaseSeq, Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	e2, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID: c.ID, PhaseSeq: e2.PhaseSeq, Status: domain.PhaseStatusSucceeded,
+		Details: []byte(`{"session_id":"sess-new"}`), By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.LastSessionID(ctx, c.ID, domain.PhaseExecute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "sess-new" {
+		t.Fatalf("LastSessionID = %q, want sess-new", got)
+	}
+}
+
 func TestStore_TaskDelete_cascades_to_cycles_and_phases(t *testing.T) {
 	s, ctx := newCycleStore(t)
 	tsk := mustCreateTask(t, s, ctx)
