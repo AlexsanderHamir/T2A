@@ -390,3 +390,30 @@ export type TaskDraftSummary = {
 export type TaskDraftDetail = TaskDraftSummary & {
   payload: TaskDraftPayload;
 };
+
+export type TaskComposePayload = {
+  title: string;
+  initial_prompt: string;
+  status: Status;
+  priority: Priority;
+  runner?: string;
+  cursor_model?: string;
+  project_id?: string;
+  project_context_item_ids?: string[];
+  pickup_not_before?: string;
+  tags?: string[];
+  milestone?: string;
+  depends_on?: TaskDependencyEdge[];
+  checklist_items: TaskDraftChecklistItem[];
+};
+
+export type TaskTemplateSummary = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaskTemplateDetail = TaskTemplateSummary & {
+  payload: TaskComposePayload;
+};

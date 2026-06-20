@@ -1,31 +1,24 @@
-import type { Priority } from "@/types";
-import { createSubmitStatusForAutonomy } from "./defaults";
+import { buildComposePayloadFromForm } from "./composePayload";
 import type { CreateTaskMutationInput, TaskCreateFormFields } from "./types";
-
-function parseTagsFromCsv(csv: string): string[] {
-  return csv
-    .split(/[,;\n]+/)
-    .map((t) => t.trim())
-    .filter(Boolean);
-}
 
 export function buildCreateTaskMutationInput(
   fields: TaskCreateFormFields,
 ): CreateTaskMutationInput {
+  const compose = buildComposePayloadFromForm(fields);
   return {
-    title: fields.newTitle.trim(),
-    initial_prompt: fields.newPrompt,
-    status: createSubmitStatusForAutonomy(fields.newAutonomyEnabled),
-    priority: fields.newPriority as Priority,
+    title: compose.title,
+    initial_prompt: compose.initial_prompt,
+    status: compose.status,
+    priority: compose.priority,
     draft_id: fields.newDraftID,
     checklistItems: fields.newChecklistItems,
-    runner: fields.newTaskRunner.trim() || "cursor",
-    cursor_model: fields.newTaskCursorModel.trim(),
-    project_id: fields.newProjectID.trim(),
-    project_context_item_ids: fields.newProjectContextItemIDs,
+    runner: compose.runner ?? "cursor",
+    cursor_model: compose.cursor_model ?? "",
     pickup_not_before: fields.newSchedule,
-    tags: parseTagsFromCsv(fields.newTagsCsv),
-    milestone: fields.newMilestone.trim() || undefined,
-    depends_on: fields.newDependsOn.map((task_id) => ({ task_id, satisfies: "done" as const })),
+    project_id: fields.newProjectID,
+    project_context_item_ids: compose.project_context_item_ids ?? [],
+    tags: compose.tags ?? [],
+    milestone: compose.milestone,
+    depends_on: compose.depends_on ?? [],
   };
 }

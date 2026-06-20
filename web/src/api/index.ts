@@ -9,3 +9,4 @@ export * from "./settings";
 export * from "./runners";
 export * from "./rum";
 export * from "./bootstrap";
+export * from "./taskTemplates";

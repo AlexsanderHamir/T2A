@@ -74,6 +74,9 @@ export const taskQueryKeys = {
     [...taskQueryKeys.cycleFailuresRoot(), sort, offset] as const,
   /** GET /task-drafts list and draft mutations invalidation. */
   drafts: () => ["task-drafts"] as const,
+  /** GET /task-templates list; keyed by search query. */
+  templates: (params?: { q?: string }) =>
+    params?.q ? (["task-templates", { q: params.q }] as const) : (["task-templates"] as const),
 };
 
 export const settingsQueryKeys = {

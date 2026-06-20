@@ -33,6 +33,9 @@ export type CreateModalPrefill = {
   lockProjectAssignment: boolean;
 };
 
+export type ComposeTarget = "task" | "template";
+export type ComposeOperation = "create" | "edit";
+
 export type TaskCreateFormFields = {
   newTitle: string;
   newPrompt: string;
