@@ -10,33 +10,31 @@ Human involvement happens where it creates the most value: defining goals, revie
 
 ## Get started
 
-Requirements: Go 1.25+, Postgres, and a repo-root `.env` with `DATABASE_URL` (copy from [.env.example](.env.example)).
+**Requirements:** Go 1.25+, Node 20+ (npm/npx included), and `DATABASE_URL` in a repo-root `.env`.
 
-Start the API and web UI together:
+1. Create a repo-root `.env` with `DATABASE_URL` set
+2. Apply the schema: `go run ./cmd/dbcheck -migrate`
+3. Start the API and web UI:
 
 ```bash
 ./scripts/dev.sh        # Unix — chmod +x once if needed
 .\scripts\dev.ps1       # Windows
 ```
 
-This builds `taskapi`, runs it on `http://127.0.0.1:8080`, and starts Vite on `http://localhost:5173`. Ctrl+C stops both.
+API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops both.
 
-Run pieces individually:
-
-```bash
-go run ./cmd/dbcheck -migrate   # apply schema
-go run ./cmd/taskapi            # REST /tasks + SSE /events
-```
-
-Verify everything before pushing:
+4. Verify your setup from the repo root:
 
 ```bash
-./scripts/check.sh      # or .\scripts\check.ps1
+./scripts/check.sh      # Unix — ./scripts/check.sh --help for flags
+.\scripts\check.ps1     # Windows — .\scripts\check.ps1 -Help for flags
 ```
+
+Setting up to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Important
 
-**Creating tasks with AI agents.** Every task runs an **execute** agent and a **verify** agent. Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria — or start from the [Operator branch in docs/guide.md](docs/guide.md#goal-branches). The worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
+Every task runs an **execute** agent and a **verify** agent. Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria. The worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
 
 ## Docs
 
