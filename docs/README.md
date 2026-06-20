@@ -2,6 +2,8 @@
 
 Contributor reference for T2A. The root [README.md](../README.md) covers product framing and `npm` / `go run` commands.
 
+**New to the project?** Read [guide.md](./guide.md) first — it maps layers and goal branches. Use the table below when you already know what you need.
+
 **Agents:** start at [../AGENTS.md](../AGENTS.md) for scoped paths and lookups; use this table for doc deep-dives. Code paths: [agent-map.md](./agent-map.md).
 
 | Doc | Read when |

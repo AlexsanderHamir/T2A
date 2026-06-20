@@ -2,7 +2,7 @@
 
 First pass before editing code. **Do not read everything** — pick a scoped path below, then open only the linked docs and map rows you need.
 
-Doc deep-dives: [docs/README.md](docs/README.md). Code paths: [docs/agent-map.md](docs/agent-map.md).
+Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md](docs/README.md). Code paths: [docs/agent-map.md](docs/agent-map.md).
 
 ## How to use this file
 

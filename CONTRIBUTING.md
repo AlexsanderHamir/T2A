@@ -10,7 +10,7 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
 2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL`. The workspace repo path, agent worker switches, cursor binary, and per-run timeout live in the SPA Settings page (gear icon in the header → `/settings`); see [docs/configuration.md](docs/configuration.md). Never commit `.env`.
-3. Authoritative HTTP/SSE/JSON behavior: [docs/api.md](docs/api.md); architecture and limitations: [docs/architecture.md](docs/architecture.md); env + app settings: [docs/configuration.md](docs/configuration.md); optional UI client: [docs/web.md](docs/web.md).
+3. To understand the project: [docs/guide.md](docs/guide.md). For API/config contracts while coding: [docs/api.md](docs/api.md), [docs/configuration.md](docs/configuration.md).
 
 ## Local setup
 
