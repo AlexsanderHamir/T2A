@@ -8,6 +8,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 |------|-----|-----|
 | 1 | [README.md](README.md) | Install, run `taskapi` / `dbcheck`, `web/` npm commands, dev scripts. |
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
+| 2b | [docs/execute-and-verify.md](docs/execute-and-verify.md) | **Operators:** execute vs verify agents, criteria reports, writing checklist items. |
 | 3 | [docs/architecture.md](docs/architecture.md) | System overview, store, agent worker, SSE hub, limitations. |
 | 4 | [docs/data-model.md](docs/data-model.md) | Tasks, projects, execution cycles/phases, checklist, dependencies, gates. |
 | 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (scheduling, persistence, SSE, queue, supervisor, harness, …). Index: [docs/domain/README.md](docs/domain/README.md). |

@@ -4,6 +4,7 @@ Contributor reference for T2A. The root [README.md](../README.md) covers product
 
 | Doc | Read when |
 | --- | --- |
+| **[execute-and-verify.md](./execute-and-verify.md)** | **You create tasks or write done criteria (checklist items).** Execute vs verify agents and operator guidance. |
 | [architecture.md](./architecture.md) | You need to understand how `taskapi`, the store, the agent worker, and SSE fit together. |
 | [data-model.md](./data-model.md) | You are touching tasks, projects, execution cycles/phases, dependencies, gates, or checklists. |
 | [domain/](./domain/) | Behavioral deep-dives (scheduling, persistence, SSE, queue, supervisor, harness, …). Start with [harness.md](./domain/harness.md) for cycles, [task-scheduling.md](./domain/task-scheduling.md) for “stuck ready”, or [persistence.md](./domain/persistence.md) for store writes. Schema and routes stay in data-model and api. |

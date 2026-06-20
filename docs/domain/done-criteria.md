@@ -283,10 +283,9 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 
 ## See also
 
-### Documentation
-
 | Doc | Why read it |
 | --- | --- |
+| [execute-and-verify.md](../execute-and-verify.md) | Operator-facing summary: execute vs verify, criteria reports, writing checklist items |
 | [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [verify-agent.md](./verify-agent.md) | Verify pass deep-dive (companion article) |

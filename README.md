@@ -34,14 +34,19 @@ Verify everything before pushing:
 ./scripts/check.sh      # or .\scripts\check.ps1
 ```
 
+## Important
+
+**Creating tasks with AI agents.** Every task runs an **execute** agent (implements work) and a **verify** agent (judges your checklist). Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria. As of today, the worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
+
 ## Docs
 
-- [docs/architecture.md](docs/architecture.md) — how `taskapi`, the store, the worker, and SSE fit together
-- [docs/domain/](docs/domain/) — subsystem deep-dives (harness, execute agent, verify agent, …)
-- [docs/api.md](docs/api.md) — REST + SSE surface
-- [docs/web.md](docs/web.md) — web UI architecture
-- [AGENTS.md](AGENTS.md) — repo map and conventions
-- [CONTRIBUTING.md](CONTRIBUTING.md) — PR checklist
+- **[execute-and-verify.md](docs/execute-and-verify.md)**: execute vs verify agents, criteria reports, and how to write good checklist items
+- [docs/architecture.md](docs/architecture.md): how `taskapi`, the store, the worker, and SSE fit together
+- [docs/domain/](docs/domain/): subsystem deep dives (harness, execute agent, verify agent, …)
+- [docs/api.md](docs/api.md): REST + SSE surface
+- [docs/web.md](docs/web.md): web UI architecture
+- [AGENTS.md](AGENTS.md): repo map and conventions
+- [CONTRIBUTING.md](CONTRIBUTING.md): PR checklist
 
 ## License
 
