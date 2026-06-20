@@ -23,7 +23,7 @@ T2A docs are grouped by **purpose**, not by a single reading order. Reference ar
 
 > **Note** — Read one [learning path](#choose-a-learning-path) below. Open additional articles only when your task requires them.
 
-> **Important** — For code changes, use [AGENTS.md](../AGENTS.md) for scoped paths and [agent-map.md](./agent-map.md) for repository locations. This guide orients you; it does not replace the contributor checklist in [CONTRIBUTING.md](../CONTRIBUTING.md).
+> **Important** — For code changes, use [AGENTS.md](../AGENTS.md) for scoped paths and [agent-map.md](./agent-map.md) for repository locations. Implementation how-to: [contributing.md](./contributing.md).
 
 ## Documentation types
 
@@ -62,7 +62,7 @@ Pick **one** row. Follow links left to right. Stop when you have enough context 
 | --- | --- |
 | **Use T2A** — create tasks and write criteria | 1. [execute-and-verify.md](./execute-and-verify.md) → 2. [done-criteria.md](./domain/done-criteria.md) (optional) |
 | **Understand the system** | 1. [architecture.md](./architecture.md) → 2. [data-model.md](./data-model.md) → 3. [api.md](./api.md) (skim routes) |
-| **Work on the API or store** | 1. Understand the system (above) → 2. [contributing.md](./contributing.md) — Adding a feature → 3. [persistence.md](./domain/persistence.md) as needed |
+| **Work on the API or store** | 1. Understand the system (above) → 2. [contributing.md](./contributing.md) — Add a feature → 3. [persistence.md](./domain/persistence.md) as needed |
 | **Work on the web UI** | 1. [web.md](./web.md) → 2. [architecture.md](./architecture.md) — SSE / live updates only |
 | **Work on agents or harness** | 1. [architecture.md](./architecture.md) → 2. [harness.md](./domain/harness.md) → 3. [execute-agent.md](./domain/execute-agent.md) and/or [verify-agent.md](./domain/verify-agent.md) |
 | **Edit code (human or AI)** | 1. [AGENTS.md](../AGENTS.md) → 2. [agent-map.md](./agent-map.md) for paths |
@@ -84,13 +84,14 @@ Open [adr/](./adr/) when you need the historical **why** behind a design, not fo
 | Repository paths | [agent-map.md](./agent-map.md) |
 | Scoped paths when editing | [AGENTS.md](../AGENTS.md) |
 | Specific edit task (route, harness, sync…) | [AGENTS.md](../AGENTS.md) §Where to find X |
-| PR checklist and local setup | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| PR checklist and developer guide | [contributing.md](./contributing.md) |
 
 ## See also
 
 - [Documentation index](./README.md) — “Read when” table for all docs under `docs/`
 - [domain/README.md](./domain/README.md) — domain article index and writing template
 - [AGENTS.md](../AGENTS.md) — agent and contributor orientation for code changes
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — PR checklist, security, and troubleshooting
+- [contributing.md](./contributing.md) — developer guide (checklist, features, troubleshooting)
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — GitHub PR stub (security + verify command)
 
 New articles under `docs/` should follow the template in [domain/README.md](./domain/README.md) § Article template (metadata table, **In this article**, **See also**).

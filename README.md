@@ -41,8 +41,8 @@ Verify everything before pushing:
 ## Docs
 
 - [docs/guide.md](docs/guide.md): how documentation fits together — start here to learn the project
+- [docs/contributing.md](docs/contributing.md): developer guide — vertical slices, tests, troubleshooting
 - [AGENTS.md](AGENTS.md): scoped paths and code lookups when editing the repo
-- [CONTRIBUTING.md](CONTRIBUTING.md): PR checklist and contributor setup
 
 ## License
 

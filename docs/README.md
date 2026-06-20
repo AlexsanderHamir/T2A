@@ -44,7 +44,7 @@ Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below
 | Doc | Read when |
 | --- | --- |
 | [web.md](./web.md) | You work on the `web/` SPA |
-| [contributing.md](./contributing.md) | You add a feature, split a handler, or debug a local failure |
+| [contributing.md](./contributing.md) | Developer guide: features, handler growth, tests, troubleshooting |
 | [domain/](./domain/) | You need why a subsystem behaves as it does — index: [domain/README.md](./domain/README.md) |
 | [omitted-features.md](./omitted-features.md) | A feature exists in code but is hidden for launch |
 | [adr/](./adr/) | You need the historical reason behind a design decision |
@@ -53,4 +53,5 @@ Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below
 
 - [guide.md](./guide.md) — documentation layers and learning paths
 - [AGENTS.md](../AGENTS.md) — scoped paths and code lookups
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — PR checklist and security
+- [contributing.md](./contributing.md) — developer guide
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — GitHub PR stub (security + verify command)

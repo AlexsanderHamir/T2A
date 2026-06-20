@@ -24,7 +24,7 @@ Repository paths grouped by subsystem. Read only the rows relevant to your task.
 
 | Area | Path | Purpose | Deep dive |
 | --- | --- | --- | --- |
-| HTTP API + SSE | `pkgs/tasks/handler/` | REST handlers, SSE hub wiring, route registration | [handler/README.md](../pkgs/tasks/handler/README.md), [domain/sse-hub.md](./domain/sse-hub.md), [contributing.md](./contributing.md) §Splitting handler |
+| HTTP API + SSE | `pkgs/tasks/handler/` | REST handlers, SSE hub wiring, route registration | [handler/README.md](../pkgs/tasks/handler/README.md), [domain/sse-hub.md](./domain/sse-hub.md), [contributing.md — Handler growth](./contributing.md#when-the-handler-package-grows) |
 | Domain types | `pkgs/tasks/domain/` | Task model, status/priority enums, cycles, validation, retry | [data-model.md](./data-model.md) |
 | Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Store facade, GORM migrate, dual-write to `task_events` | [domain/persistence.md](./domain/persistence.md), [store/README.md](../pkgs/tasks/store/README.md) |
 | Task scheduling | `pkgs/tasks/scheduling/` | Worker readiness predicates, pickup gate, post-commit notify | [domain/task-scheduling.md](./domain/task-scheduling.md), ADR-0023 |
@@ -68,7 +68,7 @@ Repository paths grouped by subsystem. Read only the rows relevant to your task.
 | Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entrypoints only; wire deps and run | [cmd/taskapi/README.md](../cmd/taskapi/README.md) |
 | Env loading | `internal/envload/` | Resolve `.env` from repo root | [configuration.md](./configuration.md) |
 | taskapi config | `internal/taskapiconfig/` | Listen host, log level, queue cap, dev SSE interval | [configuration.md](./configuration.md) |
-| SQLite test DB | `internal/tasktestdb/` | In-memory GORM for default Go tests | [contributing.md](./contributing.md) §Tests |
+| SQLite test DB | `internal/tasktestdb/` | In-memory GORM for default Go tests | [contributing.md — Tests](./contributing.md#tests) |
 | Middleware tests | `internal/middlewaretest/` | Black-box tests for middleware stack | [middleware/README.md](../pkgs/tasks/middleware/README.md) |
 | Handler tests | `internal/handlertest/` | Black-box HTTP tests for exported handler API | — |
 | Security header tests | `internal/httpsecurityexpect/` | Shared baseline header assertions | — |

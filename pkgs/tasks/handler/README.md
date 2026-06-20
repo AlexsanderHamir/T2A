@@ -79,4 +79,4 @@ When adding a **new** route or middleware file, extend this README in the same P
 
 ## Scaling this package
 
-`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/contributing.md`](../../docs/contributing.md#splitting-pkgstaskshandler)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).
+`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/contributing.md`](../../docs/contributing.md#when-the-handler-package-grows)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).

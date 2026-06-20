@@ -141,3 +141,17 @@ The variables below are silently ignored if still present in `.env`. Move the va
 ### Test-only override
 
 Real-cursor smoke tests honour `T2A_TEST_CURSOR_BIN` to point at a specific binary path. This is unrelated to production `app_settings.cursor_bin`; it only wires test runs.
+
+## Metrics (`GET /metrics`)
+
+Prometheus scrape endpoint. Most series are stable; one label set needs operator awareness:
+
+### `t2a_agent_runs_by_model_total` cardinality
+
+The `model` label is not capped at the wire. Watch with:
+
+```promql
+count({__name__="t2a_agent_runs_by_model_total"})
+```
+
+If it spikes, check for typos in `tasks.cursor_model` / `app_settings.cursor_model`, and cap label values at the scraper with `metric_relabel_configs`. The older `t2a_agent_runs_total{runner,terminal_status}` series is byte-identical to the pre-feature shape and always safe for alerting.

@@ -15,12 +15,12 @@ Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md]
 
 | If you are… | Read (in order) | Skip |
 | --- | --- | --- |
-| Changing Go REST / handlers | [docs/api.md](docs/api.md), [docs/contributing.md](docs/contributing.md) §Splitting handler | harness docs, [docs/web.md](docs/web.md) |
+| Changing Go REST / handlers | [docs/api.md](docs/api.md), [docs/contributing.md — Handler growth](docs/contributing.md#when-the-handler-package-grows) | harness docs, [docs/web.md](docs/web.md) |
 | Changing Go domain / store | [docs/data-model.md](docs/data-model.md), [pkgs/tasks/store/README.md](pkgs/tasks/store/README.md) | web, harness |
 | Changing agent worker / harness | [docs/domain/harness.md](docs/domain/harness.md), [docs/configuration.md](docs/configuration.md) | [docs/web.md](docs/web.md) |
 | Changing web UI only | [docs/web.md](docs/web.md), `.cursor/rules/frontend_bar.mdc` | architecture, harness |
 | Changing web data (API / sync / mutations) | [docs/web.md](docs/web.md) §Task sync / Query policy, `web/src/api/` | handler split guide |
-| Adding a full-stack feature | [docs/contributing.md](docs/contributing.md) §Adding a feature, [docs/api.md](docs/api.md) | — |
+| Adding a full-stack feature | [docs/contributing.md — Add a feature](docs/contributing.md#add-a-feature-vertical-slice), [docs/api.md](docs/api.md) | — |
 | Writing operator / checklist copy | [docs/execute-and-verify.md](docs/execute-and-verify.md) | code map |
 | Docs or config only | Target doc from [docs/README.md](docs/README.md) | code map |
 
@@ -35,8 +35,8 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Find any subsystem code path | [docs/agent-map.md](docs/agent-map.md) |
 | Understand doc structure | [docs/guide.md](docs/guide.md) |
 | Pick a doc by topic | [docs/README.md](docs/README.md) |
-| PR checklist | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Test failure triage | [docs/contributing.md](docs/contributing.md) §Troubleshooting |
+| PR checklist | [docs/contributing.md — Before you open a PR](docs/contributing.md#before-you-open-a-pr) |
+| Test failure triage | [docs/contributing.md — Troubleshooting](docs/contributing.md#troubleshooting) |
 | Local dev / install | [README.md](README.md) |
 
 ### Backend — API, domain, persistence
@@ -109,7 +109,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | --- | --- |
 | Structured logs / `request_id` | `pkgs/tasks/logctx/`, `pkgs/tasks/calltrace/` |
 | Fix `funclogmeasure -enforce` failure | [docs/domain/observability-trace-lines.md](docs/domain/observability-trace-lines.md) |
-| Match a failing request in logs | [docs/contributing.md](docs/contributing.md) §Matching a failing request |
+| Match a failing request in logs | [docs/contributing.md — Matching a failing request](docs/contributing.md#matching-a-failing-request-to-logs) |
 | Dev SSE ticker for local UI | `pkgs/tasks/devsim/`, `T2A_SSE_TEST` in [docs/configuration.md](docs/configuration.md) |
 | Why a design was chosen | [docs/adr/](docs/adr/) (not for day-to-day routes) |
 
@@ -118,8 +118,8 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | I need to… | Go to |
 | --- | --- |
 | Where a new file goes | `.cursor/rules/CODE_STANDARDS.mdc` Part 12 |
-| Handler file too large | [docs/contributing.md](docs/contributing.md) §Splitting handler |
-| Default Go tests | `internal/tasktestdb/`, [docs/contributing.md](docs/contributing.md) §Tests |
+| Handler file too large | [docs/contributing.md — Handler growth](docs/contributing.md#when-the-handler-package-grows) |
+| Default Go tests | `internal/tasktestdb/`, [docs/contributing.md — Tests](docs/contributing.md#tests) |
 | Env or app settings | [docs/configuration.md](docs/configuration.md), Settings SPA |
 
 ## Tooling and rules
@@ -137,7 +137,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
 
-Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [docs/contributing.md](docs/contributing.md) §Tests and `backend-engineering-bar.mdc` §11).
+Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [docs/contributing.md — Tests](docs/contributing.md#tests) and `backend-engineering-bar.mdc` §11).
 
 ## Conventions worth remembering
 
