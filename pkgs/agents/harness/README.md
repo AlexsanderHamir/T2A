@@ -26,6 +26,7 @@ Root `harness` owns `Harness`, cycle entrypoints, effect application (`cycle_eff
 | `harness.go` | `Harness`, `New`, `Options`, `CancelCurrentRun`, SSE notifiers, metrics interface |
 | `cycle.go` | `Run` entry — starts a new cycle then delegates to the shared loop |
 | `cycle_loop.go` | Shared execute/verify loop coordinator; I/O then orchestration Decide |
+| `cursor_resume.go` | ADR-0031 Cursor `--resume` policy, recovery delta vs full prompt ([cursor-session-resume.md](../../docs/domain/cursor-session-resume.md)) |
 | `cycle_effects.go` | Applies orchestration effects (store writes, publish, metrics) |
 | `cycle_execute_adapter.go` | Maps runner/git facts to orchestration DTOs at the I/O boundary |
 | `verify_retry_eligibility.go` | Post-execute anchors + `gatherRetryClassifyInput` (ADR-0028) |

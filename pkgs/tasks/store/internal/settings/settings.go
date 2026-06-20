@@ -50,6 +50,7 @@ type Patch struct {
 	VerifyRunnerName            *string
 	VerifyRunnerModel           *string
 	VerifyCommandTimeoutSeconds *int
+	CursorSessionResumeEnabled  *bool
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -75,7 +76,8 @@ func (p Patch) IsEmpty() bool {
 		p.VerifyMaxRetries == nil &&
 		p.VerifyRunnerName == nil &&
 		p.VerifyRunnerModel == nil &&
-		p.VerifyCommandTimeoutSeconds == nil
+		p.VerifyCommandTimeoutSeconds == nil &&
+		p.CursorSessionResumeEnabled == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -281,6 +283,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.VerifyCommandTimeoutSeconds != nil {
 		row.VerifyCommandTimeoutSeconds = *patch.VerifyCommandTimeoutSeconds
+	}
+	if patch.CursorSessionResumeEnabled != nil {
+		row.CursorSessionResumeEnabled = *patch.CursorSessionResumeEnabled
 	}
 
 	dualWriteCursorToRunnerConfigs(row)

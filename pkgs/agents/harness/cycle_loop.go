@@ -119,13 +119,21 @@ func (h *Harness) runCycleLoopExecute(
 	}
 	state.gitSnap = snap
 
-	_ = reports.ScrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
+	decision, err := h.planExecuteRun(parentCtx, task, cycle, state, opts)
+	if err != nil {
+		h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, "cursor_resume_plan_failed")
+		return false
+	}
+	if decision.Mode == CursorResumeFresh || decision.Mode == CursorResumeFallback {
+		_ = reports.ScrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
+	}
 	_ = reports.EnsureReportCycleDir(h.opts.ReportDir, cycle.ID)
-	promptText := h.composeExecutePrompt(parentCtx, task, cycle, state, opts)
-	execTask := *task
-	execTask.InitialPrompt = promptText
 
-	result, runErr := h.invokeRunnerWithTask(parentCtx, &execTask, cycle, execPhase)
+	result, runErr := h.invokeRunnerWithTask(parentCtx, task, cycle, execPhase, decision)
+	if errors.Is(runErr, runner.ErrResumeSession) {
+		fallback := h.planExecuteResumeFallback(parentCtx, task, cycle, state, opts)
+		result, runErr = h.invokeRunnerWithTask(parentCtx, task, cycle, execPhase, fallback)
+	}
 	operatorCancelled := h.consumeOperatorCancel()
 
 	if parentCtx.Err() != nil {
@@ -166,7 +174,7 @@ func (h *Harness) runCycleLoopExecute(
 	}
 	cont := h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
 	if cont {
-		h.anchorPostExecuteState(parentCtx, state, snap, ingestAttempted, ingestOutcome, ingestErr)
+		h.anchorPostExecuteState(parentCtx, state, execPhase.PhaseSeq, snap, ingestAttempted, ingestOutcome, ingestErr)
 	}
 	return cont
 }
@@ -199,6 +207,13 @@ func (h *Harness) runCycleLoopVerify(
 		state.verifyFeedback = feedback
 	}
 	recordPassedCriterionVerdicts(state, verdicts)
+	if verifyErr != nil {
+		state.lastFailedVerdicts = append([]criterionVerdict(nil), verdicts...)
+		var tampered *verify.TamperedError
+		if errors.As(verifyErr, &tampered) {
+			state.reportTampered = true
+		}
+	}
 	if verifyErr == nil {
 		return false, false, false
 	}
@@ -247,6 +262,9 @@ func (h *Harness) runCycleLoopFinalizeSuccess(
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) {
+	state.continuation = opts.continuation
+	state.resumeNotice = opts.resumeNotice
+	state.interruptedPhase = opts.interruptedPhase
 	skipExecute := opts.skipFirstExecute
 	for {
 		if !skipExecute {

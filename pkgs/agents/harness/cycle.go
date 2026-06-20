@@ -61,6 +61,22 @@ type processState struct {
 	lastCommitIngestOK bool
 	// executeReachedVerify is true after execute completes with ContinueToVerify.
 	executeReachedVerify bool
+	// reportParseErr is set when criteria-report.json fails parse (ADR-0031).
+	reportParseErr string
+	// lastFailedVerdicts holds the latest verify failure verdicts for recovery deltas.
+	lastFailedVerdicts []criterionVerdict
+	// lastCompletedExecutePhaseSeq is the phase_seq of the last execute that continued to verify.
+	lastCompletedExecutePhaseSeq int64
+	// lastVerifyAfterExecuteSeq ties the verify session chain to an execute phase_seq.
+	lastVerifyAfterExecuteSeq int64
+	// lastCursorResumeMode is logged after each runner.Run plan.
+	lastCursorResumeMode CursorResumeMode
+	// reportTampered is set when verify detects tampering (deny cursor resume).
+	reportTampered bool
+	// continuation/resumeNotice/interruptedPhase mirror cycleLoopOpts for verify planning.
+	continuation     *ContinuationBundle
+	resumeNotice     bool
+	interruptedPhase domain.Phase
 }
 
 // Run drives the harness cycle body for one task already in StatusRunning.
@@ -161,22 +177,33 @@ func (h *Harness) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle
 	return exec, true
 }
 
-func (h *Harness) invokeRunnerWithTask(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
-	return h.invokeRunner(parentCtx, task, cycle, exec)
+func (h *Harness) invokeRunnerWithTask(
+	parentCtx context.Context,
+	task *domain.Task,
+	cycle *domain.TaskCycle,
+	exec *domain.TaskCyclePhase,
+	decision CursorResumeDecision,
+) (runner.Result, error) {
+	return h.invokeRunnerWithDecision(parentCtx, task, cycle, exec, domain.PhaseExecute, task.CursorModel, decision)
 }
 
-// invokeRunner builds the Request, applies the per-run timeout (if any),
-// publishes the cancel func so an operator can interrupt the run, and
-// returns whatever the runner produced. <=0 RunTimeout means "no cap":
-// the run can only be interrupted by the parent ctx (process shutdown)
-// or CancelCurrentRun (operator-initiated). The returned error is the
-// raw adapter error (typed via runner.Err* sentinels); classification
-// is done by the caller so the shutdown branch can short-circuit it.
-func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
-	runCorrelationID := domain.RunCorrelationIDFromDetailsJSON(exec.DetailsJSON)
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunner",
-		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq,
+// invokeRunnerWithDecision runs the runner with a pre-built resume decision.
+func (h *Harness) invokeRunnerWithDecision(
+	parentCtx context.Context,
+	task *domain.Task,
+	cycle *domain.TaskCycle,
+	phaseRow *domain.TaskCyclePhase,
+	phase domain.Phase,
+	cursorModel string,
+	decision CursorResumeDecision,
+) (runner.Result, error) {
+	runCorrelationID := domain.RunCorrelationIDFromDetailsJSON(phaseRow.DetailsJSON)
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunnerWithDecision",
+		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseRow.PhaseSeq,
 		"run_correlation_id", runCorrelationID,
+		"cursor_resume_mode", string(decision.Mode),
+		"recovery_hint_kind", string(decision.RecoveryKind),
+		"recovery_hint_bytes", len(decision.Prompt),
 		"run_timeout_ns", int64(h.opts.RunTimeout), "stream_idle_stuck_ns", int64(h.opts.StreamIdleStuck))
 	runCtx, cancelCause := context.WithCancelCause(parentCtx)
 	if h.opts.RunTimeout > 0 {
@@ -194,23 +221,40 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 	h.setCurrentRunCancel(cancel)
 	defer h.setCurrentRunCancel(nil)
 	onProgress := func(ev runner.ProgressEvent) {
-		h.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
-		h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, runCorrelationID, ev)
+		h.persistProgress(runCtx, task.ID, cycle.ID, phaseRow.PhaseSeq, ev)
+		h.publishProgress(task.ID, cycle.ID, phaseRow.PhaseSeq, runCorrelationID, ev)
 	}
 	streamIdleStuck, onStreamIdle := h.streamIdleRunnerFields(onProgress)
+	promptText := prompt.WrapWithProjectContext(decision.Prompt, projectContext.Text)
 	return h.runner.Run(runCtx, runner.Request{
 		TaskID:           task.ID,
 		AttemptSeq:       cycle.AttemptSeq,
-		Phase:            domain.PhaseExecute,
-		Prompt:           prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
+		Phase:            phase,
+		Prompt:           promptText,
 		WorkingDir:       h.opts.WorkingDir,
 		Timeout:          h.opts.RunTimeout,
-		CursorModel:      task.CursorModel,
+		CursorModel:      cursorModel,
 		RunCorrelationID: runCorrelationID,
+		ResumeSessionID:  decision.ResumeSessionID,
 		StreamIdleStuck:  streamIdleStuck,
 		OnStreamIdle:     onStreamIdle,
 		OnProgress:       onProgress,
 	})
+}
+
+// invokeRunner builds the Request, applies the per-run timeout (if any),
+// publishes the cancel func so an operator can interrupt the run, and
+// returns whatever the runner produced. <=0 RunTimeout means "no cap":
+// the run can only be interrupted by the parent ctx (process shutdown)
+// or CancelCurrentRun (operator-initiated). The returned error is the
+// raw adapter error (typed via runner.Err* sentinels); classification
+// is done by the caller so the shutdown branch can short-circuit it.
+// invokeRunner is retained for tests that build task.InitialPrompt directly.
+//
+//funclogmeasure:skip category=hot-path reason="Test shim; invokeRunnerWithDecision emits trace logs."
+func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
+	decision := CursorResumeDecision{Mode: CursorResumeFresh, Prompt: task.InitialPrompt}
+	return h.invokeRunnerWithDecision(parentCtx, task, cycle, exec, domain.PhaseExecute, task.CursorModel, decision)
 }
 
 func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {

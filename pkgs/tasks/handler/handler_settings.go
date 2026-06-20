@@ -37,6 +37,7 @@ type settingsResponse struct {
 	VerifyRunnerName            string `json:"verify_runner_name"`
 	VerifyRunnerModel           string `json:"verify_runner_model"`
 	VerifyCommandTimeoutSeconds int    `json:"verify_command_timeout_seconds"`
+	CursorSessionResumeEnabled  bool   `json:"cursor_session_resume_enabled"`
 	UpdatedAt                   string `json:"updated_at,omitempty"`
 }
 
@@ -62,6 +63,7 @@ type settingsPatchBody struct {
 	VerifyRunnerName            *string `json:"verify_runner_name,omitempty"`
 	VerifyRunnerModel           *string `json:"verify_runner_model,omitempty"`
 	VerifyCommandTimeoutSeconds *int    `json:"verify_command_timeout_seconds,omitempty"`
+	CursorSessionResumeEnabled  *bool   `json:"cursor_session_resume_enabled,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -162,6 +164,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		VerifyRunnerName:            body.VerifyRunnerName,
 		VerifyRunnerModel:           body.VerifyRunnerModel,
 		VerifyCommandTimeoutSeconds: body.VerifyCommandTimeoutSeconds,
+		CursorSessionResumeEnabled:  body.CursorSessionResumeEnabled,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
 	}
@@ -334,6 +337,7 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		VerifyRunnerName:            cfg.VerifyRunnerName,
 		VerifyRunnerModel:           cfg.VerifyRunnerModel,
 		VerifyCommandTimeoutSeconds: cfg.VerifyCommandTimeoutSeconds,
+		CursorSessionResumeEnabled:  cfg.CursorSessionResumeEnabled,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

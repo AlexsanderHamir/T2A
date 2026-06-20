@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
@@ -18,4 +19,28 @@ type Hooks struct {
 	SetRunCancel    func(cancel context.CancelFunc)
 	StreamIdleStuck time.Duration
 	OnStreamIdle    func(kind runner.StreamIdleKind)
+	// PlanVerifyRun selects prompt + cursor resume fields before verify runner.Run.
+	PlanVerifyRun func(ctx context.Context, in PlanVerifyRunInput) (VerifyRunPlan, error)
+	// OnVerifyPhaseEnded is called after verify phase row closes (success or failure).
+	OnVerifyPhaseEnded func(executePhaseSeq int64)
+}
+
+// PlanVerifyRunInput carries verify context into harness resume policy.
+type PlanVerifyRunInput struct {
+	Task             *domain.Task
+	Cycle            *domain.TaskCycle
+	Snap             Snapshot
+	VerifyAttempt    int
+	Feedback         string
+	CmdEvidence      []CommandEvidence
+	SelfReport       map[string]reports.CriteriaEntry
+	PreviouslyPassed map[string]Verdict
+}
+
+// VerifyRunPlan is the cursor resume plan for one verify runner.Run.
+type VerifyRunPlan struct {
+	Prompt           string
+	ResumeSessionID  string
+	CursorResumeMode string
+	RecoveryKind     string
 }

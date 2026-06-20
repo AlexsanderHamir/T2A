@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -81,6 +82,13 @@ func (s *Service) SetStreamIdleStuck(d time.Duration) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.SetStreamIdleStuck",
 		"stuck_ns", int64(d))
 	s.hooks.StreamIdleStuck = d
+}
+
+// SetPlanVerifyRun overrides the cursor resume planner for the next verify run.
+//
+//funclogmeasure:skip category=hot-path reason="Setter only; verify pipeline logs at RunPipeline."
+func (s *Service) SetPlanVerifyRun(fn func(context.Context, PlanVerifyRunInput) (VerifyRunPlan, error)) {
+	s.hooks.PlanVerifyRun = fn
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

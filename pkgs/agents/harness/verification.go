@@ -72,7 +72,11 @@ func (h *Harness) runVerificationPipeline(
 	snap verificationSnapshot,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
-	return h.verifySvc().RunPipeline(parentCtx, task, cycle, snap, state.verifyAttempt, state.previouslyPassed, feedback, verify.PhaseCallbacks{
+	svc := h.verifySvc()
+	svc.SetPlanVerifyRun(func(ctx context.Context, in verify.PlanVerifyRunInput) (verify.VerifyRunPlan, error) {
+		return h.planVerifyRun(ctx, in.Task, in.Cycle, state, in.Snap, in.VerifyAttempt, in.Feedback, in.CmdEvidence, in.SelfReport)
+	})
+	return svc.RunPipeline(parentCtx, task, cycle, snap, state.verifyAttempt, state.previouslyPassed, feedback, verify.PhaseCallbacks{
 		OnStarted: func(phase *domain.TaskCyclePhase) {
 			state.runningPhase = domain.PhaseVerify
 			state.runningPhaseSeq = phase.PhaseSeq
@@ -81,6 +85,7 @@ func (h *Harness) runVerificationPipeline(
 			h.setPhaseRunCorrelationID(id)
 		},
 		OnEnded: func() {
+			state.lastVerifyAfterExecuteSeq = state.lastCompletedExecutePhaseSeq
 			state.runningPhase = ""
 			state.runningPhaseSeq = 0
 			state.runCorrelationID = ""

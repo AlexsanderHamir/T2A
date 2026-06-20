@@ -79,8 +79,10 @@ type AppSettings struct {
 	// VerifyRunnerModel empty means use the verify runner's default model.
 	VerifyRunnerModel string `gorm:"not null;default:''"`
 	// VerifyCommandTimeoutSeconds caps each optional criterion shell check during verify.
-	VerifyCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_verify_command_timeout_seconds,verify_command_timeout_seconds > 0"`
-	UpdatedAt                   time.Time `gorm:"not null"`
+	VerifyCommandTimeoutSeconds int `gorm:"not null;default:120;check:chk_app_settings_verify_command_timeout_seconds,verify_command_timeout_seconds > 0"`
+	// CursorSessionResumeEnabled enables ADR-0031 --resume-by-default for Cursor CLI.
+	CursorSessionResumeEnabled bool      `gorm:"not null;default:true"`
+	UpdatedAt                  time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -141,6 +143,7 @@ func DefaultAppSettings() AppSettings {
 		VerifyRunnerName:            "",
 		VerifyRunnerModel:           "",
 		VerifyCommandTimeoutSeconds: DefaultVerifyCommandTimeoutSeconds,
+		CursorSessionResumeEnabled:  true,
 	}
 }
 

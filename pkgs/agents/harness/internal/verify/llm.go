@@ -32,12 +32,48 @@ func (s *Service) runLLMVerifyAgent(
 	selfReport map[string]reports.CriteriaEntry,
 	feedback string,
 	cmdEvidence []CommandEvidence,
+	verifyAttempt int,
 ) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
 	promptText := buildVerifyPrompt(ctx, s, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
-	_, err := s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, promptText)
+	resumeSessionID := ""
+	if s.hooks.PlanVerifyRun != nil {
+		plan, err := s.hooks.PlanVerifyRun(ctx, PlanVerifyRunInput{
+			Task:             task,
+			Cycle:            cycle,
+			Snap:             snap,
+			VerifyAttempt:    verifyAttempt,
+			Feedback:         feedback,
+			CmdEvidence:      cmdEvidence,
+			SelfReport:       selfReport,
+			PreviouslyPassed: previouslyPassed,
+		})
+		if err != nil {
+			return err
+		}
+		promptText = plan.Prompt
+		resumeSessionID = plan.ResumeSessionID
+	}
+	_, err := s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, promptText, resumeSessionID)
+	if errors.Is(err, runner.ErrResumeSession) {
+		full := buildVerifyPrompt(ctx, s, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
+		_, err = s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, full, "")
+	}
 	return err
+}
+
+// BuildVerifyPrompt exports the full verify prompt composer for harness fallback paths.
+func (s *Service) BuildVerifyPrompt(
+	ctx context.Context,
+	snap Snapshot,
+	cycleID string,
+	previouslyPassed map[string]Verdict,
+	selfReport map[string]reports.CriteriaEntry,
+	feedback string,
+	cmdEvidence []CommandEvidence,
+) string {
+	return buildVerifyPrompt(ctx, s, snap, cycleID, previouslyPassed, selfReport, feedback, cmdEvidence)
 }
 
 func buildVerifyPrompt(
@@ -96,6 +132,7 @@ func (s *Service) runVerifyCursor(
 	runCorrelationID string,
 	snap Snapshot,
 	promptText string,
+	resumeSessionID string,
 ) (runner.Result, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyCursor",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseSeq,
@@ -127,6 +164,7 @@ func (s *Service) runVerifyCursor(
 		WorkingDir:       s.workingDir,
 		CursorModel:      snap.VerifyModel,
 		RunCorrelationID: runCorrelationID,
+		ResumeSessionID:  resumeSessionID,
 		StreamIdleStuck:  streamIdleStuck,
 		OnStreamIdle:     onStreamIdle,
 		OnProgress:       onProgress,

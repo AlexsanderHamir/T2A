@@ -23,6 +23,7 @@ func verdictsToClassifyInput(verdicts []criterionVerdict) []orchestration.Classi
 func (h *Harness) anchorPostExecuteState(
 	ctx context.Context,
 	state *processState,
+	execPhaseSeq int64,
 	snap git.PhaseSnapshot,
 	ingestAttempted bool,
 	ingestOutcome executeCommitIngestOutcome,
@@ -40,6 +41,7 @@ func (h *Harness) anchorPostExecuteState(
 	if ok {
 		state.postExecuteHeadSHA = head
 	}
+	state.lastCompletedExecutePhaseSeq = execPhaseSeq
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -100,9 +102,11 @@ func (h *Harness) gatherRetryClassifyInput(
 		expected[it.ID] = struct{}{}
 	}
 	reportValid := true
+	state.reportParseErr = ""
 	if len(expected) > 0 {
 		if _, err := reports.ParseCriteriaReport(h.opts.ReportDir, cycle.ID, expected); err != nil {
 			reportValid = false
+			state.reportParseErr = err.Error()
 		}
 	}
 	headMatches := true

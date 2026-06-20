@@ -73,7 +73,7 @@ func (s *Service) runVerifyChecks(
 		if cmdErr != nil {
 			return nil, "", cmdErr
 		}
-		runErr := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, runCorrelationID, snap, previouslyPassed, selfReport, feedback, cmdEvidence)
+		runErr := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, runCorrelationID, snap, previouslyPassed, selfReport, feedback, cmdEvidence, int(attemptSeq)-1)
 		nextVerdicts, parseErr := s.assembleVerdictsFromVerifyReport(cycle.ID, expected, verdicts, selfReport, previouslyPassed)
 		if err := verifyLLMRunError(runErr, parseErr); err != nil {
 			return nil, "", err
