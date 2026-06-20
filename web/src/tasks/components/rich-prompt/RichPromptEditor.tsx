@@ -1,4 +1,4 @@
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,7 +22,10 @@ import {
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
 import { RichPromptRepoHints } from "./RichPromptRepoHints";
-import { useRepoWorkspaceProbe } from "./useRepoWorkspaceProbe";
+import {
+  useRepoWorkspaceProbe,
+} from "./useRepoWorkspaceProbe";
+import type { RepoWorkspaceProbe } from "@/api";
 import { Modal } from "@/shared/Modal";
 import { ProjectContextChoiceDialog } from "@/projects/ProjectContextChoiceDialog";
 import {
@@ -75,8 +78,111 @@ type Props = {
   projectContext?: RichPromptEditorProjectContextProps;
 };
 
-/** Rich initial prompt (TipTap) with @ file suggestions when the workspace repo (app_settings.repo_root) is set, plus optional `#` project-context mentions. */
-export function RichPromptEditor({
+type PendingFileInsert = {
+  insertAt: number;
+  path: string;
+};
+
+type PendingProjectChoice = {
+  item: ProjectContextItem;
+  insertAt: number | null;
+};
+
+type RepoHintFlags = {
+  showRepoMisconfigHint: boolean;
+  workspaceBroken: boolean;
+  fileSearchFailedWhileAvailable: boolean;
+  showRepoUnknownHint: boolean;
+  showFileSearchSpinner: boolean;
+};
+
+function buildRichPromptExtensions(
+  placeholder: string | undefined,
+  repoOpts: RepoFileSuggestionOptions,
+  projectSuggestionOpts: ProjectContextSuggestionOptions,
+) {
+  return [
+    StarterKit.configure({
+      heading: { levels: [2, 3, 4] },
+    }),
+    Placeholder.configure({
+      placeholder: placeholder ?? "",
+    }),
+    RepoFileMention,
+    RepoFileSuggestion.configure(repoOpts),
+    ProjectContextMention,
+    ProjectContextSuggestion.configure(projectSuggestionOpts),
+  ];
+}
+
+function insertRepoFileMentionAt(
+  editor: Editor,
+  insertAt: number,
+  path: string,
+  lineStart?: number,
+  lineEnd?: number,
+) {
+  const attrs =
+    lineStart != null && lineEnd != null
+      ? { path, lineStart, lineEnd }
+      : { path };
+  editor
+    .chain()
+    .focus()
+    .insertContentAt(insertAt, [
+      { type: "repoFileMention", attrs },
+      { type: "text", text: " " },
+    ])
+    .run();
+}
+
+function insertProjectContextChipAt(
+  editor: Editor,
+  item: ProjectContextItem,
+  insertAt: number | null,
+) {
+  const chip = {
+    type: "projectContextMention",
+    attrs: { id: item.id, title: item.title || "" },
+  } as const;
+  const text = { type: "text", text: " " } as const;
+  if (insertAt == null) {
+    // Came from the "Choose context" chooser, not the `#` plugin —
+    // append the chip to the current cursor instead of jumping to a
+    // stale document position from a different surface.
+    editor.chain().focus().insertContent([chip, text]).run();
+    return;
+  }
+  editor.chain().focus().insertContentAt(insertAt, [chip, text]).run();
+}
+
+function computeRepoHintFlags(
+  workspaceProbe: RepoWorkspaceProbe | "pending",
+  fileSearchUnavailable: boolean,
+  showFileSearchSpinner: boolean,
+): RepoHintFlags {
+  const probeDone = workspaceProbe !== "pending";
+  const showRepoMisconfigHint =
+    probeDone &&
+    (workspaceProbe.state === "unavailable" ||
+      workspaceProbe.state === "broken" ||
+      (workspaceProbe.state === "available" && fileSearchUnavailable));
+  const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
+
+  return {
+    showRepoMisconfigHint,
+    workspaceBroken:
+      workspaceProbe !== "pending" && workspaceProbe.state === "broken",
+    fileSearchFailedWhileAvailable:
+      workspaceProbe !== "pending" &&
+      workspaceProbe.state === "available" &&
+      fileSearchUnavailable,
+    showRepoUnknownHint,
+    showFileSearchSpinner,
+  };
+}
+
+function useRichPromptEditorController({
   id,
   value,
   onChange,
@@ -87,23 +193,17 @@ export function RichPromptEditor({
   const workspaceProbe = useRepoWorkspaceProbe();
   const [fileSearchUnavailable, setFileSearchUnavailable] = useState(false);
   const [fileSuggestBusy, setFileSuggestBusy] = useState(false);
-  const [pendingInsert, setPendingInsert] = useState<{
-    insertAt: number;
-    path: string;
-  } | null>(null);
+  const [pendingInsert, setPendingInsert] = useState<PendingFileInsert | null>(
+    null,
+  );
   const [rangeWarning, setRangeWarning] = useState<string | null>(null);
   const lastEmittedHtml = useRef<string | null>(null);
 
-  // Project context state -------------------------------------------------
   const projectItems = projectContext?.items ?? EMPTY_CONTEXT_ITEMS;
   const projectEdges = projectContext?.edges ?? EMPTY_CONTEXT_EDGES;
   const selectedProjectIds = projectContext?.selectedIds ?? EMPTY_SELECTED_IDS;
   const onProjectIdsChange = projectContext?.onSelectedIdsChange;
 
-  // Ref so the suggestion plugin (configured once at mount) can read the
-  // freshest items list without rebuilding the TipTap editor on every render.
-  // `null` means "no project context wiring on this surface" — the # plugin
-  // surfaces the empty-state copy in that case.
   const projectItemsRef = useRef<ProjectContextItem[] | null>(
     projectContext != null ? projectItems : null,
   );
@@ -111,10 +211,8 @@ export function RichPromptEditor({
     projectItemsRef.current = projectContext != null ? projectItems : null;
   }, [projectContext, projectItems]);
 
-  const [pendingProjectChoice, setPendingProjectChoice] = useState<{
-    item: ProjectContextItem;
-    insertAt: number | null;
-  } | null>(null);
+  const [pendingProjectChoice, setPendingProjectChoice] =
+    useState<PendingProjectChoice | null>(null);
 
   const onFilePicked = useCallback(
     (payload: { insertAt: number; path: string }) => {
@@ -148,10 +246,6 @@ export function RichPromptEditor({
 
   const projectSuggestionOpts = useMemo<ProjectContextSuggestionOptions>(
     () => ({
-      // Read from the ref so the items closure stays stable as the underlying
-      // list updates (the suggestion plugin is configured once when the
-      // editor mounts; we don't want the items provider to capture a stale
-      // snapshot).
       getItems: () => projectItemsRef.current,
       onContextPicked: onProjectContextPicked,
     }),
@@ -159,18 +253,8 @@ export function RichPromptEditor({
   );
 
   const extensions = useMemo(
-    () => [
-      StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
-      }),
-      Placeholder.configure({
-        placeholder: placeholder ?? "",
-      }),
-      RepoFileMention,
-      RepoFileSuggestion.configure(repoOpts),
-      ProjectContextMention,
-      ProjectContextSuggestion.configure(projectSuggestionOpts),
-    ],
+    () =>
+      buildRichPromptExtensions(placeholder, repoOpts, projectSuggestionOpts),
     [placeholder, repoOpts, projectSuggestionOpts],
   );
 
@@ -209,18 +293,6 @@ export function RichPromptEditor({
   }, [editor, value]);
 
   const probeDone = workspaceProbe !== "pending";
-
-  const showRepoMisconfigHint =
-    probeDone &&
-    (workspaceProbe.state === "unavailable" ||
-      workspaceProbe.state === "broken" ||
-      (workspaceProbe.state === "available" && fileSearchUnavailable));
-
-  const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
-  const rangeModalTitleId = `${id}-mention-range-modal-title`;
-  const rangeModalDescId = `${id}-mention-range-modal-desc`;
-
-  /** Avoid flashing “Searching…” when /repo/search returns in a few ms (useDelayedTrue drops immediately when idle). */
   const fileSearchLoadingEligible =
     probeDone &&
     workspaceProbe.state === "available" &&
@@ -228,79 +300,50 @@ export function RichPromptEditor({
     !fileSearchUnavailable;
   const showFileSearchSpinner = useDelayedTrue(fileSearchLoadingEligible, 300);
 
-  const insertPathOnly = () => {
-    if (!editor || !pendingInsert) return;
-    const { insertAt, path } = pendingInsert;
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(insertAt, [
-        { type: "repoFileMention", attrs: { path } },
-        { type: "text", text: " " },
-      ])
-      .run();
-    setPendingInsert(null);
-  };
+  const repoHints = computeRepoHintFlags(
+    workspaceProbe,
+    fileSearchUnavailable,
+    showFileSearchSpinner,
+  );
 
-  const insertWithRange = async (startLine: number, endLine: number) => {
+  const insertPathOnly = useCallback(() => {
     if (!editor || !pendingInsert) return;
-    const { insertAt, path } = pendingInsert;
-    const a = startLine;
-    const b = endLine;
-    setRangeWarning(null);
-    const res = await validateRepoRange(path, a, b);
-    if (res === null) {
-      editor
-        .chain()
-        .focus()
-        .insertContentAt(insertAt, [
-          {
-            type: "repoFileMention",
-            attrs: { path, lineStart: a, lineEnd: b },
-          },
-          { type: "text", text: " " },
-        ])
-        .run();
-      setPendingInsert(null);
-      return;
-    }
-    if (!res.ok) {
-      setRangeWarning(
-        res.warning ??
-          "That line range is not valid for this file (check line numbers).",
-      );
-      return;
-    }
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(insertAt, [
-        {
-          type: "repoFileMention",
-          attrs: { path, lineStart: a, lineEnd: b },
-        },
-        { type: "text", text: " " },
-      ])
-      .run();
+    insertRepoFileMentionAt(
+      editor,
+      pendingInsert.insertAt,
+      pendingInsert.path,
+    );
     setPendingInsert(null);
-  };
+  }, [editor, pendingInsert]);
+
+  const insertWithRange = useCallback(
+    async (startLine: number, endLine: number) => {
+      if (!editor || !pendingInsert) return;
+      const { insertAt, path } = pendingInsert;
+      setRangeWarning(null);
+      const res = await validateRepoRange(path, startLine, endLine);
+      if (res === null) {
+        insertRepoFileMentionAt(editor, insertAt, path, startLine, endLine);
+        setPendingInsert(null);
+        return;
+      }
+      if (!res.ok) {
+        setRangeWarning(
+          res.warning ??
+            "That line range is not valid for this file (check line numbers).",
+        );
+        return;
+      }
+      insertRepoFileMentionAt(editor, insertAt, path, startLine, endLine);
+      setPendingInsert(null);
+    },
+    [editor, pendingInsert],
+  );
 
   const insertProjectContextChip = useCallback(
     (item: ProjectContextItem, insertAt: number | null) => {
       if (!editor) return;
-      const chip = {
-        type: "projectContextMention",
-        attrs: { id: item.id, title: item.title || "" },
-      } as const;
-      const text = { type: "text", text: " " } as const;
-      if (insertAt == null) {
-        // Came from the "Choose context" chooser, not the `#` plugin —
-        // append the chip to the current cursor instead of jumping to a
-        // stale document position from a different surface.
-        editor.chain().focus().insertContent([chip, text]).run();
-        return;
-      }
-      editor.chain().focus().insertContentAt(insertAt, [chip, text]).run();
+      insertProjectContextChipAt(editor, item, insertAt);
     },
     [editor],
   );
@@ -319,9 +362,6 @@ export function RichPromptEditor({
         expanded,
       );
       onProjectIdsChange?.(merged);
-      // Always insert a chip for the picked node — the descendants flow into
-      // the REFERENCES block but we only insert a single chip at the cursor
-      // so the prompt body stays readable.
       insertProjectContextChip(item, insertAt);
       setPendingProjectChoice(null);
     },
@@ -339,9 +379,11 @@ export function RichPromptEditor({
   }, []);
 
   const removeSelectedProjectId = useCallback(
-    (id: string) => {
+    (contextId: string) => {
       if (!onProjectIdsChange) return;
-      const next = selectedProjectIds.filter((existing) => existing !== id);
+      const next = selectedProjectIds.filter(
+        (existing) => existing !== contextId,
+      );
       if (next.length === selectedProjectIds.length) return;
       onProjectIdsChange(next);
     },
@@ -352,6 +394,100 @@ export function RichPromptEditor({
     () => selectedProjectContextItems(projectItems, selectedProjectIds),
     [projectItems, selectedProjectIds],
   );
+
+  const dismissPendingInsert = useCallback(() => {
+    setPendingInsert(null);
+    setRangeWarning(null);
+  }, []);
+
+  return {
+    editor,
+    projectContextEnabled,
+    referencesItems,
+    onProjectIdsChange,
+    removeSelectedProjectId,
+    pendingInsert,
+    rangeWarning,
+    dismissPendingInsert,
+    insertPathOnly,
+    insertWithRange,
+    pendingProjectChoice,
+    projectEdges,
+    selectedProjectIds,
+    cancelProjectContextChoice,
+    confirmProjectContextChoice,
+    repoHints,
+  };
+}
+
+function RichPromptFileReferenceModal({
+  id,
+  pendingInsert,
+  disabled,
+  rangeWarning,
+  onClose,
+  onInsertWithRange,
+  onInsertPathOnly,
+}: {
+  id: string;
+  pendingInsert: PendingFileInsert;
+  disabled?: boolean;
+  rangeWarning: string | null;
+  onClose: () => void;
+  onInsertWithRange: (startLine: number, endLine: number) => Promise<void>;
+  onInsertPathOnly: () => void;
+}) {
+  const rangeModalTitleId = `${id}-mention-range-modal-title`;
+  const rangeModalDescId = `${id}-mention-range-modal-desc`;
+
+  return (
+    <Modal
+      onClose={onClose}
+      labelledBy={rangeModalTitleId}
+      describedBy={rangeModalDescId}
+      size="wide"
+    >
+      <section className="panel modal-sheet mention-range-modal">
+        <h2 id={rangeModalTitleId}>Insert file reference</h2>
+        <p id={rangeModalDescId} className="mention-range-modal-desc muted">
+          Review the file, optionally choose a line range, then insert it into
+          your prompt.
+        </p>
+        <MentionRangePanel
+          id={id}
+          path={pendingInsert.path}
+          disabled={disabled}
+          rangeWarning={rangeWarning}
+          onInsertWithRange={onInsertWithRange}
+          onInsertPathOnly={onInsertPathOnly}
+          onCancel={onClose}
+        />
+      </section>
+    </Modal>
+  );
+}
+
+/** Rich initial prompt (TipTap) with @ file suggestions when the workspace repo (app_settings.repo_root) is set, plus optional `#` project-context mentions. */
+export function RichPromptEditor(props: Props) {
+  const { id, disabled } = props;
+  const {
+    editor,
+    projectContextEnabled,
+    referencesItems,
+    onProjectIdsChange,
+    removeSelectedProjectId,
+    pendingInsert,
+    rangeWarning,
+    dismissPendingInsert,
+    insertPathOnly,
+    insertWithRange,
+    pendingProjectChoice,
+    projectEdges,
+    selectedProjectIds,
+    cancelProjectContextChoice,
+    confirmProjectContextChoice,
+    repoHints,
+  } = useRichPromptEditorController(props);
 
   return (
     <div className="rich-prompt-wrap">
@@ -365,35 +501,15 @@ export function RichPromptEditor({
       ) : null}
       <EditorContent editor={editor} />
       {pendingInsert ? (
-        <Modal
-          onClose={() => {
-            setPendingInsert(null);
-            setRangeWarning(null);
-          }}
-          labelledBy={rangeModalTitleId}
-          describedBy={rangeModalDescId}
-          size="wide"
-        >
-          <section className="panel modal-sheet mention-range-modal">
-            <h2 id={rangeModalTitleId}>Insert file reference</h2>
-            <p id={rangeModalDescId} className="mention-range-modal-desc muted">
-              Review the file, optionally choose a line range, then insert it into
-              your prompt.
-            </p>
-            <MentionRangePanel
-              id={id}
-              path={pendingInsert.path}
-              disabled={disabled}
-              rangeWarning={rangeWarning}
-              onInsertWithRange={insertWithRange}
-              onInsertPathOnly={insertPathOnly}
-              onCancel={() => {
-                setPendingInsert(null);
-                setRangeWarning(null);
-              }}
-            />
-          </section>
-        </Modal>
+        <RichPromptFileReferenceModal
+          id={id}
+          pendingInsert={pendingInsert}
+          disabled={disabled}
+          rangeWarning={rangeWarning}
+          onClose={dismissPendingInsert}
+          onInsertWithRange={insertWithRange}
+          onInsertPathOnly={insertPathOnly}
+        />
       ) : null}
       {pendingProjectChoice ? (
         <ProjectContextChoiceDialog
@@ -405,17 +521,13 @@ export function RichPromptEditor({
         />
       ) : null}
       <RichPromptRepoHints
-        showRepoMisconfigHint={showRepoMisconfigHint}
-        workspaceBroken={
-          workspaceProbe !== "pending" && workspaceProbe.state === "broken"
-        }
+        showRepoMisconfigHint={repoHints.showRepoMisconfigHint}
+        workspaceBroken={repoHints.workspaceBroken}
         fileSearchFailedWhileAvailable={
-          workspaceProbe !== "pending" &&
-          workspaceProbe.state === "available" &&
-          fileSearchUnavailable
+          repoHints.fileSearchFailedWhileAvailable
         }
-        showRepoUnknownHint={showRepoUnknownHint}
-        showFileSearchSpinner={showFileSearchSpinner}
+        showRepoUnknownHint={repoHints.showRepoUnknownHint}
+        showFileSearchSpinner={repoHints.showFileSearchSpinner}
       />
     </div>
   );
