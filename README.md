@@ -26,7 +26,7 @@ To address the following problems and more:
 
 ## Get started
 
-**Requirements:** Go 1.25+, Node 20+, and `DATABASE_URL` in a repo-root `.env`.
+**Requirements:** Go 1.25+ | Node 20+
 
 1. Create a `.env` file and set `DATABASE_URL`.
 2. Apply the schema: `go run ./cmd/dbcheck -migrate`
@@ -41,7 +41,7 @@ API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops b
 
 4. Verify your setup: `./scripts/check.sh` or `.\scripts\check.ps1` (add `--install` / `-Install` on first run)
 
-Contributing? See [CONTRIBUTING.md](CONTRIBUTING.md). Agent and workspace settings are in the web UI at `/settings` — see [docs/configuration.md](docs/configuration.md).
+Agent and workspace settings are in the web UI at `/settings` — see [docs/configuration.md](docs/configuration.md).
 
 ## Before you run tasks
 
