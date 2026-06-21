@@ -390,7 +390,9 @@ describe("TaskCycleDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Showing Verify #2")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Verify", pressed: true }),
+    ).toBeInTheDocument();
     const activitySection = screen.getByRole("heading", {
       name: /^activity$/i,
     }).parentElement?.parentElement;
@@ -435,19 +437,20 @@ describe("TaskCycleDetailPage", () => {
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /filter activity to verify phase 2/i,
-      }),
-    );
-    expect(screen.getByText("Showing Verify #2")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Verify", pressed: false }));
     expect(
-      screen.getByRole("button", {
-        name: /filter activity to verify phase 2/i,
-      }),
-    ).toHaveAttribute("aria-current", "true");
+      screen.getByRole("button", { name: "Verify", pressed: true }),
+    ).toBeInTheDocument();
+    const activitySection = screen.getByRole("heading", {
+      name: /^activity$/i,
+    }).parentElement?.parentElement;
+    if (!activitySection) throw new Error("missing activity section");
+    expect(within(activitySection).getByText("Verify stream line")).toBeInTheDocument();
+    expect(within(activitySection).queryByText("Cursor update 1")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: /clear filter/i }));
-    expect(screen.queryByText("Showing Verify #2")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "All phases", pressed: false }));
+    expect(
+      screen.getByRole("button", { name: "All phases", pressed: true }),
+    ).toBeInTheDocument();
   });
 });

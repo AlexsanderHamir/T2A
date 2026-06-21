@@ -373,9 +373,18 @@ function AttemptPhasesSection({
       className="task-attempt-section task-attempt-section--phases"
       aria-labelledby="attempt-phases"
     >
-      <h3 className="task-detail-subheading" id="attempt-phases">
-        <span>Phases</span>
-      </h3>
+      <div className="task-attempt-section-heading-row">
+        <h3 className="task-detail-subheading" id="attempt-phases">
+          <span>Phases</span>
+        </h3>
+        {phaseFilterEnabled ? (
+          <AttemptPhaseFilterBar
+            phases={cycle.phases}
+            filterPhaseSeq={filterPhaseSeq}
+            onSelectPhase={onSelectPhase}
+          />
+        ) : null}
+      </div>
       <div className="task-attempt-phase-timeline">
         {showStartCap ? (
           <AttemptStartCap
@@ -402,9 +411,6 @@ function AttemptPhasesSection({
               phaseCount={cycle.phases.length}
               showPhaseBadge={showPhaseBadge}
               showEndcap={showEndcap}
-              filterActive={filterPhaseSeq === phase.phase_seq}
-              phaseFilterEnabled={phaseFilterEnabled}
-              onSelectPhase={() => onSelectPhase(phase.phase_seq)}
             />
           ))}
         </ol>
@@ -421,6 +427,55 @@ function AttemptPhasesSection({
   );
 }
 
+function AttemptPhaseFilterBar({
+  phases,
+  filterPhaseSeq,
+  onSelectPhase,
+}: {
+  phases: readonly TaskCyclePhase[];
+  filterPhaseSeq: number | null;
+  onSelectPhase: (seq: number | null) => void;
+}) {
+  return (
+    <div
+      className="task-attempt-activity-tabs task-attempt-phase-filter"
+      role="group"
+      aria-label="Filter activity by phase"
+    >
+      <button
+        type="button"
+        className={
+          filterPhaseSeq === null
+            ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+            : "task-attempt-activity-tab"
+        }
+        aria-pressed={filterPhaseSeq === null}
+        onClick={() => onSelectPhase(null)}
+      >
+        All phases
+      </button>
+      {phases.map((phase) => {
+        const active = filterPhaseSeq === phase.phase_seq;
+        return (
+          <button
+            key={phase.id}
+            type="button"
+            className={
+              active
+                ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+                : "task-attempt-activity-tab"
+            }
+            aria-pressed={active}
+            onClick={() => onSelectPhase(active ? null : phase.phase_seq)}
+          >
+            {phaseLabel(phase.phase)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AttemptPhaseStep({
   taskId,
   cycleId,
@@ -429,9 +484,6 @@ function AttemptPhaseStep({
   phaseCount,
   showPhaseBadge,
   showEndcap,
-  filterActive,
-  phaseFilterEnabled,
-  onSelectPhase,
 }: {
   taskId: string;
   cycleId: string;
@@ -440,16 +492,8 @@ function AttemptPhaseStep({
   phaseCount: number;
   showPhaseBadge: boolean;
   showEndcap: boolean;
-  filterActive: boolean;
-  phaseFilterEnabled: boolean;
-  onSelectPhase: () => void;
 }) {
-  const stepClass = [
-    "task-attempt-phase-step",
-    filterActive && "task-attempt-phase-step--filter-active",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const stepClass = "task-attempt-phase-step";
   const main = (
     <div className="task-attempt-phase-step-main">
       <span className="task-attempt-phase-step-name">
@@ -471,19 +515,7 @@ function AttemptPhaseStep({
       }
     >
       <span className="task-attempt-phase-step-marker" aria-hidden="true" />
-      {phaseFilterEnabled ? (
-        <button
-          type="button"
-          className="task-attempt-phase-step-button"
-          aria-current={filterActive ? "true" : undefined}
-          aria-label={`Filter activity to ${phaseLabel(phase.phase)} phase ${phase.phase_seq}`}
-          onClick={onSelectPhase}
-        >
-          {main}
-        </button>
-      ) : (
-        main
-      )}
+      {main}
       <PhaseDebugDetails phase={phase} />
       <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
     </li>
@@ -599,21 +631,6 @@ function AttemptActivitySection({
           </button>
         </div>
       </div>
-
-      {filterLabel ? (
-        <div className="task-attempt-activity-filter-bar">
-          <p className="task-attempt-activity-filter-label">
-            Showing {filterLabel}
-          </p>
-          <button
-            type="button"
-            className="secondary task-attempt-activity-filter-clear"
-            onClick={onClearPhaseFilter}
-          >
-            Clear filter
-          </button>
-        </div>
-      ) : null}
 
       {activityTab === "cursor" ? (
         <CursorActivityPanel

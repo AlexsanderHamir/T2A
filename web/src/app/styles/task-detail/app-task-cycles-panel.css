@@ -215,10 +215,6 @@
    the cycle status pill is doing the visual work. */
 .task-cycle-row-summary::-webkit-details-marker { display: none; }
 
-.task-cycle-row-summary:hover {
-  background: var(--surface-2);
-}
-
 .task-cycle-row-attempt {
   font-size: var(--text-sm);
   color: var(--text-primary);
