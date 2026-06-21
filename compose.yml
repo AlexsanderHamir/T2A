@@ -17,7 +17,7 @@ services:
     ports:
       - "8080:8080"
       - "5173:5173"
-    entrypoint: ["/app/docker/dev-entrypoint.sh"]
+    entrypoint: ["/bin/bash", "/app/docker/dev-entrypoint.sh"]
     command: ["./scripts/dev.sh", "--host", "0.0.0.0", "--vite-host", "0.0.0.0"]
 
 volumes:
