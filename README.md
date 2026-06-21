@@ -1,4 +1,6 @@
-<h1 align="center">T2A</h1>
+<p align="center">
+  <img src="assets/T2A_wordmark.png" alt="T2A" />
+</p>
 
 Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.
 
