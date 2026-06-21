@@ -8,7 +8,7 @@ import { RouteAnnouncer } from "./RouteAnnouncer";
 
 function PageA() {
   useEffect(() => {
-    document.title = "Page A · T2A";
+    document.title = "Page A · Hamix";
   }, []);
   return (
     <>
@@ -20,7 +20,7 @@ function PageA() {
 
 function PageB() {
   useEffect(() => {
-    document.title = "Page B · T2A";
+    document.title = "Page B · Hamix";
   }, []);
   return <p>Page B</p>;
 }
@@ -51,7 +51,7 @@ describe("RouteAnnouncer", () => {
 
     await waitFor(() => {
       expect(document.querySelector(".route-announcer")).toHaveTextContent(
-        "Page A · T2A",
+        "Page A · Hamix",
       );
     });
   });
@@ -69,7 +69,7 @@ describe("RouteAnnouncer", () => {
 
     await waitFor(() => {
       expect(document.querySelector(".route-announcer")).toHaveTextContent(
-        "Page B · T2A",
+        "Page B · Hamix",
       );
     });
   });

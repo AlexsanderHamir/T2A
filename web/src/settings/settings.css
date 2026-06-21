@@ -13,7 +13,7 @@
 /* Thin vertical rule before the actions cluster — mirrors the rule
    that sits between the brand and the nav (`app-nav::before`), so
    the header reads as three balanced regions:
-       [T2A] | Tasks Drafts Projects | [status] [⚙]
+       [Hamix] | Tasks Drafts Projects | [status] [⚙]
    The eye groups items by the rules instead of by spacing alone. */
 .app-header-actions::before {
   content: "";

@@ -84,7 +84,7 @@ describe("App", () => {
     vi.unstubAllGlobals();
   });
 
-  it("exposes T2A wordmark as home link with aria-current on /", async () => {
+  it("exposes Hamix wordmark as home link with aria-current on /", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = requestUrl(input);
       if (url.startsWith("/tasks?")) {
@@ -100,13 +100,13 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByRole("heading", { name: /^t2a$/i });
-    const titleLink = screen.getByRole("link", { name: /^t2a$/i });
+    await screen.findByRole("img", { name: /^hamix$/i });
+    const titleLink = screen.getByRole("link", { name: /^hamix$/i });
     expect(titleLink).toHaveAttribute("href", "/");
     expect(titleLink).toHaveAttribute("aria-current", "page");
   });
 
-  it("navigates home when T2A wordmark is used from a task route", async () => {
+  it("navigates home when Hamix wordmark is used from a task route", async () => {
     const user = userEvent.setup();
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -162,12 +162,12 @@ describe("App", () => {
     );
 
     await screen.findByRole("heading", { name: /^home link task$/i });
-    const titleLink = screen.getByRole("link", { name: /^t2a$/i });
+    const titleLink = screen.getByRole("link", { name: /^hamix$/i });
     expect(titleLink).not.toHaveAttribute("aria-current");
 
     await user.click(titleLink);
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^t2a$/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^hamix$/i })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -231,7 +231,7 @@ describe("App", () => {
     expect(skip).toHaveAttribute("href", "#main-content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
     expect(
-      await screen.findByRole("heading", { name: /^t2a$/i }),
+      await screen.findByRole("img", { name: /^hamix$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
     await waitFor(() => {

@@ -8,23 +8,23 @@ import {
 
 describe("commitDisplay", () => {
   it("normalizes Windows and POSIX paths for comparison", () => {
-    expect(normalizeGitPath("C:\\Users\\gomes\\T2A\\")).toBe(
-      normalizeGitPath("C:/Users/gomes/T2A"),
+    expect(normalizeGitPath("C:\\tmp\\hamix-repo\\")).toBe(
+      normalizeGitPath("C:/tmp/hamix-repo"),
     );
   });
 
   it("buildGitContextItems collapses duplicate repo and worktree", () => {
     const items = buildGitContextItems({
-      repo: "C:\\Users\\gomes\\OneDrive\\Documents\\T2A",
-      worktree: "C:/Users/gomes/OneDrive/Documents/T2A",
+      repo: "C:\\tmp\\hamix-repo",
+      worktree: "C:/tmp/hamix-repo",
       branch: "main",
     });
     expect(items).toEqual([
       { label: "Branch", value: "main" },
       {
         label: "Worktree",
-        value: "T2A",
-        title: "C:/Users/gomes/OneDrive/Documents/T2A",
+        value: "hamix-repo",
+        title: "C:/tmp/hamix-repo",
       },
     ]);
   });

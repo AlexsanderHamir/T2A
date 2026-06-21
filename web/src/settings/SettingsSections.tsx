@@ -651,7 +651,7 @@ export function PhasesSettingsSection({
               <div className="settings-field-help-block">
                 <p className="settings-field-help">
                   Stops the run when the agent produces no new output for this
-                  long. T2A may use git commits or reports the agent already
+                  long. Hamix may use git commits or reports the agent already
                   wrote and move on to verify.
                 </p>
                 <p className="settings-field-help settings-field-help-meta">

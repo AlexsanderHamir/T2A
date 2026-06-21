@@ -1,4 +1,4 @@
-const SESSION_KEY = "t2a_ui_test_mode";
+const SESSION_KEY = "hamix_ui_test_mode";
 
 function envUiTestMode(): boolean {
   const v = import.meta.env.VITE_UI_TEST_MODE;

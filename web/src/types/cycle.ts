@@ -143,7 +143,7 @@ export type TaskCycleStreamEvent = {
   phase_seq: number;
   stream_seq: number;
   at: string;
-  source: "cursor" | "t2a" | string;
+  source: "cursor" | "hamix" | string;
   kind: string;
   subtype?: string;
   message?: string;

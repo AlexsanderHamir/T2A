@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { ViewType } from "react-diff-view";
 
-const storageKey = "t2a.commitDiff.viewMode";
+const storageKey = "hamix.commitDiff.viewMode";
 
 function readStoredViewMode(): ViewType {
   try {

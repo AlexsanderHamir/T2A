@@ -3,7 +3,7 @@ import { projectQueryKeys } from "@/projects/queryKeys";
 import { QUERY_POLICY } from "@/tasks/queryPolicy";
 import { settingsQueryKeys, taskQueryKeys } from "@/tasks/task-query";
 
-const LAST_DETAIL_ID_KEY = "t2a:last-detail-id";
+const LAST_DETAIL_ID_KEY = "hamix:last-detail-id";
 
 export function isQueryPersistEnabled(): boolean {
   return import.meta.env.VITE_QUERY_PERSIST !== "0";
@@ -18,7 +18,7 @@ export function queryPersistMaxAgeMs(): number {
   return QUERY_POLICY.persistMaxAgeMs;
 }
 
-const PERSIST_STORAGE_KEY = "t2a:react-query";
+const PERSIST_STORAGE_KEY = "hamix:react-query";
 
 export function queryPersistStorageKey(): string {
   return PERSIST_STORAGE_KEY;

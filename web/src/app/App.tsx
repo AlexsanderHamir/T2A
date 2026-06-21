@@ -105,7 +105,11 @@ function AppShell() {
                 ? { "aria-current": "page" as const }
                 : {})}
             >
-              <h1 className="app-title app-title--logo">T2A</h1>
+              <img
+                src="/Hamix_wordmark.png"
+                alt="Hamix"
+                className="app-title app-title--logo app-title--wordmark"
+              />
             </Link>
             <nav className="app-nav" aria-label="Primary">
               <Link

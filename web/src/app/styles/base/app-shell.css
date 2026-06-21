@@ -167,9 +167,16 @@
   color: var(--text-primary);
 }
 
+.app-title--wordmark {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+  max-width: min(7.5rem, 42vw);
+}
+
 @media (hover: hover) {
-  .app-brand:hover .app-title--logo {
-    color: var(--link);
+  .app-brand:hover .app-title--wordmark {
+    opacity: 0.88;
   }
 }
 
@@ -181,7 +188,7 @@
  * item visibly wins.
  *
  * The nav sits next to the brand with a thin vertical rule in front
- * (::before) so the eye reads: [T2A] | Tasks Drafts, with the brand on
+ * (::before) so the eye reads: [Hamix] | Tasks Drafts, with the brand on
  * the left and destinations on the right of the rule.
  */
 .app-nav {

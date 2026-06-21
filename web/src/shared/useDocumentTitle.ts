@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 /** Matches `web/index.html` `<title>`; used as the app suffix for route-specific titles. */
-export const DEFAULT_DOCUMENT_TITLE = "T2A — Tasks";
+export const DEFAULT_DOCUMENT_TITLE = "Hamix — Tasks";
 
 /**
  * Sets `document.title` for the current view (WCAG 2.4.2). Restores
