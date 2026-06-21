@@ -1,6 +1,6 @@
 # T2A
 
-Control plane for agentic systems. Built on top of Cursor CLI, Claude Code, Codex, and other agentic systems.
+Control plane for agentic systems. Built on top of Cursor CLI, Claude Code, Codex, and others.
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
