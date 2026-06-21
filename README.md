@@ -4,7 +4,7 @@ Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
-## Why T2A Exists
+#### Why T2A Exists
 
 To address the following problems and more:
 
