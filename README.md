@@ -17,15 +17,15 @@ Instead of relying on conversations, T2A structures work as tasks with explicit 
 
 ## Features
 
-**Execute & Verify** — One AI agent implements the task, a second AI agent independently verifies that every acceptance criterion has been met. [Details](docs/execute-and-verify.md)
+**Execute & Verify** —> One agent executes the task, another independently verifies the acceptance criteria.
 
-**Execution History** — Every execution is recorded, including verification results, commits, and an audit trail that can be inspected. [Cycles](docs/data-model.md#execution-cycles-and-phases)
+**Execution History** —> Every execution is recorded with commits, verification results, and an audit trail.
 
-**Acceptance Criteria** — Define exactly what "done" means using structured checklists and optional verification commands. [Writing criteria](docs/domain/done-criteria.md)
+**Acceptance Criteria** —> Define what "done" means with checklists and optional verification commands.
 
-**Task Templates** — Save reusable task definitions and create new tasks from them through the UI or API. [Templates](docs/web.md)
+**Task Templates** —> Reuse task definitions from the UI or API.
 
-**Runner Adapters** — Run T2A with different AI coding agents. Configure separate models or runners for execution and verification. [Runners](docs/domain/runner-adapters.md)
+**Runner Adapters** —> Run T2A with different AI coding agents and models.
 
 
 ---
