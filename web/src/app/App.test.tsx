@@ -100,8 +100,7 @@ describe("App", () => {
     });
 
     renderApp();
-    await screen.findByRole("img", { name: /^hamix$/i });
-    const titleLink = screen.getByRole("link", { name: /^hamix$/i });
+    const titleLink = await screen.findByRole("link", { name: /^hamix$/i });
     expect(titleLink).toHaveAttribute("href", "/");
     expect(titleLink).toHaveAttribute("aria-current", "page");
   });
@@ -231,7 +230,7 @@ describe("App", () => {
     expect(skip).toHaveAttribute("href", "#main-content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
     expect(
-      await screen.findByRole("img", { name: /^hamix$/i }),
+      await screen.findByRole("link", { name: /^hamix$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText("No tasks yet")).toBeInTheDocument();
     await waitFor(() => {

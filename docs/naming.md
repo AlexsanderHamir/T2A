@@ -14,7 +14,8 @@ Authoritative product and operator identifiers for Hamix. New code and docs must
 | localStorage keys | `hamix:*`, `hamix_ui_test_mode` | Client-only persistence |
 | Stream event source (type union) | `"hamix"` | Reserved alongside `"cursor"` |
 | Script temp files | `hamix-check.*` | Check script scratch logs |
-| Nav wordmark | `web/public/Hamix_wordmark.png` | Same asset as `assets/Hamix_wordmark.png` |
+| Nav wordmark | `web/src/components/layout/HamixWordmark.tsx` | CSS gradient text (not raster) |
+| Marketing wordmark asset | `assets/Hamix_wordmark.png` | README and external use only |
 
 **Unchanged (not brand):** `taskapi`, `dbcheck`, `funclogmeasure`, `pkgs/tasks`, SSE route `/events`, Postgres table names.
 

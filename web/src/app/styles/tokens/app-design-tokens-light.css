@@ -34,6 +34,12 @@
   --brand-muted: rgb(var(--brand-rgb) / 12%);
   --brand-mesh: rgb(var(--brand-rgb) / 0%);
   --brand-focus: rgb(var(--brand-rgb) / 28%);
+  --wordmark-gradient: linear-gradient(
+    90deg,
+    #1a1a52 0%,
+    #4a4ab8 48%,
+    #8282e8 100%
+  );
   --link: #3d3bf3;
   --link-hover: #3230c9;
   --surface-hover: var(--brand-muted);

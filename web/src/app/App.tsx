@@ -12,6 +12,7 @@ import {
 import { TasksAppProvider, useTasksAppContext, useTasksAppMeta } from "@/tasks/app/TasksAppProvider";
 import { useTasksApp } from "@/tasks/hooks/useTasksApp";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
+import { HamixWordmark } from "@/components/layout/HamixWordmark";
 import { useStickyShellElevation } from "@/lib/useStickyShellElevation";
 
 // Route-level code splitting. Each lazy() call becomes its own chunk
@@ -105,11 +106,7 @@ function AppShell() {
                 ? { "aria-current": "page" as const }
                 : {})}
             >
-              <img
-                src="/Hamix_wordmark.png"
-                alt="Hamix"
-                className="app-title app-title--logo app-title--wordmark"
-              />
+              <HamixWordmark className="app-title app-title--logo app-title--wordmark" />
             </Link>
             <nav className="app-nav" aria-label="Primary">
               <Link

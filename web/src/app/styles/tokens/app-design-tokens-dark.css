@@ -77,6 +77,12 @@
     --brand-muted: rgb(var(--brand-rgb) / 18%);
     --brand-mesh: rgb(var(--brand-rgb) / 10%);
     --brand-focus: rgb(var(--brand-rgb) / 45%);
+    --wordmark-gradient: linear-gradient(
+      90deg,
+      #5a5ac8 0%,
+      #7878e0 45%,
+      #a8a8f0 100%
+    );
     --focus-ring: var(--brand-focus);
     /* Dark: same RGB, higher alpha so hairlines + tints read on near-black (DS §14) */
     --brand-border-faint: rgb(var(--brand-rgb) / 22%);
