@@ -1,4 +1,4 @@
-# T2A
+<h1 align="center">T2A</h1>
 
 Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.
 
@@ -50,7 +50,7 @@ Agent and workspace settings are in the web UI at `/settings` — see [docs/conf
 - Do not edit, commit, or checkout files in the workspace repo during **verify**. Git changes there end the cycle as `verify_tampered` (no retry).
 - Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout — [why?](docs/execute-and-verify.md#dedicated-worktree-recommended).
 
-Read [docs/execute-and-verify.md](docs/execute-and-verify.md) for mroe details.
+Read [docs/execute-and-verify.md](docs/execute-and-verify.md) for more details.
 
 ## Docs
 
