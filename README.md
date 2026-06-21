@@ -10,8 +10,6 @@ Orchestration layer for agentic coding systems. Coordinates Cursor CLI, Claude C
 
 **Problem:** Chat-based interfaces introduce too much variability into software engineering. Chat is an excellent interface for exploration, but a poor interface for executing large amounts of work while maintaining consistent quality.
 
-T2A is an experiment to find a better approach.
-
 Instead of relying on conversations, T2A structures work as tasks with explicit acceptance criteria. One AI agent implements the work, a separate AI agent verifies it against those criteria, and every attempt is recorded so the workflow can be inspected, repeated, and improved.
 
 
