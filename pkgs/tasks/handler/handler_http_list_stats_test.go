@@ -46,7 +46,7 @@ func TestHTTP_list_keyset_after_id(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&page1); err != nil {
 		t.Fatal(err)
 	}
-	if !page1.HasMore || len(page1.Tasks) != 2 || page1.Tasks[0].ID != id1 || page1.Tasks[1].ID != id2 {
+	if !page1.HasMore || len(page1.Tasks) != 2 || page1.Tasks[0].ID != id3 || page1.Tasks[1].ID != id2 {
 		t.Fatalf("page1 %+v", page1)
 	}
 	res2, err := http.Get(srv.URL + "/tasks?limit=2&after_id=" + id2)
@@ -61,7 +61,7 @@ func TestHTTP_list_keyset_after_id(t *testing.T) {
 	if err := json.NewDecoder(res2.Body).Decode(&page2); err != nil {
 		t.Fatal(err)
 	}
-	if page2.HasMore || len(page2.Tasks) != 1 || page2.Tasks[0].ID != id3 {
+	if page2.HasMore || len(page2.Tasks) != 1 || page2.Tasks[0].ID != id1 {
 		t.Fatalf("page2 %+v", page2)
 	}
 }

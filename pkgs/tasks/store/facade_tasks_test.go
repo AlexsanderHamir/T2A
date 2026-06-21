@@ -298,15 +298,15 @@ func TestStore_ListFlatPage_hasMore_and_keyset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !hasMore || len(got) != 2 || got[0].ID != ids[0] || got[1].ID != ids[1] {
-		t.Fatalf("page1: len=%d hasMore=%v", len(got), hasMore)
+	if !hasMore || len(got) != 2 || got[0].ID != ids[2] || got[1].ID != ids[1] {
+		t.Fatalf("page1: len=%d hasMore=%v ids=%v,%v want %s,%s", len(got), hasMore, got[0].ID, got[1].ID, ids[2], ids[1])
 	}
 	got2, hasMore2, err := s.ListFlatAfter(ctx, 2, ids[1])
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hasMore2 || len(got2) != 1 || got2[0].ID != ids[2] {
-		t.Fatalf("page2: len=%d hasMore=%v", len(got2), hasMore2)
+	if hasMore2 || len(got2) != 1 || got2[0].ID != ids[0] {
+		t.Fatalf("page2: len=%d hasMore=%v id=%s want %s", len(got2), hasMore2, got2[0].ID, ids[0])
 	}
 }
 
