@@ -36,7 +36,9 @@ To address the following problems and more:
 ./scripts/dev.sh        # Unix — chmod +x once if needed
 .\scripts\dev.ps1       # Windows
 
-API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops both.
+API at `http://127.0.0.1:8080`
+Web at `http://localhost:5173`
+Ctrl+C stops both.
 ```
 
 4. Optional (when changing code): Run the same checks as CI before opening a PR.
