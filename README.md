@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/Hamix_wordmark.png" alt="Hamix" />
+  <img src="assets/Hamix_wordmark.png" alt="Hamix" width="420" />
 </p>
 
 Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.
