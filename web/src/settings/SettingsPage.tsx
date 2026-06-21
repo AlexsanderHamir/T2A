@@ -1,8 +1,14 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { type FormEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
+import { type UseMutationResult, type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
-import { listCursorModels } from "@/api/settings";
+import {
+  listCursorModels,
+  type AppSettings,
+  type AppSettingsPatch,
+  type ListCursorModelsResult,
+  type ProbeCursorResult,
+} from "@/api/settings";
 import {
   detectBrowserTimezone,
   formatInAppTimezone,
@@ -30,6 +36,7 @@ import {
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
+import "./settings.css";
 
 /**
  * In-page navigation rail entries. Order matches the form below
@@ -55,46 +62,169 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
 const SETTINGS_HASH_TARGETS: ReadonlySet<string> = new Set([
   ...Object.values(SECTION_IDS),
 ]);
-import "./settings.css";
 
-export function SettingsPage() {
-  useDocumentTitle("Settings");
-  const location = useLocation();
-  const { settings, isLoading, error, patch, probe, refetch } =
-    useAppSettings();
-  const [form, setForm] = useState<SettingsFormState | null>(null);
-  const [status, setStatus] = useState<SettingsStatus>(null);
-  /**
-   * The PATH-resolved cursor binary the server reports from the most
-   * recent successful probe, kept around so the help text can show the
-   * concrete default ("auto-detected at /usr/local/bin/cursor-agent")
-   * after the operator clicks Test with the field blank. Cleared on
-   * any field edit because a fresh edit may invalidate the previously
-   * resolved path (e.g. they're typing a custom path that hasn't been
-   * probed yet).
-   */
-  const [resolvedDefaultBin, setResolvedDefaultBin] = useState<string | null>(
-    null,
+type SettingsNumericValidation = {
+  maxInvalid: boolean;
+  streamIdleInvalid: boolean;
+  pickupInvalid: boolean;
+};
+
+type TimezoneDisplayContext = {
+  browserTz: string;
+  effectiveDisplayTimezone: string;
+  lastUpdatedFormatted: string;
+  showCustomTz: boolean;
+};
+
+function parseNonNegativeIntField(raw: string): boolean {
+  const parsed = Number.parseInt(raw.trim() || "0", 10);
+  return !Number.isFinite(parsed) || parsed < 0;
+}
+
+function parseSettingsNumericValidation(
+  form: SettingsFormState | null,
+): SettingsNumericValidation {
+  if (!form) {
+    return {
+      maxInvalid: false,
+      streamIdleInvalid: false,
+      pickupInvalid: false,
+    };
+  }
+  const pickupParsed = Number.parseInt(
+    form.agentPickupDelaySeconds.trim() || "0",
+    10,
   );
+  const pickupInvalid =
+    !Number.isFinite(pickupParsed) ||
+    pickupParsed < 0 ||
+    pickupParsed > 604800;
+  return {
+    maxInvalid: parseNonNegativeIntField(form.maxRunDurationSeconds),
+    streamIdleInvalid: parseNonNegativeIntField(form.streamIdleStuckSeconds),
+    pickupInvalid,
+  };
+}
 
+function modelIdsFromListResponse(
+  data: ListCursorModelsResult | undefined,
+): Set<string> {
+  if (!data?.ok || !data.models) return new Set<string>();
+  return new Set(data.models.map((x) => x.id));
+}
+
+function resolveVerifyEffectiveRunner(
+  form: SettingsFormState,
+  settings: AppSettings,
+): string {
+  return (
+    (form.verifyRunnerName ?? "").trim() ||
+    form.runner ||
+    settings.runner ||
+    "cursor"
+  );
+}
+
+function mergeFormAfterSettingsPatch(
+  cur: SettingsFormState | null,
+  formAtSubmit: SettingsFormState,
+  next: AppSettings,
+): SettingsFormState {
+  if (cur === null) return toFormState(next);
+  const merged: SettingsFormState = { ...cur };
+  if (cur.runner === formAtSubmit.runner) {
+    merged.runner = next.runner;
+  }
+  if (cur.repoRoot === formAtSubmit.repoRoot) {
+    merged.repoRoot = next.repo_root;
+  }
+  if (cur.cursorBin === formAtSubmit.cursorBin) {
+    merged.cursorBin = next.cursor_bin;
+  }
+  if (cur.cursorModel === formAtSubmit.cursorModel) {
+    merged.cursorModel = next.cursor_model;
+  }
+  if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
+    merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
+  }
+  if (cur.streamIdleStuckSeconds === formAtSubmit.streamIdleStuckSeconds) {
+    merged.streamIdleStuckSeconds = String(next.stream_idle_stuck_seconds);
+  }
+  if (cur.agentPickupDelaySeconds === formAtSubmit.agentPickupDelaySeconds) {
+    merged.agentPickupDelaySeconds = String(next.agent_pickup_delay_seconds);
+  }
+  if (cur.displayTimezone === formAtSubmit.displayTimezone) {
+    merged.displayTimezone = next.display_timezone;
+  }
+  return merged;
+}
+
+function buildCursorProbeSuccessMessage(result: {
+  binary_path?: string;
+  version?: string;
+}): string {
+  const bits: string[] = ["Cursor binary OK"];
+  if (result.binary_path) bits.push(`at ${result.binary_path}`);
+  if (result.version) bits.push(`(version ${result.version})`);
+  return `${bits.join(" ")}.`;
+}
+
+function resolveProbeDefaultBin(
+  form: SettingsFormState,
+  result: { binary_path?: string },
+): string | null {
+  if (result.binary_path && form.cursorBin.trim() === "") {
+    return result.binary_path;
+  }
+  return null;
+}
+
+function computeTimezoneDisplayContext(
+  form: SettingsFormState,
+  tzSelectOptions: ReturnType<typeof getTimezoneSelectOptions>,
+  lastUpdated: string,
+  tzValueSet: Set<string>,
+): TimezoneDisplayContext {
+  const showCustomTz =
+    form.displayTimezone.trim() !== "" &&
+    !tzValueSet.has(form.displayTimezone.trim());
+  const browserTz = detectBrowserTimezone();
+  const effectiveDisplayTimezone = form.displayTimezone.trim() || browserTz;
+  const lastUpdatedFormatted = lastUpdated
+    ? formatInAppTimezone(lastUpdated, effectiveDisplayTimezone, {
+        timeZoneName: "longOffset",
+      })
+    : "";
+  return {
+    browserTz,
+    effectiveDisplayTimezone,
+    lastUpdatedFormatted,
+    showCustomTz,
+  };
+}
+
+function useAutoDismissSettingsSuccess(
+  status: SettingsStatus,
+  setStatus: (status: SettingsStatus) => void,
+) {
   useEffect(() => {
     if (status?.kind !== "success") return;
     const id = window.setTimeout(() => {
       setStatus(null);
     }, SETTINGS_SUCCESS_DISMISS_MS);
     return () => window.clearTimeout(id);
-  }, [status]);
+  }, [status, setStatus]);
+}
 
-  /**
-   * Client navigations to `/settings#<section>` do not scroll the way
-   * a full page load would, and the `<section>` target is not in the
-   * DOM until settings finish loading — scroll after the form mounts.
-   * Supports any section id registered in SETTINGS_NAV_ITEMS, not
-   * just the legacy `#cursor-agent` deep link.
-   */
+function useSettingsSectionHashScroll(
+  locationHash: string,
+  isLoading: boolean,
+  form: SettingsFormState | null,
+  settings: AppSettings | undefined,
+) {
   useEffect(() => {
     if (isLoading || !form || !settings) return;
-    const hash = location.hash.replace(/^#/, "");
+    const hash = locationHash.replace(/^#/, "");
     if (!hash) return;
     if (!SETTINGS_HASH_TARGETS.has(hash)) return;
     const el = document.getElementById(hash);
@@ -111,19 +241,25 @@ export function SettingsPage() {
     requestAnimationFrame(() => {
       requestAnimationFrame(run);
     });
-  }, [isLoading, form, settings, location.hash]);
+  }, [isLoading, form, settings, locationHash]);
+}
 
+function useSettingsFormHydration(
+  settings: AppSettings | undefined,
+  form: SettingsFormState | null,
+  setForm: (value: SettingsFormState | null) => void,
+) {
   useEffect(() => {
     if (settings && form === null) {
       setForm(toFormState(settings));
     }
-  }, [settings, form]);
+  }, [settings, form, setForm]);
+}
 
-  const isDirty = useMemo(() => {
-    if (!settings || !form) return false;
-    return Object.keys(diffPatch(settings, form)).length > 0;
-  }, [settings, form]);
-
+function useSettingsCursorModelQueries(
+  settings: AppSettings | undefined,
+  form: SettingsFormState | null,
+) {
   const cursorModelsQuery = useQuery({
     queryKey: [
       "settings",
@@ -143,26 +279,16 @@ export function SettingsPage() {
     enabled: Boolean(settings && form),
   });
 
-  const modelIdsFromList = useMemo(() => {
-    const m = cursorModelsQuery.data;
-    if (!m?.ok || !m.models) return new Set<string>();
-    return new Set(m.models.map((x) => x.id));
-  }, [cursorModelsQuery.data]);
+  const modelIdsFromList = useMemo(
+    () => modelIdsFromListResponse(cursorModelsQuery.data),
+    [cursorModelsQuery.data],
+  );
 
-  // Verify-runner model list — same wire shape as the execute runner
-  // model query, just keyed on the effective verify runner. When
-  // `verify_runner_name` is empty the verify path reuses the execute
-  // runner (see worker.go::loadVerificationSnapshot), so the model
-  // list collapses onto cursorModelsQuery's response. We could share
-  // the cache by keying on the same tuple, but a separate query
-  // makes "verify uses runner X" explicit in network traces and
-  // keeps the section autonomous if a future verify runner ever
-  // ships its own binary input.
   const verifyEffectiveRunner =
-    (form?.verifyRunnerName ?? "").trim() ||
-    form?.runner ||
-    settings?.runner ||
-    "cursor";
+    form && settings
+      ? resolveVerifyEffectiveRunner(form, settings)
+      : "cursor";
+
   const verifyModelsQuery = useQuery({
     queryKey: [
       "settings",
@@ -181,36 +307,29 @@ export function SettingsPage() {
     enabled: Boolean(settings && form),
   });
 
-  const verifyModelIdsFromList = useMemo(() => {
-    const m = verifyModelsQuery.data;
-    if (!m?.ok || !m.models) return new Set<string>();
-    return new Set(m.models.map((x) => x.id));
-  }, [verifyModelsQuery.data]);
-
-  const tzSelectOptions = useMemo(() => getTimezoneSelectOptions(), []);
-  const tzValueSet = useMemo(
-    () => new Set(tzSelectOptions.map((o) => o.value)),
-    [tzSelectOptions],
+  const verifyModelIdsFromList = useMemo(
+    () => modelIdsFromListResponse(verifyModelsQuery.data),
+    [verifyModelsQuery.data],
   );
 
-  const maxParsed = form ? Number.parseInt(form.maxRunDurationSeconds.trim() || "0", 10) : 0;
-  const maxInvalid = form ? !Number.isFinite(maxParsed) || maxParsed < 0 : false;
-  const streamIdleParsed = form
-    ? Number.parseInt(form.streamIdleStuckSeconds.trim() || "0", 10)
-    : 0;
-  const streamIdleInvalid = form
-    ? !Number.isFinite(streamIdleParsed) || streamIdleParsed < 0
-    : false;
-  const pickupParsed = form
-    ? Number.parseInt(form.agentPickupDelaySeconds.trim() || "0", 10)
-    : 0;
-  const pickupInvalid = form
-    ? !Number.isFinite(pickupParsed) ||
-      pickupParsed < 0 ||
-      pickupParsed > 604800
-    : false;
+  return {
+    cursorModelsQuery,
+    modelIdsFromList,
+    verifyModelsQuery,
+    verifyModelIdsFromList,
+  };
+}
 
-  function handleField<K extends keyof SettingsFormState>(
+function settingsErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function createSettingsFieldHandler(
+  setForm: Dispatch<SetStateAction<SettingsFormState | null>>,
+  resolvedDefaultBin: string | null,
+  setResolvedDefaultBin: Dispatch<SetStateAction<string | null>>,
+) {
+  return function handleField<K extends keyof SettingsFormState>(
     key: K,
     value: SettingsFormState[K],
   ) {
@@ -221,162 +340,146 @@ export function SettingsPage() {
     if (key === "cursorBin" && resolvedDefaultBin !== null) {
       setResolvedDefaultBin(null);
     }
-  }
+  };
+}
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (
-      !settings ||
-      !form ||
-      maxInvalid ||
-      streamIdleInvalid ||
-      pickupInvalid
-    ) {
+async function submitSettingsForm(params: {
+  settings: AppSettings;
+  form: SettingsFormState;
+  numericValidation: SettingsNumericValidation;
+  patch: UseMutationResult<AppSettings, Error, AppSettingsPatch, unknown>;
+  setForm: Dispatch<SetStateAction<SettingsFormState | null>>;
+  setStatus: Dispatch<SetStateAction<SettingsStatus>>;
+}): Promise<void> {
+  const { settings, form, numericValidation, patch, setForm, setStatus } =
+    params;
+  const { maxInvalid, streamIdleInvalid, pickupInvalid } = numericValidation;
+  if (maxInvalid || streamIdleInvalid || pickupInvalid) return;
+  const body = diffPatch(settings, form);
+  if (Object.keys(body).length === 0) return;
+  // Snapshot the form *as submitted* so we can detect post-submit
+  // typing on any field when the PATCH eventually resolves. The
+  // race we're closing here: the user clicks Save with one field
+  // edited (e.g. `repo_root`), then while the PATCH is in flight
+  // they keep typing in *other* fields (e.g. `cursor_bin`).
+  // Without this snapshot the post-resolution
+  // `setForm(toFormState(next))` would clobber the in-flight
+  // typing back to whatever the server returned (which for the
+  // un-submitted fields is the *prior* server value, not the
+  // user's typing) — silent data loss with no feedback.
+  //
+  // Same race-hardening shape used by `useTaskPatchFlow` /
+  // `useTaskDeleteFlow` — capture the
+  // freshest known good snapshot at call time, then per-field
+  // compare at resolve time and only apply server truth for
+  // fields the user hasn't subsequently edited. Fields the user
+  // re-edited keep the user's typing; `isDirty` will recompute
+  // against the new server-known baseline so the Save button
+  // re-enables for the new edits.
+  const formAtSubmit = form;
+  setStatus(null);
+  try {
+    const next = await patch.mutateAsync(body);
+    setForm((cur) => mergeFormAfterSettingsPatch(cur, formAtSubmit, next));
+    setStatus({ kind: "success", message: "Settings saved." });
+  } catch (err) {
+    setStatus({ kind: "error", message: settingsErrorMessage(err) });
+  }
+}
+
+async function probeCursorBinary(params: {
+  form: SettingsFormState;
+  probe: UseMutationResult<
+    ProbeCursorResult,
+    Error,
+    { runner?: string; binary_path?: string },
+    unknown
+  >;
+  setStatus: Dispatch<SetStateAction<SettingsStatus>>;
+  setResolvedDefaultBin: Dispatch<SetStateAction<string | null>>;
+}): Promise<void> {
+  const { form, probe, setStatus, setResolvedDefaultBin } = params;
+  setStatus(null);
+  try {
+    const result = await probe.mutateAsync({
+      runner: form.runner.trim() || undefined,
+      binary_path: form.cursorBin.trim() || undefined,
+    });
+    if (result.ok) {
+      // Compose the message from whichever fields the server populated.
+      // The resolved binary path is the most user-actionable bit when
+      // the operator left the field blank — without it they have no
+      // idea what "auto-detect on PATH" actually picked.
+      setStatus({
+        kind: "success",
+        message: buildCursorProbeSuccessMessage(result),
+      });
+      setResolvedDefaultBin(resolveProbeDefaultBin(form, result));
       return;
     }
-    const body = diffPatch(settings, form);
-    if (Object.keys(body).length === 0) return;
-    // Snapshot the form *as submitted* so we can detect post-submit
-    // typing on any field when the PATCH eventually resolves. The
-    // race we're closing here: the user clicks Save with one field
-    // edited (e.g. `repo_root`), then while the PATCH is in flight
-    // they keep typing in *other* fields (e.g. `cursor_bin`).
-    // Without this snapshot the post-resolution
-    // `setForm(toFormState(next))` would clobber the in-flight
-    // typing back to whatever the server returned (which for the
-    // un-submitted fields is the *prior* server value, not the
-    // user's typing) — silent data loss with no feedback.
-    //
-    // Same race-hardening shape used by `useTaskPatchFlow` /
-    // `useTaskDeleteFlow` — capture the
-    // freshest known good snapshot at call time, then per-field
-    // compare at resolve time and only apply server truth for
-    // fields the user hasn't subsequently edited. Fields the user
-    // re-edited keep the user's typing; `isDirty` will recompute
-    // against the new server-known baseline so the Save button
-    // re-enables for the new edits.
-    const formAtSubmit = form;
-    setStatus(null);
-    try {
-      const next = await patch.mutateAsync(body);
-      setForm((cur) => {
-        if (cur === null) return toFormState(next);
-        const merged: SettingsFormState = { ...cur };
-        if (cur.runner === formAtSubmit.runner) {
-          merged.runner = next.runner;
-        }
-        if (cur.repoRoot === formAtSubmit.repoRoot) {
-          merged.repoRoot = next.repo_root;
-        }
-        if (cur.cursorBin === formAtSubmit.cursorBin) {
-          merged.cursorBin = next.cursor_bin;
-        }
-        if (cur.cursorModel === formAtSubmit.cursorModel) {
-          merged.cursorModel = next.cursor_model;
-        }
-        if (cur.maxRunDurationSeconds === formAtSubmit.maxRunDurationSeconds) {
-          merged.maxRunDurationSeconds = String(next.max_run_duration_seconds);
-        }
-        if (cur.streamIdleStuckSeconds === formAtSubmit.streamIdleStuckSeconds) {
-          merged.streamIdleStuckSeconds = String(next.stream_idle_stuck_seconds);
-        }
-        if (cur.agentPickupDelaySeconds === formAtSubmit.agentPickupDelaySeconds) {
-          merged.agentPickupDelaySeconds = String(
-            next.agent_pickup_delay_seconds,
-          );
-        }
-        if (cur.displayTimezone === formAtSubmit.displayTimezone) {
-          merged.displayTimezone = next.display_timezone;
-        }
-        return merged;
-      });
-      setStatus({ kind: "success", message: "Settings saved." });
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
+    // Probe returned `{ ok: false, error }` — semantically a
+    // failure even though the HTTP request succeeded. Route through
+    // the error channel so screen readers hear the assertive
+    // announcement and the user sees the danger styling instead of
+    // the previous "neutral status" treatment that made a probe
+    // failure look like a successful informational message.
+    setStatus({
+      kind: "error",
+      message: `Cursor binary check failed: ${result.error ?? "unknown error"}`,
+    });
+  } catch (err) {
+    setStatus({ kind: "error", message: settingsErrorMessage(err) });
   }
+}
 
-  async function handleProbe() {
-    if (!form) return;
-    setStatus(null);
-    try {
-      const result = await probe.mutateAsync({
-        runner: form.runner.trim() || undefined,
-        binary_path: form.cursorBin.trim() || undefined,
-      });
-      if (result.ok) {
-        // Compose the message from whichever fields the server populated.
-        // The resolved binary path is the most user-actionable bit when
-        // the operator left the field blank — without it they have no
-        // idea what "auto-detect on PATH" actually picked.
-        const bits: string[] = ["Cursor binary OK"];
-        if (result.binary_path) bits.push(`at ${result.binary_path}`);
-        if (result.version) bits.push(`(version ${result.version})`);
-        setStatus({ kind: "success", message: `${bits.join(" ")}.` });
-        if (result.binary_path && form.cursorBin.trim() === "") {
-          setResolvedDefaultBin(result.binary_path);
-        } else {
-          setResolvedDefaultBin(null);
-        }
-      } else {
-        // Probe returned `{ ok: false, error }` — semantically a
-        // failure even though the HTTP request succeeded. Route through
-        // the error channel so screen readers hear the assertive
-        // announcement and the user sees the danger styling instead of
-        // the previous "neutral status" treatment that made a probe
-        // failure look like a successful informational message.
-        setStatus({
-          kind: "error",
-          message: `Cursor binary check failed: ${result.error ?? "unknown error"}`,
-        });
-      }
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
+type SettingsPageLoadedViewProps = {
+  form: SettingsFormState;
+  status: SettingsStatus;
+  resolvedDefaultBin: string | null;
+  isDirty: boolean;
+  numericValidation: SettingsNumericValidation;
+  tzSelectOptions: ReturnType<typeof getTimezoneSelectOptions>;
+  browserTz: string;
+  showCustomTz: boolean;
+  lastUpdated: string;
+  lastUpdatedFormatted: string;
+  cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
+  modelIdsFromList: Set<string>;
+  verifyModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
+  verifyModelIdsFromList: Set<string>;
+  patchPending: boolean;
+  probePending: boolean;
+  onField: ReturnType<typeof createSettingsFieldHandler>;
+  onSubmit: (e: FormEvent) => void;
+  onProbe: () => void;
+  onDiscard: () => void;
+};
 
-  if (isLoading || !form || !settings) {
-    return (
-      <SettingsLoadingState
-        error={error}
-        onRetry={() => {
-          void refetch();
-        }}
-      />
-    );
-  }
-
+function SettingsPageLoadedView({
+  form,
+  status,
+  resolvedDefaultBin,
+  isDirty,
+  numericValidation,
+  tzSelectOptions,
+  browserTz,
+  showCustomTz,
+  lastUpdated,
+  lastUpdatedFormatted,
+  cursorModelsQuery,
+  modelIdsFromList,
+  verifyModelsQuery,
+  verifyModelIdsFromList,
+  patchPending,
+  probePending,
+  onField,
+  onSubmit,
+  onProbe,
+  onDiscard,
+}: SettingsPageLoadedViewProps) {
+  const { maxInvalid, streamIdleInvalid, pickupInvalid } = numericValidation;
   const repoRootEmpty = form.repoRoot.trim() === "";
-  const lastUpdated = settings.updated_at ?? "";
-  // Tolerate operator-pasted custom zones that aren't in the
-  // Intl.supportedValuesOf list — show them as a synthetic option so
-  // the <select> can display the saved value rather than silently
-  // falling back to the first list item.
-  const showCustomTz =
-    form.displayTimezone.trim() !== "" &&
-    !tzValueSet.has(form.displayTimezone.trim());
-  // Browser-detected zone surfaced in the "Auto-detect" option label so
-  // operators can see WHICH zone auto-detect will resolve to before
-  // committing. Recomputed per-render — detectBrowserTimezone is a
-  // single Intl.DateTimeFormat() call, negligible cost.
-  const browserTz = detectBrowserTimezone();
-  // Same effective zone as the timezone <select>: explicit IANA, or
-  // browser when Auto-detect (empty). Trim so whitespace-only never
-  // bypasses auto-detect or slips an invalid zone to Intl.
-  const effectiveDisplayTimezone = form.displayTimezone.trim() || browserTz;
-  // longOffset aligns the suffix with Meet-style menu labels (GMT±hh:mm)
-  // instead of a separate abbreviation (e.g. PDT) that looks mismatched.
-  const lastUpdatedFormatted = lastUpdated
-    ? formatInAppTimezone(lastUpdated, effectiveDisplayTimezone, {
-        timeZoneName: "longOffset",
-      })
-    : "";
+
   return (
     <section className="settings-page">
       <SettingsHeader
@@ -391,20 +494,15 @@ export function SettingsPage() {
           <SettingsNav items={SETTINGS_NAV_ITEMS} />
         </aside>
 
-        <form
-          className="settings-form"
-          onSubmit={(e) => void handleSubmit(e)}
-        >
-          <WorkspaceSettingsSection form={form} onField={handleField} />
+        <form className="settings-form" onSubmit={onSubmit}>
+          <WorkspaceSettingsSection form={form} onField={onField} />
 
           <RunnerSettingsSection
             form={form}
             resolvedDefaultBin={resolvedDefaultBin}
-            probePending={probe.isPending}
-            onField={handleField}
-            onProbe={() => {
-              void handleProbe();
-            }}
+            probePending={probePending}
+            onField={onField}
+            onProbe={onProbe}
           />
 
           <PhasesSettingsSection
@@ -416,7 +514,7 @@ export function SettingsPage() {
             modelIdsFromList={modelIdsFromList}
             verifyModelsQuery={verifyModelsQuery}
             verifyModelIdsFromList={verifyModelIdsFromList}
-            onField={handleField}
+            onField={onField}
           />
 
           <DisplaySettingsSection
@@ -424,7 +522,7 @@ export function SettingsPage() {
             browserTz={browserTz}
             options={tzSelectOptions}
             showCustomTz={showCustomTz}
-            onField={handleField}
+            onField={onField}
           />
 
           <UiTestModeSettingsSection />
@@ -436,11 +534,160 @@ export function SettingsPage() {
             maxInvalid={maxInvalid}
             streamIdleInvalid={streamIdleInvalid}
             pickupInvalid={pickupInvalid}
-            patchPending={patch.isPending}
-            onDiscard={() => setForm(toFormState(settings))}
+            patchPending={patchPending}
+            onDiscard={onDiscard}
           />
         </form>
       </div>
     </section>
   );
+}
+
+function useSettingsPageController() {
+  const location = useLocation();
+  const { settings, isLoading, error, patch, probe, refetch } =
+    useAppSettings();
+  const [form, setForm] = useState<SettingsFormState | null>(null);
+  const [status, setStatus] = useState<SettingsStatus>(null);
+  /**
+   * The PATH-resolved cursor binary the server reports from the most
+   * recent successful probe, kept around so the help text can show the
+   * concrete default ("auto-detected at /usr/local/bin/cursor-agent")
+   * after the operator clicks Test with the field blank. Cleared on
+   * any field edit because a fresh edit may invalidate the previously
+   * resolved path (e.g. they're typing a custom path that hasn't been
+   * probed yet).
+   */
+  const [resolvedDefaultBin, setResolvedDefaultBin] = useState<string | null>(
+    null,
+  );
+
+  useAutoDismissSettingsSuccess(status, setStatus);
+  useSettingsSectionHashScroll(
+    location.hash,
+    isLoading,
+    form,
+    settings,
+  );
+  useSettingsFormHydration(settings, form, setForm);
+
+  const isDirty = useMemo(() => {
+    if (!settings || !form) return false;
+    return Object.keys(diffPatch(settings, form)).length > 0;
+  }, [settings, form]);
+
+  const {
+    cursorModelsQuery,
+    modelIdsFromList,
+    verifyModelsQuery,
+    verifyModelIdsFromList,
+  } = useSettingsCursorModelQueries(settings, form);
+
+  const tzSelectOptions = useMemo(() => getTimezoneSelectOptions(), []);
+  const tzValueSet = useMemo(
+    () => new Set(tzSelectOptions.map((o) => o.value)),
+    [tzSelectOptions],
+  );
+
+  const numericValidation = parseSettingsNumericValidation(form);
+  const handleField = createSettingsFieldHandler(
+    setForm,
+    resolvedDefaultBin,
+    setResolvedDefaultBin,
+  );
+
+  const loadedViewProps = useMemo((): SettingsPageLoadedViewProps | null => {
+    if (isLoading || !form || !settings) return null;
+    const lastUpdated = settings.updated_at ?? "";
+    const {
+      browserTz,
+      lastUpdatedFormatted,
+      showCustomTz,
+    } = computeTimezoneDisplayContext(
+      form,
+      tzSelectOptions,
+      lastUpdated,
+      tzValueSet,
+    );
+    return {
+      form,
+      status,
+      resolvedDefaultBin,
+      isDirty,
+      numericValidation,
+      tzSelectOptions,
+      browserTz,
+      showCustomTz,
+      lastUpdated,
+      lastUpdatedFormatted,
+      cursorModelsQuery,
+      modelIdsFromList,
+      verifyModelsQuery,
+      verifyModelIdsFromList,
+      patchPending: patch.isPending,
+      probePending: probe.isPending,
+      onField: handleField,
+      onSubmit: (e) => {
+        e.preventDefault();
+        void submitSettingsForm({
+          settings,
+          form,
+          numericValidation,
+          patch,
+          setForm,
+          setStatus,
+        });
+      },
+      onProbe: () => {
+        void probeCursorBinary({
+          form,
+          probe,
+          setStatus,
+          setResolvedDefaultBin,
+        });
+      },
+      onDiscard: () => setForm(toFormState(settings)),
+    };
+  }, [
+    isLoading,
+    form,
+    settings,
+    status,
+    resolvedDefaultBin,
+    isDirty,
+    numericValidation,
+    tzSelectOptions,
+    tzValueSet,
+    cursorModelsQuery,
+    modelIdsFromList,
+    verifyModelsQuery,
+    verifyModelIdsFromList,
+    patch,
+    probe,
+    handleField,
+  ]);
+
+  return {
+    error,
+    refetch,
+    loadedViewProps,
+  };
+}
+
+export function SettingsPage() {
+  useDocumentTitle("Settings");
+  const { error, refetch, loadedViewProps } = useSettingsPageController();
+
+  if (!loadedViewProps) {
+    return (
+      <SettingsLoadingState
+        error={error}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
+    );
+  }
+
+  return <SettingsPageLoadedView {...loadedViewProps} />;
 }
