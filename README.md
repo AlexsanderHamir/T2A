@@ -43,14 +43,16 @@ API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops b
 
 Agent and workspace settings are in the web UI at `/settings` — see [docs/configuration.md](docs/configuration.md).
 
-## Before you run tasks
+## Before You Run Tasks
 
-- Every task runs an **execute** agent and a **verify** agent.
-- The worker runs **one task at a time** — you can queue many, but they run sequentially.
-- Do not edit, commit, or checkout files in the workspace repo during **verify**. Git changes there end the cycle as `verify_tampered` (no retry).
-- Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout — [why?](docs/execute-and-verify.md#dedicated-worktree-recommended).
+The current implementation has a few important limitations:
 
-Read [docs/execute-and-verify.md](docs/execute-and-verify.md) for more details.
+* Every task is executed by one AI agent and independently verified by another.
+* Tasks run sequentially. You can queue multiple tasks, but only one runs at a time.
+* Use a dedicated Git worktree as the workspace so you can continue working in your main checkout.
+* Do not edit the workspace while verification is running. Any Git changes will invalidate the verification attempt.
+
+See [docs/execute-and-verify.md](docs/execute-and-verify.md) for details.
 
 ## Docs
 
