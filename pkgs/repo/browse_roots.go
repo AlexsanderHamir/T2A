@@ -68,6 +68,7 @@ func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error
 	return roots, env, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func parseBrowseRootPaths(raw string) ([]BrowseRoot, error) {
 	parts := strings.Split(raw, ",")
 	out := make([]BrowseRoot, 0, len(parts))
@@ -94,6 +95,7 @@ func parseBrowseRootPaths(raw string) ([]BrowseRoot, error) {
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func resolveInstallBrowseRoot(startDir string, env BrowseEnvironment) (BrowseRoot, error) {
 	if env == BrowseEnvDocker {
 		root := BrowseRoot{
@@ -117,6 +119,7 @@ func resolveInstallBrowseRoot(startDir string, env BrowseEnvironment) (BrowseRoo
 	return root, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func resolveHomeBrowseRoot(env BrowseEnvironment) (BrowseRoot, error) {
 	path := ""
 	if env == BrowseEnvDocker {
@@ -137,6 +140,7 @@ func resolveHomeBrowseRoot(env BrowseEnvironment) (BrowseRoot, error) {
 	return root, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func markBrowseRootAvailable(root *BrowseRoot) {
 	fi, err := os.Stat(root.Path)
 	if err != nil {
@@ -152,6 +156,7 @@ func markBrowseRootAvailable(root *BrowseRoot) {
 	root.Available = true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func browseRootLabel(abs string) string {
 	base := filepath.Base(filepath.Clean(abs))
 	if base == "" || base == string(filepath.Separator) {

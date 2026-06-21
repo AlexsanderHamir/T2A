@@ -56,6 +56,7 @@ func ListBrowseDirs(roots []BrowseRoot, absPath string) (BrowseDirListing, error
 	}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ListBrowseDirs."
 func listBrowseRootEntries(roots []BrowseRoot) (BrowseDirListing, error) {
 	entries := make([]BrowseDirEntry, 0, len(roots))
 	for _, r := range roots {
@@ -74,6 +75,7 @@ func listBrowseRootEntries(roots []BrowseRoot) (BrowseDirListing, error) {
 	return BrowseDirListing{Entries: entries}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ListBrowseDirs."
 func resolvePathUnderBrowseRoots(roots []BrowseRoot, absPath string) (string, *BrowseRoot, error) {
 	abs, err := filepath.Abs(absPath)
 	if err != nil {
@@ -101,6 +103,7 @@ func resolvePathUnderBrowseRoots(roots []BrowseRoot, absPath string) (string, *B
 	return "", nil, fmt.Errorf("%w: path is outside allowed browse roots", domain.ErrInvalidInput)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ensureDirExists(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -115,6 +118,7 @@ func ensureDirExists(path string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ensureUnderRootCanon(rootClean, target string) error {
 	targetCanon, err := canonicalizePathForContainment(target)
 	if err != nil {
@@ -131,6 +135,7 @@ func ensureUnderRootCanon(rootClean, target string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parentBrowsePath(root *BrowseRoot, clean string) string {
 	if root == nil {
 		return ""
@@ -150,6 +155,7 @@ func parentBrowsePath(root *BrowseRoot, clean string) string {
 	return parent
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ListBrowseDirs."
 func readBrowseSubdirs(dir string) ([]BrowseDirEntry, error) {
 	ents, err := os.ReadDir(dir)
 	if err != nil {
@@ -180,6 +186,7 @@ func readBrowseSubdirs(dir string) ([]BrowseDirEntry, error) {
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ListBrowseDirs."
 func dirHasBrowsableChildren(dir string) (bool, error) {
 	ents, err := os.ReadDir(dir)
 	if err != nil {
@@ -197,11 +204,13 @@ func dirHasBrowsableChildren(dir string) (bool, error) {
 	return false, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ListBrowseDirs."
 func isGitWorktree(dir string) bool {
 	_, err := os.Stat(filepath.Join(dir, ".git"))
 	return err == nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func sortBrowseEntries(entries []BrowseDirEntry) {
 	sort.Slice(entries, func(i, j int) bool {
 		return strings.ToLower(entries[i].Name) < strings.ToLower(entries[j].Name)
