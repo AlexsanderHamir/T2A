@@ -35,16 +35,16 @@ To address the following problems and more:
 Requires [Docker](https://www.docker.com/products/docker-desktop/) only. Full guide: [docs/docker.md](docs/docker.md).
 
 ```bash
-./scripts/docker-build.sh
-docker compose up
+./scripts/docker-build.sh        # Unix — chmod +x once if needed
+.\scripts\docker-build.ps1      # Windows PowerShell
+docker compose up              # same on all platforms
 ```
 
 API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops the stack.
 
 ### Native (Go 1.25+ and Node 20+)
 
-2. Apply the schema: `go run ./cmd/dbcheck -migrate`
-3. Start the API and web UI:
+2. Start the API and web UI (taskapi migrates the schema on startup):
 
 ```bash
 ./scripts/dev.sh        # Unix — chmod +x once if needed
@@ -52,6 +52,8 @@ API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops
 ```
 
 API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops both.
+
+Optional: migrate or ping the DB without starting servers — `go run ./cmd/dbcheck -migrate`. See [Schema migrations in docs/configuration.md](docs/configuration.md).
 
 ### Before a PR
 

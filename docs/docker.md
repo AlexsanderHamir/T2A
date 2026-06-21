@@ -14,6 +14,7 @@ Run Hamix API and web UI without installing Go or Node locally. You still provid
 - [Quick start](#quick-start)
 - [How it works](#how-it-works)
 - [DATABASE_URL from a container](#database_url-from-a-container)
+- [Schema migrations](#schema-migrations)
 - [Running checks](#running-checks)
 - [Rebuild the image](#rebuild-the-image)
 - [Troubleshooting](#troubleshooting)
@@ -34,10 +35,14 @@ Native setup (Go + Node installed locally): [CONTRIBUTING.md](../CONTRIBUTING.md
 3. Build the toolchain image once:
 
 ```bash
-./scripts/docker-build.sh
+./scripts/docker-build.sh        # Unix
 ```
 
-4. Start API + web:
+```powershell
+.\scripts\docker-build.ps1       # Windows PowerShell
+```
+
+4. Start API + web (same on all platforms):
 
 ```bash
 docker compose up
@@ -46,7 +51,7 @@ docker compose up
 - API: `http://127.0.0.1:8080`
 - Web: `http://localhost:5173`
 
-The container runs `go run ./cmd/dbcheck -migrate` automatically before starting dev servers (idempotent).
+Schema migrate runs when **taskapi** starts (same as native dev). See [Schema migrations](#schema-migrations).
 
 Press Ctrl+C to stop. Run `docker compose down` to remove the container.
 
@@ -56,7 +61,7 @@ Press Ctrl+C to stop. Run `docker compose down` to remove the container.
 | --- | --- |
 | [docker/Dockerfile.dev](../docker/Dockerfile.dev) | Toolchain image: Go 1.25, Node 20, PowerShell (for web standards check) |
 | [compose.yml](../compose.yml) | Mounts the repo, loads `.env`, publishes ports 8080 and 5173 |
-| [docker/dev-entrypoint.sh](../docker/dev-entrypoint.sh) | Validates `DATABASE_URL`, migrates on dev start, runs your command |
+| [docker/dev-entrypoint.sh](../docker/dev-entrypoint.sh) | Validates `DATABASE_URL`, then runs your command |
 | [scripts/dev.sh](../scripts/dev.sh) | Same script as native dev; Compose passes `--host 0.0.0.0 --vite-host 0.0.0.0` so the browser on your machine can reach the servers |
 
 You do not run those flags yourself — Compose sets them.
@@ -78,6 +83,18 @@ DATABASE_URL=postgres://user:pass@host.docker.internal:5432/hamix?sslmode=disabl
 
 `compose.yml` adds `host.docker.internal:host-gateway` for Linux; Docker Desktop provides it on Windows and Mac.
 
+## Schema migrations
+
+Not in the Docker entrypoint. When `docker compose up` runs `./scripts/dev.sh`, **taskapi** applies `postgres.Migrate` on startup — the same path as `.\scripts\dev.ps1` / `./scripts/dev.sh` on the host.
+
+Optional manual migrate (schema only, no servers):
+
+```bash
+docker compose run --rm dev go run ./cmd/dbcheck -migrate
+```
+
+Full detail: [configuration.md — Schema migrations](./configuration.md).
+
 ## Running checks
 
 Same bar as [CONTRIBUTING.md § Before you open a PR](../CONTRIBUTING.md#before-you-open-a-pr), inside the container:
@@ -88,12 +105,6 @@ docker compose run --rm dev ./scripts/check.sh --install
 
 Go-only or web-only flags work the same as native (`--go-only`, `--web-only`).
 
-One-off migrate:
-
-```bash
-docker compose run --rm dev go run ./cmd/dbcheck -migrate
-```
-
 ## Rebuild the image
 
 After changes to [docker/Dockerfile.dev](../docker/Dockerfile.dev) or to refresh base packages:
@@ -101,6 +112,11 @@ After changes to [docker/Dockerfile.dev](../docker/Dockerfile.dev) or to refresh
 ```bash
 ./scripts/docker-build.sh
 ./scripts/docker-build.sh --no-cache
+```
+
+```powershell
+.\scripts\docker-build.ps1
+.\scripts\docker-build.ps1 -NoCache
 ```
 
 ## Troubleshooting
@@ -116,7 +132,6 @@ After changes to [docker/Dockerfile.dev](../docker/Dockerfile.dev) or to refresh
 ## Known limitations
 
 - **Agent execution** (Cursor CLI, workspace repo path) is configured in the SPA **Settings** page and runs against paths on your **host**. Docker covers API/web development and PR checks, not running Cursor inside the container unless you configure that separately.
-- **Windows shell:** run `./scripts/docker-build.sh` from Git Bash or WSL, or use `docker compose build dev` directly from PowerShell.
 
 ## See also
 

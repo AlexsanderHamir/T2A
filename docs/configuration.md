@@ -7,6 +7,13 @@ Two surfaces:
 
 The two surfaces do not overlap. Anything in `app_settings` is **not** driven by env vars (and historical env vars like `HAMIX_AGENT_WORKER_*` and `REPO_ROOT` are silently ignored).
 
+## In this article
+
+- [Environment variables](#environment-variables)
+- [Schema migrations](#schema-migrations)
+- [App settings](#app-settings-app_settings-row)
+- [Metrics](#metrics-get-metrics)
+
 ## Environment variables
 
 `taskapi` loads `.env` from the repo root via `internal/envload.Load`. `dbcheck` follows the same discovery rule for `DATABASE_URL`.
@@ -59,6 +66,18 @@ On `SIGINT`/`SIGTERM`: `http.Server.Shutdown` with a 10s deadline, then close th
 ### Request correlation
 
 Every request gets a `request_id` (from `X-Request-ID` or a generated UUID). The handler wraps `slog` so access logs, GORM SQL traces, and JSON error bodies (`request_id` field) all share that value. JSON error bodies may include `request_id`; the SPA's `readError` appends it to error messages.
+
+## Schema migrations
+
+Hamix uses GORM **AutoMigrate** plus idempotent upgrade steps in [`pkgs/tasks/postgres/postgres.go`](../pkgs/tasks/postgres/postgres.go) (`postgres.Migrate`). There are no numbered SQL migration files.
+
+| When | Where | What runs |
+| --- | --- | --- |
+| **Every dev session** (native or Docker) | `taskapi` startup — [`cmd/taskapi/run_db.go`](../cmd/taskapi/run_db.go) | `postgres.Migrate` after opening `DATABASE_URL`. Happens when `./scripts/dev.sh`, `.\scripts\dev.ps1`, or `docker compose up` starts taskapi. Idempotent: safe on every start. |
+| **Manual** (optional) | `go run ./cmd/dbcheck -migrate` | Same migrate + backfill as taskapi, without starting HTTP or Vite. Use to verify DB connectivity or update schema only. |
+| **Docker entrypoint** | [`docker/dev-entrypoint.sh`](../docker/dev-entrypoint.sh) | Validates `DATABASE_URL` only — **does not** migrate. |
+
+Dev scripts (`dev.sh` / `dev.ps1`) and the Docker entrypoint do **not** call `dbcheck`. Pull new code and run dev as usual; taskapi applies any new schema on startup.
 
 ## App settings (`app_settings` row)
 

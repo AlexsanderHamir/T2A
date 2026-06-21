@@ -38,7 +38,7 @@ Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below
 | [architecture.md](./architecture.md) | You need how `taskapi`, the store, the agent worker, and SSE fit together |
 | [data-model.md](./data-model.md) | You touch tasks, projects, cycles/phases, dependencies, gates, or checklists |
 | [api.md](./api.md) | You need the REST + SSE endpoint surface (handler code is authoritative for status codes) |
-| [configuration.md](./configuration.md) | You change env vars, app settings, or agent worker configuration |
+| [configuration.md](./configuration.md) | You change env vars, app settings, agent worker configuration, or schema migrate behavior (see **Schema migrations** in that doc) |
 | [naming.md](./naming.md) | You need product/operator identifier conventions (Hamix, `HAMIX_*`, metrics) |
 
 ## Implementation and deep dive

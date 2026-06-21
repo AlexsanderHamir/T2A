@@ -36,18 +36,18 @@ Set up the repo, verify your change, and find the right documentation for learni
 ### Docker
 
 ```bash
-./scripts/docker-build.sh
+./scripts/docker-build.sh        # Unix
+.\scripts\docker-build.ps1       # Windows PowerShell
 docker compose up
 ```
 
-Migrate runs automatically on first `docker compose up`. Details: [docs/docker.md](docs/docker.md).
+Taskapi migrates the schema on startup (same as native dev). See [Schema migrations in docs/configuration.md](docs/configuration.md) and [docs/docker.md](docs/docker.md).
 
 API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
 
 ### Native
 
-2. Apply schema: `go run ./cmd/dbcheck -migrate`
-3. Run API + web together:
+2. Run API + web (taskapi migrates on startup):
 
 ```bash
 ./scripts/dev.sh        # Unix — chmod +x once if needed
@@ -55,6 +55,8 @@ API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
 ```
 
 API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
+
+Optional manual migrate: `go run ./cmd/dbcheck -migrate` — [Schema migrations in configuration.md](docs/configuration.md).
 
 ## Before you open a PR
 
