@@ -11,28 +11,347 @@ import { TaskListDeleteGlyph, TaskListEditGlyph } from "../components/task-list/
 import { TaskDraftsListSkeleton } from "../components/skeletons";
 import { useTasksAppContext } from "../app/TasksAppProvider";
 import { taskQueryKeys } from "../task-query";
+import type { Task, TaskTemplateSummary } from "@/types";
+
+type InstantiateTemplatesBatchResult = {
+  tasks: Task[];
+  errors: { template_id: string; error: string }[];
+};
 
 function isTemplateRowActionExcluded(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return true;
   return Boolean(target.closest("button, input, label"));
 }
 
-export function TaskTemplatesPage() {
-  const app = useTasksAppContext();
-  useDocumentTitle("Task templates");
-  const navigate = useNavigate();
+function useDebouncedTrimmedValue(value: string, delayMs: number): string {
+  const [debounced, setDebounced] = useState(value.trim());
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value.trim()), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+function formatInstantiateTemplatesBatchError(result: InstantiateTemplatesBatchResult): string | null {
+  if (result.errors.length > 0 && result.tasks.length === 0) {
+    return result.errors.map((entry) => `${entry.template_id}: ${entry.error}`).join(" ");
+  }
+  if (result.errors.length > 0) {
+    return `Created ${result.tasks.length} task(s). Failed: ${result.errors
+      .map((entry) => entry.template_id)
+      .join(", ")}`;
+  }
+  return null;
+}
+
+type TemplateBatchBarProps = {
+  selectedCount: number;
+  instantiatePending: boolean;
+  onCreate: () => void;
+};
+
+function TemplateBatchBar({ selectedCount, instantiatePending, onCreate }: TemplateBatchBarProps) {
+  if (selectedCount === 0) return null;
+
+  return (
+    <div className="template-batch-bar" role="region" aria-label="Batch actions">
+      <span className="template-batch-bar__count">{selectedCount} selected</span>
+      <button
+        type="button"
+        className="task-create-submit"
+        disabled={instantiatePending}
+        onClick={onCreate}
+      >
+        {instantiatePending ? "Creating tasks…" : `Create tasks (${selectedCount})`}
+      </button>
+    </div>
+  );
+}
+
+type TemplateSearchToolbarProps = {
+  searchInput: string;
+  onSearchChange: (value: string) => void;
+  onNewTemplate: () => void;
+};
+
+function TemplateSearchToolbar({
+  searchInput,
+  onSearchChange,
+  onNewTemplate,
+}: TemplateSearchToolbarProps) {
+  return (
+    <div className="task-list-toolbar">
+      <header className="task-list-section-head">
+        <div className="task-list-section-head__text">
+          <h2 id="task-templates-heading" className="task-list-section-title">
+            Task templates
+          </h2>
+        </div>
+        <div className="task-list-section-actions">
+          <button type="button" className="secondary" onClick={onNewTemplate}>
+            New template
+          </button>
+        </div>
+      </header>
+
+      <div
+        className="task-templates-search field grow task-list-search-field"
+        role="search"
+        aria-label="Search templates"
+      >
+        <label htmlFor="task-templates-search" className="visually-hidden">
+          Search templates
+        </label>
+        <input
+          id="task-templates-search"
+          type="search"
+          placeholder="Search by title…"
+          autoComplete="off"
+          value={searchInput}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TemplateRowActions({
+  templateName,
+  isDeleting,
+  rowDisabled,
+  onEdit,
+  onDelete,
+}: {
+  templateName: string;
+  isDeleting: boolean;
+  rowDisabled: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="draft-row__actions">
+      <div className="task-list-row-actions">
+        <button
+          type="button"
+          className="task-list-icon-btn task-list-icon-btn--edit"
+          aria-label={`Edit template "${templateName}"`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          disabled={rowDisabled}
+        >
+          <TaskListEditGlyph />
+        </button>
+        <button
+          type="button"
+          className="task-list-icon-btn task-list-icon-btn--delete"
+          aria-label={
+            isDeleting
+              ? `Deleting template "${templateName}"`
+              : `Delete template "${templateName}"`
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          disabled={rowDisabled}
+          aria-busy={isDeleting || undefined}
+        >
+          <TaskListDeleteGlyph />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type TemplateRowProps = {
+  template: TaskTemplateSummary;
+  isSelected: boolean;
+  isDeleting: boolean;
+  isExiting: boolean;
+  rowDisabled: boolean;
+  renderNow: Date;
+  onToggleSelected: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+function TemplateRow({
+  template,
+  isSelected,
+  isDeleting,
+  isExiting,
+  rowDisabled,
+  renderNow,
+  onToggleSelected,
+  onEdit,
+  onDelete,
+}: TemplateRowProps) {
+  const lastEdited = template.updated_at || template.created_at;
+  const relative = formatRelativeTime(lastEdited, renderNow);
+
+  return (
+    <li
+      className={[
+        "draft-row",
+        "template-row",
+        isSelected ? "template-row--selected" : "",
+        rowDisabled ? "" : "draft-row--interactive",
+        isExiting ? "draft-row--exit" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onClick={(e) => {
+        if (rowDisabled || isTemplateRowActionExcluded(e.target)) return;
+        onToggleSelected(template.id);
+      }}
+      onKeyDown={(e) => {
+        if (rowDisabled || isTemplateRowActionExcluded(e.target)) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggleSelected(template.id);
+        }
+      }}
+      tabIndex={rowDisabled ? undefined : 0}
+      aria-label={`Template: ${template.name}`}
+      aria-selected={isSelected}
+    >
+      <div className="task-list-select-col">
+        <input
+          type="checkbox"
+          className="task-list-select-checkbox"
+          checked={isSelected}
+          aria-label={`Select ${template.name}`}
+          onChange={() => onToggleSelected(template.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <div className="draft-row__meta">
+        <span className="draft-row__name" title={template.name}>
+          {template.name}
+        </span>
+        {lastEdited && relative ? (
+          <time className="draft-row__time" dateTime={lastEdited} title={lastEdited}>
+            Updated {relative}
+          </time>
+        ) : null}
+      </div>
+      <TemplateRowActions
+        templateName={template.name}
+        isDeleting={isDeleting}
+        rowDisabled={rowDisabled}
+        onEdit={() => onEdit(template.id)}
+        onDelete={() => onDelete(template.id)}
+      />
+    </li>
+  );
+}
+
+type TemplateListBodyProps = {
+  templates: TaskTemplateSummary[];
+  debouncedQ: string;
+  selectedIds: string[];
+  allSelected: boolean;
+  deletingTemplateId: string | null;
+  exitingTemplateIds: string[];
+  loadTemplatePending: boolean;
+  deleteTemplatePending: boolean;
+  renderNow: Date;
+  onToggleSelectAll: () => void;
+  onToggleSelected: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+function TemplateListBody({
+  templates,
+  debouncedQ,
+  selectedIds,
+  allSelected,
+  deletingTemplateId,
+  exitingTemplateIds,
+  loadTemplatePending,
+  deleteTemplatePending,
+  renderNow,
+  onToggleSelectAll,
+  onToggleSelected,
+  onEdit,
+  onDelete,
+}: TemplateListBodyProps) {
+  if (templates.length === 0) {
+    return (
+      <EmptyState
+        title={debouncedQ ? "No matching templates" : "No templates yet"}
+        description={debouncedQ ? "Try a different search term." : undefined}
+        className="empty-state--task-list-fresh"
+      />
+    );
+  }
+
+  return (
+    <div className="template-list">
+      <div className="template-list-head" role="row">
+        <div className="task-list-select-col template-list-head__select">
+          <input
+            type="checkbox"
+            className="task-list-select-checkbox"
+            checked={allSelected}
+            onChange={onToggleSelectAll}
+            aria-label={allSelected ? "Deselect all templates" : "Select all templates"}
+            data-testid="template-list-select-all"
+          />
+        </div>
+        <span className="template-list-head__label" role="columnheader">Title</span>
+        <span
+          className="template-list-head__label template-list-head__label--actions"
+          role="columnheader"
+        >
+          Actions
+        </span>
+      </div>
+      <ul className="draft-row-list template-list-rows" aria-label="Task templates">
+        {templates.map((template) => {
+          const isSelected = selectedIds.includes(template.id);
+          const isDeleting = deletingTemplateId === template.id;
+          const isExiting = exitingTemplateIds.includes(template.id);
+          const rowDisabled =
+            loadTemplatePending ||
+            deleteTemplatePending ||
+            isExiting;
+
+          return (
+            <TemplateRow
+              key={template.id}
+              template={template}
+              isSelected={isSelected}
+              isDeleting={isDeleting}
+              isExiting={isExiting}
+              rowDisabled={rowDisabled}
+              renderNow={renderNow}
+              onToggleSelected={onToggleSelected}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+type TaskTemplatesApp = ReturnType<typeof useTasksAppContext>;
+
+function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<typeof useNavigate>) {
   const [searchInput, setSearchInput] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
+  const debouncedQ = useDebouncedTrimmedValue(searchInput, 300);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
   const [exitingTemplateIds, setExitingTemplateIds] = useState<string[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
   const deleteTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQ(searchInput.trim()), 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const templatesQuery = useQuery({
     queryKey: taskQueryKeys.templates(debouncedQ ? { q: debouncedQ } : undefined),
@@ -102,19 +421,12 @@ export function TaskTemplatesPage() {
     setBatchError(null);
     try {
       const result = await app.instantiateTemplatesByIDs(selectedIds);
-      if (result.errors.length > 0 && result.tasks.length === 0) {
-        setBatchError(
-          result.errors.map((entry) => `${entry.template_id}: ${entry.error}`).join(" "),
-        );
-        return;
-      }
-      if (result.errors.length > 0) {
-        setBatchError(
-          `Created ${result.tasks.length} task(s). Failed: ${result.errors
-            .map((entry) => entry.template_id)
-            .join(", ")}`,
-        );
-        setSelectedIds(result.errors.map((entry) => entry.template_id));
+      const batchMessage = formatInstantiateTemplatesBatchError(result);
+      if (batchMessage !== null) {
+        setBatchError(batchMessage);
+        if (result.errors.length > 0 && result.tasks.length > 0) {
+          setSelectedIds(result.errors.map((entry) => entry.template_id));
+        }
         return;
       }
       setSelectedIds([]);
@@ -124,226 +436,149 @@ export function TaskTemplatesPage() {
     }
   };
 
-  const batchBar =
-    selectedCount > 0 ? (
-      <div className="template-batch-bar" role="region" aria-label="Batch actions">
-        <span className="template-batch-bar__count">{selectedCount} selected</span>
-        <button
-          type="button"
-          className="task-create-submit"
-          disabled={app.instantiateTemplatesPending}
-          onClick={() => void runBatchCreate()}
-        >
-          {app.instantiateTemplatesPending
-            ? "Creating tasks…"
-            : `Create tasks (${selectedCount})`}
-        </button>
-      </div>
-    ) : null;
+  return {
+    searchInput,
+    setSearchInput,
+    debouncedQ,
+    selectedIds,
+    deletingTemplateId,
+    exitingTemplateIds,
+    batchError,
+    templatesQuery,
+    templates,
+    loading,
+    error,
+    showSkeleton,
+    renderNow,
+    allSelected,
+    selectedCount,
+    toggleSelected,
+    toggleSelectAll,
+    deleteTemplate,
+    runBatchCreate,
+  };
+}
+
+type TemplatePageContentProps = {
+  loading: boolean;
+  showSkeleton: boolean;
+  error: string | null;
+  onRetry: () => void;
+  templates: TaskTemplateSummary[];
+  debouncedQ: string;
+  selectedIds: string[];
+  allSelected: boolean;
+  deletingTemplateId: string | null;
+  exitingTemplateIds: string[];
+  loadTemplatePending: boolean;
+  deleteTemplatePending: boolean;
+  renderNow: Date;
+  onToggleSelectAll: () => void;
+  onToggleSelected: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+function TemplatePageContent({
+  loading,
+  showSkeleton,
+  error,
+  onRetry,
+  templates,
+  debouncedQ,
+  selectedIds,
+  allSelected,
+  deletingTemplateId,
+  exitingTemplateIds,
+  loadTemplatePending,
+  deleteTemplatePending,
+  renderNow,
+  onToggleSelectAll,
+  onToggleSelected,
+  onEdit,
+  onDelete,
+}: TemplatePageContentProps) {
+  return (
+    <div className="stack">
+      {loading && showSkeleton ? <TaskDraftsListSkeleton /> : null}
+      {!loading ? (
+        <div className="stack task-list-content task-list-content--enter">
+          {error ? (
+            <div className="err" role="alert">
+              <p>{error}</p>
+              <div className="task-detail-error-actions">
+                <button type="button" className="secondary" onClick={onRetry}>
+                  Try again
+                </button>
+              </div>
+            </div>
+          ) : (
+            <TemplateListBody
+              templates={templates}
+              debouncedQ={debouncedQ}
+              selectedIds={selectedIds}
+              allSelected={allSelected}
+              deletingTemplateId={deletingTemplateId}
+              exitingTemplateIds={exitingTemplateIds}
+              loadTemplatePending={loadTemplatePending}
+              deleteTemplatePending={deleteTemplatePending}
+              renderNow={renderNow}
+              onToggleSelectAll={onToggleSelectAll}
+              onToggleSelected={onToggleSelected}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function TaskTemplatesPage() {
+  const app = useTasksAppContext();
+  useDocumentTitle("Task templates");
+  const navigate = useNavigate();
+  const model = useTaskTemplatesPageModel(app, navigate);
 
   return (
     <section className="panel task-list-section-panel task-detail-content--enter">
-      <div className="task-list-toolbar">
-        <header className="task-list-section-head">
-          <div className="task-list-section-head__text">
-            <h2 id="task-templates-heading" className="task-list-section-title">
-              Task templates
-            </h2>
-          </div>
-          <div className="task-list-section-actions">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => app.openTemplateCreateModal()}
-            >
-              New template
-            </button>
-          </div>
-        </header>
+      <TemplateSearchToolbar
+        searchInput={model.searchInput}
+        onSearchChange={model.setSearchInput}
+        onNewTemplate={() => app.openTemplateCreateModal()}
+      />
 
-        <div
-          className="task-templates-search field grow task-list-search-field"
-          role="search"
-          aria-label="Search templates"
-        >
-          <label htmlFor="task-templates-search" className="visually-hidden">
-            Search templates
-          </label>
-          <input
-            id="task-templates-search"
-            type="search"
-            placeholder="Search by title…"
-            autoComplete="off"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {batchError ? (
+      {model.batchError ? (
         <div className="err" role="alert">
-          <p>{batchError}</p>
+          <p>{model.batchError}</p>
         </div>
       ) : null}
 
-      <div className="stack">
-        {loading && showSkeleton ? <TaskDraftsListSkeleton /> : null}
-        {!loading ? (
-          <div className="stack task-list-content task-list-content--enter">
-            {error ? (
-              <div className="err" role="alert">
-                <p>{error}</p>
-                <div className="task-detail-error-actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      void templatesQuery.refetch();
-                    }}
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            ) : templates.length === 0 ? (
-              <EmptyState
-                title={debouncedQ ? "No matching templates" : "No templates yet"}
-                description={
-                  debouncedQ ? "Try a different search term." : undefined
-                }
-                className="empty-state--task-list-fresh"
-              />
-            ) : (
-              <div className="template-list">
-                <div className="template-list-head" role="row">
-                  <div className="task-list-select-col template-list-head__select">
-                    <input
-                      type="checkbox"
-                      className="task-list-select-checkbox"
-                      checked={allSelected}
-                      onChange={toggleSelectAll}
-                      aria-label={
-                        allSelected
-                          ? "Deselect all templates"
-                          : "Select all templates"
-                      }
-                      data-testid="template-list-select-all"
-                    />
-                  </div>
-                  <span className="template-list-head__label" role="columnheader">
-                    Title
-                  </span>
-                  <span
-                    className="template-list-head__label template-list-head__label--actions"
-                    role="columnheader"
-                  >
-                    Actions
-                  </span>
-                </div>
-                <ul className="draft-row-list template-list-rows" aria-label="Task templates">
-                  {templates.map((template) => {
-                    const lastEdited = template.updated_at || template.created_at;
-                    const relative = formatRelativeTime(lastEdited, renderNow);
-                    const isSelected = selectedIds.includes(template.id);
-                    const isDeleting = deletingTemplateId === template.id;
-                    const rowDisabled =
-                      app.loadTemplatePending ||
-                      app.deleteTemplatePending ||
-                      exitingTemplateIds.includes(template.id);
-                    return (
-                      <li
-                        key={template.id}
-                        className={[
-                          "draft-row",
-                          "template-row",
-                          isSelected ? "template-row--selected" : "",
-                          rowDisabled ? "" : "draft-row--interactive",
-                          exitingTemplateIds.includes(template.id) ? "draft-row--exit" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        onClick={(e) => {
-                          if (rowDisabled || isTemplateRowActionExcluded(e.target)) return;
-                          toggleSelected(template.id);
-                        }}
-                        onKeyDown={(e) => {
-                          if (rowDisabled || isTemplateRowActionExcluded(e.target)) return;
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleSelected(template.id);
-                          }
-                        }}
-                        tabIndex={rowDisabled ? undefined : 0}
-                        aria-label={`Template: ${template.name}`}
-                        aria-selected={isSelected}
-                      >
-                        <div className="task-list-select-col">
-                          <input
-                            type="checkbox"
-                            className="task-list-select-checkbox"
-                            checked={isSelected}
-                            aria-label={`Select ${template.name}`}
-                            onChange={() => toggleSelected(template.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div className="draft-row__meta">
-                          <span className="draft-row__name" title={template.name}>
-                            {template.name}
-                          </span>
-                          {lastEdited && relative ? (
-                            <time
-                              className="draft-row__time"
-                              dateTime={lastEdited}
-                              title={lastEdited}
-                            >
-                              Updated {relative}
-                            </time>
-                          ) : null}
-                        </div>
-                        <div className="draft-row__actions">
-                          <div className="task-list-row-actions">
-                            <button
-                              type="button"
-                              className="task-list-icon-btn task-list-icon-btn--edit"
-                              aria-label={`Edit template "${template.name}"`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void app.editTemplateByID(template.id);
-                              }}
-                              disabled={rowDisabled}
-                            >
-                              <TaskListEditGlyph />
-                            </button>
-                            <button
-                              type="button"
-                              className="task-list-icon-btn task-list-icon-btn--delete"
-                              aria-label={
-                                isDeleting
-                                  ? `Deleting template "${template.name}"`
-                                  : `Delete template "${template.name}"`
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void deleteTemplate(template.id);
-                              }}
-                              disabled={rowDisabled}
-                              aria-busy={isDeleting || undefined}
-                            >
-                              <TaskListDeleteGlyph />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-      {batchBar}
+      <TemplatePageContent
+        loading={model.loading}
+        showSkeleton={model.showSkeleton}
+        error={model.error}
+        onRetry={() => void model.templatesQuery.refetch()}
+        templates={model.templates}
+        debouncedQ={model.debouncedQ}
+        selectedIds={model.selectedIds}
+        allSelected={model.allSelected}
+        deletingTemplateId={model.deletingTemplateId}
+        exitingTemplateIds={model.exitingTemplateIds}
+        loadTemplatePending={app.loadTemplatePending}
+        deleteTemplatePending={app.deleteTemplatePending}
+        renderNow={model.renderNow}
+        onToggleSelectAll={model.toggleSelectAll}
+        onToggleSelected={model.toggleSelected}
+        onEdit={(id) => void app.editTemplateByID(id)}
+        onDelete={(id) => void model.deleteTemplate(id)}
+      />
+      <TemplateBatchBar
+        selectedCount={model.selectedCount}
+        instantiatePending={app.instantiateTemplatesPending}
+        onCreate={() => void model.runBatchCreate()}
+      />
     </section>
   );
 }
