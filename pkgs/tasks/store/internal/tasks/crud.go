@@ -37,6 +37,9 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 	if err := hydrateDependsOn(ctx, db, &t); err != nil {
 		return nil, err
 	}
+	if err := hydrateCreatedAt(ctx, db, &t); err != nil {
+		return nil, err
+	}
 	return &t, nil
 }
 
@@ -60,6 +63,9 @@ func Create(ctx context.Context, db *gorm.DB, in CreateInput, by domain.Actor) (
 		return nil, fmt.Errorf("create task: %w", err)
 	}
 	if err := hydrateDependsOn(ctx, db, t); err != nil {
+		return nil, err
+	}
+	if err := hydrateCreatedAt(ctx, db, t); err != nil {
 		return nil, err
 	}
 	return t, nil
