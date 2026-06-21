@@ -25,7 +25,7 @@ func TestBuildEnv_deniesConfiguredKeysAndPrefixes(t *testing.T) {
 			return map[string]string{
 				"PATH":         "/bin",
 				"DATABASE_URL": "postgres://secret",
-				"HAMIX_SECRET":   "secret",
+				"HAMIX_SECRET": "secret",
 				"EXTRA":        "extra-from-parent",
 			}[k]
 		},
@@ -34,7 +34,7 @@ func TestBuildEnv_deniesConfiguredKeysAndPrefixes(t *testing.T) {
 	got := envSliceToMap(adapterkit.BuildEnv(map[string]string{
 		"PATH":         "/custom/bin",
 		"DATABASE_URL": "postgres://request-secret",
-		"HAMIX_EXTRA":    "secret",
+		"HAMIX_EXTRA":  "secret",
 		"SAFE":         "request-safe",
 	}, policy))
 

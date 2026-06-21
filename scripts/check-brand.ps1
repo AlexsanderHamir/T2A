@@ -45,10 +45,11 @@ Test-BrandPattern "retired product word" '\bT2A\b' $excludeBrandScripts
 Test-BrandPattern "retired env prefix" 'T2A_' @("--glob", "!docs/adr/**", "--glob", "!scripts/check-brand*")
 Test-BrandPattern "retired Go module path" 'github.com/AlexsanderHamir/T2A' @("--glob", "!scripts/check-brand*")
 Test-BrandPattern "retired worker scratch dir" '\bt2a-worker\b' @("--glob", "!docs/adr/**")
-Test-BrandPattern "retired Prometheus namespace" 'Namespace: "t2a"' @()
+Test-BrandPattern "retired Prometheus namespace" 'Namespace: "t2a"' @("--glob", "!scripts/check-brand*")
 Test-BrandPattern "retired npm package name" '\bt2a-web\b' @()
 Test-BrandPattern "retired localStorage prefix" '\bt2a:' @("--glob", "!docs/adr/**")
 Test-BrandPattern "retired localStorage key" 't2a_ui_test_mode' @("--glob", "!scripts/check-brand*")
 Test-BrandPattern "retired check temp prefix" 't2a-check' @("--glob", "!scripts/check-brand*")
 
 Write-Host "check-brand OK"
+exit 0

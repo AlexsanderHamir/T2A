@@ -856,7 +856,7 @@ func TestRun_envAllowlist(t *testing.T) {
 	req := defaultRequest()
 	req.Env = map[string]string{
 		"DATABASE_URL":     "from-request-must-also-be-stripped",
-		"HAMIX_BACKDOOR":     "must-be-stripped",
+		"HAMIX_BACKDOOR":   "must-be-stripped",
 		"REQUEST_PROVIDED": "request-wins-over-parent",
 	}
 

@@ -68,7 +68,8 @@ check_pattern 'retired Go module path' 'github.com/AlexsanderHamir/T2A' \
 check_pattern 'retired worker scratch dir' '\bt2a-worker\b' \
   --glob '!docs/adr/**'
 
-check_pattern 'retired Prometheus namespace' 'Namespace: "t2a"'
+check_pattern 'retired Prometheus namespace' 'Namespace: "t2a"' \
+  --glob '!scripts/check-brand*'
 
 check_pattern 'retired npm package name' '\bt2a-web\b'
 
