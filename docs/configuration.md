@@ -16,7 +16,9 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 
 ## Environment variables
 
-`taskapi` loads `.env` from the repo root via `internal/envload.Load`. `dbcheck` follows the same discovery rule for `DATABASE_URL`.
+`taskapi` loads `.env` from the repo root via `internal/envload.Load`. `dbcheck` follows the same discovery rule for `DATABASE_URL`. Docker Compose also loads the same file via `env_file` in [compose.yml](../compose.yml).
+
+> **Note** — [.env.example](../.env.example) lists only `DATABASE_URL` and optional logging knobs. The tables below are the full operator reference (defaults, flags, and dev-only tunables).
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
@@ -36,7 +38,15 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. See [domain/agent-queue.md](domain/agent-queue.md). |
 | `HAMIX_WORKER_REPORT_DIR` | No | `<os.TempDir()>/hamix-worker` | Worker-managed scratch root for the agent ↔ worker side-channel report files (`criteria-report.json`, `verify-report.json`). Lives outside `app_settings.repo_root` so customer working trees stay clean. The supervisor probes writability at startup; failure logs a `report_dir_not_writable` warn and the worker still starts (verify will fail loudly on the first run instead of silently). The per-cycle `<dir>/<cycle_id>/` subdirectory is GC'd at cycle terminate so disk use stays bounded. |
 | `HAMIX_SSE_TEST` | No | — | Dev: enable synthetic SSE ticker. See [api.md](./api.md). |
-| `HAMIX_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and `.env.example`. |
+| `HAMIX_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and [domain/sse-hub.md](domain/sse-hub.md). |
+
+### Local development (optional)
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DEV_TASKAPI_PORT` | `8080` | Non-default API port when using `scripts/dev.*`. Set `VITE_TASKAPI_ORIGIN` in `web/.env.local` to match. |
+| `VITE_TASKAPI_ORIGIN` | `http://127.0.0.1:8080` | Vite dev proxy target (`web/` only). See [web.md](./web.md). |
+| `VITE_UI_TEST_MODE` | — | When `true`/`1`, demo JSON for some GET routes (layouts without DB seed). Mutations still hit taskapi. Settings → UI test mode. |
 
 Reconcile tick interval is fixed in code (`pkgs/agents.ReconcileTickInterval`, 2 minutes), not an env var.
 

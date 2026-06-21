@@ -15,6 +15,7 @@ Run Hamix API and web UI without installing Go or Node locally. You still provid
 - [How it works](#how-it-works)
 - [DATABASE_URL from a container](#database_url-from-a-container)
 - [Schema migrations](#schema-migrations)
+- [Logs](#logs)
 - [Running checks](#running-checks)
 - [Rebuild the image](#rebuild-the-image)
 - [Troubleshooting](#troubleshooting)
@@ -94,6 +95,19 @@ docker compose run --rm dev go run ./cmd/dbcheck -migrate
 ```
 
 Full detail: [configuration.md — Schema migrations](./configuration.md).
+
+## Logs
+
+taskapi writes JSON lines to **`./logs/`** by default (`HAMIX_LOG_DIR` unset). In Docker that path is **`/app/logs`**, which is your repo’s `logs/` folder on the host (bind mount) — same as native dev. The directory is gitignored.
+
+| Setting | Docker note |
+| --- | --- |
+| Default (no log vars) | Files appear at `logs/taskapi-*.jsonl` in your checkout |
+| `HAMIX_LOG_LEVEL=debug` | More verbose JSON logs (same as native) |
+| `HAMIX_DISABLE_LOGGING=1` | No JSON files; only errors on stderr. taskapi runs in the background inside `dev.sh`, so this is harder to tail than `./logs/` |
+| `HAMIX_LOG_DIR=/some/other/path` | Only persists if that path is under the repo mount (`/app/...`) or you add a Compose volume. Paths outside the mount are lost when the container is removed |
+
+`docker compose logs` shows the foreground process (mostly Vite). For taskapi request traces, open the JSON files under **`logs/`** on the host.
 
 ## Running checks
 

@@ -8,7 +8,7 @@ function envUiTestMode(): boolean {
 /**
  * When true, `fetchWithTimeout` serves synthetic GET payloads for tasks and
  * projects so layouts can be reviewed without a populated database.
- * Enable via `VITE_UI_TEST_MODE=true` (see `.env.example`) or session toggle
+ * Enable via `VITE_UI_TEST_MODE=true` (see docs/configuration.md) or session toggle
  * on the Settings page (persists for the tab until cleared).
  */
 export function isUiTestMode(): boolean {
