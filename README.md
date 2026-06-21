@@ -4,15 +4,13 @@ Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
-#### Why T2A Exists
+## Why T2A Exists
 
 To address the following problems and more:
 
 1. Chat-based interfaces introduce too much variability into software engineering.
 2. Developers already coordinate multiple AI agents manually. T2A makes that workflow explicit and repeatable.
 3. Existing project management tools were designed for human teams, not AI-driven software engineering.
-
----
 
 ## Initial Features
 
@@ -25,8 +23,6 @@ To address the following problems and more:
 **Acceptance Criteria** —> Define what "done" means with checklists and optional verification commands.
 
 **Runner Adapters** —> Run T2A with different agentic systems.
-
----
 
 ## Get started
 
