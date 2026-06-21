@@ -28,61 +28,11 @@ To address the following problems and more:
 
 ## Get started
 
-1. Create a `.env` file and set `DATABASE_URL` (copy from `.env.example`).
+1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+2. Run `docker compose up`.
 
-### Docker (no Go or Node required)
+API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`
 
-Requires [Docker](https://www.docker.com/products/docker-desktop/) only. Full guide: [docs/docker.md](docs/docker.md).
-
-```bash
-./scripts/docker-build.sh        # Unix — chmod +x once if needed
-.\scripts\docker-build.ps1      # Windows PowerShell
-docker compose up              # same on all platforms
-```
-
-API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops the stack.
-
-### Native (Go 1.25+ and Node 20+)
-
-2. Start the API and web UI (taskapi migrates the schema on startup):
-
-```bash
-./scripts/dev.sh        # Unix — chmod +x once if needed
-.\scripts\dev.ps1       # Windows
-```
-
-API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops both.
-
-Optional: migrate or ping the DB without starting servers — `go run ./cmd/dbcheck -migrate`. See [Schema migrations in docs/configuration.md](docs/configuration.md).
-
-### Before a PR
-
-Optional (when changing code): Run the same checks as CI.
-
-```bash
-./scripts/check.sh
-.\scripts\check.ps1
-
-# Result
-
-Hamix check (Go)
-
-[1/5] gofmt                  ok 6s
-[2/5] go vet                 ok 8s
-[3/5] scheduling boundary    ok 0s
-[4/5] go test                ok 19s  (65 packages)
-[5/5] funclogmeasure         ok 2s
-check OK  5/5 passed  35s
-
-Hamix check (web)
-
-[1/4] web test               ok 22s
-[2/4] web lint               ok 5s  (4 warnings)
-[3/4] web standards          ok 1s
-[4/4] web build              ok 6s
-check OK  4/4 passed  33s
-
-```
 
 ## Before You Run Tasks
 

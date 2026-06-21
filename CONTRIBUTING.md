@@ -35,10 +35,17 @@ Set up the repo, verify your change, and find the right documentation for learni
 
 ### Docker
 
+Requires [Docker](https://www.docker.com/products/docker-desktop/) only. Full guide: [docs/docker.md](docs/docker.md).
+
 ```bash
-./scripts/docker-build.sh        # Unix
+docker compose up              # builds the image on first run
+```
+
+Optional — rebuild the toolchain image after [Dockerfile.dev](docker/Dockerfile.dev) changes:
+
+```bash
+./scripts/docker-build.sh        # Unix — chmod +x once if needed
 .\scripts\docker-build.ps1       # Windows PowerShell
-docker compose up
 ```
 
 Taskapi migrates the schema on startup (same as native dev). See [Schema migrations in docs/configuration.md](docs/configuration.md) and [docs/docker.md](docs/docker.md).
@@ -73,6 +80,20 @@ Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and P
 | Full logs | add `--verbose` / `-Verbose` |
 
 Quiet by default: one line per step on success; full tool output only on failure. Each script accepts `--help` / `-Help` for its step list and flags.
+
+Example (quiet success):
+
+```text
+Hamix check (Go)
+[1/5] gofmt                  ok 6s
+...
+check OK  5/5 passed  35s
+
+Hamix check (web)
+[1/4] web test               ok 22s
+...
+check OK  4/4 passed  33s
+```
 
 Also:
 
