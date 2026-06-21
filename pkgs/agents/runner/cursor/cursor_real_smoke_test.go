@@ -2,7 +2,7 @@
 
 // This file is the operator-run smoke for the real cursor-agent
 // binary. It is excluded from default builds by the cursor_real
-// build tag and additionally gated by the T2A_TEST_REAL_CURSOR=1
+// build tag and additionally gated by the HAMIX_TEST_REAL_CURSOR=1
 // env var so even with the tag set the test no-ops unless the
 // operator opted in. See docs/architecture.md "Smoke run" for the
 // operator runbook and pkgs/agents/agentsmoke/doc.go for the
@@ -10,8 +10,8 @@
 //
 // Run it locally as:
 //
-//	$env:T2A_TEST_REAL_CURSOR='1'
-//	$env:T2A_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
+//	$env:HAMIX_TEST_REAL_CURSOR='1'
+//	$env:HAMIX_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
 //	go test -tags=cursor_real -run TestCursorAdapter_RealBinary -race ./pkgs/agents/runner/cursor/... -count=1
 //
 // Prerequisites: cursor-agent on PATH (or the env override) and
@@ -28,23 +28,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/agentsmoke"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/agentsmoke"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // realCursorRunGateEnv is the on/off switch for the real-binary
 // smoke. Even with the cursor_real build tag set, the test skips
 // unless this env var is exactly "1" so a stray go test invocation
 // against the package never triggers a paid Cursor run.
-const realCursorRunGateEnv = "T2A_TEST_REAL_CURSOR"
+const realCursorRunGateEnv = "HAMIX_TEST_REAL_CURSOR"
 
 // realCursorBinaryEnv lets operators point the smoke at a specific
 // cursor-agent binary (for example the .cmd shim on Windows). When
 // unset the adapter's default ("cursor-agent" resolved against PATH)
 // is used.
-const realCursorBinaryEnv = "T2A_TEST_CURSOR_BIN"
+const realCursorBinaryEnv = "HAMIX_TEST_CURSOR_BIN"
 
 // realCursorRunBudget is the per-call wall-clock cap. Generous
 // because cold caches + first-tool-call latency can take well over a

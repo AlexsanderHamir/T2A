@@ -13,10 +13,10 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 | `WithRecovery` | Panic → 500 JSON. |
 | `WithHTTPMetrics` | Prometheus `taskapi_http_*` + in-flight gauge (health paths excluded from latency). |
 | `WithAccessLog` | `http.access` line, `request_id`, `log_seq` scope. |
-| `WithRateLimit` | Per-IP token bucket (`T2A_RATE_LIMIT_PER_MIN`). |
-| `WithAPIAuth` | Optional bearer token (`T2A_API_TOKEN`). |
+| `WithRateLimit` | Per-IP token bucket (`HAMIX_RATE_LIMIT_PER_MIN`). |
+| `WithAPIAuth` | Optional bearer token (`HAMIX_API_TOKEN`). |
 | `WithRequestTimeout` | Context deadline on API routes; SSE exempt. |
-| `WithMaxRequestBody` | Body size cap (`T2A_MAX_REQUEST_BODY_BYTES`). |
+| `WithMaxRequestBody` | Body size cap (`HAMIX_MAX_REQUEST_BODY_BYTES`). |
 | `WithIdempotency` | `Idempotency-Key` replay cache. |
 
 **`middleware.Stack(inner, callPath)`** in `pkgs/tasks/middleware/stack.go` composes the `With*` layers; production passes **`calltrace.Path`** so access logs include `call_path`.

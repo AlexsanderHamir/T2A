@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/version"
+	"github.com/AlexsanderHamir/Hamix/internal/version"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -199,7 +199,7 @@ func applyFamily(snap *Snapshot, mf *dto.MetricFamily) {
 		snap.Agent.QueueDepth = int64(gaugeSum(mf))
 	case "taskapi_agent_queue_capacity":
 		snap.Agent.QueueCapacity = int64(gaugeSum(mf))
-	case "t2a_agent_runs_total":
+	case "hamix_agent_runs_total":
 		applyAgentRuns(&snap.Agent, mf)
 	case "process_start_time_seconds":
 		applyUptime(snap, mf)

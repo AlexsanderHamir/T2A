@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func TestReconstructCheckpoint_lockedCriteriaAndVerifyAttempt(t *testing.T) {

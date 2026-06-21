@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

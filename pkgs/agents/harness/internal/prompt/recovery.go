@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 const recoveryLogCmd = "taskapi"
@@ -64,7 +64,7 @@ type RecoveryContext struct {
 const (
 	recoveryMaxTotalBytes       = 8 * 1024
 	recoveryMaxReasoningRunes   = 2048
-	recoverySectionContinuation = "## Continuation (T2A attempt %d)"
+	recoverySectionContinuation = "## Continuation (Hamix attempt %d)"
 )
 
 // ComposeRecoveryDelta builds a self-contained follow-up prompt for --resume.

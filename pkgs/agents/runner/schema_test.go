@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 )
 
 // TestErrCapabilityNotSupported_distinct ensures the new sentinel does

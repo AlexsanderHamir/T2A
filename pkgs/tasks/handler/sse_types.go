@@ -1,6 +1,6 @@
 package handler
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
 
 // Wire types re-exported from pkgs/tasks/realtime so existing handler
 // callers keep stable names. New non-handler publishers should import

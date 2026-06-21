@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -93,7 +93,7 @@ func (a *workerMetricsAdapter) RecordRun(runnerName, model, terminalStatus strin
 	a.durationByModel.WithLabelValues(runnerName, model).Observe(d.Seconds())
 }
 
-// RecordVerifyVerdict increments t2a_verify_verdict_total. Verdict
+// RecordVerifyVerdict increments hamix_verify_verdict_total. Verdict
 // label is a stable two-value enum ("passed"/"failed") so dashboards
 // can sum across without enumerating the label space.
 func (a *workerMetricsAdapter) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
@@ -141,12 +141,12 @@ func (a *workerMetricsAdapter) ObserveVerifyRetries(n int) {
 func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdapter, error) {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.registerAgentWorkerMetricsOn")
 	runs := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "agent_runs_total",
 		Help:      "Count of completed agent worker attempts, labelled by runner and terminal cycle status.",
 	}, []string{"runner", "terminal_status"})
 	duration := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "agent_run_duration_seconds",
 		Help:      "Wall-clock duration of one agent worker attempt (StartCycle → TerminateCycle), in seconds.",
 		Buckets:   agentRunDurationBuckets,
@@ -159,53 +159,53 @@ func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdap
 	// confined here; the runner-only pair stays untouched so existing
 	// dashboards/alerts keep working without any query rewrite.
 	runsByModel := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "agent_runs_by_model_total",
 		Help:      "Count of completed agent worker attempts, labelled by runner, effective model, and terminal cycle status.",
 	}, []string{"runner", "model", "terminal_status"})
 	durationByModel := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "agent_run_duration_by_model_seconds",
 		Help:      "Wall-clock duration of one agent worker attempt, labelled by runner and effective model.",
 		Buckets:   agentRunDurationBuckets,
 	}, []string{"runner", "model"})
 	if err := reg.Register(runs); err != nil {
-		return nil, fmt.Errorf("register t2a_agent_runs_total: %w", err)
+		return nil, fmt.Errorf("register hamix_agent_runs_total: %w", err)
 	}
 	if err := reg.Register(duration); err != nil {
-		return nil, fmt.Errorf("register t2a_agent_run_duration_seconds: %w", err)
+		return nil, fmt.Errorf("register hamix_agent_run_duration_seconds: %w", err)
 	}
 	if err := reg.Register(runsByModel); err != nil {
-		return nil, fmt.Errorf("register t2a_agent_runs_by_model_total: %w", err)
+		return nil, fmt.Errorf("register hamix_agent_runs_by_model_total: %w", err)
 	}
 	if err := reg.Register(durationByModel); err != nil {
-		return nil, fmt.Errorf("register t2a_agent_run_duration_by_model_seconds: %w", err)
+		return nil, fmt.Errorf("register hamix_agent_run_duration_by_model_seconds: %w", err)
 	}
 	verifyVerdicts := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "verify_verdict_total",
 		Help:      "Per-criterion verify verdicts. verifier_kind is one of the domain.VerifierKind values; verdict is passed|failed. Disagreements (verifier rejecting an agent self-claim) are the verifier_kind=\"agent_self\",verdict=\"failed\" slice.",
 	}, []string{"verifier_kind", "verdict"})
 	verifyDuration := prometheus.NewHistogram(prometheus.HistogramOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "verify_phase_duration_seconds",
 		Help:      "Wall-clock duration of one verify phase (StartPhase(verify) -> CompletePhase), in seconds.",
 		Buckets:   verifyPhaseDurationBuckets,
 	})
 	verifyRetries := prometheus.NewHistogram(prometheus.HistogramOpts{
-		Namespace: "t2a",
+		Namespace: "hamix",
 		Name:      "verify_retries_per_cycle",
 		Help:      "Verify retry count per terminal cycle (0 when first attempt succeeded or verification was skipped).",
 		Buckets:   verifyRetriesBuckets,
 	})
 	if err := reg.Register(verifyVerdicts); err != nil {
-		return nil, fmt.Errorf("register t2a_verify_verdict_total: %w", err)
+		return nil, fmt.Errorf("register hamix_verify_verdict_total: %w", err)
 	}
 	if err := reg.Register(verifyDuration); err != nil {
-		return nil, fmt.Errorf("register t2a_verify_phase_duration_seconds: %w", err)
+		return nil, fmt.Errorf("register hamix_verify_phase_duration_seconds: %w", err)
 	}
 	if err := reg.Register(verifyRetries); err != nil {
-		return nil, fmt.Errorf("register t2a_verify_retries_per_cycle: %w", err)
+		return nil, fmt.Errorf("register hamix_verify_retries_per_cycle: %w", err)
 	}
 	return &workerMetricsAdapter{
 		runs:            runs,

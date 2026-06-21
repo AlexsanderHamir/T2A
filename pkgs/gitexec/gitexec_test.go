@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/gitexec"
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitexec"
 )
 
 func initGitRepo(t *testing.T, dir string) string {

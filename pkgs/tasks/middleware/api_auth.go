@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 // AuthorizationHeader is the HTTP header name checked for bearer tokens.
@@ -16,7 +16,7 @@ const AuthorizationHeader = "Authorization"
 
 func apiTokenConfigured() string {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.apiTokenConfigured")
-	return strings.TrimSpace(os.Getenv("T2A_API_TOKEN"))
+	return strings.TrimSpace(os.Getenv("HAMIX_API_TOKEN"))
 }
 
 // APIAuthEnabled reports whether API bearer-token auth is enabled.
@@ -69,7 +69,7 @@ func HasValidBearerToken(rawAuth, configuredToken string) bool {
 	return subtle.ConstantTimeCompare([]byte(presented), []byte(configuredToken)) == 1
 }
 
-// WithAPIAuth enforces Authorization: Bearer <token> when T2A_API_TOKEN is set.
+// WithAPIAuth enforces Authorization: Bearer <token> when HAMIX_API_TOKEN is set.
 // When the token is unset, the wrapper is a no-op.
 // GET /health, /health/live, /health/ready, and /metrics are exempt.
 func WithAPIAuth(h http.Handler) http.Handler {

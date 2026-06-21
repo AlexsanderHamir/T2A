@@ -11,7 +11,7 @@ import (
 // upserts onto id=1 and every GET reads id=1, optionally creating it
 // with defaults on first read.
 //
-// This row replaces the historical T2A_AGENT_WORKER_* env vars and the
+// This row replaces the historical HAMIX_AGENT_WORKER_* env vars and the
 // REPO_ROOT env var. Env vars are no longer read at runtime — the row
 // is the only source of truth and is "saved until changed".
 //
@@ -112,7 +112,7 @@ const DefaultVerifyCommandTimeoutSeconds = 120
 // boot. Empty string is the "auto-detect" sentinel: the SPA reads it as
 // "no explicit operator choice yet" and falls back to the browser's own
 // IANA zone (Intl.DateTimeFormat().resolvedOptions().timeZone), so a
-// freshly-installed T2A renders timestamps in the operator's local time
+// freshly-installed Hamix renders timestamps in the operator's local time
 // without anyone touching the SettingsPage. Setting the column to any
 // non-empty zone (including literal "UTC") via PATCH /settings is a
 // deliberate override that pins every operator to that zone, regardless

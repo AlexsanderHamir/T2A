@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker/policy"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	_ "github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry/all"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 type applySettingsSnapshot struct {

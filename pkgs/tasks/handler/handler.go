@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/repo"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // Task routes: see README.md (handler_task_*.go). /repo: repo_handlers.go. SSE: sse.go.

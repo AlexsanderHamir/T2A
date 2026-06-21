@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // emptyRunnerStats is the Phase 2 invariant: every map in the

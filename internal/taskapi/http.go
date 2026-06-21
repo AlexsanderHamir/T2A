@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/repo"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 const cmdLog = "taskapi"

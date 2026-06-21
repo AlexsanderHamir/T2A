@@ -4,11 +4,11 @@
 //
 // Wiring: handler.go (mux + security header helpers). Task routes span handler_task_*.go, handler_checklist.go, handler_task_events.go—see README.md.
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
-// Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/configuration.md).
-// Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/configuration.md).
-// Max request body: max_body.go (WithMaxRequestBody; optional T2A_MAX_REQUEST_BODY_BYTES in docs/configuration.md).
+// Per-IP rate limiting: rate_limit.go (WithRateLimit; HAMIX_RATE_LIMIT_PER_MIN in docs/configuration.md).
+// Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; HAMIX_IDEMPOTENCY_TTL in docs/configuration.md).
+// Max request body: max_body.go (WithMaxRequestBody; optional HAMIX_MAX_REQUEST_BODY_BYTES in docs/configuration.md).
 // Ready-task agent queue: store.SetReadyTaskNotifier (taskapi always; docs/architecture.md, docs/configuration.md, pkgs/agents). Queue consumers must AckAfterRecv or Receive so reconcile matches the buffer.
-// Request timeout: request_timeout.go (WithRequestTimeout; optional T2A_HTTP_REQUEST_TIMEOUT in docs/configuration.md; GET /events exempt).
+// Request timeout: request_timeout.go (WithRequestTimeout; optional HAMIX_HTTP_REQUEST_TIMEOUT in docs/configuration.md; GET /events exempt).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): pkgs/tasks/calltrace — use calltrace.WithRequestRoot on each handler, calltrace.Push inside helpers; calltrace.RunObserved for explicit helper in/out pairs.
 // JSONL order: pkgs/tasks/logctx.WrapSlogHandlerWithLogSequence (taskapi outer) + logctx.ContextWithLogSeq in access middleware → log_seq, log_seq_scope.
@@ -40,7 +40,7 @@
 //   - GET    /repo/diff       — optional; JSON commit patch for sha= (git show); 409 if repo_root unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
-// Dev-only: when taskapi sets T2A_SSE_TEST=1, pkgs/tasks/devsim runs a background ticker (store.ListFlat + AppendTaskEvent,
+// Dev-only: when taskapi sets HAMIX_SSE_TEST=1, pkgs/tasks/devsim runs a background ticker (store.ListFlat + AppendTaskEvent,
 // rotates all EventType, ActorAgent) per task then notifies the SSE hub (see docs/api.md). No extra HTTP routes.
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.

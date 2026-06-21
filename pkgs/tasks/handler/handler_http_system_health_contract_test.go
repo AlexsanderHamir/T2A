@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/systemhealth"
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/systemhealth"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

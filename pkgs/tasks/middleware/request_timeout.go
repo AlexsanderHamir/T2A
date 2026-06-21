@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 const (
 	defaultRequestTimeout = 30 * time.Second
-	requestTimeoutEnv     = "T2A_HTTP_REQUEST_TIMEOUT"
+	requestTimeoutEnv     = "HAMIX_HTTP_REQUEST_TIMEOUT"
 )
 
 func requestTimeoutConfigured() time.Duration {

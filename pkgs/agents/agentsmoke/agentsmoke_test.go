@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/agentsmoke"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/agentsmoke"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestFixture_Prompt_referencesAbsoluteTargetPath(t *testing.T) {

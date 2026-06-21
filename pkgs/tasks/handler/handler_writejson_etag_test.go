@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
 )
 
 func TestWriteJSONWithETag_emits_etag_and_revalidatable_cache_control(t *testing.T) {

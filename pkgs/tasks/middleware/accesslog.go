@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 	"github.com/google/uuid"
 )
 

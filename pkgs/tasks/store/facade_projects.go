@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/projects"
 )
 
 // CreateProjectInput is the store input for creating a project.

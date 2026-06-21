@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const calltracePkg = "github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+const calltracePkg = "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 
 var tracePrimitiveNames = map[string]struct{}{
 	"RunObserved": {},

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/cursor"
 )
 
 func TestProbe_HappyPath_returnsTrimmedFirstLine(t *testing.T) {

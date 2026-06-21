@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
 )
 
 func TestTruncateUTF8ByBytes_preservesShortString(t *testing.T) {

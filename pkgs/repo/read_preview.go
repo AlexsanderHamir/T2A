@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // FilePreview is UTF-8 text for the @ file line-range UI, or Binary when the file should not be shown.

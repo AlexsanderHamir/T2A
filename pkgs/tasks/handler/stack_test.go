@@ -8,16 +8,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 // middleware.Stack with calltrace.Path is the production chain for taskapi; these tests pin critical
 // behavior without requiring a real store or Postgres. Do not use t.Parallel with
 // t.Setenv here.
 func TestMiddlewareStack_innerPanic_returnsJSON500(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "")
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "0")
+	t.Setenv("HAMIX_API_TOKEN", "")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "0")
 
 	inner := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("intentional test panic")
@@ -51,8 +51,8 @@ func TestMiddlewareStack_innerPanic_returnsJSON500(t *testing.T) {
 }
 
 func TestMiddlewareStack_innerOK(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "")
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "0")
+	t.Setenv("HAMIX_API_TOKEN", "")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "0")
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTeapot)

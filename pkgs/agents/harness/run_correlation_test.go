@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 type correlationCapturingRunner struct {

@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/httpsecurityexpect"
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/httpsecurityexpect"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func TestStreamEvents_sets_security_headers(t *testing.T) {

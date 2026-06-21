@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 func TestRunObserved_successEmitsHelperInThenOut(t *testing.T) {

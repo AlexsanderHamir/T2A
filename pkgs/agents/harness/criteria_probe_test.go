@@ -3,8 +3,8 @@ package harness
 import (
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestSelectRecoveryKind_criteriaReportInvalidFromState(t *testing.T) {

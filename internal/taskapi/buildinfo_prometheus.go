@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/AlexsanderHamir/T2A/internal/version"
+	"github.com/AlexsanderHamir/Hamix/internal/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

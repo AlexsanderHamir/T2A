@@ -12,12 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi"
-	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/devsim"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapiconfig"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/devsim"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -45,7 +45,7 @@ func maybeRunSSEDevTicker(ctx context.Context, taskStore *store.Store, hub *hand
 	d := taskapiconfig.SSETestTickerInterval()
 	if d < time.Second {
 		slog.Info("sse dev env on, ticker off", "cmd", cmdName, "operation", "taskapi.sse_dev",
-			"interval", d.String(), "hint", "set T2A_SSE_TEST_INTERVAL to 1s or more to run the ticker")
+			"interval", d.String(), "hint", "set HAMIX_SSE_TEST_INTERVAL to 1s or more to run the ticker")
 		return
 	}
 	slog.Info("sse dev ticker enabled", "cmd", cmdName, "operation", "taskapi.sse_dev", "interval", d.String())

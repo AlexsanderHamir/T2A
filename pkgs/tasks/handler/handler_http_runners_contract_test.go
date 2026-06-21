@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
+	_ "github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry/all"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // runnersTestServer creates a test handler wired with a real SQLite

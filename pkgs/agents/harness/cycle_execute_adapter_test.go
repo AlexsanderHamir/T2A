@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/orchestration"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 )
 
 func TestMapRunnerOutcome(t *testing.T) {

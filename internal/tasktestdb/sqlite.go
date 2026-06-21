@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

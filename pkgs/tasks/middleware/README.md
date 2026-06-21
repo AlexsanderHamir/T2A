@@ -15,8 +15,8 @@ Defined in **`stack.go`**. When changing order or adding a layer, update this RE
 | `WithRecovery` | Panic → 500 JSON. |
 | `WithHTTPMetrics` | Prometheus `taskapi_http_*`; health paths omitted from latency where documented in code. |
 | `WithAccessLog` | Structured `http.access` line; `call_path` from the injected `callPath` func (use `calltrace.Path` in production). |
-| `WithRateLimit` | Per-IP limit; see `T2A_RATE_LIMIT_PER_MIN` below. |
-| `WithAPIAuth` | Optional `Authorization: Bearer`; see `T2A_API_TOKEN`. |
+| `WithRateLimit` | Per-IP limit; see `HAMIX_RATE_LIMIT_PER_MIN` below. |
+| `WithAPIAuth` | Optional `Authorization: Bearer`; see `HAMIX_API_TOKEN`. |
 | `WithRequestTimeout` | Request context deadline; `GET /events` exempt. |
 | `WithMaxRequestBody` | Max body bytes before handler runs. |
 | `WithIdempotency` | Mutating requests with `Idempotency-Key`; TTL and cache caps from env. |
@@ -31,8 +31,8 @@ Defined in **`stack.go`**. When changing order or adding a layer, update this RE
 | `accesslog.go` | Access logging. |
 | `rate_limit.go` | Token-bucket rate limit. |
 | `api_auth.go` | Bearer token gate. |
-| `request_timeout.go` | `T2A_HTTP_REQUEST_TIMEOUT`. |
-| `max_body.go` | `T2A_MAX_REQUEST_BODY_BYTES`. |
+| `request_timeout.go` | `HAMIX_HTTP_REQUEST_TIMEOUT`. |
+| `max_body.go` | `HAMIX_MAX_REQUEST_BODY_BYTES`. |
 | `idempotency.go` | Idempotency middleware + `IdempotencyTTL` / `IdempotencyCacheLimits`. |
 | `idempotency_cache.go` | In-process replay cache (`ClearIdempotencyStateForTest` for tests). |
 
@@ -40,13 +40,13 @@ Defined in **`stack.go`**. When changing order or adding a layer, update this RE
 
 | Variable | Used by | Notes |
 |----------|---------|--------|
-| `T2A_RATE_LIMIT_PER_MIN` | `WithRateLimit` | Default 120/min; `0` disables. |
-| `T2A_API_TOKEN` | `WithAPIAuth` | Non-empty enables bearer auth on API routes. |
-| `T2A_HTTP_REQUEST_TIMEOUT` | `WithRequestTimeout` | Go duration; default 30s; `0` disables. |
-| `T2A_MAX_REQUEST_BODY_BYTES` | `WithMaxRequestBody` | Default 1 MiB; `0` unlimited. |
-| `T2A_IDEMPOTENCY_TTL` | `WithIdempotency` | Default 24h; `0` disables caching. |
-| `T2A_IDEMPOTENCY_MAX_ENTRIES` | idempotency cache | Default 2048; `0` disables entry cap. |
-| `T2A_IDEMPOTENCY_MAX_BYTES` | idempotency cache | Default 8 MiB; `0` disables byte cap. |
+| `HAMIX_RATE_LIMIT_PER_MIN` | `WithRateLimit` | Default 120/min; `0` disables. |
+| `HAMIX_API_TOKEN` | `WithAPIAuth` | Non-empty enables bearer auth on API routes. |
+| `HAMIX_HTTP_REQUEST_TIMEOUT` | `WithRequestTimeout` | Go duration; default 30s; `0` disables. |
+| `HAMIX_MAX_REQUEST_BODY_BYTES` | `WithMaxRequestBody` | Default 1 MiB; `0` unlimited. |
+| `HAMIX_IDEMPOTENCY_TTL` | `WithIdempotency` | Default 24h; `0` disables caching. |
+| `HAMIX_IDEMPOTENCY_MAX_ENTRIES` | idempotency cache | Default 2048; `0` disables entry cap. |
+| `HAMIX_IDEMPOTENCY_MAX_BYTES` | idempotency cache | Default 8 MiB; `0` disables byte cap. |
 
 Taskapi-only knobs (listen address, log level, agent intervals, etc.) are **not** here — see [`internal/taskapiconfig`](../../internal/taskapiconfig/).
 

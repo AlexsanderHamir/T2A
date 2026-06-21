@@ -156,7 +156,7 @@ func TestRead_populatedSSEAndDBPoolAndAgent(t *testing.T) {
 		Namespace: "taskapi", Name: "agent_queue_capacity", Help: ".",
 	})
 	agentRuns := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "t2a", Name: "agent_runs_total", Help: ".",
+		Namespace: "hamix", Name: "agent_runs_total", Help: ".",
 	}, []string{"runner", "terminal_status"})
 	reg.MustRegister(subs, dropped, maxOpen, open, inUse, idle, waitCount, waitDur, queueDepth, queueCap, agentRuns)
 

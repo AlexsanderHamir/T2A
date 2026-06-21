@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 type renderedProjectContext struct {

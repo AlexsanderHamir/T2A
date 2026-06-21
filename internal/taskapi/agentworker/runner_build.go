@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker/policy"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func (s *Supervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSettings) (runner.Runner, string) {

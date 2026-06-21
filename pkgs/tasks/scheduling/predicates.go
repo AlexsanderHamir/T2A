@@ -3,7 +3,7 @@ package scheduling
 import (
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // EvaluateWorkerReadiness applies the four worker predicates in fixed order.

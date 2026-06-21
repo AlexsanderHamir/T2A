@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/ready"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/ready"
 	"gorm.io/gorm"
 )
 

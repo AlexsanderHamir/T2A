@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/devmirror"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/devmirror"
 )
 
 // ApplyDevTaskRowMirror updates the task row to reflect a synthetic

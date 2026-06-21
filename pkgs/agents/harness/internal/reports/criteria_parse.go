@@ -58,7 +58,7 @@ type VerifyEntry struct {
 
 // ReportCycleDir is the worker-managed scratch directory for one
 // cycle's report files. Lives under Options.ReportDir (defaulted by
-// NewWorker to <os.TempDir()>/t2a-worker) so the operator's RepoRoot
+// NewWorker to <os.TempDir()>/hamix-worker) so the operator's RepoRoot
 // is never touched. Cleaned up at terminateCycle time via
 // CleanupReportDir; cycle subdirectories from a previous worker run
 // are scrubbed at startExecutePhase via ScrubCycleArtifacts so a
@@ -83,7 +83,7 @@ func VerifyReportPath(reportDir, cycleID string) string {
 // EnsureReportCycleDir creates <reportDir>/<cycleID>/ with a permissive
 // directory mode so the agent CLI can write its report into it.
 // Idempotent — repeated calls within a cycle are no-ops. The directory
-// lives outside any git repo, so unlike the prior .t2a/ helper there
+// lives outside any git repo, so unlike the prior .legacy-scratch/ helper there
 // is no .gitignore to write here; a stray entry would be a bug.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -104,7 +104,7 @@ func ScrubCycleArtifacts(reportDir, cycleID string) error {
 
 // CleanupReportDir removes <reportDir>/<cycleID>/ at cycle terminate
 // time. Closes the unbounded-disk-growth gap that existed when files
-// were written under .t2a/ — there was no per-cycle GC. Called from
+// were written under .legacy-scratch/ — there was no per-cycle GC. Called from
 // terminateCycle and the cleanup paths (handleShutdownAfterRun,
 // recoverFromPanic, bestEffortTerminate) so every exit point clears
 // its scratch.

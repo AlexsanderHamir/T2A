@@ -3,7 +3,7 @@ package verify
 import (
 	"context"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 )
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

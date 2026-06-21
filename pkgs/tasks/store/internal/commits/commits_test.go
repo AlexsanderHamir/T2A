@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestDedupeCommitsBySHA_keepsFirstOccurrence(t *testing.T) {

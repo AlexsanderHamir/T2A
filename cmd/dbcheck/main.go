@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/version"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/version"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"gorm.io/gorm"
 )
 

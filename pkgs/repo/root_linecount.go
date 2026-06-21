@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // LineCount returns the number of lines in a file (newline-separated).

@@ -13,24 +13,24 @@ import (
 const (
 	cmdLog = "taskapi"
 
-	// EnvUserTaskAgentQueueCap is T2A_USER_TASK_AGENT_QUEUE_CAP (bounded ready-task queue depth).
-	EnvUserTaskAgentQueueCap = "T2A_USER_TASK_AGENT_QUEUE_CAP"
-	// EnvSSETestInterval is T2A_SSE_TEST_INTERVAL (dev synthetic SSE ticker).
-	EnvSSETestInterval = "T2A_SSE_TEST_INTERVAL"
-	// EnvDisableLogging is T2A_DISABLE_LOGGING (truthy values minimize logging).
-	EnvDisableLogging = "T2A_DISABLE_LOGGING"
-	// EnvListenHost is T2A_LISTEN_HOST (HTTP bind address).
-	EnvListenHost = "T2A_LISTEN_HOST"
-	// EnvLogLevel is T2A_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
-	EnvLogLevel = "T2A_LOG_LEVEL"
-	// EnvWorkerReportDir is T2A_WORKER_REPORT_DIR. Overrides the default
-	// worker-managed scratch directory (<os.TempDir()>/t2a-worker)
+	// EnvUserTaskAgentQueueCap is HAMIX_USER_TASK_AGENT_QUEUE_CAP (bounded ready-task queue depth).
+	EnvUserTaskAgentQueueCap = "HAMIX_USER_TASK_AGENT_QUEUE_CAP"
+	// EnvSSETestInterval is HAMIX_SSE_TEST_INTERVAL (dev synthetic SSE ticker).
+	EnvSSETestInterval = "HAMIX_SSE_TEST_INTERVAL"
+	// EnvDisableLogging is HAMIX_DISABLE_LOGGING (truthy values minimize logging).
+	EnvDisableLogging = "HAMIX_DISABLE_LOGGING"
+	// EnvListenHost is HAMIX_LISTEN_HOST (HTTP bind address).
+	EnvListenHost = "HAMIX_LISTEN_HOST"
+	// EnvLogLevel is HAMIX_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
+	EnvLogLevel = "HAMIX_LOG_LEVEL"
+	// EnvWorkerReportDir is HAMIX_WORKER_REPORT_DIR. Overrides the default
+	// worker-managed scratch directory (<os.TempDir()>/hamix-worker)
 	// where the agent CLI writes criteria-report.json /
 	// verify-report.json. Lives outside the operator's RepoRoot so
 	// customer working trees stay clean. The supervisor validates the
 	// path is writable at startup; failure logs a warn and falls back
 	// to the default rather than blocking the worker.
-	EnvWorkerReportDir           = "T2A_WORKER_REPORT_DIR"
+	EnvWorkerReportDir           = "HAMIX_WORKER_REPORT_DIR"
 	defaultUserTaskAgentQueueCap = 256
 	defaultSSETestInterval       = 3 * time.Second
 	// defaultWorkerReportDirSubdir matches worker.DefaultReportDirSubdir;
@@ -38,13 +38,13 @@ const (
 	// package. The Worker package is the source of truth for the leaf
 	// name; supervising code that wants the resolved path should call
 	// WorkerReportDir() rather than recomputing.
-	defaultWorkerReportDirSubdir = "t2a-worker"
+	defaultWorkerReportDirSubdir = "hamix-worker"
 )
 
-// DefaultUserTaskAgentQueueCap is used when T2A_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
+// DefaultUserTaskAgentQueueCap is used when HAMIX_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
 const DefaultUserTaskAgentQueueCap = defaultUserTaskAgentQueueCap
 
-// DefaultSSETestTickerInterval is used when T2A_SSE_TEST_INTERVAL is unset or below 1s (dev only).
+// DefaultSSETestTickerInterval is used when HAMIX_SSE_TEST_INTERVAL is unset or below 1s (dev only).
 const DefaultSSETestTickerInterval = defaultSSETestInterval
 
 // EnvTruthy reports whether key is set to a common “true” value (1, true, yes, on; case-insensitive).
@@ -60,7 +60,7 @@ func EnvTruthy(key string) bool {
 }
 
 // LoggingMinimized returns true when file logging and most slog output should be off:
-// disableFlag, or T2A_DISABLE_LOGGING truthy. Only slog.Error is emitted (to stderr) in that mode.
+// disableFlag, or HAMIX_DISABLE_LOGGING truthy. Only slog.Error is emitted (to stderr) in that mode.
 func LoggingMinimized(disableFlag bool) bool {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.LoggingMinimized")
 	if disableFlag {
@@ -70,7 +70,7 @@ func LoggingMinimized(disableFlag bool) bool {
 }
 
 // ResolveLogLevel returns the minimum slog level for the JSON log file.
-// If flagLevel is non-empty after TrimSpace, it wins; otherwise T2A_LOG_LEVEL is used.
+// If flagLevel is non-empty after TrimSpace, it wins; otherwise HAMIX_LOG_LEVEL is used.
 // When both are empty, the default is info.
 func ResolveLogLevel(flagLevel string) (slog.Level, error) {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.ResolveLogLevel")
@@ -95,7 +95,7 @@ func ResolveLogLevel(flagLevel string) (slog.Level, error) {
 	}
 }
 
-// ListenHost returns the HTTP bind host: flagHost if set, else T2A_LISTEN_HOST, else 127.0.0.1.
+// ListenHost returns the HTTP bind host: flagHost if set, else HAMIX_LISTEN_HOST, else 127.0.0.1.
 func ListenHost(flagHost string) string {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.ListenHost")
 	s := strings.TrimSpace(flagHost)
@@ -108,7 +108,7 @@ func ListenHost(flagHost string) string {
 	return s
 }
 
-// SSETestTickerInterval returns how often the SSE dev ticker runs (T2A_SSE_TEST_INTERVAL).
+// SSETestTickerInterval returns how often the SSE dev ticker runs (HAMIX_SSE_TEST_INTERVAL).
 // Default is 3s when unset. Set to 0 to disable the ticker. Values below 1s fall back to the default.
 func SSETestTickerInterval() time.Duration {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.SSETestTickerInterval")
@@ -118,7 +118,7 @@ func SSETestTickerInterval() time.Duration {
 	}
 	d, err := time.ParseDuration(raw)
 	if err != nil {
-		slog.Warn("invalid T2A_SSE_TEST_INTERVAL, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
+		slog.Warn("invalid HAMIX_SSE_TEST_INTERVAL, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
 			"default", defaultSSETestInterval.String(), "err", err)
 		return defaultSSETestInterval
 	}
@@ -126,7 +126,7 @@ func SSETestTickerInterval() time.Duration {
 		return 0
 	}
 	if d < time.Second {
-		slog.Warn("T2A_SSE_TEST_INTERVAL below 1s, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
+		slog.Warn("HAMIX_SSE_TEST_INTERVAL below 1s, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
 			"default", defaultSSETestInterval.String(), "value", raw)
 		return defaultSSETestInterval
 	}
@@ -135,8 +135,8 @@ func SSETestTickerInterval() time.Duration {
 
 // WorkerReportDir resolves the worker-managed scratch root for the
 // agent <-> worker side-channel report files. Returns the value of
-// T2A_WORKER_REPORT_DIR when set (after TrimSpace); otherwise
-// <os.TempDir()>/t2a-worker. Never returns an empty string — callers
+// HAMIX_WORKER_REPORT_DIR when set (after TrimSpace); otherwise
+// <os.TempDir()>/hamix-worker. Never returns an empty string — callers
 // can pass the result straight into worker.Options.ReportDir without
 // a nil/empty guard.
 func WorkerReportDir() string {

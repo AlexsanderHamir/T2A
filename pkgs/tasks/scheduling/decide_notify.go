@@ -3,7 +3,7 @@ package scheduling
 import (
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // DecideNotifyAfterReadyTransition chooses post-commit queue notify and pickup wake

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // TestHTTP_createTask_onHoldStatusAllowed pins the contract that

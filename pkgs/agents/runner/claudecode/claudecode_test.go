@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/claudecode"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/claudecode"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

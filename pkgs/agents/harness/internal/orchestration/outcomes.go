@@ -1,6 +1,6 @@
 package orchestration
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // TerminationReason is a stable cycle terminate_reason string persisted to the store.
 type TerminationReason string

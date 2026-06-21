@@ -3,7 +3,7 @@ package verify
 import (
 	"os/exec"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
 )
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

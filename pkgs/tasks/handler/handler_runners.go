@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 )
 
 // runnersListTimeout caps the time spent listing model schemas

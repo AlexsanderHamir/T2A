@@ -27,14 +27,14 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 	var foundCounter, foundHistogram, foundCounterByModel, foundHistogramByModel bool
 	for _, mf := range mfs {
 		switch mf.GetName() {
-		case "t2a_agent_runs_total":
+		case "hamix_agent_runs_total":
 			foundCounter = true
 			assertCounterValue(t, mf, map[string]string{"runner": "cursor", "terminal_status": "succeeded"}, 2)
 			assertCounterValue(t, mf, map[string]string{"runner": "cursor", "terminal_status": "failed"}, 1)
-		case "t2a_agent_run_duration_seconds":
+		case "hamix_agent_run_duration_seconds":
 			foundHistogram = true
 			assertHistogramSampleCount(t, mf, map[string]string{"runner": "cursor"}, 3)
-		case "t2a_agent_runs_by_model_total":
+		case "hamix_agent_runs_by_model_total":
 			foundCounterByModel = true
 			assertCounterValue(t, mf, map[string]string{
 				"runner": "cursor", "model": "sonnet-4.5", "terminal_status": "succeeded",
@@ -45,7 +45,7 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 			assertCounterValue(t, mf, map[string]string{
 				"runner": "cursor", "model": "opus-4", "terminal_status": "succeeded",
 			}, 1)
-		case "t2a_agent_run_duration_by_model_seconds":
+		case "hamix_agent_run_duration_by_model_seconds":
 			foundHistogramByModel = true
 			assertHistogramSampleCount(t, mf, map[string]string{
 				"runner": "cursor", "model": "sonnet-4.5",
@@ -56,16 +56,16 @@ func TestRegisterAgentWorkerMetricsOn_counterAndHistogram(t *testing.T) {
 		}
 	}
 	if !foundCounter {
-		t.Fatal("expected t2a_agent_runs_total in registry")
+		t.Fatal("expected hamix_agent_runs_total in registry")
 	}
 	if !foundHistogram {
-		t.Fatal("expected t2a_agent_run_duration_seconds in registry")
+		t.Fatal("expected hamix_agent_run_duration_seconds in registry")
 	}
 	if !foundCounterByModel {
-		t.Fatal("expected t2a_agent_runs_by_model_total in registry")
+		t.Fatal("expected hamix_agent_runs_by_model_total in registry")
 	}
 	if !foundHistogramByModel {
-		t.Fatal("expected t2a_agent_run_duration_by_model_seconds in registry")
+		t.Fatal("expected hamix_agent_run_duration_by_model_seconds in registry")
 	}
 }
 
@@ -90,7 +90,7 @@ func TestRegisterAgentWorkerMetricsOn_emptyModelRecordedVerbatim(t *testing.T) {
 	}
 	var saw bool
 	for _, mf := range mfs {
-		if mf.GetName() != "t2a_agent_runs_by_model_total" {
+		if mf.GetName() != "hamix_agent_runs_by_model_total" {
 			continue
 		}
 		for _, m := range mf.GetMetric() {
@@ -102,7 +102,7 @@ func TestRegisterAgentWorkerMetricsOn_emptyModelRecordedVerbatim(t *testing.T) {
 		}
 	}
 	if !saw {
-		t.Fatalf("expected empty model label recorded verbatim in t2a_agent_runs_by_model_total; mfs=%+v", mfs)
+		t.Fatalf("expected empty model label recorded verbatim in hamix_agent_runs_by_model_total; mfs=%+v", mfs)
 	}
 }
 
@@ -121,7 +121,7 @@ func TestRegisterAgentWorkerMetricsOn_bucketsCoverV1RunTimeoutRange(t *testing.T
 	}
 	var maxBucket float64
 	for _, mf := range mfs {
-		if mf.GetName() != "t2a_agent_run_duration_seconds" {
+		if mf.GetName() != "hamix_agent_run_duration_seconds" {
 			continue
 		}
 		for _, m := range mf.GetMetric() {

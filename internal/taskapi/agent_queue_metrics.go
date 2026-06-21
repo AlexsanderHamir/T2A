@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

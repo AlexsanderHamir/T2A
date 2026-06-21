@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
 )
 
 type bufferedEvent struct {

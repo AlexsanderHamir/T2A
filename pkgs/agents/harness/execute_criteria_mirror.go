@@ -5,8 +5,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func (h *Harness) bestEffortMirrorExecuteCriteria(

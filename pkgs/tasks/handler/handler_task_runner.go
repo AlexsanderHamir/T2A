@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // resolveTaskRunnerModel merges optional JSON fields with app settings and

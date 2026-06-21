@@ -10,7 +10,7 @@ func TestInjectCriteria_NoAlreadyVerified_RendersAllItems(t *testing.T) {
 		{ID: "c1", Text: "first criterion"},
 		{ID: "c2", Text: "second criterion"},
 	}
-	reportPath := "/tmp/t2a-worker/cycle-1/criteria-report.json"
+	reportPath := "/tmp/hamix-worker/cycle-1/criteria-report.json"
 	out := InjectCriteria("base", items, reportPath, nil)
 	if !strings.Contains(out, "first criterion") || !strings.Contains(out, "second criterion") {
 		t.Fatalf("expected all items in prompt, got:\n%s", out)
@@ -24,8 +24,8 @@ func TestInjectCriteria_NoAlreadyVerified_RendersAllItems(t *testing.T) {
 	if !strings.Contains(out, "schema_version") {
 		t.Fatalf("schema_version missing from prompt:\n%s", out)
 	}
-	if strings.Contains(out, ".t2a/") {
-		t.Fatalf(".t2a/ relative path leaked into prompt:\n%s", out)
+	if strings.Contains(out, ".legacy-scratch/") {
+		t.Fatalf(".legacy-scratch/ relative path leaked into prompt:\n%s", out)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestInjectCriteria_LockedItem_OmittedFromActiveChecklist(t *testing.T) {
 		{ID: "c2", Text: "second criterion"},
 	}
 	already := map[string]struct{}{"c1": {}}
-	out := InjectCriteria("base", items, "/tmp/t2a-worker/cycle-1/criteria-report.json", already)
+	out := InjectCriteria("base", items, "/tmp/hamix-worker/cycle-1/criteria-report.json", already)
 
 	if !strings.Contains(out, "## Already verified") {
 		t.Fatalf("missing Already-verified header in:\n%s", out)
@@ -63,7 +63,7 @@ func TestInjectCriteria_AllLocked_NoActiveSchema(t *testing.T) {
 		{ID: "c1", Text: "first"},
 	}
 	already := map[string]struct{}{"c1": {}}
-	out := InjectCriteria("base", items, "/tmp/t2a-worker/cycle-1/criteria-report.json", already)
+	out := InjectCriteria("base", items, "/tmp/hamix-worker/cycle-1/criteria-report.json", already)
 	if strings.Contains(out, "Schema:") {
 		t.Errorf("schema instructions must be omitted when nothing is active:\n%s", out)
 	}

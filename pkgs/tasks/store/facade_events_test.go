@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestStore_events_recorded_for_create_and_title_change(t *testing.T) {

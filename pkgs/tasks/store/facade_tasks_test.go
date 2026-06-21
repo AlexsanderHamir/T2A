@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/postgres"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/prometheus/client_golang/prometheus"
 	"gorm.io/gorm"
 )

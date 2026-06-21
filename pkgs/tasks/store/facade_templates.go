@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/templates"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/templates"
 )
 
 type TemplateSummary = templates.Summary

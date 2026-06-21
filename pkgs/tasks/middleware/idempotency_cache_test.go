@@ -11,8 +11,8 @@ import (
 
 func TestIdempotencyCache_set_enforces_entry_limit(t *testing.T) {
 	t.Cleanup(ClearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "2")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "0")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "2")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "0")
 
 	now := time.Now()
 	idempCache.set(context.Background(), "k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("a")}, now.Add(time.Hour))
@@ -32,8 +32,8 @@ func TestIdempotencyCache_set_enforces_entry_limit(t *testing.T) {
 
 func TestIdempotencyCache_set_evictionsIncrementPrometheusCounter(t *testing.T) {
 	t.Cleanup(ClearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "2")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "0")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "2")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "0")
 
 	before := testutil.ToFloat64(taskapiHTTPIdempotencyCacheEvictionsTotal)
 	now := time.Now()
@@ -49,8 +49,8 @@ func TestIdempotencyCache_set_evictionsIncrementPrometheusCounter(t *testing.T) 
 
 func TestIdempotencyCache_set_enforces_byte_limit(t *testing.T) {
 	t.Cleanup(ClearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "0")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "5")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "0")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "5")
 
 	now := time.Now()
 	idempCache.set(context.Background(), "k1", idempotencyCaptured{status: http.StatusCreated, body: []byte("111")}, now.Add(time.Hour))

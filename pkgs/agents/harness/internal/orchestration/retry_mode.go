@@ -1,6 +1,6 @@
 package orchestration
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // RetryMode selects whether the next loop iteration re-runs execute.
 type RetryMode string

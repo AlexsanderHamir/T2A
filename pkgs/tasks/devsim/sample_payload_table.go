@@ -3,7 +3,7 @@ package devsim
 import (
 	"encoding/json"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // samplePayloadByType returns deterministic JSON payloads for the dev ticker.
@@ -52,7 +52,7 @@ var samplePayloadByType = map[domain.EventType]func() ([]byte, error){
 		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Removed criterion (synthetic)"})
 	},
 	domain.EventArtifactAdded: func() ([]byte, error) {
-		return json.Marshal(map[string]string{"name": "notes.md", "uri": "file:///tmp/t2a-devsim"})
+		return json.Marshal(map[string]string{"name": "notes.md", "uri": "file:///tmp/hamix-devsim"})
 	},
 	domain.EventApprovalRequested: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"reason": "Checkpoint ready", "checkpoint": "plan_review"})

@@ -7,30 +7,30 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 func TestRequestTimeoutConfigured(t *testing.T) {
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "")
 	if got := middleware.RequestTimeout(); got != 30*time.Second {
 		t.Fatalf("default got %v", got)
 	}
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "12s")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "12s")
 	if got := middleware.RequestTimeout(); got != 12*time.Second {
 		t.Fatalf("configured got %v", got)
 	}
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "0")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "0")
 	if got := middleware.RequestTimeout(); got != 0 {
 		t.Fatalf("zero got %v", got)
 	}
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "bad")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "bad")
 	if got := middleware.RequestTimeout(); got != 30*time.Second {
 		t.Fatalf("invalid fallback got %v", got)
 	}
 }
 
 func TestWithRequestTimeoutSetsDeadline(t *testing.T) {
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "2s")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "2s")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, ok := r.Context().Deadline()
 		if !ok {
@@ -48,7 +48,7 @@ func TestWithRequestTimeoutSetsDeadline(t *testing.T) {
 }
 
 func TestWithRequestTimeoutSkipsEventsSSE(t *testing.T) {
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "2s")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "2s")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Deadline(); ok {
 			t.Fatal("did not expect deadline for /events")
@@ -65,7 +65,7 @@ func TestWithRequestTimeoutSkipsEventsSSE(t *testing.T) {
 }
 
 func TestWithRequestTimeoutDisabledNoDeadline(t *testing.T) {
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "0")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "0")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Deadline(); ok {
 			t.Fatal("did not expect deadline when disabled")
@@ -82,7 +82,7 @@ func TestWithRequestTimeoutDisabledNoDeadline(t *testing.T) {
 }
 
 func TestWithRequestTimeoutContextCanceled(t *testing.T) {
-	t.Setenv("T2A_HTTP_REQUEST_TIMEOUT", "1ms")
+	t.Setenv("HAMIX_HTTP_REQUEST_TIMEOUT", "1ms")
 	done := make(chan struct{})
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()

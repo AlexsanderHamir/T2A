@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 )
 
 func (h *Handler) notifyChange(typ TaskChangeType, id string) {

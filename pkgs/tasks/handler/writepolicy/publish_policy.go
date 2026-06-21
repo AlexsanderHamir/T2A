@@ -6,7 +6,7 @@ package writepolicy
 import (
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
 )
 
 // EnrichedTaskChangeEvent reports whether a change type should carry the full

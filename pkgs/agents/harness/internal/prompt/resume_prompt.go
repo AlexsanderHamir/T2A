@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // AppendOperatorRetryResumeNotice is for cross-cycle "Resume from failure" attempts.
@@ -71,7 +71,7 @@ func AppendGitCommitPolicy(prompt string, operatorResume bool) string {
 	if operatorResume {
 		b.WriteString("Create **new** commits only in this attempt; prior attempt SHAs are already indexed.\n\n")
 	}
-	b.WriteString("Use normal descriptive commit messages only — do **not** embed task IDs, cycle IDs, or `t2a:` markers.\n")
+	b.WriteString("Use normal descriptive commit messages only — do **not** embed task IDs, cycle IDs, or ID markers.\n")
 	b.WriteString("Create **new commits only** — fix mistakes with a follow-up commit; never amend, rebase, squash, or delete history.\n")
 	b.WriteString("You may commit incrementally during the run. Uncommitted local changes are allowed if you already committed the work you are claiming.\n")
 	b.WriteString("Do not push.\n\n")

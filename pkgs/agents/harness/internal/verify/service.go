@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // Service runs the verify pipeline stages against explicit dependencies.

@@ -72,8 +72,8 @@
 // None of the listed keys are credential-bearing.
 //
 // The adapter ALWAYS strips entries whose key is "DATABASE_URL" or whose
-// key has a "T2A_" prefix, even when the caller asked for them. Store
-// credentials and T2A internals must never reach a runner. This is a
+// key has a "HAMIX_" prefix, even when the caller asked for them. Store
+// credentials and Hamix internals must never reach a runner. This is a
 // belt-and-suspenders defense against caller mistakes.
 //
 // # Redaction
@@ -82,7 +82,7 @@
 // through the shared adapterkit redactor via Redact, which replaces:
 //
 //   - "Authorization: <anything>" header values with "Authorization: [REDACTED]"
-//   - any "T2A_FOO=value" assignment with "T2A_FOO=[REDACTED]"
+//   - any "HAMIX_FOO=value" assignment with "HAMIX_FOO=[REDACTED]"
 //   - the contents of $HOME / $USERPROFILE in absolute paths with "~"
 //
 // Callers that need stricter redaction can wrap the adapter and post-

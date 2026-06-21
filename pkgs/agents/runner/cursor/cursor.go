@@ -8,9 +8,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // Options configures an Adapter at construction time.
@@ -41,7 +41,7 @@ type Options struct {
 	StreamExecFn StreamExecFn
 	// ExtraAllowedEnvKeys widens the parent-env passthrough beyond the
 	// default curated allowlist. Entries are still subject to the deny-list
-	// (DATABASE_URL, T2A_*).
+	// (DATABASE_URL, HAMIX_*).
 	ExtraAllowedEnvKeys []string
 	// HomePathReplacements lets tests inject the values used to scrub
 	// absolute home paths from RawOutput. Empty slice means use the live

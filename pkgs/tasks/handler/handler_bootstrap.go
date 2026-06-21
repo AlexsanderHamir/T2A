@@ -6,10 +6,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler/readpolicy"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler/readpolicy"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // bootstrapTasksPayload mirrors listResponse so the SPA can seed

@@ -1,6 +1,6 @@
 package orchestration
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // DecideVerifyDisabledLegacy maps legacy checklist completion outcome to effects.
 //

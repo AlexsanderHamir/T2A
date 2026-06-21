@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // hookRunner wraps a runnerfake so integration tests can script report files.
@@ -39,7 +39,7 @@ func (h *hookRunner) Run(ctx context.Context, req runner.Request) (runner.Result
 // criteria-report.json under the worker-managed scratch dir so the
 // next parseCriteriaReport call succeeds. reportDir is the value the
 // worker was given via Options.ReportDir; helpers do NOT prepend any
-// `.t2a/` segment after PR1 — files live outside the operator's
+// `.legacy-scratch/` segment after PR1 — files live outside the operator's
 // RepoRoot, so the path is just <reportDir>/<cycleID>/...
 func writeCriteriaReport(t *testing.T, reportDir, cycleID string, ids []string) {
 	writeCriteriaReportWithCommits(t, reportDir, cycleID, ids, nil)
@@ -190,7 +190,7 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 		json.RawMessage(`{"ok":true}`), "",
 	))
 
-	// Use a temp WorkingDir so the worker's .t2a/<cycle>/ paths land
+	// Use a temp WorkingDir so the worker's .legacy-scratch/<cycle>/ paths land
 	// somewhere isolated and parseCriteriaReport hits ErrCriteriaReportMissing
 	// deterministically (no stray files from earlier test runs).
 	_, done := h.startWorker(ctx, r, harness.Options{WorkingDir: t.TempDir()})
@@ -816,7 +816,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 // TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed pins the
 // disagreement-via-derived-query contract from PR3: when the execute
 // agent does NOT claim a criterion done, that surfaces on
-// t2a_verify_verdict_total{verifier_kind="agent_self",verdict="failed"}.
+// hamix_verify_verdict_total{verifier_kind="agent_self",verdict="failed"}.
 // The same counter handles passes and the verifier's own verdicts;
 // disagreement is the {agent_self,failed} slice.
 func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
@@ -995,7 +995,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 
 // TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle pins PR1's
 // headline UX promise: customer working trees no longer accumulate
-// `.t2a/` scratch files. The worker writes scratch outside RepoRoot
+// `.legacy-scratch/` scratch files. The worker writes scratch outside RepoRoot
 // (Options.ReportDir) and never touches the operator's repo. Both
 // pre- and post-cycle `git status --porcelain` MUST report the
 // working tree as clean.
@@ -1069,8 +1069,8 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	}
 	if entries, err := os.ReadDir(workDir); err == nil {
 		for _, e := range entries {
-			if e.Name() == ".t2a" {
-				t.Fatalf("RepoRoot still contains legacy .t2a/ dir; PR1 contract is broken")
+			if e.Name() == ".legacy-scratch" {
+				t.Fatalf("RepoRoot still contains legacy .legacy-scratch/ dir; PR1 contract is broken")
 			}
 		}
 	}
@@ -1079,7 +1079,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 // TestWorker_terminateCycle_cleansReportDir pins PR1's GC contract:
 // after the cycle terminates, <reportDir>/<cycleID>/ must be gone so
 // disk use stays bounded across thousands of cycles. The previous
-// .t2a/-under-RepoRoot scheme had no GC and would have grown
+// .legacy-scratch/-under-RepoRoot scheme had no GC and would have grown
 // unboundedly.
 func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	t.Parallel()
@@ -1146,7 +1146,7 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 // TestWorker_VerifyPhase_repoRootMutationStillTampered pins the
 // strengthened integrity contract: with the report-file allowlist
 // removed in PR1, ANY mutation under RepoRoot during the verify pass
-// is tampering. Even paths that mimic the legacy `.t2a/<cycleID>/...`
+// is tampering. Even paths that mimic the legacy `.legacy-scratch/<cycleID>/...`
 // shape are no longer tolerated — the verifier has no business
 // touching the working tree.
 func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
@@ -1189,7 +1189,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 			// Drop a fake legacy-shaped artifact INSIDE the working
 			// tree. Pre-PR1 this would have been tolerated by the
 			// allowlist; post-PR1 it must trip integrity.
-			legacyDir := filepath.Join(workDir, ".t2a", cycles[0].ID)
+			legacyDir := filepath.Join(workDir, ".legacy-scratch", cycles[0].ID)
 			_ = os.MkdirAll(legacyDir, 0o755)
 			_ = os.WriteFile(filepath.Join(legacyDir, "verify-report.json"), []byte("{}"), 0o644)
 		}

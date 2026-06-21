@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestSetDoneWithEvidence_rejectsEmptyEvidence(t *testing.T) {

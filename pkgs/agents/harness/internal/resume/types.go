@@ -1,7 +1,7 @@
 package resume
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // Entry selects which cycle-loop branch resumes after interruption or retry.

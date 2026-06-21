@@ -8,25 +8,25 @@ import (
 
 func TestRateLimitPerMinuteConfigured(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		t.Setenv("T2A_RATE_LIMIT_PER_MIN", "")
+		t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "")
 		if g := RateLimitPerMinuteConfigured(); g != defaultRateLimitPerMin {
 			t.Fatalf("got %d want %d", g, defaultRateLimitPerMin)
 		}
 	})
 	t.Run("zero", func(t *testing.T) {
-		t.Setenv("T2A_RATE_LIMIT_PER_MIN", "0")
+		t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "0")
 		if g := RateLimitPerMinuteConfigured(); g != 0 {
 			t.Fatalf("got %d want 0", g)
 		}
 	})
 	t.Run("custom", func(t *testing.T) {
-		t.Setenv("T2A_RATE_LIMIT_PER_MIN", "42")
+		t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "42")
 		if g := RateLimitPerMinuteConfigured(); g != 42 {
 			t.Fatalf("got %d want 42", g)
 		}
 	})
 	t.Run("invalid_falls_back", func(t *testing.T) {
-		t.Setenv("T2A_RATE_LIMIT_PER_MIN", "nope")
+		t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "nope")
 		if g := RateLimitPerMinuteConfigured(); g != defaultRateLimitPerMin {
 			t.Fatalf("got %d want default", g)
 		}
@@ -46,7 +46,7 @@ func TestClientIPForRateLimit(t *testing.T) {
 }
 
 func TestWithRateLimit_429(t *testing.T) {
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "3")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "3")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -81,7 +81,7 @@ func TestWithRateLimit_429(t *testing.T) {
 }
 
 func TestWithRateLimit_disabled(t *testing.T) {
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "0")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "0")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -99,7 +99,7 @@ func TestWithRateLimit_disabled(t *testing.T) {
 }
 
 func TestWithRateLimit_exemptHealthUnderTightLimit(t *testing.T) {
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "1")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "1")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

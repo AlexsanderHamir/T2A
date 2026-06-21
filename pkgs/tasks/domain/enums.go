@@ -98,7 +98,7 @@ const (
 	EventPhaseCompleted EventType = "phase_completed"
 	EventPhaseFailed    EventType = "phase_failed"
 	EventPhaseSkipped   EventType = "phase_skipped"
-	// EventSyncPing is included in the dev ticker rotation (T2A_SSE_TEST) alongside every other EventType.
+	// EventSyncPing is included in the dev ticker rotation (HAMIX_SSE_TEST) alongside every other EventType.
 	EventSyncPing EventType = "sync_ping"
 )
 

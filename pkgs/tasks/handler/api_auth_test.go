@@ -10,16 +10,16 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 func TestAPIAuthEnabled(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "")
+	t.Setenv("HAMIX_API_TOKEN", "")
 	if APIAuthEnabled() {
 		t.Fatal("expected auth disabled")
 	}
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 	if !APIAuthEnabled() {
 		t.Fatal("expected auth enabled")
 	}
@@ -44,7 +44,7 @@ func TestHasValidBearerToken(t *testing.T) {
 }
 
 func TestWithAccessLog_apiAuthDenied_logIncludesRequestID(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 
 	var buf bytes.Buffer
 	prev := slog.Default()
@@ -89,7 +89,7 @@ func TestWithAccessLog_apiAuthDenied_logIncludesRequestID(t *testing.T) {
 }
 
 func TestWithAPIAuth_unauthorized_without_token(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -104,7 +104,7 @@ func TestWithAPIAuth_unauthorized_without_token(t *testing.T) {
 }
 
 func TestWithAPIAuth_authorized_with_bearer_token(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -138,7 +138,7 @@ func TestHasValidBearerToken_caseInsensitiveScheme(t *testing.T) {
 }
 
 func TestWithAPIAuth_authorized_with_lowercase_bearer_scheme(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -154,7 +154,7 @@ func TestWithAPIAuth_authorized_with_lowercase_bearer_scheme(t *testing.T) {
 }
 
 func TestWithAPIAuth_exempts_health_and_metrics(t *testing.T) {
-	t.Setenv("T2A_API_TOKEN", "secret")
+	t.Setenv("HAMIX_API_TOKEN", "secret")
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

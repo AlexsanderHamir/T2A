@@ -3,8 +3,8 @@ package tasks
 import (
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/checklist"
 )
 
 // CreateInput is the task creation payload. Re-aliased by the public

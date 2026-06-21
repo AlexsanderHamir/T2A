@@ -1,7 +1,7 @@
 package scheduling
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // EdgeSatisfied reports whether predecessor meets the edge predicate.

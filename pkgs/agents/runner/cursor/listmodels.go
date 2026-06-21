@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
 )
 
 // ModelInfo is one entry from `cursor-agent --list-models` stdout.

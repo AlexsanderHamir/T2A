@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // LoadContinuationBundle rehydrates cross-cycle resume context from a parent attempt.

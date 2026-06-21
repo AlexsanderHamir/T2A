@@ -12,28 +12,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/google/uuid"
 )
 
 func TestIdempotencyTTLConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
 	const defaultTTL = 24 * time.Hour
-	t.Setenv("T2A_IDEMPOTENCY_TTL", "")
+	t.Setenv("HAMIX_IDEMPOTENCY_TTL", "")
 	if IdempotencyTTL() != defaultTTL {
 		t.Fatalf("default ttl")
 	}
-	t.Setenv("T2A_IDEMPOTENCY_TTL", "0")
+	t.Setenv("HAMIX_IDEMPOTENCY_TTL", "0")
 	if IdempotencyTTL() != 0 {
 		t.Fatalf("zero")
 	}
-	t.Setenv("T2A_IDEMPOTENCY_TTL", "30m")
+	t.Setenv("HAMIX_IDEMPOTENCY_TTL", "30m")
 	if got := IdempotencyTTL(); got != 30*time.Minute {
 		t.Fatalf("30m: got %v", got)
 	}
-	t.Setenv("T2A_IDEMPOTENCY_TTL", "not-a-duration")
+	t.Setenv("HAMIX_IDEMPOTENCY_TTL", "not-a-duration")
 	if IdempotencyTTL() != defaultTTL {
 		t.Fatalf("invalid falls back")
 	}
@@ -41,22 +41,22 @@ func TestIdempotencyTTLConfigured(t *testing.T) {
 
 func TestIdempotencyCacheLimitsConfigured(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "")
 	maxEntries, maxBytes := IdempotencyCacheLimits()
 	if maxEntries != 2048 || maxBytes != 8<<20 {
 		t.Fatalf("defaults got entries=%d bytes=%d", maxEntries, maxBytes)
 	}
 
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "128")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "262144")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "128")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "262144")
 	maxEntries, maxBytes = IdempotencyCacheLimits()
 	if maxEntries != 128 || maxBytes != 262144 {
 		t.Fatalf("configured got entries=%d bytes=%d", maxEntries, maxBytes)
 	}
 
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "-1")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "nope")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "-1")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "nope")
 	maxEntries, maxBytes = IdempotencyCacheLimits()
 	if maxEntries != 2048 || maxBytes != 8<<20 {
 		t.Fatalf("invalid fallback got entries=%d bytes=%d", maxEntries, maxBytes)
@@ -65,9 +65,9 @@ func TestIdempotencyCacheLimitsConfigured(t *testing.T) {
 
 func TestWithAccessLog_idempotencyCacheEviction_logIncludesRequestID(t *testing.T) {
 	t.Cleanup(clearIdempotencyStateForTest)
-	t.Setenv("T2A_IDEMPOTENCY_TTL", "1h")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_ENTRIES", "2")
-	t.Setenv("T2A_IDEMPOTENCY_MAX_BYTES", "0")
+	t.Setenv("HAMIX_IDEMPOTENCY_TTL", "1h")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES", "2")
+	t.Setenv("HAMIX_IDEMPOTENCY_MAX_BYTES", "0")
 
 	var buf bytes.Buffer
 	prev := slog.Default()

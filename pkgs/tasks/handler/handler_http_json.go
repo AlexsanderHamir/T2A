@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 func actorFromRequest(r *http.Request) (a domain.Actor) {

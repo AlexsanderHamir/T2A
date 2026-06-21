@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 )
 
 func TestRun_usageLimit_nonZeroExitStructuredDetails(t *testing.T) {

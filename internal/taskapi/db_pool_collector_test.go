@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

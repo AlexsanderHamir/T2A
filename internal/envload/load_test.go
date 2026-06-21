@@ -52,7 +52,7 @@ func TestOverloadDotenvIfPresent_loadsWithoutDATABASE_URL(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module envload_early_test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("T2A_DISABLE_LOGGING=1\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("HAMIX_DISABLE_LOGGING=1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	old, err := os.Getwd()
@@ -65,7 +65,7 @@ func TestOverloadDotenvIfPresent_loadsWithoutDATABASE_URL(t *testing.T) {
 	if err := os.Chdir(root); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("T2A_DISABLE_LOGGING", "")
+	t.Setenv("HAMIX_DISABLE_LOGGING", "")
 	p, err := OverloadDotenvIfPresent("")
 	if err != nil {
 		t.Fatal(err)
@@ -73,8 +73,8 @@ func TestOverloadDotenvIfPresent_loadsWithoutDATABASE_URL(t *testing.T) {
 	if want := filepath.Join(root, ".env"); p != want {
 		t.Fatalf("path %q want %q", p, want)
 	}
-	if os.Getenv("T2A_DISABLE_LOGGING") != "1" {
-		t.Fatalf("expected T2A_DISABLE_LOGGING from .env")
+	if os.Getenv("HAMIX_DISABLE_LOGGING") != "1" {
+		t.Fatalf("expected HAMIX_DISABLE_LOGGING from .env")
 	}
 }
 

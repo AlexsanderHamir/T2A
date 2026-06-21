@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/orchestration"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/verify"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 type cycleLoopOpts struct {

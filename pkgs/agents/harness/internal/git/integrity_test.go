@@ -49,7 +49,7 @@ func TestIntegrityDiff_AnyRepoRootChange_Tampered(t *testing.T) {
 	post := IntegritySnapshot{
 		Head: "deadbeef",
 		Changed: map[string]struct{}{
-			".t2a/" + cycleID + "/verify-report.json": {},
+			".legacy-scratch/" + cycleID + "/verify-report.json": {},
 		},
 	}
 	tampered, summary := ClassifyIntegrityDiff(DiffIntegritySnapshots(pre, post), cycleID)

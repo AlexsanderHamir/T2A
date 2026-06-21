@@ -10,5 +10,5 @@
 // Callers typically log and exit non-zero.
 //
 // This package is internal to the module; importers use the full module path
-// github.com/AlexsanderHamir/T2A/internal/envload.
+// github.com/AlexsanderHamir/Hamix/internal/envload.
 package envload

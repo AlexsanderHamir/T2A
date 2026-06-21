@@ -9,11 +9,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/httpsecurityexpect"
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/repo"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/httpsecurityexpect"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

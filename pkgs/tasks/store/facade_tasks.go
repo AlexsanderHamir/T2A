@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/scheduling"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/tasks"
 )
 
 // FailedPredicate identifies the first worker readiness check that failed.

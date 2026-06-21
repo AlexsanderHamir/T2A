@@ -1,7 +1,7 @@
 package worker
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 )
 
 // Public re-exports so cmd/taskapi and tests keep importing worker without

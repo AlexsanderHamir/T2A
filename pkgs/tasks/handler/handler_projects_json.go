@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 type projectCreateJSON struct {

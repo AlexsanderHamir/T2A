@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // FormatGitContextForPrompt renders worker-indexed commit context for verify prompts.

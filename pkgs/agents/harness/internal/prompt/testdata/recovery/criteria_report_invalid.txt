@@ -1,4 +1,4 @@
-## Continuation (T2A attempt 3)
+## Continuation (Hamix attempt 3)
 
 You are continuing the same Cursor session. Do not restart discovery or revert locked work.
 

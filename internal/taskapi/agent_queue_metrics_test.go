@@ -3,8 +3,8 @@ package taskapi
 import (
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )

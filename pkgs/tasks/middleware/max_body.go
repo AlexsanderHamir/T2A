@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
-const maxRequestBodyEnv = "T2A_MAX_REQUEST_BODY_BYTES"
+const maxRequestBodyEnv = "HAMIX_MAX_REQUEST_BODY_BYTES"
 const defaultMaxRequestBodyBytes = 1 << 20 // 1 MiB
 
-// MaxRequestBodyBytesConfigured returns the max request body size from T2A_MAX_REQUEST_BODY_BYTES.
+// MaxRequestBodyBytesConfigured returns the max request body size from HAMIX_MAX_REQUEST_BODY_BYTES.
 // Unset defaults to 1 MiB. 0 means no limit (explicit opt-out). Invalid or negative values use the default.
 func MaxRequestBodyBytesConfigured() int {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.MaxRequestBodyBytesConfigured")

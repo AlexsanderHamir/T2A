@@ -3,8 +3,8 @@ package harness
 import (
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/orchestration"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // Invariant: verify retry decisions never return retry after the budget is exhausted.

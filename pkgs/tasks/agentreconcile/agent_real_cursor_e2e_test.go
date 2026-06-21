@@ -3,15 +3,15 @@
 // agent_real_cursor_e2e_test.go is the operator-run, full-stack smoke
 // for the V1 agent worker against the real cursor-agent binary. It is
 // excluded from default builds by the cursor_real build tag and
-// additionally gated by T2A_TEST_REAL_CURSOR=1 so even with the tag
+// additionally gated by HAMIX_TEST_REAL_CURSOR=1 so even with the tag
 // set the test no-ops unless the operator opted in. See
 // docs/architecture.md "Smoke run" for the operator runbook and
 // pkgs/agents/agentsmoke/doc.go for the prompt + assertion rationale.
 //
 // Run it locally as:
 //
-//	$env:T2A_TEST_REAL_CURSOR='1'
-//	$env:T2A_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
+//	$env:HAMIX_TEST_REAL_CURSOR='1'
+//	$env:HAMIX_TEST_CURSOR_BIN='C:\path\to\cursor-agent.cmd' # optional override
 //	go test -tags=cursor_real -run TestAgentE2E_RealCursor -race ./pkgs/tasks/agentreconcile/... -count=1
 //
 // Prerequisites: cursor-agent on PATH (or the env override) and
@@ -31,15 +31,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi"
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/agentsmoke"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/agentsmoke"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 
@@ -50,13 +50,13 @@ import (
 // e2e. Even with the cursor_real build tag set, the test skips
 // unless this env var is exactly "1" so a stray go test invocation
 // against the package never triggers a paid Cursor run.
-const realCursorRunGateEnv = "T2A_TEST_REAL_CURSOR"
+const realCursorRunGateEnv = "HAMIX_TEST_REAL_CURSOR"
 
 // realCursorBinaryEnv lets operators point the e2e at a specific
 // cursor-agent binary (for example the .cmd shim on Windows). When
 // unset the adapter's default ("cursor-agent" resolved against PATH)
 // is used.
-const realCursorBinaryEnv = "T2A_TEST_CURSOR_BIN"
+const realCursorBinaryEnv = "HAMIX_TEST_CURSOR_BIN"
 
 // e2eRealCursorPollTimeout bounds the wait for task.status == done.
 // Generous because Cursor cold caches + first-tool-call latency can
@@ -117,7 +117,7 @@ func (n *hubCycleNotifier) PublishCycleChange(taskID, cycleID string) {
 // cmd/taskapi builds (handler + SSE hub + notifier + reconcile +
 // worker + cursor adapter + Prometheus adapter), turns a single
 // POST /tasks into a real file on disk and a fully-audited cycle.
-// Default-skip in CI; opt-in via T2A_TEST_REAL_CURSOR=1.
+// Default-skip in CI; opt-in via HAMIX_TEST_REAL_CURSOR=1.
 func TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten(t *testing.T) {
 	if os.Getenv(realCursorRunGateEnv) != "1" {
 		t.Skipf("skipping: %s != 1; this test invokes a paid Cursor run", realCursorRunGateEnv)
@@ -297,7 +297,7 @@ const e2eRealCursorCancelTerminalTimeout = 60 * time.Second
 // then assert the task lands in failed and the cycle's terminal
 // reason is "cancelled_by_operator" — not "runner_timeout" (the per-
 // run cap did not fire) and not "shutdown" (the worker context is
-// alive). Default-skip in CI; opt-in via T2A_TEST_REAL_CURSOR=1.
+// alive). Default-skip in CI; opt-in via HAMIX_TEST_REAL_CURSOR=1.
 //
 // The test deliberately uses a long-form prompt and a no-cap
 // RunTimeout so the cancel path is the only thing that can finish the
@@ -659,9 +659,9 @@ func drainSSEUntilCycleChanged(t *testing.T, ch <-chan string, taskID, cycleID s
 
 // assertOneSucceededRunRecorded gathers the pedantic registry and
 // fails unless exactly one observation landed in
-// t2a_agent_runs_total{runner="cursor-cli",terminal_status="succeeded"}
+// hamix_agent_runs_total{runner="cursor-cli",terminal_status="succeeded"}
 // and exactly one observation landed in
-// t2a_agent_run_duration_seconds{runner="cursor-cli"}. Other label
+// hamix_agent_run_duration_seconds{runner="cursor-cli"}. Other label
 // combinations failing the run would be a regression and are surfaced
 // via t.Logf so the operator gets a useful pointer.
 func assertOneSucceededRunRecorded(t *testing.T, reg *prometheus.Registry) {
@@ -673,32 +673,32 @@ func assertOneSucceededRunRecorded(t *testing.T, reg *prometheus.Registry) {
 	var sawCounter, sawHistogram bool
 	for _, mf := range mfs {
 		switch mf.GetName() {
-		case "t2a_agent_runs_total":
+		case "hamix_agent_runs_total":
 			sawCounter = true
 			for _, m := range mf.GetMetric() {
 				labels := labelMap(m)
 				count := m.GetCounter().GetValue()
-				t.Logf("metric: t2a_agent_runs_total{runner=%q,terminal_status=%q} = %v",
+				t.Logf("metric: hamix_agent_runs_total{runner=%q,terminal_status=%q} = %v",
 					labels["runner"], labels["terminal_status"], count)
 				if labels["runner"] == "cursor-cli" && labels["terminal_status"] == "succeeded" {
 					if count != 1 {
-						t.Errorf("t2a_agent_runs_total{runner=cursor-cli,terminal_status=succeeded} = %v, want 1", count)
+						t.Errorf("hamix_agent_runs_total{runner=cursor-cli,terminal_status=succeeded} = %v, want 1", count)
 					}
 				} else if count > 0 {
-					t.Errorf("unexpected non-zero counter t2a_agent_runs_total{runner=%q,terminal_status=%q} = %v",
+					t.Errorf("unexpected non-zero counter hamix_agent_runs_total{runner=%q,terminal_status=%q} = %v",
 						labels["runner"], labels["terminal_status"], count)
 				}
 			}
-		case "t2a_agent_run_duration_seconds":
+		case "hamix_agent_run_duration_seconds":
 			sawHistogram = true
 			for _, m := range mf.GetMetric() {
 				labels := labelMap(m)
 				h := m.GetHistogram()
-				t.Logf("metric: t2a_agent_run_duration_seconds{runner=%q} count=%d sum=%v",
+				t.Logf("metric: hamix_agent_run_duration_seconds{runner=%q} count=%d sum=%v",
 					labels["runner"], h.GetSampleCount(), h.GetSampleSum())
 				if labels["runner"] == "cursor-cli" {
 					if h.GetSampleCount() != 1 {
-						t.Errorf("t2a_agent_run_duration_seconds{runner=cursor-cli} count = %d, want 1",
+						t.Errorf("hamix_agent_run_duration_seconds{runner=cursor-cli} count = %d, want 1",
 							h.GetSampleCount())
 					}
 				}
@@ -706,10 +706,10 @@ func assertOneSucceededRunRecorded(t *testing.T, reg *prometheus.Registry) {
 		}
 	}
 	if !sawCounter {
-		t.Errorf("metric t2a_agent_runs_total not present in registry; agent worker metrics did not record")
+		t.Errorf("metric hamix_agent_runs_total not present in registry; agent worker metrics did not record")
 	}
 	if !sawHistogram {
-		t.Errorf("metric t2a_agent_run_duration_seconds not present in registry; agent worker metrics did not record")
+		t.Errorf("metric hamix_agent_run_duration_seconds not present in registry; agent worker metrics did not record")
 	}
 }
 

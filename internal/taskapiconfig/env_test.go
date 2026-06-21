@@ -33,20 +33,20 @@ func TestUserTaskAgentQueueCap(t *testing.T) {
 }
 
 func TestEnvTruthy(t *testing.T) {
-	t.Setenv("T2A_ENV_TRUTHY_TEST", "")
-	if EnvTruthy("T2A_ENV_TRUTHY_TEST") {
+	t.Setenv("HAMIX_ENV_TRUTHY_TEST", "")
+	if EnvTruthy("HAMIX_ENV_TRUTHY_TEST") {
 		t.Fatal("empty should be false")
 	}
 	for _, v := range []string{"1", "true", "TRUE", "yes", "Yes", "on", "ON"} {
 		t.Run(v, func(t *testing.T) {
-			t.Setenv("T2A_ENV_TRUTHY_TEST", v)
-			if !EnvTruthy("T2A_ENV_TRUTHY_TEST") {
+			t.Setenv("HAMIX_ENV_TRUTHY_TEST", v)
+			if !EnvTruthy("HAMIX_ENV_TRUTHY_TEST") {
 				t.Fatalf("want true for %q", v)
 			}
 		})
 	}
-	t.Setenv("T2A_ENV_TRUTHY_TEST", "0")
-	if EnvTruthy("T2A_ENV_TRUTHY_TEST") {
+	t.Setenv("HAMIX_ENV_TRUTHY_TEST", "0")
+	if EnvTruthy("HAMIX_ENV_TRUTHY_TEST") {
 		t.Fatal("0 should be false")
 	}
 }
@@ -161,7 +161,7 @@ func TestSSETestTickerInterval(t *testing.T) {
 }
 
 func TestWorkerReportDir(t *testing.T) {
-	t.Run("defaults to <os.TempDir>/t2a-worker when env unset", func(t *testing.T) {
+	t.Run("defaults to <os.TempDir>/hamix-worker when env unset", func(t *testing.T) {
 		t.Setenv(EnvWorkerReportDir, "")
 		got := WorkerReportDir()
 		want := filepath.Join(os.TempDir(), defaultWorkerReportDirSubdir)
@@ -170,14 +170,14 @@ func TestWorkerReportDir(t *testing.T) {
 		}
 	})
 	t.Run("env override wins over default", func(t *testing.T) {
-		override := filepath.Join(os.TempDir(), "t2a-override")
+		override := filepath.Join(os.TempDir(), "hamix-override")
 		t.Setenv(EnvWorkerReportDir, override)
 		if got := WorkerReportDir(); got != override {
 			t.Fatalf("got %q want %q", got, override)
 		}
 	})
 	t.Run("trims surrounding whitespace", func(t *testing.T) {
-		override := filepath.Join(os.TempDir(), "t2a-trim")
+		override := filepath.Join(os.TempDir(), "hamix-trim")
 		t.Setenv(EnvWorkerReportDir, "  "+override+"\t")
 		if got := WorkerReportDir(); got != override {
 			t.Fatalf("got %q want %q", got, override)

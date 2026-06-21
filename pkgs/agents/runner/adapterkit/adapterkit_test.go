@@ -10,22 +10,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
 )
 
 func TestBuildEnv_deniesConfiguredKeysAndPrefixes(t *testing.T) {
 	t.Parallel()
 
 	policy := adapterkit.EnvPolicy{
-		ParentAllowedKeys: []string{"PATH", "DATABASE_URL", "T2A_SECRET"},
-		ExtraAllowedKeys:  []string{"EXTRA", "T2A_EXTRA"},
+		ParentAllowedKeys: []string{"PATH", "DATABASE_URL", "HAMIX_SECRET"},
+		ExtraAllowedKeys:  []string{"EXTRA", "HAMIX_EXTRA"},
 		DeniedKeys:        []string{"DATABASE_URL"},
-		DeniedPrefixes:    []string{"T2A_"},
+		DeniedPrefixes:    []string{"HAMIX_"},
 		Lookup: func(k string) string {
 			return map[string]string{
 				"PATH":         "/bin",
 				"DATABASE_URL": "postgres://secret",
-				"T2A_SECRET":   "secret",
+				"HAMIX_SECRET":   "secret",
 				"EXTRA":        "extra-from-parent",
 			}[k]
 		},
@@ -34,7 +34,7 @@ func TestBuildEnv_deniesConfiguredKeysAndPrefixes(t *testing.T) {
 	got := envSliceToMap(adapterkit.BuildEnv(map[string]string{
 		"PATH":         "/custom/bin",
 		"DATABASE_URL": "postgres://request-secret",
-		"T2A_EXTRA":    "secret",
+		"HAMIX_EXTRA":    "secret",
 		"SAFE":         "request-safe",
 	}, policy))
 
@@ -44,7 +44,7 @@ func TestBuildEnv_deniesConfiguredKeysAndPrefixes(t *testing.T) {
 	if got["SAFE"] != "request-safe" {
 		t.Fatalf("SAFE = %q", got["SAFE"])
 	}
-	for _, denied := range []string{"DATABASE_URL", "T2A_SECRET", "T2A_EXTRA"} {
+	for _, denied := range []string{"DATABASE_URL", "HAMIX_SECRET", "HAMIX_EXTRA"} {
 		if _, ok := got[denied]; ok {
 			t.Fatalf("denied key %q leaked into child env: %#v", denied, got)
 		}
@@ -55,7 +55,7 @@ func TestRedact_scrubsSharedSecretShapes(t *testing.T) {
 	t.Parallel()
 
 	got := adapterkit.Redact(
-		"Authorization: Bearer abc.def\nCookie: sid=cookie-secret\nSet-Cookie: x=y\nT2A_FOO=secret\n/home/me/repo",
+		"Authorization: Bearer abc.def\nCookie: sid=cookie-secret\nSet-Cookie: x=y\nHAMIX_FOO=secret\n/home/me/repo",
 		adapterkit.DefaultRedactionPolicy([]string{"/home/me"}),
 	)
 

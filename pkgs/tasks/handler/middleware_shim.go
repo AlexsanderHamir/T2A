@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 //funclogmeasure:skip category=re-export-wrapper reason="Thin middleware re-export; slog lives on pkgs/tasks/middleware implementation."

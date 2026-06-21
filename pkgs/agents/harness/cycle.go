@@ -8,12 +8,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // process.go owns the happy-path per-task lifecycle: dequeue → reload
@@ -390,7 +390,7 @@ func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskI
 	// GC the worker-managed scratch dir for this cycle. Idempotent
 	// against a missing dir; logged at Debug because operators rarely
 	// care unless cleanup itself errors. Closes the unbounded-disk-
-	// growth gap that existed when files were written under RepoRoot/.t2a.
+	// growth gap that existed when files were written under RepoRoot/.legacy-scratch.
 	if err := reports.CleanupReportDir(h.opts.ReportDir, state.cycleID); err != nil {
 		slog.Warn("agent harness cleanupReportDir failed",
 			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.cleanup_err",

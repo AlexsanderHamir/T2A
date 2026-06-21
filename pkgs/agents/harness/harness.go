@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/resume"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/verify"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/resume"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/verify"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 const harnessLogCmd = "taskapi"
@@ -34,7 +34,7 @@ const PanicReason = "panic"
 
 // DefaultReportDirSubdir is the leaf directory the harness manages
 // under os.TempDir() for agent↔worker side-channel report files.
-const DefaultReportDirSubdir = "t2a-worker"
+const DefaultReportDirSubdir = "hamix-worker"
 
 // ShutdownReason is the termination reason written when the parent
 // context cancels mid-run.

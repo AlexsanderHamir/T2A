@@ -3,7 +3,7 @@ package cycles
 import (
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // StartCycleInput captures everything needed to begin a new execution

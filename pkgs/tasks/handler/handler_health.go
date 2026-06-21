@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func health(w http.ResponseWriter, r *http.Request) {

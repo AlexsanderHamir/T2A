@@ -10,7 +10,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | `run.go` | Flag parse, `.env` preload, JSON log bootstrap (**`pkgs/tasks/logctx`** wraps the JSON `slog` handler), DB open/migrate, store + SSE hub + optional repo, agent queue + reconcile goroutine, **`internal/taskapi.NewHTTPHandler`**, devsim ticker, mux (`/` + `GET /metrics`), `ListenAndServe`, graceful shutdown. |
 | `run_helpers.go` | `buildTaskAPIApp`, `runTaskAPIService`, startup config log helpers. |
 | `run_agentworker.go` | Queue + reconcile + pickup wake boot; **`internal/taskapi/agentworker`** supervisor `New` + `Start`. |
-| `logfile.go` | Create log directory and open per-run `taskapi-*.jsonl` (`-logdir` / `T2A_LOG_DIR`). |
+| `logfile.go` | Create log directory and open per-run `taskapi-*.jsonl` (`-logdir` / `HAMIX_LOG_DIR`). |
 | `logging_startup_test.go` | Logging config line shape. |
 | `logfile_test.go` | Log path / directory behavior. |
 
@@ -27,6 +27,6 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 | [`pkgs/tasks/logctx`](../../pkgs/tasks/logctx) | Request id + `log_seq` context and `slog` handler wrappers for JSONL correlation (used in `run.go` and handler). |
 | [`pkgs/agents`](../../pkgs/agents) | `MemoryQueue` + reconcile loop. |
 | [`pkgs/repo`](../../pkgs/repo) | Optional workspace when `app_settings.repo_root` is set (SPA Settings page; see [docs/configuration.md](../../docs/configuration.md)). |
-| [`pkgs/tasks/devsim`](../../pkgs/tasks/devsim) | Synthetic SSE / audit ticker when `T2A_SSE_TEST=1`. |
+| [`pkgs/tasks/devsim`](../../pkgs/tasks/devsim) | Synthetic SSE / audit ticker when `HAMIX_SSE_TEST=1`. |
 
 Keep **business rules** out of this directory—only startup, wiring, and process lifecycle.

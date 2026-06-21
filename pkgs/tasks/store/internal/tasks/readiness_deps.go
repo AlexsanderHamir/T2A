@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/scheduling"
 	"gorm.io/gorm"
 )
 

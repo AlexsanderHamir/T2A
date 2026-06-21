@@ -1,6 +1,6 @@
 package policy
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 
 // SchedulingIdleHintReason is the diagnostic idle reason emitted when
 // the worker is fully configured and could run, but the ready queue

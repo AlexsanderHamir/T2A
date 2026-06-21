@@ -11,9 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/cursor"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 // captured records every (env, stdin, dir, name, args) tuple a fake ExecFn
@@ -778,21 +778,21 @@ func TestRun_redactionCookieHeader(t *testing.T) {
 	}
 }
 
-// TestRun_redactionT2AEnv proves T2A_* env values are scrubbed from
+// TestRun_redactionT2AEnv proves HAMIX_* env values are scrubbed from
 // RawOutput. Exact mechanism: stderr accidentally echoing an env line
-// like "T2A_DATABASE_URL=postgres://...".
+// like "HAMIX_DATABASE_URL=postgres://...".
 func TestRun_redactionT2AEnv(t *testing.T) {
 	t.Parallel()
 
-	stderr := []byte("env dump: T2A_DATABASE_URL=postgres://user:pw@host/db PATH=/usr/bin\n")
+	stderr := []byte("env dump: HAMIX_DATABASE_URL=postgres://user:pw@host/db PATH=/usr/bin\n")
 	a := newAdapter(fakeExec(&captured{}, []byte(""), stderr, 1, nil, false))
 
 	res, _ := a.Run(context.Background(), defaultRequest())
 	if strings.Contains(res.RawOutput, "postgres://user:pw@host/db") {
 		t.Errorf("RawOutput leaks DATABASE_URL value: %q", res.RawOutput)
 	}
-	if !strings.Contains(res.RawOutput, "T2A_DATABASE_URL=[REDACTED]") {
-		t.Errorf("expected T2A_DATABASE_URL=[REDACTED]: %q", res.RawOutput)
+	if !strings.Contains(res.RawOutput, "HAMIX_DATABASE_URL=[REDACTED]") {
+		t.Errorf("expected HAMIX_DATABASE_URL=[REDACTED]: %q", res.RawOutput)
 	}
 }
 
@@ -821,7 +821,7 @@ func TestRun_redactionHomePath(t *testing.T) {
 func TestRedact_publicHelper(t *testing.T) {
 	t.Parallel()
 
-	in := "Authorization: Bearer abc.def.ghi\nT2A_FOO=secretvalue\nCookie: sid=cookie-secret-12345\nSet-Cookie: x=y; HttpOnly\n"
+	in := "Authorization: Bearer abc.def.ghi\nHAMIX_FOO=secretvalue\nCookie: sid=cookie-secret-12345\nSet-Cookie: x=y; HttpOnly\n"
 	got := cursor.Redact(in)
 	if strings.Contains(got, "abc.def.ghi") || strings.Contains(got, "secretvalue") {
 		t.Errorf("Redact leaked secret: %q", got)
@@ -834,7 +834,7 @@ func TestRedact_publicHelper(t *testing.T) {
 	}
 }
 
-// TestRun_envAllowlist asserts that DATABASE_URL and T2A_* keys are
+// TestRun_envAllowlist asserts that DATABASE_URL and HAMIX_* keys are
 // stripped from the env passed to the child process even when the caller
 // places them in Request.Env. This is the defense-in-depth guarantee.
 //
@@ -843,7 +843,7 @@ func TestRun_envAllowlist(t *testing.T) {
 	t.Setenv("PATH", "/test/path")
 	t.Setenv("HOME", "/home/runner")
 	t.Setenv("DATABASE_URL", "postgres://should-not-leak")
-	t.Setenv("T2A_SECRET_TOKEN", "should-not-leak")
+	t.Setenv("HAMIX_SECRET_TOKEN", "should-not-leak")
 	t.Setenv("ALLOWED_EXTRA", "yes-please")
 
 	var c captured
@@ -856,7 +856,7 @@ func TestRun_envAllowlist(t *testing.T) {
 	req := defaultRequest()
 	req.Env = map[string]string{
 		"DATABASE_URL":     "from-request-must-also-be-stripped",
-		"T2A_BACKDOOR":     "must-be-stripped",
+		"HAMIX_BACKDOOR":     "must-be-stripped",
 		"REQUEST_PROVIDED": "request-wins-over-parent",
 	}
 
@@ -869,8 +869,8 @@ func TestRun_envAllowlist(t *testing.T) {
 		t.Errorf("DATABASE_URL must never be passed to child: %v", envMap)
 	}
 	for k := range envMap {
-		if strings.HasPrefix(k, "T2A_") {
-			t.Errorf("T2A_* keys must never be passed to child: %s", k)
+		if strings.HasPrefix(k, "HAMIX_") {
+			t.Errorf("HAMIX_* keys must never be passed to child: %s", k)
 		}
 	}
 	if envMap["PATH"] != "/test/path" {

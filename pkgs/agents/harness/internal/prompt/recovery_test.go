@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestComposeRecoveryDelta_verifyImplementation(t *testing.T) {
@@ -15,7 +15,7 @@ func TestComposeRecoveryDelta_verifyImplementation(t *testing.T) {
 		Kind:       RecoveryVerifyImplementation,
 		Phase:      domain.PhaseExecute,
 		AttemptSeq: 2,
-		ReportPath: "/tmp/t2a/cycle-1/criteria-report.json",
+		ReportPath: "/tmp/hamix/cycle-1/criteria-report.json",
 		FailedCriteria: []CriterionFailure{{
 			ID:        "criterion-a",
 			Reasoning: "missing handler",
@@ -23,7 +23,7 @@ func TestComposeRecoveryDelta_verifyImplementation(t *testing.T) {
 		}},
 		LockedCriteria: []string{"criterion-b"},
 	})
-	if !strings.Contains(delta, "## Continuation (T2A attempt 2)") {
+	if !strings.Contains(delta, "## Continuation (Hamix attempt 2)") {
 		t.Fatalf("missing continuation header: %q", delta)
 	}
 	if !strings.Contains(delta, "**[criterion-a]**") {
@@ -81,7 +81,7 @@ func TestComposeRecoveryDelta_goldenFiles(t *testing.T) {
 			Kind:       RecoveryVerifyImplementation,
 			Phase:      domain.PhaseExecute,
 			AttemptSeq: 2,
-			ReportPath: "/tmp/t2a/cycle-1/criteria-report.json",
+			ReportPath: "/tmp/hamix/cycle-1/criteria-report.json",
 			FailedCriteria: []CriterionFailure{{
 				ID: "criterion-a", Reasoning: "missing handler", Verifier: "verify_agent",
 			}},

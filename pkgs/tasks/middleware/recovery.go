@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 // WithRecovery wraps h so panics are logged and answered with a JSON 500 response.

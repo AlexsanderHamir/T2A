@@ -1,4 +1,4 @@
-## Continuation (T2A attempt 2)
+## Continuation (Hamix attempt 2)
 
 You are continuing the same Cursor session. Do not restart discovery or revert locked work.
 
@@ -15,7 +15,7 @@ Verification rejected the implementation. Address the failures below.
 ### Do this next
 
 1. Fix the issue described above.
-2. Update `/tmp/t2a/cycle-1/criteria-report.json` for active criteria only.
+2. Update `/tmp/hamix/cycle-1/criteria-report.json` for active criteria only.
 
 ### Do not
 
@@ -24,4 +24,4 @@ Verification rejected the implementation. Address the failures below.
 
 ### Artifacts
 
-- criteria-report.json: `/tmp/t2a/cycle-1/criteria-report.json` (schema v1, claimed_done + evidence per active id)
+- criteria-report.json: `/tmp/hamix/cycle-1/criteria-report.json` (schema v1, claimed_done + evidence per active id)

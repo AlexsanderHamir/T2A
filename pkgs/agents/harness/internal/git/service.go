@@ -1,7 +1,7 @@
 package git
 
 import (
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // Service orchestrates harness git operations with explicit dependencies.

@@ -3,8 +3,8 @@ package harness_test
 import (
 	"context"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 )
 
 // hookRunner wraps a runnerfake so tests can run a side effect when Run

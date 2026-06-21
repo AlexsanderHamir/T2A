@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 )
 
 func TestStore_Ping_ok(t *testing.T) {

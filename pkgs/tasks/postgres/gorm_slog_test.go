@@ -27,7 +27,7 @@ func TestSlowQueryThresholdForGORM(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("T2A_GORM_SLOW_QUERY_MS", tc.env)
+			t.Setenv("HAMIX_GORM_SLOW_QUERY_MS", tc.env)
 			if got := slowQueryThresholdForGORM(); got != tc.want {
 				t.Fatalf("got %v want %v", got, tc.want)
 			}
@@ -49,7 +49,7 @@ func TestSlowQueryThresholdMS(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("T2A_GORM_SLOW_QUERY_MS", tc.env)
+			t.Setenv("HAMIX_GORM_SLOW_QUERY_MS", tc.env)
 			if got := SlowQueryThresholdMS(); got != tc.want {
 				t.Fatalf("got %d want %d", got, tc.want)
 			}

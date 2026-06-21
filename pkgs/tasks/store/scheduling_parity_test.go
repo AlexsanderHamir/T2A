@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
+	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/scheduling"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/tasks"
 )
 
 // I3 contract gate: scheduling.EvaluateWorkerReadiness must match ListQueueCandidates.

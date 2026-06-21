@@ -10,7 +10,7 @@ import (
 )
 
 // openTaskAPILogFile creates the log directory if needed and opens a new JSON-lines log file
-// named with the current local date and time. dirFlag takes precedence over T2A_LOG_DIR;
+// named with the current local date and time. dirFlag takes precedence over HAMIX_LOG_DIR;
 // when both are empty, "logs" (relative to the process working directory) is used.
 // minLevel is the minimum slog level written to this file (e.g. slog.LevelInfo hides Debug).
 func openTaskAPILogFile(dirFlag string, minLevel slog.Level) (*os.File, string, error) {
@@ -38,7 +38,7 @@ func openTaskAPILogFile(dirFlag string, minLevel slog.Level) (*os.File, string, 
 func resolveTaskAPILogDir(dirFlag string) (string, error) {
 	dir := strings.TrimSpace(dirFlag)
 	if dir == "" {
-		dir = strings.TrimSpace(os.Getenv("T2A_LOG_DIR"))
+		dir = strings.TrimSpace(os.Getenv("HAMIX_LOG_DIR"))
 	}
 	if dir == "" {
 		dir = "logs"

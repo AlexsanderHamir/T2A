@@ -31,7 +31,7 @@ func ensureWorkerReportDirWritable(dir string) error {
 	if err := pathProbe.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("mkdir %q: %w", dir, err)
 	}
-	probePath, err := pathProbe.CreateTemp(dir, ".t2a-worker-probe-*")
+	probePath, err := pathProbe.CreateTemp(dir, ".hamix-worker-probe-*")
 	if err != nil {
 		return fmt.Errorf("write probe in %q: %w", dir, err)
 	}

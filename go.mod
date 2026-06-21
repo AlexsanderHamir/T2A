@@ -1,4 +1,4 @@
-module github.com/AlexsanderHamir/T2A
+module github.com/AlexsanderHamir/Hamix
 
 go 1.25.0
 

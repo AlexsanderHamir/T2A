@@ -25,7 +25,7 @@ type RedactionPolicy struct {
 func DefaultRedactionPolicy(homePaths []string) RedactionPolicy {
 	return RedactionPolicy{
 		HomePaths:   append([]string(nil), homePaths...),
-		EnvPrefixes: []string{"T2A_"},
+		EnvPrefixes: []string{"HAMIX_"},
 	}
 }
 

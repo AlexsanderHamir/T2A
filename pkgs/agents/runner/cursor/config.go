@@ -3,7 +3,7 @@ package cursor
 import (
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
 )
 
 const cursorLogCmd = "taskapi"
@@ -164,7 +164,7 @@ func envPolicy(extraKeys []string) adapterkit.EnvPolicy {
 		ParentAllowedKeys: defaultPassthroughEnvKeys,
 		ExtraAllowedKeys:  extraKeys,
 		DeniedKeys:        []string{"DATABASE_URL"},
-		DeniedPrefixes:    []string{"T2A_"},
+		DeniedPrefixes:    []string{"HAMIX_"},
 	}
 }
 

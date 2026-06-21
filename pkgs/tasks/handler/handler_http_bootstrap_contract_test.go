@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler/readpolicy"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler/readpolicy"
 )
 
 func TestHTTP_bootstrap_returns_aggregate_envelope(t *testing.T) {

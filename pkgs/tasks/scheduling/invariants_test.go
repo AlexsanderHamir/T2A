@@ -3,7 +3,7 @@ package scheduling_test
 import (
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/scheduling"
 )
 
 // Documents ADR-0023 invariants enforced by unit + parity tests in this package.

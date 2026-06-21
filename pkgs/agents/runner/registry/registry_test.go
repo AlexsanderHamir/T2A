@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/claudecode"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/claudecode"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	_ "github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry/all"
 )
 
 // TestList_pinsRegisteredRunners pins the catalogue exposed to the SPA.

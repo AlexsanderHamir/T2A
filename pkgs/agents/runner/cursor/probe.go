@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
 )
 
 // ProbeFn matches the bits of os/exec the Probe needs. Tests inject a

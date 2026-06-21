@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/time/rate"
@@ -30,7 +30,7 @@ var taskapiHTTPRateLimitedTotal = promauto.NewCounter(prometheus.CounterOpts{
 	Help:      "HTTP requests rejected with 429 (per-IP rate limit).",
 })
 
-// RateLimitPerMinuteConfigured returns the effective per-IP limit from T2A_RATE_LIMIT_PER_MIN
+// RateLimitPerMinuteConfigured returns the effective per-IP limit from HAMIX_RATE_LIMIT_PER_MIN
 // (requests per minute). Unset uses defaultRateLimitPerMin. Invalid or negative values use the default.
 // Zero disables rate limiting (WithRateLimit becomes a no-op).
 func RateLimitPerMinuteConfigured() int {
@@ -40,7 +40,7 @@ func RateLimitPerMinuteConfigured() int {
 
 func parseRateLimitPerMinFromEnv() int {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.parseRateLimitPerMinFromEnv")
-	s := strings.TrimSpace(os.Getenv("T2A_RATE_LIMIT_PER_MIN"))
+	s := strings.TrimSpace(os.Getenv("HAMIX_RATE_LIMIT_PER_MIN"))
 	if s == "" {
 		return defaultRateLimitPerMin
 	}
@@ -129,7 +129,7 @@ func (il *ipRateLimiter) pruneLocked(now time.Time) {
 	}
 }
 
-// WithRateLimit enforces a token-bucket limit per client IP (RemoteAddr host) using T2A_RATE_LIMIT_PER_MIN.
+// WithRateLimit enforces a token-bucket limit per client IP (RemoteAddr host) using HAMIX_RATE_LIMIT_PER_MIN.
 // Unset env uses defaultRateLimitPerMin. Set to 0 to disable (no-op wrapper).
 // GET /health, /health/live, /health/ready, and /metrics are exempt.
 // Rejected requests receive 429, plain text body, and Retry-After: 60.

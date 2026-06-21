@@ -3,7 +3,7 @@ package harness
 import (
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/resume"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/resume"
 )
 
 // ContinuationBundle rehydrates cross-cycle resume context from a parent attempt.

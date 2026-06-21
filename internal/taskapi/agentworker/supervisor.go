@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/registry"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 const logCmd = "taskapi"

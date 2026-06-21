@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
 )
 
 // rumEvent is one Real-User-Monitoring data point shipped by the SPA

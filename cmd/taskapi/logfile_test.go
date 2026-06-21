@@ -9,7 +9,7 @@ import (
 )
 
 func TestOpenTaskAPILogFile_createsFileUnderDir(t *testing.T) {
-	t.Setenv("T2A_LOG_DIR", "")
+	t.Setenv("HAMIX_LOG_DIR", "")
 	base := t.TempDir()
 	f, path, err := openTaskAPILogFile(base, slog.LevelDebug)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestOpenTaskAPILogFile_createsFileUnderDir(t *testing.T) {
 }
 
 func TestOpenTaskAPILogFile_skipsBootstrapDebugWhenMinInfo(t *testing.T) {
-	t.Setenv("T2A_LOG_DIR", "")
+	t.Setenv("HAMIX_LOG_DIR", "")
 	base := t.TempDir()
 	f, path, err := openTaskAPILogFile(base, slog.LevelInfo)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestOpenTaskAPILogFile_skipsBootstrapDebugWhenMinInfo(t *testing.T) {
 func TestOpenTaskAPILogFile_prefersFlagOverEnv(t *testing.T) {
 	flagDir := t.TempDir()
 	envDir := t.TempDir()
-	t.Setenv("T2A_LOG_DIR", envDir)
+	t.Setenv("HAMIX_LOG_DIR", envDir)
 	f, path, err := openTaskAPILogFile(flagDir, slog.LevelDebug)
 	if err != nil {
 		t.Fatal(err)

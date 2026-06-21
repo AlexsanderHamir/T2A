@@ -12,7 +12,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure"
+const defaultToolImportPath = "github.com/AlexsanderHamir/Hamix/cmd/funclogmeasure"
 
 type analyzeOpts struct {
 	tests       bool

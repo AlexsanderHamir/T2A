@@ -3,7 +3,7 @@ package orchestration
 import (
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestClassify_EC01_verifyInfra_verifyOnly(t *testing.T) {

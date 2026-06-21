@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/health"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/health"
 )
 
 // DefaultReadyTimeout is the recommended upper bound for [context.Context] passed to (*Store).Ready

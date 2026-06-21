@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 func TestWithAccessLog_rateLimitWarn_carriesRequestID(t *testing.T) {
-	t.Setenv("T2A_RATE_LIMIT_PER_MIN", "1")
+	t.Setenv("HAMIX_RATE_LIMIT_PER_MIN", "1")
 	var buf bytes.Buffer
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/apijson"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/apijson"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/sync/singleflight"
@@ -51,7 +51,7 @@ var idempSF singleflight.Group
 
 func idempotencyTTLConfigured() time.Duration {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyTTLConfigured")
-	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_TTL"))
+	s := strings.TrimSpace(os.Getenv("HAMIX_IDEMPOTENCY_TTL"))
 	if s == "" {
 		return defaultIdempotencyTTL
 	}
@@ -67,7 +67,7 @@ func idempotencyTTLConfigured() time.Duration {
 
 func idempotencyMaxEntriesConfigured() int {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyMaxEntriesConfigured")
-	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_ENTRIES"))
+	s := strings.TrimSpace(os.Getenv("HAMIX_IDEMPOTENCY_MAX_ENTRIES"))
 	if s == "" {
 		return defaultIdempotencyMaxEntries
 	}
@@ -80,7 +80,7 @@ func idempotencyMaxEntriesConfigured() int {
 
 func idempotencyMaxBytesConfigured() int {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.idempotencyMaxBytesConfigured")
-	s := strings.TrimSpace(os.Getenv("T2A_IDEMPOTENCY_MAX_BYTES"))
+	s := strings.TrimSpace(os.Getenv("HAMIX_IDEMPOTENCY_MAX_BYTES"))
 	if s == "" {
 		return defaultIdempotencyMaxBytes
 	}
@@ -92,7 +92,7 @@ func idempotencyMaxBytesConfigured() int {
 }
 
 // IdempotencyTTL returns the effective in-process idempotency cache TTL from
-// T2A_IDEMPOTENCY_TTL (same as WithIdempotency): default 24h, 0 disables caching.
+// HAMIX_IDEMPOTENCY_TTL (same as WithIdempotency): default 24h, 0 disables caching.
 func IdempotencyTTL() time.Duration {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.IdempotencyTTL")
 	return idempotencyTTLConfigured()
@@ -223,7 +223,7 @@ func prepareIdempotencyRequest(r *http.Request, w http.ResponseWriter) (idempote
 // POST/PATCH with unknown Content-Length (chunked) are rejected with 400 because
 // body fingerprinting would be ambiguous; bodies larger than 1 MiB are rejected with 413.
 //
-// Cache TTL comes from T2A_IDEMPOTENCY_TTL (Go duration; default 24h). Set to 0 to disable.
+// Cache TTL comes from HAMIX_IDEMPOTENCY_TTL (Go duration; default 24h). Set to 0 to disable.
 // The cache is in-process only and is not shared across replicas.
 func WithIdempotency(h http.Handler) http.Handler {
 	slog.Debug("trace", "cmd", logctx.TraceCmd, "operation", "middleware.WithIdempotency")

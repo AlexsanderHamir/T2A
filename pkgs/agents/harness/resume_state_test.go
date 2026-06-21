@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/prompt"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/resume"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/resume"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 func TestComposeContinuationPrompt_scopeLockAndAntiDiscovery(t *testing.T) {
@@ -54,8 +54,8 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 	if containsSubstr(withCommit, "git rev-list") {
 		t.Fatalf("commit policy must not mention rev-list discovery: %q", withCommit)
 	}
-	if containsSubstr(withCommit, "t2a:cycle") {
-		t.Fatalf("commit policy must not mention t2a markers: %q", withCommit)
+	if containsSubstr(withCommit, ":cycle=") {
+		t.Fatalf("commit policy must not mention cycle ID markers: %q", withCommit)
 	}
 	resumePolicy := prompt.AppendGitCommitPolicy("", true)
 	for _, frag := range []string{"new commits only", "already indexed"} {

@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync/atomic"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapiconfig"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
 // run_logging.go owns slog/log-file setup for taskapi: opening the

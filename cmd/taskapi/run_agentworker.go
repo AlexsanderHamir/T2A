@@ -4,11 +4,11 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker"
-	"github.com/AlexsanderHamir/T2A/internal/taskapiconfig"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapiconfig"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // run_agentworker.go wires the bounded ready-task queue, reconcile loop,

@@ -5,12 +5,12 @@ import (
 	"log/slog"
 	"math/rand/v2"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/google/uuid"
 )
 
-const devsimTaskIDPrefix = "t2a-devsim-"
+const devsimTaskIDPrefix = "hamix-devsim-"
 
 // RunLifecycleOnce either creates a prefixed dev task or deletes one (no children), then calls publish.
 func RunLifecycleOnce(ctx context.Context, st *store.Store, publish func(ChangeKind, string)) {

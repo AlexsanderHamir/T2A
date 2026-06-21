@@ -45,7 +45,7 @@ func (m *memPathProbeFS) CreateTemp(dir, pattern string) (string, error) {
 	if m.tempPath != "" {
 		return m.tempPath, nil
 	}
-	return dir + "/.t2a-worker-probe-test", nil
+	return dir + "/.hamix-worker-probe-test", nil
 }
 
 func (m *memPathProbeFS) Remove(path string) error {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/stats"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/stats"
 )
 
 // TaskStats holds the global task counters returned by GET /tasks/stats.

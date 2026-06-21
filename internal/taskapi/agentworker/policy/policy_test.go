@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker/policy"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func TestDecideIdle(t *testing.T) {
