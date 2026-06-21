@@ -39,9 +39,32 @@ To address the following problems and more:
 
 API at `http://127.0.0.1:8080` · Web at `http://localhost:5173`. Ctrl+C stops both.
 
-4. Verify your setup: `./scripts/check.sh` or `.\scripts\check.ps1` (add `--install` / `-Install` on first run)
+4. Optional (when changing code): Run the same checks as CI before opening a PR.
 
-Agent and workspace settings are in the web UI at `/settings` — see [docs/configuration.md](docs/configuration.md).
+```bash
+./scripts/check.sh
+.\scripts\check.ps1
+
+# Result
+
+T2A check (Go)
+
+[1/5] gofmt                  ok 6s
+[2/5] go vet                 ok 8s
+[3/5] scheduling boundary    ok 0s
+[4/5] go test                ok 19s  (65 packages)
+[5/5] funclogmeasure         ok 2s
+check OK  5/5 passed  35s
+
+T2A check (web)
+
+[1/4] web test               ok 22s
+[2/4] web lint               ok 5s  (4 warnings)
+[3/4] web standards          ok 1s
+[4/4] web build              ok 6s
+check OK  4/4 passed  33s
+
+```
 
 ## Before You Run Tasks
 
