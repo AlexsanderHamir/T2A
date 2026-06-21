@@ -29,6 +29,7 @@ import {
   isRecord,
   parseBooleanField,
   parseFiniteNumber,
+  parseISO8601Required,
   parseNonEmptyString,
   parsePriority,
   parseStatus,
@@ -374,6 +375,9 @@ export function parseTask(value: unknown): Task {
       value.pickup_not_before,
       "pickup_not_before",
     );
+  }
+  if (value.created_at !== undefined && value.created_at !== null) {
+    base.created_at = parseISO8601Required(value.created_at, "created_at");
   }
   if (value.project_id !== undefined && value.project_id !== null) {
     const projectID = parseString(value.project_id, "project_id").trim();

@@ -40,6 +40,8 @@ export type Task = {
    * until this instant. Omitted when eligible immediately.
    */
   pickup_not_before?: string;
+  /** RFC3339 UTC from the task_created audit event; present on list/get responses. */
+  created_at?: string;
   /** Present when this task belongs to a long-lived project context. */
   project_id?: string;
   /** User-selected project context items passed to agent runs for this task. */
