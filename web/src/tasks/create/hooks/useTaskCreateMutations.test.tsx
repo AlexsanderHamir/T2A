@@ -92,7 +92,7 @@ describe("useTaskCreateMutations", () => {
     let mutationSettled = false;
     await act(async () => {
       await result.current.instantiateTemplatesMutation
-        .mutateAsync(["tmpl-1"])
+        .mutateAsync([{ template_id: "tmpl-1", count: 1 }])
         .then(() => {
           mutationSettled = true;
         });

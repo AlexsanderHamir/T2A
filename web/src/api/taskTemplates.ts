@@ -6,10 +6,15 @@ import {
 } from "./parseTaskApiTemplates";
 import { apiErrorFromResponse, fetchWithTimeout, jsonHeaders } from "./shared";
 import {
+  assertInstantiateTemplateItems,
   assertListIntQuery,
   assertOptionalTaskPathId,
   assertTaskPathId,
+  type TaskTemplateInstantiateItem,
 } from "./taskRequestBounds";
+
+export type { TaskTemplateInstantiateItem };
+export { maxTemplateInstantiateCountPerItem } from "./taskRequestBounds";
 
 export async function listTaskTemplates(
   options?: { limit?: number; q?: string; signal?: AbortSignal },
@@ -86,12 +91,13 @@ export async function deleteTaskTemplate(id: string): Promise<void> {
 }
 
 export async function instantiateTaskTemplates(
-  templateIds: string[],
+  items: TaskTemplateInstantiateItem[],
 ): Promise<{ tasks: import("@/types").Task[]; errors: { template_id: string; error: string }[] }> {
+  const normalized = assertInstantiateTemplateItems(items);
   const res = await fetchWithTimeout("/task-templates/instantiate", {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify({ template_ids: templateIds }),
+    body: JSON.stringify({ items: normalized }),
   });
   if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();

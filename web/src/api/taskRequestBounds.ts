@@ -3,6 +3,10 @@
 export const maxTaskPathIDBytes = 128;
 export const maxListAfterIDParamBytes = 128;
 export const maxListIntQueryParamBytes = 32;
+/** Match pkgs/tasks/handler maxTemplateInstantiateCountPerItem. */
+export const maxTemplateInstantiateCountPerItem = 25;
+/** Match pkgs/tasks/handler maxTemplateInstantiateTotalCreates. */
+export const maxTemplateInstantiateTotalCreates = 100;
 /** Seq in path or before_seq / after_seq query (maxTaskEventSeqParamBytes). */
 export const maxTaskSeqPathOrQueryParamBytes = 32;
 
@@ -78,4 +82,40 @@ export function assertPositiveSeq(name: string, n: number): string {
     throw new Error(`${name} is too large`);
   }
   return s;
+}
+
+export type TaskTemplateInstantiateItem = {
+  template_id: string;
+  count: number;
+};
+
+export function assertInstantiateTemplateItems(
+  items: TaskTemplateInstantiateItem[],
+): TaskTemplateInstantiateItem[] {
+  if (items.length === 0) {
+    throw new Error("at least one template item is required");
+  }
+  const seen = new Set<string>();
+  let total = 0;
+  const normalized: TaskTemplateInstantiateItem[] = [];
+  for (const item of items) {
+    const template_id = assertTaskPathId(item.template_id, "template id");
+    if (seen.has(template_id)) {
+      throw new Error(`duplicate template id ${template_id}`);
+    }
+    seen.add(template_id);
+    if (
+      !Number.isInteger(item.count) ||
+      item.count < 1 ||
+      item.count > maxTemplateInstantiateCountPerItem
+    ) {
+      throw new Error(`count must be integer 1..${maxTemplateInstantiateCountPerItem}`);
+    }
+    total += item.count;
+    if (total > maxTemplateInstantiateTotalCreates) {
+      throw new Error(`total creates must not exceed ${maxTemplateInstantiateTotalCreates}`);
+    }
+    normalized.push({ template_id, count: item.count });
+  }
+  return normalized;
 }

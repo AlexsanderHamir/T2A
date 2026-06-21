@@ -181,8 +181,9 @@ export function useTaskCreateEntryActions(input: {
     [input.mutations.deleteTemplateMutation],
   );
 
-  const instantiateTemplatesByIDs = useCallback(
-    async (ids: string[]) => input.mutations.instantiateTemplatesMutation.mutateAsync(ids),
+  const instantiateTemplates = useCallback(
+    async (items: import("@/api").TaskTemplateInstantiateItem[]) =>
+      input.mutations.instantiateTemplatesMutation.mutateAsync(items),
     [input.mutations.instantiateTemplatesMutation],
   );
 
@@ -195,7 +196,7 @@ export function useTaskCreateEntryActions(input: {
     deleteDraftByID,
     editTemplateByID,
     deleteTemplateByID,
-    instantiateTemplatesByIDs,
+    instantiateTemplates,
     retryDraftList,
     retryCreateEntryDraftLoad,
   };

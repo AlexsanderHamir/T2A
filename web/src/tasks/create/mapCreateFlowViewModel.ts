@@ -121,7 +121,7 @@ export function mapCreateFlowViewModel(input: {
     composeOperation: input.modal.composeOperation,
     editTemplateByID: input.actions.editTemplateByID,
     deleteTemplateByID: input.actions.deleteTemplateByID,
-    instantiateTemplatesByIDs: input.actions.instantiateTemplatesByIDs,
+    instantiateTemplates: input.actions.instantiateTemplates,
     editingTaskRunner: input.modal.editingTaskRunner,
     composeStatus: input.modal.composeStatus,
     setComposeStatus: input.modal.setComposeStatus,
