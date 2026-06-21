@@ -22,6 +22,7 @@ import {
   type TaskListClientPriorityFilter,
   type TaskListClientStatusFilter,
 } from "../filters/taskListClientFilter";
+import { sortTasksByCreatedDesc } from "../filters/taskListSort";
 import { taskListPagerSummary } from "../pager/taskListPagerSummary";
 import { TaskListTableSkeleton } from "../table/TaskListTableSkeleton";
 import { useAppTimezone } from "@/shared/time/appTimezone";
@@ -87,7 +88,7 @@ type Props = {
 const LOADING_STATUS_DELAY_MS = 220;
 
 const TASK_LIST_TABLE_CAPTION =
-  "All tasks: title with context line, status, priority, project, and row actions.";
+  "All tasks: title with context line, status, priority, created time, project, and row actions.";
 
 export const TaskListSection = memo(function TaskListSection({
   tasks,
@@ -137,11 +138,13 @@ export const TaskListSection = memo(function TaskListSection({
       priorityFilter,
       titleSearch,
     );
-    if (projectFilter === "all") return base;
-    if (projectFilter === "none") {
-      return base.filter((task) => !task.project_id);
-    }
-    return base.filter((task) => task.project_id === projectFilter);
+    const scoped =
+      projectFilter === "all"
+        ? base
+        : projectFilter === "none"
+          ? base.filter((task) => !task.project_id)
+          : base.filter((task) => task.project_id === projectFilter);
+    return sortTasksByCreatedDesc(scoped);
   }, [tasks, statusFilter, priorityFilter, titleSearch, projectFilter]);
 
   const visibleIds = useMemo(

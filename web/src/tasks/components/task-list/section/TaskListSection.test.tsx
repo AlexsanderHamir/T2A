@@ -143,7 +143,7 @@ describe("TaskListSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("table", {
-        name: /all tasks: title with context line, status, priority, project, and row actions/i,
+        name: /all tasks: title with context line, status, priority, created time, project, and row actions/i,
       }),
     ).toBeInTheDocument();
   });
