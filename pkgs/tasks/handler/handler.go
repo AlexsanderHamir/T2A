@@ -94,6 +94,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /projects/{id}/git/repositories/{repoId}/branches", http.HandlerFunc(h.listGitBranches))
 	m.Handle("POST /projects/{id}/git/repositories/{repoId}/branches", http.HandlerFunc(h.createGitBranch))
 	m.Handle("DELETE /projects/{id}/git/branches/{branchId}", http.HandlerFunc(h.deleteGitBranch))
+	m.Handle("POST /projects/{id}/git/repositories/{repoId}/reconcile", http.HandlerFunc(h.reconcileGitRepository))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /task-drafts", http.HandlerFunc(h.listTaskDrafts))
 	m.Handle("POST /task-drafts", http.HandlerFunc(h.saveTaskDraft))
