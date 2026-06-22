@@ -26,6 +26,12 @@ To address the following problems and more:
 
 **Runner Adapters** —> Run Hamix with different agentic systems.
 
+## Roadmap
+
+The current development plan is tracked in the **[V0.1.0 Milestone](https://github.com/AlexsanderHamir/Hamix/milestone/1)**.
+
+Future work will be planned as additional milestones after the initial release.
+
 ## Get started
 
 1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
