@@ -122,6 +122,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := dropLegacyGoalStepTables(ctx, db); err != nil {
 		return fmt.Errorf("drop legacy goal/step tables: %w", err)
 	}
+	if err := migrateRepoRootToGitRepository(ctx, db); err != nil {
+		return fmt.Errorf("migrate repo_root to git repository: %w", err)
+	}
 	return nil
 }
 
