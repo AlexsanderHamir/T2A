@@ -44,6 +44,26 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | PATCH | `/projects/{id}/context/edges/{edgeId}` | Partial. Publishes `project_context_changed`. |
 | DELETE | `/projects/{id}/context/edges/{edgeId}` | `204`. Publishes `project_context_changed`. |
 
+### Git repositories, worktrees, and branches
+
+Per-project git context for Issue #39. Error responses use `{ "error", "code", "request_id?" }` with stable `code` values listed below.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/projects/{id}/git/repositories` | `{ repositories: [...] }`. |
+| POST | `/projects/{id}/git/repositories` | Register main checkout. Body `{ path, host_path?, default_branch? }`. **201** repository. **409** `not_a_git_repository`, `duplicate`. |
+| GET | `/projects/{id}/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
+| DELETE | `/projects/{id}/git/repositories/{repoId}` | **204**. **409** `has_running_task` when a `running` task references the repo, a worktree, or a branch under it. |
+| GET | `/projects/{id}/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
+| POST | `/projects/{id}/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. **201**. **409** `path_exists`, `branch_checked_out`. |
+| DELETE | `/projects/{id}/git/worktrees/{worktreeId}` | **204**. Query `?force=true` for dirty trees. **409** `has_running_task`. Main worktree cannot be deleted (**400**). |
+| GET | `/projects/{id}/git/repositories/{repoId}/branches` | `{ branches: [...] }`. |
+| POST | `/projects/{id}/git/repositories/{repoId}/branches` | Body `{ name, start_point? }`. **201**. **409** `branch_exists`. |
+| DELETE | `/projects/{id}/git/branches/{branchId}` | **204**. Query `?force=true` for unmerged. **409** `has_running_task`, `branch_checked_out`. |
+| POST | `/projects/{id}/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. **409** when a missing worktree is still referenced by tasks. |
+
+Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
+
 ## Tasks
 
 Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-model.md](./data-model.md).
