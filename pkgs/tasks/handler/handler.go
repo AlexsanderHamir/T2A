@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
@@ -45,6 +46,7 @@ type Handler struct {
 	repoProv       RepoProvider
 	agent          AgentWorkerControl
 	systemHealthFn systemHealthSnapshotter
+	git            gitwork.Service
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
@@ -60,7 +62,7 @@ type Handler struct {
 // GET /settings still works without it (read-only).
 func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOption) http.Handler {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.NewHandler")
-	h := &Handler{store: s, hub: hub, repoProv: NewStaticRepoProvider(rep)}
+	h := &Handler{store: s, hub: hub, repoProv: NewStaticRepoProvider(rep), git: gitwork.New()}
 	for _, opt := range opts {
 		opt(h)
 	}
@@ -82,6 +84,10 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("DELETE /projects/{id}/context/edges/{edgeId}", http.HandlerFunc(h.deleteProjectContextEdge))
 	m.Handle("PATCH /projects/{id}/context/{contextId}", http.HandlerFunc(h.patchProjectContext))
 	m.Handle("DELETE /projects/{id}/context/{contextId}", http.HandlerFunc(h.deleteProjectContext))
+	m.Handle("GET /projects/{id}/git/repositories", http.HandlerFunc(h.listGitRepositories))
+	m.Handle("POST /projects/{id}/git/repositories", http.HandlerFunc(h.createGitRepository))
+	m.Handle("GET /projects/{id}/git/repositories/{repoId}", http.HandlerFunc(h.getGitRepository))
+	m.Handle("DELETE /projects/{id}/git/repositories/{repoId}", http.HandlerFunc(h.deleteGitRepository))
 	m.Handle("POST /tasks", http.HandlerFunc(h.create))
 	m.Handle("GET /task-drafts", http.HandlerFunc(h.listTaskDrafts))
 	m.Handle("POST /task-drafts", http.HandlerFunc(h.saveTaskDraft))
