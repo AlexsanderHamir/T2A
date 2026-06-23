@@ -39,14 +39,14 @@ After the verify-phase split, each file maps to edge cases in [harness.md § Ver
 ## Local verification
 
 ```powershell
-# Fast iteration (same packages as CI harness group)
-go test ./pkgs/agents/harness/... -count=1 -timeout 120s
+# Same as CI harness group (includes coverage gate)
+.\scripts\check-go.ps1 -TestsOnly -Group harness -Verbose
 
 # Full Go bar
 .\scripts\check.ps1 -GoOnly
 ```
 
-Scoped CI group: `./scripts/check-go.sh --tests-only --group=harness --verbose`.
+See [testing.md](testing.md) for all groups and the verification ladder.
 
 ## Store interface
 

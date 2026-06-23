@@ -65,6 +65,7 @@ Pick **one** row. Follow links left to right. Stop when you have enough context 
 | **Work on the API or store** | 1. Understand the system (above) → 2. [AGENTS.md](../AGENTS.md) scoped paths → 3. [persistence.md](./domain/persistence.md) as needed |
 | **Work on the web UI** | 1. [web.md](./web.md) → 2. [architecture.md](./architecture.md) — SSE / live updates only |
 | **Work on agents or harness** | 1. [architecture.md](./architecture.md) → 2. [harness.md](./domain/harness.md) → 3. [execute-agent.md](./domain/execute-agent.md) and/or [verify-agent.md](./domain/verify-agent.md) |
+| **Work on tests / CI** | 1. [domain/testing.md](./domain/testing.md) → 2. [harness-testing.md](./domain/harness-testing.md) (harness only) → 3. [CONTRIBUTING.md](../CONTRIBUTING.md) § Before you open a PR |
 | **Edit code (human or AI)** | 1. [AGENTS.md](../AGENTS.md) → 2. [agent-map.md](./agent-map.md) for paths |
 
 ## When to read domain articles and ADRs

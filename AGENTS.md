@@ -18,6 +18,7 @@ Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md]
 | Changing Go REST / handlers | [docs/api.md](docs/api.md), [pkgs/tasks/handler/README.md](pkgs/tasks/handler/README.md) | harness docs, [docs/web.md](docs/web.md) |
 | Changing Go domain / store | [docs/data-model.md](docs/data-model.md), [pkgs/tasks/store/README.md](pkgs/tasks/store/README.md) | web, harness |
 | Changing agent worker / harness | [docs/domain/harness.md](docs/domain/harness.md), [docs/domain/harness-testing.md](docs/domain/harness-testing.md), [docs/configuration.md](docs/configuration.md) | [docs/web.md](docs/web.md) |
+| Changing tests / CI / coverage | [docs/domain/testing.md](docs/domain/testing.md), [CONTRIBUTING.md](CONTRIBUTING.md) | web-only work |
 | Changing web UI only | [docs/web.md](docs/web.md), `.cursor/rules/frontend_bar.mdc` | architecture, harness |
 | Changing web data (API / sync / mutations) | [docs/web.md](docs/web.md) §Task sync / Query policy, `web/src/api/` | handler split guide |
 | Adding a full-stack feature | [pkgs/tasks/handler/README.md](pkgs/tasks/handler/README.md), [docs/domain/persistence.md](docs/domain/persistence.md), [docs/api.md](docs/api.md) | — |
@@ -99,6 +100,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Settings page | `web/src/settings/` |
 | SSE transport hook (not sync policy) | `web/src/tasks/hooks/useTaskEventStream.ts`, [docs/domain/sse-hub.md](docs/domain/sse-hub.md) |
 | Vitest / MSW test setup | `web/src/test/`, `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` |
+| Go test tiers, CI groups, coverage gate | [docs/domain/testing.md](docs/domain/testing.md), `scripts/test-groups.sh`, `scripts/coverage-baselines.json` |
 | Write operator / checklist copy | [docs/execute-and-verify.md](docs/execute-and-verify.md), [docs/domain/done-criteria.md](docs/domain/done-criteria.md) |
 | UI tokens or spacing | `web/src/app/styles/tokens/`, `frontend_bar.mdc` |
 | Hidden launch features | [docs/omitted-features.md](docs/omitted-features.md) |

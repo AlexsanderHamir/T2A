@@ -75,7 +75,7 @@ Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and P
 | Run everything locally | `./scripts/check.sh` or `.\scripts\check.ps1` |
 | First run / lockfile changed | `./scripts/check.sh --install` or `.\scripts\check.ps1 -Install` |
 | Same as CI Go lint | `./scripts/check-go.sh --lint-only --verbose` or `.\scripts\check-go.ps1 -LintOnly -Verbose` |
-| Same as CI Go tests (one group) | `./scripts/check-go.sh --tests-only --group=core --verbose` (groups: `core`, `tasks`, `agents`, `harness`) |
+| Same as CI Go tests (one group) | `./scripts/check-go.sh --tests-only --group=core --verbose` (groups: `core`, `tasks`, `agents`, `harness`) — includes [coverage gate](docs/domain/testing.md#coverage-floors) |
 | Same as CI Go (full local bar) | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |
 | Same as CI web | `./scripts/check-web.sh --install --verbose` or `.\scripts\check-web.ps1 -Install -Verbose` |
 | Go only (fast) | `./scripts/check.sh --go-only` or `.\scripts\check.ps1 -GoOnly` |
@@ -100,7 +100,7 @@ check OK  4/4 passed  33s
 Also:
 
 - [ ] Changed an API endpoint → update [docs/api.md](docs/api.md) in the same PR
-- [ ] New behavior → add or update a test
+- [ ] New behavior → add or update a test — see [docs/domain/testing.md](docs/domain/testing.md)
 - [ ] User-visible change → update the relevant doc
 
 Coding conventions (where to put API calls, how the live UI updates, etc.): [AGENTS.md](AGENTS.md).
