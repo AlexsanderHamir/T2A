@@ -94,6 +94,7 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.GitRepository{},
 		&domain.GitWorktree{},
 		&domain.GitBranch{},
+		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}
@@ -127,6 +128,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := migrateDropRepoRootColumn(ctx, db); err != nil {
 		return fmt.Errorf("drop app_settings.repo_root: %w", err)
+	}
+	if err := RecordSchemaRevision(ctx, db, time.Now().UTC()); err != nil {
+		return fmt.Errorf("record schema revision: %w", err)
 	}
 	return nil
 }
