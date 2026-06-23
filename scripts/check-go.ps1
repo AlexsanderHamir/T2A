@@ -5,32 +5,57 @@
 # Usage (repo root): .\scripts\check-go.ps1 [flags]
 #
 # Flags:
-#   -Verbose          Stream full tool output (CI uses this)
-#   -SkipFunclog      Skip funclogmeasure -enforce
-#   -Help             Show options
+#   -Verbose            Stream full tool output (CI uses this)
+#   -SkipFunclog        Skip funclogmeasure -enforce
+#   -LintOnly           Lint steps only (includes test-group coverage guard)
+#   -TestsOnly          go test only (use with -Group for CI matrix cells)
+#   -Group <name>       Restrict go test to core|tasks|agents|harness
+#   -Help               Show options
 #
-# CI: ./scripts/check-go.sh --verbose
+# CI: ./scripts/check-go.sh --lint-only --verbose
+#     ./scripts/check-go.sh --tests-only --group=core --verbose
 
 param(
     [switch]$Help,
     [switch]$Verbose,
-    [switch]$SkipFunclog
+    [switch]$SkipFunclog,
+    [switch]$LintOnly,
+    [switch]$TestsOnly,
+    [string]$Group = ""
 )
 
 if ($Help -or $args -contains '--help' -or $args -contains '-h') {
-    Get-Content $PSCommandPath | Select-Object -Skip 1 -First 13 | ForEach-Object { $_ -replace '^# ?', '' }
+    Get-Content $PSCommandPath | Select-Object -Skip 1 -First 17 | ForEach-Object { $_ -replace '^# ?', '' }
     exit 0
+}
+
+if ($LintOnly -and $TestsOnly) {
+    Write-Error "cannot use -LintOnly and -TestsOnly together"
+    exit 2
 }
 
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repo
 
+. (Join-Path $PSScriptRoot "test-groups.ps1")
+
+if ($Group) {
+    $null = Get-GroupPackages $Group
+}
+
 $CheckStart = Get-Date
 $script:Step = 0
 $script:Passed = 0
-$script:Total = if ($SkipFunclog) { 5 } else { 6 }
 $script:StepStats = ""
+
+if ($TestsOnly) {
+    $script:Total = 1
+} elseif ($LintOnly) {
+    $script:Total = if ($SkipFunclog) { 5 } else { 6 }
+} else {
+    $script:Total = if ($SkipFunclog) { 5 } else { 6 }
+}
 
 function Format-Duration {
     param([TimeSpan]$Span)
@@ -135,6 +160,13 @@ function Get-GoTestStats {
     return ""
 }
 
+function Get-GoTestTargets {
+    if ($Group) {
+        return (Get-GroupPackages $Group) -join ' '
+    }
+    return './...'
+}
+
 function Step-Gofmt {
     $label = "gofmt"
     Write-StepPrefix
@@ -184,14 +216,50 @@ function Step-SchedulingBoundary {
     Write-OkLine $label $sw.Elapsed
 }
 
+function Step-TestGroupCoverage {
+    $label = "test group coverage"
+    Write-StepPrefix
+    Write-Host -NoNewline "$label "
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        Assert-GroupsCoverAll
+    } catch {
+        $sw.Stop()
+        Write-Host "FAILED" -ForegroundColor Red
+        Fail-Step $label 1
+    }
+    $sw.Stop()
+
+    $script:Passed++
+    Write-OkLine $label $sw.Elapsed
+}
+
+function Invoke-GoTest {
+    $label = if ($Group) { "go test ($Group)" } else { "go test" }
+    $targets = Get-GoTestTargets
+
+    Invoke-CapturedStep $label { go test $targets.Split(' ') -count=1 } { param($p) Get-GoTestStats $p }
+}
+
 Write-Host "Hamix check (Go)"
 Write-Host ""
+
+if ($TestsOnly) {
+    Invoke-GoTest
+    Complete-Ok
+}
 
 Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
 Step-Gofmt
 Invoke-CapturedStep "go vet" { go vet ./... }
 Step-SchedulingBoundary
-Invoke-CapturedStep "go test" { go test ./... -count=1 } { param($p) Get-GoTestStats $p }
+
+if ($LintOnly) {
+    Step-TestGroupCoverage
+} else {
+    Invoke-GoTest
+}
 
 if (-not $SkipFunclog) {
     Invoke-CapturedStep "funclogmeasure" { go run ./cmd/funclogmeasure -enforce }
