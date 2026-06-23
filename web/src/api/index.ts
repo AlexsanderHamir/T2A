@@ -11,3 +11,5 @@ export * from "./runners";
 export * from "./rum";
 export * from "./bootstrap";
 export * from "./taskTemplates";
+export * from "./git";
+export * from "./parseGitApi";
