@@ -207,6 +207,7 @@ func (s *Supervisor) publishSettingsChanged() {
 	s.publisher.Publish(realtime.Event{Type: realtime.SettingsChanged})
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Thin wrapper; store.AgentWorkerGitIdle emits the persistence trace."
 func (s *Supervisor) gitRegistrationChecker(ctx context.Context) (idle bool, reason string, err error) {
 	return s.store.AgentWorkerGitIdle(ctx)
 }

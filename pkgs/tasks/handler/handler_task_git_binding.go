@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func taskHasGitBinding(worktreeID, branchID *string) bool {
 	if worktreeID == nil || branchID == nil {
 		return false
@@ -18,6 +19,7 @@ func taskHasGitBinding(worktreeID, branchID *string) bool {
 	return strings.TrimSpace(*worktreeID) != "" && strings.TrimSpace(*branchID) != ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func trimmedWorktreeID(worktreeID *string) string {
 	if worktreeID == nil {
 		return ""

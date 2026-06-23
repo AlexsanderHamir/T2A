@@ -183,6 +183,8 @@ func (h *Harness) publishProgress(taskID, cycleID string, phaseSeq int64, runCor
 }
 
 // SetWorkingDir updates the per-run working directory for execute and verify.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) SetWorkingDir(dir string) {
 	if h == nil {
 		return

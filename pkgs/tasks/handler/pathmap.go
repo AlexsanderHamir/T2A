@@ -48,6 +48,7 @@ func NewPathMapFromEnv() *PathMap {
 	return &PathMap{pairs: pairs}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func sortPathMapPairs(pairs []pathMapPair) {
 	sort.Slice(pairs, func(i, j int) bool {
 		if len(pairs[i].container) != len(pairs[j].container) {
@@ -59,6 +60,8 @@ func sortPathMapPairs(pairs []pathMapPair) {
 
 // TranslateToHost maps a container path to its host equivalent using the
 // longest matching container prefix. ok is false when no prefix matched.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (pm *PathMap) TranslateToHost(containerPath string) (host string, ok bool) {
 	if pm == nil || len(pm.pairs) == 0 {
 		return containerPath, false
@@ -75,6 +78,8 @@ func (pm *PathMap) TranslateToHost(containerPath string) (host string, ok bool) 
 
 // DisplayHostPath returns the host-facing path for SPA display. When no map
 // entry matches, the container path is returned unchanged.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (pm *PathMap) DisplayHostPath(containerPath string) string {
 	if host, ok := pm.TranslateToHost(containerPath); ok {
 		return host
@@ -82,6 +87,7 @@ func (pm *PathMap) DisplayHostPath(containerPath string) string {
 	return containerPath
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func pathMapPrefixMatch(path, prefix string) bool {
 	if path == prefix {
 		return true
@@ -106,6 +112,8 @@ func WithPathMap(pm *PathMap) HandlerOption {
 }
 
 // WithGitAvailable overrides the git binary probe (tests only).
+//
+//funclogmeasure:skip category=tool-required-noop reason="Test-only HandlerOption wiring; no production operation boundary."
 func WithGitAvailable(ok bool) HandlerOption {
 	return func(h *Handler) {
 		h.gitAvailable = ok

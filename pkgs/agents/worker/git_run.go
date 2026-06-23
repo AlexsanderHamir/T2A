@@ -20,6 +20,7 @@ type taskGitBinding struct {
 	BranchName   string
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func taskHasBinding(task *domain.Task) bool {
 	if task == nil {
 		return false
@@ -29,6 +30,7 @@ func taskHasBinding(task *domain.Task) bool {
 		strings.TrimSpace(*task.BranchID) != ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *Worker) gitService() gitwork.Service {
 	if w.gitSvc != nil {
 		return w.gitSvc
@@ -62,6 +64,7 @@ func (w *Worker) resolveTaskGitBinding(ctx context.Context, task *domain.Task) (
 	}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *Worker) worktreeMutex(worktreeID string) *sync.Mutex {
 	v, _ := w.worktreeLocks.LoadOrStore(worktreeID, &sync.Mutex{})
 	return v.(*sync.Mutex)
@@ -82,6 +85,7 @@ func (w *Worker) prepareGitRun(ctx context.Context, binding *taskGitBinding) (re
 	return mu.Unlock, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapGitPrepError(err error) error {
 	if errors.Is(err, gitwork.ErrDirty) {
 		return fmt.Errorf("worktree_dirty: %w", err)
@@ -109,6 +113,7 @@ func (w *Worker) abortRunningFromGitPrep(ctx context.Context, taskID string, pre
 	}
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Orchestrator; resolveTaskGitBinding and prepareGitRun emit operation traces."
 func (w *Worker) runWithGitPrep(ctx context.Context, task *domain.Task, run func()) {
 	binding, err := w.resolveTaskGitBinding(ctx, task)
 	if err != nil {
