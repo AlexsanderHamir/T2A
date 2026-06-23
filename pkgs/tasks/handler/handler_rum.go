@@ -20,19 +20,25 @@ import (
 // reuse the same vocabulary):
 //
 //   - mutation_started: a mutation hook fired (no timing yet).
+//
 //   - mutation_optimistic_applied: the optimistic onMutate produced
 //     visible UI change. duration_seconds is the click→render
 //     latency (start → setQueryData).
+//
 //   - mutation_settled: the server returned 2xx OR a known business
 //     error. duration_seconds is the click→server-confirmed latency.
 //     status_code is the HTTP status.
+//
 //   - mutation_rolled_back: onError ran; the cache snapshot was
 //     restored. duration_seconds is the click→rollback latency.
+//
 //   - sse_reconnected: the EventSource transport reconnected
 //     (browser auto-retry or our explicit reconnect after a
 //     resync directive). duration_seconds is gap_to_reconnect.
+//
 //   - sse_resync_received: the client received a resync directive.
 //     No duration.
+//
 //   - web_vitals: LCP / INP / CLS sample. The web-vitals lib emits
 //     one event per metric so we forward the metric name in `name`
 //     and the value in `value`.
