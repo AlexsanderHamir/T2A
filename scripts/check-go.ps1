@@ -50,7 +50,7 @@ $script:Passed = 0
 $script:StepStats = ""
 
 if ($TestsOnly) {
-    $script:Total = 1
+    $script:Total = if ($Group) { 2 } else { 1 }
 } elseif ($LintOnly) {
     $script:Total = if ($SkipFunclog) { 5 } else { 6 }
 } else {
@@ -235,11 +235,92 @@ function Step-TestGroupCoverage {
     Write-OkLine $label $sw.Elapsed
 }
 
+function Invoke-CoverageGate {
+    $label = "coverage gate ($Group)"
+    Write-StepPrefix
+    Write-Host -NoNewline "$label "
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    $gateArgs = @{ Group = $Group }
+    if ($script:CoverProfile) {
+        $gateArgs['Profile'] = $script:CoverProfile
+    }
+    & "$PSScriptRoot\coverage-gate.ps1" @gateArgs
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $prevEap
+    $sw.Stop()
+
+    if ($code -eq 0) {
+        $script:Passed++
+        Write-OkLine $label $sw.Elapsed
+        return
+    }
+
+    Write-Host "FAILED" -ForegroundColor Red
+    Fail-Step $label $code
+}
+
 function Invoke-GoTest {
     $label = if ($Group) { "go test ($Group)" } else { "go test" }
     $targets = Get-GoTestTargets
+    $script:CoverProfile = ""
 
-    Invoke-CapturedStep $label { go test $targets.Split(' ') -count=1 } { param($p) Get-GoTestStats $p }
+    if ($Group) {
+        $script:CoverProfile = [System.IO.Path]::GetTempFileName()
+        $coverArgs = @('-coverprofile=' + $script:CoverProfile)
+    } else {
+        $coverArgs = @()
+    }
+
+    Write-StepPrefix
+    Write-Host -NoNewline "$label "
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $log = [System.IO.Path]::GetTempFileName()
+    $code = 0
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    try {
+        if ($Verbose) {
+            Write-Host "..." -ForegroundColor Cyan
+            go test $targets.Split(' ') -count=1 @coverArgs
+            $code = $LASTEXITCODE
+        } else {
+            go test $targets.Split(' ') -count=1 @coverArgs 2>&1 | Out-File -FilePath $log -Encoding utf8
+            $code = $LASTEXITCODE
+        }
+        if ($null -eq $code) { $code = 0 }
+    } catch {
+        $code = 1
+        if (-not $Verbose) { $_ | Out-File -FilePath $log -Encoding utf8 -Append }
+    } finally {
+        $ErrorActionPreference = $prevEap
+        $sw.Stop()
+    }
+
+    if ($code -eq 0) {
+        $stats = ""
+        if (-not $Verbose -and (Test-Path $log)) {
+            $stats = Get-GoTestStats $log
+        }
+        $script:Passed++
+        Write-OkLine $label $sw.Elapsed $stats
+        Remove-Item $log -Force -ErrorAction SilentlyContinue
+        return
+    }
+
+    Write-Host "FAILED" -ForegroundColor Red
+    if (-not $Verbose -and (Test-Path $log)) { Get-Content $log }
+    Remove-Item $log -Force -ErrorAction SilentlyContinue
+    if ($script:CoverProfile) {
+        Remove-Item $script:CoverProfile -Force -ErrorAction SilentlyContinue
+        $script:CoverProfile = ""
+    }
+    Fail-Step $label $code
 }
 
 Write-Host "Hamix check (Go)"
@@ -247,6 +328,13 @@ Write-Host ""
 
 if ($TestsOnly) {
     Invoke-GoTest
+    if ($Group) {
+        Invoke-CoverageGate
+        if ($script:CoverProfile) {
+            Remove-Item $script:CoverProfile -Force -ErrorAction SilentlyContinue
+            $script:CoverProfile = ""
+        }
+    }
     Complete-Ok
 }
 

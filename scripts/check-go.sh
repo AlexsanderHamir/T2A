@@ -72,7 +72,11 @@ STEP=0
 PASSED=0
 
 if [[ "$TESTS_ONLY" -eq 1 ]]; then
-  TOTAL=1
+  if [[ -n "$GROUP" ]]; then
+    TOTAL=2
+  else
+    TOTAL=1
+  fi
 elif [[ "$LINT_ONLY" -eq 1 ]]; then
   if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
     TOTAL=6
@@ -182,6 +186,36 @@ step_test_group_coverage() {
   print_ok_line "$label" "$elapsed"
 }
 
+run_coverage_gate() {
+  local label="coverage gate ($GROUP)"
+  local start=$SECONDS
+  local prof="${COVER_PROFILE:-}"
+
+  step_prefix
+  printf '%s ' "$label"
+
+  set +e
+  if [[ -n "$prof" && -f "$prof" ]]; then
+    bash "$script_dir/coverage-gate.sh" "$GROUP" --profile="$prof"
+  else
+    bash "$script_dir/coverage-gate.sh" "$GROUP"
+  fi
+  local code=$?
+  set -e
+
+  local elapsed=$((SECONDS - start))
+  add_section_time "$elapsed"
+
+  if [[ $code -eq 0 ]]; then
+    PASSED=$((PASSED + 1))
+    print_ok_line "$label" "$elapsed"
+    return 0
+  fi
+
+  echo "${C_RED}FAILED${C_RESET}"
+  fail_step "$label" "$code"
+}
+
 run_go_test() {
   local label="go test"
   if [[ -n "$GROUP" ]]; then
@@ -194,6 +228,13 @@ run_go_test() {
   local targets
   targets="$(go_test_targets)"
 
+  local cover_args=()
+  COVER_PROFILE=""
+  if [[ -n "$GROUP" ]]; then
+    COVER_PROFILE="$(mktemp "${TMPDIR:-/tmp}/hamix-cover.XXXXXX")"
+    cover_args=(-coverprofile="$COVER_PROFILE")
+  fi
+
   step_prefix
   printf '%s ' "$label"
 
@@ -201,21 +242,25 @@ run_go_test() {
     echo "${C_CYAN}...${C_RESET}"
     set +e
     # shellcheck disable=SC2086
-    go test $targets -count=1
+    go test $targets -count=1 "${cover_args[@]}"
     local code=$?
     set -e
     local elapsed=$((SECONDS - start))
     add_section_time "$elapsed"
     if [[ $code -eq 0 ]]; then
       PASSED=$((PASSED + 1))
+      if [[ -z "$COVER_PROFILE" ]]; then
+        return 0
+      fi
       return 0
     fi
+    [[ -n "$COVER_PROFILE" ]] && rm -f "$COVER_PROFILE"
     fail_step "$label" "$code"
   fi
 
   set +e
   # shellcheck disable=SC2086
-  go test $targets -count=1 >"$log" 2>&1
+  go test $targets -count=1 "${cover_args[@]}" >"$log" 2>&1
   local code=$?
   set -e
   local elapsed=$((SECONDS - start))
@@ -233,6 +278,7 @@ run_go_test() {
   echo "${C_RED}FAILED${C_RESET}"
   cat "$log"
   rm -f "$log"
+  [[ -n "$COVER_PROFILE" ]] && rm -f "$COVER_PROFILE"
   fail_step "$label" "$code"
 }
 
@@ -240,6 +286,10 @@ print_banner
 
 if [[ "$TESTS_ONLY" -eq 1 ]]; then
   run_go_test
+  if [[ -n "$GROUP" ]]; then
+    run_coverage_gate
+    rm -f "${COVER_PROFILE:-}"
+  fi
   complete_ok
 fi
 
