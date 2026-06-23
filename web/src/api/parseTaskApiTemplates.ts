@@ -89,6 +89,12 @@ export function parseTaskComposePayload(value: unknown): TaskComposePayload {
           ),
         }
       : {}),
+    ...(typeof value.worktree_id === "string"
+      ? { worktree_id: parseString(value.worktree_id, "payload.worktree_id") }
+      : {}),
+    ...(typeof value.branch_id === "string"
+      ? { branch_id: parseString(value.branch_id, "payload.branch_id") }
+      : {}),
     ...(typeof value.pickup_not_before === "string"
       ? {
           pickup_not_before: parseString(

@@ -127,6 +127,10 @@ export function TaskCreateModalsLayer() {
           tagsCsv={app.newTagsCsv}
           milestone={app.newMilestone}
           projectId={app.newProjectID}
+          worktreeId={app.newWorktreeID}
+          branchId={app.newBranchID}
+          onWorktreeChange={app.setNewWorktreeID}
+          onBranchChange={app.setNewBranchID}
           dependsOn={app.newDependsOn}
           onTagsCsvChange={app.setNewTagsCsv}
           onMilestoneChange={app.setNewMilestone}

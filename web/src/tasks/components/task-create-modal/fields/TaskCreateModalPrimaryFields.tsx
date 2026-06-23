@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ChecklistItemDraft } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../../rich-prompt";
 import { TaskComposeFields } from "../../task-compose";
@@ -21,6 +22,8 @@ type Props = {
   onRemoveChecklistRow: (index: number) => void;
   /** Forwarded to the rich prompt editor for `#` mentions and the REFERENCES block. */
   projectContext?: RichPromptEditorProjectContextProps;
+  betweenTitleAndPrompt?: ReactNode;
+  worktreeId?: string;
 };
 
 export function TaskCreateModalPrimaryFields({
@@ -41,6 +44,8 @@ export function TaskCreateModalPrimaryFields({
   onUpdateChecklistRow,
   onRemoveChecklistRow,
   projectContext,
+  betweenTitleAndPrompt,
+  worktreeId,
 }: Props) {
   return (
     <TaskComposeFields
@@ -61,6 +66,8 @@ export function TaskCreateModalPrimaryFields({
       onUpdateChecklistRow={onUpdateChecklistRow}
       onRemoveChecklistRow={onRemoveChecklistRow}
       projectContext={projectContext}
+      betweenTitleAndPrompt={betweenTitleAndPrompt}
+      worktreeId={worktreeId}
     />
   );
 }

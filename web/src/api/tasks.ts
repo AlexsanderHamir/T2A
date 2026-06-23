@@ -231,6 +231,8 @@ export async function createTask(input: {
   draft_id?: string;
   project_id?: string;
   project_context_item_ids?: string[];
+  worktree_id?: string;
+  branch_id?: string;
   runner?: string;
   cursor_model?: string;
   /**
@@ -273,6 +275,14 @@ export async function createTask(input: {
   }
   if (input.project_context_item_ids !== undefined) {
     body.project_context_item_ids = input.project_context_item_ids;
+  }
+  const worktreeId = assertOptionalTaskPathId(input.worktree_id, "worktree_id");
+  if (worktreeId !== undefined) {
+    body.worktree_id = worktreeId;
+  }
+  const branchId = assertOptionalTaskPathId(input.branch_id, "branch_id");
+  if (branchId !== undefined) {
+    body.branch_id = branchId;
   }
   if (input.pickup_not_before !== undefined) {
     body.pickup_not_before = input.pickup_not_before;

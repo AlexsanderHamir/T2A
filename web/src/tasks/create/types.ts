@@ -23,6 +23,8 @@ export type CreateTaskMutationInput = {
   pickup_not_before: string | null;
   project_id: string;
   project_context_item_ids: string[];
+  worktree_id: string;
+  branch_id: string;
   tags: string[];
   milestone?: string;
   depends_on: TaskDependencyEdge[];
@@ -44,6 +46,8 @@ export type TaskCreateFormFields = {
   newTaskCursorModel: string;
   newProjectID: string;
   newProjectContextItemIDs: string[];
+  newWorktreeID: string;
+  newBranchID: string;
   newSchedule: string | null;
   newAutonomyEnabled: boolean;
   newTagsCsv: string;

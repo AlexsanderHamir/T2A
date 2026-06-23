@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
@@ -8,6 +8,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
+import {
+  GIT_TEST_BRANCH_ID,
+  GIT_TEST_WORKTREE_ID,
+  respondGitApi,
+} from "@/test/handlers/git";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskCreateModal } from "./TaskCreateModal";
 
@@ -63,6 +68,10 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     tagsCsv: "",
     milestone: "",
     projectId: "",
+    worktreeId: "",
+    branchId: "",
+    onWorktreeChange: vi.fn(),
+    onBranchChange: vi.fn(),
     dependsOn: [],
     onTagsCsvChange: vi.fn(),
     onMilestoneChange: vi.fn(),
@@ -212,6 +221,8 @@ describe("TaskCreateModal", () => {
     renderModal({
       title: "Reproduce me",
       checklistItems: [{ text: "Ship it" }],
+      worktreeId: "wt-1",
+      branchId: "br-1",
       createError: new Error("boom"),
     });
     expect(screen.getByRole("button", { name: /^create task$/i })).not.toBeDisabled();
@@ -493,6 +504,34 @@ describe("TaskCreateModal", () => {
       expect(
         screen.getByRole("button", { name: /^save$/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("git binding", () => {
+    function stubGitFetch() {
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        const git = respondGitApi(url);
+        if (git) return git;
+        return new Response("not found", { status: 404 });
+      });
+    }
+
+    it("disables Create task until worktree and branch are selected", async () => {
+      stubGitFetch();
+      renderModal({ worktreeId: "", branchId: "" });
+      expect(screen.getByRole("button", { name: /Create task/i })).toBeDisabled();
+    });
+
+    it("preselects when only one worktree and branch exist", async () => {
+      stubGitFetch();
+      const onWorktreeChange = vi.fn();
+      const onBranchChange = vi.fn();
+      renderModal({ onWorktreeChange, onBranchChange });
+      await waitFor(() => {
+        expect(onWorktreeChange).toHaveBeenCalledWith(GIT_TEST_WORKTREE_ID);
+        expect(onBranchChange).toHaveBeenCalledWith(GIT_TEST_BRANCH_ID);
+      });
     });
   });
 });

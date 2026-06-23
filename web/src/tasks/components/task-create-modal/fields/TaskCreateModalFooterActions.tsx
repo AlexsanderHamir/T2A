@@ -8,6 +8,9 @@ type Props = {
   title: string;
   priority: PriorityChoice;
   checklistItems: ChecklistItemDraft[];
+  worktreeId?: string;
+  branchId?: string;
+  requireGitBinding?: boolean;
   onClose: () => void;
   onSaveDraft?: () => void;
 };
@@ -19,13 +22,19 @@ export function TaskCreateModalFooterActions({
   title,
   priority,
   checklistItems,
+  worktreeId = "",
+  branchId = "",
+  requireGitBinding = false,
   onClose,
   onSaveDraft,
 }: Props) {
+  const gitBindingIncomplete =
+    requireGitBinding && (!worktreeId.trim() || !branchId.trim());
   const submitDisabled =
     !title.trim() ||
     !priority ||
     nonEmptyChecklistCount(checklistItems) < 1 ||
+    gitBindingIncomplete ||
     disabled;
 
   const submitLabel = variant === "template" ? "Save template" : "Create task";

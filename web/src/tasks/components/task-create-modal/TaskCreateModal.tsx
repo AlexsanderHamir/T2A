@@ -19,6 +19,7 @@ import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
 import { advancedSummaryLine } from "./advancedSummaryLine";
+import { WorktreeBranchSelector } from "./fields/WorktreeBranchSelector";
 
 const noopOnDependsOnChange = (): void => {};
 
@@ -65,6 +66,10 @@ type Props = {
   tagsCsv: string;
   milestone: string;
   projectId: string;
+  worktreeId: string;
+  branchId: string;
+  onWorktreeChange: (worktreeId: string) => void;
+  onBranchChange: (branchId: string) => void;
   dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
@@ -371,6 +376,10 @@ function TaskCreateModalFormBody(props: {
   tagsCsv: string;
   milestone: string;
   projectId: string;
+  worktreeId: string;
+  branchId: string;
+  onWorktreeChange: (worktreeId: string) => void;
+  onBranchChange: (branchId: string) => void;
   dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
@@ -406,6 +415,10 @@ function TaskCreateModalFormBody(props: {
     tagsCsv,
     milestone,
     projectId,
+    worktreeId,
+    branchId,
+    onWorktreeChange,
+    onBranchChange,
     dependsOn,
     onTagsCsvChange,
     onMilestoneChange,
@@ -443,6 +456,20 @@ function TaskCreateModalFormBody(props: {
           onUpdateChecklistRow={onUpdateChecklistRow}
           onRemoveChecklistRow={onRemoveChecklistRow}
           projectContext={promptProjectContext}
+          worktreeId={worktreeId.trim() || undefined}
+          betweenTitleAndPrompt={
+            presentation.isTaskEdit ? null : (
+              <WorktreeBranchSelector
+                idsPrefix={presentation.idsPrefix}
+                projectId={projectId}
+                worktreeId={worktreeId}
+                branchId={branchId}
+                disabled={presentation.disabled}
+                onWorktreeChange={onWorktreeChange}
+                onBranchChange={onBranchChange}
+              />
+            )
+          }
         />
       </TaskCreateModalSection>
 
@@ -536,6 +563,8 @@ function TaskCreateModalActionFooter(props: {
   title: string;
   priority: PriorityChoice;
   checklistItems: ChecklistItemDraft[];
+  worktreeId: string;
+  branchId: string;
   draftSaving: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
@@ -545,6 +574,8 @@ function TaskCreateModalActionFooter(props: {
     title,
     priority,
     checklistItems,
+    worktreeId,
+    branchId,
     draftSaving,
     onClose,
     onSaveDraft,
@@ -578,6 +609,9 @@ function TaskCreateModalActionFooter(props: {
       title={title}
       priority={priority}
       checklistItems={checklistItems}
+      worktreeId={worktreeId}
+      branchId={branchId}
+      requireGitBinding
       onClose={onClose}
       onSaveDraft={presentation.isTemplateMode ? undefined : onSaveDraft}
     />
@@ -624,6 +658,10 @@ export function TaskCreateModal({
   tagsCsv,
   milestone,
   projectId,
+  worktreeId,
+  branchId,
+  onWorktreeChange,
+  onBranchChange,
   dependsOn,
   onTagsCsvChange,
   onMilestoneChange,
@@ -715,6 +753,10 @@ export function TaskCreateModal({
               tagsCsv={tagsCsv}
               milestone={milestone}
               projectId={projectId}
+              worktreeId={worktreeId}
+              branchId={branchId}
+              onWorktreeChange={onWorktreeChange}
+              onBranchChange={onBranchChange}
               dependsOn={dependsOn}
               onTagsCsvChange={onTagsCsvChange}
               onMilestoneChange={onMilestoneChange}
@@ -734,6 +776,8 @@ export function TaskCreateModal({
               title={title}
               priority={priority}
               checklistItems={checklistItems}
+              worktreeId={worktreeId}
+              branchId={branchId}
               draftSaving={draftSaving}
               onClose={onClose}
               onSaveDraft={onSaveDraft}

@@ -147,10 +147,14 @@ export async function probeRepoWorkspace(
 /** File paths under the configured workspace repo matching q, or null if repo is not configured (409/503). */
 export async function searchRepoFiles(
   q: string,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; worktreeId?: string },
 ): Promise<string[] | null> {
   assertRepoSearchQueryLength(q);
   const params = new URLSearchParams({ q });
+  const worktreeId = options?.worktreeId?.trim();
+  if (worktreeId) {
+    params.set("worktree_id", worktreeId);
+  }
   const res = await fetch(`/repo/search?${params}`, {
     headers: { Accept: "application/json" },
     signal: repoFetchCombinedSignal(options?.signal),

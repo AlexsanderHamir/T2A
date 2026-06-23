@@ -76,6 +76,8 @@ type Props = {
    * notes) so behaviour stays unchanged.
    */
   projectContext?: RichPromptEditorProjectContextProps;
+  /** When set, @-mention search is scoped to this worktree. */
+  worktreeId?: string;
 };
 
 type PendingFileInsert = {
@@ -189,6 +191,7 @@ function useRichPromptEditorController({
   disabled,
   placeholder,
   projectContext,
+  worktreeId,
 }: Props) {
   const workspaceProbe = useRepoWorkspaceProbe();
   const [fileSearchUnavailable, setFileSearchUnavailable] = useState(false);
@@ -222,12 +225,18 @@ function useRichPromptEditorController({
     [],
   );
 
+  const worktreeIdRef = useRef(worktreeId);
+  useEffect(() => {
+    worktreeIdRef.current = worktreeId;
+  }, [worktreeId]);
+
   const repoOpts = useMemo<RepoFileSuggestionOptions>(
     () => ({
       onRepoUnavailable: () => setFileSearchUnavailable(true),
       onRepoAvailable: () => setFileSearchUnavailable(false),
       onSuggestFetchChange: setFileSuggestBusy,
       onFilePicked,
+      getWorktreeId: () => worktreeIdRef.current,
     }),
     [onFilePicked],
   );

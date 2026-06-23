@@ -29,13 +29,9 @@ export type RepoFilePickedPayload = {
 export type RepoFileSuggestionOptions = {
   onRepoUnavailable: () => void;
   onRepoAvailable: () => void;
-  /**
-   * Fires when TipTap starts or updates an @‑mention query (before the network request)
-   * and again after the request finishes or the menu closes — for immediate “searching…” UX.
-   */
   onSuggestFetchChange?: (busy: boolean) => void;
-  /** After the user picks a file, range UI runs; insert happens when they confirm. */
   onFilePicked?: (payload: RepoFilePickedPayload) => void;
+  getWorktreeId?: () => string | undefined;
 };
 
 export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
@@ -59,6 +55,7 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
     const onAvailable = this.options.onRepoAvailable;
     const onSuggestFetchChange = this.options.onSuggestFetchChange;
     const onFilePicked = this.options.onFilePicked;
+    const getWorktreeId = this.options.getWorktreeId;
     const setFetchBusy = (busy: boolean) => {
       onSuggestFetchChange?.(busy);
     };
@@ -88,7 +85,12 @@ export const RepoFileSuggestion = Extension.create<RepoFileSuggestionOptions>({
           const seq = mentionSearchSeq;
 
           try {
-            const paths = await searchRepoFiles(query);
+            const scopedWorktreeId = getWorktreeId?.()?.trim();
+            if (!scopedWorktreeId) {
+              lastRepoSuggestionItems = [];
+              return [];
+            }
+            const paths = await searchRepoFiles(query, { worktreeId: scopedWorktreeId });
             if (seq !== mentionSearchSeq) {
               return lastRepoSuggestionItems;
             }

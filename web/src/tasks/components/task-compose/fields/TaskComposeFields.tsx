@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { PriorityChoice, ChecklistItemDraft } from "@/types";
 import { normalizeVerifyCommands } from "@/tasks/task-compose/checklistRequirement";
 import { FieldLabel } from "@/shared/FieldLabel";
@@ -39,6 +39,10 @@ export type TaskComposeFieldsProps = {
    * isn't applicable (e.g. nested subtask drafts that inherit from parent).
    */
   projectContext?: RichPromptEditorProjectContextProps;
+  /** Rendered between the title row and the prompt editor (e.g. git binding). */
+  betweenTitleAndPrompt?: ReactNode;
+  /** When set, @-mentions resolve against this worktree. */
+  worktreeId?: string;
 };
 
 export function TaskComposeFields({
@@ -59,6 +63,8 @@ export function TaskComposeFields({
   onRemoveChecklistRow,
   editorKey,
   projectContext,
+  betweenTitleAndPrompt,
+  worktreeId,
 }: TaskComposeFieldsProps) {
   const titleId = `${idsPrefix}-title`;
   const promptId = `${idsPrefix}-prompt`;
@@ -136,6 +142,8 @@ export function TaskComposeFields({
         />
       </div>
 
+      {betweenTitleAndPrompt}
+
       <div className="field grow stack-tight prompt-field-full task-create-prompt">
         <FieldLabel
           id={`${promptId}-label`}
@@ -157,6 +165,7 @@ export function TaskComposeFields({
                 : "Optional context. Toolbar for headings and bold; type @ to mention a repo file."
             }
             projectContext={projectContext}
+            worktreeId={worktreeId}
           />
         </div>
       </div>

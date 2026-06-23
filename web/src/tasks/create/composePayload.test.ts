@@ -15,6 +15,8 @@ const baseFields: TaskCreateFormFields = {
   newTagsCsv: "alpha, beta",
   newMilestone: "m1",
   newDependsOn: ["dep-1"],
+  newWorktreeID: "wt-1",
+  newBranchID: "br-1",
   newChecklistItems: [{ text: "Criterion one" }],
   newDraftID: "draft-1",
 };
