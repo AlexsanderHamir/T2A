@@ -181,3 +181,14 @@ func (h *Harness) publishProgress(taskID, cycleID string, phaseSeq int64, runCor
 	}
 	h.opts.ProgressNotifier.PublishRunProgress(taskID, cycleID, phaseSeq, runCorrelationID, ev)
 }
+
+// SetWorkingDir updates the per-run working directory for execute and verify.
+func (h *Harness) SetWorkingDir(dir string) {
+	if h == nil {
+		return
+	}
+	h.opts.WorkingDir = dir
+	if h.verify != nil {
+		h.verify.SetWorkingDir(dir)
+	}
+}

@@ -87,7 +87,6 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
 		RunTimeout:       runTimeout,
 		StreamIdleStuck:  streamIdleStuck,
-		WorkingDir:       cfg.RepoRoot,
 		ReportDir:        reportDir,
 		Notifier:         notifier,
 		ProgressNotifier: progressNotifier,
