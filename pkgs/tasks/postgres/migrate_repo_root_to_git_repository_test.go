@@ -6,12 +6,63 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
+
+func TestMigrateRepoRootToGitRepository_idempotentWhenRepoAlreadyRegistered(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not on PATH")
+	}
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	seedLegacyAppSettingsWithRepoRoot(ctx, t, db)
+	main := initMigrateGitRepo(t)
+
+	gitSvc := gitwork.New()
+	opened, err := gitSvc.OpenRepository(ctx, main)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	existing := domain.GitRepository{
+		ID:            "existing-repo",
+		ProjectID:     domain.DefaultProjectID,
+		Path:          opened.Root,
+		DefaultBranch: "main",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := db.WithContext(ctx).Create(&existing).Error; err != nil {
+		t.Fatal(err)
+	}
+	// Legacy repo_root may differ from the canonical path stored on git_repositories.
+	if err := db.WithContext(ctx).Exec(
+		`UPDATE app_settings SET repo_root = ? WHERE id = ?`, main+`\`, domain.AppSettingsRowID,
+	).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateRepoRootToGitRepository(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	var n int64
+	if err := db.Model(&domain.GitRepository{}).Count(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("count=%d want 1", n)
+	}
+}
 
 func TestMigrateRepoRootToGitRepository_idempotent(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {

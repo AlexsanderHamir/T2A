@@ -35,19 +35,20 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	if path == "" {
 		return nil
 	}
-	var existing int64
-	if err := db.WithContext(ctx).Model(&domain.GitRepository{}).
-		Where("project_id = ? AND path = ?", domain.DefaultProjectID, path).
-		Count(&existing).Error; err != nil {
-		return err
-	}
-	if existing > 0 {
-		return nil
-	}
 	gitSvc := gitwork.New()
 	opened, err := gitSvc.OpenRepository(ctx, path)
 	if err != nil {
 		slog.Warn("repo_root migration skipped: not a git repository", "path", path, "err", err)
+		return nil
+	}
+	repoRoot := opened.Root
+	var existing int64
+	if err := db.WithContext(ctx).Model(&domain.GitRepository{}).
+		Where("project_id = ? AND path = ?", domain.DefaultProjectID, repoRoot).
+		Count(&existing).Error; err != nil {
+		return err
+	}
+	if existing > 0 {
 		return nil
 	}
 	branches, err := gitSvc.ListBranches(ctx, opened)
@@ -92,9 +93,6 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&repo).Error; err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "unique") {
-				return nil
-			}
 			return err
 		}
 		if err := tx.Create(&mainWT).Error; err != nil {
