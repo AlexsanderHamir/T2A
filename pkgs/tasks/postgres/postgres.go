@@ -13,6 +13,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 const (
@@ -65,6 +66,14 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 // Migrate runs AutoMigrate for domain.Task and domain.TaskEvent (works with any GORM dialector, e.g. tests on SQLite).
 func Migrate(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.Migrate")
+	db = db.Session(&gorm.Session{
+		Logger: gormlogger.NewSlogLogger(slog.Default(), gormlogger.Config{
+			LogLevel:                  gormlogger.Warn,
+			SlowThreshold:             slowQueryThresholdForGORM(),
+			IgnoreRecordNotFoundError: true,
+			ParameterizedQueries:      true,
+		}),
+	})
 	if db.Dialector != nil && db.Dialector.Name() == "postgres" {
 		if err := db.WithContext(ctx).Exec(`ALTER TABLE project_context_items DROP CONSTRAINT IF EXISTS chk_project_context_kind`).Error; err != nil {
 			return fmt.Errorf("drop project context kind constraint: %w", err)
