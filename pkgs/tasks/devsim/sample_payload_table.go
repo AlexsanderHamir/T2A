@@ -60,8 +60,12 @@ var samplePayloadByType = map[domain.EventType]func() ([]byte, error){
 	domain.EventApprovalGranted: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"grantor": "lead", "note": "LGTM (synthetic)"})
 	},
-	domain.EventTaskCompleted: func() ([]byte, error) {
-		return json.Marshal(map[string]string{"summary": "Synthetic completion."})
+	domain.EventOnTaskDone: func() ([]byte, error) {
+		return json.Marshal(map[string]any{
+			"worktree_id": "wt-devsim",
+			"branch_id":   "br-devsim",
+			"commits":     []map[string]string{{"sha": "abc1234", "message": "Synthetic commit."}},
+		})
 	},
 	domain.EventTaskFailed: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"error": "Simulated failure", "retryable": "true"})

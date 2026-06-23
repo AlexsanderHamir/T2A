@@ -120,12 +120,5 @@ func (h *Handler) validatePromptMentionsIfRepo(ctx context.Context, worktreeID *
 	if len(repo.ParseFileMentions(prompt)) > 0 {
 		return fmt.Errorf("%w: worktree_id required for @-mentions", domain.ErrInvalidInput)
 	}
-	if h.repoProv == nil {
-		return nil
-	}
-	root, _, err := h.repoProv.Repo(ctx)
-	if err != nil || root == nil {
-		return nil
-	}
-	return root.ValidatePromptMentions(prompt)
+	return nil
 }

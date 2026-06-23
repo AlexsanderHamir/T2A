@@ -39,7 +39,7 @@ func newSupervisorTestRig(t *testing.T, ctx context.Context, probeFn func(ctx co
 	return &supervisorTestRig{store: st, queue: q, hub: hub, sup: sup}
 }
 
-func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
+func TestSupervisor_StaysIdleWhenNoGitRepositories(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -55,10 +55,10 @@ func TestSupervisor_StaysIdleWhenRepoRootEmpty(t *testing.T) {
 		t.Fatalf("Start: %v", err)
 	}
 	if rig.sup.HasRunningInstance() {
-		t.Errorf("supervisor spawned worker despite empty repo root")
+		t.Errorf("supervisor spawned worker without registered git repositories")
 	}
 	if probeCalled {
-		t.Error("probe called even though supervisor was idle on empty repo root")
+		t.Error("probe called even though supervisor was idle without git repositories")
 	}
 }
 
@@ -68,9 +68,9 @@ func TestSupervisor_StaysIdleWhenAgentPaused(t *testing.T) {
 	defer cancel()
 
 	rig := newSupervisorTestRig(t, ctx, nil)
+	rig.seedGitRepository(t, "")
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
 		AgentPaused: ptrBool(true),
-		RepoRoot:    ptrString(t.TempDir()),
 	}); err != nil {
 		t.Fatalf("seed settings: %v", err)
 	}

@@ -46,7 +46,6 @@ async function editCursorBin(value: string) {
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     agent_paused: false,
-    repo_root: "/Users/me/code/example",
     cursor_bin: "/usr/local/bin/cursor-agent",
     ...TASK_TEST_DEFAULTS,
     max_run_duration_seconds: 0,
@@ -233,17 +232,6 @@ describe("SettingsPage", () => {
     const links = await screen.findAllByRole("link", { name: /^Open Worktrees$/i });
     expect(links.length).toBeGreaterThan(0);
     expect(links[0]).toHaveAttribute("href", "/worktrees");
-  });
-
-  it("shows the workspace warning banner when repo root is empty", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
-      jsonResponse(defaultSettings({ repo_root: "" })),
-    ));
-
-    renderPage();
-    expect(
-      await screen.findByText(/Agent workspace not configured/i),
-    ).toBeInTheDocument();
   });
 
   it("PATCHes only the changed fields and updates form state on success", async () => {

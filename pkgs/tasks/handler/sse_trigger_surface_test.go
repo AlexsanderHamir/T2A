@@ -294,7 +294,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		defer cancel()
 
 		mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
-			`{"repo_root":"/tmp/sse-trigger"}`, http.StatusOK)
+			`{"cursor_bin":"/tmp/sse-trigger"}`, http.StatusOK)
 		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
 		mustEqualEvents(t, "PATCH /settings", got, []string{"settings_changed:"})
 	})

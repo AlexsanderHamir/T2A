@@ -132,34 +132,6 @@ func (h *Handler) requireWorktreeRepo(w http.ResponseWriter, r *http.Request, op
 	return root, true
 }
 
-// requireRepo resolves the active workspace via the configured
-// RepoProvider and writes the canonical "repo unavailable" response
-// when no usable repo is available. Returns (root, true) when the
-// caller can continue; (nil, false) when an error has already been
-// written and the caller must return.
-//
-// Deprecated: /repo/* routes use requireWorktreeRepo. Retained for legacy mention fallback.
-func (h *Handler) requireRepo(w http.ResponseWriter, r *http.Request, op string) (*repo.Root, bool) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.requireRepo", "http_op", op)
-	root, reason, err := h.repoProv.Repo(r.Context())
-	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "repo provider failed",
-			"cmd", calltrace.LogCmd, "operation", op, "reason", reason, "err", err)
-		writeJSON(w, r, op, http.StatusInternalServerError, repoUnavailableErrorBody{
-			Error: err.Error(), Reason: reason,
-		})
-		return nil, false
-	}
-	if root == nil {
-		writeJSON(w, r, op, http.StatusConflict, repoUnavailableErrorBody{
-			Error:  "repo root is not configured",
-			Reason: reason,
-		})
-		return nil, false
-	}
-	return root, true
-}
-
 func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 	const op = "repo.search"
 	r = calltrace.WithRequestRoot(r, op)

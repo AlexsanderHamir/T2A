@@ -17,15 +17,21 @@ import (
 // Idempotent; failures log a warning and do not block startup.
 func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.migrateRepoRootToGitRepository")
-	var settings domain.AppSettings
-	err := db.WithContext(ctx).First(&settings, domain.AppSettingsRowID).Error
+	var path string
+	err := db.WithContext(ctx).
+		Raw(`SELECT COALESCE(repo_root, '') FROM app_settings WHERE id = ?`, domain.AppSettingsRowID).
+		Scan(&path).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
 		}
+		// Column already dropped on upgraded DBs — nothing to backfill.
+		if strings.Contains(strings.ToLower(err.Error()), "repo_root") {
+			return nil
+		}
 		return err
 	}
-	path := strings.TrimSpace(settings.RepoRoot)
+	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil
 	}

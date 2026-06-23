@@ -33,9 +33,6 @@ func TestStore_GetSettings_seedsDefaultsOnFirstRead(t *testing.T) {
 	if got.Runner != want.Runner {
 		t.Errorf("Runner = %q, want %q", got.Runner, want.Runner)
 	}
-	if got.RepoRoot != want.RepoRoot {
-		t.Errorf("RepoRoot = %q, want %q", got.RepoRoot, want.RepoRoot)
-	}
 	if got.CursorBin != want.CursorBin {
 		t.Errorf("CursorBin = %q, want %q", got.CursorBin, want.CursorBin)
 	}
@@ -87,14 +84,14 @@ func TestStore_UpdateSettings_partialPatchRoundtrip(t *testing.T) {
 	}
 
 	updated, err := s.UpdateSettings(ctx, SettingsPatch{
-		RepoRoot:              ptrString("/tmp/repo"),
+		CursorBin:             ptrString("/tmp/cursor"),
 		MaxRunDurationSeconds: ptrInt(900),
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if updated.RepoRoot != "/tmp/repo" {
-		t.Errorf("RepoRoot = %q, want /tmp/repo", updated.RepoRoot)
+	if updated.CursorBin != "/tmp/cursor" {
+		t.Errorf("CursorBin = %q, want /tmp/cursor", updated.CursorBin)
 	}
 	if updated.MaxRunDurationSeconds != 900 {
 		t.Errorf("MaxRunDurationSeconds = %d, want 900", updated.MaxRunDurationSeconds)
@@ -107,8 +104,8 @@ func TestStore_UpdateSettings_partialPatchRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-get: %v", err)
 	}
-	if persisted.RepoRoot != updated.RepoRoot {
-		t.Errorf("RepoRoot did not persist: got %q, want %q", persisted.RepoRoot, updated.RepoRoot)
+	if persisted.CursorBin != updated.CursorBin {
+		t.Errorf("CursorBin did not persist: got %q, want %q", persisted.CursorBin, updated.CursorBin)
 	}
 	if persisted.MaxRunDurationSeconds != updated.MaxRunDurationSeconds {
 		t.Errorf("MaxRunDurationSeconds did not persist: got %d, want %d", persisted.MaxRunDurationSeconds, updated.MaxRunDurationSeconds)
@@ -121,13 +118,13 @@ func TestStore_UpdateSettings_partialPatchRoundtrip(t *testing.T) {
 func TestStore_UpdateSettings_createsRowOnFirstWrite(t *testing.T) {
 	s, ctx := newSettingsStore(t)
 	updated, err := s.UpdateSettings(ctx, SettingsPatch{
-		RepoRoot: ptrString("/srv/code"),
+		CursorBin: ptrString("/srv/cursor"),
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if updated.RepoRoot != "/srv/code" {
-		t.Errorf("RepoRoot = %q, want /srv/code", updated.RepoRoot)
+	if updated.CursorBin != "/srv/cursor" {
+		t.Errorf("CursorBin = %q, want /srv/cursor", updated.CursorBin)
 	}
 	if updated.Runner != "cursor" {
 		t.Errorf("Runner = %q, want cursor (default seed)", updated.Runner)
@@ -142,14 +139,10 @@ func TestStore_UpdateSettings_trimsAndClamps(t *testing.T) {
 	t.Run("trims_strings", func(t *testing.T) {
 		s, ctx := newSettingsStore(t)
 		updated, err := s.UpdateSettings(ctx, SettingsPatch{
-			RepoRoot:  ptrString("  /trimmed  "),
 			CursorBin: ptrString("\tcursor\n"),
 		})
 		if err != nil {
 			t.Fatalf("update: %v", err)
-		}
-		if updated.RepoRoot != "/trimmed" {
-			t.Errorf("RepoRoot = %q, want /trimmed (whitespace trimmed)", updated.RepoRoot)
 		}
 		if updated.CursorBin != "cursor" {
 			t.Errorf("CursorBin = %q, want cursor (whitespace trimmed)", updated.CursorBin)
@@ -309,7 +302,7 @@ func TestSettingsPatch_IsEmpty(t *testing.T) {
 	if !(SettingsPatch{}).IsEmpty() {
 		t.Error("zero-value patch should report IsEmpty() == true")
 	}
-	if (SettingsPatch{RepoRoot: ptrString("")}).IsEmpty() {
+	if (SettingsPatch{CursorBin: ptrString("")}).IsEmpty() {
 		t.Error("patch with one explicit field should report IsEmpty() == false")
 	}
 }

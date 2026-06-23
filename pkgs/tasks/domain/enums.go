@@ -86,6 +86,7 @@ const (
 	EventApprovalRequested     EventType = "approval_requested"
 	EventApprovalGranted       EventType = "approval_granted"
 	EventTaskCompleted         EventType = "task_completed"
+	EventOnTaskDone            EventType = "on_task_done"
 	EventTaskFailed            EventType = "task_failed"
 	EventTaskRetryRequested    EventType = "task_retry_requested"
 	// Execution-cycle audit mirrors. Emitted in the same SQL transaction as writes to

@@ -54,7 +54,6 @@ function parseSettingsField(raw: unknown): AppSettings {
   const o = raw;
   const paused = typeof o.agent_paused === "boolean" ? o.agent_paused : false;
   const runner = o.runner;
-  const repoRoot = o.repo_root;
   const cursorBin = o.cursor_bin;
   const cursorModel = o.cursor_model;
   const maxDur = o.max_run_duration_seconds;
@@ -79,7 +78,6 @@ function parseSettingsField(raw: unknown): AppSettings {
       : 120;
   if (
     typeof runner !== "string" ||
-    typeof repoRoot !== "string" ||
     typeof cursorBin !== "string" ||
     typeof cursorModel !== "string" ||
     typeof maxDur !== "number" ||
@@ -91,7 +89,6 @@ function parseSettingsField(raw: unknown): AppSettings {
   const out: AppSettings = {
     agent_paused: paused,
     runner,
-    repo_root: repoRoot,
     cursor_bin: cursorBin,
     cursor_model: cursorModel,
     max_run_duration_seconds: maxDur,

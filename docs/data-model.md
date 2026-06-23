@@ -18,7 +18,9 @@ Work hierarchy is **Project → Task**. Tasks may have:
 |---|---|---|
 | `id` | string (UUID) | Server-assigned when omitted. |
 | `title` | string | Required after trim. |
-| `initial_prompt` | string (HTML) | TipTap rich text; validated for `@`-mentions when `app_settings.repo_root` is set. |
+| `initial_prompt` | string (HTML) | TipTap rich text; `@`-mentions validated against the task's `worktree_id` when present. |
+| `worktree_id` | string \| null | Git worktree binding (required on create). |
+| `branch_id` | string \| null | Git branch binding (required on create). |
 | `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
 | `pending_retry` | JSON \| null | Ephemeral operator intent between `POST /tasks/{id}/retry` and worker pickup. `{ mode: fresh|resume, parent_cycle_id }`. Not exposed on the HTTP task JSON (`json:"-"`); consumed and cleared atomically when the worker transitions `ready→running`. |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
@@ -338,6 +340,46 @@ Mental model: project = process, task = thread. Project = shared memory; task = 
 
 Out of scope today: embeddings / vector search, autonomous memory pruning, summarization daemons, tenancy / sharing / billing, automatic migration of legacy tasks into synthetic projects.
 
+## Git workflow (`git_repositories`, `git_worktrees`, `git_branches`)
+
+Per-project git context for Issue #39. See [ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md) and [domain/worktrees-and-branches.md](./domain/worktrees-and-branches.md).
+
+### `git_repositories`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | Server-assigned. |
+| `project_id` | string fk | Scoped to a project (default project in v0.1 UI). |
+| `path` | text | Container-visible absolute path to the main checkout. |
+| `host_path` | text | Optional display path for Docker (`HAMIX_PATH_MAP`). |
+| `default_branch` | string | e.g. `main`. |
+| `created_at` / `updated_at` | timestamptz | |
+
+### `git_worktrees`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | |
+| `repository_id` | string fk → `git_repositories.id` | |
+| `path` | text | Working directory (main checkout or linked worktree). |
+| `name` | string | Operator label. |
+| `is_main` | bool | True for the registered main checkout row. |
+| `created_at` | timestamptz | |
+
+### `git_branches`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | |
+| `repository_id` | string fk | |
+| `name` | string | Branch name. |
+| `head_sha` | string | Cached tip SHA (reconcile refreshes). |
+| `created_at` | timestamptz | |
+
+Tasks reference `worktree_id` + `branch_id`. Delete returns **409** `has_running_task` when a **running** task targets the worktree or branch.
+
 ## Audit log (`task_events`)
 
-Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, checklist events, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.
+Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, checklist events, `on_task_done`, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.
+
+`on_task_done` payload (emitted when the harness marks a task `done`): `{ "worktree_id", "branch_id", "commits": [{ "sha", "message", ... }] }` — foundation for future PR automation; no UI in v0.1.

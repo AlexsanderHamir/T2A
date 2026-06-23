@@ -57,7 +57,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Commits or repo diff API | `handler_commits.go`, `handler_http_repo*.go`, [docs/domain/cycle-commits.md](docs/domain/cycle-commits.md) |
 | Task drafts API | `handler_task_drafts.go`, [docs/api.md](docs/api.md) |
 | Projects API | `handler_projects.go`, `handler_projects_json.go` |
-| Workspace repo / `@`-mentions | `pkgs/repo/`, [docs/domain/workspace-repo.md](docs/domain/workspace-repo.md) |
+| Workspace repo / `@`-mentions | `pkgs/repo/`, [docs/domain/worktrees-and-branches.md](docs/domain/worktrees-and-branches.md) |
 | Schema migration | `pkgs/tasks/postgres/postgres.go` (`postgres.Migrate` on **taskapi** startup); optional manual: `go run ./cmd/dbcheck -migrate` — [docs/configuration.md](docs/configuration.md) (Schema migrations) |
 | Write policy / enriched SSE payload | `writepolicy/`, `handler_writepolicy.go`, [ADR-0026](docs/adr/ADR-0026-backend-data-coherence.md) |
 
@@ -131,13 +131,20 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 
 ## Commands to run before you finish
 
-See [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr) for the verification command table (full bar, CI parity, Go-only, `--install`).
+**Use the local check script** — it is the same bar CI runs (`check-go.sh` + `check-web.sh`). Do **not** poll GitHub Actions (`gh run watch`) as verification; run check locally and fix until green.
 
-| Change | Command |
+| Platform | Command |
+| --- | --- |
+| Unix / Git Bash | `./scripts/check.sh` (add `--install` when `web/package-lock.json` changed) |
+| Windows PowerShell | `.\scripts\check.ps1` (add `-Install` when lockfile changed) |
+| Docker only (no local Go/Node) | `docker compose run --rm dev ./scripts/check.sh --install` |
+
+Scoped: `--go-only` / `-GoOnly`, `--web-only` / `-WebOnly`. See [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr) for CI-parity flags (`--verbose`, etc.).
+
+| Change | If not running full check |
 | --- | --- |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
-| Docker-only environment (no local Go/Node) | `docker compose run --rm dev ./scripts/check.sh --install` — see [docs/docker.md](docs/docker.md) |
 
 Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [CONTRIBUTING.md](CONTRIBUTING.md#before-you-open-a-pr) and `backend-engineering-bar.mdc` §11).
 
@@ -154,6 +161,7 @@ Default tests must not require real Postgres, real outbound network, or a runnin
 - Do not rely on `taskapi` serving `web/dist`; production is static files + reverse proxy.
 - `GET /events` is SSE; `/health` is plain JSON — different clients.
 - Default per-IP rate limit is 120/min (`HAMIX_RATE_LIMIT_PER_MIN`); set **`0`** to disable locally.
+- Verify with **`./scripts/check.sh`** / **`.\scripts\check.ps1`** — not **`gh run watch`** (see `.cursor/rules/verification.mdc`).
 
 ## Full indexes
 

@@ -25,7 +25,6 @@ import {
   SettingsLoadingState,
   SettingsStatusMessage,
   WorkspaceSettingsSection,
-  WorkspaceWarning,
 } from "./SettingsSections";
 import { UiTestModeSettingsSection } from "./UiTestModeSettingsSection";
 import { SettingsNav, type SettingsNavItem } from "./SettingsNav";
@@ -134,9 +133,6 @@ function mergeFormAfterSettingsPatch(
   const merged: SettingsFormState = { ...cur };
   if (cur.runner === formAtSubmit.runner) {
     merged.runner = next.runner;
-  }
-  if (cur.repoRoot === formAtSubmit.repoRoot) {
-    merged.repoRoot = next.repo_root;
   }
   if (cur.cursorBin === formAtSubmit.cursorBin) {
     merged.cursorBin = next.cursor_bin;
@@ -477,7 +473,6 @@ function SettingsPageLoadedView({
   onDiscard,
 }: SettingsPageLoadedViewProps) {
   const { maxInvalid, streamIdleInvalid, pickupInvalid } = numericValidation;
-  const repoRootEmpty = form.repoRoot.trim() === "";
 
   return (
     <section className="settings-page">
@@ -485,8 +480,6 @@ function SettingsPageLoadedView({
         lastUpdated={lastUpdated}
         lastUpdatedFormatted={lastUpdatedFormatted}
       />
-
-      {repoRootEmpty ? <WorkspaceWarning /> : null}
 
       <div className="settings-layout">
         <aside className="settings-layout-aside">

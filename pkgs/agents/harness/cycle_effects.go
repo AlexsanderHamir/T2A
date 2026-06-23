@@ -126,6 +126,9 @@ func (h *Harness) applyFinalizeEffects(
 	if !h.transitionTask(parentCtx, task.ID, effects.TaskStatus, "final_task_transition") {
 		return false
 	}
+	if effects.TaskStatus == domain.StatusDone {
+		h.emitOnTaskDone(parentCtx, task, cycle.ID)
+	}
 	if effects.CycleStatus != domain.CycleStatusSucceeded {
 		return true
 	}

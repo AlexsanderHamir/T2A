@@ -157,19 +157,11 @@ Passes run against [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md), [docs/domain/ha
 | **Evidence** | [project-context.md](docs/domain/project-context.md); landscape C gap |
 | **Success signal** | Large projects complete without runner context overflow failures |
 
-#### - [ ] 8. Optional per-cycle git worktree (light sandbox)
+#### - [x] 8. Optional per-cycle git worktree (light sandbox)
 
 | | |
 | --- | --- |
-| **Status** | Not started |
-| **ROI_score** | ~3.1 |
-| **Problem** | All cycles mutate shared `repo_root` on host ([HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) sandbox row). Single worker limits concurrency today, but operator + manual edits share tree. |
-| **Proposed change** | Settings flag: create worktree per cycle, run harness in worktree path, merge or discard on terminate. |
-| **Effort** | L — harness git svc + settings + cleanup |
-| **ETCSLV** | T (isolation), S |
-| **Evidence** | Landscape sandbox; [workspace-repo.md](docs/domain/workspace-repo.md) |
-| **Dependencies / risks** | Git worktree cleanup on crash; Start over / fresh retry interaction |
-| **Success signal** | Failed cycle leaves main worktree clean without operator git reset |
+| **Status** | **Superseded** — persistent worktree + branch model shipped in Issue #39 ([ADR-0033](docs/adr/ADR-0033-git-worktrees-and-branches.md), [worktrees-and-branches.md](docs/domain/worktrees-and-branches.md)). Per-cycle ephemeral worktrees deferred. |
 
 #### - [ ] 9. ETCSLV completeness scorecard (deployment audit)
 

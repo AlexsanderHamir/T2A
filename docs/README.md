@@ -40,6 +40,7 @@ Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below
 | [api.md](./api.md) | You need the REST + SSE endpoint surface (handler code is authoritative for status codes) |
 | [configuration.md](./configuration.md) | You change env vars, app settings, agent worker configuration, or schema migrate behavior (see **Schema migrations** in that doc) |
 | [naming.md](./naming.md) | You need product/operator identifier conventions (Hamix, `HAMIX_*`, metrics) |
+| [plans/issue-39-git-workflow-roadmap.md](./plans/issue-39-git-workflow-roadmap.md) | Issue #39 phased delivery: worktrees, branches, worker binding, Docker |
 
 ## Implementation and deep dive
 

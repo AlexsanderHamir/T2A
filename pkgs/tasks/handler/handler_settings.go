@@ -24,7 +24,6 @@ import (
 type settingsResponse struct {
 	AgentPaused                 bool   `json:"agent_paused"`
 	Runner                      string `json:"runner"`
-	RepoRoot                    string `json:"repo_root"`
 	CursorBin                   string `json:"cursor_bin"`
 	CursorModel                 string `json:"cursor_model"`
 	MaxRunDurationSeconds       int    `json:"max_run_duration_seconds"`
@@ -50,7 +49,6 @@ type settingsResponse struct {
 type settingsPatchBody struct {
 	AgentPaused                 *bool   `json:"agent_paused,omitempty"`
 	Runner                      *string `json:"runner,omitempty"`
-	RepoRoot                    *string `json:"repo_root,omitempty"`
 	CursorBin                   *string `json:"cursor_bin,omitempty"`
 	CursorModel                 *string `json:"cursor_model,omitempty"`
 	MaxRunDurationSeconds       *int    `json:"max_run_duration_seconds,omitempty"`
@@ -153,7 +151,6 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 	patch := store.SettingsPatch{
 		AgentPaused:                 body.AgentPaused,
 		Runner:                      body.Runner,
-		RepoRoot:                    body.RepoRoot,
 		CursorBin:                   body.CursorBin,
 		CursorModel:                 body.CursorModel,
 		MaxRunDurationSeconds:       body.MaxRunDurationSeconds,
@@ -324,7 +321,6 @@ func (h *Handler) settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	resp := settingsResponse{
 		AgentPaused:                 cfg.AgentPaused,
 		Runner:                      cfg.Runner,
-		RepoRoot:                    h.pathMap.DisplayHostPath(cfg.RepoRoot),
 		CursorBin:                   cfg.CursorBin,
 		CursorModel:                 cfg.CursorModel,
 		MaxRunDurationSeconds:       cfg.MaxRunDurationSeconds,

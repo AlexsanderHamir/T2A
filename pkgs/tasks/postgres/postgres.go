@@ -125,6 +125,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := migrateRepoRootToGitRepository(ctx, db); err != nil {
 		return fmt.Errorf("migrate repo_root to git repository: %w", err)
 	}
+	if err := migrateDropRepoRootColumn(ctx, db); err != nil {
+		return fmt.Errorf("drop app_settings.repo_root: %w", err)
+	}
 	return nil
 }
 

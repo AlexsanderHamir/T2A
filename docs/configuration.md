@@ -168,8 +168,8 @@ The variables below are silently ignored if still present in `.env`. Move the va
 | `HAMIX_AGENT_WORKER_ENABLED` | Deprecated. The agent worker always starts; use the header pause toggle (`agent_paused`) for a runtime stop. |
 | `HAMIX_AGENT_WORKER_CURSOR_BIN` | `app_settings.cursor_bin`. |
 | `HAMIX_AGENT_WORKER_RUN_TIMEOUT` | `app_settings.max_run_duration_seconds` (default `0` = no limit, not 5m). |
-| `HAMIX_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root`. |
-| `REPO_ROOT` | `app_settings.repo_root`. |
+| `HAMIX_AGENT_WORKER_WORKING_DIR` | Removed — register git repositories on `/worktrees`; tasks bind `worktree_id` + `branch_id`. |
+| `REPO_ROOT` | Removed — same as above ([ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md)). |
 
 ### Test-only override
 

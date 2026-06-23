@@ -32,18 +32,6 @@ func (s *Supervisor) RunningInstanceIdentity() uintptr {
 	return uintptr(unsafe.Pointer(s.current))
 }
 
-// RunningInstanceRepoRoot returns the repo root of the active instance.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Supervisor) RunningInstanceRepoRoot() (string, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.current == nil {
-		return "", false
-	}
-	return s.current.settings.RepoRoot, true
-}
-
 // RunningInstanceRunnerVersion returns the execute runner version when active.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

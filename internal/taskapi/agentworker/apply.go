@@ -21,7 +21,6 @@ type applySettingsSnapshot struct {
 type effectiveSettingsLog struct {
 	AgentPaused           bool
 	Runner                string
-	RepoRoot              string
 	CursorBin             string
 	CursorModel           string
 	MaxRunDurationSeconds int
@@ -89,7 +88,6 @@ func baseEffectiveSettings(cfg store.AppSettings) effectiveSettingsLog {
 	return effectiveSettingsLog{
 		AgentPaused:           cfg.AgentPaused,
 		Runner:                cfg.Runner,
-		RepoRoot:              cfg.RepoRoot,
 		CursorBin:             cfg.CursorBin,
 		CursorModel:           cfg.CursorModel,
 		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
@@ -193,7 +191,7 @@ func (s *Supervisor) logEffective(phase string, eff effectiveSettingsLog) {
 		"paused", eff.AgentPaused,
 		"idle", eff.Idle, "idle_reason", eff.IdleReason,
 		"runner", eff.Runner, "runner_version", eff.RunnerVersion,
-		"repo_root", eff.RepoRoot, "cursor_bin", eff.CursorBin,
+		"cursor_bin", eff.CursorBin,
 		"cursor_model", eff.CursorModel,
 		"max_run_duration_sec", eff.MaxRunDurationSeconds,
 		"verify_runner", eff.VerifyRunner, "verify_runner_status", eff.VerifyRunnerStatus)

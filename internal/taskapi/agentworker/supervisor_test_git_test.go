@@ -39,10 +39,5 @@ func (rig *supervisorTestRig) seedRunnableWorker(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	rig.seedGitRepository(t, dir)
-	if _, err := rig.store.UpdateSettings(context.Background(), store.SettingsPatch{
-		RepoRoot: ptrString(dir),
-	}); err != nil {
-		t.Fatalf("seed settings: %v", err)
-	}
 	return dir
 }

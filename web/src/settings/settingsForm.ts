@@ -26,7 +26,6 @@ export function runnerShortLabel(runnerId: string): string {
 
 export type SettingsFormState = {
   runner: string;
-  repoRoot: string;
   cursorBin: string;
   cursorModel: string;
   maxRunDurationSeconds: string;
@@ -49,7 +48,6 @@ export const SETTINGS_SUCCESS_DISMISS_MS = 4_000;
 export function toFormState(s: AppSettings): SettingsFormState {
   return {
     runner: s.runner,
-    repoRoot: s.repo_root,
     cursorBin: s.cursor_bin,
     cursorModel: s.cursor_model,
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
@@ -69,9 +67,6 @@ export function diffPatch(
   const out: AppSettingsPatch = {};
   if (initial.runner !== form.runner.trim()) {
     out.runner = form.runner.trim();
-  }
-  if (initial.repo_root !== form.repoRoot.trim()) {
-    out.repo_root = form.repoRoot.trim();
   }
   if (initial.cursor_bin !== form.cursorBin.trim()) {
     out.cursor_bin = form.cursorBin.trim();

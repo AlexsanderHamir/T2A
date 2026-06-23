@@ -25,7 +25,6 @@ const logCmd = "taskapi"
 type Patch struct {
 	AgentPaused             *bool
 	Runner                  *string
-	RepoRoot                *string
 	CursorBin               *string
 	CursorModel             *string
 	MaxRunDurationSeconds   *int
@@ -63,7 +62,6 @@ type Patch struct {
 func (p Patch) IsEmpty() bool {
 	return p.AgentPaused == nil &&
 		p.Runner == nil &&
-		p.RepoRoot == nil &&
 		p.CursorBin == nil &&
 		p.CursorModel == nil &&
 		p.MaxRunDurationSeconds == nil &&
@@ -118,7 +116,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 		"cmd", logCmd, "operation", "tasks.store.settings.seeded",
 		"agent_paused", row.AgentPaused,
 		"runner", row.Runner,
-		"repo_root", row.RepoRoot, "cursor_bin", row.CursorBin,
+		"cursor_bin", row.CursorBin,
 		"max_run_duration_seconds", row.MaxRunDurationSeconds,
 		"display_timezone", row.DisplayTimezone)
 	return row, nil
@@ -237,9 +235,6 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.Runner != nil {
 		row.Runner = strings.TrimSpace(*patch.Runner)
-	}
-	if patch.RepoRoot != nil {
-		row.RepoRoot = strings.TrimSpace(*patch.RepoRoot)
 	}
 	if patch.CursorBin != nil {
 		row.CursorBin = strings.TrimSpace(*patch.CursorBin)

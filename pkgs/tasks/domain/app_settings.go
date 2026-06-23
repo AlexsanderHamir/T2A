@@ -11,9 +11,8 @@ import (
 // upserts onto id=1 and every GET reads id=1, optionally creating it
 // with defaults on first read.
 //
-// This row replaces the historical HAMIX_AGENT_WORKER_* env vars and the
-// REPO_ROOT env var. Env vars are no longer read at runtime — the row
-// is the only source of truth and is "saved until changed".
+// Git working directories are registered per project via git_repositories /
+// git_worktrees (see ADR-0033); tasks bind worktree_id + branch_id at create.
 //
 // Field semantics:
 //   - AgentPaused: operator-facing soft pause exposed in the SPA
@@ -23,10 +22,6 @@ import (
 //     run, and pause is the operator's stop-the-dequeue knob.
 //   - Runner: id of the runner registered in pkgs/agents/runner/registry
 //     (today only "cursor"). Default "cursor".
-//   - RepoRoot: absolute or process-relative path used for both the
-//     agent worker WorkingDir and the global repo file picker / @-mention
-//     autocomplete. Empty means "not configured": worker stays idle and
-//     repo endpoints respond 409 repo_root_not_configured.
 //   - CursorBin: cursor binary path. Empty means "auto-detect from PATH"
 //     (the supervisor probes `cursor --version` at boot).
 //   - CursorModel: optional `cursor-agent --model` value. Empty means omit
@@ -58,7 +53,6 @@ type AppSettings struct {
 	ID                         uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
 	AgentPaused                bool   `gorm:"not null;default:false"`
 	Runner                     string `gorm:"not null;default:'cursor'"`
-	RepoRoot                   string `gorm:"not null;default:''"`
 	CursorBin                  string `gorm:"not null;default:''"`
 	CursorModel                string `gorm:"not null;default:''"`
 	MaxRunDurationSeconds      int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
@@ -131,7 +125,6 @@ func DefaultAppSettings() AppSettings {
 		ID:                          AppSettingsRowID,
 		AgentPaused:                 false,
 		Runner:                      DefaultRunner,
-		RepoRoot:                    "",
 		CursorBin:                   "",
 		MaxRunDurationSeconds:       0,
 		StreamIdleStuckSeconds:      DefaultStreamIdleStuckSeconds,

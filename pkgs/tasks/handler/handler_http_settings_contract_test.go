@@ -110,9 +110,6 @@ func TestHTTP_GetSettings_returnsSeededDefaults(t *testing.T) {
 	if resp.Runner != "cursor" {
 		t.Errorf("Runner=%q, want cursor", resp.Runner)
 	}
-	if resp.RepoRoot != "" {
-		t.Errorf("RepoRoot=%q, want empty (operator must configure)", resp.RepoRoot)
-	}
 	if resp.MaxRunDurationSeconds != 0 {
 		t.Errorf("MaxRunDurationSeconds=%d, want 0 (no limit)", resp.MaxRunDurationSeconds)
 	}
@@ -147,13 +144,13 @@ func TestHTTP_PatchSettings_persistsAndReloads(t *testing.T) {
 	defer cancel()
 
 	body := mustPatchSettingsJSON(t, srv.URL+"/settings",
-		`{"repo_root":"/tmp/x","max_run_duration_seconds":120}`,
+		`{"cursor_bin":"/tmp/cursor","max_run_duration_seconds":120}`,
 		http.StatusOK)
 	var resp settingsResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		t.Fatalf("decode: %v body=%s", err, body)
 	}
-	if resp.RepoRoot != "/tmp/x" || resp.MaxRunDurationSeconds != 120 {
+	if resp.CursorBin != "/tmp/cursor" || resp.MaxRunDurationSeconds != 120 {
 		t.Errorf("response did not reflect patch: %+v", resp)
 	}
 	if got := ctrl.reloadCalls.Load(); got != 1 {
@@ -241,7 +238,7 @@ func TestHTTP_PatchSettings_validationError(t *testing.T) {
 func TestHTTP_PatchSettings_503WithoutAgent(t *testing.T) {
 	srv, _ := settingsTestServerNoAgent(t)
 	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
-		`{"repo_root":"/tmp/x"}`, http.StatusServiceUnavailable)
+		`{"cursor_bin":"/tmp/cursor"}`, http.StatusServiceUnavailable)
 	assertSettingsBareError(t, resp, "agent worker control unavailable")
 }
 
@@ -264,7 +261,7 @@ func TestHTTP_PatchSettings_reloadFailureSurfaces500(t *testing.T) {
 	e := errors.New("synthetic reload failure")
 	ctrl.reloadErr.Store(&e)
 	resp := mustSettingsHTTP(t, http.MethodPatch, srv.URL+"/settings",
-		`{"repo_root":"/tmp/x"}`, http.StatusInternalServerError)
+		`{"cursor_bin":"/tmp/cursor"}`, http.StatusInternalServerError)
 	assertSettingsBareError(t, resp, "settings saved but worker reload failed")
 }
 

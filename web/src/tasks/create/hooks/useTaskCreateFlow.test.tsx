@@ -52,7 +52,6 @@ function makeWrapper() {
   queryClient.setQueryData(settingsQueryKeys.app(), {
     agent_paused: false,
     runner: "cursor",
-    repo_root: "",
     cursor_bin: "",
     cursor_model: "",
     max_run_duration_seconds: 0,

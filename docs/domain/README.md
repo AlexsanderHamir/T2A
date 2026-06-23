@@ -68,7 +68,7 @@ Use Microsoft-style callouts where they add clarity:
 | [agent-queue.md](./agent-queue.md) | Agent ready-task queue: notify, pickup wake, reconcile, ack semantics |
 | [agent-supervisor.md](./agent-supervisor.md) | Worker supervisor: boot/reload, idle reasons, hot-swap, cancel, SSE wiring |
 | [sse-hub.md](./sse-hub.md) | SSE hub: fanout, reconnect replay, resync, SPA invalidation |
-| [workspace-repo.md](./workspace-repo.md) | Workspace repo: `repo_root` gate, `/repo/*`, `@`-mention validation |
+| [worktrees-and-branches.md](./worktrees-and-branches.md) | Git worktrees: task binding, `/repo/*`, `@`-mentions, worker `WorkingDir` |
 | [persistence.md](./persistence.md) | Store facade, dual-write, verdict tables vs report files |
 | [task-events.md](./task-events.md) | Audit log: `task_events`, paging, response threads, cycle mirrors |
 | [runner-adapters.md](./runner-adapters.md) | Runner plug-in model: registry, capabilities, adding CLI adapters |

@@ -278,13 +278,6 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (h *Harness) repoRootForGit(ctx context.Context) string {
-	settings, err := h.store.GetSettings(ctx)
-	if err != nil {
-		return strings.TrimSpace(h.opts.WorkingDir)
-	}
-	if v := strings.TrimSpace(settings.RepoRoot); v != "" {
-		return v
-	}
+func (h *Harness) repoRootForGit(_ context.Context) string {
 	return strings.TrimSpace(h.opts.WorkingDir)
 }

@@ -8,7 +8,6 @@ import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
   agent_paused: false,
   runner: "cursor",
-  repo_root: "",
   cursor_bin: "",
   cursor_model: "",
   max_run_duration_seconds: 0,
