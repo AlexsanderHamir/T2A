@@ -100,8 +100,8 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
 	<-done
+	cancel()
 	bg := context.Background()
 	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {

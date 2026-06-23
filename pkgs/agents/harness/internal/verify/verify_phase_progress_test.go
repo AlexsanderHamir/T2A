@@ -68,8 +68,8 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
 	<-done
+	cancel()
 	if !verifyProgressFired.Load() {
 		t.Fatal("verify runner.Request.OnProgress was nil; progress wiring missing")
 	}

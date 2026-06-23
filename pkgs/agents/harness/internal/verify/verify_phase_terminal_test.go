@@ -80,8 +80,8 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
@@ -192,8 +192,8 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	bg := context.Background()
 	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {
@@ -269,8 +269,8 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	bg := context.Background()
 	events, err := h.store.ListTaskEvents(bg, tsk.ID)
 	if err != nil {
@@ -364,8 +364,8 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	events, _ := h.store.ListTaskEvents(context.Background(), tsk.ID)
 	sawTampered := false
 	for _, e := range events {

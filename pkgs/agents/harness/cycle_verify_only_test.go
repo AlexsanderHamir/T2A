@@ -190,8 +190,8 @@ func TestEdgeCase_EC01_verifyInfra_skipsExecute(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	cancel()
 	<-done
+	cancel()
 
 	execCalls := 0
 	for _, c := range execRunner.Calls() {
@@ -271,8 +271,8 @@ func TestEdgeCase_EC02_verifyAgentReject_fullReexecute(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	cancel()
 	<-done
+	cancel()
 
 	if execAttempt.Load() != 2 {
 		t.Fatalf("execute attempts = %d, want 2 (full re-execute on verify-agent reject)", execAttempt.Load())
@@ -317,9 +317,20 @@ func TestEdgeCase_EC03_claimedNotDone_fullReexecute(t *testing.T) {
 		defer close(done)
 		h.Run(ctx, tsk)
 	}()
-	time.Sleep(200 * time.Millisecond)
-	cancel()
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting for full re-execute after claimed_not_done")
+		default:
+		}
+		if execAttempt.Load() >= 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	<-done
+	cancel()
 
 	if execAttempt.Load() < 2 {
 		t.Fatalf("execute attempts = %d, want >=2 for claimed_not_done retry", execAttempt.Load())
@@ -339,9 +350,26 @@ func TestEdgeCase_EC04_reportMissing_fullReexecute(t *testing.T) {
 		defer close(done)
 		h.Run(ctx, tsk)
 	}()
-	time.Sleep(300 * time.Millisecond)
-	cancel()
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting for full re-execute")
+		default:
+		}
+		execCalls := 0
+		for _, c := range r.Calls() {
+			if c.Phase == domain.PhaseExecute {
+				execCalls++
+			}
+		}
+		if execCalls >= 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	<-done
+	cancel()
 
 	execCalls := 0
 	for _, c := range r.Calls() {
@@ -425,8 +453,8 @@ func TestEdgeCase_EC09_partialPass_infraVerifyOnly(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	cancel()
 	<-done
+	cancel()
 
 	if n := countPhaseCalls(execRunner, domain.PhaseExecute); n != 1 {
 		t.Fatalf("execute calls = %d, want 1", n)

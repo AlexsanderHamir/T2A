@@ -61,8 +61,8 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
 	<-done
+	cancel()
 	execCalls := execRunner.Calls()
 	for _, c := range execCalls {
 		if c.Phase == domain.PhaseVerify {

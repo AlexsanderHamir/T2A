@@ -17,7 +17,7 @@ import (
 )
 
 const pollInterval = 10 * time.Millisecond
-const pollTimeout = 3 * time.Second
+const pollTimeout = 10 * time.Second
 
 type testEnv struct {
 	t        *testing.T

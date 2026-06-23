@@ -55,8 +55,8 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	// deterministically (no stray files from earlier test runs).
 	done := h.startHarnessRun(ctx, tsk, r, harness.Options{WorkingDir: t.TempDir()})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
@@ -178,8 +178,8 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 	metrics := newRecordingMetrics()
 	done := h.startHarnessRun(ctx, tsk, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
-	cancel()
 	<-done
+	cancel()
 	verdicts := metrics.verdictSnapshot()
 	if len(verdicts) == 0 {
 		t.Fatalf("expected at least one verdict recorded")
