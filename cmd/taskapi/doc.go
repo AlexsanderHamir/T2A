@@ -7,7 +7,7 @@
 //
 // It loads environment with envload.Load (repo-root .env or -env path), opens the database with
 // pkgs/tasks/postgres.Open, optionally runs postgres.Migrate when -migrate or HAMIX_MIGRATE is set,
-// checks schema revision drift on every startup, constructs handler.NewSSEHub for
+// checks schema drift on every startup and exits before listening when migrate is required, constructs handler.NewSSEHub for
 // task change notifications, optionally opens pkgs/repo from app_settings.repo_root for GET /repo/* and prompt
 // validation, then mounts handler.NewHandler (REST + GET /events SSE + optional /repo) on / with
 // WithRecovery, WithHTTPMetrics, WithAccessLog, WithRateLimit, WithAPIAuth, WithRequestTimeout, WithMaxRequestBody, and WithIdempotency; GET /metrics (Prometheus text) is registered separately on the mux behind handler.WrapPrometheusHandler (baseline security headers).

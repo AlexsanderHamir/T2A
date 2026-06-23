@@ -49,17 +49,18 @@ func registerDBMetrics(db *gorm.DB) {
 }
 
 func emitSchemaDriftAlerts(report postgres.SchemaDriftReport) {
-	if report.Status != postgres.SchemaDriftPending {
+	if report.Status != postgres.SchemaDriftPending && report.Status != postgres.SchemaDriftDowngrade {
 		return
 	}
 	fmt.Fprintf(os.Stderr,
-		"%s: SCHEMA MIGRATION REQUIRED (code revision %d, database revision %d).\n"+
-			"         Run: .\\scripts\\migrate.ps1   or   go run ./cmd/dbcheck -migrate\n",
-		cmdName, report.CodeRevision, report.DBRevision)
-	slog.Error("schema migration required", "cmd", cmdName, "operation", "taskapi.schema_drift",
+		"%s: %s\n"+
+			"         %s\n",
+		cmdName, report.OperatorMessage(), report.RemediationCLI())
+	slog.Error("schema migrate required", "cmd", cmdName, "operation", "taskapi.schema_drift",
 		"status", string(report.Status),
 		"code_revision", report.CodeRevision,
 		"db_revision", report.DBRevision,
+		"message", report.OperatorMessage(),
 		"remediation", report.Remediation())
 }
 
@@ -95,16 +96,21 @@ func loadEnvAndOpenDatabase(envPath string, migrateEnabled bool) (dbStartupResul
 		if err != nil {
 			return out, fmt.Errorf("schema drift check after migrate: %w", err)
 		}
+		if drift.FailsReadiness() {
+			emitSchemaDriftAlerts(drift)
+			_ = closeSQLDBOrLog(db)
+			out.db = nil
+			return out, fmt.Errorf("%s", drift.OperatorMessage())
+		}
 	} else {
 		slog.Info("migrate skipped", "cmd", cmdName, "operation", "taskapi.migrate",
 			"reason", "not_requested",
 			"hint", "run scripts/migrate.* or pass -migrate / set HAMIX_MIGRATE=1")
-		emitSchemaDriftAlerts(drift)
-		if drift.Status == postgres.SchemaDriftDowngrade {
-			slog.Warn("schema downgrade detected", "cmd", cmdName, "operation", "taskapi.schema_drift",
-				"code_revision", drift.CodeRevision,
-				"db_revision", drift.DBRevision,
-				"remediation", "deploy a binary matching the database schema revision")
+		if drift.FailsReadiness() {
+			emitSchemaDriftAlerts(drift)
+			_ = closeSQLDBOrLog(db)
+			out.db = nil
+			return out, fmt.Errorf("%s", drift.OperatorMessage())
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
@@ -41,8 +42,12 @@ func TestHealthReady_schemaPendingReturns503(t *testing.T) {
 	if !ok {
 		t.Fatalf("schema block missing: %v", body)
 	}
-	if schema["code_revision"].(float64) != float64(postgres.SchemaRevision) {
-		t.Fatalf("code_revision=%v", schema["code_revision"])
+	msg, _ := schema["message"].(string)
+	if msg == "" {
+		t.Fatalf("schema.message missing: %v", schema)
+	}
+	if !strings.Contains(msg, "migrate") {
+		t.Fatalf("schema.message=%q", msg)
 	}
 }
 

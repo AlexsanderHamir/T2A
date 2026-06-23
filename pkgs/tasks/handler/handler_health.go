@@ -72,9 +72,8 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 			"status": "degraded",
 			"checks": checks,
 			"schema": map[string]any{
-				"code_revision": h.schemaDrift.CodeRevision,
-				"db_revision":   h.schemaDrift.DBRevision,
-				"remediation":   h.schemaDrift.Remediation(),
+				"message":     h.schemaDrift.OperatorMessage(),
+				"remediation": h.schemaDrift.Remediation(),
 			},
 			"version": ServerVersion(),
 		})

@@ -39,8 +39,11 @@ func TestEmitSchemaDriftAlerts_pendingWritesStderr(t *testing.T) {
 	if out == "" {
 		t.Fatal("expected stderr banner")
 	}
-	if !bytes.Contains([]byte(out), []byte("SCHEMA MIGRATION REQUIRED")) {
+	if !bytes.Contains([]byte(out), []byte("schema migrate")) {
 		t.Fatalf("stderr %q", out)
+	}
+	if bytes.Contains([]byte(out), []byte("revision")) {
+		t.Fatalf("stderr should not mention revision: %q", out)
 	}
 }
 
@@ -52,10 +55,17 @@ func TestEmitSchemaDriftAlerts_okSilent(t *testing.T) {
 	}
 }
 
-func TestEmitSchemaDriftAlerts_downgradeSilent(t *testing.T) {
-	report := postgres.SchemaDriftReport{Status: postgres.SchemaDriftDowngrade}
+func TestEmitSchemaDriftAlerts_downgradeWritesStderr(t *testing.T) {
+	report := postgres.SchemaDriftReport{
+		Status:       postgres.SchemaDriftDowngrade,
+		CodeRevision: 1,
+		DBRevision:   2,
+	}
 	out := captureStderr(t, func() { emitSchemaDriftAlerts(report) })
-	if out != "" {
-		t.Fatalf("downgrade uses slog only, got stderr: %q", out)
+	if out == "" {
+		t.Fatal("expected stderr banner for downgrade")
+	}
+	if !bytes.Contains([]byte(out), []byte("older than the database schema")) {
+		t.Fatalf("stderr %q", out)
 	}
 }

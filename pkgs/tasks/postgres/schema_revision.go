@@ -43,11 +43,45 @@ type SchemaDriftReport struct {
 	DBRevision   int
 }
 
+// OperatorMessage is plain-language guidance for stderr and fatal startup errors.
+//
+//funclogmeasure:skip category=hot-path reason="Pure string formatter; drift is traced at taskapi startup."
+func (r SchemaDriftReport) OperatorMessage() string {
+	switch r.Status {
+	case SchemaDriftPending:
+		if r.DBRevision == 0 {
+			return "Database schema has not been migrated yet. Apply schema migrate before starting taskapi."
+		}
+		return "Database schema is out of date for this build. Apply schema migrate before starting taskapi."
+	case SchemaDriftDowngrade:
+		return "This taskapi build is older than the database schema. Deploy a matching release before starting taskapi."
+	default:
+		return ""
+	}
+}
+
 // Remediation returns operator guidance when drift fails readiness.
 //
 //funclogmeasure:skip category=hot-path reason="Pure constant accessor; drift is traced at taskapi startup and GET /health/ready."
 func (r SchemaDriftReport) Remediation() string {
-	return SchemaDriftRemediation
+	switch r.Status {
+	case SchemaDriftDowngrade:
+		return "deploy a taskapi build that matches the database schema"
+	default:
+		return SchemaDriftRemediation
+	}
+}
+
+// RemediationCLI returns a one-line shell command for stderr when migrate applies.
+//
+//funclogmeasure:skip category=hot-path reason="Pure string formatter; drift is traced at taskapi startup."
+func (r SchemaDriftReport) RemediationCLI() string {
+	switch r.Status {
+	case SchemaDriftDowngrade:
+		return "Deploy a taskapi build that matches the database schema."
+	default:
+		return "Run: .\\scripts\\migrate.ps1   or   go run ./cmd/dbcheck -migrate"
+	}
 }
 
 // FailsReadiness reports whether GET /health/ready should return 503 for schema.

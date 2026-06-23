@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -88,5 +89,22 @@ func TestCheckSchemaDrift_downgradeWhenDBAhead(t *testing.T) {
 	}
 	if report.DBRevision != ahead {
 		t.Fatalf("db_revision=%d want %d", report.DBRevision, ahead)
+	}
+}
+
+func TestSchemaDriftReport_OperatorMessage_pendingFreshDB(t *testing.T) {
+	msg := (SchemaDriftReport{Status: SchemaDriftPending, DBRevision: 0}).OperatorMessage()
+	if msg == "" || !strings.Contains(msg, "not been migrated") {
+		t.Fatalf("message=%q", msg)
+	}
+}
+
+func TestSchemaDriftReport_OperatorMessage_pendingOutOfDate(t *testing.T) {
+	msg := (SchemaDriftReport{Status: SchemaDriftPending, DBRevision: 1, CodeRevision: 2}).OperatorMessage()
+	if msg == "" || !strings.Contains(msg, "out of date") {
+		t.Fatalf("message=%q", msg)
+	}
+	if strings.Contains(msg, "revision") {
+		t.Fatalf("message should not mention revision: %q", msg)
 	}
 }

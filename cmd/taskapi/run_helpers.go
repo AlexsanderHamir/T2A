@@ -103,6 +103,9 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 	migrateEnabled := taskapiconfig.MigrateEnabled(migrateFlag)
 	dbStartup, err := loadEnvAndOpenDatabase(envPath, migrateEnabled)
 	if err != nil {
+		if dbStartup.db != nil {
+			closeSQLDBOrLog(dbStartup.db)
+		}
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.startup_db", "err", err)
 		return 1
 	}
