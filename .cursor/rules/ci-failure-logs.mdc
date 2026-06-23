@@ -1,0 +1,46 @@
+---
+description: Read GitHub Actions failure details via gh CLI when the user shares a run/job URL or asks what failed in CI
+alwaysApply: false
+---
+
+# CI failure logs — use `gh`, not the Actions web page
+
+The GitHub Actions job page often **does not expose full logs** to agents or unsigned viewers (“Sign in to view logs”). Do **not** guess the failure from the page summary alone.
+
+When the user links a run or job (e.g. `https://github.com/AlexsanderHamir/Hamix/actions/runs/27997390975/job/82862345777`), **fetch logs with the GitHub CLI** in the shell.
+
+## Workflow
+
+1. **Prefer local reproduction first** — see `.cursor/rules/verification.mdc` (`.\scripts\check.ps1` / `./scripts/check.sh`, scoped `--group=` when applicable).
+2. **When CI failed and the user shared a URL**, extract the **run ID** from the path (`/actions/runs/<RUN_ID>/...`).
+3. **Pull failed-step output** with `gh` (repo defaults to `origin` when run from this clone):
+
+```bash
+# Run summary + per-job conclusions
+gh run view <RUN_ID> --repo AlexsanderHamir/Hamix --json conclusion,status,displayTitle,headSha,jobs
+
+# Failed steps only (primary source for root cause)
+gh run view <RUN_ID> --repo AlexsanderHamir/Hamix --log-failed
+```
+
+On Windows PowerShell, pipe the log tail if output is large:
+
+```powershell
+gh run view <RUN_ID> --repo AlexsanderHamir/Hamix --log-failed 2>&1 | Select-Object -Last 120
+```
+
+4. **Report**: which job/matrix cell failed, failing package/test names, and the last error lines — not just “exit code 1”.
+
+## Do not
+
+- Do **not** use `gh run watch` or poll Actions as the main fix loop (see `verification.mdc`).
+- Do **not** claim you cannot see CI details without trying `gh run view --log-failed` first.
+
+## Example (run 27997390975, commit `3b480e5`)
+
+| Job | Result |
+| --- | --- |
+| `go-lint`, `go-tests (core\|tasks\|agents)`, `web` | passed |
+| **`go-tests (harness)`** | **failed** (~10m) |
+
+Harness failures: tasks stuck at `status="ready"`; logs showed `agent worker task missing git binding; deferring pickup`. Harness tests need `worktree_id` / `branch_id` on seeded tasks (same class of fix as `pkgs/tasks/agentreconcile/git_test_helpers_test.go`).
