@@ -8,11 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/notifierfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
@@ -22,17 +21,20 @@ const pollTimeout = 3 * time.Second
 
 type testEnv struct {
 	t        *testing.T
-	store    *store.Store
-	queue    *agents.MemoryQueue
-	notifier *recordingNotifier
+	store    harness.Store
+	concrete *store.Store
+	notifier *notifierfake.RecordingCycleNotifier
 }
 
-func newHarness(t *testing.T) *testEnv {
+func newHarnessWithFakes(t *testing.T) *testEnv {
 	t.Helper()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
-	q := agents.NewMemoryQueue(8)
-	st.SetReadyTaskNotifier(q)
-	return &testEnv{t: t, store: st, queue: q, notifier: newRecordingNotifier()}
+	sf := storefake.New(t)
+	return &testEnv{
+		t:        t,
+		store:    sf,
+		concrete: sf.Store,
+		notifier: notifierfake.NewRecordingCycleNotifier(),
+	}
 }
 
 func (h *testEnv) createReadyTask(ctx context.Context, title string) *domain.Task {
@@ -64,17 +66,32 @@ func (h *testEnv) createReadyTaskWithModel(ctx context.Context, title, model str
 	return tsk
 }
 
-func (h *testEnv) startWorker(ctx context.Context, r runner.Runner, opts harness.Options) (*worker.Worker, <-chan error) {
+func (h *testEnv) transitionRunning(ctx context.Context, tsk *domain.Task) *domain.Task {
+	h.t.Helper()
+	running := domain.StatusRunning
+	updated, err := h.store.Update(ctx, tsk.ID, store.UpdateTaskInput{Status: &running}, domain.ActorAgent)
+	if err != nil {
+		h.t.Fatalf("transition running: %v", err)
+	}
+	return updated
+}
+
+func (h *testEnv) newHarness(r runner.Runner, opts harness.Options) *harness.Harness {
 	h.t.Helper()
 	if opts.Notifier == nil {
 		opts.Notifier = h.notifier
 	}
-	w := worker.NewWorker(h.store, h.queue, r, opts)
-	done := make(chan error, 1)
+	return harness.New(h.store, r, opts)
+}
+
+func (h *testEnv) runHarness(ctx context.Context, hh *harness.Harness, tsk *domain.Task) <-chan struct{} {
+	h.t.Helper()
+	done := make(chan struct{})
 	go func() {
-		done <- w.Run(ctx)
+		defer close(done)
+		hh.Run(ctx, tsk)
 	}()
-	return w, done
+	return done
 }
 
 func (h *testEnv) waitTaskStatus(ctx context.Context, taskID string, want domain.Status) *domain.Task {
@@ -94,34 +111,6 @@ func (h *testEnv) waitTaskStatus(ctx context.Context, taskID string, want domain
 	}
 	h.t.Fatalf("timeout waiting for task %s status=%q (last=%q)", taskID, want, gotStatus)
 	return nil
-}
-
-type publishCall struct {
-	TaskID  string
-	CycleID string
-}
-
-type recordingNotifier struct {
-	mu    sync.Mutex
-	calls []publishCall
-}
-
-func newRecordingNotifier() *recordingNotifier {
-	return &recordingNotifier{}
-}
-
-func (r *recordingNotifier) PublishCycleChange(taskID, cycleID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.calls = append(r.calls, publishCall{TaskID: taskID, CycleID: cycleID})
-}
-
-func (r *recordingNotifier) snapshot() []publishCall {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	out := make([]publishCall, len(r.calls))
-	copy(out, r.calls)
-	return out
 }
 
 type blockingRunner struct {
@@ -175,7 +164,7 @@ func (b *blockingRunner) Run(ctx context.Context, req runner.Request) (runner.Re
 	}
 }
 
-func assertCycleStatus(t *testing.T, st *store.Store, taskID string, wantCount int, wantStatus domain.CycleStatus) *domain.TaskCycle {
+func assertCycleStatus(t *testing.T, st harness.Store, taskID string, wantCount int, wantStatus domain.CycleStatus) *domain.TaskCycle {
 	t.Helper()
 	cycles, err := st.ListCyclesForTask(context.Background(), taskID, 10)
 	if err != nil {
@@ -192,4 +181,35 @@ func assertCycleStatus(t *testing.T, st *store.Store, taskID string, wantCount i
 		t.Fatalf("cycle status = %q, want %q", c.Status, wantStatus)
 	}
 	return &c
+}
+
+// statusSnappingNotifier records task status at each cycle publish.
+type statusSnappingNotifier struct {
+	store harness.Store
+
+	mu       sync.Mutex
+	statuses []domain.Status
+	cycles   []string
+}
+
+func (n *statusSnappingNotifier) PublishCycleChange(taskID, cycleID string) {
+	tsk, _ := n.store.Get(context.Background(), taskID)
+	var s domain.Status
+	if tsk != nil {
+		s = tsk.Status
+	}
+	n.mu.Lock()
+	n.statuses = append(n.statuses, s)
+	n.cycles = append(n.cycles, cycleID)
+	n.mu.Unlock()
+}
+
+func (n *statusSnappingNotifier) snapshot() ([]domain.Status, []string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	st := make([]domain.Status, len(n.statuses))
+	cy := make([]string, len(n.cycles))
+	copy(st, n.statuses)
+	copy(cy, n.cycles)
+	return st, cy
 }

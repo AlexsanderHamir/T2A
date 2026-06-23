@@ -157,7 +157,8 @@ func TestComposeRecoveryDelta_goldenFiles(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read golden %s: %v (run with UPDATE_RECOVERY_GOLDEN=1)", path, err)
 			}
-			if strings.TrimSpace(got) != strings.TrimSpace(string(want)) {
+			norm := func(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }
+			if norm(strings.TrimSpace(got)) != norm(strings.TrimSpace(string(want))) {
 				t.Fatalf("golden mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", name, got, want)
 			}
 		})

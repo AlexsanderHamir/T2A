@@ -193,13 +193,10 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	// Use a temp WorkingDir so the worker's .legacy-scratch/<cycle>/ paths land
 	// somewhere isolated and parseCriteriaReport hits ErrCriteriaReportMissing
 	// deterministically (no stray files from earlier test runs).
-	_, done := h.startWorker(ctx, r, harness.Options{WorkingDir: t.TempDir()})
+	done := h.startHarnessRun(ctx, tsk, r, harness.Options{WorkingDir: t.TempDir()})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
@@ -317,17 +314,14 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	execCalls := execRunner.Calls()
 	for _, c := range execCalls {
 		if c.Phase == domain.PhaseVerify {
@@ -398,17 +392,14 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
@@ -500,17 +491,14 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	if !verifyProgressFired.Load() {
 		t.Fatal("verify runner.Request.OnProgress was nil; progress wiring missing")
 	}
@@ -671,17 +659,14 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	bg := context.Background()
 	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {
@@ -790,17 +775,14 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	bg := context.Background()
 	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {
@@ -860,14 +842,11 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
 
-	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
+	metrics := newRecordingMetrics()
+	done := h.startHarnessRun(ctx, tsk, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	verdicts := metrics.verdictSnapshot()
 	if len(verdicts) == 0 {
 		t.Fatalf("expected at least one verdict recorded")
@@ -950,17 +929,14 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	bg := context.Background()
 	events, err := h.store.ListTaskEvents(bg, tsk.ID)
 	if err != nil {
@@ -1049,17 +1025,14 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	postStatus, postErr := exec.Command("git", "-C", workDir, "status", "--porcelain").CombinedOutput()
 	if postErr != nil {
 		t.Fatalf("post git status: %v\n%s", postErr, postStatus)
@@ -1122,17 +1095,14 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	cycles, _ := h.store.ListCyclesForTask(context.Background(), tsk.ID, 1)
 	if len(cycles) != 1 {
 		t.Fatalf("cycle count = %d, want 1", len(cycles))
@@ -1197,17 +1167,14 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, harness.Options{
+	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit err: %v", err)
-	}
-
+	<-done
 	events, _ := h.store.ListTaskEvents(context.Background(), tsk.ID)
 	sawTampered := false
 	for _, e := range events {

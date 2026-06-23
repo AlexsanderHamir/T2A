@@ -36,19 +36,16 @@ func (r *correlationCapturingRunner) lastRequest() runner.Request {
 
 func TestHarness_execute_propagates_run_correlation_id_to_runner(t *testing.T) {
 	t.Parallel()
-	h := newHarness(t)
+	env := newHarnessWithFakes(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "run-correlation-id")
+	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "run-correlation-id"))
 	r := &correlationCapturingRunner{}
 
-	_, done := h.startWorker(ctx, r, harness.Options{})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
-	if err := <-done; err != nil {
-		t.Fatalf("worker exit: %v", err)
-	}
+	done := env.runHarness(ctx, env.newHarness(r, harness.Options{}), tsk)
+	<-done
+	env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 
 	req := r.lastRequest()
 	if req.RunCorrelationID == "" {
@@ -56,14 +53,14 @@ func TestHarness_execute_propagates_run_correlation_id_to_runner(t *testing.T) {
 	}
 
 	bg := context.Background()
-	cycles, err := h.store.ListCyclesForTask(bg, tsk.ID, 10)
+	cycles, err := env.store.ListCyclesForTask(bg, tsk.ID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(cycles) != 1 {
 		t.Fatalf("cycles: got %d want 1", len(cycles))
 	}
-	phases, err := h.store.ListPhasesForCycle(bg, cycles[0].ID)
+	phases, err := env.store.ListPhasesForCycle(bg, cycles[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}

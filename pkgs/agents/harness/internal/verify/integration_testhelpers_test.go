@@ -4,91 +4,37 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/metricsfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/notifierfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
-
-type recordedVerdict struct {
-	Kind   domain.VerifierKind
-	Passed bool
-}
-
-type recordingMetrics struct {
-	mu             sync.Mutex
-	verdicts       []recordedVerdict
-	verifyDuration []time.Duration
-	verifyRetries  []int
-}
-
-func (m *recordingMetrics) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {}
-
-func (m *recordingMetrics) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.verdicts = append(m.verdicts, recordedVerdict{Kind: kind, Passed: passed})
-}
-
-func (m *recordingMetrics) ObserveVerifyDuration(d time.Duration) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.verifyDuration = append(m.verifyDuration, d)
-}
-
-func (m *recordingMetrics) ObserveVerifyRetries(n int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.verifyRetries = append(m.verifyRetries, n)
-}
-
-func (m *recordingMetrics) verdictSnapshot() []recordedVerdict {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out := make([]recordedVerdict, len(m.verdicts))
-	copy(out, m.verdicts)
-	return out
-}
-
-func (m *recordingMetrics) verifyDurationSnapshot() []time.Duration {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out := make([]time.Duration, len(m.verifyDuration))
-	copy(out, m.verifyDuration)
-	return out
-}
-
-func (m *recordingMetrics) verifyRetriesSnapshot() []int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out := make([]int, len(m.verifyRetries))
-	copy(out, m.verifyRetries)
-	return out
-}
 
 const pollInterval = 10 * time.Millisecond
 const pollTimeout = 3 * time.Second
 
 type testEnv struct {
 	t        *testing.T
-	store    *store.Store
-	queue    *agents.MemoryQueue
-	notifier *recordingNotifier
+	store    harness.Store
+	concrete *store.Store
+	notifier *notifierfake.RecordingCycleNotifier
 }
 
 func newHarness(t *testing.T) *testEnv {
 	t.Helper()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
-	q := agents.NewMemoryQueue(8)
-	st.SetReadyTaskNotifier(q)
-	return &testEnv{t: t, store: st, queue: q, notifier: newRecordingNotifier()}
+	sf := storefake.New(t)
+	return &testEnv{
+		t:        t,
+		store:    sf,
+		concrete: sf.Store,
+		notifier: notifierfake.NewRecordingCycleNotifier(),
+	}
 }
 
 func (h *testEnv) createReadyTask(ctx context.Context, title string) *domain.Task {
@@ -105,17 +51,40 @@ func (h *testEnv) createReadyTask(ctx context.Context, title string) *domain.Tas
 	return tsk
 }
 
-func (h *testEnv) startWorker(ctx context.Context, r runner.Runner, opts harness.Options) (*worker.Worker, <-chan error) {
+func (h *testEnv) transitionRunning(ctx context.Context, tsk *domain.Task) *domain.Task {
+	h.t.Helper()
+	running := domain.StatusRunning
+	updated, err := h.store.Update(ctx, tsk.ID, store.UpdateTaskInput{Status: &running}, domain.ActorAgent)
+	if err != nil {
+		h.t.Fatalf("transition running: %v", err)
+	}
+	return updated
+}
+
+func (h *testEnv) newHarnessRunner(r runner.Runner, opts harness.Options) *harness.Harness {
 	h.t.Helper()
 	if opts.Notifier == nil {
 		opts.Notifier = h.notifier
 	}
-	w := worker.NewWorker(h.store, h.queue, r, opts)
-	done := make(chan error, 1)
+	return harness.New(h.store, r, opts)
+}
+
+func (h *testEnv) runHarness(ctx context.Context, hh *harness.Harness, tsk *domain.Task) <-chan struct{} {
+	h.t.Helper()
+	done := make(chan struct{})
 	go func() {
-		done <- w.Run(ctx)
+		defer close(done)
+		hh.Run(ctx, tsk)
 	}()
-	return w, done
+	return done
+}
+
+// startHarnessRun transitions the task to running and invokes harness.Run
+// asynchronously (replaces the old worker-loop test helper).
+func (h *testEnv) startHarnessRun(ctx context.Context, tsk *domain.Task, r runner.Runner, opts harness.Options) <-chan struct{} {
+	h.t.Helper()
+	tsk = h.transitionRunning(ctx, tsk)
+	return h.runHarness(ctx, h.newHarnessRunner(r, opts), tsk)
 }
 
 func (h *testEnv) waitTaskStatus(ctx context.Context, taskID string, want domain.Status) *domain.Task {
@@ -135,26 +104,6 @@ func (h *testEnv) waitTaskStatus(ctx context.Context, taskID string, want domain
 	}
 	h.t.Fatalf("timeout waiting for task %s status=%q (last=%q)", taskID, want, gotStatus)
 	return nil
-}
-
-type publishCall struct {
-	TaskID  string
-	CycleID string
-}
-
-type recordingNotifier struct {
-	mu    sync.Mutex
-	calls []publishCall
-}
-
-func newRecordingNotifier() *recordingNotifier {
-	return &recordingNotifier{}
-}
-
-func (r *recordingNotifier) PublishCycleChange(taskID, cycleID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.calls = append(r.calls, publishCall{TaskID: taskID, CycleID: cycleID})
 }
 
 type blockingRunner struct {
@@ -205,7 +154,7 @@ func (b *blockingRunner) Run(ctx context.Context, req runner.Request) (runner.Re
 	}
 }
 
-func assertCycleStatus(t *testing.T, st *store.Store, taskID string, wantCount int, wantStatus domain.CycleStatus) *domain.TaskCycle {
+func assertCycleStatus(t *testing.T, st harness.Store, taskID string, wantCount int, wantStatus domain.CycleStatus) *domain.TaskCycle {
 	t.Helper()
 	cycles, err := st.ListCyclesForTask(context.Background(), taskID, 10)
 	if err != nil {
@@ -222,4 +171,34 @@ func assertCycleStatus(t *testing.T, st *store.Store, taskID string, wantCount i
 		t.Fatalf("cycle status = %q, want %q", c.Status, wantStatus)
 	}
 	return &c
+}
+
+// recordingMetrics wraps metricsfake for verify-phase tests.
+type recordingMetrics struct {
+	*metricsfake.RecordingMetrics
+}
+
+type recordedVerdict struct {
+	Kind   domain.VerifierKind
+	Passed bool
+}
+
+func newRecordingMetrics() *recordingMetrics {
+	return &recordingMetrics{RecordingMetrics: metricsfake.New()}
+}
+
+func (m *recordingMetrics) verdictSnapshot() []recordedVerdict {
+	out := make([]recordedVerdict, 0, len(m.SnapshotVerdicts()))
+	for _, v := range m.SnapshotVerdicts() {
+		out = append(out, recordedVerdict{Kind: v.Kind, Passed: v.Passed})
+	}
+	return out
+}
+
+func (m *recordingMetrics) verifyDurationSnapshot() []time.Duration {
+	return m.SnapshotVerifyDurations()
+}
+
+func (m *recordingMetrics) verifyRetriesSnapshot() []int {
+	return m.SnapshotVerifyRetries()
 }
