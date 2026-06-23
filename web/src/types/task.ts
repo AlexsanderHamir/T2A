@@ -200,7 +200,10 @@ export type TaskChangeType =
   | "project_context_changed";
 
 /**
- * Wire shape of a single SSE frame on `GET /events`.
+ * Wire shape of a single SSE frame on `GET /events` (legacy narrow subset).
+ *
+ * Full SSE surface is {@link SSEChangeType} + `TaskChangeFrame` in
+ * `tasks/task-query/sseInvalidate.ts`. Prefer those for new code.
  *
  * `cycle_id` is only present on `task_cycle_changed` (omitted for the other
  * three types so the existing wire shape stays byte-identical).
@@ -210,6 +213,47 @@ export type TaskChangeEvent = {
   id: string;
   cycle_id?: string;
 };
+
+/**
+ * SSE `data.type` strings on `GET /events`. Mirrors
+ * `pkgs/tasks/realtime/wire.go` (`realtime.ChangeType`).
+ */
+export const SSE_CHANGE_TYPE = {
+  taskCreated: "task_created",
+  taskUpdated: "task_updated",
+  taskDeleted: "task_deleted",
+  taskGateChanged: "task_gate_changed",
+  taskDependencyChanged: "task_dependency_changed",
+  taskCycleChanged: "task_cycle_changed",
+  agentRunProgress: "agent_run_progress",
+  projectCreated: "project_created",
+  projectUpdated: "project_updated",
+  projectDeleted: "project_deleted",
+  projectContextChanged: "project_context_changed",
+  settingsChanged: "settings_changed",
+  agentRunCancelled: "agent_run_cancelled",
+  resync: "resync",
+} as const;
+
+export const SSE_CHANGE_TYPES = Object.values(SSE_CHANGE_TYPE);
+
+export type SSEChangeType = (typeof SSE_CHANGE_TYPE)[keyof typeof SSE_CHANGE_TYPE];
+
+/** Task-scoped hint frames that carry a task `id` (invalidation path). */
+export const SSE_TASK_HINT_TYPES = [
+  SSE_CHANGE_TYPE.taskCreated,
+  SSE_CHANGE_TYPE.taskUpdated,
+  SSE_CHANGE_TYPE.taskDeleted,
+  SSE_CHANGE_TYPE.taskGateChanged,
+  SSE_CHANGE_TYPE.taskDependencyChanged,
+] as const;
+
+/** Project-scoped hint frames that carry a project `id`. */
+export const SSE_PROJECT_HINT_TYPES = [
+  SSE_CHANGE_TYPE.projectCreated,
+  SSE_CHANGE_TYPE.projectUpdated,
+  SSE_CHANGE_TYPE.projectDeleted,
+] as const;
 
 export const STATUSES: Status[] = [
   "ready",

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SSE_CHANGE_TYPE, SSE_CHANGE_TYPES } from "@/types";
 import {
   collectTaskIdFromSSEData,
   parseTaskChangeFrame,
@@ -197,5 +198,31 @@ describe("parseTaskChangeFrame", () => {
     expect(
       parseTaskChangeFrame('{"type":"task_updated","id":"task-1"}'),
     ).toEqual({ kind: "task", taskId: "task-1" });
+  });
+
+  it("handles every SSE_CHANGE_TYPES wire value (mirrors realtime/wire.go)", () => {
+    const samples: Record<(typeof SSE_CHANGE_TYPES)[number], string> = {
+      [SSE_CHANGE_TYPE.taskCreated]: '{"type":"task_created","id":"t-1"}',
+      [SSE_CHANGE_TYPE.taskUpdated]: '{"type":"task_updated","id":"t-1"}',
+      [SSE_CHANGE_TYPE.taskDeleted]: '{"type":"task_deleted","id":"t-1"}',
+      [SSE_CHANGE_TYPE.taskGateChanged]: '{"type":"task_gate_changed","id":"t-1"}',
+      [SSE_CHANGE_TYPE.taskDependencyChanged]:
+        '{"type":"task_dependency_changed","id":"t-1"}',
+      [SSE_CHANGE_TYPE.taskCycleChanged]:
+        '{"type":"task_cycle_changed","id":"t-1","cycle_id":"c-1"}',
+      [SSE_CHANGE_TYPE.agentRunProgress]:
+        '{"type":"agent_run_progress","id":"t-1","cycle_id":"c-1","phase_seq":1,"progress":{"kind":"status"}}',
+      [SSE_CHANGE_TYPE.projectCreated]: '{"type":"project_created","id":"p-1"}',
+      [SSE_CHANGE_TYPE.projectUpdated]: '{"type":"project_updated","id":"p-1"}',
+      [SSE_CHANGE_TYPE.projectDeleted]: '{"type":"project_deleted","id":"p-1"}',
+      [SSE_CHANGE_TYPE.projectContextChanged]:
+        '{"type":"project_context_changed","id":"p-1"}',
+      [SSE_CHANGE_TYPE.settingsChanged]: '{"type":"settings_changed"}',
+      [SSE_CHANGE_TYPE.agentRunCancelled]: '{"type":"agent_run_cancelled"}',
+      [SSE_CHANGE_TYPE.resync]: '{"type":"resync"}',
+    };
+    for (const wireType of SSE_CHANGE_TYPES) {
+      expect(parseTaskChangeFrame(samples[wireType])).not.toBeNull();
+    }
   });
 });

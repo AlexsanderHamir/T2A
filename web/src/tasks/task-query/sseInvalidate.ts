@@ -1,5 +1,11 @@
 /** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/api.md). */
 
+import {
+  SSE_CHANGE_TYPE,
+  SSE_PROJECT_HINT_TYPES,
+  SSE_TASK_HINT_TYPES,
+} from "@/types";
+
 /**
  * Discriminated union for one parsed SSE frame from `GET /events`. Returned by
  * `parseTaskChangeFrame`; `null` is used for blank, malformed, or
@@ -82,6 +88,20 @@ function readOptionalString(o: Record<string, unknown>, key: string): string | u
   return trimmed === "" ? undefined : trimmed;
 }
 
+function isTaskHintType(type: unknown): type is (typeof SSE_TASK_HINT_TYPES)[number] {
+  return (
+    typeof type === "string" &&
+    (SSE_TASK_HINT_TYPES as readonly string[]).includes(type)
+  );
+}
+
+function isProjectHintType(type: unknown): type is (typeof SSE_PROJECT_HINT_TYPES)[number] {
+  return (
+    typeof type === "string" &&
+    (SSE_PROJECT_HINT_TYPES as readonly string[]).includes(type)
+  );
+}
+
 /**
  * Parses one SSE `data:` line. Cycle frames must include both `id` (task) and
  * `cycle_id`; task frames only need `id`. Unknown event types (including
@@ -103,20 +123,20 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
   } catch {
     return null;
   }
-  if (o.type === "settings_changed") {
+  if (o.type === SSE_CHANGE_TYPE.settingsChanged) {
     return { kind: "settings" };
   }
-  if (o.type === "agent_run_cancelled") {
+  if (o.type === SSE_CHANGE_TYPE.agentRunCancelled) {
     return { kind: "agent_run_cancelled" };
   }
-  if (o.type === "resync") {
+  if (o.type === SSE_CHANGE_TYPE.resync) {
     return { kind: "resync" };
   }
   const id = readStringId(o, "id");
   if (id === "") {
     return null;
   }
-  if (o.type === "agent_run_progress") {
+  if (o.type === SSE_CHANGE_TYPE.agentRunProgress) {
     const cycleId = readStringId(o, "cycle_id");
     const phaseSeq = o.phase_seq;
     const rawProgress = o.progress;
@@ -149,7 +169,7 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
       },
     };
   }
-  if (o.type === "task_cycle_changed") {
+  if (o.type === SSE_CHANGE_TYPE.taskCycleChanged) {
     const cycleId = readStringId(o, "cycle_id");
     if (cycleId === "") {
       return null;
@@ -160,23 +180,13 @@ export function parseTaskChangeFrame(data: string): TaskChangeFrame | null {
     }
     return frame;
   }
-  if (
-    o.type === "project_created" ||
-    o.type === "project_updated" ||
-    o.type === "project_deleted"
-  ) {
+  if (isProjectHintType(o.type)) {
     return { kind: "project", projectId: id };
   }
-  if (o.type === "project_context_changed") {
+  if (o.type === SSE_CHANGE_TYPE.projectContextChanged) {
     return { kind: "project_context", projectId: id };
   }
-  if (
-    o.type === "task_created" ||
-    o.type === "task_updated" ||
-    o.type === "task_deleted" ||
-    o.type === "task_gate_changed" ||
-    o.type === "task_dependency_changed"
-  ) {
+  if (isTaskHintType(o.type)) {
     const frame: TaskChangeFrame = { kind: "task", taskId: id };
     if (o.data !== undefined) {
       frame.data = o.data;
