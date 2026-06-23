@@ -33,6 +33,8 @@ type taskCreateJSON struct {
 	Gate            *domain.TaskGate                 `json:"gate,omitempty"`
 	DependsOn       dependsOnWire                    `json:"depends_on,omitempty"`
 	ChecklistItems  []store.CreateChecklistItemInput `json:"checklist_items"`
+	WorktreeID      *string                          `json:"worktree_id,omitempty"`
+	BranchID        *string                          `json:"branch_id,omitempty"`
 }
 
 type taskDraftSaveJSON struct {
@@ -57,6 +59,8 @@ type taskPatchJSON struct {
 	Milestone   *string             `json:"milestone,omitempty"`
 	Gate        patchGateField      `json:"gate"`
 	DependsOn   *dependsOnPatchWire `json:"depends_on,omitempty"`
+	WorktreeID  *string             `json:"worktree_id,omitempty"`
+	BranchID    *string             `json:"branch_id,omitempty"`
 }
 
 type taskGateActionJSON struct {

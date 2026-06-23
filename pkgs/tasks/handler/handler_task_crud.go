@@ -165,9 +165,43 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Milestone:             body.Milestone,
 		Gate:                  gateFieldPatchToStore(body.Gate),
 		DependsOn:             dependsOnPatch,
+		WorktreeID:            body.WorktreeID,
+		BranchID:              body.BranchID,
 	}
 	if body.InitialPrompt != nil {
-		if err := h.validatePromptMentionsIfRepo(r, *body.InitialPrompt); err != nil {
+		cur, getErr := h.store.Get(r.Context(), id)
+		if getErr != nil {
+			writeStoreError(w, r, op, getErr)
+			return
+		}
+		wtID := body.WorktreeID
+		if wtID == nil {
+			wtID = cur.WorktreeID
+		}
+		if err := h.validatePromptMentionsIfRepo(r.Context(), wtID, *body.InitialPrompt); err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+	}
+	if body.WorktreeID != nil || body.BranchID != nil {
+		cur, getErr := h.store.Get(r.Context(), id)
+		if getErr != nil {
+			writeStoreError(w, r, op, getErr)
+			return
+		}
+		projectID := cur.ProjectID
+		if body.ProjectID.Defined && !body.ProjectID.Clear {
+			projectID = &body.ProjectID.SetID
+		}
+		wt := cur.WorktreeID
+		if body.WorktreeID != nil {
+			wt = body.WorktreeID
+		}
+		br := cur.BranchID
+		if body.BranchID != nil {
+			br = body.BranchID
+		}
+		if err := h.validateTaskGitBinding(r.Context(), projectID, wt, br); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}
@@ -289,16 +323,4 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 		offset = n
 	}
 	return limit, offset, afterID, nil
-}
-
-func (h *Handler) validatePromptMentionsIfRepo(r *http.Request, prompt string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsIfRepo")
-	if h.repoProv == nil {
-		return nil
-	}
-	root, _, err := h.repoProv.Repo(r.Context())
-	if err != nil || root == nil {
-		return nil
-	}
-	return root.ValidatePromptMentions(prompt)
 }
