@@ -17,11 +17,12 @@ func run() int {
 	logDir := flag.String("logdir", "", "directory for JSON log files (default: HAMIX_LOG_DIR or ./logs)")
 	logLevelFlag := flag.String("loglevel", "", "minimum log level for JSON file: debug, info, warn, error (default: HAMIX_LOG_LEVEL or info)")
 	disableLoggingFlag := flag.Bool("disable-logging", false, "no log file; only errors to stderr (default: HAMIX_DISABLE_LOGGING)")
+	migrateFlag := flag.Bool("migrate", false, "run GORM AutoMigrate before serving (default: HAMIX_MIGRATE or skip)")
 	flag.Parse()
 
 	if _, err := envload.OverloadDotenvIfPresent(*envPath); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: preload .env: %v\n", cmdName, err)
 		return 1
 	}
-	return runTaskAPIService(*port, *host, *envPath, *logDir, *logLevelFlag, *disableLoggingFlag)
+	return runTaskAPIService(*port, *host, *envPath, *logDir, *logLevelFlag, *disableLoggingFlag, *migrateFlag)
 }

@@ -19,6 +19,8 @@ const (
 	EnvSSETestInterval = "HAMIX_SSE_TEST_INTERVAL"
 	// EnvDisableLogging is HAMIX_DISABLE_LOGGING (truthy values minimize logging).
 	EnvDisableLogging = "HAMIX_DISABLE_LOGGING"
+	// EnvMigrate is HAMIX_MIGRATE (truthy values run postgres.Migrate at taskapi startup).
+	EnvMigrate = "HAMIX_MIGRATE"
 	// EnvListenHost is HAMIX_LISTEN_HOST (HTTP bind address).
 	EnvListenHost = "HAMIX_LISTEN_HOST"
 	// EnvLogLevel is HAMIX_LOG_LEVEL (minimum JSON file log level when -loglevel is unset).
@@ -57,6 +59,16 @@ func EnvTruthy(key string) bool {
 	default:
 		return false
 	}
+}
+
+// MigrateEnabled reports whether taskapi should run postgres.Migrate at startup.
+// The -migrate flag wins when true; otherwise HAMIX_MIGRATE is consulted.
+func MigrateEnabled(migrateFlag bool) bool {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.MigrateEnabled")
+	if migrateFlag {
+		return true
+	}
+	return EnvTruthy(EnvMigrate)
 }
 
 // LoggingMinimized returns true when file logging and most slog output should be off:

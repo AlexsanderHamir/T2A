@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker"
+	"github.com/AlexsanderHamir/Hamix/internal/taskapiconfig"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"gorm.io/gorm"
 )
@@ -66,6 +68,7 @@ type taskAPIApp struct {
 	hub         *handler.SSEHub
 	agentQueue  *agents.MemoryQueue
 	agentWorker *agentworker.Supervisor
+	schemaDrift postgres.SchemaDriftReport
 }
 
 func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.CancelFunc, error) {
@@ -86,7 +89,7 @@ func buildTaskAPIApp(ctx context.Context, db *gorm.DB) (*taskAPIApp, context.Can
 	return &taskAPIApp{taskStore: taskStore, hub: hub, agentQueue: q, agentWorker: aw}, cancel, nil
 }
 
-func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disableLogging bool) int {
+func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disableLogging bool, migrateFlag bool) int {
 	minLevel, logFile, logPath, minimized, err := openTaskAPILogging(logDir, logLevelFlag, disableLogging)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", cmdName, err)
@@ -97,11 +100,13 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 	var processLogSeq atomic.Uint64
 	installTaskAPIDefaultLogger(logFile, minimized, minLevel, &processLogSeq, logPath)
 
-	db, err := loadEnvAndOpenDatabase(envPath)
+	migrateEnabled := taskapiconfig.MigrateEnabled(migrateFlag)
+	dbStartup, err := loadEnvAndOpenDatabase(envPath, migrateEnabled)
 	if err != nil {
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.startup_db", "err", err)
 		return 1
 	}
+	db := dbStartup.db
 
 	appCtx, appCancel := context.WithCancel(context.Background())
 	defer appCancel()
@@ -112,6 +117,7 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		closeSQLDBOrLog(db)
 		return 1
 	}
+	app.schemaDrift = dbStartup.schemaDrift
 	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(appCtx, port, host, app)
 	// Order: cancel worker ctx and wait for it to drain (best-effort
 	// aborted/cycle writes need a live DB pool) → cancel reconcile →
