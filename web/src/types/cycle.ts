@@ -165,13 +165,18 @@ export type TaskCycleStreamResponse = {
  * `domain.VerifierKind` in the backend. The SPA renders a chip per
  * value so users can tell at-a-glance how a criterion was decided.
  */
-export type VerifierKind =
-  | "agent_self"
-  | "verify_agent"
-  | "deterministic_check"
-  | "human_override"
-  | "legacy"
-  | "";
+export const VERIFIER_KINDS = [
+  "agent_self",
+  "verify_agent",
+  "deterministic_check",
+  "human_override",
+  "legacy",
+] as const;
+
+export type VerifierKind = (typeof VERIFIER_KINDS)[number] | "";
+
+/** All wire strings accepted by parseVerifierKind (includes empty). */
+export const VERIFIER_KIND_WIRE_VALUES = [...VERIFIER_KINDS, ""] as const;
 
 /**
  * One row from `GET /tasks/{id}/cycles/{cycleId}/verdicts.criteria_reports`.

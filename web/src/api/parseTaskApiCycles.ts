@@ -16,6 +16,7 @@ import {
   type TaskCycleStreamResponse,
   type TaskCyclesListResponse,
   type VerifierKind,
+  VERIFIER_KIND_WIRE_VALUES,
 } from "@/types";
 import {
   isRecord,
@@ -178,14 +179,7 @@ export function parseTaskCycleStreamEvent(value: unknown): TaskCycleStreamEvent 
   return out;
 }
 
-const verifierKindValues: ReadonlySet<VerifierKind> = new Set([
-  "agent_self",
-  "verify_agent",
-  "deterministic_check",
-  "human_override",
-  "legacy",
-  "",
-]);
+const verifierKindValues: ReadonlySet<VerifierKind> = new Set(VERIFIER_KIND_WIRE_VALUES);
 
 function parseVerifierKind(value: unknown): VerifierKind {
   if (typeof value !== "string") return "";

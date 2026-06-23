@@ -38,20 +38,13 @@ import {
   assertTaskPathId,
 } from "./taskRequestBounds";
 import { TASK_DRAFTS } from "@/constants/tasks";
+import { CYCLE_FAILURE_SORTS, type CycleFailureSort } from "@/constants/api";
 
-/** Matches `GET /tasks/cycle-failures` `sort` query (store cycle failure sorts). */
-const CYCLE_FAILURE_SORTS = [
-  "at_desc",
-  "at_asc",
-  "reason_asc",
-  "reason_desc",
-] as const;
-
-function assertCycleFailureSort(sort: string): (typeof CYCLE_FAILURE_SORTS)[number] {
+function assertCycleFailureSort(sort: string): CycleFailureSort {
   if (!(CYCLE_FAILURE_SORTS as readonly string[]).includes(sort)) {
     throw new Error(`sort must be one of: ${CYCLE_FAILURE_SORTS.join(", ")}`);
   }
-  return sort as (typeof CYCLE_FAILURE_SORTS)[number];
+  return sort as CycleFailureSort;
 }
 
 export {
