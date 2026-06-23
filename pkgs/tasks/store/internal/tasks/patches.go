@@ -53,6 +53,9 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyPendingRetryPatch(cur, in.PendingRetry, in.ClearPendingRetry); err != nil {
 		return err
 	}
+	if err := applyGitBindingPatch(cur, in.WorktreeID, in.BranchID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -73,6 +76,34 @@ func applyPendingRetryPatch(cur *domain.Task, set *domain.PendingRetry, clear bo
 		return err
 	}
 	cur.PendingRetry = &cp
+	return nil
+}
+
+func applyGitBindingPatch(cur *domain.Task, worktreeID, branchID *string) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyGitBindingPatch")
+	if worktreeID == nil && branchID == nil {
+		return nil
+	}
+	if worktreeID != nil {
+		cur.WorktreeID = normalizeOptionalID(worktreeID)
+	}
+	if branchID != nil {
+		cur.BranchID = normalizeOptionalID(branchID)
+	}
+	wt := ""
+	if cur.WorktreeID != nil {
+		wt = *cur.WorktreeID
+	}
+	br := ""
+	if cur.BranchID != nil {
+		br = *cur.BranchID
+	}
+	if wt == "" && br == "" {
+		return nil
+	}
+	if wt == "" || br == "" {
+		return fmt.Errorf("%w: worktree_id and branch_id must both be set", domain.ErrInvalidInput)
+	}
 	return nil
 }
 

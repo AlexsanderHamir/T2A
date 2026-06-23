@@ -29,6 +29,8 @@ type CreateInput struct {
 	Gate            *domain.TaskGate
 	DependsOn       []domain.DependencyEdge
 	ChecklistItems  []checklist.CreateChecklistItemInput
+	WorktreeID      *string
+	BranchID        *string
 }
 
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means
@@ -59,6 +61,8 @@ type UpdateInput struct {
 	PendingRetry *domain.PendingRetry
 	// ClearPendingRetry removes pending_retry from the row.
 	ClearPendingRetry bool
+	WorktreeID        *string
+	BranchID          *string
 }
 
 // ListFilter optionally restricts flat task listing.

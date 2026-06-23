@@ -203,11 +203,25 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		Runner:                runner,
 		CursorModel:           in.CursorModel,
 		PickupNotBefore:       in.PickupNotBefore,
+		WorktreeID:            normalizeOptionalID(in.WorktreeID),
+		BranchID:              normalizeOptionalID(in.BranchID),
 	}
 	if err := normalizeCreateTaskModelFields(t, in); err != nil {
 		return nil, "", "", err
 	}
 	return t, title, st, nil
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func normalizeOptionalID(id *string) *string {
+	if id == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*id)
+	if v == "" {
+		return nil
+	}
+	return &v
 }
 
 func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor, title string, st domain.Status) error {
