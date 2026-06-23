@@ -74,7 +74,9 @@ Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and P
 | Run everything (Docker, no local Go/Node) | `docker compose run --rm dev ./scripts/check.sh --install` |
 | Run everything locally | `./scripts/check.sh` or `.\scripts\check.ps1` |
 | First run / lockfile changed | `./scripts/check.sh --install` or `.\scripts\check.ps1 -Install` |
-| Same as CI backend | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |
+| Same as CI Go lint | `./scripts/check-go.sh --lint-only --verbose` or `.\scripts\check-go.ps1 -LintOnly -Verbose` |
+| Same as CI Go tests (one group) | `./scripts/check-go.sh --tests-only --group=core --verbose` (groups: `core`, `tasks`, `agents`, `harness`) |
+| Same as CI Go (full local bar) | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |
 | Same as CI web | `./scripts/check-web.sh --install --verbose` or `.\scripts\check-web.ps1 -Install -Verbose` |
 | Go only (fast) | `./scripts/check.sh --go-only` or `.\scripts\check.ps1 -GoOnly` |
 | Full logs | add `--verbose` / `-Verbose` |

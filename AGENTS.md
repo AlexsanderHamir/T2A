@@ -125,7 +125,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 ## Tooling and rules
 
 - **Cursor rules:** `CODE_STANDARDS.mdc`, `codebase_comments.mdc`, `backend-engineering-bar.mdc`, `frontend_bar.mdc`
-- **CI:** backend job runs `./scripts/check-go.sh --verbose`; web job runs `./scripts/check-web.sh --install --verbose` — see `.github/workflows/ci.yml`
+- **CI:** `go-lint` runs `./scripts/check-go.sh --lint-only --verbose`; `go-tests` matrix runs `./scripts/check-go.sh --tests-only --group=<name> --verbose`; web job runs `./scripts/check-web.sh --install --verbose` — see `.github/workflows/ci.yml`
 - **Local bar:** see [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr)
 - **TDD default:** failing test first, then implement until green
 
@@ -144,6 +144,7 @@ Scoped: `--go-only` / `-GoOnly`, `--web-only` / `-WebOnly`. See [CONTRIBUTING.md
 | Change | If not running full check |
 | --- | --- |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
+| Reproduce a failing CI test group | `./scripts/check-go.sh --tests-only --group=<core\|tasks\|agents\|harness> --verbose` |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
 
 Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [CONTRIBUTING.md](CONTRIBUTING.md#before-you-open-a-pr) and `backend-engineering-bar.mdc` §11).

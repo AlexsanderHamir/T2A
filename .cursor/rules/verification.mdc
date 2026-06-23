@@ -1,0 +1,37 @@
+---
+description: Verify changes with local check scripts — same bar as CI; do not poll GitHub Actions
+alwaysApply: true
+---
+
+# Verification — use check scripts, not CI polling
+
+CI (`.github/workflows/ci.yml`) runs:
+
+- `./scripts/check-go.sh --lint-only --verbose`
+- `./scripts/check-go.sh --tests-only --group=<core|tasks|agents|harness> --verbose` (matrix)
+- `./scripts/check-web.sh --install --verbose`
+
+Those are wrapped by **`scripts/check.sh`** (Unix) and **`scripts/check.ps1`** (Windows). Run the local check script to verify the same bar CI enforces.
+
+## Do
+
+- Before finishing or pushing: run **`./scripts/check.sh`** from repo root (or **`.\scripts\check.ps1`** on Windows).
+- First web run or lockfile change: add **`--install`** / **`-Install`**.
+- Scoped iteration: **`--go-only`** / **`-GoOnly`** or **`--web-only`** / **`-WebOnly`**.
+- No local Go/Node: **`docker compose run --rm dev ./scripts/check.sh --install`** ([docs/docker.md](../docs/docker.md)).
+- Fix failures from check output locally, then re-run check until green.
+
+## Do not
+
+- Do **not** use **`gh run watch`**, repeated **`gh run list`**, or poll Actions as the primary verification loop — it is slow and redundant.
+- Do **not** re-run individual CI steps ad hoc (`go test ./...`, `npm test`, funclogmeasure) unless narrowing a failure **after** check failed, or the user asked for a subset.
+- Use **`gh run view --log-failed`** only when check passed locally but CI still failed (environment drift).
+
+## Quick reference
+
+| Platform | Full bar | Go only |
+| --- | --- | --- |
+| Unix / Git Bash / Docker dev | `./scripts/check.sh` | `./scripts/check.sh --go-only` |
+| Windows PowerShell | `.\scripts\check.ps1` | `.\scripts\check.ps1 -GoOnly` |
+
+Details: [CONTRIBUTING.md](../CONTRIBUTING.md#before-you-open-a-pr), [AGENTS.md](../AGENTS.md).
