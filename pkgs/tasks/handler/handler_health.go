@@ -57,10 +57,9 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 	}
 	checks["database"] = "ok"
 
-	root, _, repoErr := h.repoProv.Repo(ctx)
-	if repoErr != nil {
-		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "workspace_repo", "err", repoErr)
-		checks["workspace_repo"] = "fail"
+	if !h.gitAvailable {
+		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "git_available")
+		checks["git_available"] = "fail"
 		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
 			"status":  "degraded",
 			"checks":  checks,
@@ -68,18 +67,24 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if root != nil {
-		if err := root.Ready(); err != nil {
-			slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "workspace_repo", "err", err)
-			checks["workspace_repo"] = "fail"
-			writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
-				"status":  "degraded",
-				"checks":  checks,
-				"version": ServerVersion(),
-			})
-			return
-		}
-		checks["workspace_repo"] = "ok"
+	checks["git_available"] = "ok"
+
+	repoCount, err := h.store.CountGitRepositories(ctx)
+	if err != nil {
+		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "registered_repositories", "err", err)
+		checks["registered_repositories"] = "fail"
+		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
+			"status":  "degraded",
+			"checks":  checks,
+			"version": ServerVersion(),
+		})
+		return
+	}
+	if repoCount == 0 {
+		slog.Warn("readiness advisory", "cmd", calltrace.LogCmd, "operation", op, "check", "registered_repositories", "count", 0)
+		checks["registered_repositories"] = "warn"
+	} else {
+		checks["registered_repositories"] = "ok"
 	}
 
 	writeJSON(w, r, op, http.StatusOK, map[string]any{

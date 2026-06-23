@@ -6,12 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/internal/httpsecurityexpect"
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
-	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -68,7 +66,37 @@ func TestHTTP_health_ready_ok(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Version == "" {
+	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Checks["git_available"] != "ok" || body.Checks["registered_repositories"] != "warn" || body.Version == "" {
+		t.Fatalf("body %+v", body)
+	}
+}
+
+func TestHTTP_health_ready_git_unavailable(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	h := handler.NewHandler(st, handler.NewSSEHub(), nil,
+		handler.WithPathMap(&handler.PathMap{}),
+		handler.WithGitAvailable(false),
+	)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/health/ready")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var body struct {
+		Status string            `json:"status"`
+		Checks map[string]string `json:"checks"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Status != "degraded" || body.Checks["database"] != "ok" || body.Checks["git_available"] != "fail" {
 		t.Fatalf("body %+v", body)
 	}
 }
@@ -137,67 +165,6 @@ func TestHTTP_health_ready_degraded_when_db_closed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if body.Status != "degraded" || body.Checks["database"] != "fail" || body.Version == "" {
-		t.Fatalf("body %+v", body)
-	}
-}
-
-func TestHTTP_health_ready_workspace_repo_ok(t *testing.T) {
-	root := t.TempDir()
-	srv := NewServerWithRepo(t, root)
-	defer srv.Close()
-
-	res, err := http.Get(srv.URL + "/health/ready")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status %d", res.StatusCode)
-	}
-	var body struct {
-		Status  string            `json:"status"`
-		Checks  map[string]string `json:"checks"`
-		Version string            `json:"version"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-		t.Fatal(err)
-	}
-	if body.Status != "ok" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "ok" || body.Version == "" {
-		t.Fatalf("body %+v", body)
-	}
-}
-
-func TestHTTP_health_ready_workspace_repo_fail_when_root_removed(t *testing.T) {
-	root := t.TempDir()
-	db := tasktestdb.OpenSQLite(t)
-	rep, err := repo.OpenRoot(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := httptest.NewServer(handler.NewHandler(store.NewStore(db), handler.NewSSEHub(), rep))
-	defer srv.Close()
-
-	if err := os.RemoveAll(root); err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := http.Get(srv.URL + "/health/ready")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("status %d", res.StatusCode)
-	}
-	var body struct {
-		Status  string            `json:"status"`
-		Checks  map[string]string `json:"checks"`
-		Version string            `json:"version"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-		t.Fatal(err)
-	}
-	if body.Status != "degraded" || body.Checks["database"] != "ok" || body.Checks["workspace_repo"] != "fail" || body.Version == "" {
 		t.Fatalf("body %+v", body)
 	}
 }
