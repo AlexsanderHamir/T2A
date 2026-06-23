@@ -78,7 +78,7 @@ Manual migrate only: `go run ./cmd/dbcheck -migrate` — [Schema migrations in c
 
 ## Before you open a PR
 
-Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` / `scripts/check-docs.sh` (and PowerShell twins). CI runs those leaf scripts directly — not duplicated commands in `.github/workflows/ci.yml`.
+Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and PowerShell twins). CI runs those leaf scripts directly — not duplicated commands in `.github/workflows/ci.yml`.
 
 | I want to… | Command |
 |------------|---------|
@@ -89,7 +89,6 @@ Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` / `scr
 | Same as CI Go tests (one group) | `./scripts/check-go.sh --tests-only --group=core --verbose` (groups: `core`, `tasks`, `agents`, `harness`) — includes [coverage gate](docs/domain/testing.md#coverage-floors) |
 | Same as CI Go (full local bar) | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |
 | Same as CI web | `./scripts/check-web.sh --install --verbose` or `.\scripts\check-web.ps1 -Install -Verbose` |
-| Same as CI docs site | `./scripts/check-docs.sh --install --verbose` or `.\scripts\check-docs.ps1 -Install -Verbose` |
 | Go only (fast) | `./scripts/check.sh --go-only` or `.\scripts\check.ps1 -GoOnly` |
 | Full logs | add `--verbose` / `-Verbose` |
 
@@ -112,25 +111,10 @@ check OK  4/4 passed  33s
 Also:
 
 - [ ] Changed an API endpoint → update [docs/api.md](docs/api.md) in the same PR
-- [ ] Changed `docs/` or `website/` → run `./scripts/check-docs.sh` (builds the [published docs site](https://alexsanderhamir.github.io/Hamix/))
 - [ ] New behavior → add or update a test — see [docs/domain/testing.md](docs/domain/testing.md)
 - [ ] User-visible change → update the relevant doc
 
 Coding conventions (where to put API calls, how the live UI updates, etc.): [AGENTS.md](AGENTS.md).
-
-## Documentation site
-
-Product and contributor docs are published from the same `docs/` markdown you edit in the repo.
-
-| Task | Where |
-| --- | --- |
-| Read docs (search, tracks, dark mode) | [https://alexsanderhamir.github.io/Hamix/](https://alexsanderhamir.github.io/Hamix/) |
-| Local preview | `cd website && npm start` → `http://localhost:3000` |
-| Verify build (CI parity) | `./scripts/check-docs.sh --install` |
-| Sidebar order / new section | `website/sidebars.ts` |
-| Theme / landing page | `website/src/` |
-
-Deploy: push to `main` when `docs/**` or `website/**` changes — [`.github/workflows/docs-deploy.yml`](.github/workflows/docs-deploy.yml). Decision record: [ADR-0035](docs/adr/ADR-0035-docusaurus-documentation-site.md).
 
 ## Where to go next
 
