@@ -494,14 +494,3 @@ Structured logs on retry: `retry_mode`, `reason_code`, `skip_next_execute`.
 | Core | [`harness.go`](../../pkgs/agents/harness/harness.go), [`doc.go`](../../pkgs/agents/harness/doc.go) |
 | Worker boundary | [`pkgs/agents/worker/admission.go`](../../pkgs/agents/worker/admission.go) |
 | Package file map | [`pkgs/agents/harness/README.md`](../../pkgs/agents/harness/README.md) |
-
-## Next steps
-
-1. **Execute phase** — [execute-agent.md](./execute-agent.md): prompts, runner invocation, criteria self-report.
-2. **Verify phase** — [verify-agent.md](./verify-agent.md): judge pipeline, shell checks, integrity rules.
-3. **Operator view** — [execute-and-verify.md](../execute-and-verify.md): what operators see in the UI.
-
-## See also
-
-- [architecture.md](../architecture.md) §Agent worker and harness
-- [harness-testing.md](./harness-testing.md) — how to test harness behavior without the full worker

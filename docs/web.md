@@ -75,12 +75,6 @@ Expanded cycle rows in `TaskCyclesPanel` load `GET /tasks/{id}/cycles/{cycleId}/
 
 The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPanel` / `useTaskCommits` — task-wide commit history deduped by SHA, refetched on `task_cycle_changed` SSE. Clicking a commit row navigates to **`/tasks/{id}/commits/{sha}`** (`TaskCommitDiffPage`), which loads **`GET /repo/diff?sha=`** with GitHub-style summary stats, syntax-highlighted hunks (refractor + `react-diff-view`), unified/split toggle, file navigator, and collapsible large files. Parsers: `web/src/api/parseTaskApiCycles.ts`; types: `web/src/types/cycle.ts`. See [domain/cycle-commits.md](./domain/cycle-commits.md).
 
-## Next steps
-
-1. **Architecture** — [architecture.md](./architecture.md) §Write path and live UI for the server-side SSE contract.
-2. **Sync policy** — [ADR-0022](./adr/ADR-0022-task-sync-policy.md) and `web/src/tasks/sync/` for cache coherence rules.
-3. **API reference** — [api.md](./api.md) for bootstrap and task routes the UI calls.
-
 ## See also
 
 - [guide.md](./guide.md) — documentation layers and learning paths

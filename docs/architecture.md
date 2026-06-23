@@ -398,15 +398,3 @@ Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 11. `dbcheck` does not serve HTTP. `GET /health` and `/health/live` are liveness-only (no DB probe); `/health/ready` does a DB ping + `SELECT 1` plus a workspace directory stat when `app_settings.repo_root` is set.
 12. `taskapi` serves plain HTTP. TLS belongs at a reverse proxy or load balancer.
 13. No CORS (assume same origin or a gateway in front).
-
-## Next steps
-
-1. **Data model** — [data-model.md](./data-model.md): tasks, cycles, checklists, dependencies, and gates.
-2. **API surface** — [api.md](./api.md): routes and SSE event names (skim the tables; handler code is authoritative for status codes).
-3. **Deep dive** — Pick a subsystem from [domain/README.md](./domain/README.md) when you change worker, harness, or sync behavior.
-
-## See also
-
-- [guide.md](./guide.md) — learning paths by goal
-- [configuration.md](./configuration.md) — env vars and `app_settings`
-- [execute-and-verify.md](./execute-and-verify.md) — operator-facing execute/verify model

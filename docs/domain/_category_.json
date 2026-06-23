@@ -1,9 +1,0 @@
-{
-  "label": "Deep dives",
-  "position": 5,
-  "link": {
-    "type": "doc",
-    "id": "domain/README"
-  },
-  "description": "Behavioral deep-dives: why production subsystems work the way they do."
-}

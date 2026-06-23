@@ -194,12 +194,6 @@ If the run ends in failure (including after all retries), those passes do not st
 
 You do not need access to `criteria-report.json` or `verify-report.json` for normal operation.
 
-## Next steps
-
-1. **System map** — [architecture.md](./architecture.md): how `taskapi`, the store, SSE, and the worker connect.
-2. **Criteria depth** — [domain/done-criteria.md](./domain/done-criteria.md): full verification loop and wire contracts.
-3. **Configuration** — [configuration.md](./configuration.md): runners, retries, and workspace settings.
-
 ## See also
 
 | Doc | Why read it |

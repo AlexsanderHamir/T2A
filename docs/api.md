@@ -21,7 +21,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 |---|---|---|
 | GET | `/health` | Liveness; returns `version` from `runtime/debug.ReadBuildInfo`. No DB probe. |
 | GET | `/health/live` | Same shape as `/health`. |
-| GET | `/health/ready` | Readiness; DB ping + `SELECT 1`; `checks.schema` when drift is pending or downgrade (`503` with `schema.message` and `schema.remediation`); workspace/repo checks as before. taskapi exits at startup when migrate is required, so this probe is mainly for downgrade or legacy wiring. |
+| GET | `/health/ready` | Readiness; DB ping + `SELECT 1`; `checks.schema` compares code vs DB `SchemaRevision` (`503` when `pending` or `downgrade`, with `schema.code_revision`, `schema.db_revision`, `schema.remediation`); workspace/repo checks as before. |
 | GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `hamix_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |
@@ -208,14 +208,3 @@ Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts
 ### Dev synthetic SSE (`HAMIX_SSE_TEST=1`)
 
 For local UI work, `taskapi` can start a background ticker (no extra routes). Set `HAMIX_SSE_TEST=1`; interval via `HAMIX_SSE_TEST_INTERVAL` (default `3s`; `0` disables). Tunables: `HAMIX_SSE_TEST_EVENTS_PER_TICK`, `HAMIX_SSE_TEST_SYNC_ROW`, `HAMIX_SSE_TEST_USER_RESPONSE`, `HAMIX_SSE_TEST_LIFECYCLE`, `HAMIX_SSE_TEST_LIFECYCLE_EVERY`. Never enable in production without intent. Source: `pkgs/tasks/devsim/`.
-
-## Next steps
-
-1. **Schemas** — [data-model.md](./data-model.md): tables and JSON shapes behind these routes.
-2. **Live UI** — [web.md](./web.md): how the SPA consumes bootstrap, SSE, and mutations.
-3. **SSE behavior** — [domain/sse-hub.md](./domain/sse-hub.md): hub fanout, reconnect, and resync.
-
-## See also
-
-- [architecture.md](./architecture.md) — component overview
-- [configuration.md](./configuration.md) — env vars referenced by handlers

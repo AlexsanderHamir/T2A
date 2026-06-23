@@ -1,9 +1,0 @@
-{
-  "label": "Get started",
-  "position": 2,
-  "link": {
-    "type": "doc",
-    "id": "get-started/index"
-  },
-  "description": "Run Hamix locally and complete your first execute-and-verify task."
-}

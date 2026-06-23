@@ -21,8 +21,6 @@ How Hamix documentation is organized and which articles to read for your goal.
 
 Hamix docs are grouped by **purpose**, not by a single reading order. Reference articles answer “what is exposed or stored.” Overview and domain articles answer “how it behaves.” Implementation articles answer “how to change it.”
 
-> **Tip** — Browse the [published documentation site](https://alexsanderhamir.github.io/Hamix/) for searchable, narrative tracks (get started → understand → build → reference).
-
 > **Note** — Read one [learning path](#choose-a-learning-path) below. Open additional articles only when your task requires them.
 
 > **Important** — For code changes, use [AGENTS.md](../AGENTS.md) for scoped paths and [agent-map.md](./agent-map.md) for repository locations. Setup and PR checklist: [CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -92,7 +90,6 @@ Open [adr/](./adr/) when you need the historical **why** behind a design, not fo
 ## See also
 
 - [Documentation index](./README.md) — “Read when” table for all docs under `docs/`
-- [Published docs site](https://alexsanderhamir.github.io/Hamix/) — searchable site built from `docs/` ([ADR-0035](./adr/ADR-0035-docusaurus-documentation-site.md))
 - [domain/README.md](./domain/README.md) — domain article index and writing template
 - [AGENTS.md](../AGENTS.md) — agent and contributor orientation for code changes
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — setup, PR checklist, where to go next
