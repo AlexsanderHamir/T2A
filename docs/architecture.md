@@ -101,24 +101,30 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
-  participant Client as Client (UI or agent)
-  participant H as handler
-  participant S as store
+  participant Agent as Agent worker
+  participant API as taskapi handler
   participant PG as Postgres
   participant Hub as SSEHub
-  participant Subscriber as SSE subscriber
+  participant Browser as Browser (SSE subscriber)
+  participant RQ as React Query
+  participant REST as GET /tasks/{id}
 
-  Client->>H: POST/PATCH/DELETE /tasks
-  H->>S: Create/Update/Delete
-  S->>PG: commit (row write + task_events mirror in same tx)
-  S-->>H: result
-  H->>Hub: Publish task_created|updated|deleted
-  Hub-->>Subscriber: data: JSON line (id + type)
-  Subscriber->>H: GET /tasks/{id}
-  H-->>Subscriber: authoritative JSON
+  Note over Browser: EventSource("/events") already open
+
+  Agent->>API: PATCH /tasks/abc-123 (status=done)
+  API->>PG: COMMIT
+  API->>Hub: Publish task_updated (with data)
+  Hub-->>Browser: SSE: {"type":"task_updated","id":"abc-123","data":{...}}
+
+  Browser->>Browser: parse frame, setQueryData (enriched)
+  Browser->>Browser: debounce flush (~900ms)
+  Browser->>RQ: invalidate list, stats, commits
+  RQ->>REST: GET /tasks?limit=200, GET /tasks/stats, ...
+  Note over RQ,REST: GET /tasks/abc-123 skipped if enrichment applied
+  REST-->>Browser: authoritative JSON
 ```
 
-SSE is a hint. The follow-up GET returns the authoritative body.
+SSE is a hint delivered to the browser's long-lived `EventSource("/events")` connection. React Query invalidates cached queries and refetches from REST; enriched frames may `setQueryData` and skip `GET /tasks/{id}`. Deep dive: [domain/sse-hub.md](domain/sse-hub.md).
 
 ## Persistence
 
