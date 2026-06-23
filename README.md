@@ -53,6 +53,7 @@ See [docs/execute-and-verify.md](docs/execute-and-verify.md) for details.
 
 ## Docs
 
+- **Published site:** [https://alexsanderhamir.github.io/Hamix/](https://alexsanderhamir.github.io/Hamix/) — narrative documentation (Docusaurus)
 - [docs/guide.md](docs/guide.md) — how documentation fits together
 - [CONTRIBUTING.md](CONTRIBUTING.md) — setup and PR checklist
 - [AGENTS.md](AGENTS.md) — code paths when editing the repo
