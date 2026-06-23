@@ -18,6 +18,8 @@ type Fake struct {
 }
 
 // New returns a Fake that implements contract.Store (alias harness.Store).
+//
+//funclogmeasure:skip category=tool-required-noop reason="Harness test fake only; store I/O traces live on production harness.Run chokepoints."
 func New(t *testing.T) *Fake {
 	t.Helper()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))

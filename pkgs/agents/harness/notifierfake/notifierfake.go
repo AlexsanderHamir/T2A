@@ -20,11 +20,15 @@ type RecordingCycleNotifier struct {
 }
 
 // NewRecordingCycleNotifier constructs an empty recorder.
+//
+//funclogmeasure:skip category=tool-required-noop reason="Harness test fake only; SSE publish traces live on production harness.Run chokepoints."
 func NewRecordingCycleNotifier() *RecordingCycleNotifier {
 	return &RecordingCycleNotifier{}
 }
 
 // PublishCycleChange records the call.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (r *RecordingCycleNotifier) PublishCycleChange(taskID, cycleID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -32,6 +36,8 @@ func (r *RecordingCycleNotifier) PublishCycleChange(taskID, cycleID string) {
 }
 
 // Snapshot returns a copy of recorded calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (r *RecordingCycleNotifier) Snapshot() []PublishCall {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -56,11 +62,15 @@ type RecordingProgressNotifier struct {
 }
 
 // NewRecordingProgressNotifier constructs an empty recorder.
+//
+//funclogmeasure:skip category=tool-required-noop reason="Harness test fake only; SSE publish traces live on production harness.Run chokepoints."
 func NewRecordingProgressNotifier() *RecordingProgressNotifier {
 	return &RecordingProgressNotifier{}
 }
 
 // PublishRunProgress records the call.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (n *RecordingProgressNotifier) PublishRunProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -74,6 +84,8 @@ func (n *RecordingProgressNotifier) PublishRunProgress(taskID, cycleID string, p
 }
 
 // Snapshot returns a copy of recorded calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (n *RecordingProgressNotifier) Snapshot() []ProgressCall {
 	n.mu.Lock()
 	defer n.mu.Unlock()

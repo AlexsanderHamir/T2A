@@ -32,11 +32,15 @@ type RecordingMetrics struct {
 }
 
 // New constructs an empty recorder.
+//
+//funclogmeasure:skip category=tool-required-noop reason="Harness test fake only; run metrics are traced on production harness.Run chokepoints."
 func New() *RecordingMetrics {
 	return &RecordingMetrics{}
 }
 
 // RecordRun records a terminal cycle observation.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (m *RecordingMetrics) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -49,6 +53,8 @@ func (m *RecordingMetrics) RecordRun(runnerName, model, terminalStatus string, d
 }
 
 // RecordVerifyVerdict records a per-criterion verify outcome.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (m *RecordingMetrics) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -56,6 +62,8 @@ func (m *RecordingMetrics) RecordVerifyVerdict(kind domain.VerifierKind, passed 
 }
 
 // ObserveVerifyDuration records verify phase wall clock.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (m *RecordingMetrics) ObserveVerifyDuration(d time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -63,6 +71,8 @@ func (m *RecordingMetrics) ObserveVerifyDuration(d time.Duration) {
 }
 
 // ObserveVerifyRetries records retry count on terminal cycles.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only in-memory recorder; operation trace is emitted by harness.Run in production."
 func (m *RecordingMetrics) ObserveVerifyRetries(n int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -70,6 +80,8 @@ func (m *RecordingMetrics) ObserveVerifyRetries(n int) {
 }
 
 // SnapshotRuns returns a copy of RecordRun calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (m *RecordingMetrics) SnapshotRuns() []RecordedRun {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -79,6 +91,8 @@ func (m *RecordingMetrics) SnapshotRuns() []RecordedRun {
 }
 
 // SnapshotVerdicts returns a copy of RecordVerifyVerdict calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (m *RecordingMetrics) SnapshotVerdicts() []RecordedVerdict {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -88,6 +102,8 @@ func (m *RecordingMetrics) SnapshotVerdicts() []RecordedVerdict {
 }
 
 // SnapshotVerifyDurations returns a copy of ObserveVerifyDuration calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (m *RecordingMetrics) SnapshotVerifyDurations() []time.Duration {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -97,6 +113,8 @@ func (m *RecordingMetrics) SnapshotVerifyDurations() []time.Duration {
 }
 
 // SnapshotVerifyRetries returns a copy of ObserveVerifyRetries calls.
+//
+//funclogmeasure:skip category=hot-path reason="Test-only assertion helper; no production I/O boundary."
 func (m *RecordingMetrics) SnapshotVerifyRetries() []int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
