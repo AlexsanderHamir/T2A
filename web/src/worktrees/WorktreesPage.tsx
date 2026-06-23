@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DEFAULT_PROJECT_ID, type GitBranch, type GitRepository, type GitWorktree } from "@/types";
+import { Button } from "@/components/ui";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
@@ -66,81 +67,98 @@ export function WorktreesPage() {
   };
 
   return (
-    <div className="worktrees-page task-list-section-panel">
-      <header className="worktrees-page__header">
-        <div>
-          <h1 className="worktrees-page__title">Worktrees</h1>
-          <p className="worktrees-page__subtitle">
-            Register a repository, then manage worktrees and branches for task git context.
-          </p>
-        </div>
-        {repositories.length > 0 ? (
-          <button type="button" className="btn-primary" onClick={() => setRegisterOpen(true)}>
-            Register repository
-          </button>
+    <div className="task-detail-content--enter">
+      <section
+        className="panel task-list-section-panel worktrees-page"
+        aria-labelledby="worktrees-heading"
+      >
+        <header className="task-list-section-head">
+          <div className="task-list-section-head__text">
+            <h2 id="worktrees-heading" className="task-list-section-title">
+              Worktrees
+            </h2>
+          </div>
+          <div className="task-list-section-actions">
+            {!showSkeleton ? (
+              <Button
+                type="button"
+                variant="primary"
+                className="task-home-new-task-btn"
+                onClick={() => setRegisterOpen(true)}
+              >
+                Register repository
+              </Button>
+            ) : null}
+          </div>
+        </header>
+
+        {repositoriesQuery.isError ? (
+          <div className="err" role="alert">
+            <p>
+              {repositoriesQuery.error instanceof Error
+                ? repositoriesQuery.error.message
+                : "Could not load repositories"}
+            </p>
+          </div>
         ) : null}
-      </header>
 
-      {repositoriesQuery.isError ? (
-        <div className="err error-banner" role="alert">
-          {repositoriesQuery.error instanceof Error
-            ? repositoriesQuery.error.message
-            : "Could not load repositories"}
+        <div className="task-list-content task-list-content--enter">
+          {showSkeleton ? <TaskDraftsListSkeleton /> : null}
+          {!showSkeleton && repositories.length === 0 ? (
+            <div className="task-list-empty-cell">
+              <EmptyState
+                title="No repositories yet"
+                description=""
+                hideIcon
+                className="empty-state--in-table empty-state--task-list-fresh"
+              />
+            </div>
+          ) : null}
+          {!showSkeleton && repositories.length > 0 ? (
+            <div className="worktrees-page__cards">
+              {repositories.map((repository) => (
+                <RepositoryCard
+                  key={repository.id}
+                  projectId={projectId}
+                  repository={repository}
+                  reconcilePending={mutations.reconcile.isPending}
+                  onReconcile={() => void mutations.reconcile.mutate(repository.id)}
+                  onRegisterWorktree={() =>
+                    setActiveRepoModal({ kind: "worktree", repository })
+                  }
+                  onRegisterBranch={() =>
+                    setActiveRepoModal({ kind: "branch", repository })
+                  }
+                  onDeleteRepository={() =>
+                    setDeleteTarget({
+                      kind: "repository",
+                      id: repository.id,
+                      label: repository.path,
+                      repositoryId: repository.id,
+                    })
+                  }
+                  onDeleteWorktree={(worktree: GitWorktree) =>
+                    setDeleteTarget({
+                      kind: "worktree",
+                      id: worktree.id,
+                      label: worktree.name || worktree.path,
+                      repositoryId: repository.id,
+                    })
+                  }
+                  onDeleteBranch={(branch: GitBranch) =>
+                    setDeleteTarget({
+                      kind: "branch",
+                      id: branch.id,
+                      label: branch.name,
+                      repositoryId: repository.id,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : null}
-
-      {showSkeleton ? (
-        <TaskDraftsListSkeleton />
-      ) : repositories.length === 0 ? (
-        <EmptyState
-          title="Register your first repository"
-          description="Hamix needs a registered git repository before tasks can bind to worktrees and branches."
-          action={{
-            label: "Register repository",
-            onClick: () => setRegisterOpen(true),
-          }}
-        />
-      ) : (
-        <div className="worktrees-page__cards">
-          {repositories.map((repository) => (
-            <RepositoryCard
-              key={repository.id}
-              projectId={projectId}
-              repository={repository}
-              reconcilePending={mutations.reconcile.isPending}
-              onReconcile={() => void mutations.reconcile.mutate(repository.id)}
-              onRegisterWorktree={() =>
-                setActiveRepoModal({ kind: "worktree", repository })
-              }
-              onRegisterBranch={() => setActiveRepoModal({ kind: "branch", repository })}
-              onDeleteRepository={() =>
-                setDeleteTarget({
-                  kind: "repository",
-                  id: repository.id,
-                  label: repository.path,
-                  repositoryId: repository.id,
-                })
-              }
-              onDeleteWorktree={(worktree: GitWorktree) =>
-                setDeleteTarget({
-                  kind: "worktree",
-                  id: worktree.id,
-                  label: worktree.name || worktree.path,
-                  repositoryId: repository.id,
-                })
-              }
-              onDeleteBranch={(branch: GitBranch) =>
-                setDeleteTarget({
-                  kind: "branch",
-                  id: branch.id,
-                  label: branch.name,
-                  repositoryId: repository.id,
-                })
-              }
-            />
-          ))}
-        </div>
-      )}
+      </section>
 
       <RegisterRepositoryModal
         open={registerOpen}

@@ -34,7 +34,7 @@ export function RepositoryCard({
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
 
   return (
-    <article className="worktrees-repo-card panel" aria-labelledby={`repo-${repository.id}-title`}>
+    <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
       <header className="worktrees-repo-card__header">
         <div className="worktrees-repo-card__heading">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">

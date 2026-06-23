@@ -42,7 +42,7 @@ describe("WorktreesPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows empty state CTA that opens register modal", async () => {
+  it("shows header CTA that opens register modal when empty", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
       if (url.endsWith(`/projects/${DEFAULT_PROJECT_ID}/git/repositories`)) {
@@ -52,7 +52,7 @@ describe("WorktreesPage", () => {
     });
 
     renderPage();
-    await screen.findByText(/Register your first repository/i);
+    await screen.findByText(/No repositories yet/i);
     fireEvent.click(screen.getByRole("button", { name: /Register repository/i }));
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
