@@ -50,13 +50,26 @@ Defined in [`web/vitest.workspace.ts`](../../web/vitest.workspace.ts):
 | Project | Owns |
 | --- | --- |
 | `unit` | `*.test.ts` — parsers, pure helpers, `renderHook` |
-| `components` | `*.test.tsx` rendering one component (no `<App />`, no full pages) |
+| `components` | `*.test.tsx` — single components, hooks (`renderHook`), no `<App />`, no full pages |
 | `app` | App shell, routing, bootstrap, 404, route announcer |
 | `task-pages` | Task detail/cycle/event/home/templates/drafts pages |
-| `task-create` | Create-task flows and hooks |
+| `task-create` | Create-task modal flows (not hooks — those are `components`) |
 | `settings` | Settings page |
 | `projects` | Project list and detail pages |
 | `worktrees` | Worktrees page |
+
+## Testing boundary
+
+Web tests prove UI and HTTP contracts given fixture data. They do **not** simulate infrastructure the SPA cannot run in jsdom.
+
+| In scope | Out of scope |
+| --- | --- |
+| Component renders given mocked JSON | Worker picked up a task |
+| User action produces correct HTTP request/body | Cursor or Claude CLI executed |
+| Loading, error, and retry UI | Postgres or live database state |
+| URL query params affect page filters | Live SSE from a real agent run |
+
+Hook tests under `src/tasks/create/hooks/` belong in the `components` project, not `task-create`.
 
 ## Five rules
 
