@@ -37,6 +37,7 @@ func resolveUserDirPlaces() ([]Place, error) {
 	return parseXDGUserDirsFile(filepath.Join(configHome, "user-dirs.dirs"), home)
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func parseXDGUserDirsFile(path, home string) ([]Place, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -95,6 +96,7 @@ func parseXDGUserDirsFile(path, home string) ([]Place, error) {
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func defaultLinuxUserDirPlaces(home string) ([]Place, error) {
 	specs := []struct {
 		category PlaceCategory
@@ -127,6 +129,7 @@ func defaultLinuxUserDirPlaces(home string) ([]Place, error) {
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ResolveBrowseRoots."
 func expandXDGPath(raw, home string) (string, error) {
 	if raw == "" {
 		return "", fmt.Errorf("empty xdg path")
