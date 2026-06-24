@@ -47,26 +47,23 @@ func DetectBrowseEnvironment() BrowseEnvironment {
 func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error) {
 	slog.Debug("trace", "operation", "repo.ResolveBrowseRoots")
 	env := DetectBrowseEnvironment()
-	if override := strings.TrimSpace(os.Getenv("HAMIX_BROWSE_ROOTS")); override != "" {
-		roots, err := parseBrowseRootPaths(override)
-		if err != nil {
-			return nil, env, err
-		}
-		return roots, env, nil
+	reg := defaultPlaceRegistry()
+	if CustomBrowseRootsConfigured() {
+		reg = NewPlaceRegistry(CustomPlaceProvider{})
 	}
-	var roots []BrowseRoot
-	install, installErr := resolveInstallBrowseRoot(startDir, env)
-	if installErr == nil {
-		roots = append(roots, install)
+	places, err := reg.Places(env, startDir)
+	if err != nil {
+		return nil, env, err
 	}
-	home, homeErr := resolveHomeBrowseRoot(env)
-	if homeErr == nil {
-		roots = append(roots, home)
-	}
-	if len(roots) == 0 {
-		return nil, env, fmt.Errorf("no browse roots available")
+	roots := make([]BrowseRoot, 0, len(places))
+	for _, p := range places {
+		roots = append(roots, placeToBrowseRoot(p))
 	}
 	return roots, env, nil
+}
+
+func defaultPlaceRegistry() *PlaceRegistry {
+	return NewPlaceRegistry(InstallPlaceProvider{}, HomePlaceProvider{})
 }
 
 //funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
