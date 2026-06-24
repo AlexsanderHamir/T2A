@@ -7,15 +7,16 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 func TestResetHardClean_resetsAndCleansUntracked(t *testing.T) {
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	ctx := context.Background()
 	repo := NewExecRepo()
 	base, err := repo.Run(ctx, dir, "rev-parse", "HEAD")

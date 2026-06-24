@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
@@ -82,7 +83,7 @@ func TestHTTP_createTask_projectRepoMismatch_returns409(t *testing.T) {
 	ctx := context.Background()
 	gitSvc := gitwork.New()
 	otherDir := t.TempDir()
-	ensureGitRepo(t, otherDir)
+	gittest.EnsureMain(t, otherDir)
 	otherRepo, err := st.CreateGlobalGitRepository(ctx, store.CreateGitRepositoryInput{Path: otherDir}, gitSvc)
 	if err != nil {
 		t.Fatalf("CreateGlobalGitRepository: %v", err)

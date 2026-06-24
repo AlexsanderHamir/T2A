@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
@@ -15,7 +16,7 @@ import (
 
 func TestIngestExecuteCommits_fromClaims(t *testing.T) {
 	t.Parallel()
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	ctx := context.Background()
 	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
@@ -30,7 +31,7 @@ func TestIngestExecuteCommits_fromClaims(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	repo := NewExecRepo()
 	base, err := repo.Run(ctx, dir, "rev-parse", "HEAD")
 	if err != nil {
@@ -95,7 +96,7 @@ func TestIngestExecuteCommits_fromClaims(t *testing.T) {
 
 func TestIngestExecuteCommits_emptyClaimsContinues(t *testing.T) {
 	t.Parallel()
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	ctx := context.Background()
 	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
@@ -109,7 +110,7 @@ func TestIngestExecuteCommits_emptyClaimsContinues(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	repo := NewExecRepo()
 	base, _ := repo.Run(ctx, dir, "rev-parse", "HEAD")
 	svc := NewService(st, repo, t.TempDir())

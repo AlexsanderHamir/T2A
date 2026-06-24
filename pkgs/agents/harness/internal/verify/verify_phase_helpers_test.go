@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 )
 
 // hookRunner wraps a runnerfake so integration tests can script report files.
@@ -135,18 +137,7 @@ func writeVerifyReport(t *testing.T, reportDir, cycleID string, ids []string) {
 
 func gitInitTestRepo(t *testing.T, dir string) {
 	t.Helper()
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not installed; skipping git-backed integrity test")
-	}
-	for _, args := range [][]string{
-		{"init"},
-		{"-c", "user.email=t@e.local", "-c", "user.name=t", "commit", "--allow-empty", "-m", "init"},
-	} {
-		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
-		if err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	gittest.InitOrSkip(t, dir)
 }
 
 // writeCriteriaReportFor writes a criteria-report.json containing only

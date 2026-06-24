@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
 )
 
 func TestIntegritySnapshot_NonGitDir_Bypass(t *testing.T) {
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	dir := t.TempDir()
 	snap, err := CaptureIntegritySnapshot(context.Background(), NewExecRepo(), dir)
 	if err != nil {
@@ -21,9 +23,9 @@ func TestIntegritySnapshot_NonGitDir_Bypass(t *testing.T) {
 }
 
 func TestIntegritySnapshot_CleanRepo_NoChanges(t *testing.T) {
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	repo := NewExecRepo()
 
 	pre, err := CaptureIntegritySnapshot(context.Background(), repo, dir)
@@ -107,7 +109,7 @@ func TestIntegrityDiff_ManyPaths_TruncatesSummary(t *testing.T) {
 
 func TestIntegrityCheck_PreErrorIsTampered(t *testing.T) {
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	repo := NewExecRepo()
 	pre, _ := CaptureIntegritySnapshot(context.Background(), repo, dir)
 	tampered, reason := CheckVerifyIntegrity(context.Background(), repo, dir, "c", pre, os.ErrPermission)
@@ -117,9 +119,9 @@ func TestIntegrityCheck_PreErrorIsTampered(t *testing.T) {
 }
 
 func TestIntegrityCheck_PostGitGoneIsTampered(t *testing.T) {
-	skipIfNoGit(t)
+	gittest.SkipIfNoGit(t)
 	dir := t.TempDir()
-	gitInit(t, dir)
+	gittest.Init(t, dir)
 	repo := NewExecRepo()
 	pre, err := CaptureIntegritySnapshot(context.Background(), repo, dir)
 	if err != nil || pre.NotGitRepo {
