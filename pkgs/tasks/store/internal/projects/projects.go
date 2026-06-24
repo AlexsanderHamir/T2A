@@ -26,6 +26,7 @@ type CreateProjectInput struct {
 	Name           string
 	Description    string
 	ContextSummary string
+	RepositoryID   *string
 }
 
 // UpdateProjectInput is a partial patch for project metadata.
@@ -79,6 +80,13 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 	if name == "" {
 		return domain.Project{}, fmt.Errorf("%w: project name required", domain.ErrInvalidInput)
 	}
+	repoID := trimOptional(input.RepositoryID)
+	if repoID != nil {
+		var repo domain.GitRepository
+		if err := db.WithContext(ctx).First(&repo, "id = ?", *repoID).Error; err != nil {
+			return domain.Project{}, mapNotFound(err)
+		}
+	}
 	now := time.Now().UTC()
 	row := domain.Project{
 		ID:             id,
@@ -86,6 +94,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 		Description:    strings.TrimSpace(input.Description),
 		Status:         domain.ProjectStatusActive,
 		ContextSummary: strings.TrimSpace(input.ContextSummary),
+		RepositoryID:   repoID,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -165,7 +174,8 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 	return out, nil
 }
 
-// DeleteProject removes a project when no tasks still reference it.
+// DeleteProject removes a project. Tasks referencing it keep running; project_id
+// falls back to NULL via ON DELETE SET NULL on tasks.project_id.
 func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteProject)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.DeleteProject")
@@ -175,13 +185,6 @@ func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	}
 	if id == domain.DefaultProjectID {
 		return fmt.Errorf("%w: default project cannot be deleted", domain.ErrConflict)
-	}
-	var taskCount int64
-	if err := db.WithContext(ctx).Model(&domain.Task{}).Where("project_id = ?", id).Count(&taskCount).Error; err != nil {
-		return fmt.Errorf("count project tasks: %w", err)
-	}
-	if taskCount > 0 {
-		return fmt.Errorf("%w: project has tasks", domain.ErrConflict)
 	}
 	res := db.WithContext(ctx).Delete(&domain.Project{}, "id = ?", id)
 	if res.Error != nil {

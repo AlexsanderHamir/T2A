@@ -75,6 +75,8 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 
 // ValidateTaskGitBinding checks worktree and branch belong to the same repository
 // and, when projectID is set, that the repository belongs to that project.
+//
+// Legacy two-column binding — retained until the contract cycle (C8).
 func (s *Store) ValidateTaskGitBinding(ctx context.Context, projectID *string, worktreeID, branchID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskGitBinding")
 	worktreeID = strings.TrimSpace(worktreeID)
@@ -120,6 +122,67 @@ func (s *Store) ResolveTaskGitContext(ctx context.Context, worktreeID, branchID 
 		return TaskGitContext{}, err
 	}
 	br, err := s.GetGitBranchByID(ctx, branchID)
+	if err != nil {
+		return TaskGitContext{}, err
+	}
+	return TaskGitContext{WorktreePath: wt.Path, BranchName: br.Name}, nil
+}
+
+// ValidateTaskWorktreeBranchBinding checks worktree_branch_id exists and, when
+// projectID is set, that project.repository_id matches the association's repo.
+func (s *Store) ValidateTaskWorktreeBranchBinding(ctx context.Context, projectID *string, worktreeBranchID string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskWorktreeBranchBinding")
+	worktreeBranchID = strings.TrimSpace(worktreeBranchID)
+	if worktreeBranchID == "" {
+		return fmt.Errorf("%w: worktree_branch_id required", domain.ErrInvalidInput)
+	}
+	wb, err := s.GetWorktreeBranchByID(ctx, worktreeBranchID)
+	if err != nil {
+		return err
+	}
+	wt, err := s.GetGitWorktreeByID(ctx, wb.WorktreeID)
+	if err != nil {
+		return err
+	}
+	br, err := s.GetGitBranchByID(ctx, wb.BranchID)
+	if err != nil {
+		return err
+	}
+	if wt.RepositoryID != br.RepositoryID {
+		return domain.NewGitErr(domain.GitCodeBranchNotAssociated, "worktree and branch belong to different repositories")
+	}
+	if projectID == nil {
+		return nil
+	}
+	pid := strings.TrimSpace(*projectID)
+	if pid == "" {
+		return nil
+	}
+	proj, err := s.GetProject(ctx, pid)
+	if err != nil {
+		return err
+	}
+	if proj.RepositoryID == nil || *proj.RepositoryID != wt.RepositoryID {
+		return domain.NewGitErr(domain.GitCodeProjectRepoMismatch, "project is not tied to this repository")
+	}
+	return nil
+}
+
+// ResolveTaskGitContextFromAssociation loads worktree path and branch name via worktree_branch_id.
+func (s *Store) ResolveTaskGitContextFromAssociation(ctx context.Context, worktreeBranchID string) (TaskGitContext, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ResolveTaskGitContextFromAssociation")
+	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, worktreeBranchID); err != nil {
+		return TaskGitContext{}, err
+	}
+	wb, err := s.GetWorktreeBranchByID(ctx, worktreeBranchID)
+	if err != nil {
+		return TaskGitContext{}, err
+	}
+	wt, err := s.GetGitWorktreeByID(ctx, wb.WorktreeID)
+	if err != nil {
+		return TaskGitContext{}, err
+	}
+	br, err := s.GetGitBranchByID(ctx, wb.BranchID)
 	if err != nil {
 		return TaskGitContext{}, err
 	}
