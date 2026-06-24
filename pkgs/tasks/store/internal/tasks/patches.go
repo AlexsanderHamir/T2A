@@ -57,6 +57,18 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyGitBindingPatch(cur, in.WorktreeID, in.BranchID); err != nil {
 		return err
 	}
+	if err := applyWorktreeBranchPatch(cur, in.WorktreeBranchID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func applyWorktreeBranchPatch(cur *domain.Task, worktreeBranchID *string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyWorktreeBranchPatch")
+	if worktreeBranchID == nil {
+		return nil
+	}
+	cur.WorktreeBranchID = normalizeOptionalID(worktreeBranchID)
 	return nil
 }
 

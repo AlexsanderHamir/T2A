@@ -31,6 +31,7 @@ type CreateInput struct {
 	ChecklistItems  []checklist.CreateChecklistItemInput
 	WorktreeID      *string
 	BranchID        *string
+	WorktreeBranchID *string
 }
 
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means
@@ -63,6 +64,7 @@ type UpdateInput struct {
 	ClearPendingRetry bool
 	WorktreeID        *string
 	BranchID          *string
+	WorktreeBranchID  *string
 }
 
 // ListFilter optionally restricts flat task listing.

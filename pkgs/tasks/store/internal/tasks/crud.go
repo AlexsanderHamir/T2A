@@ -206,6 +206,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		PickupNotBefore:       in.PickupNotBefore,
 		WorktreeID:            normalizeOptionalID(in.WorktreeID),
 		BranchID:              normalizeOptionalID(in.BranchID),
+		WorktreeBranchID:      normalizeOptionalID(in.WorktreeBranchID),
 	}
 	if err := normalizeCreateTaskModelFields(t, in); err != nil {
 		return nil, "", "", err

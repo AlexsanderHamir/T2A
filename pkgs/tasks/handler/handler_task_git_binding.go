@@ -20,15 +20,38 @@ func taskHasGitBinding(worktreeID, branchID *string) bool {
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func trimmedWorktreeID(worktreeID *string) string {
-	if worktreeID == nil {
+func trimmedOptionalID(id *string) string {
+	if id == nil {
 		return ""
 	}
-	return strings.TrimSpace(*worktreeID)
+	return strings.TrimSpace(*id)
 }
 
-func (h *Handler) validateTaskGitBinding(ctx context.Context, projectID *string, worktreeID, branchID *string) error {
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func trimmedWorktreeID(worktreeID *string) string {
+	return trimmedOptionalID(worktreeID)
+}
+
+func (h *Handler) validateTaskGitBinding(
+	ctx context.Context,
+	projectID *string,
+	worktreeID, branchID, worktreeBranchID *string,
+) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validateTaskGitBinding")
+	wbID := trimmedOptionalID(worktreeBranchID)
+	if wbID != "" {
+		if err := h.validateLegacyGitPairPartial(worktreeID, branchID); err != nil {
+			return err
+		}
+		if err := h.store.ValidateTaskWorktreeBranchBinding(ctx, projectID, wbID); err != nil {
+			return err
+		}
+		assoc, err := h.store.GetWorktreeBranchByID(ctx, wbID)
+		if err != nil {
+			return err
+		}
+		return h.store.GuardBranchNotActiveElsewhere(ctx, assoc.WorktreeID, assoc.BranchID)
+	}
 	if !taskHasGitBinding(worktreeID, branchID) {
 		if worktreeID != nil && strings.TrimSpace(*worktreeID) != "" {
 			return fmt.Errorf("%w: branch_id required when worktree_id is set", domain.ErrInvalidInput)
@@ -43,46 +66,20 @@ func (h *Handler) validateTaskGitBinding(ctx context.Context, projectID *string,
 	if err := h.store.ValidateTaskGitBinding(ctx, projectID, wt, br); err != nil {
 		return err
 	}
-	h.warnBranchCheckedOutElsewhere(ctx, wt, br)
-	return nil
+	return h.store.GuardBranchNotActiveElsewhere(ctx, wt, br)
 }
 
-func (h *Handler) warnBranchCheckedOutElsewhere(ctx context.Context, worktreeID, branchID string) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.warnBranchCheckedOutElsewhere")
-	if h.git == nil {
-		return
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (h *Handler) validateLegacyGitPairPartial(worktreeID, branchID *string) error {
+	wt := trimmedOptionalID(worktreeID)
+	br := trimmedOptionalID(branchID)
+	if wt == "" && br == "" {
+		return nil
 	}
-	wt, err := h.store.GetGitWorktreeByID(ctx, worktreeID)
-	if err != nil {
-		return
+	if wt == "" || br == "" {
+		return fmt.Errorf("%w: worktree_id and branch_id must both be set when worktree_branch_id is omitted", domain.ErrInvalidInput)
 	}
-	br, err := h.store.GetGitBranchByID(ctx, branchID)
-	if err != nil {
-		return
-	}
-	repoRow, err := h.store.GetGitRepositoryByID(ctx, wt.RepositoryID)
-	if err != nil {
-		return
-	}
-	opened, err := h.git.OpenRepository(ctx, repoRow.Path)
-	if err != nil {
-		return
-	}
-	worktrees, err := h.git.ListWorktrees(ctx, opened)
-	if err != nil {
-		return
-	}
-	for _, other := range worktrees {
-		if other.Path == wt.Path {
-			continue
-		}
-		if other.Branch == br.Name {
-			slog.Warn("branch checked out in another worktree at task save",
-				"cmd", calltrace.LogCmd, "operation", "handler.task_git_binding.branch_elsewhere",
-				"worktree_id", worktreeID, "branch_id", branchID, "other_worktree", other.Path)
-			return
-		}
-	}
+	return nil
 }
 
 func (h *Handler) validatePromptMentionsForWorktree(ctx context.Context, worktreeID, prompt string) error {

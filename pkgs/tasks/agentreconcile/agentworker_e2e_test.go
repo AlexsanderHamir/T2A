@@ -39,7 +39,7 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(4)
 
-	worktreeID, branchID := seedAgentReconcileGit(t, st)
+	worktreeID, branchID, _ := seedAgentReconcileGit(t, st)
 	tsk, err := st.Create(rootCtx, store.CreateTaskInput{
 		Title:         "e2e",
 		InitialPrompt: "do the thing",
@@ -141,6 +141,77 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	<-reconcileDone
 }
 
+// TestAgentWorkerE2E_worktreeBranchBinding verifies the worker resolves git
+// context via worktree_branch_id and clears active_branch_id after the run.
+func TestAgentWorkerE2E_worktreeBranchBinding(t *testing.T) {
+	t.Parallel()
+
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	q := agents.NewMemoryQueue(4)
+
+	_, _, wbID := seedAgentReconcileGit(t, st)
+	tsk, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:            "e2e-wb",
+		InitialPrompt:    "via association",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbID,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create ready task: %v", err)
+	}
+
+	r := runnerfake.New().WithName("fake")
+	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "all green",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+
+	w := worker.NewWorker(st, q, r, worker.Options{
+		RunTimeout: 30 * time.Second,
+	})
+
+	reconcileCtx, reconcileCancel := context.WithCancel(rootCtx)
+	defer reconcileCancel()
+	reconcileDone := make(chan struct{})
+	go func() {
+		defer close(reconcileDone)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick, nil)
+	}()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	defer workerCancel()
+	workerDone := make(chan error, 1)
+	go func() {
+		workerDone <- w.Run(workerCtx)
+	}()
+
+	waitTaskStatusE2E(t, rootCtx, st, tsk.ID, domain.StatusDone)
+	time.Sleep(e2eIdleSettleWindow)
+
+	wb, err := st.GetWorktreeBranchByID(rootCtx, wbID)
+	if err != nil {
+		t.Fatalf("GetWorktreeBranchByID: %v", err)
+	}
+	wt, err := st.GetGitWorktreeByID(rootCtx, wb.WorktreeID)
+	if err != nil {
+		t.Fatalf("GetGitWorktreeByID: %v", err)
+	}
+	if wt.ActiveBranchID != nil {
+		t.Fatalf("active_branch_id = %v after run, want cleared", *wt.ActiveBranchID)
+	}
+
+	workerCancel()
+	if err := <-workerDone; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+	reconcileCancel()
+	<-reconcileDone
+}
+
 // TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone verifies the worker
 // does not run a dependent task until every depends_on task is done.
 func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
@@ -152,7 +223,7 @@ func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
 
-	worktreeID, branchID := seedAgentReconcileGit(t, st)
+	worktreeID, branchID, _ := seedAgentReconcileGit(t, st)
 	upstream, err := st.Create(rootCtx, store.CreateTaskInput{
 		Title:         "upstream",
 		InitialPrompt: "first",

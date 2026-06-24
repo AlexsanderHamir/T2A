@@ -25,6 +25,7 @@ type taskComposePayloadJSON struct {
 	ChecklistItems        []store.CreateChecklistItemInput `json:"checklist_items"`
 	WorktreeID            *string                          `json:"worktree_id,omitempty"`
 	BranchID              *string                          `json:"branch_id,omitempty"`
+	WorktreeBranchID      *string                          `json:"worktree_branch_id,omitempty"`
 }
 
 type taskTemplateSaveJSON struct {

@@ -11,9 +11,9 @@ import (
 )
 
 // seedAgentReconcileGit initialises a temp git repo, registers it with the
-// store, and returns the first worktree and branch ids. Skips when git is
-// not on PATH (matches pkgs/tasks/store/facade_git_test.go).
-func seedAgentReconcileGit(t *testing.T, st *store.Store) (worktreeID, branchID string) {
+// store, associates the default worktree with its branch, and returns ids.
+// Skips when git is not on PATH (matches pkgs/tasks/store/facade_git_test.go).
+func seedAgentReconcileGit(t *testing.T, st *store.Store) (worktreeID, branchID, worktreeBranchID string) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not on PATH")
@@ -47,5 +47,12 @@ func seedAgentReconcileGit(t *testing.T, st *store.Store) (worktreeID, branchID 
 	if err != nil || len(branches) == 0 {
 		t.Fatalf("ListGitBranches: %v len=%d", err, len(branches))
 	}
-	return wts[0].ID, branches[0].ID
+	wb, err := st.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
+		WorktreeID: wts[0].ID,
+		BranchID:   branches[0].ID,
+	})
+	if err != nil {
+		t.Fatalf("AssociateWorktreeBranch: %v", err)
+	}
+	return wts[0].ID, branches[0].ID, wb.ID
 }

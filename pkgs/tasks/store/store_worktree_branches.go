@@ -163,6 +163,11 @@ func (s *Store) ClearActiveBranch(ctx context.Context, worktreeID, branchID stri
 	return nil
 }
 
+// GuardBranchNotActiveElsewhere rejects binding when branchID is the active checkout in another worktree.
+func (s *Store) GuardBranchNotActiveElsewhere(ctx context.Context, worktreeID, branchID string) error {
+	return s.guardBranchNotActiveElsewhere(ctx, worktreeID, branchID)
+}
+
 func (s *Store) guardBranchNotActiveElsewhere(ctx context.Context, worktreeID, branchID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.guardBranchNotActiveElsewhere")
 	var other domain.GitWorktree

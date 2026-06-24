@@ -40,6 +40,7 @@ func taskCreateJSONToCompose(body taskCreateJSON) taskComposePayloadJSON {
 		ChecklistItems:        body.ChecklistItems,
 		WorktreeID:            body.WorktreeID,
 		BranchID:              body.BranchID,
+		WorktreeBranchID:      body.WorktreeBranchID,
 	}
 }
 
@@ -104,6 +105,7 @@ func (h *Handler) createTaskFromComposeJSON(
 		ChecklistItems:        checklistItems,
 		WorktreeID:            payload.WorktreeID,
 		BranchID:              payload.BranchID,
+		WorktreeBranchID:      payload.WorktreeBranchID,
 	}, by)
 	if err != nil {
 		return nil, err
@@ -129,7 +131,7 @@ func (h *Handler) validateComposePayload(ctx context.Context, payload taskCompos
 	if err := h.validatePromptMentionsIfRepo(ctx, payload.WorktreeID, payload.InitialPrompt); err != nil {
 		return err
 	}
-	if err := h.validateTaskGitBinding(ctx, payload.ProjectID, payload.WorktreeID, payload.BranchID); err != nil {
+	if err := h.validateTaskGitBinding(ctx, payload.ProjectID, payload.WorktreeID, payload.BranchID, payload.WorktreeBranchID); err != nil {
 		return err
 	}
 	if _, _, err := resolveRunnerModelFields(payload.Runner, payload.CursorModel, settings); err != nil {

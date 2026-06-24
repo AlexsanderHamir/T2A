@@ -167,6 +167,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		DependsOn:             dependsOnPatch,
 		WorktreeID:            body.WorktreeID,
 		BranchID:              body.BranchID,
+		WorktreeBranchID:      body.WorktreeBranchID,
 	}
 	if body.InitialPrompt != nil {
 		cur, getErr := h.store.Get(r.Context(), id)
@@ -183,7 +184,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if body.WorktreeID != nil || body.BranchID != nil {
+	if body.WorktreeID != nil || body.BranchID != nil || body.WorktreeBranchID != nil {
 		cur, getErr := h.store.Get(r.Context(), id)
 		if getErr != nil {
 			writeStoreError(w, r, op, getErr)
@@ -201,7 +202,11 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		if body.BranchID != nil {
 			br = body.BranchID
 		}
-		if err := h.validateTaskGitBinding(r.Context(), projectID, wt, br); err != nil {
+		wb := cur.WorktreeBranchID
+		if body.WorktreeBranchID != nil {
+			wb = body.WorktreeBranchID
+		}
+		if err := h.validateTaskGitBinding(r.Context(), projectID, wt, br, wb); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}
