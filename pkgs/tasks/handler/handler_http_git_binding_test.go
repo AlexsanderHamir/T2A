@@ -70,3 +70,50 @@ func TestHTTP_createTask_branchActiveElsewhere_returns409(t *testing.T) {
 		t.Fatalf("code=%q want %q", errBody.Code, domain.GitCodeBranchActiveElsewhere)
 	}
 }
+
+func TestHTTP_createTask_projectRepoMismatch_returns409(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not on PATH")
+	}
+	dir := t.TempDir()
+	srv, st, _, _, wbID := newTaskTestServerWithRepoStore(t, dir)
+	t.Cleanup(srv.Close)
+
+	ctx := context.Background()
+	gitSvc := gitwork.New()
+	otherDir := t.TempDir()
+	ensureGitRepo(t, otherDir)
+	otherRepo, err := st.CreateGlobalGitRepository(ctx, store.CreateGitRepositoryInput{Path: otherDir}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGlobalGitRepository: %v", err)
+	}
+	otherRepoID := otherRepo.ID
+	otherProj, err := st.CreateProject(ctx, store.CreateProjectInput{
+		Name:         "wrong-repo overlay",
+		RepositoryID: &otherRepoID,
+	})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	body := fmt.Sprintf(
+		`{"title":"mismatch","priority":"medium","project_id":%q,"worktree_branch_id":%q}`,
+		otherProj.ID, wbID,
+	)
+	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(res.Body)
+	_ = res.Body.Close()
+	if res.StatusCode != http.StatusConflict {
+		t.Fatalf("status %d body=%s want 409 project_repo_mismatch", res.StatusCode, raw)
+	}
+	var errBody jsonCodedErrorBody
+	if err := json.Unmarshal(raw, &errBody); err != nil {
+		t.Fatalf("decode: %v body=%s", err, raw)
+	}
+	if errBody.Code != domain.GitCodeProjectRepoMismatch {
+		t.Fatalf("code=%q want %q", errBody.Code, domain.GitCodeProjectRepoMismatch)
+	}
+}

@@ -532,7 +532,8 @@ func TestWorker_StartCycle_recordsRunnerModelAttribution(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Subtests run sequentially: each starts a worker + git prep on
+			// in-memory SQLite; nested t.Parallel here races sibling DBs.
 			h := newHarness(t)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
