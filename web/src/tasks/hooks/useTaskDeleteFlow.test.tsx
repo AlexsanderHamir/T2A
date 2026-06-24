@@ -1,18 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
 import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { taskQueryKeys } from "../task-query";
-import { ToastProvider } from "@/shared/toast";
 import {
   __resetMutationGuardForTests,
   shouldSuppressTaskMutationEcho,
 } from "@/tasks/sync/mutationGuard";
-import { settingsQueryKeys } from "../task-query";
-import type { AppSettings } from "@/api/settings";
-import type { Task, TaskListResponse } from "@/types";
-import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
+import type { TaskListResponse } from "@/types";
+import { makeMutationTestWrapper } from "@/test/reactQuery";
+import { makeTask } from "@/test/taskDefaults";
 
 vi.mock("../../api", () => ({
   deleteTask: vi.fn(),
@@ -21,45 +17,6 @@ vi.mock("../../api", () => ({
 import { deleteTask } from "../../api";
 
 const mockedDelete = vi.mocked(deleteTask);
-
-function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
-  return {
-    ...APP_SETTINGS_DEFAULTS,
-    ...overrides,
-  };
-}
-
-function makeWrapper(settings: AppSettings = makeAppSettings()) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  queryClient.setQueryData(settingsQueryKeys.app(), settings);
-  const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>{children}</ToastProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, queryClient, invalidateSpy };
-}
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "t1",
-    title: "Some task",
-    initial_prompt: "<p>do it</p>",
-    status: "ready",
-    priority: "low",
-    runner: "cursor",
-    cursor_model: "",
-    ...overrides,
-  };
-}
 
 describe("useTaskDeleteFlow", () => {
   beforeEach(() => {
@@ -72,7 +29,7 @@ describe("useTaskDeleteFlow", () => {
   });
 
   it("starts with no target, no pending, no success, no error", () => {
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -84,7 +41,7 @@ describe("useTaskDeleteFlow", () => {
   });
 
   it("requestDelete captures id and title", () => {
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -98,7 +55,7 @@ describe("useTaskDeleteFlow", () => {
   });
 
   it("cancelDelete clears the target without calling the API", () => {
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -113,7 +70,7 @@ describe("useTaskDeleteFlow", () => {
   });
 
   it("confirmDelete is a no-op when no target is set", () => {
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -125,7 +82,7 @@ describe("useTaskDeleteFlow", () => {
 
   it("confirmDelete calls the API, invalidates list+stats, clears target, fires onDeleted", async () => {
     mockedDelete.mockResolvedValueOnce(undefined as unknown as void);
-    const { Wrapper, invalidateSpy } = makeWrapper();
+    const { Wrapper, invalidateSpy } = makeMutationTestWrapper();
     const onDeleted = vi.fn();
     const { result } = renderHook(() => useTaskDeleteFlow({ onDeleted }), {
       wrapper: Wrapper,
@@ -156,7 +113,7 @@ describe("useTaskDeleteFlow", () => {
 
   it("surfaces API errors via deleteError without clearing the target", async () => {
     mockedDelete.mockRejectedValueOnce(new Error("nope"));
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const onDeleted = vi.fn();
     const { result } = renderHook(() => useTaskDeleteFlow({ onDeleted }), {
       wrapper: Wrapper,
@@ -187,7 +144,7 @@ describe("useTaskDeleteFlow", () => {
     // callout before the user had interacted. resetError must NOT
     // call deleteTask again.
     mockedDelete.mockRejectedValueOnce(new Error("boom"));
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -217,7 +174,7 @@ describe("useTaskDeleteFlow", () => {
     // call when already idle so we don't churn the react-query state
     // tree on every render. Success is also preserved because detail-page
     // navigation reads the settled delete variables after the dialog closes.
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -231,7 +188,7 @@ describe("useTaskDeleteFlow", () => {
 
   it("omits parent_id from delete variables", async () => {
     mockedDelete.mockResolvedValueOnce(undefined as unknown as void);
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
@@ -260,7 +217,7 @@ describe("useTaskDeleteFlow", () => {
         }) as unknown as ReturnType<typeof deleteTask>,
     );
 
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const onDeleted = vi.fn();
     const { result } = renderHook(() => useTaskDeleteFlow({ onDeleted }), {
       wrapper: Wrapper,
@@ -316,7 +273,7 @@ describe("useTaskDeleteFlow", () => {
           resolveFn = resolve;
         }) as unknown as ReturnType<typeof deleteTask>,
     );
-    const { Wrapper, queryClient } = makeWrapper();
+    const { Wrapper, queryClient } = makeMutationTestWrapper();
     const list: TaskListResponse = {
       tasks: [makeTask({ id: "t1" }), makeTask({ id: "t2" })],
       limit: 50,
@@ -353,7 +310,7 @@ describe("useTaskDeleteFlow", () => {
   // even more confusing than a non-optimistic delete failure.
   it("restores the list cache on server error", async () => {
     mockedDelete.mockRejectedValueOnce(new Error("perm denied"));
-    const { Wrapper, queryClient } = makeWrapper();
+    const { Wrapper, queryClient } = makeMutationTestWrapper();
     const list: TaskListResponse = {
       tasks: [makeTask({ id: "t1" }), makeTask({ id: "t2" })],
       limit: 50,
@@ -392,7 +349,7 @@ describe("useTaskDeleteFlow", () => {
           resolveFn = resolve;
         }) as unknown as ReturnType<typeof deleteTask>,
     );
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });

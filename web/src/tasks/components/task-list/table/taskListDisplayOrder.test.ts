@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { TaskWithDepth } from "../../../task-tree";
-import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
+import { makeTaskWithCreatedAt } from "@/test/taskDefaults";
 import { computeTaskListDisplayOrder } from "./taskListDisplayOrder";
 
 function makeTask(id: string, created_at: string): TaskWithDepth {
-  return {
-    id,
-    title: id,
-    initial_prompt: "",
-    status: "ready",
-    priority: "medium",
-    created_at,
-    depth: 0,
-    ...TASK_TEST_DEFAULTS,
-  };
+  return { ...makeTaskWithCreatedAt(id, created_at), depth: 0 };
 }
 
 /** Documents the pre-fix append-at-bottom bug that bulk template create exposed. */

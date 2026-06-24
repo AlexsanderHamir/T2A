@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task, TaskDraftDetail } from "@/types";
+import type { TaskDraftDetail } from "@/types";
 import { DEFAULT_PROJECT_ID } from "@/types";
 import { settingsQueryKeys } from "../../task-query";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
@@ -28,20 +28,7 @@ const mockedListDrafts = vi.mocked(listTaskDrafts);
 const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
 
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "task-1",
-    title: "Fresh task",
-    initial_prompt: "",
-    status: "ready",
-    priority: "medium",
-    runner: "cursor",
-    cursor_model: "",
-    project_id: DEFAULT_PROJECT_ID,
-    ...overrides,
-  };
-}
-
+import { makeTask } from "@/test/taskDefaults";
 function makeWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {

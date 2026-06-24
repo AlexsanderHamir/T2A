@@ -1,18 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
 import { useTaskPatchFlow, type TaskPatchInput } from "./useTaskPatchFlow";
 import { taskQueryKeys } from "../task-query";
-import { ToastProvider } from "@/shared/toast";
 import {
   __resetMutationGuardForTests,
   shouldSuppressTaskMutationEcho,
 } from "@/tasks/sync/mutationGuard";
-import { settingsQueryKeys } from "../task-query";
-import type { AppSettings } from "@/api/settings";
+import { makeMutationTestWrapper } from "@/test/reactQuery";
+import { makeTask } from "@/test/taskDefaults";
 import type { Task } from "@/types";
-import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 
 vi.mock("../../api", () => ({
   patchTask: vi.fn(),
@@ -21,49 +17,6 @@ vi.mock("../../api", () => ({
 import { patchTask } from "../../api";
 
 const mockedPatch = vi.mocked(patchTask);
-
-function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
-  return {
-    ...APP_SETTINGS_DEFAULTS,
-    ...overrides,
-  };
-}
-
-function makeWrapper(settings: AppSettings = makeAppSettings()) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  // Seed the settings query so useRolloutFlags reads it synchronously
-  // on first render. Without this seed the hook returns
-  // {optimisticMutationsEnabled:false} for the first few renders and
-  // the optimistic code path never runs in the test.
-  queryClient.setQueryData(settingsQueryKeys.app(), settings);
-  const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>{children}</ToastProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, queryClient, invalidateSpy };
-}
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "t1",
-    title: "Original title",
-    initial_prompt: "<p>orig</p>",
-    status: "ready",
-    priority: "low",
-    runner: "cursor",
-    cursor_model: "",
-    ...overrides,
-  };
-}
 
 const baseInput: TaskPatchInput = {
   id: "t1",
@@ -85,7 +38,7 @@ describe("useTaskPatchFlow", () => {
   });
 
   it("starts idle (no pending, no error)", () => {
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -95,7 +48,7 @@ describe("useTaskPatchFlow", () => {
 
   it("forwards every patch field to patchTask(id, fields) on the API call", async () => {
     mockedPatch.mockResolvedValueOnce(undefined as unknown as never);
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -116,7 +69,7 @@ describe("useTaskPatchFlow", () => {
 
   it("forwards pickup_not_before when provided on the patch input", async () => {
     mockedPatch.mockResolvedValueOnce(undefined as unknown as never);
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -147,7 +100,7 @@ describe("useTaskPatchFlow", () => {
           resolveFn = resolve;
         }) as unknown as ReturnType<typeof patchTask>,
     );
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -167,7 +120,7 @@ describe("useTaskPatchFlow", () => {
 
   it("invalidates the full tasks tree + task-stats on success and fires onPatched(id)", async () => {
     mockedPatch.mockResolvedValueOnce(undefined as unknown as never);
-    const { Wrapper, invalidateSpy } = makeWrapper();
+    const { Wrapper, invalidateSpy } = makeMutationTestWrapper();
     const onPatched = vi.fn();
     const { result } = renderHook(() => useTaskPatchFlow({ onPatched }), {
       wrapper: Wrapper,
@@ -184,7 +137,7 @@ describe("useTaskPatchFlow", () => {
 
   it("surfaces API errors via patchError; does not call onPatched", async () => {
     mockedPatch.mockRejectedValueOnce(new Error("boom"));
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const onPatched = vi.fn();
     const { result } = renderHook(() => useTaskPatchFlow({ onPatched }), {
       wrapper: Wrapper,
@@ -201,7 +154,7 @@ describe("useTaskPatchFlow", () => {
 
   it("clears patchError after a subsequent successful patch", async () => {
     mockedPatch.mockRejectedValueOnce(new Error("first-fail"));
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -226,7 +179,7 @@ describe("useTaskPatchFlow", () => {
     // any edit modal would render an old `.err` callout before the
     // user had interacted. `resetError` must NOT call patchTask again.
     mockedPatch.mockRejectedValueOnce(new Error("boom"));
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -252,7 +205,7 @@ describe("useTaskPatchFlow", () => {
     // session); resetError must skip the underlying mutation.reset()
     // call when already idle so we don't churn the react-query state
     // tree on every render.
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });
@@ -266,7 +219,7 @@ describe("useTaskPatchFlow", () => {
 
   it("calls onPatched with the id from the most recent patch", async () => {
     mockedPatch.mockResolvedValue(undefined as unknown as never);
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const onPatched = vi.fn();
     const { result } = renderHook(() => useTaskPatchFlow({ onPatched }), {
       wrapper: Wrapper,
@@ -299,7 +252,7 @@ describe("useTaskPatchFlow", () => {
           resolveFn = resolve;
         }) as unknown as ReturnType<typeof patchTask>,
     );
-    const { Wrapper, queryClient } = makeWrapper();
+    const { Wrapper, queryClient } = makeMutationTestWrapper();
     queryClient.setQueryData<Task>(taskQueryKeys.detail("t1"), makeTask());
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
@@ -327,7 +280,7 @@ describe("useTaskPatchFlow", () => {
   // experience optimistic UI is supposed to avoid.
   it("rolls the detail cache back to the snapshot on server error", async () => {
     mockedPatch.mockRejectedValueOnce(new Error("save failed"));
-    const { Wrapper, queryClient } = makeWrapper();
+    const { Wrapper, queryClient } = makeMutationTestWrapper();
     const original = makeTask();
     queryClient.setQueryData<Task>(taskQueryKeys.detail("t1"), original);
     const { result } = renderHook(() => useTaskPatchFlow(), {
@@ -356,7 +309,7 @@ describe("useTaskPatchFlow", () => {
           resolveFn = resolve;
         }) as unknown as ReturnType<typeof patchTask>,
     );
-    const { Wrapper } = makeWrapper();
+    const { Wrapper } = makeMutationTestWrapper();
     const { result } = renderHook(() => useTaskPatchFlow(), {
       wrapper: Wrapper,
     });

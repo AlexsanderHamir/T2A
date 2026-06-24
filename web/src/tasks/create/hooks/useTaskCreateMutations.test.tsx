@@ -2,8 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { Task } from "@/types";
-import { DEFAULT_PROJECT_ID } from "@/types";
 import { taskQueryKeys } from "../../task-query";
 import { useTaskCreateMutations } from "./useTaskCreateMutations";
 
@@ -23,20 +21,7 @@ import { instantiateTaskTemplates } from "@/api";
 
 const mockedInstantiate = vi.mocked(instantiateTaskTemplates);
 
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "task-1",
-    title: "From template",
-    initial_prompt: "",
-    status: "ready",
-    priority: "medium",
-    runner: "cursor",
-    cursor_model: "",
-    project_id: DEFAULT_PROJECT_ID,
-    ...overrides,
-  };
-}
-
+import { makeTask } from "@/test/taskDefaults";
 function makeMutationInput(queryClient: QueryClient) {
   return {
     queryClient,

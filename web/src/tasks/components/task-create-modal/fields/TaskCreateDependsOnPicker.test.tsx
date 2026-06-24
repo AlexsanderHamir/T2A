@@ -6,19 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { taskQueryKeys } from "@/tasks/task-query";
 import type { Task, TaskListResponse } from "@/types";
-import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
+import { makeTask as makeTaskBase } from "@/test/taskDefaults";
 import { TaskCreateDependsOnPicker } from "./TaskCreateDependsOnPicker";
 
 function makeTask(partial: Partial<Task> & Pick<Task, "id" | "title">): Task {
-  return {
-    initial_prompt: "",
-    status: "ready",
-    priority: "medium",
-    runner: TASK_TEST_DEFAULTS.runner,
-    cursor_model: TASK_TEST_DEFAULTS.cursor_model,
-    checklist_inherit: false,
-    ...partial,
-  } as Task;
+  return makeTaskBase(partial);
 }
 
 const PROJECT_A = "project-aaa";
