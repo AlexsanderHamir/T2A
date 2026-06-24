@@ -61,16 +61,30 @@
   list-style: none;
 }
 
+.workspace-picker-root-group .workspace-picker-section-label {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+}
+
 .workspace-picker-root-group + .workspace-picker-root-group {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
+  margin-top: 0;
+  padding-top: 0;
   border-top: 1px solid var(--border-hairline);
+}
+
+.workspace-picker-root-group + .workspace-picker-root-group .workspace-picker-section-label {
+  padding-top: var(--space-4);
 }
 
 .workspace-picker-root-group-list {
   list-style: none;
-  margin: var(--space-2) 0 0;
+  margin: 0;
   padding: 0;
+}
+
+.workspace-picker-root-group-list > li,
+.workspace-picker-list > li {
+  display: block;
+  width: 100%;
 }
 
 /* Breadcrumb bar: persistent context for "where am I." Back + the full
@@ -187,7 +201,7 @@
 .workspace-picker-list {
   list-style: none;
   margin: 0;
-  padding: var(--space-1);
+  padding: 0;
   flex: 1;
   min-height: 14rem;
   max-height: min(50vh, 26rem);
@@ -205,7 +219,8 @@
   min-height: 3rem;
   padding: var(--space-2) var(--space-3);
   border: none;
-  border-radius: var(--radius-md);
+  border-bottom: 1px solid var(--border-hairline);
+  border-radius: 0;
   background: transparent;
   color: var(--text-primary);
   font: inherit;
@@ -215,6 +230,11 @@
   transition:
     background var(--duration-normal) var(--ease-default),
     color var(--duration-normal) var(--ease-default);
+}
+
+.workspace-picker-list > li:last-child .workspace-picker-row,
+.workspace-picker-root-group-list > li:last-child .workspace-picker-row {
+  border-bottom: none;
 }
 
 .workspace-picker-row:not(:disabled):hover {
