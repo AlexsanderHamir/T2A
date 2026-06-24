@@ -1,4 +1,5 @@
 import type { GitBranch, GitRepository, GitWorktree, WorktreeBranch } from "@/types/git";
+import type { JsonBodyType } from "msw";
 
 export const FACTORY_GIT_REPO_ID = "00000000-0000-4000-8000-000000000010";
 export const FACTORY_GIT_WORKTREE_ID = "00000000-0000-4000-8000-000000000020";
@@ -50,22 +51,22 @@ export function worktreeBranchFactory(overrides: Partial<WorktreeBranch> = {}): 
   };
 }
 
-export function globalGitRepositoriesResponse(): unknown {
+export function globalGitRepositoriesResponse(): JsonBodyType {
   return { repositories: [gitRepositoryFactory()] };
 }
 
-export function globalGitWorktreesResponse(): unknown {
+export function globalGitWorktreesResponse(): JsonBodyType {
   return { worktrees: [gitWorktreeFactory()] };
 }
 
-export function globalGitBranchesResponse(): unknown {
+export function globalGitBranchesResponse(): JsonBodyType {
   return { branches: [gitBranchFactory()] };
 }
 
-export function globalGitLiveBranchesResponse(): unknown {
+export function globalGitLiveBranchesResponse(): JsonBodyType {
   return { branches: [{ name: "main", head_sha: "abc123" }] };
 }
 
-export function worktreeBranchAssociationsResponse(): unknown {
+export function worktreeBranchAssociationsResponse(): JsonBodyType {
   return { associations: [worktreeBranchFactory()] };
 }

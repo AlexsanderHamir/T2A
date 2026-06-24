@@ -95,7 +95,7 @@ export function checklistItemCreate(taskId: string) {
 }
 
 export function defaultTask(id = "t1", title = "Ship fix"): Task {
-  return makeTask({ id, title, initial_prompt: "", checklist_inherit: false });
+  return makeTask({ id, title, initial_prompt: "" });
 }
 
 /** Handlers for home create-modal flows that refresh the task list after POST. */

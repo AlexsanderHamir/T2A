@@ -1,4 +1,5 @@
 import { DEFAULT_PROJECT_ID } from "@/types";
+import type { JsonBodyType } from "msw";
 import {
   FACTORY_GIT_BRANCH_ID,
   FACTORY_GIT_REPO_ID,
@@ -12,7 +13,7 @@ export const GIT_TEST_REPO_ID = FACTORY_GIT_REPO_ID;
 export const GIT_TEST_WORKTREE_ID = FACTORY_GIT_WORKTREE_ID;
 export const GIT_TEST_BRANCH_ID = FACTORY_GIT_BRANCH_ID;
 
-export function gitRepositoriesResponse(): unknown {
+export function gitRepositoriesResponse(): JsonBodyType {
   return {
     repositories: [
       { ...gitRepositoryFactory(), project_id: DEFAULT_PROJECT_ID },
@@ -20,11 +21,11 @@ export function gitRepositoriesResponse(): unknown {
   };
 }
 
-export function gitWorktreesResponse(): unknown {
+export function gitWorktreesResponse(): JsonBodyType {
   return { worktrees: [gitWorktreeFactory()] };
 }
 
-export function gitBranchesResponse(): unknown {
+export function gitBranchesResponse(): JsonBodyType {
   return { branches: [gitBranchFactory()] };
 }
 
