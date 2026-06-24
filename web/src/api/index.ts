@@ -12,4 +12,5 @@ export * from "./rum";
 export * from "./bootstrap";
 export * from "./taskTemplates";
 export * from "./git";
+export * from "./gitGlobal";
 export * from "./parseGitApi";

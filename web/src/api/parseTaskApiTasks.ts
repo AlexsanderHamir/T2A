@@ -402,6 +402,12 @@ export function parseTask(value: unknown): Task {
       base.branch_id = branchID;
     }
   }
+  if (value.worktree_branch_id !== undefined && value.worktree_branch_id !== null) {
+    const wbID = parseString(value.worktree_branch_id, "worktree_branch_id").trim();
+    if (wbID !== "") {
+      base.worktree_branch_id = wbID;
+    }
+  }
   if (Array.isArray(value.tags)) {
     base.tags = value.tags.map((raw, i) => parseNonEmptyString(raw, `tags[${i}]`));
   } else if (value.tags === undefined) {

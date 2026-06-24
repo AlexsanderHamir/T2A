@@ -50,6 +50,8 @@ export type Task = {
   worktree_id?: string;
   /** Git branch binding for agent runs (Issue #39). */
   branch_id?: string;
+  /** Preferred git binding via worktree_branches association (ADR-0037). */
+  worktree_branch_id?: string;
   tags?: string[];
   milestone?: string | null;
   depends_on?: TaskDependencyEdge[];
@@ -454,6 +456,7 @@ export type TaskComposePayload = {
   project_context_item_ids?: string[];
   worktree_id?: string;
   branch_id?: string;
+  worktree_branch_id?: string;
   pickup_not_before?: string;
   tags?: string[];
   milestone?: string;
