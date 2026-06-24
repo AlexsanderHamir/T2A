@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import type { Task } from "@/types/task";
+import { createDeferred } from "@/test/deferred";
 import { makeTask } from "@/test/taskDefaults";
 import { gitApiHandlers } from "@/test/handlers/gitMsw";
 import { globalGitApiHandlers } from "@/test/handlers/gitMsw";
@@ -56,6 +57,92 @@ export function taskGet(id: string, task: Partial<Task> & Pick<Task, "id" | "tit
   );
 }
 
+/** Keeps GET /tasks/:id pending until deferred.resolve/reject is called. */
+export function taskGetPending(taskId: string) {
+  const deferred = createDeferred<Response>();
+  const handler = http.get(`/tasks/${taskId}`, () => deferred.promise);
+  return [handler, deferred] as const;
+}
+
+export function taskGetFlaky(
+  taskId: string,
+  task: Partial<Task> & Pick<Task, "id" | "title">,
+) {
+  let calls = 0;
+  return http.get(`/tasks/${taskId}`, () => {
+    calls += 1;
+    if (calls === 1) {
+      return new HttpResponse(null, { status: 500 });
+    }
+    return HttpResponse.json({
+      initial_prompt: "",
+      status: "ready",
+      priority: "medium",
+      checklist_inherit: false,
+      ...task,
+    });
+  });
+}
+
+export function taskChecklist(taskId: string, items: unknown[]) {
+  return http.get(`/tasks/${taskId}/checklist`, () =>
+    HttpResponse.json({ items }),
+  );
+}
+
+export function taskChecklistFlaky(taskId: string) {
+  let calls = 0;
+  return http.get(`/tasks/${taskId}/checklist`, () => {
+    calls += 1;
+    if (calls === 1) {
+      return new HttpResponse(null, { status: 500 });
+    }
+    return HttpResponse.json({ items: [] });
+  });
+}
+
+export function taskChecklistItemPatch(
+  taskId: string,
+  itemId: string,
+  onPatch: (body: string) => void,
+  nextText: string,
+) {
+  return http.patch(
+    `/tasks/${taskId}/checklist/items/${itemId}`,
+    async ({ request }) => {
+      const body = await request.text();
+      onPatch(body);
+      return HttpResponse.json({
+        items: [
+          {
+            id: itemId,
+            sort_order: 0,
+            text: nextText,
+            done: false,
+          },
+        ],
+      });
+    },
+  );
+}
+
+export function taskEventGet(taskId: string, seq: number, body: unknown) {
+  return http.get(`/tasks/${taskId}/events/${seq}`, () =>
+    HttpResponse.json(body),
+  );
+}
+
+export function taskEventGetFlaky(taskId: string, seq: number, body: unknown) {
+  let calls = 0;
+  return http.get(`/tasks/${taskId}/events/${seq}`, () => {
+    calls += 1;
+    if (calls === 1) {
+      return new HttpResponse(null, { status: 500 });
+    }
+    return HttpResponse.json(body);
+  });
+}
+
 export function taskChecklistEmpty(taskId: string) {
   return http.get(`/tasks/${taskId}/checklist`, () =>
     HttpResponse.json({ items: [] }),
@@ -64,6 +151,21 @@ export function taskChecklistEmpty(taskId: string) {
 
 export function taskEventsEmpty(taskId: string) {
   return http.get(new RegExp(`/tasks/${taskId}/events`), () =>
+    HttpResponse.json({
+      task_id: taskId,
+      events: [],
+      limit: 20,
+      total: 0,
+      has_more_newer: false,
+      has_more_older: false,
+      approval_pending: false,
+    }),
+  );
+}
+
+/** Task detail page event timeline — exact list path only (not /events/:seq). */
+export function taskEventsListEmpty(taskId: string) {
+  return http.get(`/tasks/${taskId}/events`, () =>
     HttpResponse.json({
       task_id: taskId,
       events: [],
