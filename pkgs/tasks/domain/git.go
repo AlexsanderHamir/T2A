@@ -16,6 +16,16 @@ const (
 	GitCodeWorktreeNotFound   = "worktree_not_found"
 	GitCodeBranchNotFound     = "branch_not_found"
 	GitCodeDuplicate          = "duplicate"
+	// GitCodeBranchActiveElsewhere is returned when a branch is the active
+	// checkout in another worktree and Hamix rejects binding/running against
+	// it (replaces the soft "checked out elsewhere" warning). See ADR-0037.
+	GitCodeBranchActiveElsewhere = "branch_active_elsewhere"
+	// GitCodeBranchNotAssociated is returned when a task binds a (worktree,
+	// branch) pair that has no worktree_branches association row.
+	GitCodeBranchNotAssociated = "branch_not_associated"
+	// GitCodeProjectRepoMismatch is returned when a task's project belongs to
+	// a different repository than its bound worktree.
+	GitCodeProjectRepoMismatch = "project_repo_mismatch"
 )
 
 // GitErr is a domain error with a stable API code for git entity routes.
@@ -44,7 +54,13 @@ func GitErrCode(err error) string {
 	return ""
 }
 
-// GitRepository is a registered main git checkout for a project.
+// GitRepository is a registered main git checkout.
+//
+// ProjectID is legacy: ADR-0037 makes repositories global (one row per
+// canonical path, shared across projects). The column is retained through the
+// expand phase so existing consumers keep compiling; it is dropped in the
+// contract cycle (Cycle 8) along with the per-project unique index, replaced
+// by a global unique index on Path.
 type GitRepository struct {
 	ID            string    `json:"id" gorm:"primaryKey"`
 	ProjectID     string    `json:"project_id" gorm:"not null;index;uniqueIndex:idx_git_repo_project_path,priority:1"`
@@ -56,16 +72,22 @@ type GitRepository struct {
 }
 
 // GitWorktree is a linked working directory for a GitRepository.
+//
+// ActiveBranchID tracks the branch currently checked out in this directory; at
+// most one branch is the active checkout in a given worktree at a time. Plain
+// indexed nullable column (no FK constraint) — set by the store/worker, cleared
+// on completion. See ADR-0037.
 type GitWorktree struct {
-	ID           string    `json:"id" gorm:"primaryKey"`
-	RepositoryID string    `json:"repository_id" gorm:"not null;index;uniqueIndex:idx_git_worktree_repo_path,priority:1"`
-	Path         string    `json:"path" gorm:"not null;uniqueIndex:idx_git_worktree_repo_path,priority:2"`
-	Name         string    `json:"name" gorm:"not null"`
-	IsMain       bool      `json:"is_main" gorm:"not null;default:false"`
-	CreatedAt    time.Time `json:"created_at" gorm:"not null;index"`
+	ID             string    `json:"id" gorm:"primaryKey"`
+	RepositoryID   string    `json:"repository_id" gorm:"not null;index;uniqueIndex:idx_git_worktree_repo_path,priority:1"`
+	Path           string    `json:"path" gorm:"not null;uniqueIndex:idx_git_worktree_repo_path,priority:2"`
+	Name           string    `json:"name" gorm:"not null"`
+	IsMain         bool      `json:"is_main" gorm:"not null;default:false"`
+	ActiveBranchID *string   `json:"active_branch_id,omitempty" gorm:"index"`
+	CreatedAt      time.Time `json:"created_at" gorm:"not null;index"`
 }
 
-// GitBranch is a local branch tracked for a GitRepository.
+// GitBranch is a local branch tracked for a GitRepository (repo-level ref).
 type GitBranch struct {
 	ID           string    `json:"id" gorm:"primaryKey"`
 	RepositoryID string    `json:"repository_id" gorm:"not null;index;uniqueIndex:idx_git_branch_repo_name,priority:1"`
@@ -73,3 +95,21 @@ type GitBranch struct {
 	HeadSHA      string    `json:"head_sha" gorm:"not null;default:''"`
 	CreatedAt    time.Time `json:"created_at" gorm:"not null;index"`
 }
+
+// WorktreeBranch associates a repo-level branch with a worktree directory
+// ("this branch, in this directory"). It is the precise node a task runs
+// against: tasks bind to a WorktreeBranch via Task.WorktreeBranchID. The
+// (WorktreeID, BranchID) pair is unique. Both sides must share the same
+// repository (enforced at the store boundary). See ADR-0037.
+type WorktreeBranch struct {
+	ID         string    `json:"id" gorm:"primaryKey"`
+	WorktreeID string    `json:"worktree_id" gorm:"not null;index;uniqueIndex:idx_worktree_branch_unique,priority:1"`
+	BranchID   string    `json:"branch_id" gorm:"not null;index;uniqueIndex:idx_worktree_branch_unique,priority:2"`
+	CreatedAt  time.Time `json:"created_at" gorm:"not null;index"`
+
+	Worktree *GitWorktree `json:"-" gorm:"foreignKey:WorktreeID;references:ID;constraint:OnDelete:CASCADE"`
+	Branch   *GitBranch   `json:"-" gorm:"foreignKey:BranchID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (WorktreeBranch) TableName() string { return "worktree_branches" }

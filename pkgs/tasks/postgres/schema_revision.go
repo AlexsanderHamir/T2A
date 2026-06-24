@@ -13,7 +13,11 @@ import (
 
 // SchemaRevision is bumped in the same PR as any change to domain models or
 // idempotent post-AutoMigrate steps in Migrate.
-const SchemaRevision = 1
+//
+// Rev 2 (ADR-0037 expand phase): adds worktree_branches, git_worktrees
+// .active_branch_id, projects.repository_id, tasks.worktree_branch_id and their
+// idempotent backfill.
+const SchemaRevision = 2
 
 const schemaMetaRowID = 1
 

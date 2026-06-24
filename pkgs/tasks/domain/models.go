@@ -44,21 +44,32 @@ type Task struct {
 	// CreatedAt is hydrated from the seq=1 task_created audit row on read;
 	// not a tasks-table column.
 	CreatedAt *time.Time `json:"created_at,omitempty" gorm:"-"`
-	// WorktreeID and BranchID bind a task to a git context (Plan 4 validates
-	// on create; columns exist in Plan 3 for delete guards).
+	// WorktreeID and BranchID are the legacy two-column git binding. ADR-0037
+	// replaces them with the single WorktreeBranchID association FK; they are
+	// retained through the expand phase and dropped in the contract cycle.
 	WorktreeID *string `json:"worktree_id,omitempty" gorm:"index"`
 	BranchID   *string `json:"branch_id,omitempty" gorm:"index"`
+	// WorktreeBranchID binds the task to a worktree_branches association
+	// ("this branch, in this directory"). Plain indexed nullable column (same
+	// pattern as WorktreeID/BranchID); validated on create from Cycle 4.
+	WorktreeBranchID *string `json:"worktree_branch_id,omitempty" gorm:"index"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 // Project is shared context memory for a long-running body of work.
+//
+// RepositoryID ties a project to exactly one global repository (ADR-0037); the
+// repository must exist first. Nullable: the built-in default project is legacy
+// with no repository. Plain indexed nullable column (no FK constraint, same
+// pattern as Task git-binding columns).
 type Project struct {
 	ID             string        `json:"id" gorm:"primaryKey"`
 	Name           string        `json:"name" gorm:"not null;index"`
 	Description    string        `json:"description" gorm:"type:text;not null;default:''"`
 	Status         ProjectStatus `json:"status" gorm:"not null;index;default:active;check:chk_projects_status,status IN ('active','archived')"`
 	ContextSummary string        `json:"context_summary" gorm:"type:text;not null;default:''"`
+	RepositoryID   *string       `json:"repository_id,omitempty" gorm:"index"`
 	CreatedAt      time.Time     `json:"created_at" gorm:"not null;index"`
 	UpdatedAt      time.Time     `json:"updated_at" gorm:"not null;index"`
 }
