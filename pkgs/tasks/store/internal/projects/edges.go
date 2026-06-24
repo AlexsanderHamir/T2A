@@ -121,7 +121,7 @@ func UpdateContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var row domain.ProjectContextEdge
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ? AND project_id = ?", edgeID, projectID).Error; err != nil {
-			return mapNotFound(err)
+			return kernel.MapNotFound(err)
 		}
 		applyContextEdgePatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()

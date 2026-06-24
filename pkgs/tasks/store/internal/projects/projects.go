@@ -6,7 +6,6 @@ import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -84,7 +83,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 	if repoID != nil {
 		var repo domain.GitRepository
 		if err := db.WithContext(ctx).First(&repo, "id = ?", *repoID).Error; err != nil {
-			return domain.Project{}, mapNotFound(err)
+			return domain.Project{}, kernel.MapNotFound(err)
 		}
 	}
 	now := time.Now().UTC()
@@ -135,7 +134,7 @@ func GetProject(ctx context.Context, db *gorm.DB, id string) (domain.Project, er
 	}
 	var row domain.Project
 	if err := db.WithContext(ctx).First(&row, "id = ?", id).Error; err != nil {
-		return domain.Project{}, mapNotFound(err)
+		return domain.Project{}, kernel.MapNotFound(err)
 	}
 	return row, nil
 }
@@ -155,7 +154,7 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var row domain.Project
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ?", id).Error; err != nil {
-			return mapNotFound(err)
+			return kernel.MapNotFound(err)
 		}
 		if err := validateDefaultProjectPatch(row, input); err != nil {
 			return err
@@ -320,7 +319,7 @@ func UpdateContext(ctx context.Context, db *gorm.DB, projectID, itemID string, i
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var row domain.ProjectContextItem
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ? AND project_id = ?", itemID, projectID).Error; err != nil {
-			return mapNotFound(err)
+			return kernel.MapNotFound(err)
 		}
 		applyContextPatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()
@@ -404,7 +403,7 @@ func GetSnapshotForCycle(ctx context.Context, db *gorm.DB, cycleID string) (doma
 	}
 	var row domain.TaskContextSnapshot
 	if err := db.WithContext(ctx).First(&row, "cycle_id = ?", cycleID).Error; err != nil {
-		return domain.TaskContextSnapshot{}, mapNotFound(err)
+		return domain.TaskContextSnapshot{}, kernel.MapNotFound(err)
 	}
 	return row, nil
 }
@@ -508,17 +507,6 @@ func trimOptional(value *string) *string {
 		return nil
 	}
 	return &trimmed
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func mapNotFound(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.ErrNotFound
-	}
-	return fmt.Errorf("db: %w", err)
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
