@@ -45,16 +45,22 @@ describe("runWithConcurrency", () => {
     const max = 3;
     let inFlight = 0;
     let observedMax = 0;
-    const tasks = Array.from({ length: 12 }, () => async () => {
+    const gates = Array.from({ length: 12 }, () => deferred<void>());
+    const tasks = gates.map((gate) => async () => {
       inFlight++;
       observedMax = Math.max(observedMax, inFlight);
-      await new Promise((r) => setTimeout(r, 5));
+      await gate.promise;
       inFlight--;
       return inFlight;
     });
-    await runWithConcurrency(tasks, max);
+    const run = runWithConcurrency(tasks, max);
+    await Promise.resolve();
     expect(observedMax).toBeLessThanOrEqual(max);
     expect(observedMax).toBeGreaterThan(0);
+    for (const gate of gates) {
+      gate.resolve();
+    }
+    await run;
   });
 
   it("clamps `limit` below 1 to 1 (no division-by-zero, no idle workers)", async () => {
@@ -96,9 +102,11 @@ describe("runWithConcurrency", () => {
       2,
     );
     d2.resolve();
-    await new Promise((r) => setTimeout(r, 0));
+    await Promise.resolve();
+    await Promise.resolve();
     d3.resolve();
-    await new Promise((r) => setTimeout(r, 0));
+    await Promise.resolve();
+    await Promise.resolve();
     d1.resolve();
     await promise;
     expect(order).toEqual([2, 3, 1]);

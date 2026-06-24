@@ -10,9 +10,7 @@ import {
   taskChecklistEmpty,
   taskEventsEmpty,
   taskGet,
-  tasksListEmpty,
 } from "@/test/handlers/tasks";
-import { repoNotConfigured } from "@/test/handlers/repo";
 import {
   appDefaultHandlers,
   renderApp,

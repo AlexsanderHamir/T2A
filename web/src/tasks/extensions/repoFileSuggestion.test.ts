@@ -59,7 +59,12 @@ describe("RepoFileSuggestion", () => {
     });
     editor.chain().insertContent("@").run();
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r, 30));
+    vi.useFakeTimers();
+    try {
+      await vi.advanceTimersByTimeAsync(30);
+    } finally {
+      vi.useRealTimers();
+    }
     expect(onRepoUnavailable).not.toHaveBeenCalled();
     editor.destroy();
   });

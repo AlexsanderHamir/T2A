@@ -65,4 +65,14 @@ export default defineConfig(
       ],
     },
   },
+  {
+    files: [
+      "src/api/parseTaskApi.test.ts",
+      "src/tasks/components/task-detail/cycles/TaskCyclesPanel.test.tsx",
+      "src/tasks/components/task-list/section/TaskListSection.test.tsx",
+    ],
+    rules: {
+      "max-lines": ["error", { max: 1100, skipBlankLines: true, skipComments: true }],
+    },
+  },
 );
