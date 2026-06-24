@@ -12,7 +12,7 @@ Full reference: [docs/domain/web-testing.md](../../docs/domain/web-testing.md).
 
 1. **MSW only for new tests** — `server.use(handlers)` from `web/src/test/handlers/`. No new `vi.spyOn(globalThis, "fetch")`.
 2. **No bare sleeps** — `vi.useFakeTimers()` or `createDeferred()`; never `setTimeout` or `new Promise(() => {})`.
-3. **Project placement** — `unit` / `components` / `integration` per `web/vitest.workspace.ts`. `<App />` and pages belong in `integration`.
+3. **Project placement** — `unit` / `components` / `app` / `task-pages` / `task-create` / `settings` / `projects` / `worktrees` per `web/vitest.workspace.ts`. `<App />` and pages belong in the matching full-app project.
 4. **≤ 500 lines** per `*.test.{ts,tsx}`.
 5. **Keep tests fast** — prefer handlers + `renderHook` over full-app renders when the behaviour is local.
 
