@@ -1,7 +1,7 @@
 # ADR-0036: Workspace Place Providers
 
 **Date:** 2026-06-23
-**Status:** Accepted
+**Status:** Superseded by [Cycle 7 browse policy cleanup](#cycle-7-amendment-2026-06-23)
 **Deciders:** Engineering
 
 ## Context
@@ -64,3 +64,26 @@ Directory listing (`ListBrowseDirs` / `readBrowseSubdirs`) performs **pure I/O**
 | Rename endpoint to `/settings/places` | Unnecessary breaking change; `category` extends existing shape |
 | macOS cgo / `NSFileManager` | `$HOME` paths are symlinked by the OS; cgo adds build complexity for marginal gain |
 | Inject user dirs as synthetic children of Home | Hides first-class folders; breadcrumb parent semantics become ambiguous |
+
+---
+
+## Cycle 7 Amendment (2026-06-23)
+
+**Status:** This decision is superseded for `GET /settings/workspace-roots` behavior. The Place / PlaceProvider abstraction is retained but the **default registry is emptied**.
+
+### What changed
+
+`GET /settings/workspace-roots` now returns registered git repositories from the `git_repositories` table instead of OS-resolved place providers.
+
+- `InstallPlaceProvider`, `HomePlaceProvider`, and `UserDirsPlaceProvider` are **retired from `defaultPlaceRegistry()`**. Their code is preserved for future reuse but no longer registered by default.
+- `CustomPlaceProvider` (`HAMIX_BROWSE_ROOTS`) remains as an **ops override**: when set, it replaces DB-sourced roots entirely (for CI and restricted deployments).
+- `GET /settings/workspace-roots` returns roots with `category: "registered"` for DB-sourced entries.
+- `GET /settings/browse-dirs` switches to **full-disk (unrestricted) listing** when `HAMIX_BROWSE_ROOTS` is not set, enabling the register-repo bootstrap flow without requiring pre-configured roots.
+- A new `repo.ListBrowseDirsUnrestricted` function handles the unrestricted case without path containment enforcement.
+- A new `PlaceCategoryRegistered = "registered"` constant is added to `pkgs/repo`.
+
+### Rationale
+
+Once the git_repositories table is populated via the Register Repo flow (Cycles 5–6), the OS folder providers no longer serve a purpose as workspace roots — they suggest locations the user hasn't registered. The picker should reflect what has been deliberately registered, not what happens to exist on disk.
+
+Full-disk browse is preserved in `browse-dirs` so operators can still navigate to unregistered repositories during the bootstrap registration flow.

@@ -32,22 +32,39 @@ func (h *Handler) workspaceRoots(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
+	env := repo.DetectBrowseEnvironment()
+
+	// HAMIX_BROWSE_ROOTS is an ops override that replaces DB-sourced roots entirely.
+	if repo.CustomBrowseRootsConfigured() {
+		wd, err := os.Getwd()
+		if err != nil {
+			writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
+			return
+		}
+		roots, browseEnv, err := repo.ResolveBrowseRoots(wd)
+		if err != nil {
+			slog.Log(r.Context(), slog.LevelError, "workspace roots failed",
+				"cmd", calltrace.LogCmd, "operation", op, "err", err)
+			writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
+			return
+		}
+		writeJSON(w, r, op, http.StatusOK, workspaceRootsResponse{Roots: roots, Environment: browseEnv})
 		return
 	}
-	roots, env, err := repo.ResolveBrowseRoots(wd)
+
+	// Normal path: registered git repositories are the workspace roots (Cycle 7).
+	gitRepos, err := h.store.ListAllGitRepositories(r.Context())
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "workspace roots failed",
+		slog.Log(r.Context(), slog.LevelError, "list git repositories failed",
 			"cmd", calltrace.LogCmd, "operation", op, "err", err)
-		writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
+		writeJSONError(w, r, op, http.StatusInternalServerError, "workspace roots unavailable")
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, workspaceRootsResponse{
-		Roots:       roots,
-		Environment: env,
-	})
+	roots := make([]repo.BrowseRoot, 0, len(gitRepos))
+	for _, gr := range gitRepos {
+		roots = append(roots, repo.BrowseRootFromPath(gr.ID, gr.Path, repo.PlaceCategoryRegistered))
+	}
+	writeJSON(w, r, op, http.StatusOK, workspaceRootsResponse{Roots: roots, Environment: env})
 }
 
 func (h *Handler) browseDirs(w http.ResponseWriter, r *http.Request) {
@@ -64,24 +81,33 @@ func (h *Handler) browseDirs(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusBadRequest, "path too long")
 		return
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
-		return
+
+	var listing repo.BrowseDirListing
+	var listErr error
+	if repo.CustomBrowseRootsConfigured() {
+		// Ops override: constrain browsing to the configured roots.
+		wd, err := os.Getwd()
+		if err != nil {
+			writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
+			return
+		}
+		roots, _, err := repo.ResolveBrowseRoots(wd)
+		if err != nil {
+			writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
+			return
+		}
+		listing, listErr = repo.ListBrowseDirs(roots, path)
+	} else {
+		// Full-disk browse for register-repo bootstrap: no containment restriction.
+		listing, listErr = repo.ListBrowseDirsUnrestricted(path)
 	}
-	roots, _, err := repo.ResolveBrowseRoots(wd)
-	if err != nil {
-		writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
-		return
-	}
-	listing, err := repo.ListBrowseDirs(roots, path)
-	if err != nil {
-		if errors.Is(err, domain.ErrInvalidInput) {
-			writeJSONError(w, r, op, http.StatusBadRequest, repoErrUserMessage(err))
+	if listErr != nil {
+		if errors.Is(listErr, domain.ErrInvalidInput) {
+			writeJSONError(w, r, op, http.StatusBadRequest, repoErrUserMessage(listErr))
 			return
 		}
 		slog.Log(r.Context(), slog.LevelError, "browse dirs failed",
-			"cmd", calltrace.LogCmd, "operation", op, "err", err)
+			"cmd", calltrace.LogCmd, "operation", op, "err", listErr)
 		writeJSONError(w, r, op, http.StatusInternalServerError, "browse failed")
 		return
 	}

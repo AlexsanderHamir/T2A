@@ -5,6 +5,7 @@ import {
   createGlobalGitWorktree,
   deleteGlobalGitRepository,
   deleteGlobalGitWorktree,
+  reconcileGlobalGitRepository,
   registerGlobalGitWorktree,
   removeWorktreeBranchAssociation,
 } from "@/api/gitGlobal";
@@ -82,6 +83,11 @@ export function useGlobalGitMutations() {
     },
   });
 
+  const reconcile = useMutation({
+    mutationFn: (repositoryId: string) => reconcileGlobalGitRepository(repositoryId),
+    onSuccess: (_data, repositoryId) => invalidateRepo(repositoryId),
+  });
+
   return {
     createRepository,
     deleteRepository,
@@ -90,5 +96,6 @@ export function useGlobalGitMutations() {
     deleteWorktree,
     associateBranch,
     removeAssociation,
+    reconcile,
   };
 }

@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { DEFAULT_PROJECT_ID } from "@/types";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { requestUrl } from "@/test/requestUrl";
+import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
 import { WorktreesPage } from "./WorktreesPage";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 
@@ -45,15 +45,17 @@ describe("WorktreesPage", () => {
   it("shows header CTA that opens register modal when empty", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
-      if (url.endsWith(`/projects/${DEFAULT_PROJECT_ID}/git/repositories`)) {
+      const res = respondGlobalGitApi(url, "GET");
+      if (url.endsWith("/git/repositories")) {
         return jsonResponse({ repositories: [] });
       }
+      if (res) return res;
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
     renderPage();
     await screen.findByText(/No repositories yet/i);
-    fireEvent.click(screen.getByRole("button", { name: /Register repository/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Register repository/i }));
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
     ).toBeInTheDocument();
@@ -77,57 +79,59 @@ describe("WorktreesPage", () => {
   it("renders one repository with two worktrees", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
-        if (url.endsWith(`/projects/${DEFAULT_PROJECT_ID}/git/repositories`)) {
-          return jsonResponse({
-            repositories: [
-              {
-                id: repoId,
-                project_id: DEFAULT_PROJECT_ID,
-                path: "/repo/main",
-                host_path: "",
-                default_branch: "main",
-                created_at: "2026-06-22T12:00:00Z",
-                updated_at: "2026-06-22T12:00:00Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/worktrees")) {
-          return jsonResponse({
-            worktrees: [
-              {
-                id: wtA,
-                repository_id: repoId,
-                path: "/repo/main",
-                name: "main",
-                is_main: true,
-                created_at: "2026-06-22T12:00:00Z",
-              },
-              {
-                id: wtB,
-                repository_id: repoId,
-                path: "/repo/feature",
-                name: "feature",
-                is_main: false,
-                created_at: "2026-06-22T12:00:00Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/branches")) {
-          return jsonResponse({
-            branches: [
-              {
-                id: branchId,
-                repository_id: repoId,
-                name: "main",
-                head_sha: "abc123",
-                created_at: "2026-06-22T12:00:00Z",
-              },
-            ],
-          });
-        }
-        return jsonResponse({ error: "not found" }, { status: 404 });
+      if (url.endsWith("/git/repositories")) {
+        return jsonResponse({
+          repositories: [
+            {
+              id: repoId,
+              path: "/repo/main",
+              host_path: "",
+              default_branch: "main",
+              created_at: "2026-06-22T12:00:00Z",
+              updated_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (url.includes(`/git/repositories/${repoId}/worktrees`)) {
+        return jsonResponse({
+          worktrees: [
+            {
+              id: wtA,
+              repository_id: repoId,
+              path: "/repo/main",
+              name: "main",
+              is_main: true,
+              created_at: "2026-06-22T12:00:00Z",
+            },
+            {
+              id: wtB,
+              repository_id: repoId,
+              path: "/repo/feature",
+              name: "feature",
+              is_main: false,
+              created_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (url.includes(`/git/repositories/${repoId}/branches`)) {
+        return jsonResponse({
+          branches: [
+            {
+              id: branchId,
+              repository_id: repoId,
+              name: "main",
+              head_sha: "abc123",
+              created_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/git/worktrees/") && url.endsWith("/branches")) {
+        return jsonResponse({ associations: [] });
+      }
+      return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
     renderPage();
@@ -140,12 +144,11 @@ describe("WorktreesPage", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = requestUrl(input);
       const method = init?.method ?? "GET";
-      if (method === "GET" && url.endsWith(`/projects/${DEFAULT_PROJECT_ID}/git/repositories`)) {
+      if (method === "GET" && url.endsWith("/git/repositories")) {
         return jsonResponse({
           repositories: [
             {
               id: repoId,
-              project_id: DEFAULT_PROJECT_ID,
               path: "/repo/main",
               host_path: "",
               default_branch: "main",
@@ -155,7 +158,7 @@ describe("WorktreesPage", () => {
           ],
         });
       }
-      if (method === "GET" && url.includes("/worktrees") && !url.includes(wtB)) {
+      if (method === "GET" && url.includes(`/git/repositories/${repoId}/worktrees`)) {
         return jsonResponse({
           worktrees: [
             {
@@ -169,8 +172,11 @@ describe("WorktreesPage", () => {
           ],
         });
       }
-      if (method === "GET" && url.includes("/branches")) {
+      if (method === "GET" && url.includes(`/git/repositories/${repoId}/branches`)) {
         return jsonResponse({ branches: [] });
+      }
+      if (method === "GET" && url.includes("/git/worktrees/") && url.endsWith("/branches")) {
+        return jsonResponse({ associations: [] });
       }
       if (method === "DELETE") {
         return jsonResponse(

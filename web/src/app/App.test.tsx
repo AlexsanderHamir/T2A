@@ -10,6 +10,7 @@ import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
 import { respondGitApi } from "@/test/handlers/git";
+import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
 
 /** Task create modal loads models via POST /settings/list-cursor-models; mocks must not 404 here. */
 function jsonListCursorModelsOk(): Response {
@@ -265,7 +266,7 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
-      const git = respondGitApi(url, init?.method ?? "GET");
+      const git = respondGitApi(url, init?.method ?? "GET") ?? respondGlobalGitApi(url, init?.method ?? "GET");
       if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
@@ -1054,7 +1055,7 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
-      const git = respondGitApi(url, init?.method ?? "GET");
+      const git = respondGitApi(url, init?.method ?? "GET") ?? respondGlobalGitApi(url, init?.method ?? "GET");
       if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
@@ -1139,7 +1140,7 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
-      const git = respondGitApi(url, init?.method ?? "GET");
+      const git = respondGitApi(url, init?.method ?? "GET") ?? respondGlobalGitApi(url, init?.method ?? "GET");
       if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
@@ -1294,7 +1295,7 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
-      const git = respondGitApi(url, init?.method ?? "GET");
+      const git = respondGitApi(url, init?.method ?? "GET") ?? respondGlobalGitApi(url, init?.method ?? "GET");
       if (git) return git;
       if (url.startsWith("/tasks?")) {
         return Response.json({

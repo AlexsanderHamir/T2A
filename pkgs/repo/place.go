@@ -8,15 +8,16 @@ import (
 type PlaceCategory string
 
 const (
-	PlaceCategoryInstall   PlaceCategory = "install"
-	PlaceCategoryHome      PlaceCategory = "home"
-	PlaceCategoryDocuments PlaceCategory = "documents"
-	PlaceCategoryDesktop   PlaceCategory = "desktop"
-	PlaceCategoryDownloads PlaceCategory = "downloads"
-	PlaceCategoryPictures  PlaceCategory = "pictures"
-	PlaceCategoryMusic     PlaceCategory = "music"
-	PlaceCategoryVideos    PlaceCategory = "videos"
-	PlaceCategoryCustom    PlaceCategory = "custom"
+	PlaceCategoryInstall    PlaceCategory = "install"
+	PlaceCategoryHome       PlaceCategory = "home"
+	PlaceCategoryDocuments  PlaceCategory = "documents"
+	PlaceCategoryDesktop    PlaceCategory = "desktop"
+	PlaceCategoryDownloads  PlaceCategory = "downloads"
+	PlaceCategoryPictures   PlaceCategory = "pictures"
+	PlaceCategoryMusic      PlaceCategory = "music"
+	PlaceCategoryVideos     PlaceCategory = "videos"
+	PlaceCategoryCustom     PlaceCategory = "custom"
+	PlaceCategoryRegistered PlaceCategory = "registered"
 )
 
 // Place is a labeled absolute directory the workspace picker may start from.

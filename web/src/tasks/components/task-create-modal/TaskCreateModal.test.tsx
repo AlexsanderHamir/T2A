@@ -11,8 +11,8 @@ import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import {
   GIT_TEST_BRANCH_ID,
   GIT_TEST_WORKTREE_ID,
-  respondGitApi,
 } from "@/test/handlers/git";
+import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskCreateModal } from "./TaskCreateModal";
 
@@ -511,7 +511,7 @@ describe("TaskCreateModal", () => {
     function stubGitFetch() {
       vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
         const url = typeof input === "string" ? input : input.toString();
-        const git = respondGitApi(url);
+        const git = respondGlobalGitApi(url);
         if (git) return git;
         return new Response("not found", { status: 404 });
       });

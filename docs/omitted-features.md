@@ -29,23 +29,22 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 
 | Field | Value |
 | --- | --- |
-| **Status** | Omitted (initial launch) |
+| **Status** | **Restored** — Cycle 6, 2026-06-23 |
 | **Since** | 2026-06-20 |
-| **Target restore** | TBD — when multi-project workflows are launch-ready |
+| **Restored** | 2026-06-23 — global Repo→Worktree→Branch drill-down; `projects: false` in `omittedFeatures.ts` |
 
-**Operator-visible behavior**
+**Operator-visible behavior** (restored)
 
-- No **Projects** item in the primary nav.
-- `/projects` and nested project routes redirect to `/`.
-- Task list: no **Project** column and no project filter.
-- Create / edit task modal: no project picker and no project context attachment UI.
-- New and edited tasks still persist with the **default project** (`DEFAULT_PROJECT_ID` in `web/src/types/project.ts`).
+- **Projects** item visible in the primary nav.
+- `/projects` and nested project routes are accessible.
+- Task create modal: project picker active; project-scoped worktree/branch drill-down via global git API (ADR-0037).
+- New tasks can be scoped to a project and assigned a `worktree_branch_id` association.
 
-**Still implemented (intentionally not deleted)**
+**Still implemented**
 
 - REST: `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}`, project context routes — see [api.md](./api.md).
 - Postgres seed of the built-in default project (`pkgs/tasks/postgres/postgres.go`).
-- `web/src/projects/` pages, hooks, and tests (reachable in tests; not linked from launch UI).
+- `web/src/projects/` pages, hooks, and tests.
 - `project_id` on tasks in the data model — [data-model.md](./data-model.md).
 
 **UI gates**

@@ -1,34 +1,36 @@
-import type { GitBranch, GitRepository, GitWorktree } from "@/types/git";
-import { useBranches } from "../hooks/useBranches";
-import { useWorktrees } from "../hooks/useWorktrees";
+import type { GitRepository } from "@/types/git";
+import { useGlobalBranches } from "../hooks/useGlobalBranches";
+import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
 import { WorktreeRow } from "./WorktreeRow";
-import { BranchPill } from "./BranchPill";
 
 type Props = {
-  projectId: string;
   repository: GitRepository;
   onRegisterWorktree: () => void;
-  onRegisterBranch: () => void;
+  onAssociateBranch: (worktreeId: string) => void;
   onDeleteRepository: () => void;
-  onDeleteWorktree: (worktree: GitWorktree) => void;
-  onDeleteBranch: (branch: GitBranch) => void;
+  onDeleteWorktree: (worktreeId: string, label: string) => void;
+  onDeleteAssociation: (
+    assocId: string,
+    branchId: string,
+    worktreeId: string,
+    label: string,
+  ) => void;
   onReconcile: () => void;
   reconcilePending?: boolean;
 };
 
 export function RepositoryCard({
-  projectId,
   repository,
   onRegisterWorktree,
-  onRegisterBranch,
+  onAssociateBranch,
   onDeleteRepository,
   onDeleteWorktree,
-  onDeleteBranch,
+  onDeleteAssociation,
   onReconcile,
   reconcilePending = false,
 }: Props) {
-  const worktreesQuery = useWorktrees(projectId, repository.id);
-  const branchesQuery = useBranches(projectId, repository.id);
+  const worktreesQuery = useGlobalWorktrees(repository.id);
+  const branchesQuery = useGlobalBranches(repository.id);
   const worktrees = worktreesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
@@ -64,9 +66,15 @@ export function RepositoryCard({
         </div>
       </header>
 
-      <section className="worktrees-repo-card__section" aria-labelledby={`repo-${repository.id}-worktrees`}>
+      <section
+        className="worktrees-repo-card__section"
+        aria-labelledby={`repo-${repository.id}-worktrees`}
+      >
         <div className="worktrees-repo-card__section-header">
-          <h3 id={`repo-${repository.id}-worktrees`} className="worktrees-repo-card__section-title">
+          <h3
+            id={`repo-${repository.id}-worktrees`}
+            className="worktrees-repo-card__section-title"
+          >
             Worktrees
           </h3>
           <button type="button" className="secondary" onClick={onRegisterWorktree}>
@@ -86,43 +94,19 @@ export function RepositoryCard({
                 key={worktree.id}
                 worktree={worktree}
                 branches={branches}
-                onDelete={() => onDeleteWorktree(worktree)}
+                onDelete={() =>
+                  onDeleteWorktree(
+                    worktree.id,
+                    worktree.name.trim() || worktree.path,
+                  )
+                }
+                onAssociateBranch={() => onAssociateBranch(worktree.id)}
+                onDeleteAssociation={(assocId, branchId, label) =>
+                  onDeleteAssociation(assocId, branchId, worktree.id, label)
+                }
               />
             ))}
           </div>
-        )}
-      </section>
-
-      <section className="worktrees-repo-card__section" aria-labelledby={`repo-${repository.id}-branches`}>
-        <div className="worktrees-repo-card__section-header">
-          <h3 id={`repo-${repository.id}-branches`} className="worktrees-repo-card__section-title">
-            Branches
-          </h3>
-          <button type="button" className="secondary" onClick={onRegisterBranch}>
-            Add branch
-          </button>
-        </div>
-        {loading ? (
-          <p className="worktrees-repo-card__loading" aria-busy="true">
-            Loading branches…
-          </p>
-        ) : branches.length === 0 ? (
-          <p className="worktrees-repo-card__empty">No branches yet.</p>
-        ) : (
-          <ul className="worktrees-branch-list">
-            {branches.map((branch) => (
-              <li key={branch.id} className="worktrees-branch-list__item">
-                <BranchPill branch={branch} />
-                <button
-                  type="button"
-                  className="secondary worktrees-branch-list__delete"
-                  onClick={() => onDeleteBranch(branch)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
         )}
       </section>
     </article>

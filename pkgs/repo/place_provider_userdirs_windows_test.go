@@ -10,7 +10,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func TestResolveBrowseRoots_includesRedirectedDocumentsOnWindows(t *testing.T) {
+// TestUserDirsProvider_includesRedirectedDocumentsOnWindows verifies that
+// UserDirsPlaceProvider resolves the OneDrive-redirected Documents path via
+// KnownFolderPath rather than $HOME/Documents. The provider is no longer in
+// defaultPlaceRegistry (retired in Cycle 7) but its resolution logic is kept
+// for potential reuse.
+func TestUserDirsProvider_includesRedirectedDocumentsOnWindows(t *testing.T) {
 	t.Parallel()
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -25,25 +30,26 @@ func TestResolveBrowseRoots_includesRedirectedDocumentsOnWindows(t *testing.T) {
 		t.Skip("Documents is not redirected on this host")
 	}
 
-	roots, _, err := ResolveBrowseRoots(home)
+	places, err := UserDirsPlaceProvider{}.Places(BrowseEnvNative, home)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var documentsRoot *BrowseRoot
-	for i := range roots {
-		if roots[i].Category == PlaceCategoryDocuments {
-			documentsRoot = &roots[i]
+	var documentsPlace *Place
+	for i := range places {
+		if places[i].Category == PlaceCategoryDocuments {
+			documentsPlace = &places[i]
 			break
 		}
 	}
-	if documentsRoot == nil {
-		t.Fatal("expected Documents root")
+	if documentsPlace == nil {
+		t.Fatal("expected Documents place from UserDirsPlaceProvider")
 	}
-	if filepath.Clean(documentsRoot.Path) != filepath.Clean(documentsKnown) {
-		t.Fatalf("Documents path = %q want known folder %q", documentsRoot.Path, documentsKnown)
+	if filepath.Clean(documentsPlace.Path) != filepath.Clean(documentsKnown) {
+		t.Fatalf("Documents path = %q want known folder %q", documentsPlace.Path, documentsKnown)
 	}
 
-	listing, err := ListBrowseDirs(roots, documentsRoot.Path)
+	root := placeToBrowseRoot(*documentsPlace)
+	listing, err := ListBrowseDirs([]BrowseRoot{root}, documentsPlace.Path)
 	if err != nil {
 		t.Fatal(err)
 	}

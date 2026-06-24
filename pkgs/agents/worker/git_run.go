@@ -51,8 +51,8 @@ func (w *Worker) resolveTaskGitBinding(ctx context.Context, task *domain.Task) (
 		return nil, fmt.Errorf("missing_task_binding")
 	}
 	var (
-		gitCtx store.TaskGitContext
-		err    error
+		gitCtx  store.TaskGitContext
+		err     error
 		binding taskGitBinding
 	)
 	if task.WorktreeBranchID != nil && strings.TrimSpace(*task.WorktreeBranchID) != "" {

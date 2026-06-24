@@ -1,30 +1,29 @@
 import { useState } from "react";
-import { DEFAULT_PROJECT_ID, type GitBranch, type GitRepository, type GitWorktree } from "@/types";
+import type { GitRepository } from "@/types";
 import { Button } from "@/components/ui";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { TaskDraftsListSkeleton } from "@/tasks/components/skeletons";
-import { useRepositories } from "./hooks/useRepositories";
-import { useGitMutations } from "./hooks/useGitMutations";
+import { useGlobalRepositories } from "./hooks/useGlobalRepositories";
+import { useGlobalGitMutations } from "./hooks/useGlobalGitMutations";
 import { RepositoryCard } from "./components/RepositoryCard";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import type { GitDeleteTarget } from "./gitDeleteErrors";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 import { CreateWorktreeModal } from "./modals/CreateWorktreeModal";
-import { CreateBranchModal } from "./modals/CreateBranchModal";
+import { AssociateBranchModal } from "./modals/AssociateBranchModal";
 
 type ActiveRepoModal =
   | { kind: "worktree"; repository: GitRepository }
-  | { kind: "branch"; repository: GitRepository }
+  | { kind: "branch"; repository: GitRepository; worktreeId: string }
   | null;
 
 export function WorktreesPage() {
   useDocumentTitle("Worktrees");
-  const projectId = DEFAULT_PROJECT_ID;
-  const repositoriesQuery = useRepositories(projectId);
-  const mutations = useGitMutations(projectId);
+  const repositoriesQuery = useGlobalRepositories();
+  const mutations = useGlobalGitMutations();
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [activeRepoModal, setActiveRepoModal] = useState<ActiveRepoModal>(null);
@@ -48,14 +47,15 @@ export function WorktreesPage() {
     setDeleteError(null);
     try {
       if (deleteTarget.kind === "repository") {
-        await mutations.removeRepository.mutateAsync(deleteTarget.id);
+        await mutations.deleteRepository.mutateAsync(deleteTarget.id);
       } else if (deleteTarget.kind === "worktree") {
-        await mutations.removeWorktree.mutateAsync({
+        await mutations.deleteWorktree.mutateAsync({
           worktreeId: deleteTarget.id,
           repositoryId: deleteTarget.repositoryId,
         });
       } else {
-        await mutations.removeBranch.mutateAsync({
+        await mutations.removeAssociation.mutateAsync({
+          worktreeId: deleteTarget.worktreeId,
           branchId: deleteTarget.id,
           repositoryId: deleteTarget.repositoryId,
         });
@@ -65,6 +65,11 @@ export function WorktreesPage() {
       setDeleteError(err);
     }
   };
+
+  const deletePending =
+    mutations.deleteRepository.isPending ||
+    mutations.deleteWorktree.isPending ||
+    mutations.removeAssociation.isPending;
 
   return (
     <div className="task-detail-content--enter">
@@ -119,15 +124,14 @@ export function WorktreesPage() {
               {repositories.map((repository) => (
                 <RepositoryCard
                   key={repository.id}
-                  projectId={projectId}
                   repository={repository}
                   reconcilePending={mutations.reconcile.isPending}
                   onReconcile={() => void mutations.reconcile.mutate(repository.id)}
                   onRegisterWorktree={() =>
                     setActiveRepoModal({ kind: "worktree", repository })
                   }
-                  onRegisterBranch={() =>
-                    setActiveRepoModal({ kind: "branch", repository })
+                  onAssociateBranch={(worktreeId) =>
+                    setActiveRepoModal({ kind: "branch", repository, worktreeId })
                   }
                   onDeleteRepository={() =>
                     setDeleteTarget({
@@ -137,20 +141,21 @@ export function WorktreesPage() {
                       repositoryId: repository.id,
                     })
                   }
-                  onDeleteWorktree={(worktree: GitWorktree) =>
+                  onDeleteWorktree={(worktreeId, label) =>
                     setDeleteTarget({
                       kind: "worktree",
-                      id: worktree.id,
-                      label: worktree.name || worktree.path,
+                      id: worktreeId,
+                      label,
                       repositoryId: repository.id,
                     })
                   }
-                  onDeleteBranch={(branch: GitBranch) =>
+                  onDeleteAssociation={(assocId, _branchId, worktreeId, label) =>
                     setDeleteTarget({
                       kind: "branch",
-                      id: branch.id,
-                      label: branch.name,
+                      id: assocId,
+                      label,
                       repositoryId: repository.id,
+                      worktreeId,
                     })
                   }
                 />
@@ -162,14 +167,14 @@ export function WorktreesPage() {
 
       <RegisterRepositoryModal
         open={registerOpen}
-        pending={mutations.registerRepository.isPending}
-        error={mutations.registerRepository.error}
+        pending={mutations.createRepository.isPending}
+        error={mutations.createRepository.error}
         onClose={() => {
           setRegisterOpen(false);
-          mutations.registerRepository.reset();
+          mutations.createRepository.reset();
         }}
         onSubmit={(input) => {
-          void mutations.registerRepository
+          void mutations.createRepository
             .mutateAsync(input)
             .then(() => setRegisterOpen(false));
         }}
@@ -177,42 +182,51 @@ export function WorktreesPage() {
 
       <CreateWorktreeModal
         open={activeRepoModal?.kind === "worktree"}
-        pending={mutations.addWorktree.isPending}
-        error={mutations.addWorktree.error}
+        pending={mutations.createWorktree.isPending}
+        error={mutations.createWorktree.error}
         defaultBranch={activeRepoModal?.repository.default_branch}
         onClose={() => {
           setActiveRepoModal(null);
-          mutations.addWorktree.reset();
+          mutations.createWorktree.reset();
         }}
         onSubmit={(input) => {
           const repo = activeRepoModal?.repository;
           if (!repo) return;
-          void mutations.addWorktree
-            .mutateAsync({ repositoryId: repo.id, ...input })
+          void mutations.createWorktree
+            .mutateAsync({ repositoryId: repo.id, input })
             .then(() => setActiveRepoModal(null));
         }}
       />
 
-      <CreateBranchModal
+      <AssociateBranchModal
         open={activeRepoModal?.kind === "branch"}
-        pending={mutations.addBranch.isPending}
-        error={mutations.addBranch.error}
+        pending={mutations.associateBranch.isPending}
+        error={mutations.associateBranch.error}
+        repositoryId={
+          activeRepoModal?.kind === "branch"
+            ? activeRepoModal.repository.id
+            : ""
+        }
         onClose={() => {
           setActiveRepoModal(null);
-          mutations.addBranch.reset();
+          mutations.associateBranch.reset();
         }}
         onSubmit={(input) => {
-          const repo = activeRepoModal?.repository;
-          if (!repo) return;
-          void mutations.addBranch
-            .mutateAsync({ repositoryId: repo.id, ...input })
+          const modal = activeRepoModal;
+          if (modal?.kind !== "branch") return;
+          void mutations.associateBranch
+            .mutateAsync({
+              worktreeId: modal.worktreeId,
+              repositoryId: modal.repository.id,
+              input,
+            })
             .then(() => setActiveRepoModal(null));
         }}
       />
 
       <DeleteConfirmDialog
         target={deleteTarget}
-        pending={mutations.removeRepository.isPending || mutations.removeWorktree.isPending || mutations.removeBranch.isPending}
+        pending={deletePending}
         error={deleteError}
         onClose={closeDelete}
         onConfirm={() => void runDelete()}

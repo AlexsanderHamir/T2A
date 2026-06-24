@@ -32,6 +32,40 @@ type BrowseDirListing struct {
 	Entries    []BrowseDirEntry `json:"entries"`
 }
 
+// ListBrowseDirsUnrestricted lists immediate subdirectories of absPath without
+// root containment enforcement. Used by the register-repo bootstrap flow when
+// HAMIX_BROWSE_ROOTS is not configured so operators can locate any git repository
+// on the filesystem before registration.
+// When absPath is empty, returns an empty listing (caller navigates from a typed path).
+func ListBrowseDirsUnrestricted(absPath string) (BrowseDirListing, error) {
+	slog.Debug("trace", "operation", "repo.ListBrowseDirsUnrestricted")
+	absPath = strings.TrimSpace(absPath)
+	if absPath == "" {
+		return BrowseDirListing{Entries: []BrowseDirEntry{}}, nil
+	}
+	clean, err := filepath.Abs(absPath)
+	if err != nil {
+		return BrowseDirListing{}, fmt.Errorf("%w: invalid path", domain.ErrInvalidInput)
+	}
+	clean = filepath.Clean(clean)
+	if err := ensureDirExists(clean); err != nil {
+		return BrowseDirListing{}, err
+	}
+	entries, err := readBrowseSubdirs(clean)
+	if err != nil {
+		return BrowseDirListing{}, err
+	}
+	parent := filepath.Dir(clean)
+	if parent == clean {
+		parent = ""
+	}
+	return BrowseDirListing{
+		Path:       clean,
+		ParentPath: parent,
+		Entries:    entries,
+	}, nil
+}
+
 // ListBrowseDirs lists immediate subdirectories of absPath when absPath is under roots.
 // When absPath is empty, returns one synthetic entry per available root (navigation start).
 func ListBrowseDirs(roots []BrowseRoot, absPath string) (BrowseDirListing, error) {

@@ -13,10 +13,10 @@ import (
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Handler) gitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
 	return gitWorktreeJSON{
-		ID:           w.ID,
-		RepositoryID: w.RepositoryID,
-		Path:         w.Path,
-		HostPath:     h.pathMap.DisplayHostPath(w.Path),
+		ID:             w.ID,
+		RepositoryID:   w.RepositoryID,
+		Path:           w.Path,
+		HostPath:       h.pathMap.DisplayHostPath(w.Path),
 		Name:           w.Name,
 		IsMain:         w.IsMain,
 		ActiveBranchID: w.ActiveBranchID,

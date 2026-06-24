@@ -23,14 +23,14 @@ type CreateInput struct {
 	CursorModel           string
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
 	// until the instant has passed (UTC).
-	PickupNotBefore *time.Time
-	Tags            []string
-	Milestone       *string
-	Gate            *domain.TaskGate
-	DependsOn       []domain.DependencyEdge
-	ChecklistItems  []checklist.CreateChecklistItemInput
-	WorktreeID      *string
-	BranchID        *string
+	PickupNotBefore  *time.Time
+	Tags             []string
+	Milestone        *string
+	Gate             *domain.TaskGate
+	DependsOn        []domain.DependencyEdge
+	ChecklistItems   []checklist.CreateChecklistItemInput
+	WorktreeID       *string
+	BranchID         *string
 	WorktreeBranchID *string
 }
 

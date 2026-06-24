@@ -19,6 +19,7 @@ export function buildCreateTaskMutationInput(
     project_context_item_ids: compose.project_context_item_ids ?? [],
     worktree_id: fields.newWorktreeID,
     branch_id: fields.newBranchID,
+    worktree_branch_id: fields.newWorktreeBranchID,
     tags: compose.tags ?? [],
     milestone: compose.milestone,
     depends_on: compose.depends_on ?? [],

@@ -1,6 +1,7 @@
 import { fetchWithTimeout, apiErrorFromResponse } from "./shared";
 
 export type WorkspaceBrowseCategory =
+  | "registered"
   | "install"
   | "home"
   | "documents"
@@ -43,6 +44,7 @@ function parseBrowseCategory(raw: unknown): WorkspaceBrowseCategory | undefined 
     return undefined;
   }
   const allowed: WorkspaceBrowseCategory[] = [
+    "registered",
     "install",
     "home",
     "documents",

@@ -42,15 +42,16 @@ func DetectBrowseEnvironment() BrowseEnvironment {
 	return BrowseEnvNative
 }
 
-// ResolveBrowseRoots returns allowed picker roots for the current process environment.
-// When HAMIX_BROWSE_ROOTS is set (comma-separated absolute paths), it replaces the defaults.
+// ResolveBrowseRoots returns the HAMIX_BROWSE_ROOTS custom paths when the env var is set.
+// When HAMIX_BROWSE_ROOTS is not configured it returns an empty slice — workspace roots
+// are now sourced from the git_repositories table (Cycle 7).
 func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error) {
 	slog.Debug("trace", "operation", "repo.ResolveBrowseRoots")
 	env := DetectBrowseEnvironment()
-	reg := defaultPlaceRegistry()
-	if CustomBrowseRootsConfigured() {
-		reg = NewPlaceRegistry(CustomPlaceProvider{})
+	if !CustomBrowseRootsConfigured() {
+		return nil, env, nil
 	}
+	reg := NewPlaceRegistry(CustomPlaceProvider{})
 	places, err := reg.Places(env, startDir)
 	if err != nil {
 		return nil, env, err
@@ -62,9 +63,29 @@ func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error
 	return roots, env, nil
 }
 
+// BrowseRootFromPath builds a BrowseRoot for an absolute path with availability
+// checked via os.Stat. Used by handlers that source roots from the git_repositories
+// table rather than OS providers.
+//
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by the calling chokepoint."
+func BrowseRootFromPath(id, path string, cat PlaceCategory) BrowseRoot {
+	root := BrowseRoot{
+		ID:       id,
+		Path:     path,
+		Label:    browseRootLabel(path),
+		Category: cat,
+	}
+	markBrowseRootAvailable(&root)
+	return root
+}
+
+// defaultPlaceRegistry returns an empty registry after Cycle 7 retirement.
+// Install, Home, and UserDirs providers are no longer registered by default;
+// workspace roots are sourced from the git_repositories table via the handler.
+//
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ResolveBrowseRoots."
 func defaultPlaceRegistry() *PlaceRegistry {
-	return NewPlaceRegistry(InstallPlaceProvider{}, HomePlaceProvider{}, UserDirsPlaceProvider{})
+	return NewPlaceRegistry()
 }
 
 //funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."

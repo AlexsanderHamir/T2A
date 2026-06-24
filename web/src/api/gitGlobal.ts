@@ -2,7 +2,6 @@ import type { GitBranch, GitLiveBranch, GitRepository, GitWorktree, WorktreeBran
 import type { ProjectListResponse } from "@/types/project";
 import { parseProjectListResponse } from "./projects";
 import {
-  parseGitBranch,
   parseGitBranchList,
   parseGitLiveBranchList,
   parseGitRepository,
@@ -186,6 +185,19 @@ export async function removeWorktreeBranchAssociation(
     { method: "DELETE" },
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
+}
+
+export async function reconcileGlobalGitRepository(
+  repositoryId: string,
+): Promise<import("@/types/git").GitReconcileResult> {
+  const repoId = assertTaskPathId(repositoryId, "repository id");
+  const res = await fetchWithTimeout(
+    `${gitRoot}/repositories/${encodeURIComponent(repoId)}/reconcile`,
+    { method: "POST", headers: jsonHeaders, body: "{}" },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  const { parseGitReconcileResult } = await import("./parseGitApi");
+  return parseGitReconcileResult((await res.json()) as unknown);
 }
 
 export async function listProjectsByRepository(
