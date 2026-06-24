@@ -27,14 +27,14 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-tampers")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-tampers")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
 
 	maxRetries := 3
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set verify max retries: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
@@ -60,7 +60,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -74,12 +74,12 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	final := h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
 	if final.Status != domain.StatusFailed {
@@ -87,7 +87,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	}
 
 	bg := context.Background()
-	cycles, _ := h.store.ListCyclesForTask(bg, tsk.ID, 5)
+	cycles, _ := h.Store.ListCyclesForTask(bg, tsk.ID, 5)
 	if len(cycles) != 1 {
 		t.Fatalf("cycle count = %d, want 1 (no retries on tamper)", len(cycles))
 	}
@@ -95,7 +95,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		t.Fatalf("cycle status = %q, want failed", cycles[0].Status)
 	}
 
-	events, _ := h.store.ListTaskEvents(bg, tsk.ID)
+	events, _ := h.Store.ListTaskEvents(bg, tsk.ID)
 	sawTampered := false
 	for _, e := range events {
 		if e.Type != domain.EventCycleFailed {
@@ -133,18 +133,18 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-no-completion")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-no-completion")
+	c1, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
+	c2, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
 
 	maxRetries := 1
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set max retries: %v", err)
 	}
 
@@ -156,7 +156,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -175,7 +175,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -186,16 +186,16 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
 	bg := context.Background()
-	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
+	items, err := h.Store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {
 		t.Fatalf("list checklist: %v", err)
 	}
@@ -216,18 +216,18 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-reason-ids")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-reason-ids")
+	c1, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
+	c2, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
 
 	maxRetries := 0
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set max retries: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -252,7 +252,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -263,16 +263,16 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
 	bg := context.Background()
-	events, err := h.store.ListTaskEvents(bg, tsk.ID)
+	events, err := h.Store.ListTaskEvents(bg, tsk.ID)
 	if err != nil {
 		t.Fatalf("list events: %v", err)
 	}
@@ -316,8 +316,8 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-no-allowlist")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-no-allowlist")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
@@ -344,7 +344,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 			// Drop a fake legacy-shaped artifact INSIDE the working
@@ -358,15 +358,15 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
-	events, _ := h.store.ListTaskEvents(context.Background(), tsk.ID)
+	events, _ := h.Store.ListTaskEvents(context.Background(), tsk.ID)
 	sawTampered := false
 	for _, e := range events {
 		if e.Type == domain.EventCycleFailed && strings.Contains(string(e.Data), "verify_tampered") {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -14,8 +15,8 @@ import (
 
 func TestHarness_CancelCurrentRun_idleIsNoOp(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
-	h := env.newHarness(runnerfake.New(), harness.Options{})
+	env := harnesstest.NewEnv(t)
+	h := env.NewHarness(runnerfake.New(), harness.Options{})
 
 	if h.CancelCurrentRun() {
 		t.Error("CancelCurrentRun() = true, want false (idle)")
@@ -24,19 +25,19 @@ func TestHarness_CancelCurrentRun_idleIsNoOp(t *testing.T) {
 
 func TestHarness_CancelCurrentRun_failsCycleWithOperatorReason(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "cancel-me"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "cancel-me"))
 
-	br := newBlockingRunner()
-	h := env.newHarness(br, harness.Options{RunTimeout: 0})
-	done := env.runHarness(ctx, h, tsk)
+	br := harnesstest.NewBlockingRunner()
+	h := env.NewHarness(br, harness.Options{RunTimeout: 0})
+	done := env.RunHarness(ctx, h, tsk)
 
 	select {
-	case <-br.starts:
-	case <-time.After(pollTimeout):
+	case <-br.Starts:
+	case <-time.After(harnesstest.DefaultPollTimeout):
 		t.Fatal("runner did not start; CancelCurrentRun would be a no-op")
 	}
 
@@ -45,13 +46,13 @@ func TestHarness_CancelCurrentRun_failsCycleWithOperatorReason(t *testing.T) {
 	}
 
 	<-done
-	final := env.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	final := env.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
 
-	cycle := assertCycleStatus(t, env.store, tsk.ID, 1, domain.CycleStatusFailed)
-	events, err := env.store.ListTaskEvents(context.Background(), tsk.ID)
+	cycle := harnesstest.AssertCycleStatus(t, env.Store, tsk.ID, 1, domain.CycleStatusFailed)
+	events, err := env.Store.ListTaskEvents(context.Background(), tsk.ID)
 	if err != nil {
 		t.Fatalf("list events: %v", err)
 	}
@@ -73,28 +74,28 @@ func TestHarness_CancelCurrentRun_failsCycleWithOperatorReason(t *testing.T) {
 
 func TestHarness_NoCapRunTimeout_doesNotFireOnLongRun(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "no-cap"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "no-cap"))
 
-	br := newBlockingRunner()
-	br.result = runner.NewResult(domain.PhaseStatusSucceeded, "released", nil, "")
+	br := harnesstest.NewBlockingRunner()
+	br.Result = runner.NewResult(domain.PhaseStatusSucceeded, "released", nil, "")
 
-	done := env.runHarness(ctx, env.newHarness(br, harness.Options{RunTimeout: 0}), tsk)
+	done := env.RunHarness(ctx, env.NewHarness(br, harness.Options{RunTimeout: 0}), tsk)
 
 	select {
-	case <-br.starts:
-	case <-time.After(pollTimeout):
+	case <-br.Starts:
+	case <-time.After(harnesstest.DefaultPollTimeout):
 		t.Fatal("runner did not start")
 	}
 
 	time.Sleep(150 * time.Millisecond)
-	close(br.release)
+	close(br.Release)
 
 	<-done
-	final := env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	final := env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	if final.Status != domain.StatusDone {
 		t.Fatalf("task status = %q, want done (no-cap run should succeed)", final.Status)
 	}
@@ -102,22 +103,22 @@ func TestHarness_NoCapRunTimeout_doesNotFireOnLongRun(t *testing.T) {
 
 func TestHarness_PositiveRunTimeout_stillFiresAsTimeout(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "timeout"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "timeout"))
 
-	br := newBlockingRunner()
-	done := env.runHarness(ctx, env.newHarness(br, harness.Options{RunTimeout: 50 * time.Millisecond}), tsk)
+	br := harnesstest.NewBlockingRunner()
+	done := env.RunHarness(ctx, env.NewHarness(br, harness.Options{RunTimeout: 50 * time.Millisecond}), tsk)
 
 	<-done
-	final := env.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	final := env.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	if final.Status != domain.StatusFailed {
 		t.Fatalf("task status = %q, want failed", final.Status)
 	}
 
-	events, err := env.store.ListTaskEvents(context.Background(), tsk.ID)
+	events, err := env.Store.ListTaskEvents(context.Background(), tsk.ID)
 	if err != nil {
 		t.Fatalf("list events: %v", err)
 	}

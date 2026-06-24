@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
@@ -90,7 +91,7 @@ func TestHarness_Resume_afterInterruptedExecute_composesResumePrompt(t *testing.
 	var prompt string
 	select {
 	case prompt = <-promptCh:
-	case <-time.After(pollTimeout):
+	case <-time.After(harnesstest.DefaultPollTimeout):
 		t.Fatal("timeout waiting for resume execute prompt")
 	}
 	select {
@@ -98,7 +99,7 @@ func TestHarness_Resume_afterInterruptedExecute_composesResumePrompt(t *testing.
 		if phase != domain.PhaseExecute {
 			t.Fatalf("first runner phase = %q, want execute", phase)
 		}
-	case <-time.After(pollTimeout):
+	case <-time.After(harnesstest.DefaultPollTimeout):
 		t.Fatal("timeout waiting for runner phase")
 	}
 
@@ -121,7 +122,7 @@ func TestHarness_Resume_afterInterruptedExecute_composesResumePrompt(t *testing.
 
 	select {
 	case <-done:
-	case <-time.After(pollTimeout):
+	case <-time.After(harnesstest.DefaultPollTimeout):
 		t.Fatal("timeout waiting for Resume to finish after cancel")
 	}
 }

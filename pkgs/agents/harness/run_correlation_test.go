@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
@@ -36,16 +37,16 @@ func (r *correlationCapturingRunner) lastRequest() runner.Request {
 
 func TestHarness_execute_propagates_run_correlation_id_to_runner(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "run-correlation-id"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "run-correlation-id"))
 	r := &correlationCapturingRunner{}
 
-	done := env.runHarness(ctx, env.newHarness(r, harness.Options{}), tsk)
+	done := env.RunHarness(ctx, env.NewHarness(r, harness.Options{}), tsk)
 	<-done
-	env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 
 	req := r.lastRequest()
 	if req.RunCorrelationID == "" {
@@ -53,14 +54,14 @@ func TestHarness_execute_propagates_run_correlation_id_to_runner(t *testing.T) {
 	}
 
 	bg := context.Background()
-	cycles, err := env.store.ListCyclesForTask(bg, tsk.ID, 10)
+	cycles, err := env.Store.ListCyclesForTask(bg, tsk.ID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(cycles) != 1 {
 		t.Fatalf("cycles: got %d want 1", len(cycles))
 	}
-	phases, err := env.store.ListPhasesForCycle(bg, cycles[0].ID)
+	phases, err := env.Store.ListPhasesForCycle(bg, cycles[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}

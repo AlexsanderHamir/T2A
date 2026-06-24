@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -33,11 +34,11 @@ func TestHarness_normalizes_non_object_runner_details(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			env := newHarnessWithFakes(t)
+			env := harnesstest.NewEnv(t)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "details:"+tc.name))
+			tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "details:"+tc.name))
 
 			r := runnerfake.New()
 			r.Script(tsk.ID, domain.PhaseExecute, runner.Result{
@@ -46,15 +47,15 @@ func TestHarness_normalizes_non_object_runner_details(t *testing.T) {
 				Details: tc.details,
 			})
 
-			done := env.runHarness(ctx, env.newHarness(r, harness.Options{}), tsk)
+			done := env.RunHarness(ctx, env.NewHarness(r, harness.Options{}), tsk)
 			<-done
-			final := env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+			final := env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 			if final.Status != domain.StatusDone {
 				t.Fatalf("task status = %q, want done", final.Status)
 			}
 
-			cycle := assertCycleStatus(t, env.store, tsk.ID, 1, domain.CycleStatusSucceeded)
-			phases, err := env.store.ListPhasesForCycle(ctx, cycle.ID)
+			cycle := harnesstest.AssertCycleStatus(t, env.Store, tsk.ID, 1, domain.CycleStatusSucceeded)
+			phases, err := env.Store.ListPhasesForCycle(ctx, cycle.ID)
 			if err != nil {
 				t.Fatalf("list phases: %v", err)
 			}
@@ -72,11 +73,11 @@ func TestHarness_normalizes_non_object_runner_details(t *testing.T) {
 
 func TestHarness_object_details_pass_through_unchanged(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "object-details"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "object-details"))
 
 	original := json.RawMessage(`{"ok":true,"count":3,"nested":{"k":"v"}}`)
 	r := runnerfake.New()
@@ -86,12 +87,12 @@ func TestHarness_object_details_pass_through_unchanged(t *testing.T) {
 		Details: original,
 	})
 
-	done := env.runHarness(ctx, env.newHarness(r, harness.Options{}), tsk)
+	done := env.RunHarness(ctx, env.NewHarness(r, harness.Options{}), tsk)
 	<-done
-	env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 
-	cycle := assertCycleStatus(t, env.store, tsk.ID, 1, domain.CycleStatusSucceeded)
-	phases, err := env.store.ListPhasesForCycle(ctx, cycle.ID)
+	cycle := harnesstest.AssertCycleStatus(t, env.Store, tsk.ID, 1, domain.CycleStatusSucceeded)
+	phases, err := env.Store.ListPhasesForCycle(ctx, cycle.ID)
 	if err != nil {
 		t.Fatalf("list phases: %v", err)
 	}

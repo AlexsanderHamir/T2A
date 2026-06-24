@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/notifierfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
@@ -14,13 +15,13 @@ import (
 
 func TestHarness_HappyPath_emitsTrailingPublishAfterTerminalStatus(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "trailing-publish"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "trailing-publish"))
 
-	snap := &statusSnappingNotifier{store: env.store}
+	snap := &harnesstest.StatusSnappingNotifier{Store: env.Store}
 
 	r := runnerfake.New()
 	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
@@ -28,14 +29,14 @@ func TestHarness_HappyPath_emitsTrailingPublishAfterTerminalStatus(t *testing.T)
 		json.RawMessage(`{"ok":true}`), "",
 	))
 
-	done := env.runHarness(ctx, env.newHarness(r, harness.Options{Notifier: snap}), tsk)
+	done := env.RunHarness(ctx, env.NewHarness(r, harness.Options{Notifier: snap}), tsk)
 	<-done
-	final := env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	final := env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	if final.Status != domain.StatusDone {
 		t.Fatalf("task status = %q, want done", final.Status)
 	}
 
-	statuses, cycles := snap.snapshot()
+	statuses, cycles := snap.Snapshot()
 	if len(statuses) == 0 {
 		t.Fatal("notifier received zero publishes")
 	}
@@ -49,15 +50,15 @@ func TestHarness_HappyPath_emitsTrailingPublishAfterTerminalStatus(t *testing.T)
 
 func TestHarness_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 	t.Parallel()
-	env := newHarnessWithFakes(t)
+	env := harnesstest.NewEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := env.transitionRunning(ctx, env.createReadyTask(ctx, "live-progress"))
+	tsk := env.TransitionRunning(ctx, env.CreateReadyTask(ctx, "live-progress"))
 	progress := notifierfake.NewRecordingProgressNotifier()
-	r := newBlockingRunner()
-	r.result = runner.NewResult(domain.PhaseStatusSucceeded, "all green", nil, "")
-	r.onStart = func(req runner.Request) {
+	r := harnesstest.NewBlockingRunner()
+	r.Result = runner.NewResult(domain.PhaseStatusSucceeded, "all green", nil, "")
+	r.OnStart = func(req runner.Request) {
 		if req.OnProgress != nil {
 			req.OnProgress(runner.ProgressEvent{
 				Kind:    "tool_call",
@@ -67,12 +68,12 @@ func TestHarness_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 				Payload: json.RawMessage(`{"type":"tool_call","name":"ReadFile","input":{"path":"README.md"}}`),
 			})
 		}
-		close(r.release)
+		close(r.Release)
 	}
 
-	done := env.runHarness(ctx, env.newHarness(r, harness.Options{ProgressNotifier: progress}), tsk)
+	done := env.RunHarness(ctx, env.NewHarness(r, harness.Options{ProgressNotifier: progress}), tsk)
 	<-done
-	env.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	env.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 
 	calls := progress.Snapshot()
 	if len(calls) != 1 {
@@ -91,7 +92,7 @@ func TestHarness_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 	if got.RunCorrelationID == "" {
 		t.Fatal("RunCorrelationID must be populated")
 	}
-	stream, err := env.store.ListCycleStreamEvents(context.Background(), got.CycleID, 0, 10)
+	stream, err := env.Store.ListCycleStreamEvents(context.Background(), got.CycleID, 0, 10)
 	if err != nil {
 		t.Fatalf("list persisted progress: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/Hamix/internal/gittest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
@@ -201,7 +202,7 @@ func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 // EC-10 (docs/domain/harness.md): cross-cycle verify-only resume skips execute.
 func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T) {
 	workDir := t.TempDir()
-	gitInit(t, workDir)
+	gittest.Init(t, workDir)
 	reportDir := t.TempDir()
 
 	ctx := context.Background()

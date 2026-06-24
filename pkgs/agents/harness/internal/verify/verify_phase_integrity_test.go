@@ -25,8 +25,8 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-clean-repo")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-clean-repo")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReportWithGitWork(t, reportDir, cycles[0].ID, workDir, []string{item.ID})
 		}
@@ -61,7 +61,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -69,12 +69,12 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	<-done
 	cancel()
 	postStatus, postErr := exec.Command("git", "-C", workDir, "status", "--porcelain").CombinedOutput()
@@ -104,8 +104,8 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-cleanup")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-cleanup")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -131,7 +131,7 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -139,15 +139,15 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	<-done
 	cancel()
-	cycles, _ := h.store.ListCyclesForTask(context.Background(), tsk.ID, 1)
+	cycles, _ := h.Store.ListCyclesForTask(context.Background(), tsk.ID, 1)
 	if len(cycles) != 1 {
 		t.Fatalf("cycle count = %d, want 1", len(cycles))
 	}

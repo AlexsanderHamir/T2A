@@ -23,8 +23,8 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-progress")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-progress")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -54,7 +54,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		if req.OnProgress != nil {
 			verifyProgressFired.Store(true)
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -62,12 +62,12 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	<-done
 	cancel()
 	if !verifyProgressFired.Load() {
@@ -75,11 +75,11 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	}
 
 	bg := context.Background()
-	cycles, _ := h.store.ListCyclesForTask(bg, tsk.ID, 1)
+	cycles, _ := h.Store.ListCyclesForTask(bg, tsk.ID, 1)
 	if len(cycles) != 1 {
 		t.Fatalf("cycle count = %d, want 1", len(cycles))
 	}
-	phases, _ := h.store.ListPhasesForCycle(bg, cycles[0].ID)
+	phases, _ := h.Store.ListPhasesForCycle(bg, cycles[0].ID)
 	var verifyPhaseSeq int64
 	for _, p := range phases {
 		if p.Phase == domain.PhaseVerify {
@@ -93,7 +93,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	deadline := time.Now().Add(2 * time.Second)
 	var verifyEvents int
 	for time.Now().Before(deadline) {
-		events, err := h.store.ListCycleStreamEvents(bg, cycles[0].ID, 0, 50)
+		events, err := h.Store.ListCycleStreamEvents(bg, cycles[0].ID, 0, 50)
 		if err != nil {
 			t.Fatalf("list cycle stream events: %v", err)
 		}

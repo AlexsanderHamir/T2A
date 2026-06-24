@@ -20,8 +20,8 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-multi-runner")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-multi-runner")
+	item, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -34,7 +34,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeCriteriaReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -47,7 +47,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) > 0 {
 			writeVerifyReport(t, reportDir, cycles[0].ID, []string{item.ID})
 		}
@@ -55,12 +55,12 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	<-done
 	cancel()
 	execCalls := execRunner.Calls()

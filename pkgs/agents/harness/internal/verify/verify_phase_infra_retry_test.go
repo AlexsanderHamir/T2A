@@ -26,18 +26,18 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-carry")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-carry")
+	c1, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
+	c2, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
 
 	maxRetries := 2
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set max retries: %v", err)
 	}
 
@@ -49,7 +49,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -73,7 +73,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		if req.Phase != domain.PhaseVerify {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -94,16 +94,16 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	done := h.startHarnessRun(ctx, tsk, execHook, harness.Options{
+	done := h.StartHarnessRun(ctx, tsk, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
 	})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	<-done
 	cancel()
 	bg := context.Background()
-	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
+	items, err := h.Store.ListChecklistForSubject(bg, tsk.ID)
 	if err != nil {
 		t.Fatalf("list checklist: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	// SPA's verdict block can render the retry timeline. The
 	// carry-passes lock must NOT erase prior-attempt evidence: c1's
 	// attempt 1 row should still be there alongside c2's attempt 2 row.
-	cycles, err := h.store.ListCyclesForTask(bg, tsk.ID, 5)
+	cycles, err := h.Store.ListCyclesForTask(bg, tsk.ID, 5)
 	if err != nil {
 		t.Fatalf("list cycles: %v", err)
 	}
@@ -130,14 +130,14 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 		t.Fatalf("no cycles recorded")
 	}
 	cycleID := cycles[0].ID
-	verifyRows, err := h.store.ListVerifyReportsForCycle(bg, cycleID)
+	verifyRows, err := h.Store.ListVerifyReportsForCycle(bg, cycleID)
 	if err != nil {
 		t.Fatalf("list verify reports: %v", err)
 	}
 	if len(verifyRows) < 2 {
 		t.Fatalf("expected ≥2 verify rows (one per attempted criterion), got %d", len(verifyRows))
 	}
-	criteriaRows, err := h.store.ListCriteriaReportsForCycle(bg, cycleID)
+	criteriaRows, err := h.Store.ListCriteriaReportsForCycle(bg, cycleID)
 	if err != nil {
 		t.Fatalf("list criteria reports: %v", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/harnesstest"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -30,17 +31,17 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-phase")
+	tsk := h.CreateReadyTask(ctx, "verify-phase")
 
 	// One retry only, so the loop runs at most twice. The runner never
 	// writes criteria-report.json so verification fails on every attempt
 	// — the point of the test is the phase ledger, not the verdict.
 	maxRetries := 1
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set verify max retries: %v", err)
 	}
 
-	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser); err != nil {
+	if _, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser); err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
 
@@ -53,8 +54,8 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	// Use a temp WorkingDir so the worker's .legacy-scratch/<cycle>/ paths land
 	// somewhere isolated and parseCriteriaReport hits ErrCriteriaReportMissing
 	// deterministically (no stray files from earlier test runs).
-	done := h.startHarnessRun(ctx, tsk, r, harness.Options{WorkingDir: t.TempDir()})
-	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	done := h.StartHarnessRun(ctx, tsk, r, harness.Options{WorkingDir: t.TempDir()})
+	final := h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
 	if final.Status != domain.StatusFailed {
@@ -62,9 +63,9 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	}
 
 	bg := context.Background()
-	cycle := assertCycleStatus(t, h.store, tsk.ID, 1, domain.CycleStatusFailed)
+	cycle := harnesstest.AssertCycleStatus(t, h.Store, tsk.ID, 1, domain.CycleStatusFailed)
 
-	phases, err := h.store.ListPhasesForCycle(bg, cycle.ID)
+	phases, err := h.Store.ListPhasesForCycle(bg, cycle.ID)
 	if err != nil {
 		t.Fatalf("list phases: %v", err)
 	}
@@ -93,7 +94,7 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	// Execute must NEVER fail with the synthetic reason that fired before
 	// the fix. Walk cycle_failed events; the worker stamps the terminal
 	// reason in the event's Data JSON.
-	events, err := h.store.ListTaskEvents(bg, tsk.ID)
+	events, err := h.Store.ListTaskEvents(bg, tsk.ID)
 	if err != nil {
 		t.Fatalf("list events: %v", err)
 	}
@@ -140,14 +141,14 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tsk := h.createReadyTask(ctx, "verify-disagreement")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
+	tsk := h.CreateReadyTask(ctx, "verify-disagreement")
+	c1, err := h.Store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
 
 	maxRetries := 0
-	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+	if _, err := h.Store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
 		t.Fatalf("set max retries: %v", err)
 	}
 
@@ -158,7 +159,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 		if req.Phase != domain.PhaseExecute {
 			return
 		}
-		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		cycles, _ := h.Store.ListCyclesForTask(context.Background(), req.TaskID, 1)
 		if len(cycles) == 0 {
 			return
 		}
@@ -176,8 +177,8 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
 
 	metrics := newRecordingMetrics()
-	done := h.startHarnessRun(ctx, tsk, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
-	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	done := h.StartHarnessRun(ctx, tsk, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
+	h.WaitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	<-done
 	cancel()
 	verdicts := metrics.verdictSnapshot()
