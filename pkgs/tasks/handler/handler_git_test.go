@@ -42,6 +42,23 @@ func runHandlerGit(t *testing.T, dir string, args ...string) {
 	}
 }
 
+func TestHandler_listGlobalGitRepositories(t *testing.T) {
+	h, main := gitHandlerTest(t)
+	createBody, _ := json.Marshal(map[string]string{"path": main})
+	create := httptest.NewRequest(http.MethodPost, "/git/repositories", bytes.NewReader(createBody))
+	createRec := httptest.NewRecorder()
+	h.ServeHTTP(createRec, create)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createRec.Code, createRec.Body.String())
+	}
+	list := httptest.NewRequest(http.MethodGet, "/git/repositories", nil)
+	listRec := httptest.NewRecorder()
+	h.ServeHTTP(listRec, list)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", listRec.Code, listRec.Body.String())
+	}
+}
+
 func TestHandler_createGitRepository(t *testing.T) {
 	h, main := gitHandlerTest(t)
 	body, _ := json.Marshal(map[string]string{"path": main})

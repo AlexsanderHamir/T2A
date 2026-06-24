@@ -46,7 +46,28 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 
 ### Git repositories, worktrees, and branches
 
-Per-project git context for Issue #39. Error responses use `{ "error", "code", "request_id?" }` with stable `code` values listed below.
+Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): global repositories, repo-scoped worktrees/branches, `worktree_branches` associations, optional project overlay. Error responses use `{ "error", "code", "request_id?" }`.
+
+**Global routes (preferred):**
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/git/repositories` | `{ repositories: [...] }`. |
+| POST | `/git/repositories` | Register checkout. Body `{ path, host_path?, default_branch? }`. **201**. Does not auto-create worktrees/branches. **409** `not_a_git_repository`, `duplicate`. |
+| GET | `/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
+| DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
+| GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
+| POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. **201**. |
+| POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name? }`. **201**. |
+| DELETE | `/git/worktrees/{worktreeId}` | **204**. Query `?force=true`. **409** `has_running_task`. |
+| GET | `/git/repositories/{repoId}/branches` | Registered branches `{ branches: [...] }`. |
+| GET | `/git/repositories/{repoId}/branches/live` | Live refs from `git branch` `{ branches: [{ name, head_sha }] }`. |
+| GET | `/git/worktrees/{worktreeId}/branches` | `{ associations: [{ id, worktree_id, branch_id, created_at }] }`. |
+| POST | `/git/worktrees/{worktreeId}/branches` | Associate or create+associate. Body `{ branch_id? }` or `{ name, start_point?, create_branch? }`. **201**. |
+| DELETE | `/git/worktrees/{worktreeId}/branches/{branchId}` | **204**. **409** `has_running_task`. |
+| GET | `/git/repositories/{repoId}/projects` | Projects tied to this repo `{ projects, limit }`. |
+
+**Legacy per-project routes** (deprecated; removed after contract migration):
 
 | Method | Path | Notes |
 |---|---|---|
@@ -62,7 +83,9 @@ Per-project git context for Issue #39. Error responses use `{ "error", "code", "
 | DELETE | `/projects/{id}/git/branches/{branchId}` | **204**. Query `?force=true` for unmerged. **409** `has_running_task`, `branch_checked_out`. |
 | POST | `/projects/{id}/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. **409** when a missing worktree is still referenced by tasks. |
 
-Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
+**Projects:** `POST /projects` accepts optional `repository_id` (repo must exist). Tasks accept optional `worktree_branch_id` (required for agent runs once worker migration completes).
+
+Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `branch_active_elsewhere`, `branch_not_associated`, `project_repo_mismatch`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
 
 ## Tasks
 

@@ -26,6 +26,7 @@ func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
 		Name:           body.Name,
 		Description:    body.Description,
 		ContextSummary: body.ContextSummary,
+		RepositoryID:   body.RepositoryID,
 	})
 	if err != nil {
 		writeStoreError(w, r, op, err)

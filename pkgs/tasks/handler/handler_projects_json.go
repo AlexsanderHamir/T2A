@@ -5,10 +5,11 @@ import (
 )
 
 type projectCreateJSON struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	ContextSummary string `json:"context_summary"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Description    string  `json:"description"`
+	ContextSummary string  `json:"context_summary"`
+	RepositoryID   *string `json:"repository_id"`
 }
 
 type projectPatchJSON struct {

@@ -247,6 +247,47 @@ func (s *Store) ListGitBranchesByRepo(ctx context.Context, repoID string) ([]dom
 	return rows, nil
 }
 
+// CreateGitBranchForRepo creates a branch via git under a repository (no project scope).
+func (s *Store) CreateGitBranchForRepo(ctx context.Context, repoID string, input CreateGitBranchInput, gitSvc gitwork.Service) (domain.GitBranch, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitBranchForRepo")
+	repo, err := s.GetGitRepositoryByID(ctx, repoID)
+	if err != nil {
+		return domain.GitBranch{}, err
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return domain.GitBranch{}, fmt.Errorf("%w: name required", domain.ErrInvalidInput)
+	}
+	if gitSvc == nil {
+		gitSvc = gitwork.New()
+	}
+	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
+	if err != nil {
+		return domain.GitBranch{}, fmt.Errorf("open repository: %w", err)
+	}
+	created, err := gitSvc.CreateBranch(ctx, opened, name, strings.TrimSpace(input.StartPoint))
+	if err != nil {
+		if errors.Is(err, gitwork.ErrBranchExists) {
+			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
+		}
+		return domain.GitBranch{}, err
+	}
+	row := domain.GitBranch{
+		ID:           uuid.NewString(),
+		RepositoryID: repo.ID,
+		Name:         created.Name,
+		HeadSHA:      created.HeadSHA,
+		CreatedAt:    time.Now().UTC(),
+	}
+	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
+		if isDuplicateKey(err) {
+			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
+		}
+		return domain.GitBranch{}, fmt.Errorf("create git branch row: %w", err)
+	}
+	return row, nil
+}
+
 // ListProjectsByRepository returns projects tied to a repository.
 func (s *Store) ListProjectsByRepository(ctx context.Context, repoID string) ([]domain.Project, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListProjectsByRepository")

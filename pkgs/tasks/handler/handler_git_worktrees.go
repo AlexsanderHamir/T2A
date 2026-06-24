@@ -17,9 +17,10 @@ func (h *Handler) gitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
 		RepositoryID: w.RepositoryID,
 		Path:         w.Path,
 		HostPath:     h.pathMap.DisplayHostPath(w.Path),
-		Name:         w.Name,
-		IsMain:       w.IsMain,
-		CreatedAt:    w.CreatedAt.UTC().Format(time.RFC3339),
+		Name:           w.Name,
+		IsMain:         w.IsMain,
+		ActiveBranchID: w.ActiveBranchID,
+		CreatedAt:      w.CreatedAt.UTC().Format(time.RFC3339),
 	}
 }
 
