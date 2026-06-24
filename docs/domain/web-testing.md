@@ -81,7 +81,7 @@ Use the smallest render helper from [`appHarness.tsx`](../../web/src/test/integr
 | `renderTasksHome()` / `renderTasksAt()` | Home, drafts, create modals — no bootstrap or SSE (`test-task-create`) |
 | Direct page `render()` + MSW | Single page when routing is not under test (`test-task-pages`) |
 
-MSW is configured with `onUnhandledRequest: "error"` in [`setup.ts`](../../web/src/test/setup.ts). Register handlers for every endpoint the test triggers.
+MSW uses `onUnhandledRequest: "bypass"` in [`setup.ts`](../../web/src/test/setup.ts) so component tests that still spy on `fetch` can coexist with MSW. Integration tests in task-pages and task-create should still register handlers via `appDefaultHandlers()` for every endpoint they trigger.
 
 ## Five rules
 

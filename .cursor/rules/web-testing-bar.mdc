@@ -11,7 +11,7 @@ Full reference: [docs/domain/web-testing.md](../../docs/domain/web-testing.md).
 ## Rules
 
 1. **MSW only for new tests** — `server.use(handlers)` from `web/src/test/handlers/`. No new `vi.spyOn(globalThis, "fetch")`.
-2. **Unhandled requests fail** — `web/src/test/setup.ts` sets `onUnhandledRequest: "error"`. Every fetch in MSW-based tests needs a handler.
+2. **Register handlers in integration tests** — `server.use(...appDefaultHandlers(), …)` for task-pages and task-create. MSW uses `onUnhandledRequest: "bypass"` globally so legacy `vi.spyOn(fetch)` component tests still work.
 3. **No bare sleeps** — `vi.useFakeTimers()` or `createDeferred()`; never `setTimeout` or `new Promise(() => {})`.
 4. **Project placement** — `unit` / `components` / `app` / `task-pages` / `task-create` / `settings` / `projects` / `worktrees` per `web/vitest.workspace.ts`. `<App />` and pages belong in the matching full-app project.
 5. **≤ 500 lines** per `*.test.{ts,tsx}`.

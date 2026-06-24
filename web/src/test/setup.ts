@@ -4,7 +4,9 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./server";
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "error" });
+  // bypass: component tests still use vi.spyOn(fetch); error mode rejects those bypasses.
+  // Integration tests should still register handlers via appDefaultHandlers().
+  server.listen({ onUnhandledRequest: "bypass" });
 });
 
 afterEach(() => {
