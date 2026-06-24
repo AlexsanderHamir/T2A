@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 import type { Task } from "@/types/task";
 import { createDeferred } from "@/test/deferred";
 import { makeTask } from "@/test/taskDefaults";
@@ -126,13 +126,13 @@ export function taskChecklistItemPatch(
   );
 }
 
-export function taskEventGet(taskId: string, seq: number, body: unknown) {
+export function taskEventGet(taskId: string, seq: number, body: JsonBodyType) {
   return http.get(`/tasks/${taskId}/events/${seq}`, () =>
     HttpResponse.json(body),
   );
 }
 
-export function taskEventGetFlaky(taskId: string, seq: number, body: unknown) {
+export function taskEventGetFlaky(taskId: string, seq: number, body: JsonBodyType) {
   let calls = 0;
   return http.get(`/tasks/${taskId}/events/${seq}`, () => {
     calls += 1;

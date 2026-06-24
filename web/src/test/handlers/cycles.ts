@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 
 /** Placeholder for cycle endpoints referenced by full-page flows. */
 export function taskCyclesEmpty(taskId: string) {
@@ -8,7 +8,7 @@ export function taskCyclesEmpty(taskId: string) {
 export function cycleDetailGet(
   taskId: string,
   cycleId: string,
-  body: unknown,
+  body: JsonBodyType,
 ) {
   return http.get(`/tasks/${taskId}/cycles/${cycleId}`, () =>
     HttpResponse.json(body),
@@ -49,9 +49,9 @@ export function cyclePageAuditEvents(taskId: string, events: unknown[]) {
 export function cyclePageHandlers(options: {
   taskId: string;
   cycleId: string;
-  cycle: unknown;
-  streamEvents: unknown[];
-  auditEvents: unknown[];
+  cycle: JsonBodyType;
+  streamEvents: JsonBodyType[];
+  auditEvents: JsonBodyType[];
 }) {
   const { taskId, cycleId, cycle, streamEvents, auditEvents } = options;
   return [
