@@ -17,11 +17,12 @@ const (
 
 // BrowseRoot is a top-level directory the workspace picker may start from.
 type BrowseRoot struct {
-	ID                string `json:"id"`
-	Path              string `json:"path"`
-	Label             string `json:"label"`
-	Available         bool   `json:"available"`
-	UnavailableReason string `json:"unavailable_reason,omitempty"`
+	ID                string        `json:"id"`
+	Path              string        `json:"path"`
+	Label             string        `json:"label"`
+	Category          PlaceCategory `json:"category,omitempty"`
+	Available         bool          `json:"available"`
+	UnavailableReason string        `json:"unavailable_reason,omitempty"`
 }
 
 // BrowseEnvironment is where taskapi runs (native host vs Docker container).
