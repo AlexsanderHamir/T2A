@@ -7,7 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const appIncludes = ["src/app/**/*.test.tsx"];
 const taskPagesIncludes = ["src/tasks/pages/**/*.test.tsx"];
-const taskCreateIncludes = ["src/tasks/create/**/*.test.tsx"];
+const taskCreateIncludes = [
+  "src/tasks/create/**/*.test.tsx",
+  "!src/tasks/create/hooks/**",
+];
 const settingsIncludes = ["src/settings/SettingsPage.test.tsx"];
 const projectsIncludes = [
   "src/projects/ProjectListPage.test.tsx",
