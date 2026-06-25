@@ -6,8 +6,9 @@ import {
   filterCursorModelsForSelect,
   normalizeCursorModelSelectValue,
 } from "@/api/cursorModels";
-import { fetchAppSettings, listCursorModels } from "@/api/settings";
+import { fetchAppSettings } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { useCreateModalCursorModels } from "../hooks/useCreateModalCursorModels";
 import {
   CustomSelect,
   type CustomSelectOption,
@@ -72,23 +73,7 @@ export function TaskCreateModalAgentSection({
 
   const cursorBinKey = (settingsQuery.data?.cursor_bin ?? "").trim();
 
-  const modelsQuery = useQuery({
-    queryKey: [
-      ...settingsQueryKeys.all,
-      "create-modal-cursor-models",
-      runner,
-      cursorBinKey,
-    ],
-    queryFn: ({ signal }) =>
-      listCursorModels(
-        {
-          runner,
-          binary_path: cursorBinKey || undefined,
-        },
-        { signal },
-      ),
-    enabled: runner === "cursor",
-  });
+  const modelsQuery = useCreateModalCursorModels(runner, cursorBinKey);
 
   const modelIdsFromList = useMemo(() => {
     const m = modelsQuery.data;

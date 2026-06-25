@@ -2,6 +2,10 @@ import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { Button } from "@/components/ui";
+import {
+  useCreateModalModelsPrefetcher,
+  usePrefetchOnIntent,
+} from "@/app/hooks/usePrefetchOnIntent";
 import { TaskListSection } from "../components/task-list";
 import { useTasksAppList, useTasksAppModals } from "../app/TasksAppProvider";
 import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
@@ -19,6 +23,8 @@ export function TaskHome() {
     enabled: projectsUiEnabled,
   });
   const { openCreateModal, createModalOpen } = modals;
+  const prefetchCreateModalModels = useCreateModalModelsPrefetcher();
+  const newTaskIntent = usePrefetchOnIntent(prefetchCreateModalModels);
 
   const createIntent = searchParams.get("create");
   const projectIntent = projectsUiEnabled
@@ -77,13 +83,15 @@ export function TaskHome() {
     ],
   );
 
+  const openTemplateCreateModal = modals.openTemplateCreateModal;
+
   const listActions = useMemo(
     () => (
       <>
         <Button
           variant="secondary"
           className="task-home-new-template-btn"
-          onClick={() => modals.openTemplateCreateModal()}
+          onClick={() => openTemplateCreateModal()}
           disabled={createModalOpen}
         >
           New template
@@ -91,6 +99,7 @@ export function TaskHome() {
         <Button
           variant="primary"
           className="task-home-new-task-btn"
+          {...newTaskIntent}
           onClick={() => openCreateModal()}
           disabled={createModalOpen}
         >
@@ -98,7 +107,7 @@ export function TaskHome() {
         </Button>
       </>
     ),
-    [openCreateModal, modals.openTemplateCreateModal, createModalOpen],
+    [openCreateModal, openTemplateCreateModal, createModalOpen, newTaskIntent],
   );
 
   return (

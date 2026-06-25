@@ -14,6 +14,7 @@ import {
 } from "@/test/handlers/git";
 import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
+import { createModalCursorModelsQueryKey } from "./hooks/useCreateModalCursorModels";
 import { TaskCreateModal } from "./TaskCreateModal";
 
 const isUiFeatureOmitted = vi.hoisted(() => vi.fn((_feature: string) => false));
@@ -87,7 +88,7 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
   });
   client.setQueryData(settingsQueryKeys.app(), testAppSettings);
   client.setQueryData(
-    [...settingsQueryKeys.all, "create-modal-cursor-models", "cursor", ""],
+    createModalCursorModelsQueryKey("cursor", ""),
     testCursorModelsEmpty,
   );
   return render(
