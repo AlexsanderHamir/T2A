@@ -284,9 +284,6 @@ describe("WorkspaceDirPickerModal", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Use this folder/ })).toBeDisabled();
     });
-    expect(
-      screen.getByText(/This folder is not a git checkout/i),
-    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /my-app/ }));
 

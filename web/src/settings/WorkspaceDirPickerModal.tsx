@@ -313,12 +313,6 @@ export function WorkspaceDirPickerModal({
               ) : null}
             </ul>
 
-            {requireGitRepository && hasOpenFolder && !currentPathIsGitRepo && !listingPending ? (
-              <p className="workspace-picker-status workspace-picker-git-requirement" role="status">
-                This folder is not a git checkout. Open a repository folder to continue.
-              </p>
-            ) : null}
-
             <footer className="workspace-picker-footer">
               <div className="workspace-picker-selection" aria-live="polite">
                 <span className="workspace-picker-selection-label">
