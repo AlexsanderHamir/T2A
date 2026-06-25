@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
@@ -26,6 +27,8 @@ export function RegisterRepositoryModal({
   if (!open) return null;
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
+  const trimmedPath = path.trim();
+  const hasPath = trimmedPath !== "";
 
   return (
     <>
@@ -40,10 +43,9 @@ export function RegisterRepositoryModal({
           className="panel modal-sheet worktrees-form-modal"
           onSubmit={(e) => {
             e.preventDefault();
-            const trimmed = path.trim();
-            if (!trimmed) return;
+            if (!hasPath) return;
             onSubmit({
-              path: trimmed,
+              path: trimmedPath,
               default_branch: defaultBranch.trim() || undefined,
             });
           }}
@@ -55,24 +57,30 @@ export function RegisterRepositoryModal({
               branches under it.
             </p>
           </header>
+
           <div className="worktrees-form-modal__picker">
-            <p className="worktrees-form-modal__picker-label">Repository path</p>
-            <button
+            <p className="worktrees-form-modal__picker-label" id="register-repo-path-label">
+              Repository path
+            </p>
+            <p
+              className="worktrees-form-modal__path-display"
+              data-empty={hasPath ? "false" : "true"}
+              aria-labelledby="register-repo-path-label"
+              aria-live="polite"
+            >
+              {hasPath ? trimmedPath : "No folder selected yet"}
+            </p>
+            <Button
               type="button"
-              className="secondary"
+              variant="secondary"
+              className="worktrees-form-modal__browse-btn"
               disabled={pending}
               onClick={() => setPickerOpen(true)}
             >
               Choose folder
-            </button>
-            {path.trim() !== "" ? (
-              <p className="worktrees-form-modal__selected">
-                Selected: <code>{path}</code>
-              </p>
-            ) : (
-              <p className="worktrees-form-modal__picker-empty">No folder selected yet.</p>
-            )}
+            </Button>
           </div>
+
           <label className="field">
             <span className="settings-field-label">Default branch</span>
             <input
@@ -84,16 +92,18 @@ export function RegisterRepositoryModal({
               autoComplete="off"
             />
           </label>
+
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
           ) : null}
+
           <div className="row stack-row-actions">
-            <button type="button" className="secondary" disabled={pending} onClick={onClose}>
+            <Button type="button" variant="secondary" disabled={pending} onClick={onClose}>
               Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={pending || !path.trim()}>
-              {pending ? "Registering…" : "Register"}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" loading={pending} disabled={!hasPath}>
+              Register
+            </Button>
           </div>
         </form>
       </Modal>
