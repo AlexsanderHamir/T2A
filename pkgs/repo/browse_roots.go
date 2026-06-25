@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
 const (
@@ -52,6 +54,46 @@ func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error
 		return nil, env, nil
 	}
 	reg := NewPlaceRegistry(CustomPlaceProvider{})
+	places, err := reg.Places(env, startDir)
+	if err != nil {
+		return nil, env, err
+	}
+	roots := make([]BrowseRoot, 0, len(places))
+	for _, p := range places {
+		roots = append(roots, placeToBrowseRoot(p))
+	}
+	return roots, env, nil
+}
+
+// defaultBootstrapPlaceRegistry composes OS place providers for first-time repository
+// registration when no git repositories are registered yet.
+//
+//funclogmeasure:skip category=hot-path reason="Pure constructor; operation trace is emitted by ResolveWorkspacePickerRoots."
+func defaultBootstrapPlaceRegistry() *PlaceRegistry {
+	return NewPlaceRegistry(
+		InstallPlaceProvider{},
+		HomePlaceProvider{},
+		UserDirsPlaceProvider{},
+	)
+}
+
+// ResolveWorkspacePickerRoots is the single policy for GET /settings/workspace-roots.
+// Custom browse roots override everything; registered repos drive manage mode; otherwise
+// bootstrap OS entry points enable the register-repo folder picker.
+func ResolveWorkspacePickerRoots(startDir string, registered []domain.GitRepository) ([]BrowseRoot, BrowseEnvironment, error) {
+	slog.Debug("trace", "operation", "repo.ResolveWorkspacePickerRoots")
+	if CustomBrowseRootsConfigured() {
+		return ResolveBrowseRoots(startDir)
+	}
+	env := DetectBrowseEnvironment()
+	if len(registered) > 0 {
+		roots := make([]BrowseRoot, 0, len(registered))
+		for _, gr := range registered {
+			roots = append(roots, BrowseRootFromPath(gr.ID, gr.Path, PlaceCategoryRegistered))
+		}
+		return roots, env, nil
+	}
+	reg := defaultBootstrapPlaceRegistry()
 	places, err := reg.Places(env, startDir)
 	if err != nil {
 		return nil, env, err

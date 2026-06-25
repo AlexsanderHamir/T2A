@@ -33,27 +33,11 @@ func (h *Handler) workspaceRoots(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	env := repo.DetectBrowseEnvironment()
-
-	// HAMIX_BROWSE_ROOTS is an ops override that replaces DB-sourced roots entirely.
-	if repo.CustomBrowseRootsConfigured() {
-		wd, err := os.Getwd()
-		if err != nil {
-			writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
-			return
-		}
-		roots, browseEnv, err := repo.ResolveBrowseRoots(wd)
-		if err != nil {
-			slog.Log(r.Context(), slog.LevelError, "workspace roots failed",
-				"cmd", calltrace.LogCmd, "operation", op, "err", err)
-			writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
-			return
-		}
-		writeJSON(w, r, op, http.StatusOK, workspaceRootsResponse{Roots: roots, Environment: browseEnv})
+	wd, err := os.Getwd()
+	if err != nil {
+		writeJSONError(w, r, op, http.StatusInternalServerError, "working directory unavailable")
 		return
 	}
-
-	// Normal path: registered git repositories are the workspace roots (Cycle 7).
 	gitRepos, err := h.store.ListAllGitRepositories(r.Context())
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, "list git repositories failed",
@@ -61,9 +45,12 @@ func (h *Handler) workspaceRoots(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusInternalServerError, "workspace roots unavailable")
 		return
 	}
-	roots := make([]repo.BrowseRoot, 0, len(gitRepos))
-	for _, gr := range gitRepos {
-		roots = append(roots, repo.BrowseRootFromPath(gr.ID, gr.Path, repo.PlaceCategoryRegistered))
+	roots, env, err := repo.ResolveWorkspacePickerRoots(wd, gitRepos)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "workspace roots failed",
+			"cmd", calltrace.LogCmd, "operation", op, "err", err)
+		writeJSONError(w, r, op, http.StatusInternalServerError, "browse roots unavailable")
+		return
 	}
 	writeJSON(w, r, op, http.StatusOK, workspaceRootsResponse{Roots: roots, Environment: env})
 }

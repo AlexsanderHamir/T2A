@@ -87,3 +87,7 @@ Directory listing (`ListBrowseDirs` / `readBrowseSubdirs`) performs **pure I/O**
 Once the git_repositories table is populated via the Register Repo flow (Cycles 5–6), the OS folder providers no longer serve a purpose as workspace roots — they suggest locations the user hasn't registered. The picker should reflect what has been deliberately registered, not what happens to exist on disk.
 
 Full-disk browse is preserved in `browse-dirs` so operators can still navigate to unregistered repositories during the bootstrap registration flow.
+
+### Bootstrap amendment (2026-06-24)
+
+When `git_repositories` is empty and `HAMIX_BROWSE_ROOTS` is unset, `GET /settings/workspace-roots` returns OS bootstrap entry points via `repo.ResolveWorkspacePickerRoots` (Install, Home, UserDirs providers). Once the first repository is registered, responses switch to registered-repo roots only.
