@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { CycleCommit } from "@/types";
+import { repoQueryKeys } from "@/api/repo";
 import { CommitList } from "./CommitList";
 import { TaskCommitDiffPage } from "@/tasks/pages/TaskCommitDiffPage";
 
@@ -186,6 +187,58 @@ describe("TaskCommitDiffPage", () => {
       },
       { timeout: 5000 },
     );
+  });
+
+  it("shows diff immediately when patch is already cached", async () => {
+    const diffCalls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/repo/diff")) {
+        diffCalls.push(url);
+        return okJSON({
+          sha: sampleCommits[0].sha,
+          patch: samplePatch,
+          truncated: false,
+          size_bytes: samplePatch.length,
+        });
+      }
+      if (url.includes(`/tasks/${taskId}/commits`) && !url.includes("/repo/")) {
+        return okJSON({ commits: sampleCommits });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0, staleTime: Infinity },
+      },
+    });
+    qc.setQueryData(repoQueryKeys.diff(sampleCommits[0].sha), {
+      sha: sampleCommits[0].sha,
+      patch: samplePatch,
+      truncated: false,
+      size_bytes: samplePatch.length,
+    });
+
+    function Wrapper({ children: _children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={qc}>
+          <MemoryRouter
+            future={ROUTER_FUTURE_FLAGS}
+            initialEntries={[`/tasks/${taskId}/commits/${sampleCommits[0].sha}`]}
+          >
+            <Routes>
+              <Route path="/tasks/:taskId/commits/:sha" element={<TaskCommitDiffPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+
+    render(<Wrapper>{null}</Wrapper>);
+
+    expect(await screen.findByText("note.txt")).toBeInTheDocument();
+    expect(diffCalls).toHaveLength(0);
   });
 
   it("shows truncation notice when the patch is truncated", async () => {

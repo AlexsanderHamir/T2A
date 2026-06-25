@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
+import { usePrefetchOnIntent, useCommitDiffPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { CycleCommit, TaskCommit } from "@/types";
 import { shortSha, taskCommitDiffPath } from "./commitDisplay";
 
@@ -18,6 +19,8 @@ type Props = {
 
 export function CommitRow({ taskId, commit, showAttempt = false }: Props) {
   const now = useNow();
+  const prefetchCommitDiff = useCommitDiffPrefetcher();
+  const diffIntent = usePrefetchOnIntent(() => prefetchCommitDiff(commit.sha));
   const attemptSeq = attemptSeqForRow(commit);
   const diffTo = taskCommitDiffPath(taskId, commit.sha);
   const ariaLabel = `View diff for ${shortSha(commit.sha)}: ${commit.message}`;
@@ -28,6 +31,7 @@ export function CommitRow({ taskId, commit, showAttempt = false }: Props) {
         to={diffTo}
         className="task-commit-row-link"
         aria-label={ariaLabel}
+        {...diffIntent}
       >
         <span className="task-commit-row-inner">
           <code className="task-commit-sha" title={commit.sha}>
