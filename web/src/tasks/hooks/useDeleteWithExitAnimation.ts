@@ -12,10 +12,21 @@ export function useDeleteWithExitAnimation({ entityIds, onDelete }: Options) {
   const [exitingIds, setExitingIds] = useState<string[]>([]);
   const deleteTimerRef = useRef<number | null>(null);
 
+  const entityIdsKey = entityIds.join("\0");
+
   useEffect(() => {
     const ids = new Set(entityIds);
-    setExitingIds((current) => current.filter((id) => ids.has(id)));
-  }, [entityIds]);
+    setExitingIds((current) => {
+      const next = current.filter((id) => ids.has(id));
+      if (
+        next.length === current.length &&
+        next.every((id, index) => id === current[index])
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [entityIdsKey]);
 
   useEffect(() => {
     return () => {
