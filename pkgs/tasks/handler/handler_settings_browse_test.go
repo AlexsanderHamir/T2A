@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -16,6 +17,26 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
+
+func initBrowseTestGitRepo(t *testing.T, dir string) {
+	t.Helper()
+	if out, err := exec.Command("git", "init", "-b", "main", dir).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v %s", err, out)
+	}
+	runBrowseTestGit(t, dir, "config", "user.email", "test@example.com")
+	runBrowseTestGit(t, dir, "config", "user.name", "Test User")
+	if out, err := exec.Command("git", "-C", dir, "commit", "--allow-empty", "-m", "init").CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v %s", err, out)
+	}
+}
+
+func runBrowseTestGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v %s", args, err, out)
+	}
+}
 
 // TestHTTP_workspaceRoots_returnsRegisteredRepos verifies that registered git
 // repositories are returned as workspace roots with category "registered".
@@ -230,5 +251,56 @@ func TestHTTP_browseDirs_worksWithoutRepoRootConfigured(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
 		t.Fatalf("status %d body=%s", res.StatusCode, b)
+	}
+}
+
+func TestHTTP_browseDirs_marksCurrentPathGitRepo(t *testing.T) {
+	root := t.TempDir()
+	gitChild := filepath.Join(root, "repo")
+	plainChild := filepath.Join(root, "plain")
+	if err := os.MkdirAll(plainChild, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	initBrowseTestGitRepo(t, gitChild)
+	t.Setenv("HAMIX_BROWSE_ROOTS", root)
+
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	h := NewHandler(st, NewSSEHub(), nil)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/settings/browse-dirs?path=" + url.QueryEscape(gitChild))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body=%s", res.StatusCode, b)
+	}
+	var body browseDirsResponse
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if !body.IsGitRepo {
+		t.Fatal("expected is_git_repo on current path")
+	}
+
+	res2, err := http.Get(srv.URL + "/settings/browse-dirs?path=" + url.QueryEscape(plainChild))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res2.Body)
+		t.Fatalf("status %d body=%s", res2.StatusCode, b)
+	}
+	var plain browseDirsResponse
+	if err := json.NewDecoder(res2.Body).Decode(&plain); err != nil {
+		t.Fatal(err)
+	}
+	if plain.IsGitRepo {
+		t.Fatal("expected plain folder not marked as git repo")
 	}
 }

@@ -29,6 +29,7 @@ type BrowseDirEntry struct {
 type BrowseDirListing struct {
 	Path       string           `json:"path"`
 	ParentPath string           `json:"parent_path,omitempty"`
+	IsGitRepo  bool             `json:"is_git_repo,omitempty"`
 	Entries    []BrowseDirEntry `json:"entries"`
 }
 
@@ -62,6 +63,7 @@ func ListBrowseDirsUnrestricted(absPath string) (BrowseDirListing, error) {
 	return BrowseDirListing{
 		Path:       clean,
 		ParentPath: parent,
+		IsGitRepo:  isGitWorktree(clean),
 		Entries:    entries,
 	}, nil
 }
@@ -86,6 +88,7 @@ func ListBrowseDirs(roots []BrowseRoot, absPath string) (BrowseDirListing, error
 	return BrowseDirListing{
 		Path:       clean,
 		ParentPath: parent,
+		IsGitRepo:  isGitWorktree(clean),
 		Entries:    entries,
 	}, nil
 }

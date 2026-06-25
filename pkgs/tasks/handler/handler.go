@@ -167,6 +167,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("GET /settings", http.HandlerFunc(h.getSettings))
 	m.Handle("GET /settings/workspace-roots", http.HandlerFunc(h.workspaceRoots))
 	m.Handle("GET /settings/browse-dirs", http.HandlerFunc(h.browseDirs))
+	m.Handle("GET /settings/git-probe", http.HandlerFunc(h.gitRepositoryProbe))
 	m.Handle("PATCH /settings", http.HandlerFunc(h.patchSettings))
 	m.Handle("POST /settings/probe-cursor", http.HandlerFunc(h.probeCursor))
 	m.Handle("POST /settings/list-cursor-models", http.HandlerFunc(h.listCursorModels))
