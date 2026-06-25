@@ -309,12 +309,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
+  min-width: 1.25rem;
   height: 1.25rem;
 }
 
 .workspace-picker-git-icon--yes {
   color: var(--success);
+}
+
+.workspace-picker-git-badge {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0.125rem 0.3125rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 28%, transparent);
+  text-transform: lowercase;
 }
 
 .workspace-picker-git-icon--no {

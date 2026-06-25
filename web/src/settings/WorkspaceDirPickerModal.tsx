@@ -480,7 +480,7 @@ function GitRepoStatusIcon({ isGitRepo }: { isGitRepo: boolean }) {
       title={isGitRepo ? "Git repository" : "Not a git repository"}
       aria-label={isGitRepo ? "Git repository" : "Not a git repository"}
     >
-      {isGitRepo ? <GitBranchIcon /> : <NoGitRepoIcon />}
+      {isGitRepo ? <GitRepoBadge /> : <NoGitRepoIcon />}
     </span>
   );
 }
@@ -541,23 +541,8 @@ function BackIcon() {
   );
 }
 
-function GitBranchIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-      <path
-        d="M4.5 3.25a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5ZM4.5 10.25a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5ZM11.5 6.75a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"
-        fill="currentColor"
-      />
-      <path
-        d="M5.75 5.5v3.25M5.75 5.5h3.5a1.25 1.25 0 0 1 1.25 1.25v1.25"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+function GitRepoBadge() {
+  return <span className="workspace-picker-git-badge">git</span>;
 }
 
 function NoGitRepoIcon() {
