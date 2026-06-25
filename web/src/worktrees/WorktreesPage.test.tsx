@@ -60,9 +60,9 @@ describe("WorktreesPage", () => {
     expect(
       await screen.findByText(/register a repository to get started/i),
     ).toBeInTheDocument();
-    await userEvent.click(
-      screen.getAllByRole("button", { name: /Register repository/i })[0]!,
-    );
+    const registerButtons = screen.getAllByRole("button", { name: /Register repository/i });
+    expect(registerButtons).toHaveLength(1);
+    await userEvent.click(registerButtons[0]!);
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
     ).toBeInTheDocument();
