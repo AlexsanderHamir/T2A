@@ -21,6 +21,14 @@ When no git repository is registered:
 
 Operators manage repositories, worktrees, and branches on the **`/worktrees`** SPA page (not Settings).
 
+## Operator setup flow (SPA)
+
+Hamix expects operators to follow **repository → worktree → task**:
+
+1. **`/worktrees` in setup mode** — When no repositories are registered, the page title is **Repositories** with guided copy and a register CTA. When repositories exist, the page switches to **Worktrees** and shows the repository cards.
+2. **`/worktrees?register=1`** — Deep link that opens the register-repository modal on load and then strips the query param from the URL. Used by the task-create setup prompt and the create-modal repository selector.
+3. **Task create gate** — **New task** and **Start fresh** (from the draft picker) call `ensureRepositoriesRegistered` first. With zero repos, a setup prompt appears instead of the create modal; **Register repository** navigates to `/worktrees?register=1`. Template create, task edit, and draft resume are not gated.
+
 > **Important** — Workspace trees are **read-only over HTTP**. Mutations happen when the execute agent (or the operator outside Hamix) changes files on disk.
 
 ## Key concepts

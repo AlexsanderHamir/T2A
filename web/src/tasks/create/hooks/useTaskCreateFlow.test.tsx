@@ -16,17 +16,23 @@ vi.mock("@/api", () => ({
   saveTaskDraft: vi.fn(),
 }));
 
+vi.mock("@/worktrees/ensureRepositoriesRegistered", () => ({
+  ensureRepositoriesRegistered: vi.fn().mockResolvedValue(true),
+}));
+
 import {
   createTask,
   getTaskDraft,
   listTaskDrafts,
   saveTaskDraft,
 } from "@/api";
+import { ensureRepositoriesRegistered } from "@/worktrees/ensureRepositoriesRegistered";
 
 const mockedCreateTask = vi.mocked(createTask);
 const mockedListDrafts = vi.mocked(listTaskDrafts);
 const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
+const mockedEnsureRepos = vi.mocked(ensureRepositoriesRegistered);
 
 import { makeTask } from "@/test/taskDefaults";
 function makeWrapper() {
@@ -62,6 +68,7 @@ describe("useTaskCreateFlow", () => {
   beforeEach(() => {
     mockedCreateTask.mockResolvedValue(makeTask());
     mockedListDrafts.mockResolvedValue([]);
+    mockedEnsureRepos.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -334,5 +341,27 @@ describe("useTaskCreateFlow", () => {
     expect(result.current.createModalOpen).toBe(true);
     expect(result.current.newProjectID).toBe("project-locked");
     expect(result.current.createModalAssignmentLocked).toBe(true);
+  });
+
+  it("opens repository setup prompt instead of create modal when no repos exist", async () => {
+    mockedEnsureRepos.mockResolvedValueOnce(false);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    await act(async () => {
+      result.current.openCreateModal();
+    });
+
+    await waitFor(() => {
+      expect(result.current.repositorySetupPromptOpen).toBe(true);
+    });
+    expect(result.current.createModalOpen).toBe(false);
+    expect(result.current.draftPickerOpen).toBe(false);
   });
 });

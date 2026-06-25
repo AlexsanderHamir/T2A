@@ -6,6 +6,7 @@ import { settingsQueryKeys } from "../../task-query";
 import { hydrateFormFromComposePayload } from "../composePayload";
 import { applyResumedDraftToForm } from "../draftPayload";
 import { decideCreateEntry } from "../decideCreateEntry";
+import { ensureRepositoriesRegistered } from "@/worktrees/ensureRepositoriesRegistered";
 import type { ComposeOperation, ComposeTarget, TaskDraftsQuery } from "../types";
 import type { useTaskCreateFormState } from "./useTaskCreateFormState";
 import type { useTaskCreateModalState } from "./useTaskCreateModalState";
@@ -19,7 +20,7 @@ export function useTaskCreateEntryActions(input: {
   queryClient: QueryClient;
 }) {
   const openComposeModal = useCallback(
-    (opts?: {
+    async (opts?: {
       projectID?: string;
       lockProjectAssignment?: boolean;
       target?: ComposeTarget;
@@ -36,6 +37,13 @@ export function useTaskCreateEntryActions(input: {
         : null;
       const target = opts?.target ?? "task";
       const operation = opts?.operation ?? "create";
+      if (target === "task" && operation === "create" && !opts?.skipDraftPicker) {
+        const hasRepos = await ensureRepositoriesRegistered(input.queryClient);
+        if (!hasRepos) {
+          input.modal.setRepositorySetupPromptOpen(true);
+          return;
+        }
+      }
       if (target === "template" || opts?.skipDraftPicker) {
         input.modal.resetNewTaskForm();
         input.modal.setComposeTarget(target);
@@ -66,7 +74,7 @@ export function useTaskCreateEntryActions(input: {
 
   const openCreateModal = useCallback(
     (prefill?: { projectID: string; lockProjectAssignment?: boolean }) => {
-      openComposeModal({
+      void openComposeModal({
         projectID: prefill?.projectID,
         lockProjectAssignment: prefill?.lockProjectAssignment,
         target: "task",
@@ -81,6 +89,12 @@ export function useTaskCreateEntryActions(input: {
   }, [openComposeModal]);
 
   const startFreshDraft = useCallback(async () => {
+    const hasRepos = await ensureRepositoriesRegistered(input.queryClient);
+    if (!hasRepos) {
+      input.modal.setDraftPickerOpen(false);
+      input.modal.setRepositorySetupPromptOpen(true);
+      return;
+    }
     input.modal.resetNewTaskForm();
     input.modal.applyCreateModalPrefill();
     input.modal.setDraftPickerOpen(false);

@@ -22,6 +22,7 @@ export function useTaskCreateModalState(
   const [createEntryDraftErrorHint, setCreateEntryDraftErrorHint] = useState<
     string | null
   >(null);
+  const [repositorySetupPromptOpen, setRepositorySetupPromptOpen] = useState(false);
 
   const resetNewTaskForm = useCallback(() => {
     resetFormFields();
@@ -47,6 +48,7 @@ export function useTaskCreateModalState(
     setCreateModalOpen(false);
     setDraftPickerOpen(false);
     setCreateEntryDraftErrorHint(null);
+    setRepositorySetupPromptOpen(false);
     resetNewTaskForm();
   }, [resetNewTaskForm]);
 
@@ -98,6 +100,8 @@ export function useTaskCreateModalState(
     setCreateModalAssignmentLocked,
     createEntryDraftErrorHint,
     setCreateEntryDraftErrorHint,
+    repositorySetupPromptOpen,
+    setRepositorySetupPromptOpen,
     applyCreateModalPrefill,
     resetNewTaskForm,
     closeCreateModal,

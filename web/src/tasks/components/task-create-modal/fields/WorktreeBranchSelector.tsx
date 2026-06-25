@@ -120,8 +120,8 @@ export function WorktreeBranchSelector({
     return (
       <p className="worktrees-git-selector__manage">
         No repositories registered.{" "}
-        <Link to="/worktrees" target="_blank" rel="noopener noreferrer">
-          Manage worktrees
+        <Link to="/worktrees?register=1" target="_blank" rel="noopener noreferrer">
+          Register repository
         </Link>
       </p>
     );
