@@ -171,6 +171,41 @@ describe("WorkspaceDirPickerModal", () => {
     fetchMock.mockRestore();
   });
 
+  it("renders bootstrap entry points when workspace-roots returns OS places", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [
+            {
+              id: "install",
+              path: "/app",
+              label: "Hamix checkout",
+              category: "install",
+              available: true,
+            },
+            { id: "home", path: "/roots", label: "Home", category: "home", available: true },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        currentPath=""
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: /Home/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hamix checkout/ })).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
   it("disables the confirm button when no folder is open yet", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);

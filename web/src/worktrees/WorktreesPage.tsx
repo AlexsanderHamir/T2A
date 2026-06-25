@@ -142,10 +142,6 @@ export function WorktreesPage() {
                 description="Hamix needs a git checkout before you can add worktrees, bind branches, and run agent tasks."
                 hideIcon
                 className="empty-state--in-table empty-state--task-list-fresh"
-                action={{
-                  label: "Register repository",
-                  onClick: () => setRegisterOpen(true),
-                }}
               />
             </div>
           ) : null}
