@@ -86,9 +86,9 @@ func TestHTTP_workspaceRoots_returnsRegisteredRepos(t *testing.T) {
 	}
 }
 
-// TestHTTP_workspaceRoots_emptyWhenNoRepos verifies that an empty roots list
-// is returned when no repositories are registered and HAMIX_BROWSE_ROOTS is unset.
-func TestHTTP_workspaceRoots_emptyWhenNoRepos(t *testing.T) {
+// TestHTTP_workspaceRoots_bootstrapWhenNoRepos verifies OS bootstrap entry points
+// when no repositories are registered and HAMIX_BROWSE_ROOTS is unset.
+func TestHTTP_workspaceRoots_bootstrapWhenNoRepos(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	h := NewHandler(st, NewSSEHub(), nil)
@@ -108,8 +108,18 @@ func TestHTTP_workspaceRoots_emptyWhenNoRepos(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if len(body.Roots) != 0 {
-		t.Fatalf("expected empty roots, got %+v", body.Roots)
+	if len(body.Roots) == 0 {
+		t.Fatal("expected bootstrap roots, got empty list")
+	}
+	var hasHome bool
+	for _, root := range body.Roots {
+		if root.Category == repo.PlaceCategoryHome && root.Available {
+			hasHome = true
+			break
+		}
+	}
+	if !hasHome {
+		t.Fatalf("expected available home bootstrap root, got %+v", body.Roots)
 	}
 }
 
