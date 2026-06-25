@@ -60,12 +60,7 @@ describe("worktreesPageErrorMessage", () => {
 });
 
 describe("worktreesPageTitle", () => {
-  it("uses Repositories for setup and error modes", () => {
-    expect(worktreesPageTitle("setup")).toBe("Repositories");
-    expect(worktreesPageTitle("error")).toBe("Repositories");
-  });
-
-  it("uses Worktrees when repositories exist", () => {
-    expect(worktreesPageTitle("manage")).toBe("Worktrees");
+  it("uses Repositories for every page mode", () => {
+    expect(worktreesPageTitle()).toBe("Repositories");
   });
 });

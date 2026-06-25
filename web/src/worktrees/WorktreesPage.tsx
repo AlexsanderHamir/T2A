@@ -42,7 +42,7 @@ export function WorktreesPage() {
     isError: repositoriesQuery.isError,
     repositoryCount: repositories.length,
   });
-  const pageTitle = worktreesPageTitle(pageMode);
+  const pageTitle = worktreesPageTitle();
   useDocumentTitle(pageTitle);
 
   const showSkeleton = useDelayedTrue(
@@ -119,6 +119,17 @@ export function WorktreesPage() {
         {pageMode === "error" ? (
           <div className="err" role="alert">
             <p>{worktreesPageErrorMessage(repositoriesQuery.error)}</p>
+            <div className="task-detail-error-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  void repositoriesQuery.refetch();
+                }}
+              >
+                Try again
+              </button>
+            </div>
           </div>
         ) : null}
 

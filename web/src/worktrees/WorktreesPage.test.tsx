@@ -81,6 +81,7 @@ describe("WorktreesPage", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/could not load repositories/i);
     expect(alert).toHaveTextContent(/git API may be unavailable/i);
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.queryByText(/register a repository to get started/i)).not.toBeInTheDocument();
   });
 
@@ -176,7 +177,7 @@ describe("WorktreesPage", () => {
     expect(
       await screen.findByRole("heading", {
         level: 2,
-        name: /^worktrees$/i,
+        name: /^repositories$/i,
       }),
     ).toBeInTheDocument();
     expect(await screen.findByText("feature")).toBeInTheDocument();

@@ -25,7 +25,7 @@ Operators manage repositories, worktrees, and branches on the **`/worktrees`** S
 
 Hamix expects operators to follow **repository → worktree → task**:
 
-1. **`/worktrees` in setup mode** — When no repositories are registered, the page title is **Repositories** with guided copy and a register CTA. When repositories exist, the page switches to **Worktrees** and shows the repository cards.
+1. **`/worktrees` in setup mode** — When no repositories are registered, the page shows **Repositories** with guided copy and a register CTA. When repositories exist, the same page lists registered repository cards (with worktrees and branches inside each card).
 2. **`/worktrees?register=1`** — Deep link that opens the register-repository modal on load and then strips the query param from the URL. Used by the task-create setup prompt and the create-modal repository selector.
 3. **Task create gate** — **New task** and **Start fresh** (from the draft picker) call `ensureRepositoriesRegistered` first. With zero repos, a setup prompt appears instead of the create modal; **Register repository** navigates to `/worktrees?register=1`. Template create, task edit, and draft resume are not gated.
 
