@@ -1,71 +1,20 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  draftCreateCapture,
-  draftGet,
-  draftsList,
-  draftsListPending,
-} from "@/test/handlers/drafts";
 import { listCursorModelsOk } from "@/test/handlers/settings";
 import {
   appDefaultHandlers,
   renderTasksHome,
-  renderTasksAt,
   setupAppTest,
 } from "@/test/integration/appHarness";
+import { draftsListPending } from "@/test/handlers/drafts";
 import { server } from "@/test/server";
 
 describe("draft entry hints", () => {
   beforeEach(() => {
     setupAppTest();
     server.use(...appDefaultHandlers());
-  });
-
-  it("opens a draft from drafts page in a prefilled create modal", async () => {
-    const user = userEvent.setup();
-    const draftSaves: string[] = [];
-    server.use(
-      draftsList([
-        {
-          id: "d1",
-          name: "Draft from list",
-          created_at: "2026-04-07T10:00:00Z",
-          updated_at: "2026-04-07T10:05:00Z",
-        },
-      ]),
-      draftGet("d1", {
-        name: "Draft from list",
-        created_at: "2026-04-07T10:00:00Z",
-        updated_at: "2026-04-07T10:05:00Z",
-        payload: {
-          title: "Prefilled title",
-          initial_prompt: "Prefilled prompt",
-          priority: "high",
-          checklist_items: ["Do step A"],
-        },
-      }),
-      draftCreateCapture(
-        (body) => draftSaves.push(body),
-        { status: 200, body: { id: "d1", name: "Draft from list" } },
-      ),
-    );
-
-    renderTasksAt(["/drafts"]);
-
-    await screen.findByRole("heading", { name: /^task drafts$/i });
-    await user.click(
-      await screen.findByRole("listitem", {
-        name: /^resume draft: draft from list$/i,
-      }),
-    );
-
-    const dialog = await screen.findByRole("dialog", { name: /^new task$/i });
-    expect(within(dialog).queryByLabelText(/^draft name$/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/^title$/i)).toHaveValue("Prefilled title");
-    expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
-    expect(draftSaves).toHaveLength(0);
   });
 
   it("shows loading status in draft picker modal from home", async () => {
@@ -79,6 +28,11 @@ describe("draft entry hints", () => {
     expect(await screen.findByText(/loading drafts/i)).toBeInTheDocument();
 
     await deferred.resolve(HttpResponse.json({ drafts: [] }));
+    expect(
+      await screen.findByRole("heading", { name: /resume a draft or start fresh/i }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^start fresh$/i }));
     expect(
       await screen.findByRole("dialog", { name: /^new task$/i }),
     ).toBeInTheDocument();
