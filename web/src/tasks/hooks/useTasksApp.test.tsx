@@ -20,6 +20,10 @@ vi.mock("../../api", () => ({
   addChecklistItem: vi.fn(),
 }));
 
+vi.mock("@/worktrees/ensureRepositoriesRegistered", () => ({
+  ensureRepositoriesRegistered: vi.fn().mockResolvedValue(true),
+}));
+
 import {
   listTasks,
   getTaskStats,
@@ -29,6 +33,7 @@ import {
   createTask,
   deleteTask,
 } from "../../api";
+import { ensureRepositoriesRegistered } from "@/worktrees/ensureRepositoriesRegistered";
 
 const mockedListTasks = vi.mocked(listTasks);
 const mockedGetStats = vi.mocked(getTaskStats);
@@ -37,6 +42,18 @@ const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
 const mockedCreateTask = vi.mocked(createTask);
 const mockedDeleteTask = vi.mocked(deleteTask);
+const mockedEnsureRepos = vi.mocked(ensureRepositoriesRegistered);
+
+async function openCreateModalReady(
+  result: { current: ReturnType<typeof useTasksApp> },
+) {
+  await act(async () => {
+    result.current.openCreateModal();
+  });
+  await waitFor(() => {
+    expect(result.current.createModalOpen).toBe(true);
+  });
+}
 
 function makeWrapper() {
   const queryClient = new QueryClient({
@@ -66,6 +83,7 @@ describe("useTasksApp delete lifecycle", () => {
     });
     mockedGetStats.mockResolvedValue(null as unknown as never);
     mockedListDrafts.mockResolvedValue([]);
+    mockedEnsureRepos.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -112,6 +130,7 @@ describe("useTasksApp saveDraftMutation race", () => {
     });
     mockedGetStats.mockResolvedValue(null as unknown as never);
     mockedListDrafts.mockResolvedValue([]);
+    mockedEnsureRepos.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -156,10 +175,7 @@ describe("useTasksApp saveDraftMutation race", () => {
       expect(result.current.draftListLoading).toBe(false);
     });
 
-    act(() => {
-      result.current.openCreateModal();
-    });
-    expect(result.current.createModalOpen).toBe(true);
+    await openCreateModalReady(result);
 
     // Touch a field so the autosave signature differs from the baseline -
     // otherwise saveDraftNow short-circuits before calling the API.
@@ -224,9 +240,7 @@ describe("useTasksApp saveDraftMutation race", () => {
       expect(result.current.draftListLoading).toBe(false);
     });
 
-    act(() => {
-      result.current.openCreateModal();
-    });
+    await openCreateModalReady(result);
     act(() => {
       result.current.setNewTitle("Draft A title");
     });
@@ -275,9 +289,7 @@ describe("useTasksApp saveDraftMutation race", () => {
       expect(result.current.draftListLoading).toBe(false);
     });
 
-    act(() => {
-      result.current.openCreateModal();
-    });
+    await openCreateModalReady(result);
 
     // First edit: kicks the autosave off with snapshot S1.
     act(() => {
@@ -337,6 +349,7 @@ describe("useTasksApp createMutation race", () => {
     });
     mockedGetStats.mockResolvedValue(null as unknown as never);
     mockedListDrafts.mockResolvedValue([]);
+    mockedEnsureRepos.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -395,9 +408,7 @@ describe("useTasksApp createMutation race", () => {
       expect(result.current.draftListLoading).toBe(false);
     });
 
-    act(() => {
-      result.current.openCreateModal();
-    });
+    await openCreateModalReady(result);
     act(() => {
       result.current.setNewTitle("Draft A");
     });
@@ -457,9 +468,7 @@ describe("useTasksApp createMutation race", () => {
       expect(result.current.draftListLoading).toBe(false);
     });
 
-    act(() => {
-      result.current.openCreateModal();
-    });
+    await openCreateModalReady(result);
     act(() => {
       result.current.setNewTitle("Draft A");
     });
@@ -467,7 +476,6 @@ describe("useTasksApp createMutation race", () => {
       result.current.setNewPriority("medium");
       result.current.appendNewChecklistCriterion("Criterion");
     });
-    expect(result.current.createModalOpen).toBe(true);
 
     act(() => {
       result.current.submitCreate({
@@ -492,6 +500,7 @@ describe("useTasksApp resumeDraftMutation race", () => {
     });
     mockedGetStats.mockResolvedValue(null as unknown as never);
     mockedListDrafts.mockResolvedValue([]);
+    mockedEnsureRepos.mockResolvedValue(true);
   });
 
   afterEach(() => {

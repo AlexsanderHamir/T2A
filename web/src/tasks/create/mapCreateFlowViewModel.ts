@@ -61,6 +61,8 @@ export function mapCreateFlowViewModel(input: {
       ? errorMessage(input.draftsQuery.error)
       : null,
     createEntryDraftErrorHint: input.modal.createEntryDraftErrorHint,
+    repositorySetupPromptOpen: input.modal.repositorySetupPromptOpen,
+    setRepositorySetupPromptOpen: input.modal.setRepositorySetupPromptOpen,
     retryDraftList: input.actions.retryDraftList,
     retryCreateEntryDraftLoad: input.actions.retryCreateEntryDraftLoad,
     deleteDraftPending: input.mutations.deleteDraftMutation.isPending,

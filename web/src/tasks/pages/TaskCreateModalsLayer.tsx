@@ -8,6 +8,7 @@ import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { useAppTimezone } from "@/shared/time/appTimezone";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
+import { RepositorySetupPrompt } from "@/worktrees/modals/RepositorySetupPrompt";
 import { useTasksAppContext } from "../app/TasksAppProvider";
 
 export function TaskCreateModalsLayer() {
@@ -162,6 +163,12 @@ export function TaskCreateModalsLayer() {
           }}
           resumePending={app.resumeDraftPending}
           resumeError={app.resumeDraftError}
+        />
+      ) : null}
+      {app.repositorySetupPromptOpen ? (
+        <RepositorySetupPrompt
+          open={app.repositorySetupPromptOpen}
+          onClose={() => app.setRepositorySetupPromptOpen(false)}
         />
       ) : null}
     </>

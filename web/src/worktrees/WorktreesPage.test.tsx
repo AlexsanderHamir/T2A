@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
@@ -22,15 +22,17 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
-function renderPage() {
+function renderPage(initialEntries: string[] = ["/worktrees"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={initialEntries}>
         <ModalStackProvider>
-          <WorktreesPage />
+          <Routes>
+            <Route path="/worktrees" element={<WorktreesPage />} />
+          </Routes>
         </ModalStackProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -42,20 +44,56 @@ describe("WorktreesPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows header CTA that opens register modal when empty", async () => {
+  it("shows repository setup copy when no repositories are registered", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
-      const res = respondGlobalGitApi(url, "GET");
       if (url.endsWith("/git/repositories")) {
         return jsonResponse({ repositories: [] });
       }
+      const res = respondGlobalGitApi(url, "GET");
       if (res) return res;
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
     renderPage();
-    await screen.findByText(/No repositories yet/i);
-    await userEvent.click(screen.getByRole("button", { name: /Register repository/i }));
+    expect(await screen.findByRole("heading", { name: /^repositories$/i })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/register a repository to get started/i),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: /Register repository/i })[0]!,
+    );
+    expect(
+      await screen.findByRole("button", { name: /Choose folder/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows only an error callout when repository fetch fails with Not Found", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.endsWith("/git/repositories")) {
+        return jsonResponse({ error: "Not Found" }, { status: 404 });
+      }
+      return jsonResponse({ error: "not found" }, { status: 404 });
+    });
+
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/could not load repositories/i);
+    expect(alert).toHaveTextContent(/git API may be unavailable/i);
+    expect(screen.queryByText(/register a repository to get started/i)).not.toBeInTheDocument();
+  });
+
+  it("opens register modal from ?register=1 and strips the query param", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.endsWith("/git/repositories")) {
+        return jsonResponse({ repositories: [] });
+      }
+      return jsonResponse({ error: "not found" }, { status: 404 });
+    });
+
+    renderPage(["/worktrees?register=1"]);
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
     ).toBeInTheDocument();
@@ -135,6 +173,12 @@ describe("WorktreesPage", () => {
     });
 
     renderPage();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: /^worktrees$/i,
+      }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("feature")).toBeInTheDocument();
     expect(screen.getAllByText("main").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);

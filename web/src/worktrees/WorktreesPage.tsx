@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { GitRepository } from "@/types";
 import { Button } from "@/components/ui";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
@@ -14,6 +15,11 @@ import type { GitDeleteTarget } from "./gitDeleteErrors";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 import { CreateWorktreeModal } from "./modals/CreateWorktreeModal";
 import { AssociateBranchModal } from "./modals/AssociateBranchModal";
+import {
+  deriveWorktreesPageMode,
+  worktreesPageErrorMessage,
+  worktreesPageTitle,
+} from "./worktreesPageMode";
 
 type ActiveRepoModal =
   | { kind: "worktree"; repository: GitRepository }
@@ -21,21 +27,34 @@ type ActiveRepoModal =
   | null;
 
 export function WorktreesPage() {
-  useDocumentTitle("Worktrees");
   const repositoriesQuery = useGlobalRepositories();
   const mutations = useGlobalGitMutations();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [activeRepoModal, setActiveRepoModal] = useState<ActiveRepoModal>(null);
   const [deleteTarget, setDeleteTarget] = useState<GitDeleteTarget | null>(null);
   const [deleteError, setDeleteError] = useState<unknown>(null);
 
+  const repositories = repositoriesQuery.data ?? [];
+  const pageMode = deriveWorktreesPageMode({
+    isLoading: repositoriesQuery.isLoading && !repositoriesQuery.data,
+    isError: repositoriesQuery.isError,
+    repositoryCount: repositories.length,
+  });
+  const pageTitle = worktreesPageTitle(pageMode);
+  useDocumentTitle(pageTitle);
+
   const showSkeleton = useDelayedTrue(
-    repositoriesQuery.isLoading && !repositoriesQuery.data,
+    pageMode === "loading",
     TASK_TIMINGS.draftResumeMinLoadingMs,
   );
 
-  const repositories = repositoriesQuery.data ?? [];
+  useEffect(() => {
+    if (searchParams.get("register") !== "1") return;
+    setRegisterOpen(true);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const closeDelete = () => {
     setDeleteTarget(null);
@@ -80,11 +99,11 @@ export function WorktreesPage() {
         <header className="task-list-section-head">
           <div className="task-list-section-head__text">
             <h2 id="worktrees-heading" className="task-list-section-title">
-              Worktrees
+              {pageTitle}
             </h2>
           </div>
           <div className="task-list-section-actions">
-            {!showSkeleton ? (
+            {pageMode === "setup" || pageMode === "manage" ? (
               <Button
                 type="button"
                 variant="primary"
@@ -97,29 +116,29 @@ export function WorktreesPage() {
           </div>
         </header>
 
-        {repositoriesQuery.isError ? (
+        {pageMode === "error" ? (
           <div className="err" role="alert">
-            <p>
-              {repositoriesQuery.error instanceof Error
-                ? repositoriesQuery.error.message
-                : "Could not load repositories"}
-            </p>
+            <p>{worktreesPageErrorMessage(repositoriesQuery.error)}</p>
           </div>
         ) : null}
 
         <div className="task-list-content task-list-content--enter">
           {showSkeleton ? <TaskDraftsListSkeleton /> : null}
-          {!showSkeleton && repositories.length === 0 ? (
+          {pageMode === "setup" ? (
             <div className="task-list-empty-cell">
               <EmptyState
-                title="No repositories yet"
-                description=""
+                title="Register a repository to get started"
+                description="Hamix needs a git checkout before you can add worktrees, bind branches, and run agent tasks."
                 hideIcon
                 className="empty-state--in-table empty-state--task-list-fresh"
+                action={{
+                  label: "Register repository",
+                  onClick: () => setRegisterOpen(true),
+                }}
               />
             </div>
           ) : null}
-          {!showSkeleton && repositories.length > 0 ? (
+          {pageMode === "manage" ? (
             <div className="worktrees-page__cards">
               {repositories.map((repository) => (
                 <RepositoryCard

@@ -1,4 +1,4 @@
-import { screen, within, act, fireEvent } from "@testing-library/react";
+import { screen, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -94,6 +94,7 @@ describe("draft autosave on create modal", () => {
   });
 
   it("does not autosave untouched fresh drafts", async () => {
+    const user = userEvent.setup();
     const draftSaves: string[] = [];
     server.use(
       draftCreateCapture(
@@ -105,12 +106,11 @@ describe("draft autosave on create modal", () => {
     renderTasksHome();
     await screen.findByText("No tasks yet");
 
+    const dialog = await openNewTaskModal(user);
+    expect(dialog).toBeInTheDocument();
+
     vi.useFakeTimers();
     try {
-      fireEvent.click(screen.getByRole("button", { name: /^new task$/i }));
-      expect(
-        screen.getByRole("dialog", { name: /^new task$/i }),
-      ).toBeInTheDocument();
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1200);
       });
