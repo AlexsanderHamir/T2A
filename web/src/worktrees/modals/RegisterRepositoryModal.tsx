@@ -107,10 +107,40 @@ export function RegisterRepositoryModal({
           </header>
 
           <div className="worktrees-form-modal__picker">
-            <div className="worktrees-form-modal__picker-head">
-              <p className="worktrees-form-modal__picker-label" id="register-repo-path-label">
-                Repository path
-              </p>
+            <div className="worktrees-form-modal__picker-main">
+              <span
+                className={
+                  isGitRepo
+                    ? "worktrees-form-modal__picker-icon worktrees-form-modal__picker-icon--git"
+                    : "worktrees-form-modal__picker-icon"
+                }
+                aria-hidden="true"
+              >
+                {isGitRepo ? <GitBranchGlyph /> : <FolderGlyph />}
+              </span>
+              <span className="worktrees-form-modal__picker-text">
+                <span
+                  className="worktrees-form-modal__picker-label"
+                  id="register-repo-path-label"
+                >
+                  Repository path
+                </span>
+                {hasPath ? (
+                  <code
+                    className="worktrees-form-modal__path-display"
+                    aria-labelledby="register-repo-path-label"
+                  >
+                    {trimmedPath}
+                  </code>
+                ) : (
+                  <span
+                    className="worktrees-form-modal__path-display worktrees-form-modal__path-display--empty"
+                    aria-labelledby="register-repo-path-label"
+                  >
+                    No folder selected yet
+                  </span>
+                )}
+              </span>
               <Button
                 type="button"
                 variant="secondary"
@@ -118,24 +148,9 @@ export function RegisterRepositoryModal({
                 disabled={pending}
                 onClick={() => setPickerOpen(true)}
               >
-                Choose folder
+                {hasPath ? "Change" : "Choose folder"}
               </Button>
             </div>
-            {hasPath ? (
-              <code
-                className="worktrees-form-modal__path-display"
-                aria-labelledby="register-repo-path-label"
-              >
-                {trimmedPath}
-              </code>
-            ) : (
-              <p
-                className="worktrees-form-modal__path-display worktrees-form-modal__path-display--empty"
-                aria-labelledby="register-repo-path-label"
-              >
-                No folder selected yet
-              </p>
-            )}
             {hasPath && probeQuery.isSuccess && !isGitRepo ? (
               <p
                 className="worktrees-form-modal__git-status worktrees-form-modal__git-status--missing"
@@ -200,5 +215,38 @@ export function RegisterRepositoryModal({
         }}
       />
     </>
+  );
+}
+
+function FolderGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+      <path
+        d="M2.75 5.5A1.75 1.75 0 0 1 4.5 3.75h3.13c.46 0 .9.18 1.23.5l1.12 1.06H15.5c.97 0 1.75.78 1.75 1.75v7c0 .97-.78 1.75-1.75 1.75h-11A1.75 1.75 0 0 1 2.75 14V5.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GitBranchGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+      <path
+        d="M6 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM6 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM14 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+        fill="currentColor"
+      />
+      <path
+        d="M6 7.5v5M14 7.5a4 4 0 0 1-4 4H6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
