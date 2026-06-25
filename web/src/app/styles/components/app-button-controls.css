@@ -12,7 +12,7 @@ textarea {
       .task-event-data-tab
     ):not(.task-detail-agent-model-cta):not(.pg__toggle-btn):not(.test-scenarios-popover__row):not(
       .task-commit-diff-view-btn
-    )
+    ):not(.workspace-picker-back):not(.workspace-picker-row):not(.workspace-picker-crumb)
 ) {
   font: inherit;
   font-weight: 500;
@@ -32,7 +32,9 @@ textarea {
 :where(
   button:not(.custom-select-trigger):not(.settings-dropdown-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
-  ):not(.pg__toggle-btn):not(.test-scenarios-popover__row):not(.task-commit-diff-view-btn)
+  ):not(.pg__toggle-btn):not(.test-scenarios-popover__row):not(.task-commit-diff-view-btn):not(
+    .workspace-picker-back
+  ):not(.workspace-picker-row):not(.workspace-picker-crumb)
 ):not(:disabled):hover {
   background: var(--control-primary-hover-bg);
   box-shadow: none;
@@ -43,7 +45,9 @@ textarea {
 :where(
   button:not(.custom-select-trigger):not(.settings-dropdown-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
-  ):not(.pg__toggle-btn):not(.test-scenarios-popover__row):not(.task-commit-diff-view-btn)
+  ):not(.pg__toggle-btn):not(.test-scenarios-popover__row):not(.task-commit-diff-view-btn):not(
+    .workspace-picker-back
+  ):not(.workspace-picker-row):not(.workspace-picker-crumb)
 ):not(:disabled):active {
   transform: scale(0.98);
   box-shadow: none;

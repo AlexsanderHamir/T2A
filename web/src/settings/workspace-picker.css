@@ -121,8 +121,12 @@
 }
 
 .workspace-picker-back:not(:disabled):hover {
+  background: var(--bg-elevated);
   border-color: var(--border-interactive-hover);
   color: var(--text-primary);
+  box-shadow: none;
+  transform: none;
+  filter: none;
 }
 
 .workspace-picker-back:focus-visible {
@@ -174,6 +178,9 @@
 .workspace-picker-crumb:not(:disabled):hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
+  box-shadow: none;
+  transform: none;
+  filter: none;
 }
 
 .workspace-picker-crumb:focus-visible {
@@ -239,6 +246,9 @@
 
 .workspace-picker-row:not(:disabled):hover {
   background: var(--bg-elevated);
+  box-shadow: none;
+  transform: none;
+  filter: none;
 }
 
 .workspace-picker-row:not(:disabled):hover .workspace-picker-row-chevron {
@@ -294,21 +304,28 @@
   transition: transform var(--duration-normal) var(--ease-default);
 }
 
+.workspace-picker-git-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.workspace-picker-git-icon--yes {
+  color: var(--success);
+}
+
+.workspace-picker-git-icon--no {
+  color: var(--text-tertiary);
+  opacity: 0.55;
+}
+
 .workspace-picker-row-note {
   margin: 2px var(--space-3) var(--space-2) 2.625rem;
   font-size: var(--text-xs);
-  color: var(--color-error, #ef4444);
-}
-
-.workspace-picker-badge {
-  flex-shrink: 0;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--color-brand-subtle, #ede9fe);
-  color: var(--color-brand, #635bff);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  color: var(--danger);
 }
 
 .workspace-picker-empty {
@@ -375,19 +392,6 @@
   font-style: italic;
 }
 
-.workspace-picker-git-status {
-  font-size: var(--text-sm);
-  line-height: 1.45;
-}
-
-.workspace-picker-git-status--ok {
-  color: var(--color-success, #00a96e);
-}
-
-.workspace-picker-git-status--missing {
-  color: var(--color-error, #ef4444);
-}
-
 .workspace-picker-footer-actions {
   display: flex;
   gap: var(--space-3);
@@ -402,7 +406,7 @@
 }
 
 .workspace-picker-status--error {
-  color: var(--color-error, #ef4444);
+  color: var(--danger);
 }
 
 @media (prefers-reduced-motion: reduce) {
