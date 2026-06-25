@@ -21,6 +21,6 @@ export function worktreesPageErrorMessage(error: unknown): string {
   return message || "Could not load repositories.";
 }
 
-export function worktreesPageTitle(mode: WorktreesPageMode): string {
-  return mode === "manage" ? "Worktrees" : "Repositories";
+export function worktreesPageTitle(): string {
+  return "Repositories";
 }

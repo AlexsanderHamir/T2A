@@ -62,6 +62,7 @@ export default defineConfig({
       "/task-templates": { target: api, changeOrigin: true },
       "/events": { target: api, changeOrigin: true },
       "/repo": { target: api, changeOrigin: true },
+      "/git": { target: api, changeOrigin: true },
       // GET/PATCH /settings + POST /settings/probe-cursor + POST /settings/cancel-current-run.
       // Without this proxy the SettingsPage's GET /settings hits Vite directly and renders "Error: Not Found".
       // Document navigations must bypass the proxy (same as /tasks) so full reload after UI test mode toggle serves index.html.

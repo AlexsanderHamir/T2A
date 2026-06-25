@@ -140,7 +140,7 @@ function AppShell() {
                   ? { "aria-current": "page" as const }
                   : {})}
               >
-                Worktrees
+                Repositories
               </Link>
               <Link
                 to="/drafts"
