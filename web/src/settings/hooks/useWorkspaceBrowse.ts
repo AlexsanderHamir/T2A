@@ -56,12 +56,17 @@ export function prefetchBrowseDirs(queryClient: QueryClient, path: string): void
 }
 
 /** Roots plus the first available starting location listing (typical first click). */
-export async function prefetchWorkspacePickerShell(
-  queryClient: QueryClient,
-): Promise<void> {
-  const roots = await queryClient.fetchQuery(workspaceRootsQueryOptions());
-  const firstAvailable = roots.roots.find((root) => root.available);
-  if (firstAvailable) {
-    prefetchBrowseDirs(queryClient, firstAvailable.path);
-  }
+export function prefetchWorkspacePickerShell(queryClient: QueryClient): void {
+  void (async () => {
+    try {
+      const roots = await queryClient.fetchQuery(workspaceRootsQueryOptions());
+      const firstAvailable = roots.roots.find((root) => root.available);
+      if (firstAvailable) {
+        prefetchBrowseDirs(queryClient, firstAvailable.path);
+      }
+    } catch {
+      // Prefetch is a perf hint — 404, abort on unmount, and network errors
+      // must not surface as unhandled rejections.
+    }
+  })();
 }

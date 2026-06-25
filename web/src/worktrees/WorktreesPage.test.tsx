@@ -22,6 +22,27 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
+function workspaceRootsResponse(): Response {
+  return jsonResponse({
+    environment: "native",
+    roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
+  });
+}
+
+function respondWorkspaceBrowseApi(url: string): Response | null {
+  if (url.endsWith("/settings/workspace-roots")) {
+    return workspaceRootsResponse();
+  }
+  if (url.includes("/settings/browse-dirs")) {
+    return jsonResponse({
+      path: "/roots",
+      parent_path: "",
+      entries: [],
+    });
+  }
+  return null;
+}
+
 function renderPage(initialEntries: string[] = ["/worktrees"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -52,6 +73,8 @@ describe("WorktreesPage", () => {
       }
       const res = respondGlobalGitApi(url, "GET");
       if (res) return res;
+      const browse = respondWorkspaceBrowseApi(url);
+      if (browse) return browse;
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
@@ -91,6 +114,8 @@ describe("WorktreesPage", () => {
       if (url.endsWith("/git/repositories")) {
         return jsonResponse({ repositories: [] });
       }
+      const browse = respondWorkspaceBrowseApi(url);
+      if (browse) return browse;
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
@@ -101,6 +126,13 @@ describe("WorktreesPage", () => {
   });
 
   it("renders register repository modal when open", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      const browse = respondWorkspaceBrowseApi(url);
+      if (browse) return browse;
+      return jsonResponse({ error: "not found" }, { status: 404 });
+    });
+
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
