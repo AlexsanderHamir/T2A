@@ -178,7 +178,7 @@ Singleton row (`id=1`) seeded on first read with `domain.DefaultAppSettings`. Fu
 |---|---|---|
 | GET | `/settings` | Returns the full `AppSettings` row. Always available. |
 | GET | `/settings/workspace-roots` | `{ roots: [{ id, path, label, category?, available, unavailable_reason? }], environment: "native"\|"docker" }`. Browse roots for the workspace folder picker. `category` is one of `install`, `home`, `documents`, `desktop`, `downloads`, `pictures`, `music`, `videos`, or `custom`. Does not require `repo_root`. `Cache-Control: no-store`. |
-| GET | `/settings/browse-dirs?path=` | `{ path?, parent_path?, entries: [{ name, path, has_children, is_git_repo }] }`. Lists immediate subdirectories under allowed browse roots. Empty `path` lists available roots. Does not require `repo_root`. **400** when path escapes roots. `Cache-Control: no-store`. |
+| GET | `/settings/browse-dirs?path=` | `{ path?, parent_path?, is_git_repo?, entries: [{ name, path, has_children, is_git_repo }] }`. Lists immediate subdirectories under allowed browse roots. When `path` is set, `is_git_repo` reflects whether that directory is a git checkout. Empty `path` lists available roots. Does not require `repo_root`. **400** when path escapes roots. `Cache-Control: no-store`. |
 | PATCH | `/settings` | Partial; pointer fields distinguish "not provided" from explicit zero. On success, supervisor reloads in-process and SSE publishes `settings_changed`. |
 | POST | `/settings/probe-cursor` | Body `{ runner?, binary_path? }`. Probe failures return `200 { ok: false, error }` so the SPA renders inline. |
 | POST | `/settings/list-cursor-models` | Same fallback semantics as probe. CLI failures return `200 { ok: false }`. |

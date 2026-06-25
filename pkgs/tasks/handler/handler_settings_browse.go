@@ -20,6 +20,7 @@ type workspaceRootsResponse struct {
 type browseDirsResponse struct {
 	Path       string                `json:"path,omitempty"`
 	ParentPath string                `json:"parent_path,omitempty"`
+	IsGitRepo  bool                  `json:"is_git_repo,omitempty"`
 	Entries    []repo.BrowseDirEntry `json:"entries"`
 }
 
@@ -114,6 +115,7 @@ func (h *Handler) browseDirs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, op, http.StatusOK, browseDirsResponse{
 		Path:       listing.Path,
 		ParentPath: listing.ParentPath,
+		IsGitRepo:  listing.IsGitRepo,
 		Entries:    listing.Entries,
 	})
 }
