@@ -49,7 +49,7 @@ Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below
 | [web.md](./web.md) | You work on the `web/` SPA |
 | [domain/](./domain/) | You need why a subsystem behaves as it does — index: [domain/README.md](./domain/README.md) |
 | [omitted-features.md](./omitted-features.md) | A feature exists in code but is hidden for launch |
-| [adr/](./adr/) | You need the historical reason behind a design decision |
+| [adr/](./adr/) | You need the historical reason behind a design decision — index: [adr/README.md](./adr/README.md) |
 
 ## See also
 
