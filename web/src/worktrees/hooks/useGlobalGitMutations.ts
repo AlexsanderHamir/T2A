@@ -19,6 +19,7 @@ export function useGlobalGitMutations() {
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalWorktrees(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalBranches(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalLiveBranches(repositoryId) });
+    void qc.invalidateQueries({ queryKey: gitQueryKeys.globalLiveWorktrees(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.projectsByRepo(repositoryId) });
   };
 

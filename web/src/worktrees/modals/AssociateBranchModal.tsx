@@ -58,7 +58,7 @@ export function AssociateBranchModal({
           }
         }}
       >
-        <h2 id="associate-branch-title">Associate branch</h2>
+        <h2 id="associate-branch-title">Add branch</h2>
 
         <label className="worktrees-form-modal__checkbox">
           <input
@@ -102,7 +102,7 @@ export function AssociateBranchModal({
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
-            {pending ? "Associating…" : "Associate"}
+            {pending ? "Adding…" : "Add branch"}
           </button>
         </div>
       </form>

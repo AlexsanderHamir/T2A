@@ -6,6 +6,7 @@ import { WorktreeRow } from "./WorktreeRow";
 type Props = {
   repository: GitRepository;
   onRegisterWorktree: () => void;
+  onCreateWorktree: () => void;
   onAssociateBranch: (worktreeId: string) => void;
   onDeleteRepository: () => void;
   onDeleteWorktree: (worktreeId: string, label: string) => void;
@@ -22,6 +23,7 @@ type Props = {
 export function RepositoryCard({
   repository,
   onRegisterWorktree,
+  onCreateWorktree,
   onAssociateBranch,
   onDeleteRepository,
   onDeleteWorktree,
@@ -77,16 +79,23 @@ export function RepositoryCard({
           >
             Worktrees
           </h3>
-          <button type="button" className="secondary" onClick={onRegisterWorktree}>
-            Add worktree
-          </button>
+          <div className="worktrees-repo-card__section-actions">
+            <button type="button" className="secondary" onClick={onRegisterWorktree}>
+              Register worktree
+            </button>
+            <button type="button" className="secondary" onClick={onCreateWorktree}>
+              Create worktree
+            </button>
+          </div>
         </div>
         {loading ? (
           <p className="worktrees-repo-card__loading" aria-busy="true">
             Loading worktrees…
           </p>
         ) : worktrees.length === 0 ? (
-          <p className="worktrees-repo-card__empty">No worktrees yet.</p>
+          <p className="worktrees-repo-card__empty">
+            No worktrees yet. Register an existing linked directory or create a new one.
+          </p>
         ) : (
           <div className="worktrees-repo-card__rows">
             {worktrees.map((worktree) => (

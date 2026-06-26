@@ -13,6 +13,19 @@ export function respondGlobalGitApi(url: string, method = "GET"): Response | nul
     if (url.endsWith(`${base}/repositories`)) {
       return Response.json(globalGitRepositoriesResponse());
     }
+    if (url.includes(`${base}/repositories/`) && url.endsWith("/worktrees/live")) {
+      return Response.json({
+        worktrees: [
+          {
+            path: "/repo/main",
+            branch: "main",
+            is_main: true,
+            detached: false,
+            registered: true,
+          },
+        ],
+      });
+    }
     if (url.includes(`${base}/repositories/`) && url.endsWith("/worktrees")) {
       return Response.json(globalGitWorktreesResponse());
     }

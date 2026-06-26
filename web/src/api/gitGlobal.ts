@@ -1,9 +1,10 @@
-import type { GitBranch, GitLiveBranch, GitRepository, GitWorktree, WorktreeBranch } from "@/types/git";
+import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind, WorktreeBranch } from "@/types/git";
 import type { ProjectListResponse } from "@/types/project";
 import { parseProjectListResponse } from "./projects";
 import {
   parseGitBranchList,
   parseGitLiveBranchList,
+  parseGitLiveWorktreeList,
   parseGitRepository,
   parseGitRepositoryList,
   parseGitWorktree,
@@ -96,7 +97,11 @@ export async function createGlobalGitWorktree(
 
 export async function registerGlobalGitWorktree(
   repositoryId: string,
-  input: { path: string; name?: string },
+  input: {
+    path: string;
+    name?: string;
+    branch?: GitWorktreeBranchBind;
+  },
 ): Promise<GitWorktree> {
   const repoId = assertTaskPathId(repositoryId, "repository id");
   const res = await fetchWithTimeout(
@@ -133,6 +138,19 @@ export async function listGlobalGitBranches(
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
   return parseGitBranchList((await res.json()) as unknown);
+}
+
+export async function listGlobalGitLiveWorktrees(
+  repositoryId: string,
+  options?: { signal?: AbortSignal },
+): Promise<GitLiveWorktree[]> {
+  const repoId = assertTaskPathId(repositoryId, "repository id");
+  const res = await fetchWithTimeout(
+    `${gitRoot}/repositories/${encodeURIComponent(repoId)}/worktrees/live`,
+    { headers: { Accept: "application/json" }, signal: options?.signal },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  return parseGitLiveWorktreeList((await res.json()) as unknown);
 }
 
 export async function listGlobalGitLiveBranches(

@@ -31,6 +31,21 @@ export type GitLiveBranch = {
   head_sha: string;
 };
 
+/** Linked worktree from `GET /git/repositories/{repoId}/worktrees/live`. */
+export type GitLiveWorktree = {
+  path: string;
+  branch: string;
+  is_main: boolean;
+  detached: boolean;
+  registered: boolean;
+};
+
+export type GitWorktreeBranchBind = {
+  name: string;
+  create_branch?: boolean;
+  start_point?: string;
+};
+
 /** Worktree↔branch association row. */
 export type WorktreeBranch = {
   id: string;

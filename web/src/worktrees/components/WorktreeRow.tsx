@@ -72,7 +72,7 @@ export function WorktreeRow({
             className="secondary worktrees-row__add-branch"
             onClick={onAssociateBranch}
           >
-            Associate branch
+            Add branch
           </button>
         ) : null}
       </div>

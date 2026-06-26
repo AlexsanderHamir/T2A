@@ -3,12 +3,17 @@ import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
+import {
+  WorktreeBranchBindFields,
+  branchBindPayload,
+  type BranchBindValue,
+} from "../components/WorktreeBranchBindFields";
 
 type Props = {
   open: boolean;
   pending: boolean;
   error: unknown;
-  defaultBranch?: string;
+  repositoryId: string;
   onClose: () => void;
   onSubmit: (input: {
     path: string;
@@ -22,19 +27,24 @@ export function CreateWorktreeModal({
   open,
   pending,
   error,
-  defaultBranch = "main",
+  repositoryId,
   onClose,
   onSubmit,
 }: Props) {
   const [path, setPath] = useState("");
   const [name, setName] = useState("");
-  const [branch, setBranch] = useState(defaultBranch);
-  const [createBranch, setCreateBranch] = useState(false);
+  const [branchBind, setBranchBind] = useState<BranchBindValue>({
+    selectedBranchName: "",
+    newBranchName: "",
+    createNew: false,
+  });
   const [pickerOpen, setPickerOpen] = useState(false);
 
   if (!open) return null;
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
+  const branchPayload = branchBindPayload(branchBind);
+  const canSubmit = path.trim() !== "" && branchPayload != null;
 
   return (
     <>
@@ -49,17 +59,22 @@ export function CreateWorktreeModal({
           onSubmit={(e) => {
             e.preventDefault();
             const trimmedPath = path.trim();
-            const trimmedBranch = branch.trim();
-            if (!trimmedPath || !trimmedBranch) return;
+            if (!trimmedPath || !branchPayload) return;
             onSubmit({
               path: trimmedPath,
               name: name.trim() || undefined,
-              branch: trimmedBranch,
-              create_branch: createBranch,
+              branch: branchPayload.name,
+              create_branch: branchPayload.create_branch,
             });
           }}
         >
-          <h2 id="create-worktree-title">Add worktree</h2>
+          <header className="worktrees-form-modal__header">
+            <h2 id="create-worktree-title">Create worktree</h2>
+            <p className="worktrees-form-modal__lead">
+              Add a new linked worktree directory and choose the checkout branch Hamix registers
+              with it.
+            </p>
+          </header>
           <div className="worktrees-form-modal__picker">
             <p className="worktrees-form-modal__picker-label">Worktree path</p>
             <button
@@ -86,25 +101,15 @@ export function CreateWorktreeModal({
               placeholder="Optional"
             />
           </label>
-          <label className="field">
-            <span className="settings-field-label">Branch</span>
-            <input
-              type="text"
-              value={branch}
-              required
-              disabled={pending}
-              onChange={(e) => setBranch(e.target.value)}
-            />
-          </label>
-          <label className="worktrees-form-modal__checkbox">
-            <input
-              type="checkbox"
-              checked={createBranch}
-              disabled={pending}
-              onChange={(e) => setCreateBranch(e.target.checked)}
-            />
-            Create branch if it does not exist
-          </label>
+          <WorktreeBranchBindFields
+            repositoryId={repositoryId}
+            enabled={open && repositoryId !== ""}
+            pending={pending}
+            value={branchBind}
+            onChange={setBranchBind}
+            branchSelectId="create-worktree-branch-select"
+            newBranchInputId="create-worktree-branch-new-name"
+          />
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
           ) : null}
@@ -115,7 +120,7 @@ export function CreateWorktreeModal({
             <button
               type="submit"
               className="btn-primary"
-              disabled={pending || !path.trim() || !branch.trim()}
+              disabled={pending || !canSubmit}
             >
               {pending ? "Creating…" : "Create worktree"}
             </button>

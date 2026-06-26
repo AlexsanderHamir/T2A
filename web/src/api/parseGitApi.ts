@@ -1,6 +1,7 @@
 import type {
   GitBranch,
   GitLiveBranch,
+  GitLiveWorktree,
   GitRepository,
   GitReconcileResult,
   GitWorktree,
@@ -130,6 +131,30 @@ export function parseGitLiveBranchList(raw: unknown): GitLiveBranch[] {
     throw new Error("Invalid API response: branches must be array");
   }
   return rows.map((row, i) => parseGitLiveBranchRow(row, `branches[${i}]`));
+}
+
+function parseGitLiveWorktreeRow(value: unknown, path: string): GitLiveWorktree {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be object`);
+  }
+  return {
+    path: parseString(value.path, `${path}.path`),
+    branch: parseString(value.branch, `${path}.branch`),
+    is_main: Boolean(value.is_main),
+    detached: Boolean(value.detached),
+    registered: Boolean(value.registered),
+  };
+}
+
+export function parseGitLiveWorktreeList(raw: unknown): GitLiveWorktree[] {
+  if (!isRecord(raw)) {
+    throw new Error("Invalid API response: body must be object");
+  }
+  const rows = raw.worktrees;
+  if (!Array.isArray(rows)) {
+    throw new Error("Invalid API response: worktrees must be array");
+  }
+  return rows.map((row, i) => parseGitLiveWorktreeRow(row, `worktrees[${i}]`));
 }
 
 export function parseWorktreeBranchList(raw: unknown): WorktreeBranch[] {

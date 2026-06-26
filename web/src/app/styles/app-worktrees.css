@@ -44,7 +44,8 @@
 }
 
 .worktrees-repo-card__header-actions,
-.worktrees-repo-card__section-header {
+.worktrees-repo-card__section-header,
+.worktrees-repo-card__section-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -54,6 +55,10 @@
 .worktrees-repo-card__section-header {
   justify-content: space-between;
   margin-bottom: var(--space-3);
+}
+
+.worktrees-repo-card__section-actions {
+  gap: var(--space-2);
 }
 
 .worktrees-repo-card__section-title {
