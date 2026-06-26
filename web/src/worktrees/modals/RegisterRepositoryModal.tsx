@@ -9,7 +9,7 @@ type Props = {
   pending: boolean;
   error: unknown;
   onClose: () => void;
-  onSubmit: (input: { path: string; default_branch?: string }) => void;
+  onSubmit: (input: { path: string }) => void;
 };
 
 export function RegisterRepositoryModal({
@@ -20,7 +20,6 @@ export function RegisterRepositoryModal({
   onSubmit,
 }: Props) {
   const [path, setPath] = useState("");
-  const [defaultBranch, setDefaultBranch] = useState("main");
   const [pickerOpen, setPickerOpen] = useState(false);
 
   if (!open) return null;
@@ -42,17 +41,14 @@ export function RegisterRepositoryModal({
             e.preventDefault();
             const trimmed = path.trim();
             if (!trimmed) return;
-            onSubmit({
-              path: trimmed,
-              default_branch: defaultBranch.trim() || undefined,
-            });
+            onSubmit({ path: trimmed });
           }}
         >
           <header className="worktrees-form-modal__header">
             <h2 id="register-repo-title">Register repository</h2>
             <p id="register-repo-lead" className="worktrees-form-modal__lead">
-              Choose the main checkout path for this project. Hamix registers worktrees and
-              branches under it.
+              Choose the main git checkout on disk. After registering, add worktrees and bind
+              branches from the repository card.
             </p>
           </header>
           <div className="worktrees-form-modal__picker">
@@ -73,17 +69,6 @@ export function RegisterRepositoryModal({
               <p className="worktrees-form-modal__picker-empty">No folder selected yet.</p>
             )}
           </div>
-          <label className="field">
-            <span className="settings-field-label">Default branch</span>
-            <input
-              type="text"
-              value={defaultBranch}
-              disabled={pending}
-              onChange={(e) => setDefaultBranch(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </label>
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
           ) : null}
