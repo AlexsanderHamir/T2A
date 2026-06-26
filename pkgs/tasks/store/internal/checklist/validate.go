@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -16,11 +17,11 @@ import (
 // owner; not the inherit-true subject).
 func itemsForDefinitionInTx(tx *gorm.DB, defTaskID string) ([]domain.TaskChecklistItem, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.itemsForDefinitionInTx")
-	var items []domain.TaskChecklistItem
+	var items []model.TaskChecklistItem
 	if err := tx.Where("task_id = ?", defTaskID).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
 		return nil, err
 	}
-	return items, nil
+	return model.ToDomainTaskChecklistItems(items), nil
 }
 
 // validateChecklistCompleteInTx asserts that every definition item
@@ -42,7 +43,7 @@ func validateChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) error {
 		return nil
 	}
 	for _, it := range items {
-		var comp domain.TaskChecklistCompletion
+		var comp model.TaskChecklistCompletion
 		err := tx.Where("task_id = ? AND item_id = ?", subjectTaskID, it.ID).First(&comp).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("%w: all checklist items must be done before marking this task done", domain.ErrInvalidInput)
@@ -50,10 +51,11 @@ func validateChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) error {
 		if err != nil {
 			return fmt.Errorf("checklist completion: %w", err)
 		}
-		if !domain.ValidVerifierKind(comp.VerifiedBy) {
+		dcomp := model.ToDomainTaskChecklistCompletion(comp)
+		if !domain.ValidVerifierKind(dcomp.VerifiedBy) {
 			return fmt.Errorf("%w: checklist completion missing verified_by", domain.ErrInvalidInput)
 		}
-		if comp.VerifiedBy != domain.VerifierLegacy && strings.TrimSpace(comp.Evidence) == "" {
+		if dcomp.VerifiedBy != domain.VerifierLegacy && strings.TrimSpace(dcomp.Evidence) == "" {
 			return fmt.Errorf("%w: checklist completion missing evidence", domain.ErrInvalidInput)
 		}
 	}
@@ -113,16 +115,16 @@ func criterionLockedByCompletion(taskStatus domain.Status, doneCount int64) bool
 func DeleteOwnedItemsInTx(tx *gorm.DB, taskID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.DeleteOwnedItemsInTx")
 	var ids []string
-	if err := tx.Model(&domain.TaskChecklistItem{}).Where("task_id = ?", taskID).Pluck("id", &ids).Error; err != nil {
+	if err := tx.Model(&model.TaskChecklistItem{}).Where("task_id = ?", taskID).Pluck("id", &ids).Error; err != nil {
 		return fmt.Errorf("list checklist items: %w", err)
 	}
 	if len(ids) == 0 {
 		return nil
 	}
-	if err := tx.Where("item_id IN ?", ids).Delete(&domain.TaskChecklistCompletion{}).Error; err != nil {
+	if err := tx.Where("item_id IN ?", ids).Delete(&model.TaskChecklistCompletion{}).Error; err != nil {
 		return fmt.Errorf("delete completions: %w", err)
 	}
-	if err := tx.Where("task_id = ?", taskID).Delete(&domain.TaskChecklistItem{}).Error; err != nil {
+	if err := tx.Where("task_id = ?", taskID).Delete(&model.TaskChecklistItem{}).Error; err != nil {
 		return fmt.Errorf("delete checklist items: %w", err)
 	}
 	return nil

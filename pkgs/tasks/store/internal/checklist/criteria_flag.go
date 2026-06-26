@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -34,10 +35,11 @@ func IsChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) (bool, error) {
 func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Actor) (CriteriaFlagChange, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.syncCriteriaSatisfiedAtInTx")
 	var change CriteriaFlagChange
-	var t domain.Task
-	if err := tx.Where("id = ?", subjectTaskID).First(&t).Error; err != nil {
+	var row model.Task
+	if err := tx.Where("id = ?", subjectTaskID).First(&row).Error; err != nil {
 		return change, fmt.Errorf("load task for criteria flag: %w", err)
 	}
+	t := model.ToDomainTask(row)
 	wasComplete := t.CriteriaSatisfiedAt != nil
 	nowComplete, err := IsChecklistCompleteInTx(tx, subjectTaskID)
 	if err != nil {
@@ -46,13 +48,13 @@ func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Ac
 	switch {
 	case nowComplete && !wasComplete:
 		now := time.Now().UTC()
-		if err := tx.Model(&domain.Task{}).Where("id = ?", subjectTaskID).
+		if err := tx.Model(&model.Task{}).Where("id = ?", subjectTaskID).
 			Update("criteria_satisfied_at", now).Error; err != nil {
 			return change, fmt.Errorf("set criteria_satisfied_at: %w", err)
 		}
 		change.BecameComplete = true
 	case !nowComplete && wasComplete:
-		if err := tx.Model(&domain.Task{}).Where("id = ?", subjectTaskID).
+		if err := tx.Model(&model.Task{}).Where("id = ?", subjectTaskID).
 			Update("criteria_satisfied_at", nil).Error; err != nil {
 			return change, fmt.Errorf("clear criteria_satisfied_at: %w", err)
 		}
@@ -66,7 +68,7 @@ func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Ac
 func BackfillCriteriaSatisfiedAt(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.BackfillCriteriaSatisfiedAt")
 	var ids []string
-	if err := db.WithContext(ctx).Model(&domain.Task{}).Where("criteria_satisfied_at IS NULL").Pluck("id", &ids).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&model.Task{}).Where("criteria_satisfied_at IS NULL").Pluck("id", &ids).Error; err != nil {
 		return fmt.Errorf("list tasks for criteria backfill: %w", err)
 	}
 	for _, id := range ids {

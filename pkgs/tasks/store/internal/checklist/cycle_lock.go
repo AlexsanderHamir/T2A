@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -28,8 +29,8 @@ func isTaskCycleRunningInTx(tx *gorm.DB, taskID string) (bool, error) {
 	if n > 0 {
 		return true, nil
 	}
-	var t domain.Task
-	if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
+	var row model.Task
+	if err := tx.Where("id = ?", taskID).First(&row).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, domain.ErrNotFound
 		}

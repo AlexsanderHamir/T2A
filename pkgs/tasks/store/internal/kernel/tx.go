@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -16,12 +17,13 @@ import (
 // branching on its current state.
 func LoadTask(tx *gorm.DB, id string) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.LoadTask")
-	var t domain.Task
-	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
+	var row model.Task
+	if err := tx.Where("id = ?", id).First(&row).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
 		}
 		return nil, fmt.Errorf("load task: %w", err)
 	}
+	t := model.ToDomainTask(row)
 	return &t, nil
 }

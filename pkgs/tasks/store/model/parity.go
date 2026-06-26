@@ -59,4 +59,64 @@ var ParityPairs = []ParityPair{
 		Model:  &Project{},
 		Table:  "projects",
 	},
+	{
+		Name:   "ProjectContextItem",
+		Domain: &domain.ProjectContextItem{},
+		Model:  &ProjectContextItem{},
+		Table:  "project_context_items",
+		DomainMigrateExtra: []any{
+			&domain.Project{},
+			&domain.Task{},
+			&domain.TaskCycle{},
+		},
+	},
+	{
+		Name:   "ProjectContextEdge",
+		Domain: &domain.ProjectContextEdge{},
+		Model:  &ProjectContextEdge{},
+		Table:  "project_context_edges",
+		DomainMigrateExtra: []any{
+			&domain.Project{},
+			&domain.ProjectContextItem{},
+		},
+	},
+	{
+		Name:   "TaskContextSnapshot",
+		Domain: &domain.TaskContextSnapshot{},
+		Model:  &TaskContextSnapshot{},
+		Table:  "task_context_snapshots",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.Project{},
+		},
+	},
+	{
+		Name:   "TaskChecklistItem",
+		Domain: &domain.TaskChecklistItem{},
+		Model:  &TaskChecklistItem{},
+		Table:  "task_checklist_items",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+		},
+	},
+	{
+		Name:   "TaskChecklistCompletion",
+		Domain: &domain.TaskChecklistCompletion{},
+		Model:  &TaskChecklistCompletion{},
+		Table:  "task_checklist_completions",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskChecklistItemCommand",
+		Domain: &domain.TaskChecklistItemCommand{},
+		Model:  &TaskChecklistItemCommand{},
+		Table:  "task_checklist_item_commands",
+		DomainMigrateExtra: []any{
+			&domain.TaskChecklistItem{},
+		},
+	},
 }

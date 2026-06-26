@@ -13,6 +13,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -83,7 +84,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 		}
 	}
 	now := time.Now().UTC()
-	row := domain.Project{
+	drow := domain.Project{
 		ID:             id,
 		Name:           name,
 		Description:    strings.TrimSpace(input.Description),
@@ -93,10 +94,11 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
+	row := model.FromDomainProject(drow)
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.Project{}, kernel.MapWriteError(err, "duplicate project row")
 	}
-	return row, nil
+	return drow, nil
 }
 
 // ListProjects returns projects ordered by most recently updated first.
@@ -113,11 +115,11 @@ func ListProjects(ctx context.Context, db *gorm.DB, includeArchived bool, limit 
 	if !includeArchived {
 		q = q.Where("status = ?", domain.ProjectStatusActive)
 	}
-	var rows []domain.Project
+	var rows []model.Project
 	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainProjects(rows), nil
 }
 
 // GetProject returns one project by id.
@@ -128,11 +130,11 @@ func GetProject(ctx context.Context, db *gorm.DB, id string) (domain.Project, er
 	if id == "" {
 		return domain.Project{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
 	}
-	var row domain.Project
+	var row model.Project
 	if err := db.WithContext(ctx).First(&row, "id = ?", id).Error; err != nil {
 		return domain.Project{}, kernel.MapNotFound(err)
 	}
-	return row, nil
+	return model.ToDomainProject(row), nil
 }
 
 // UpdateProject applies a partial metadata patch and returns the updated row.
@@ -148,19 +150,21 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 	}
 	var out domain.Project
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var row domain.Project
+		var row model.Project
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ?", id).Error; err != nil {
 			return kernel.MapNotFound(err)
 		}
-		if err := validateDefaultProjectPatch(row, input); err != nil {
+		drow := model.ToDomainProject(row)
+		if err := validateDefaultProjectPatch(drow, input); err != nil {
 			return err
 		}
-		applyProjectPatch(&row, input)
-		row.UpdatedAt = time.Now().UTC()
+		applyProjectPatch(&drow, input)
+		drow.UpdatedAt = time.Now().UTC()
+		row = model.FromDomainProject(drow)
 		if err := tx.Save(&row).Error; err != nil {
 			return kernel.MapWriteError(err, "duplicate project row")
 		}
-		out = row
+		out = drow
 		return nil
 	})
 	if err != nil {
@@ -181,7 +185,7 @@ func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	if id == domain.DefaultProjectID {
 		return fmt.Errorf("%w: default project cannot be deleted", domain.ErrConflict)
 	}
-	res := db.WithContext(ctx).Delete(&domain.Project{}, "id = ?", id)
+	res := db.WithContext(ctx).Delete(&model.Project{}, "id = ?", id)
 	if res.Error != nil {
 		return kernel.MapWriteError(res.Error, "duplicate project row")
 	}
@@ -222,7 +226,7 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 		return domain.ProjectContextItem{}, err
 	}
 	now := time.Now().UTC()
-	row := domain.ProjectContextItem{
+	drow := domain.ProjectContextItem{
 		ID:            id,
 		ProjectID:     projectID,
 		Kind:          kind,
@@ -235,10 +239,11 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
+	row := model.FromDomainProjectContextItem(drow)
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.ProjectContextItem{}, kernel.MapWriteError(err, "duplicate project row")
 	}
-	return row, nil
+	return drow, nil
 }
 
 // ListContext returns context items for a project, pinned items first.
@@ -259,11 +264,11 @@ func ListContext(ctx context.Context, db *gorm.DB, projectID string, includeUnpi
 	if !includeUnpinned {
 		q = q.Where("pinned = ?", true)
 	}
-	var rows []domain.ProjectContextItem
+	var rows []model.ProjectContextItem
 	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list project context: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainProjectContextItems(rows), nil
 }
 
 // ListContextByIDs returns selected context items for one project in caller order.
@@ -277,13 +282,14 @@ func ListContextByIDs(ctx context.Context, db *gorm.DB, projectID string, ids []
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	var rows []domain.ProjectContextItem
+	var rows []model.ProjectContextItem
 	if err := db.WithContext(ctx).Where("project_id = ? AND id IN ?", projectID, ids).Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list selected project context: %w", err)
 	}
 	byID := make(map[string]domain.ProjectContextItem, len(rows))
 	for _, row := range rows {
-		byID[row.ID] = row
+		d := model.ToDomainProjectContextItem(row)
+		byID[d.ID] = d
 	}
 	out := make([]domain.ProjectContextItem, 0, len(ids))
 	for _, id := range ids {
@@ -310,16 +316,18 @@ func UpdateContext(ctx context.Context, db *gorm.DB, projectID, itemID string, i
 	}
 	var out domain.ProjectContextItem
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var row domain.ProjectContextItem
+		var row model.ProjectContextItem
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ? AND project_id = ?", itemID, projectID).Error; err != nil {
 			return kernel.MapNotFound(err)
 		}
-		applyContextPatch(&row, input)
-		row.UpdatedAt = time.Now().UTC()
+		drow := model.ToDomainProjectContextItem(row)
+		applyContextPatch(&drow, input)
+		drow.UpdatedAt = time.Now().UTC()
+		row = model.FromDomainProjectContextItem(drow)
 		if err := tx.Save(&row).Error; err != nil {
 			return kernel.MapWriteError(err, "duplicate project row")
 		}
-		out = row
+		out = drow
 		return nil
 	})
 	if err != nil {
@@ -338,10 +346,10 @@ func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) e
 		return fmt.Errorf("%w: project id and context id required", domain.ErrInvalidInput)
 	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("project_id = ? AND (source_context_id = ? OR target_context_id = ?)", projectID, itemID, itemID).Delete(&domain.ProjectContextEdge{}).Error; err != nil {
+		if err := tx.Where("project_id = ? AND (source_context_id = ? OR target_context_id = ?)", projectID, itemID, itemID).Delete(&model.ProjectContextEdge{}).Error; err != nil {
 			return kernel.MapWriteError(err, "duplicate project row")
 		}
-		res := tx.Where("id = ? AND project_id = ?", itemID, projectID).Delete(&domain.ProjectContextItem{})
+		res := tx.Where("id = ? AND project_id = ?", itemID, projectID).Delete(&model.ProjectContextItem{})
 		if res.Error != nil {
 			return kernel.MapWriteError(res.Error, "duplicate project row")
 		}
@@ -367,7 +375,7 @@ func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput)
 	if err != nil {
 		return domain.TaskContextSnapshot{}, err
 	}
-	row := domain.TaskContextSnapshot{
+	drow := domain.TaskContextSnapshot{
 		ID:              id,
 		TaskID:          strings.TrimSpace(input.TaskID),
 		CycleID:         strings.TrimSpace(input.CycleID),
@@ -377,10 +385,11 @@ func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput)
 		TokenEstimate:   input.TokenEstimate,
 		CreatedAt:       time.Now().UTC(),
 	}
+	row := model.FromDomainTaskContextSnapshot(drow)
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.TaskContextSnapshot{}, kernel.MapWriteError(err, "duplicate project row")
 	}
-	return row, nil
+	return drow, nil
 }
 
 // GetSnapshotForCycle returns the context snapshot recorded for a cycle.
@@ -391,11 +400,11 @@ func GetSnapshotForCycle(ctx context.Context, db *gorm.DB, cycleID string) (doma
 	if cycleID == "" {
 		return domain.TaskContextSnapshot{}, fmt.Errorf("%w: cycle id required", domain.ErrInvalidInput)
 	}
-	var row domain.TaskContextSnapshot
+	var row model.TaskContextSnapshot
 	if err := db.WithContext(ctx).First(&row, "cycle_id = ?", cycleID).Error; err != nil {
 		return domain.TaskContextSnapshot{}, kernel.MapNotFound(err)
 	}
-	return row, nil
+	return model.ToDomainTaskContextSnapshot(row), nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

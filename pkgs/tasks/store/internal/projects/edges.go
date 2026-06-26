@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -52,7 +53,7 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 		return domain.ProjectContextEdge{}, err
 	}
 	now := time.Now().UTC()
-	row := domain.ProjectContextEdge{
+	drow := domain.ProjectContextEdge{
 		ID:              id,
 		ProjectID:       projectID,
 		SourceContextID: strings.TrimSpace(input.SourceContextID),
@@ -64,9 +65,10 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 		UpdatedAt:       now,
 	}
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := validateEdgeNodesExist(tx, projectID, row.SourceContextID, row.TargetContextID); err != nil {
+		if err := validateEdgeNodesExist(tx, projectID, drow.SourceContextID, drow.TargetContextID); err != nil {
 			return err
 		}
+		row := model.FromDomainProjectContextEdge(drow)
 		if err := tx.Create(&row).Error; err != nil {
 			return kernel.MapWriteError(err, "duplicate project row")
 		}
@@ -75,7 +77,7 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 	if err != nil {
 		return domain.ProjectContextEdge{}, err
 	}
-	return row, nil
+	return drow, nil
 }
 
 // ListContextEdges returns context edges for one project, optionally restricted to a selected node set.
@@ -94,11 +96,11 @@ func ListContextEdges(ctx context.Context, db *gorm.DB, projectID string, nodeID
 		}
 		q = q.Where("source_context_id IN ? AND target_context_id IN ?", ids, ids)
 	}
-	var rows []domain.ProjectContextEdge
+	var rows []model.ProjectContextEdge
 	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list project context edges: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainProjectContextEdges(rows), nil
 }
 
 // UpdateContextEdge applies a partial patch to one context edge.
@@ -115,16 +117,18 @@ func UpdateContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 	}
 	var out domain.ProjectContextEdge
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var row domain.ProjectContextEdge
+		var row model.ProjectContextEdge
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ? AND project_id = ?", edgeID, projectID).Error; err != nil {
 			return kernel.MapNotFound(err)
 		}
-		applyContextEdgePatch(&row, input)
-		row.UpdatedAt = time.Now().UTC()
+		drow := model.ToDomainProjectContextEdge(row)
+		applyContextEdgePatch(&drow, input)
+		drow.UpdatedAt = time.Now().UTC()
+		row = model.FromDomainProjectContextEdge(drow)
 		if err := tx.Save(&row).Error; err != nil {
 			return kernel.MapWriteError(err, "duplicate project row")
 		}
-		out = row
+		out = drow
 		return nil
 	})
 	if err != nil {
@@ -142,7 +146,7 @@ func DeleteContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 	if projectID == "" || edgeID == "" {
 		return fmt.Errorf("%w: project id and edge id required", domain.ErrInvalidInput)
 	}
-	res := db.WithContext(ctx).Where("id = ? AND project_id = ?", edgeID, projectID).Delete(&domain.ProjectContextEdge{})
+	res := db.WithContext(ctx).Where("id = ? AND project_id = ?", edgeID, projectID).Delete(&model.ProjectContextEdge{})
 	if res.Error != nil {
 		return kernel.MapWriteError(res.Error, "duplicate project row")
 	}
@@ -199,7 +203,7 @@ func validateContextRelation(relation domain.ProjectContextRelation) error {
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validateEdgeNodesExist(tx *gorm.DB, projectID, sourceID, targetID string) error {
 	var count int64
-	if err := tx.Model(&domain.ProjectContextItem{}).
+	if err := tx.Model(&model.ProjectContextItem{}).
 		Where("project_id = ? AND id IN ?", projectID, []string{sourceID, targetID}).
 		Count(&count).Error; err != nil {
 		return fmt.Errorf("context edge node lookup: %w", err)
