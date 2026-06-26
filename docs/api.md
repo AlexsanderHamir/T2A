@@ -57,8 +57,10 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): glo
 | GET | `/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
 | DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
-| POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. **201**. |
-| POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name? }`. **201**. |
+| GET | `/git/repositories/{repoId}/worktrees/live` | Linked worktrees from `git worktree list`: `{ worktrees: [{ path, branch, is_main, detached, registered }] }`. |
+| POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree and associates checkout branch. **201**. |
+| POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Binds branch when `branch` or worktree checkout branch is present. |
+| POST | `/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. |
 | DELETE | `/git/worktrees/{worktreeId}` | **204**. Query `?force=true`. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/branches` | Registered branches `{ branches: [...] }`. |
 | GET | `/git/repositories/{repoId}/branches/live` | Live refs from `git branch` `{ branches: [{ name, head_sha }] }`. |
