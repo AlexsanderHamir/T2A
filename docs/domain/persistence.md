@@ -446,6 +446,7 @@ Inject mirror failure: dual-write rollback test uses a test hook / constraint to
 | [agent-queue.md](./agent-queue.md) | `notifyReadyTask` after ready commit |
 | [done-criteria.md](./done-criteria.md) | Completion ledger vs verdict tables |
 | [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md) | Why verdicts persist in DB |
+| [ADR-0039](../adr/ADR-0039-domain-persistence-separation.md) | Proposed: GORM models out of `domain/` into `store/` (issue #61) |
 
 ### Code map
 
