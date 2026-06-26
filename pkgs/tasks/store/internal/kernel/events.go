@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -70,7 +71,7 @@ func AppendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by
 		return err
 	}
 	data = normalized
-	ev := domain.TaskEvent{
+	ev := model.TaskEvent{
 		TaskID: taskID,
 		Seq:    seq,
 		At:     time.Now().UTC(),
@@ -78,7 +79,7 @@ func AppendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by
 		By:     by,
 		Data:   datatypes.JSON(data),
 	}
-	if err := tx.Omit("Task").Create(&ev).Error; err != nil {
+	if err := tx.Create(&ev).Error; err != nil {
 		return fmt.Errorf("insert task_event: %w", err)
 	}
 	return nil

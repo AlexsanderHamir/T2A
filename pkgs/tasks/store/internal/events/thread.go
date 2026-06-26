@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -101,7 +102,7 @@ func AppendResponseMessage(ctx context.Context, db *gorm.DB, taskID string, seq 
 
 func appendResponseMessageInTx(tx *gorm.DB, tid string, seq int64, text string, by domain.Actor) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.appendResponseMessageInTx")
-	var ev domain.TaskEvent
+	var ev model.TaskEvent
 	q := tx.Where("task_id = ? AND seq = ?", tid, seq)
 	if tx.Dialector.Name() != "sqlite" {
 		q = q.Clauses(clause.Locking{Strength: "UPDATE"})
@@ -149,7 +150,7 @@ func appendResponseMessageInTx(tx *gorm.DB, tid string, seq int64, text string, 
 			break
 		}
 	}
-	if err := tx.Model(&domain.TaskEvent{}).
+	if err := tx.Model(&model.TaskEvent{}).
 		Where("task_id = ? AND seq = ?", tid, seq).
 		Updates(map[string]any{
 			"response_thread_json": raw,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -88,7 +89,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 	if db == nil {
 		return domain.AppSettings{}, errors.New("tasks store: nil database")
 	}
-	var row domain.AppSettings
+	var row model.AppSettings
 	err := db.WithContext(ctx).First(&row, "id = ?", domain.AppSettingsRowID).Error
 	if err == nil {
 		if !row.OptimisticMutationsEnabled || !row.SSEReplayEnabled {
@@ -98,12 +99,12 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 				SSEReplayEnabled:           &t,
 			})
 		}
-		return row, nil
+		return model.ToDomainAppSettings(row), nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.AppSettings{}, fmt.Errorf("get app settings: %w", err)
 	}
-	seed := domain.DefaultAppSettings()
+	seed := model.FromDomainAppSettings(domain.DefaultAppSettings())
 	seed.UpdatedAt = time.Now().UTC()
 	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&seed).Error; err != nil {
 		return domain.AppSettings{}, fmt.Errorf("seed app settings: %w", err)
@@ -118,7 +119,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 		"cursor_bin", row.CursorBin,
 		"max_run_duration_seconds", row.MaxRunDurationSeconds,
 		"display_timezone", row.DisplayTimezone)
-	return row, nil
+	return model.ToDomainAppSettings(row), nil
 }
 
 // Update applies a partial Patch to the singleton row inside a
@@ -148,10 +149,10 @@ func Update(ctx context.Context, db *gorm.DB, patch Patch) (domain.AppSettings, 
 	}
 	var out domain.AppSettings
 	txErr := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var row domain.AppSettings
+		var row model.AppSettings
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, "id = ?", domain.AppSettingsRowID).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			row = domain.DefaultAppSettings()
+			row = model.FromDomainAppSettings(domain.DefaultAppSettings())
 			row.UpdatedAt = time.Now().UTC()
 			if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error; err != nil {
 				return fmt.Errorf("seed app settings during update: %w", err)
@@ -162,12 +163,14 @@ func Update(ctx context.Context, db *gorm.DB, patch Patch) (domain.AppSettings, 
 		} else if err != nil {
 			return fmt.Errorf("lock app settings: %w", err)
 		}
-		applyPatch(&row, patch)
+		drow := model.ToDomainAppSettings(row)
+		applyPatch(&drow, patch)
+		row = model.FromDomainAppSettings(drow)
 		row.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&row).Error; err != nil {
 			return fmt.Errorf("save app settings: %w", err)
 		}
-		out = row
+		out = model.ToDomainAppSettings(row)
 		return nil
 	})
 	if txErr != nil {

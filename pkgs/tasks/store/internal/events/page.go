@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -42,7 +43,7 @@ func PageCursor(ctx context.Context, db *gorm.DB, taskID string, limit int, befo
 	}
 
 	var total int64
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).Where("task_id = ?", taskID).Count(&total).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).Where("task_id = ?", taskID).Count(&total).Error; err != nil {
 		return nil, fmt.Errorf("count task events: %w", err)
 	}
 
@@ -52,14 +53,14 @@ func PageCursor(ctx context.Context, db *gorm.DB, taskID string, limit int, befo
 	} else if afterSeq != nil {
 		q = q.Where("seq > ?", *afterSeq)
 	}
-	var rows []domain.TaskEvent
+	var rows []model.TaskEvent
 	err = q.Order("seq DESC").Limit(limit).Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("list task events page: %w", err)
 	}
 
-	out := &Page{Events: rows, Total: total}
-	if err := fillPageBounds(ctx, db, taskID, out, rows); err != nil {
+	out := &Page{Events: model.ToDomainTaskEvents(rows), Total: total}
+	if err := fillPageBounds(ctx, db, taskID, out, out.Events); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -77,7 +78,7 @@ func ApprovalPending(ctx context.Context, db *gorm.DB, taskID string) (bool, err
 		return false, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	types := []domain.EventType{domain.EventApprovalRequested, domain.EventApprovalGranted}
-	var row domain.TaskEvent
+	var row model.TaskEvent
 	err := db.WithContext(ctx).
 		Where("task_id = ? AND type IN ?", taskID, types).
 		Order("seq DESC").
@@ -108,13 +109,13 @@ func fillPageBounds(ctx context.Context, db *gorm.DB, taskID string, out *Page, 
 	minSeq := rows[len(rows)-1].Seq
 
 	var newerThanMax int64
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Where("task_id = ? AND seq > ?", taskID, maxSeq).
 		Count(&newerThanMax).Error; err != nil {
 		return fmt.Errorf("count newer task events: %w", err)
 	}
 	var olderThanMin int64
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Where("task_id = ? AND seq < ?", taskID, minSeq).
 		Count(&olderThanMin).Error; err != nil {
 		return fmt.Errorf("count older task events: %w", err)
