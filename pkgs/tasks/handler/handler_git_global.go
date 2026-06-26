@@ -47,9 +47,8 @@ func (h *Handler) createGlobalGitRepository(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	repo, err := h.store.CreateGlobalGitRepository(r.Context(), store.CreateGitRepositoryInput{
-		Path:          body.Path,
-		HostPath:      body.HostPath,
-		DefaultBranch: body.DefaultBranch,
+		Path:     body.Path,
+		HostPath: body.HostPath,
 	}, h.gitService())
 	if err != nil {
 		writeGitStoreError(w, r, op, err)

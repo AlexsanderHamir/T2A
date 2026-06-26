@@ -3,7 +3,7 @@ package handler
 type gitRepositoryCreateJSON struct {
 	Path          string `json:"path"`
 	HostPath      string `json:"host_path"`
-	DefaultBranch string `json:"default_branch"`
+	DefaultBranch string `json:"default_branch,omitempty"`
 }
 
 type gitRepositoriesListResponse struct {
@@ -14,7 +14,7 @@ type gitRepositoryJSON struct {
 	ID            string `json:"id"`
 	Path          string `json:"path"`
 	HostPath      string `json:"host_path"`
-	DefaultBranch string `json:"default_branch"`
+	DefaultBranch string `json:"default_branch,omitempty"`
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
 }

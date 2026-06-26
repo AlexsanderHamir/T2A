@@ -55,27 +55,12 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 	if existing > 0 {
 		return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
 	}
-	defaultBranch := strings.TrimSpace(input.DefaultBranch)
-	if defaultBranch == "" {
-		branches, listErr := gitSvc.ListBranches(ctx, opened)
-		if listErr == nil {
-			for _, b := range branches {
-				if b.IsCurrent && strings.TrimSpace(b.Name) != "" {
-					defaultBranch = b.Name
-					break
-				}
-			}
-		}
-		if defaultBranch == "" {
-			defaultBranch = "main"
-		}
-	}
 	now := time.Now().UTC()
 	repo := domain.GitRepository{
 		ID:            uuid.NewString(),
 		Path:          opened.Root,
 		HostPath:      strings.TrimSpace(input.HostPath),
-		DefaultBranch: defaultBranch,
+		DefaultBranch: "",
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}

@@ -15,6 +15,9 @@ func TestStore_GlobalGitRepository_andWorktreeBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateGlobalGitRepository: %v", err)
 	}
+	if repo.DefaultBranch != "" {
+		t.Fatalf("DefaultBranch=%q want empty (path-only registration)", repo.DefaultBranch)
+	}
 	all, err := s.ListAllGitRepositories(ctx)
 	if err != nil || len(all) != 1 {
 		t.Fatalf("ListAllGitRepositories: %v len=%d", err, len(all))

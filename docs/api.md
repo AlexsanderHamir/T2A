@@ -53,7 +53,7 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): glo
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/git/repositories` | `{ repositories: [...] }`. |
-| POST | `/git/repositories` | Register checkout. Body `{ path, host_path?, default_branch? }`. **201**. Does not auto-create worktrees/branches. **409** `not_a_git_repository`, `duplicate`. |
+| POST | `/git/repositories` | Register checkout. Body `{ path, host_path? }`. **201**. Path-only registration; does not set `default_branch` or auto-create worktrees/branches. **409** `not_a_git_repository`, `duplicate`. |
 | GET | `/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
 | DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |

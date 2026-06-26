@@ -41,9 +41,6 @@ function RepositoryListRow({
           {repository.path}
         </span>
       </div>
-      <div className="wl__row-meta">
-        <span className="wl__row-branch">{repository.default_branch}</span>
-      </div>
       <svg
         className="wl__row-arrow"
         width="16"

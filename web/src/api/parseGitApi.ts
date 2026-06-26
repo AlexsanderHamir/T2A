@@ -17,7 +17,10 @@ function parseGitRepositoryRow(value: unknown, path: string): GitRepository {
     id: parseNonEmptyString(value.id, `${path}.id`),
     path: parseString(value.path, `${path}.path`),
     host_path: parseString(value.host_path, `${path}.host_path`),
-    default_branch: parseString(value.default_branch, `${path}.default_branch`),
+    default_branch:
+      value.default_branch === undefined
+        ? ""
+        : parseString(value.default_branch, `${path}.default_branch`),
     created_at: parseString(value.created_at, `${path}.created_at`),
     updated_at: parseString(value.updated_at, `${path}.updated_at`),
   };
