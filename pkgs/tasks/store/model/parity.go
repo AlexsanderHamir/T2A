@@ -148,4 +148,47 @@ var ParityPairs = []ParityPair{
 			&domain.TaskCycle{},
 		},
 	},
+	{
+		Name:   "TaskCycleCriteriaReport",
+		Domain: &domain.TaskCycleCriteriaReport{},
+		Model:  &TaskCycleCriteriaReport{},
+		Table:  "task_cycle_criteria_reports",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleVerifyReport",
+		Domain: &domain.TaskCycleVerifyReport{},
+		Model:  &TaskCycleVerifyReport{},
+		Table:  "task_cycle_verify_reports",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleCommandRun",
+		Domain: &domain.TaskCycleCommandRun{},
+		Model:  &TaskCycleCommandRun{},
+		Table:  "task_cycle_command_runs",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleCommit",
+		Domain: &domain.TaskCycleCommit{},
+		Model:  &TaskCycleCommit{},
+		Table:  "task_cycle_commits",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+		},
+	},
 }

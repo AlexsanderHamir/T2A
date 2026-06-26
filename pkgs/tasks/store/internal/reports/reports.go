@@ -21,6 +21,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -96,12 +97,13 @@ func UpsertCriteriaReports(ctx context.Context, db *gorm.DB, cycleID string, att
 			WrittenAt:   now,
 		})
 	}
+	modelRows := model.FromDomainTaskCycleCriteriaReports(rows)
 	err := db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "cycle_id"}, {Name: "attempt_seq"}, {Name: "criterion_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"claimed_done", "evidence", "written_at",
 		}),
-	}).Omit("Cycle", "Criterion").Create(&rows).Error
+	}).Create(&modelRows).Error
 	if err != nil {
 		return fmt.Errorf("upsert criteria reports: %w", err)
 	}
@@ -148,12 +150,13 @@ func UpsertVerifyReports(ctx context.Context, db *gorm.DB, cycleID string, attem
 			WrittenAt:    now,
 		})
 	}
+	modelRows := model.FromDomainTaskCycleVerifyReports(rows)
 	err := db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "cycle_id"}, {Name: "attempt_seq"}, {Name: "criterion_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"verified", "verifier_kind", "reasoning", "written_at",
 		}),
-	}).Omit("Cycle", "Criterion").Create(&rows).Error
+	}).Create(&modelRows).Error
 	if err != nil {
 		return fmt.Errorf("upsert verify reports: %w", err)
 	}
@@ -174,14 +177,14 @@ func ListCriteriaReportsForCycle(ctx context.Context, db *gorm.DB, cycleID strin
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskCycleCriteriaReport
+	var rows []model.TaskCycleCriteriaReport
 	if err := db.WithContext(ctx).
 		Where("cycle_id = ?", cycleID).
 		Order("attempt_seq ASC, criterion_id ASC").
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list criteria reports: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainTaskCycleCriteriaReports(rows), nil
 }
 
 // ListVerifyReportsForCycle is the verify counterpart of
@@ -194,14 +197,14 @@ func ListVerifyReportsForCycle(ctx context.Context, db *gorm.DB, cycleID string)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskCycleVerifyReport
+	var rows []model.TaskCycleVerifyReport
 	if err := db.WithContext(ctx).
 		Where("cycle_id = ?", cycleID).
 		Order("attempt_seq ASC, criterion_id ASC").
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list verify reports: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainTaskCycleVerifyReports(rows), nil
 }
 
 // GetCriteriaReport returns one row by (cycleID, attemptSeq,
@@ -215,7 +218,7 @@ func GetCriteriaReport(ctx context.Context, db *gorm.DB, cycleID string, attempt
 	if cycleID == "" || criterionID == "" || attemptSeq <= 0 {
 		return nil, fmt.Errorf("%w: report key", domain.ErrInvalidInput)
 	}
-	var row domain.TaskCycleCriteriaReport
+	var row model.TaskCycleCriteriaReport
 	err := db.WithContext(ctx).
 		Where("cycle_id = ? AND attempt_seq = ? AND criterion_id = ?", cycleID, attemptSeq, criterionID).
 		First(&row).Error
@@ -225,5 +228,5 @@ func GetCriteriaReport(ctx context.Context, db *gorm.DB, cycleID string, attempt
 	if err != nil {
 		return nil, fmt.Errorf("get criteria report: %w", err)
 	}
-	return &row, nil
+	return model.ToDomainTaskCycleCriteriaReportPtr(&row), nil
 }
