@@ -18,6 +18,7 @@ func IsDuplicateKey(err error) bool {
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return true
 	}
+	// Defense-in-depth when TranslateError is off or the driver returns raw text.
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "unique constraint") ||
 		strings.Contains(msg, "duplicate key value violates unique constraint")
@@ -38,6 +39,7 @@ func IsDuplicatePrimaryKey(err error, tableName string) bool {
 	if tableName == "" {
 		return IsDuplicateKey(err)
 	}
+	// Defense-in-depth for driver-specific PK constraint text.
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "unique constraint failed") {
 		return strings.Contains(msg, tableName) && strings.Contains(msg, ".id")
@@ -55,6 +57,10 @@ func IsForeignKeyViolation(err error) bool {
 	if err == nil {
 		return false
 	}
+	if errors.Is(err, gorm.ErrForeignKeyViolated) {
+		return true
+	}
+	// Defense-in-depth when TranslateError is off or the driver returns raw text.
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "foreign key")
 }
@@ -66,6 +72,10 @@ func IsCheckConstraintViolation(err error) bool {
 	if err == nil {
 		return false
 	}
+	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+		return true
+	}
+	// Defense-in-depth when TranslateError is off or the driver returns raw text.
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "constraint failed") ||
 		strings.Contains(msg, "violates check constraint")

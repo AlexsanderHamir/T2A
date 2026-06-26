@@ -12,9 +12,9 @@ import (
 
 func connectAndPing(ctx context.Context, dsn string) (*gorm.DB, error) {
 	slog.Debug("trace", "cmd", cmdName, "operation", "dbcheck.connectAndPing")
-	db, err := postgres.Open(dsn, &gorm.Config{
+	db, err := postgres.Open(dsn, postgres.GORMConfigDefaults(&gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
-	})
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("postgres.Open: %w", err)
 	}

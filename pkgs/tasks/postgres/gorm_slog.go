@@ -49,12 +49,12 @@ func ConfigWithSlogLogger(lg *slog.Logger) *gorm.Config {
 	if lg == nil {
 		return nil
 	}
-	return &gorm.Config{
+	return GORMConfigDefaults(&gorm.Config{
 		Logger: gormlogger.NewSlogLogger(lg, gormlogger.Config{
 			LogLevel:                  gormlogger.Info,
 			SlowThreshold:             slowQueryThresholdForGORM(),
 			IgnoreRecordNotFoundError: true,
 			ParameterizedQueries:      true,
 		}),
-	}
+	})
 }

@@ -3,7 +3,6 @@ package git
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -32,7 +31,7 @@ func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycl
 		return FreshRetryResetOutcome{}, err
 	}
 	if strings.TrimSpace(anchor) == "" {
-		return FreshRetryResetOutcome{}, errors.New(RetryResetAnchorMissing)
+		return FreshRetryResetOutcome{}, ErrRetryResetAnchorMissing
 	}
 	resetCtx, resetCancel := context.WithTimeout(ctx, gitSnapshotProbeTimeout)
 	defer resetCancel()
@@ -49,7 +48,7 @@ func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycl
 func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCycleID string) (string, error) {
 	parentCycleID = strings.TrimSpace(parentCycleID)
 	if parentCycleID == "" {
-		return "", errors.New(RetryResetAnchorMissing)
+		return "", ErrRetryResetAnchorMissing
 	}
 	phases, err := s.store.ListPhasesForCycle(ctx, parentCycleID)
 	if err != nil {
@@ -75,11 +74,11 @@ func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCy
 		return "", err
 	}
 	if len(commits) == 0 {
-		return "", errors.New(RetryResetAnchorMissing)
+		return "", ErrRetryResetAnchorMissing
 	}
 	firstSHA := strings.TrimSpace(commits[0].SHA)
 	if firstSHA == "" {
-		return "", errors.New(RetryResetAnchorMissing)
+		return "", ErrRetryResetAnchorMissing
 	}
 	if workdir == "" {
 		worktree := strings.TrimSpace(commits[0].Worktree)
@@ -91,7 +90,7 @@ func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCy
 	}
 	parent, err := s.repo().Run(ctx, workdir, "rev-parse", firstSHA+"^")
 	if err != nil {
-		return "", errors.New(RetryResetAnchorMissing)
+		return "", ErrRetryResetAnchorMissing
 	}
 	return strings.TrimSpace(parent), nil
 }

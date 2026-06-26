@@ -3,7 +3,6 @@ package kernel
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"gorm.io/gorm"
@@ -31,8 +30,7 @@ func MapWriteError(err error, duplicateDetail string) error {
 	if err == nil {
 		return nil
 	}
-	msg := strings.ToLower(err.Error())
-	if IsDuplicateKey(err) || strings.Contains(msg, "duplicate") {
+	if IsDuplicateKey(err) {
 		return fmt.Errorf("%w: %s", domain.ErrConflict, duplicateDetail)
 	}
 	if IsCheckConstraintViolation(err) || IsForeignKeyViolation(err) {

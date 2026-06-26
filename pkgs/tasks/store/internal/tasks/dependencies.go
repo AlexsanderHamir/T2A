@@ -50,7 +50,7 @@ func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID str
 			CreatedAt:       time.Now().UTC(),
 		}
 		if err := tx.Create(&row).Error; err != nil {
-			if isUniqueViolation(err) {
+			if kernel.IsDuplicateKey(err) {
 				return nil
 			}
 			return fmt.Errorf("create dependency: %w", err)
@@ -226,13 +226,4 @@ func wouldCreateDependencyCycle(tx *gorm.DB, taskID, dependsOnTaskID string) (bo
 		}
 	}
 	return false, nil
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func isUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "unique") || strings.Contains(msg, "duplicate")
 }

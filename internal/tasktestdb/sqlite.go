@@ -15,9 +15,9 @@ import (
 func OpenSQLite(t *testing.T) *gorm.DB {
 	t.Helper()
 	slog.Debug("trace", "operation", "tasktestdb.OpenSQLite")
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(":memory:"), postgres.GORMConfigDefaults(&gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}

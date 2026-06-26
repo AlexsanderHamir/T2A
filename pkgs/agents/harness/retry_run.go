@@ -3,9 +3,10 @@ package harness
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
+	"errors"
 	"log/slog"
-	"strings"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
@@ -40,7 +41,7 @@ func (h *Harness) RunWithRetry(parentCtx context.Context, task *domain.Task, int
 func (h *Harness) runFreshRetry(parentCtx context.Context, task *domain.Task, intent *domain.PendingRetry) {
 	if _, err := h.gitResetForFreshRetry(parentCtx, intent.ParentCycleID); err != nil {
 		reason := retryGitResetFailed
-		if strings.Contains(err.Error(), retryResetAnchorMissing) {
+		if errors.Is(err, git.ErrRetryResetAnchorMissing) {
 			reason = retryResetAnchorMissing
 		}
 		slog.Warn("agent harness fresh retry git reset failed", "cmd", calltrace.LogCmd,
