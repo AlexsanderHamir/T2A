@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -31,7 +32,7 @@ func (s *Store) ListGitWorktrees(ctx context.Context, projectID, repoID string) 
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
 		return nil, err
 	}
-	var rows []domain.GitWorktree
+	var rows []model.GitWorktree
 	err := s.db.WithContext(ctx).
 		Where("repository_id = ?", repoID).
 		Order("is_main DESC, created_at ASC").
@@ -39,14 +40,14 @@ func (s *Store) ListGitWorktrees(ctx context.Context, projectID, repoID string) 
 	if err != nil {
 		return nil, fmt.Errorf("list git worktrees: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitWorktrees(rows), nil
 }
 
 // GetGitWorktree returns one worktree by ID. The projectID parameter is
 // accepted for API compatibility but ignored — repositories are global.
 func (s *Store) GetGitWorktree(ctx context.Context, projectID, worktreeID string) (domain.GitWorktree, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitWorktree")
-	var row domain.GitWorktree
+	var row model.GitWorktree
 	err := s.db.WithContext(ctx).
 		Where("id = ?", worktreeID).
 		First(&row).Error
@@ -56,7 +57,7 @@ func (s *Store) GetGitWorktree(ctx context.Context, projectID, worktreeID string
 		}
 		return domain.GitWorktree{}, fmt.Errorf("get git worktree: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitWorktree(row), nil
 }
 
 // CreateGitWorktree adds a linked worktree via git and inserts a row.
@@ -96,7 +97,7 @@ func (s *Store) DeleteGitWorktree(ctx context.Context, projectID, worktreeID str
 	if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
 		return mapGitworkRemoveErr(err)
 	}
-	res := s.db.WithContext(ctx).Delete(&domain.GitWorktree{}, "id = ?", worktreeID)
+	res := s.db.WithContext(ctx).Delete(&model.GitWorktree{}, "id = ?", worktreeID)
 	if res.Error != nil {
 		return fmt.Errorf("delete git worktree row: %w", res.Error)
 	}
@@ -145,13 +146,13 @@ func (s *Store) ReconcileGitRepository(ctx context.Context, projectID, repoID st
 	for _, wt := range live {
 		livePaths[filepath.Clean(wt.Path)] = wt
 	}
-	var dbRows []domain.GitWorktree
+	var dbRows []model.GitWorktree
 	if err := s.db.WithContext(ctx).Where("repository_id = ?", repoID).Find(&dbRows).Error; err != nil {
 		return err
 	}
 	now := time.Now().UTC()
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		dbByPath := make(map[string]domain.GitWorktree, len(dbRows))
+		dbByPath := make(map[string]model.GitWorktree, len(dbRows))
 		for _, row := range dbRows {
 			dbByPath[filepath.Clean(row.Path)] = row
 		}
@@ -160,7 +161,7 @@ func (s *Store) ReconcileGitRepository(ctx context.Context, projectID, repoID st
 				continue
 			}
 			name := "discovered-" + worktreeDisplayName(path)
-			if err := tx.Create(&domain.GitWorktree{
+			if err := tx.Create(&model.GitWorktree{
 				ID:           uuid.NewString(),
 				RepositoryID: repoID,
 				Path:         path,
@@ -185,7 +186,7 @@ func (s *Store) ReconcileGitRepository(ctx context.Context, projectID, repoID st
 			if ref {
 				return domain.NewGitErr(domain.GitCodeHasRunningTask, "worktree missing on disk but referenced by tasks")
 			}
-			if err := tx.Delete(&domain.GitWorktree{}, "id = ?", row.ID).Error; err != nil {
+			if err := tx.Delete(&model.GitWorktree{}, "id = ?", row.ID).Error; err != nil {
 				return err
 			}
 		}

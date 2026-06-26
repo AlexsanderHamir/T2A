@@ -148,4 +148,93 @@ var ParityPairs = []ParityPair{
 			&domain.TaskCycle{},
 		},
 	},
+	{
+		Name:   "TaskCycleCriteriaReport",
+		Domain: &domain.TaskCycleCriteriaReport{},
+		Model:  &TaskCycleCriteriaReport{},
+		Table:  "task_cycle_criteria_reports",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleVerifyReport",
+		Domain: &domain.TaskCycleVerifyReport{},
+		Model:  &TaskCycleVerifyReport{},
+		Table:  "task_cycle_verify_reports",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleCommandRun",
+		Domain: &domain.TaskCycleCommandRun{},
+		Model:  &TaskCycleCommandRun{},
+		Table:  "task_cycle_command_runs",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+			&domain.TaskChecklistItem{},
+		},
+	},
+	{
+		Name:   "TaskCycleCommit",
+		Domain: &domain.TaskCycleCommit{},
+		Model:  &TaskCycleCommit{},
+		Table:  "task_cycle_commits",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+		},
+	},
+	{
+		Name:   "TaskDraft",
+		Domain: &domain.TaskDraft{},
+		Model:  &TaskDraft{},
+		Table:  "task_drafts",
+	},
+	{
+		Name:   "TaskTemplate",
+		Domain: &domain.TaskTemplate{},
+		Model:  &TaskTemplate{},
+		Table:  "task_templates",
+	},
+	{
+		Name:   "GitRepository",
+		Domain: &domain.GitRepository{},
+		Model:  &GitRepository{},
+		Table:  "git_repositories",
+	},
+	{
+		Name:   "GitWorktree",
+		Domain: &domain.GitWorktree{},
+		Model:  &GitWorktree{},
+		Table:  "git_worktrees",
+		DomainMigrateExtra: []any{
+			&domain.GitRepository{},
+		},
+	},
+	{
+		Name:   "GitBranch",
+		Domain: &domain.GitBranch{},
+		Model:  &GitBranch{},
+		Table:  "git_branches",
+		DomainMigrateExtra: []any{
+			&domain.GitRepository{},
+		},
+	},
+	{
+		Name:   "WorktreeBranch",
+		Domain: &domain.WorktreeBranch{},
+		Model:  &WorktreeBranch{},
+		Table:  "worktree_branches",
+		DomainMigrateExtra: []any{
+			&domain.GitWorktree{},
+			&domain.GitBranch{},
+		},
+	},
 }

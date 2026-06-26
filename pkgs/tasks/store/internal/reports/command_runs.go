@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -52,6 +53,7 @@ func UpsertCommandRuns(ctx context.Context, db *gorm.DB, cycleID string, attempt
 			WrittenAt:   now,
 		})
 	}
+	modelRows := model.FromDomainTaskCycleCommandRuns(rows)
 	return db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "cycle_id"},
@@ -60,7 +62,7 @@ func UpsertCommandRuns(ctx context.Context, db *gorm.DB, cycleID string, attempt
 			{Name: "command_seq"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"exit_code", "meta_path", "written_at"}),
-	}).Create(&rows).Error
+	}).Create(&modelRows).Error
 }
 
 // ListCommandRunsForCycle returns command run rows for cycleID ordered by
@@ -72,7 +74,7 @@ func ListCommandRunsForCycle(ctx context.Context, db *gorm.DB, cycleID string) (
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskCycleCommandRun
+	var rows []model.TaskCycleCommandRun
 	err := db.WithContext(ctx).
 		Where("cycle_id = ?", cycleID).
 		Order("attempt_seq ASC, criterion_id ASC, command_seq ASC").
@@ -80,5 +82,5 @@ func ListCommandRunsForCycle(ctx context.Context, db *gorm.DB, cycleID string) (
 	if err != nil {
 		return nil, fmt.Errorf("list command runs: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainTaskCycleCommandRuns(rows), nil
 }
