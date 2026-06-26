@@ -63,7 +63,9 @@ func (h *Harness) applyExecuteEffects(
 		return false
 	}
 	if effects.TransitionTask == domain.StatusFailed {
-		_ = h.transitionTask(parentCtx, task.ID, effects.TransitionTask, "final_task_transition")
+		if !h.transitionTask(parentCtx, task.ID, effects.TransitionTask, "final_task_transition") {
+			return false
+		}
 	}
 	return false
 }
@@ -82,7 +84,9 @@ func (h *Harness) applyVerifyEffects(
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
 			return false, true
 		}
-		_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
+		if !h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition") {
+			return false, true
+		}
 		return false, true
 	}
 	if effects.RetryLoop {
@@ -93,7 +97,9 @@ func (h *Harness) applyVerifyEffects(
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, terminalReason) {
 			return false, true
 		}
-		_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
+		if !h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition") {
+			return false, true
+		}
 		return false, true
 	}
 	return false, false
