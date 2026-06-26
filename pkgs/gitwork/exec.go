@@ -1,48 +1,22 @@
 package gitwork
 
-import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitcore"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 )
-
-const stderrCap = 200
-
-type execError struct {
-	err    error
-	stderr string
-}
-
-func (e *execError) Error() string {
-	msg := e.err.Error()
-	if e.stderr == "" {
-		return msg
-	}
-	trimmed := e.stderr
-	if len(trimmed) > stderrCap {
-		trimmed = trimmed[:stderrCap] + "..."
-	}
-	return msg + ": " + trimmed
-}
-
-func (e *execError) Unwrap() error { return e.err }
 
 func (s *DefaultService) runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	start := time.Now()
 	dir = filepath.Clean(dir)
-	all := append([]string{"-C", dir}, args...)
-	cmd := exec.CommandContext(ctx, "git", all...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
+	out, err := gitcore.Run(ctx, dir, args...)
 	slog.DebugContext(ctx, "git command",
 		"cmd", calltrace.LogCmd,
 		"operation", "gitwork.runGit",
@@ -50,27 +24,18 @@ func (s *DefaultService) runGit(ctx context.Context, dir string, args ...string)
 		"args", args,
 		"duration_ms", time.Since(start).Milliseconds(),
 	)
-	if err != nil {
-		if errors.Is(err, exec.ErrNotFound) {
-			return "", fmt.Errorf("%w: %v", ErrGitMissing, err)
-		}
-		return "", &execError{err: err, stderr: strings.TrimSpace(stderr.String())}
+	if err == nil {
+		return out, nil
 	}
-	return strings.TrimSpace(stdout.String()), nil
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func execStderr(err error) string {
-	var ee *execError
-	if errors.As(err, &ee) {
-		return ee.stderr
+	if errors.Is(err, gitcore.ErrGitMissing) {
+		return "", fmt.Errorf("%w: %v", ErrGitMissing, err)
 	}
-	return ""
+	return "", err
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func stderrContains(err error, substr string) bool {
-	return strings.Contains(strings.ToLower(execStderr(err)), strings.ToLower(substr))
+	return gitcore.StderrContains(err, substr)
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -128,7 +93,7 @@ func mapWorktreeRemoveErr(err error) error {
 		return nil
 	}
 	if stderrContains(err, "modified or untracked files") ||
-		strings.Contains(strings.ToLower(execStderr(err)), "contains modified") {
+		strings.Contains(strings.ToLower(gitcore.Stderr(err)), "contains modified") {
 		return ErrDirty
 	}
 	return err
@@ -139,7 +104,7 @@ func mapCheckoutErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	if stderrContains(err, "already checked out") ||
+	if stderrContains(err, "is already checked out") ||
 		stderrContains(err, "used by worktree") {
 		return ErrBranchCheckedOut
 	}

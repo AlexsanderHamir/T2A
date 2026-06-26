@@ -10,7 +10,7 @@ function Get-GroupPackages {
 
     switch ($Group) {
         'core' {
-            go list ./cmd/... ./internal/... ./pkgs/repo/... ./pkgs/gitexec/... ./pkgs/gitwork/...
+            go list ./cmd/... ./internal/... ./pkgs/repo/... ./pkgs/gitcore/... ./pkgs/gitexec/... ./pkgs/gitwork/...
         }
         'tasks' {
             go list ./pkgs/tasks/... | Where-Object { $_ -notmatch '/agentreconcile$' }
