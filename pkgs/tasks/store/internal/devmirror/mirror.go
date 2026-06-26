@@ -12,6 +12,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -30,13 +31,14 @@ func ApplyTaskRowMirror(ctx context.Context, db *gorm.DB, taskID string, typ dom
 	}
 	var prevStatus domain.Status
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var t domain.Task
-		if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
+		var row model.Task
+		if err := tx.Where("id = ?", taskID).First(&row).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load task: %w", err)
 		}
+		t := model.ToDomainTask(row)
 		prevStatus = t.Status
 		up, uerr := rowUpdates(tx, taskID, &t, typ, data)
 		if uerr != nil {
@@ -45,7 +47,7 @@ func ApplyTaskRowMirror(ctx context.Context, db *gorm.DB, taskID string, typ dom
 		if len(up) == 0 {
 			return nil
 		}
-		if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Updates(up).Error; err != nil {
+		if err := tx.Model(&model.Task{}).Where("id = ?", taskID).Updates(up).Error; err != nil {
 			return fmt.Errorf("mirror task row: %w", err)
 		}
 		return nil
@@ -53,13 +55,14 @@ func ApplyTaskRowMirror(ctx context.Context, db *gorm.DB, taskID string, typ dom
 	if err != nil {
 		return nil, "", err
 	}
-	var nt domain.Task
-	if err := db.WithContext(ctx).Where("id = ?", taskID).First(&nt).Error; err != nil {
+	var ntRow model.Task
+	if err := db.WithContext(ctx).Where("id = ?", taskID).First(&ntRow).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, "", domain.ErrNotFound
 		}
 		return nil, "", fmt.Errorf("reload after mirror: %w", err)
 	}
+	nt := model.ToDomainTask(ntRow)
 	return &nt, prevStatus, nil
 }
 
@@ -73,11 +76,11 @@ func ListDevsimTasks(ctx context.Context, db *gorm.DB, idLikePattern string) ([]
 	if p == "" {
 		return nil, fmt.Errorf("%w: pattern", domain.ErrInvalidInput)
 	}
-	var out []domain.Task
-	if err := db.WithContext(ctx).Where("id LIKE ?", p).Order("id ASC").Find(&out).Error; err != nil {
+	var rows []model.Task
+	if err := db.WithContext(ctx).Where("id LIKE ?", p).Order("id ASC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list devsim tasks: %w", err)
 	}
-	return out, nil
+	return model.ToDomainTasks(rows), nil
 }
 
 func rowUpdates(tx *gorm.DB, taskID string, t *domain.Task, typ domain.EventType, data []byte) (map[string]any, error) {

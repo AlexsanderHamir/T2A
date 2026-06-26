@@ -13,6 +13,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -28,21 +29,21 @@ type CreateGitRepositoryInput struct {
 // projectID is accepted for API-route compatibility but ignored (repos are global).
 func (s *Store) ListGitRepositories(ctx context.Context, projectID string) ([]domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListGitRepositories")
-	var rows []domain.GitRepository
+	var rows []model.GitRepository
 	err := s.db.WithContext(ctx).
 		Order("created_at ASC").
 		Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("list git repositories: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitRepositories(rows), nil
 }
 
 // CountGitRepositories returns the total number of registered git repositories.
 func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CountGitRepositories")
 	var n int64
-	err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).Count(&n).Error
+	err := s.db.WithContext(ctx).Model(&model.GitRepository{}).Count(&n).Error
 	if err != nil {
 		return 0, fmt.Errorf("count git repositories: %w", err)
 	}
@@ -53,7 +54,7 @@ func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
 // projectID is accepted for API-route compatibility but ignored (repos are global).
 func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitRepository")
-	var row domain.GitRepository
+	var row model.GitRepository
 	err := s.db.WithContext(ctx).
 		Where("id = ?", strings.TrimSpace(repoID)).
 		First(&row).Error
@@ -63,7 +64,7 @@ func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) 
 		}
 		return domain.GitRepository{}, fmt.Errorf("get git repository: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitRepository(row), nil
 }
 
 // CreateGitRepository validates path with git, then inserts repository + main worktree + current branch.
@@ -128,17 +129,20 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 		})
 	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&repo).Error; err != nil {
+		repoRow := model.FromDomainGitRepository(repo)
+		if err := tx.Create(&repoRow).Error; err != nil {
 			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
 			}
 			return err
 		}
-		if err := tx.Create(&mainWT).Error; err != nil {
+		mainWTRow := model.FromDomainGitWorktree(mainWT)
+		if err := tx.Create(&mainWTRow).Error; err != nil {
 			return err
 		}
 		if len(branchRows) > 0 {
-			if err := tx.Create(&branchRows).Error; err != nil {
+			branchModelRows := model.FromDomainGitBranches(branchRows)
+			if err := tx.Create(&branchModelRows).Error; err != nil {
 				return err
 			}
 		}
@@ -162,7 +166,7 @@ func (s *Store) DeleteGitRepository(ctx context.Context, projectID, repoID strin
 	}
 	res := s.db.WithContext(ctx).
 		Where("id = ?", repoID).
-		Delete(&domain.GitRepository{})
+		Delete(&model.GitRepository{})
 	if res.Error != nil {
 		return fmt.Errorf("delete git repository: %w", res.Error)
 	}

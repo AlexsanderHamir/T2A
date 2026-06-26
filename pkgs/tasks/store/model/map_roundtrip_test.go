@@ -299,3 +299,89 @@ func TestTaskCycleCommit_roundTrip(t *testing.T) {
 		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
 	}
 }
+
+func TestTaskDraft_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	payload := datatypes.JSON(`{"title":"draft"}`)
+	orig := domain.TaskDraft{
+		ID: "draft-1", Name: "My draft", PayloadJSON: payload,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	m := FromDomainTaskDraft(orig)
+	back := ToDomainTaskDraft(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}
+
+func TestTaskTemplate_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	payload := datatypes.JSON(`{"title":"template"}`)
+	orig := domain.TaskTemplate{
+		ID: "tmpl-1", Name: "My template", PayloadJSON: payload,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	m := FromDomainTaskTemplate(orig)
+	back := ToDomainTaskTemplate(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}
+
+func TestGitRepository_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	orig := domain.GitRepository{
+		ID: "repo-1", Path: "/repo", HostPath: "/host/repo",
+		DefaultBranch: "main", CreatedAt: now, UpdatedAt: now,
+	}
+	m := FromDomainGitRepository(orig)
+	back := ToDomainGitRepository(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}
+
+func TestGitWorktree_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	active := "branch-1"
+	orig := domain.GitWorktree{
+		ID: "wt-1", RepositoryID: "repo-1", Path: "/wt", Name: "main",
+		IsMain: true, ActiveBranchID: &active, CreatedAt: now,
+	}
+	m := FromDomainGitWorktree(orig)
+	back := ToDomainGitWorktree(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}
+
+func TestGitBranch_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	orig := domain.GitBranch{
+		ID: "branch-1", RepositoryID: "repo-1", Name: "main",
+		HeadSHA: "abc", CreatedAt: now,
+	}
+	m := FromDomainGitBranch(orig)
+	back := ToDomainGitBranch(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}
+
+func TestWorktreeBranch_roundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	orig := domain.WorktreeBranch{
+		ID: "wb-1", WorktreeID: "wt-1", BranchID: "branch-1", CreatedAt: now,
+	}
+	m := FromDomainWorktreeBranch(orig)
+	back := ToDomainWorktreeBranch(m)
+	if !reflect.DeepEqual(orig, back) {
+		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
+	}
+}

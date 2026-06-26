@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -74,7 +75,7 @@ func ListCycleFailures(ctx context.Context, db *gorm.DB, in ListCycleFailuresInp
 	}
 
 	var total int64
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Where("type = ?", string(domain.EventCycleFailed)).
 		Count(&total).Error; err != nil {
 		return ListCycleFailuresResult{}, fmt.Errorf("count cycle failures: %w", err)
@@ -83,7 +84,7 @@ func ListCycleFailures(ctx context.Context, db *gorm.DB, in ListCycleFailuresInp
 	switch sortKey {
 	case CycleFailureSortAtDesc, CycleFailureSortAtAsc:
 		var rows []cycleFailedRow
-		q := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+		q := db.WithContext(ctx).Model(&model.TaskEvent{}).
 			Select("task_id, seq, at, data_json").
 			Where("type = ?", string(domain.EventCycleFailed))
 		if sortKey == CycleFailureSortAtDesc {
@@ -100,7 +101,7 @@ func ListCycleFailures(ctx context.Context, db *gorm.DB, in ListCycleFailuresInp
 
 	case CycleFailureSortReasonAsc, CycleFailureSortReasonDesc:
 		var rows []cycleFailedRow
-		if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+		if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 			Select("task_id, seq, at, data_json").
 			Where("type = ?", string(domain.EventCycleFailed)).
 			Order("at DESC, seq DESC").

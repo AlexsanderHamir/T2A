@@ -14,6 +14,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/namedpayload"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -45,7 +46,7 @@ func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload js
 	if name == nil && payload == nil {
 		return nil, fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
-	var row domain.TaskTemplate
+	var row model.TaskTemplate
 	if err := db.WithContext(ctx).Where("id = ?", id).First(&row).Error; err != nil {
 		return nil, kernel.MapNotFound(err)
 	}
@@ -64,7 +65,7 @@ func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload js
 		}
 		updates["payload_json"] = normalized
 	}
-	if err := db.WithContext(ctx).Model(&domain.TaskTemplate{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&model.TaskTemplate{}).Where("id = ?", id).Updates(updates).Error; err != nil {
 		return nil, fmt.Errorf("patch template: %w", err)
 	}
 	return Get(ctx, db, id)

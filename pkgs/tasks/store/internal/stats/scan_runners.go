@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -167,7 +168,7 @@ func newEmptyRunnerStats() RunnerStats {
 //funclogmeasure:skip category=hot-path reason="DB read helper; operation trace is emitted by scanRunnerStats chokepoint."
 func queryRunnerStatsRows(ctx context.Context, db *gorm.DB) ([]runnerStatsRow, error) {
 	var rows []runnerStatsRow
-	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
+	if err := db.WithContext(ctx).Model(&model.TaskCycle{}).
 		Select(
 			"task_cycles.status AS status, "+
 				"task_cycles.started_at AS started_at, "+

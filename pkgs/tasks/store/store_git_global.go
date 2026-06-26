@@ -13,6 +13,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -20,12 +21,12 @@ import (
 // ListAllGitRepositories returns every registered repository ordered by created_at.
 func (s *Store) ListAllGitRepositories(ctx context.Context) ([]domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListAllGitRepositories")
-	var rows []domain.GitRepository
+	var rows []model.GitRepository
 	err := s.db.WithContext(ctx).Order("created_at ASC").Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("list all git repositories: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitRepositories(rows), nil
 }
 
 // CreateGlobalGitRepository registers a main checkout without project scoping.
@@ -46,7 +47,7 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 		return domain.GitRepository{}, fmt.Errorf("open repository: %w", err)
 	}
 	var existing int64
-	if err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).
+	if err := s.db.WithContext(ctx).Model(&model.GitRepository{}).
 		Where("path = ?", opened.Root).
 		Count(&existing).Error; err != nil {
 		return domain.GitRepository{}, err
@@ -68,7 +69,8 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 		UpdatedAt:     now,
 	}
 	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&repo).Error; err != nil {
+		repoRow := model.FromDomainGitRepository(repo)
+		if err := tx.Create(&repoRow).Error; err != nil {
 			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
 			}
@@ -91,7 +93,7 @@ func (s *Store) DeleteGlobalGitRepository(ctx context.Context, repoID string) er
 	if err := guardNoRunningTask(ctx, s.db, repoID); err != nil {
 		return err
 	}
-	res := s.db.WithContext(ctx).Delete(&domain.GitRepository{}, "id = ?", repoID)
+	res := s.db.WithContext(ctx).Delete(&model.GitRepository{}, "id = ?", repoID)
 	if res.Error != nil {
 		return fmt.Errorf("delete git repository: %w", res.Error)
 	}
@@ -111,7 +113,7 @@ func (s *Store) ListGitWorktreesByRepo(ctx context.Context, repoID string) ([]do
 	if _, err := s.GetGitRepositoryByID(ctx, repoID); err != nil {
 		return nil, err
 	}
-	var rows []domain.GitWorktree
+	var rows []model.GitWorktree
 	err := s.db.WithContext(ctx).
 		Where("repository_id = ?", repoID).
 		Order("is_main DESC, created_at ASC").
@@ -119,7 +121,7 @@ func (s *Store) ListGitWorktreesByRepo(ctx context.Context, repoID string) ([]do
 	if err != nil {
 		return nil, fmt.Errorf("list git worktrees: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitWorktrees(rows), nil
 }
 
 // CreateGitWorktreeForRepo adds a linked worktree via git under a repository.
@@ -178,7 +180,8 @@ func (s *Store) RegisterExistingGitWorktree(ctx context.Context, repoID string, 
 		IsMain:       found.IsMain,
 		CreatedAt:    now,
 	}
-	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
+	wtRow := model.FromDomainGitWorktree(row)
+	if err := s.db.WithContext(ctx).Create(&wtRow).Error; err != nil {
 		if kernel.IsDuplicateKey(err) {
 			return domain.GitWorktree{}, domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 		}
@@ -214,7 +217,7 @@ func (s *Store) DeleteGitWorktreeByID(ctx context.Context, worktreeID string, fo
 	if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
 		return mapGitworkRemoveErr(err)
 	}
-	res := s.db.WithContext(ctx).Delete(&domain.GitWorktree{}, "id = ?", worktreeID)
+	res := s.db.WithContext(ctx).Delete(&model.GitWorktree{}, "id = ?", worktreeID)
 	if res.Error != nil {
 		return fmt.Errorf("delete git worktree row: %w", res.Error)
 	}
@@ -231,7 +234,7 @@ func (s *Store) ListGitBranchesByRepo(ctx context.Context, repoID string) ([]dom
 	if _, err := s.GetGitRepositoryByID(ctx, repoID); err != nil {
 		return nil, err
 	}
-	var rows []domain.GitBranch
+	var rows []model.GitBranch
 	err := s.db.WithContext(ctx).
 		Where("repository_id = ?", repoID).
 		Order("name ASC").
@@ -239,7 +242,7 @@ func (s *Store) ListGitBranchesByRepo(ctx context.Context, repoID string) ([]dom
 	if err != nil {
 		return nil, fmt.Errorf("list git branches: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitBranches(rows), nil
 }
 
 // CreateGitBranchForRepo creates a branch via git under a repository (no project scope).
@@ -274,7 +277,8 @@ func (s *Store) CreateGitBranchForRepo(ctx context.Context, repoID string, input
 		HeadSHA:      created.HeadSHA,
 		CreatedAt:    time.Now().UTC(),
 	}
-	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
+	branchRow := model.FromDomainGitBranch(row)
+	if err := s.db.WithContext(ctx).Create(&branchRow).Error; err != nil {
 		if kernel.IsDuplicateKey(err) {
 			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
 		}
@@ -293,7 +297,7 @@ func (s *Store) ListProjectsByRepository(ctx context.Context, repoID string) ([]
 	if _, err := s.GetGitRepositoryByID(ctx, repoID); err != nil {
 		return nil, err
 	}
-	var rows []domain.Project
+	var rows []model.Project
 	err := s.db.WithContext(ctx).
 		Where("repository_id = ?", repoID).
 		Order("updated_at DESC").
@@ -301,7 +305,7 @@ func (s *Store) ListProjectsByRepository(ctx context.Context, repoID string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("list projects by repository: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainProjects(rows), nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Internal helper; trace emitted by calling chokepoint."
@@ -340,14 +344,15 @@ func (s *Store) createGitWorktreeOnRepo(ctx context.Context, repo domain.GitRepo
 		CreatedAt:    now,
 	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&row).Error; err != nil {
+		wtRow := model.FromDomainGitWorktree(row)
+		if err := tx.Create(&wtRow).Error; err != nil {
 			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 			}
 			return err
 		}
 		if input.CreateBranch {
-			b := domain.GitBranch{
+			b := model.GitBranch{
 				ID:           uuid.NewString(),
 				RepositoryID: repo.ID,
 				Name:         branch,

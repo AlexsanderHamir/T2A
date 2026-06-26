@@ -9,6 +9,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -34,7 +35,7 @@ func ListDeferredReadyPickups(ctx context.Context, db *gorm.DB, now time.Time, l
 		ID              string
 		PickupNotBefore time.Time
 	}
-	q := db.WithContext(ctx).Model(&domain.Task{}).
+	q := db.WithContext(ctx).Model(&model.Task{}).
 		Select("id", "pickup_not_before").
 		Where("status = ?", domain.StatusReady).
 		Where("pickup_not_before IS NOT NULL").

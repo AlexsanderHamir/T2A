@@ -16,6 +16,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -69,7 +70,7 @@ func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *Qu
 	}
 
 	now := time.Now().UTC()
-	q := db.WithContext(ctx).Model(&domain.Task{}).
+	q := db.WithContext(ctx).Model(&model.Task{}).
 		Select(sel).
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ?`,
 			int64(1), domain.EventTaskCreated).
@@ -120,7 +121,7 @@ func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string
 	}
 	afterID = strings.TrimSpace(afterID)
 	now := time.Now().UTC()
-	q := db.WithContext(ctx).Model(&domain.Task{}).
+	q := db.WithContext(ctx).Model(&model.Task{}).
 		Joins(`INNER JOIN task_events te ON te.task_id = tasks.id AND te.seq = ? AND te.type = ? AND te.by = ?`,
 			int64(1), domain.EventTaskCreated, domain.ActorUser).
 		Where("tasks.status = ?", domain.StatusReady).
