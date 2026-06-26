@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/cycles"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -81,7 +82,7 @@ func scanRecentFailures(ctx context.Context, db *gorm.DB, limit int) ([]RecentFa
 		limit = RecentFailureLimit
 	}
 	var rows []cycleFailedRow
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Select("task_id, seq, at, data_json").
 		Where("type = ?", string(domain.EventCycleFailed)).
 		Order("at DESC, seq DESC").
@@ -163,7 +164,7 @@ func enrichRecentFailuresFromPhaseEvents(ctx context.Context, db *gorm.DB, failu
 		Data   datatypes.JSON `gorm:"column:data_json"`
 	}
 	var rows []row
-	if err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	if err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Select("task_id, seq, data_json").
 		Where("type = ?", string(domain.EventPhaseFailed)).
 		Where("task_id IN ?", taskIDs).

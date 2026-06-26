@@ -78,7 +78,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 	}
 	repoID := trimOptional(input.RepositoryID)
 	if repoID != nil {
-		var repo domain.GitRepository
+		var repo model.GitRepository
 		if err := db.WithContext(ctx).First(&repo, "id = ?", *repoID).Error; err != nil {
 			return domain.Project{}, kernel.MapNotFound(err)
 		}

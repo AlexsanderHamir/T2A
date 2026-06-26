@@ -13,6 +13,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -92,7 +93,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 			StartedAt:   now,
 			DetailsJSON: datatypes.JSON(startDetails),
 		}
-		if err := tx.Omit("Cycle").Create(row).Error; err != nil {
+		if err := tx.Create(model.FromDomainTaskCyclePhasePtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_phase: %w", err)
 		}
 		evSeq, err := kernel.NextEventSeq(tx, cycle.TaskID)
@@ -106,7 +107,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 		if err := kernel.AppendEvent(tx, cycle.TaskID, evSeq, domain.EventPhaseStarted, by, payload); err != nil {
 			return err
 		}
-		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", row.ID).Update("event_seq", evSeq).Error; err != nil {
+		if err := tx.Model(&model.TaskCyclePhase{}).Where("id = ?", row.ID).Update("event_seq", evSeq).Error; err != nil {
 			return fmt.Errorf("backfill phase event_seq: %w", err)
 		}
 		row.EventSeq = &evSeq
@@ -176,7 +177,7 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 		if in.Summary != nil {
 			updates["summary"] = *in.Summary
 		}
-		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", ph.ID).Updates(updates).Error; err != nil {
+		if err := tx.Model(&model.TaskCyclePhase{}).Where("id = ?", ph.ID).Updates(updates).Error; err != nil {
 			return fmt.Errorf("update task_cycle_phase: %w", err)
 		}
 		ph.Status = in.Status
@@ -198,7 +199,7 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 		if err := kernel.AppendEvent(tx, cycle.TaskID, evSeq, mirrorType, in.By, payload); err != nil {
 			return err
 		}
-		if err := tx.Model(&domain.TaskCyclePhase{}).Where("id = ?", ph.ID).Update("event_seq", evSeq).Error; err != nil {
+		if err := tx.Model(&model.TaskCyclePhase{}).Where("id = ?", ph.ID).Update("event_seq", evSeq).Error; err != nil {
 			return fmt.Errorf("backfill phase event_seq: %w", err)
 		}
 		ph.EventSeq = &evSeq
@@ -221,12 +222,12 @@ func ListPhasesForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]dom
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	var out []domain.TaskCyclePhase
+	var rows []model.TaskCyclePhase
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := loadByIDInTx(tx, cycleID); err != nil {
 			return err
 		}
-		if err := tx.Where("cycle_id = ?", cycleID).Order("phase_seq ASC").Find(&out).Error; err != nil {
+		if err := tx.Where("cycle_id = ?", cycleID).Order("phase_seq ASC").Find(&rows).Error; err != nil {
 			return fmt.Errorf("list task_cycle_phases: %w", err)
 		}
 		return nil
@@ -234,7 +235,7 @@ func ListPhasesForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]dom
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return model.ToDomainTaskCyclePhases(rows), nil
 }
 
 // LastSessionID returns the session_id from the latest terminal phase row
@@ -264,14 +265,14 @@ func LastSessionID(ctx context.Context, db *gorm.DB, cycleID string, phase domai
 
 func loadPhaseByCycleSeqInTx(tx *gorm.DB, cycleID string, phaseSeq int64) (*domain.TaskCyclePhase, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.loadPhaseByCycleSeqInTx")
-	var p domain.TaskCyclePhase
+	var p model.TaskCyclePhase
 	if err := tx.Where("cycle_id = ? AND phase_seq = ?", cycleID, phaseSeq).First(&p).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
 		}
 		return nil, fmt.Errorf("load task_cycle_phase: %w", err)
 	}
-	return &p, nil
+	return model.ToDomainTaskCyclePhasePtr(&p), nil
 }
 
 // mergePhaseDetailsJSON shallow-merges incoming details over existing
@@ -310,7 +311,7 @@ func mergePhaseDetailsJSON(existing datatypes.JSON, incoming []byte) ([]byte, er
 func assertNoRunningPhaseForCycleInTx(tx *gorm.DB, cycleID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.assertNoRunningPhaseForCycleInTx")
 	var n int64
-	if err := tx.Model(&domain.TaskCyclePhase{}).Where("cycle_id = ? AND status = ?", cycleID, domain.PhaseStatusRunning).Count(&n).Error; err != nil {
+	if err := tx.Model(&model.TaskCyclePhase{}).Where("cycle_id = ? AND status = ?", cycleID, domain.PhaseStatusRunning).Count(&n).Error; err != nil {
 		return fmt.Errorf("running phase lookup: %w", err)
 	}
 	if n > 0 {
@@ -332,7 +333,7 @@ func nextPhaseSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
 // or nil when none exist.
 func lastPhaseForCycleInTx(tx *gorm.DB, cycleID string) (*domain.TaskCyclePhase, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.lastPhaseForCycleInTx")
-	var p domain.TaskCyclePhase
+	var p model.TaskCyclePhase
 	err := tx.Where("cycle_id = ?", cycleID).Order("phase_seq DESC").Limit(1).First(&p).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -340,7 +341,7 @@ func lastPhaseForCycleInTx(tx *gorm.DB, cycleID string) (*domain.TaskCyclePhase,
 		}
 		return nil, fmt.Errorf("last phase lookup: %w", err)
 	}
-	return &p, nil
+	return model.ToDomainTaskCyclePhasePtr(&p), nil
 }
 
 // phaseStartedPayload builds the data_json payload for the

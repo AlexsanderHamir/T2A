@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -76,13 +77,14 @@ func UpsertCycleCommits(ctx context.Context, db *gorm.DB, taskID, cycleID string
 			RecordedAt:  now,
 		})
 	}
+	modelRows := model.FromDomainTaskCycleCommits(rows)
 	err := db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "cycle_id"}, {Name: "sha"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"phase_seq", "seq", "repo", "worktree", "branch",
 			"committed_at", "message", "recorded_at",
 		}),
-	}).Omit("Cycle", "Task").Create(&rows).Error
+	}).Create(&modelRows).Error
 	if err != nil {
 		return fmt.Errorf("upsert cycle commits: %w", err)
 	}
@@ -98,14 +100,14 @@ func ListCommitsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]do
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskCycleCommit
+	var rows []model.TaskCycleCommit
 	if err := db.WithContext(ctx).
 		Where("cycle_id = ?", cycleID).
 		Order("seq ASC").
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list cycle commits: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainTaskCycleCommits(rows), nil
 }
 
 // ListCommitsForTask returns distinct commits indexed for taskID across every
@@ -119,14 +121,14 @@ func ListCommitsForTask(ctx context.Context, db *gorm.DB, taskID string) ([]doma
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: task_id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskCycleCommit
+	var rows []model.TaskCycleCommit
 	if err := db.WithContext(ctx).
 		Where("task_id = ?", taskID).
 		Order("committed_at ASC, seq ASC, recorded_at ASC").
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list task commits: %w", err)
 	}
-	return dedupeCommitsBySHA(rows), nil
+	return dedupeCommitsBySHA(model.ToDomainTaskCycleCommits(rows)), nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

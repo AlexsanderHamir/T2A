@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -51,7 +51,7 @@ func CountPreFeatureCycles(ctx context.Context, db *gorm.DB) (PreFeatureCycleCou
 	var rows []struct {
 		Meta datatypes.JSON `gorm:"column:meta_json"`
 	}
-	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
+	if err := db.WithContext(ctx).Model(&model.TaskCycle{}).
 		Select("meta_json").
 		Where("ended_at IS NOT NULL").
 		Scan(&rows).Error; err != nil {
