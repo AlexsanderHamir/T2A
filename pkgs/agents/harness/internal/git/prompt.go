@@ -45,23 +45,3 @@ func FormatGitContextForPrompt(commits []domain.TaskCycleCommit) string {
 	b.WriteString(fmt.Sprintf("commit_count=%d\n\n", len(commits)))
 	return b.String()
 }
-
-// FormatKnownCommitsForResume lists prior indexed commits for resume prompts.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func FormatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
-	if len(commits) == 0 {
-		return ""
-	}
-	var b strings.Builder
-	b.WriteString("Known commits already indexed for this task (all prior attempts):\n")
-	for _, c := range commits {
-		short := c.SHA
-		if len(short) > 12 {
-			short = short[:12]
-		}
-		b.WriteString(fmt.Sprintf("- %s — %s\n", short, c.Message))
-	}
-	b.WriteByte('\n')
-	return b.String()
-}

@@ -221,7 +221,9 @@ func (h *Handler) runnerConfigSchema(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, r, op, http.StatusNotFound, "unknown runner")
 			return
 		}
-		writeJSONError(w, r, op, http.StatusInternalServerError, err.Error())
+		slog.ErrorContext(r.Context(), "runner registry build failed",
+			"cmd", calltrace.LogCmd, "operation", op, "runner_id", runnerID, "err", err)
+		writeJSONError(w, r, op, http.StatusInternalServerError, "failed to load runner")
 		return
 	}
 	csp, ok := built.(runner.ConfigSchemaProvider)
@@ -254,7 +256,9 @@ func (h *Handler) validateRunnerConfig(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, r, op, http.StatusNotFound, "unknown runner")
 			return
 		}
-		writeJSONError(w, r, op, http.StatusInternalServerError, err.Error())
+		slog.ErrorContext(r.Context(), "runner registry build failed",
+			"cmd", calltrace.LogCmd, "operation", op, "runner_id", runnerID, "err", err)
+		writeJSONError(w, r, op, http.StatusInternalServerError, "failed to load runner")
 		return
 	}
 	cv, ok := built.(runner.ConfigValidator)

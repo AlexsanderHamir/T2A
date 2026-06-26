@@ -3,8 +3,8 @@
  * The app shell and other cross-cutting entrypoints should import from `@/tasks`
  * instead of deep paths under `tasks/…`.
  *
- * TaskDetailPage / TaskCycleDetailPage / TaskEventDetailPage /
- * TaskGraphPage are NOT re-exported here on purpose — they are route-
+ * TaskDetailPage / TaskCycleDetailPage / TaskEventDetailPage are NOT
+ * re-exported here on purpose — they are route-
  * level entry points loaded via React.lazy() in App.tsx. Re-exporting
  * them from this barrel would force Rollup to bundle them into the
  * same chunk that imports the barrel, defeating the code split.

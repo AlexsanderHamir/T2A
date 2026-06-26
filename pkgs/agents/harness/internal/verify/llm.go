@@ -7,19 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/prompt"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-)
-
-const (
-	runStateProgressKind    = "run_state"
-	runStateIdleSuspicious  = "idle_suspicious"
-	runStateIdleKillPending = "idle_kill_pending"
 )
 
 func (s *Service) runLLMVerifyAgent(
@@ -155,7 +148,7 @@ func (s *Service) runVerifyCursor(
 	var onStreamIdle func(runner.StreamIdleKind)
 	if streamIdleStuck > 0 {
 		onStreamIdle = func(kind runner.StreamIdleKind) {
-			ev := streamIdleProgressEvent(kind, streamIdleStuck)
+			ev := runner.StreamIdleProgressEvent(kind, streamIdleStuck)
 			onProgress(ev)
 		}
 	}
@@ -172,37 +165,6 @@ func (s *Service) runVerifyCursor(
 		OnStreamIdle:     onStreamIdle,
 		OnProgress:       onProgress,
 	})
-}
-
-func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.streamIdleProgressEvent",
-		"kind", int(kind), "stuck_ns", int64(stuck))
-	switch kind {
-	case runner.StreamIdleKillPending:
-		lead := 5 * time.Second
-		if stuck > lead {
-			return runner.ProgressEvent{
-				Kind:    runStateProgressKind,
-				Subtype: runStateIdleKillPending,
-				Message: fmt.Sprintf("Terminating agent in %s if no output", lead.Round(time.Second)),
-			}
-		}
-		return runner.ProgressEvent{
-			Kind:    runStateProgressKind,
-			Subtype: runStateIdleKillPending,
-			Message: "Terminating agent soon if no output",
-		}
-	default:
-		half := stuck / 2
-		if half <= 0 {
-			half = 30 * time.Second
-		}
-		return runner.ProgressEvent{
-			Kind:    runStateProgressKind,
-			Subtype: runStateIdleSuspicious,
-			Message: fmt.Sprintf("No agent output for %s — run may be stuck", half.Round(time.Second)),
-		}
-	}
 }
 
 func (s *Service) assembleVerdictsFromVerifyReport(

@@ -118,8 +118,3 @@ export function TaskDetailToolbarActions({
     </div>
   );
 }
-
-/** @deprecated Use `TaskDetailToolbarActions` — toolbar no longer renders status copy. */
-export const TaskDetailAttentionBar = TaskDetailToolbarActions;
-
-export type TaskDetailAttentionBarProps = Props;

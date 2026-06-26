@@ -264,15 +264,15 @@ describe("WorkspaceDirPickerModal", () => {
             parent_path: "/roots/OneDrive",
             entries: [
               {
-                name: "T2A",
-                path: "/roots/OneDrive/Documents/T2A",
+                name: "Hamix",
+                path: "/roots/OneDrive/Documents/Hamix",
                 has_children: false,
                 is_git_repo: true,
               },
             ],
           },
-          "/roots/OneDrive/Documents/T2A": {
-            path: "/roots/OneDrive/Documents/T2A",
+          "/roots/OneDrive/Documents/Hamix": {
+            path: "/roots/OneDrive/Documents/Hamix",
             parent_path: "/roots/OneDrive/Documents",
             is_git_repo: true,
             entries: [],
@@ -329,15 +329,15 @@ describe("WorkspaceDirPickerModal", () => {
             parent_path: "/roots/OneDrive",
             entries: [
               {
-                name: "T2A",
-                path: "/roots/OneDrive/Documents/T2A",
+                name: "Hamix",
+                path: "/roots/OneDrive/Documents/Hamix",
                 has_children: false,
                 is_git_repo: true,
               },
             ],
           },
-          "/roots/OneDrive/Documents/T2A": {
-            path: "/roots/OneDrive/Documents/T2A",
+          "/roots/OneDrive/Documents/Hamix": {
+            path: "/roots/OneDrive/Documents/Hamix",
             parent_path: "/roots/OneDrive/Documents",
             is_git_repo: true,
             entries: [],
@@ -357,10 +357,10 @@ describe("WorkspaceDirPickerModal", () => {
     );
 
     await userEvent.click(await screen.findByRole("button", { name: /^Documents/ }));
-    await userEvent.click(await screen.findByRole("button", { name: /T2A/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Hamix/ }));
 
     await waitFor(() => {
-      expect(screen.getByText("/roots/OneDrive/Documents/T2A")).toBeInTheDocument();
+      expect(screen.getByText("/roots/OneDrive/Documents/Hamix")).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByRole("button", { name: /Go up one folder/ }));
@@ -368,7 +368,7 @@ describe("WorkspaceDirPickerModal", () => {
     await waitFor(() => {
       expect(screen.getByText("/roots/OneDrive/Documents")).toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /T2A/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hamix/ })).toBeInTheDocument();
     expect(screen.queryByText("Choose a folder to browse from")).not.toBeInTheDocument();
     fetchMock.mockRestore();
   });

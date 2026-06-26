@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import {
+  verdictPillClass,
+  verifierKindLabel,
+} from "@/tasks/task-events/parseVerificationSnapshot";
+import {
   EmptyState,
   EmptyStateTimelineGlyph,
 } from "@/shared/EmptyState";
@@ -763,27 +767,6 @@ function groupVerdictsByAttempt(
   }
   groups.sort((a, b) => a.attemptSeq - b.attemptSeq);
   return groups;
-}
-
-function verdictPillClass(verified: boolean): string {
-  return verified ? "cell-pill--status-done" : "cell-pill--status-failed";
-}
-
-function verifierKindLabel(kind: VerifierKind | ""): string {
-  switch (kind) {
-    case "verify_agent":
-      return "Verify agent";
-    case "agent_self":
-      return "Self-reported";
-    case "deterministic_check":
-      return "Deterministic check";
-    case "human_override":
-      return "Human override";
-    case "legacy":
-      return "Legacy";
-    default:
-      return "";
-  }
 }
 
 /**

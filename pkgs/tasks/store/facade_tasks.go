@@ -175,12 +175,6 @@ func (s *Store) ListFlatAfter(ctx context.Context, limit int, afterID string) ([
 	return tasks.ListFlatAfter(ctx, s.db, limit, afterID)
 }
 
-// List is an alias for ListFlat. Prefer ListFlat in new code.
-func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.List")
-	return tasks.ListFlat(ctx, s.db, limit, offset, nil)
-}
-
 func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.AddTaskDependency")
 	return tasks.AddDependency(ctx, s.db, taskID, dependsOnTaskID, satisfies)

@@ -28,11 +28,9 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, items []CreateC
 	if len(items) == 0 {
 		return nil
 	}
-	t, err := kernel.LoadTask(tx, taskID)
-	if err != nil {
+	if _, err := kernel.LoadTask(tx, taskID); err != nil {
 		return err
 	}
-	_ = t
 	var maxOrder int
 	row := tx.Model(&domain.TaskChecklistItem{}).Select("COALESCE(MAX(sort_order), 0)").Where("task_id = ?", taskID)
 	if err := row.Scan(&maxOrder).Error; err != nil {

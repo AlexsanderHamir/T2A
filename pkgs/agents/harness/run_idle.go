@@ -3,7 +3,6 @@ package harness
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -11,50 +10,14 @@ import (
 )
 
 const (
-	runStateProgressKind          = "run_state"
-	runStateIdleSuspicious        = "idle_suspicious"
-	runStateIdleKillPending       = "idle_kill_pending"
-	runStateIdleRecovered         = "idle_recovered"
-	RunnerStaleReason             = "runner_stale"
-	defaultStreamIdleStuckSeconds = 60
+	RunnerStaleReason = "runner_stale"
 )
-
-func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.streamIdleProgressEvent",
-		"kind", int(kind), "stuck_ns", int64(stuck))
-	switch kind {
-	case runner.StreamIdleKillPending:
-		lead := 5 * time.Second
-		if stuck > lead {
-			return runner.ProgressEvent{
-				Kind:    runStateProgressKind,
-				Subtype: runStateIdleKillPending,
-				Message: fmt.Sprintf("Terminating agent in %s if no output", lead.Round(time.Second)),
-			}
-		}
-		return runner.ProgressEvent{
-			Kind:    runStateProgressKind,
-			Subtype: runStateIdleKillPending,
-			Message: "Terminating agent soon if no output",
-		}
-	default:
-		half := stuck / 2
-		if half <= 0 {
-			half = 30 * time.Second
-		}
-		return runner.ProgressEvent{
-			Kind:    runStateProgressKind,
-			Subtype: runStateIdleSuspicious,
-			Message: fmt.Sprintf("No agent output for %s — run may be stuck", half.Round(time.Second)),
-		}
-	}
-}
 
 func streamIdleRecoveredEvent() runner.ProgressEvent {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.streamIdleRecoveredEvent")
 	return runner.ProgressEvent{
-		Kind:    runStateProgressKind,
-		Subtype: runStateIdleRecovered,
+		Kind:    runner.ProgressRunStateKind,
+		Subtype: runner.ProgressRunStateIdleRecovered,
 		Message: "Agent went silent; recovered from saved evidence",
 	}
 }
@@ -95,7 +58,7 @@ func (h *Harness) streamIdleRunnerFields(baseOnProgress func(runner.ProgressEven
 		return 0, nil
 	}
 	return stuck, func(kind runner.StreamIdleKind) {
-		ev := streamIdleProgressEvent(kind, stuck)
+		ev := runner.StreamIdleProgressEvent(kind, stuck)
 		if baseOnProgress != nil {
 			baseOnProgress(ev)
 		}
