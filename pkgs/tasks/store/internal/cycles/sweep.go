@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -20,14 +21,14 @@ import (
 func ListRunning(ctx context.Context, db *gorm.DB) ([]domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListRunning")
-	var out []domain.TaskCycle
+	var rows []model.TaskCycle
 	q := db.WithContext(ctx).
 		Where("status = ?", domain.CycleStatusRunning).
 		Order("started_at ASC, id ASC")
-	if err := q.Find(&out).Error; err != nil {
+	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list running task_cycles: %w", err)
 	}
-	return out, nil
+	return model.ToDomainTaskCycles(rows), nil
 }
 
 // ListRunningPhases returns every task_cycle_phases row with
@@ -38,12 +39,12 @@ func ListRunning(ctx context.Context, db *gorm.DB) ([]domain.TaskCycle, error) {
 func ListRunningPhases(ctx context.Context, db *gorm.DB) ([]domain.TaskCyclePhase, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListRunningPhases")
-	var out []domain.TaskCyclePhase
+	var rows []model.TaskCyclePhase
 	q := db.WithContext(ctx).
 		Where("status = ?", domain.PhaseStatusRunning).
 		Order("started_at ASC, id ASC")
-	if err := q.Find(&out).Error; err != nil {
+	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list running task_cycle_phases: %w", err)
 	}
-	return out, nil
+	return model.ToDomainTaskCyclePhases(rows), nil
 }

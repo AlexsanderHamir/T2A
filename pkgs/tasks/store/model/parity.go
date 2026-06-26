@@ -119,4 +119,33 @@ var ParityPairs = []ParityPair{
 			&domain.TaskChecklistItem{},
 		},
 	},
+	{
+		Name:   "TaskCycle",
+		Domain: &domain.TaskCycle{},
+		Model:  &TaskCycle{},
+		Table:  "task_cycles",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+		},
+	},
+	{
+		Name:   "TaskCyclePhase",
+		Domain: &domain.TaskCyclePhase{},
+		Model:  &TaskCyclePhase{},
+		Table:  "task_cycle_phases",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+		},
+	},
+	{
+		Name:   "TaskCycleStreamEvent",
+		Domain: &domain.TaskCycleStreamEvent{},
+		Model:  &TaskCycleStreamEvent{},
+		Table:  "task_cycle_stream_events",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+			&domain.TaskCycle{},
+		},
+	},
 }

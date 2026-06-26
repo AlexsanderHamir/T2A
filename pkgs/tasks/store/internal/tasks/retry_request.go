@@ -113,28 +113,30 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 func resolveRetryParentCycleInTx(tx *gorm.DB, taskID, explicit string) (string, error) {
 	explicit = strings.TrimSpace(explicit)
 	if explicit != "" {
-		var c domain.TaskCycle
+		var c model.TaskCycle
 		if err := tx.Where("id = ?", explicit).First(&c).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return "", domain.ErrNotFound
 			}
 			return "", fmt.Errorf("load parent cycle: %w", err)
 		}
-		if c.TaskID != taskID {
+		dc := model.ToDomainTaskCycle(c)
+		if dc.TaskID != taskID {
 			return "", fmt.Errorf("%w: parent_cycle_id does not belong to this task", domain.ErrInvalidInput)
 		}
-		if !domain.TerminalCycleStatus(c.Status) {
+		if !domain.TerminalCycleStatus(dc.Status) {
 			return "", fmt.Errorf("%w: parent cycle is not terminal", domain.ErrInvalidInput)
 		}
-		return c.ID, nil
+		return dc.ID, nil
 	}
-	var cycles []domain.TaskCycle
+	var cycles []model.TaskCycle
 	if err := tx.Where("task_id = ?", taskID).Order("attempt_seq DESC").Limit(50).Find(&cycles).Error; err != nil {
 		return "", fmt.Errorf("list cycles: %w", err)
 	}
 	for i := range cycles {
-		if domain.TerminalCycleStatus(cycles[i].Status) {
-			return cycles[i].ID, nil
+		dc := model.ToDomainTaskCycle(cycles[i])
+		if domain.TerminalCycleStatus(dc.Status) {
+			return dc.ID, nil
 		}
 	}
 	return "", fmt.Errorf("%w: no terminal cycle to retry from", domain.ErrInvalidInput)
