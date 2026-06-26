@@ -42,17 +42,11 @@ func TestStore_GlobalGitRepository_andWorktreeBranch(t *testing.T) {
 	if branchID == "" {
 		t.Fatal("feature-global branch not found")
 	}
-	wb, err := s.AssociateWorktreeBranch(ctx, AssociateWorktreeBranchInput{
-		WorktreeID: wt.ID,
-		BranchID:   branchID,
-	})
-	if err != nil {
-		t.Fatalf("AssociateWorktreeBranch: %v", err)
-	}
 	list, err := s.ListWorktreeBranches(ctx, wt.ID)
 	if err != nil || len(list) != 1 {
-		t.Fatalf("ListWorktreeBranches: %v len=%d", err, len(list))
+		t.Fatalf("ListWorktreeBranches after create: %v len=%d", err, len(list))
 	}
+	wb := list[0]
 	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, wb.ID); err != nil {
 		t.Fatalf("ValidateTaskWorktreeBranchBinding: %v", err)
 	}
@@ -118,17 +112,11 @@ func TestStore_ProjectRepositoryBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	branches, _ := s.ListGitBranchesByRepo(ctx, repo.ID)
-	var branchID string
-	for _, b := range branches {
-		if b.Name == "proj-branch" {
-			branchID = b.ID
-		}
+	list, err := s.ListWorktreeBranches(ctx, wt.ID)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("ListWorktreeBranches after create: %v len=%d", err, len(list))
 	}
-	wb, err := s.AssociateWorktreeBranch(ctx, AssociateWorktreeBranchInput{WorktreeID: wt.ID, BranchID: branchID})
-	if err != nil {
-		t.Fatal(err)
-	}
+	wb := list[0]
 	pid := proj.ID
 	if err := s.ValidateTaskWorktreeBranchBinding(ctx, &pid, wb.ID); err != nil {
 		t.Fatalf("valid project binding: %v", err)
