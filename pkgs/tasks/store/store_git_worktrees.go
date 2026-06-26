@@ -12,7 +12,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -68,66 +67,7 @@ func (s *Store) CreateGitWorktree(ctx context.Context, projectID, repoID string,
 	if err != nil {
 		return domain.GitWorktree{}, err
 	}
-	path := strings.TrimSpace(input.Path)
-	branch := strings.TrimSpace(input.Branch)
-	if path == "" || branch == "" {
-		return domain.GitWorktree{}, fmt.Errorf("%w: path and branch required", domain.ErrInvalidInput)
-	}
-	if gitSvc == nil {
-		gitSvc = gitwork.New()
-	}
-	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
-	if err != nil {
-		return domain.GitWorktree{}, fmt.Errorf("open repository: %w", err)
-	}
-	wt, err := gitSvc.AddWorktree(ctx, opened, path, gitwork.AddWorktreeOptions{
-		Branch:       branch,
-		CreateBranch: input.CreateBranch,
-		StartPoint:   strings.TrimSpace(input.StartPoint),
-	})
-	if err != nil {
-		return domain.GitWorktree{}, mapGitworkCreateErr(err)
-	}
-	name := strings.TrimSpace(input.Name)
-	if name == "" {
-		name = worktreeDisplayName(wt.Path)
-	}
-	now := time.Now().UTC()
-	row := domain.GitWorktree{
-		ID:           uuid.NewString(),
-		RepositoryID: repo.ID,
-		Path:         wt.Path,
-		Name:         name,
-		IsMain:       false,
-		CreatedAt:    now,
-	}
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&row).Error; err != nil {
-			if kernel.IsDuplicateKey(err) {
-				return domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
-			}
-			return err
-		}
-		if input.CreateBranch {
-			b := domain.GitBranch{
-				ID:           uuid.NewString(),
-				RepositoryID: repo.ID,
-				Name:         branch,
-				HeadSHA:      "",
-				CreatedAt:    now,
-			}
-			if err := tx.Where("repository_id = ? AND name = ?", repo.ID, branch).
-				FirstOrCreate(&b).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		_ = gitSvc.RemoveWorktree(ctx, opened, wt.Path, true)
-		return domain.GitWorktree{}, err
-	}
-	return row, nil
+	return s.createGitWorktreeOnRepo(ctx, repo, input, gitSvc)
 }
 
 // DeleteGitWorktree removes a worktree from disk and the database.
