@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -50,11 +51,11 @@ func openTreeMigrateDB(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	if err := db.AutoMigrate(
-		&domain.Project{},
+		&model.Project{},
 		&legacyGitRepo{},
-		&domain.GitWorktree{},
-		&domain.GitBranch{},
-		&domain.WorktreeBranch{},
+		&model.GitWorktree{},
+		&model.GitBranch{},
+		&model.WorktreeBranch{},
 		&legacySeedTask{},
 	); err != nil {
 		t.Fatal(err)
@@ -67,7 +68,7 @@ func openTreeMigrateDB(t *testing.T) *gorm.DB {
 func seedLegacyGitTree(ctx context.Context, t *testing.T, db *gorm.DB) (wtID, brID, taskID string) {
 	t.Helper()
 	now := time.Now().UTC()
-	proj := domain.DefaultProject(now)
+	proj := model.FromDomainProject(domain.DefaultProject(now))
 	if err := db.WithContext(ctx).Create(&proj).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -75,11 +76,11 @@ func seedLegacyGitTree(ctx context.Context, t *testing.T, db *gorm.DB) (wtID, br
 	if err := db.WithContext(ctx).Create(&repo).Error; err != nil {
 		t.Fatal(err)
 	}
-	wt := domain.GitWorktree{ID: "wt-1", RepositoryID: repo.ID, Path: "/repos/app", Name: "main", IsMain: true, CreatedAt: now}
+	wt := model.GitWorktree{ID: "wt-1", RepositoryID: repo.ID, Path: "/repos/app", Name: "main", IsMain: true, CreatedAt: now}
 	if err := db.WithContext(ctx).Create(&wt).Error; err != nil {
 		t.Fatal(err)
 	}
-	br := domain.GitBranch{ID: "br-1", RepositoryID: repo.ID, Name: "main", CreatedAt: now}
+	br := model.GitBranch{ID: "br-1", RepositoryID: repo.ID, Name: "main", CreatedAt: now}
 	if err := db.WithContext(ctx).Create(&br).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +109,7 @@ func TestMigrateSeedWorktreeBranchTree_backfills(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var proj domain.Project
+	var proj model.Project
 	if err := db.WithContext(ctx).First(&proj, "id = ?", domain.DefaultProjectID).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func TestMigrateSeedWorktreeBranchTree_backfills(t *testing.T) {
 		t.Fatalf("project repository_id=%v want repo-1", proj.RepositoryID)
 	}
 
-	var wb domain.WorktreeBranch
+	var wb model.WorktreeBranch
 	if err := db.WithContext(ctx).First(&wb, "worktree_id = ? AND branch_id = ?", wtID, brID).Error; err != nil {
 		t.Fatalf("association not seeded: %v", err)
 	}
@@ -142,7 +143,7 @@ func TestMigrateSeedWorktreeBranchTree_idempotent(t *testing.T) {
 	}
 
 	var n int64
-	if err := db.WithContext(ctx).Model(&domain.WorktreeBranch{}).
+	if err := db.WithContext(ctx).Model(&model.WorktreeBranch{}).
 		Where("worktree_id = ? AND branch_id = ?", wtID, brID).Count(&n).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +156,7 @@ func TestMigrateSeedWorktreeBranchTree_skipsOrphanPairs(t *testing.T) {
 	db := openTreeMigrateDB(t)
 	ctx := context.Background()
 	now := time.Now().UTC()
-	proj := domain.DefaultProject(now)
+	proj := model.FromDomainProject(domain.DefaultProject(now))
 	if err := db.WithContext(ctx).Create(&proj).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +180,7 @@ func TestMigrateSeedWorktreeBranchTree_skipsOrphanPairs(t *testing.T) {
 	}
 
 	var n int64
-	if err := db.WithContext(ctx).Model(&domain.WorktreeBranch{}).Count(&n).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&model.WorktreeBranch{}).Count(&n).Error; err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {

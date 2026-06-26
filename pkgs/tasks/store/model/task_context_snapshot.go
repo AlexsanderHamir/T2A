@@ -16,6 +16,10 @@ type TaskContextSnapshot struct {
 	RenderedContext string         `gorm:"type:text;not null;default:''"`
 	TokenEstimate   int            `gorm:"not null;default:0"`
 	CreatedAt       time.Time      `gorm:"not null;index"`
+
+	Task    *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	Cycle   *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Project *Project   `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_context_snapshots table name.

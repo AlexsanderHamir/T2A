@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -41,7 +41,7 @@ func backfillProjectRepository(ctx context.Context, db *gorm.DB) error {
 	if !tableHasColumnPortable(db, "git_repositories", "project_id") {
 		return nil
 	}
-	var projects []domain.Project
+	var projects []model.Project
 	if err := db.WithContext(ctx).
 		Where("repository_id IS NULL").
 		Find(&projects).Error; err != nil {
@@ -59,7 +59,7 @@ func backfillProjectRepository(ctx context.Context, db *gorm.DB) error {
 		if err != nil {
 			return err
 		}
-		if err := db.WithContext(ctx).Model(&domain.Project{}).
+		if err := db.WithContext(ctx).Model(&model.Project{}).
 			Where("id = ?", projects[i].ID).
 			Update("repository_id", repoID).Error; err != nil {
 			return err
@@ -118,12 +118,12 @@ func backfillTaskWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 func worktreeBranchEndpointsExist(ctx context.Context, db *gorm.DB, p worktreeBranchPair) (bool, error) {
 	slog.Debug("trace", "operation", "postgres.worktreeBranchEndpointsExist")
 	var wt int64
-	if err := db.WithContext(ctx).Model(&domain.GitWorktree{}).
+	if err := db.WithContext(ctx).Model(&model.GitWorktree{}).
 		Where("id = ?", p.WorktreeID).Count(&wt).Error; err != nil {
 		return false, err
 	}
 	var br int64
-	if err := db.WithContext(ctx).Model(&domain.GitBranch{}).
+	if err := db.WithContext(ctx).Model(&model.GitBranch{}).
 		Where("id = ?", p.BranchID).Count(&br).Error; err != nil {
 		return false, err
 	}
@@ -133,7 +133,7 @@ func worktreeBranchEndpointsExist(ctx context.Context, db *gorm.DB, p worktreeBr
 // ensureWorktreeBranch upserts the association for a pair and returns its id.
 func ensureWorktreeBranch(ctx context.Context, db *gorm.DB, p worktreeBranchPair, now time.Time) (string, error) {
 	slog.Debug("trace", "operation", "postgres.ensureWorktreeBranch")
-	row := domain.WorktreeBranch{
+	row := model.WorktreeBranch{
 		ID:         uuid.NewString(),
 		WorktreeID: p.WorktreeID,
 		BranchID:   p.BranchID,
@@ -144,7 +144,7 @@ func ensureWorktreeBranch(ctx context.Context, db *gorm.DB, p worktreeBranchPair
 		Create(&row).Error; err != nil {
 		return "", err
 	}
-	var existing domain.WorktreeBranch
+	var existing model.WorktreeBranch
 	if err := db.WithContext(ctx).
 		Where("worktree_id = ? AND branch_id = ?", p.WorktreeID, p.BranchID).
 		First(&existing).Error; err != nil {

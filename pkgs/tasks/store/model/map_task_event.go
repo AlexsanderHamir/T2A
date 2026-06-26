@@ -10,10 +10,10 @@ func FromDomainTaskEvent(d domain.TaskEvent) TaskEvent {
 		At:             d.At,
 		Type:           d.Type,
 		By:             d.By,
-		Data:           d.Data,
+		Data:           datatypesFromRaw(d.Data),
 		UserResponse:   d.UserResponse,
 		UserResponseAt: d.UserResponseAt,
-		ResponseThread: d.ResponseThread,
+		ResponseThread: datatypesFromRaw(d.ResponseThread),
 	}
 }
 
@@ -25,10 +25,10 @@ func ToDomainTaskEvent(m TaskEvent) domain.TaskEvent {
 		At:             m.At,
 		Type:           m.Type,
 		By:             m.By,
-		Data:           m.Data,
+		Data:           rawJSONObjectFromDatatypes(m.Data),
 		UserResponse:   m.UserResponse,
 		UserResponseAt: m.UserResponseAt,
-		ResponseThread: m.ResponseThread,
+		ResponseThread: rawFromDatatypes(m.ResponseThread),
 	}
 }
 

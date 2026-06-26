@@ -3,6 +3,7 @@ package cycles
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -66,7 +66,7 @@ func AppendStreamEvent(ctx context.Context, db *gorm.DB, in AppendStreamEventInp
 			Subtype:     strings.TrimSpace(in.Subtype),
 			Message:     strings.TrimSpace(in.Message),
 			Tool:        strings.TrimSpace(in.Tool),
-			PayloadJSON: datatypes.JSON(payload),
+			PayloadJSON: json.RawMessage(payload),
 		}
 		if err := tx.Create(model.FromDomainTaskCycleStreamEventPtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_stream_event: %w", err)

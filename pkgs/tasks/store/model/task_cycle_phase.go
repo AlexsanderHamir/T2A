@@ -19,6 +19,8 @@ type TaskCyclePhase struct {
 	Summary     *string             `gorm:"type:text"`
 	DetailsJSON datatypes.JSON      `gorm:"column:details_json;type:jsonb;not null;default:'{}'"`
 	EventSeq    *int64              `gorm:"column:event_seq"`
+
+	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_cycle_phases table name.

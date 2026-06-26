@@ -14,7 +14,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -380,7 +379,7 @@ func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput)
 		TaskID:          strings.TrimSpace(input.TaskID),
 		CycleID:         strings.TrimSpace(input.CycleID),
 		ProjectID:       strings.TrimSpace(input.ProjectID),
-		ContextJSON:     datatypes.JSON(contextJSON),
+		ContextJSON:     json.RawMessage(contextJSON),
 		RenderedContext: strings.TrimSpace(input.RenderedContext),
 		TokenEstimate:   input.TokenEstimate,
 		CreatedAt:       time.Now().UTC(),

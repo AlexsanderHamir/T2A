@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 )
 
 func TestSetDoneWithEvidence_rejectsEmptyEvidence(t *testing.T) {
@@ -13,13 +14,13 @@ func TestSetDoneWithEvidence_rejectsEmptyEvidence(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	ctx := t.Context()
 
-	tsk := &domain.Task{
+	tsk := model.FromDomainTaskPtr(&domain.Task{
 		ID: "task-1", Title: "t", InitialPrompt: "p", Status: domain.StatusReady, Priority: domain.PriorityMedium,
-	}
+	})
 	if err := db.WithContext(ctx).Create(tsk).Error; err != nil {
 		t.Fatal(err)
 	}
-	it := &domain.TaskChecklistItem{ID: "item-1", TaskID: tsk.ID, SortOrder: 1, Text: "criterion"}
+	it := model.FromDomainTaskChecklistItemPtr(&domain.TaskChecklistItem{ID: "item-1", TaskID: tsk.ID, SortOrder: 1, Text: "criterion"})
 	if err := db.WithContext(ctx).Create(it).Error; err != nil {
 		t.Fatal(err)
 	}

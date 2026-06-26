@@ -5,17 +5,15 @@ import (
 )
 
 // ParityPair binds a domain struct prototype to its model counterpart for
-// schema- and field-parity guards. Later phases append entries here.
+// schema- and field-parity guards.
 type ParityPair struct {
 	Name   string
 	Domain any
 	Model  any
 	Table  string
-	// DomainMigrateExtra lists additional domain structs AutoMigrate must run
-	// before the primary domain type (e.g. parent tables for association FKs).
-	// Schema comparison ignores FK constraints; extras exist so domain migrate
-	// succeeds when associations reference other tables.
-	DomainMigrateExtra []any
+	// ModelMigrateExtra lists additional model structs AutoMigrate must run
+	// before the primary model type (e.g. parent tables for association FKs).
+	ModelMigrateExtra []any
 }
 
 // ParityPairs is the single registry both parity tests iterate.
@@ -31,8 +29,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskEvent{},
 		Model:  &TaskEvent{},
 		Table:  "task_events",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
+		ModelMigrateExtra: []any{
+			&Task{},
 		},
 	},
 	{
@@ -40,8 +38,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.Task{},
 		Model:  &Task{},
 		Table:  "tasks",
-		DomainMigrateExtra: []any{
-			&domain.Project{},
+		ModelMigrateExtra: []any{
+			&Project{},
 		},
 	},
 	{
@@ -49,8 +47,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskDependency{},
 		Model:  &TaskDependency{},
 		Table:  "task_dependencies",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
+		ModelMigrateExtra: []any{
+			&Task{},
 		},
 	},
 	{
@@ -64,10 +62,10 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.ProjectContextItem{},
 		Model:  &ProjectContextItem{},
 		Table:  "project_context_items",
-		DomainMigrateExtra: []any{
-			&domain.Project{},
-			&domain.Task{},
-			&domain.TaskCycle{},
+		ModelMigrateExtra: []any{
+			&Project{},
+			&Task{},
+			&TaskCycle{},
 		},
 	},
 	{
@@ -75,9 +73,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.ProjectContextEdge{},
 		Model:  &ProjectContextEdge{},
 		Table:  "project_context_edges",
-		DomainMigrateExtra: []any{
-			&domain.Project{},
-			&domain.ProjectContextItem{},
+		ModelMigrateExtra: []any{
+			&Project{},
+			&ProjectContextItem{},
 		},
 	},
 	{
@@ -85,10 +83,10 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskContextSnapshot{},
 		Model:  &TaskContextSnapshot{},
 		Table:  "task_context_snapshots",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
-			&domain.Project{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
+			&Project{},
 		},
 	},
 	{
@@ -96,8 +94,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskChecklistItem{},
 		Model:  &TaskChecklistItem{},
 		Table:  "task_checklist_items",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
+		ModelMigrateExtra: []any{
+			&Task{},
 		},
 	},
 	{
@@ -105,9 +103,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskChecklistCompletion{},
 		Model:  &TaskChecklistCompletion{},
 		Table:  "task_checklist_completions",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskChecklistItem{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskChecklistItem{},
 		},
 	},
 	{
@@ -115,8 +113,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskChecklistItemCommand{},
 		Model:  &TaskChecklistItemCommand{},
 		Table:  "task_checklist_item_commands",
-		DomainMigrateExtra: []any{
-			&domain.TaskChecklistItem{},
+		ModelMigrateExtra: []any{
+			&TaskChecklistItem{},
 		},
 	},
 	{
@@ -124,8 +122,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycle{},
 		Model:  &TaskCycle{},
 		Table:  "task_cycles",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
+		ModelMigrateExtra: []any{
+			&Task{},
 		},
 	},
 	{
@@ -133,9 +131,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCyclePhase{},
 		Model:  &TaskCyclePhase{},
 		Table:  "task_cycle_phases",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
 		},
 	},
 	{
@@ -143,9 +141,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycleStreamEvent{},
 		Model:  &TaskCycleStreamEvent{},
 		Table:  "task_cycle_stream_events",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
 		},
 	},
 	{
@@ -153,10 +151,10 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycleCriteriaReport{},
 		Model:  &TaskCycleCriteriaReport{},
 		Table:  "task_cycle_criteria_reports",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
-			&domain.TaskChecklistItem{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
+			&TaskChecklistItem{},
 		},
 	},
 	{
@@ -164,10 +162,10 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycleVerifyReport{},
 		Model:  &TaskCycleVerifyReport{},
 		Table:  "task_cycle_verify_reports",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
-			&domain.TaskChecklistItem{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
+			&TaskChecklistItem{},
 		},
 	},
 	{
@@ -175,10 +173,10 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycleCommandRun{},
 		Model:  &TaskCycleCommandRun{},
 		Table:  "task_cycle_command_runs",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
-			&domain.TaskChecklistItem{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
+			&TaskChecklistItem{},
 		},
 	},
 	{
@@ -186,9 +184,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.TaskCycleCommit{},
 		Model:  &TaskCycleCommit{},
 		Table:  "task_cycle_commits",
-		DomainMigrateExtra: []any{
-			&domain.Task{},
-			&domain.TaskCycle{},
+		ModelMigrateExtra: []any{
+			&Task{},
+			&TaskCycle{},
 		},
 	},
 	{
@@ -214,8 +212,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.GitWorktree{},
 		Model:  &GitWorktree{},
 		Table:  "git_worktrees",
-		DomainMigrateExtra: []any{
-			&domain.GitRepository{},
+		ModelMigrateExtra: []any{
+			&GitRepository{},
 		},
 	},
 	{
@@ -223,8 +221,8 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.GitBranch{},
 		Model:  &GitBranch{},
 		Table:  "git_branches",
-		DomainMigrateExtra: []any{
-			&domain.GitRepository{},
+		ModelMigrateExtra: []any{
+			&GitRepository{},
 		},
 	},
 	{
@@ -232,9 +230,9 @@ var ParityPairs = []ParityPair{
 		Domain: &domain.WorktreeBranch{},
 		Model:  &WorktreeBranch{},
 		Table:  "worktree_branches",
-		DomainMigrateExtra: []any{
-			&domain.GitWorktree{},
-			&domain.GitBranch{},
+		ModelMigrateExtra: []any{
+			&GitWorktree{},
+			&GitBranch{},
 		},
 	},
 }

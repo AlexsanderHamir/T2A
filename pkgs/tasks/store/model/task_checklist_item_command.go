@@ -7,6 +7,8 @@ type TaskChecklistItemCommand struct {
 	SortOrder       int    `gorm:"not null"`
 	Command         string `gorm:"not null;type:text"`
 	ExpectedOutcome string `gorm:"not null;default:'';type:text"`
+
+	Item *TaskChecklistItem `gorm:"foreignKey:ItemID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_checklist_item_commands table name.

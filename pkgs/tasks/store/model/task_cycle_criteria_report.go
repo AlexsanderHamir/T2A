@@ -11,6 +11,9 @@ type TaskCycleCriteriaReport struct {
 	ClaimedDone bool      `gorm:"not null;default:false"`
 	Evidence    string    `gorm:"type:text;not null;default:''"`
 	WrittenAt   time.Time `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
 }
 
 // TableName pins the task_cycle_criteria_reports table name.

@@ -9,6 +9,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 )
 
 func gitTestStore(t *testing.T) (*Store, context.Context, gitwork.Service) {
@@ -143,7 +144,7 @@ func TestStore_GitDeleteGuard_runningTask(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	task := domain.Task{
+	task := model.FromDomainTask(domain.Task{
 		ID:               "task-running-guard",
 		Title:            "running",
 		InitialPrompt:    "x",
@@ -151,7 +152,7 @@ func TestStore_GitDeleteGuard_runningTask(t *testing.T) {
 		Priority:         domain.PriorityMedium,
 		Runner:           "cursor",
 		WorktreeBranchID: &wb.ID,
-	}
+	})
 	if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,9 @@ type WorktreeBranch struct {
 	WorktreeID string    `gorm:"not null;index;uniqueIndex:idx_worktree_branch_unique,priority:1"`
 	BranchID   string    `gorm:"not null;index;uniqueIndex:idx_worktree_branch_unique,priority:2"`
 	CreatedAt  time.Time `gorm:"not null;index"`
+
+	Worktree *GitWorktree `gorm:"foreignKey:WorktreeID;references:ID;constraint:OnDelete:CASCADE"`
+	Branch   *GitBranch   `gorm:"foreignKey:BranchID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the worktree_branches table name.

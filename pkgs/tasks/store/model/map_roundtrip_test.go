@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-	"gorm.io/datatypes"
 )
 
 func TestAppSettings_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
-	cfg := datatypes.JSON(`{"cursor":{"binary_path":"/bin/cursor"}}`)
+	cfg := json.RawMessage(`{"cursor":{"binary_path":"/bin/cursor"}}`)
 	orig := domain.AppSettings{
 		ID:                          domain.AppSettingsRowID,
 		AgentPaused:                 true,
@@ -65,8 +64,8 @@ func TestTaskEvent_roundTrip(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	resp := "ack"
 	respAt := now.Add(time.Minute)
-	data := datatypes.JSON(`{"status":"ready"}`)
-	thread := datatypes.JSON(`[{"at":"2026-03-01T12:01:00Z","by":"user","body":"hi"}]`)
+	data := json.RawMessage(`{"status":"ready"}`)
+	thread := json.RawMessage(`[{"at":"2026-03-01T12:01:00Z","by":"user","body":"hi"}]`)
 	orig := domain.TaskEvent{
 		TaskID:         "task-1",
 		Seq:            2,
@@ -100,7 +99,7 @@ func TestTaskEvent_nilOptionalFields(t *testing.T) {
 		At:     time.Now().UTC(),
 		Type:   domain.EventTaskCreated,
 		By:     domain.ActorAgent,
-		Data:   datatypes.JSON(`{}`),
+		Data:   json.RawMessage(`{}`),
 	}
 	m := FromDomainTaskEvent(orig)
 	m2 := FromDomainTaskEvent(ToDomainTaskEvent(m))
@@ -121,7 +120,7 @@ func taskEventModelEqual(a, b TaskEvent) bool {
 		ptrTimeEqual(a.UserResponseAt, b.UserResponseAt)
 }
 
-func jsonEqual(a, b datatypes.JSON) bool {
+func jsonEqual(a, b []byte) bool {
 	if len(a) == 0 && len(b) == 0 {
 		return true
 	}
@@ -173,6 +172,7 @@ func TestTask_roundTrip(t *testing.T) {
 		Gate:             gate,
 		Tags:             []string{"a", "b"},
 		Milestone:        strPtr("m1"),
+		RunnerConfig:     json.RawMessage("{}"),
 	}
 	m := FromDomainTask(orig)
 	back := ToDomainTask(m)
@@ -303,7 +303,7 @@ func TestTaskCycleCommit_roundTrip(t *testing.T) {
 func TestTaskDraft_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
-	payload := datatypes.JSON(`{"title":"draft"}`)
+	payload := json.RawMessage(`{"title":"draft"}`)
 	orig := domain.TaskDraft{
 		ID: "draft-1", Name: "My draft", PayloadJSON: payload,
 		CreatedAt: now, UpdatedAt: now,
@@ -318,7 +318,7 @@ func TestTaskDraft_roundTrip(t *testing.T) {
 func TestTaskTemplate_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
-	payload := datatypes.JSON(`{"title":"template"}`)
+	payload := json.RawMessage(`{"title":"template"}`)
 	orig := domain.TaskTemplate{
 		ID: "tmpl-1", Name: "My template", PayloadJSON: payload,
 		CreatedAt: now, UpdatedAt: now,

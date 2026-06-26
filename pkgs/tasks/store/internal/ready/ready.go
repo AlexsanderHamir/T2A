@@ -98,7 +98,7 @@ func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *Qu
 	out := make([]QueueCandidate, 0, len(rows))
 	for i := range rows {
 		out = append(out, QueueCandidate{
-			Task:          rows[i].Task,
+			Task:          model.ToDomainTask(rows[i].Task),
 			TaskCreatedAt: rows[i].TaskCreatedAt,
 			EventRowID:    rows[i].SchedEventRowID,
 		})
@@ -132,11 +132,11 @@ func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string
 	if afterID != "" {
 		q = q.Where("tasks.id > ?", afterID)
 	}
-	var out []domain.Task
-	if err := q.Find(&out).Error; err != nil {
+	var rows []model.Task
+	if err := q.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list ready tasks user created: %w", err)
 	}
-	return out, nil
+	return model.ToDomainTasks(rows), nil
 }
 
 // UseSQLiteEventRowID reports whether the active dialect is SQLite,
@@ -154,7 +154,7 @@ func UseSQLiteEventRowID(db *gorm.DB) bool {
 
 // joinScan maps tasks.* plus scheduling columns from the join (package-local scan DTO).
 type joinScan struct {
-	domain.Task     `gorm:"embedded"`
+	model.Task      `gorm:"embedded"`
 	TaskCreatedAt   time.Time `gorm:"column:task_created_at"`
 	SchedEventRowID int64     `gorm:"column:sched_te_rowid"`
 }

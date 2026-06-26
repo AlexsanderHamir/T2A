@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// SchemaRevision is bumped in the same PR as any change to domain models or
-// idempotent post-AutoMigrate steps in Migrate.
+// SchemaRevision is bumped in the same PR as any change to store persistence
+// models, domain types, or idempotent post-AutoMigrate steps in Migrate.
 //
 // Rev 2 (ADR-0037 expand phase): adds worktree_branches, git_worktrees
 // .active_branch_id, projects.repository_id, tasks.worktree_branch_id and their
@@ -20,7 +20,10 @@ import (
 //
 // Rev 3 (ADR-0037 contract phase / Cycle 8): drops git_repositories.project_id,
 // tasks.worktree_id, tasks.branch_id; nulls default-project ownership on tasks.
-const SchemaRevision = 3
+//
+// Rev 4 (ADR-0039 phase 6 cutover): AutoMigrate targets store/model types;
+// domain structs are persistence-agnostic (no GORM tags).
+const SchemaRevision = 4
 
 const schemaMetaRowID = 1
 
