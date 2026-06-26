@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/namedpayload"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -71,7 +71,7 @@ func DeleteByIDInTx(tx *gorm.DB, id string) error {
 	if id == "" {
 		return nil
 	}
-	if err := tx.Where("id = ?", id).Delete(&domain.TaskDraft{}).Error; err != nil {
+	if err := tx.Where("id = ?", id).Delete(&model.TaskDraft{}).Error; err != nil {
 		return fmt.Errorf("delete draft by id: %w", err)
 	}
 	return nil

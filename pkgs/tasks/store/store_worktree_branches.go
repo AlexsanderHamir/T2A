@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func (s *Store) GetWorktreeBranchByID(ctx context.Context, id string) (domain.Wo
 	if id == "" {
 		return domain.WorktreeBranch{}, fmt.Errorf("%w: worktree_branch_id required", domain.ErrInvalidInput)
 	}
-	var row domain.WorktreeBranch
+	var row model.WorktreeBranch
 	err := s.db.WithContext(ctx).Where("id = ?", id).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -36,7 +37,7 @@ func (s *Store) GetWorktreeBranchByID(ctx context.Context, id string) (domain.Wo
 		}
 		return domain.WorktreeBranch{}, fmt.Errorf("get worktree branch: %w", err)
 	}
-	return row, nil
+	return model.ToDomainWorktreeBranch(row), nil
 }
 
 // ListWorktreeBranches returns associations for a worktree ordered by created_at.
@@ -46,7 +47,7 @@ func (s *Store) ListWorktreeBranches(ctx context.Context, worktreeID string) ([]
 	if worktreeID == "" {
 		return nil, fmt.Errorf("%w: worktree_id required", domain.ErrInvalidInput)
 	}
-	var rows []domain.WorktreeBranch
+	var rows []model.WorktreeBranch
 	err := s.db.WithContext(ctx).
 		Where("worktree_id = ?", worktreeID).
 		Order("created_at ASC").
@@ -54,7 +55,7 @@ func (s *Store) ListWorktreeBranches(ctx context.Context, worktreeID string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("list worktree branches: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainWorktreeBranches(rows), nil
 }
 
 // AssociateWorktreeBranch creates a worktree↔branch association after validating
@@ -79,13 +80,14 @@ func (s *Store) AssociateWorktreeBranch(ctx context.Context, input AssociateWork
 		BranchID:   br.ID,
 		CreatedAt:  now,
 	}
-	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
+	wbRow := model.FromDomainWorktreeBranch(row)
+	if err := s.db.WithContext(ctx).Create(&wbRow).Error; err != nil {
 		if kernel.IsDuplicateKey(err) {
-			var existing domain.WorktreeBranch
+			var existing model.WorktreeBranch
 			if findErr := s.db.WithContext(ctx).
 				Where("worktree_id = ? AND branch_id = ?", wt.ID, br.ID).
 				First(&existing).Error; findErr == nil {
-				return existing, nil
+				return model.ToDomainWorktreeBranch(existing), nil
 			}
 			return domain.WorktreeBranch{}, domain.NewGitErr(domain.GitCodeDuplicate, "branch already associated with worktree")
 		}
@@ -102,7 +104,7 @@ func (s *Store) RemoveWorktreeBranch(ctx context.Context, worktreeID, branchID s
 	if worktreeID == "" || branchID == "" {
 		return fmt.Errorf("%w: worktree_id and branch_id required", domain.ErrInvalidInput)
 	}
-	var row domain.WorktreeBranch
+	var row model.WorktreeBranch
 	if err := s.db.WithContext(ctx).
 		Where("worktree_id = ? AND branch_id = ?", worktreeID, branchID).
 		First(&row).Error; err != nil {
@@ -114,7 +116,7 @@ func (s *Store) RemoveWorktreeBranch(ctx context.Context, worktreeID, branchID s
 	if err := guardNoRunningTaskOnWorktreeBranch(ctx, s.db, row.ID); err != nil {
 		return err
 	}
-	res := s.db.WithContext(ctx).Delete(&domain.WorktreeBranch{}, "id = ?", row.ID)
+	res := s.db.WithContext(ctx).Delete(&model.WorktreeBranch{}, "id = ?", row.ID)
 	if res.Error != nil {
 		return fmt.Errorf("remove worktree branch: %w", res.Error)
 	}
@@ -133,7 +135,7 @@ func (s *Store) SetActiveBranch(ctx context.Context, worktreeID, branchID string
 	if err := s.guardBranchNotActiveElsewhere(ctx, worktreeID, branchID); err != nil {
 		return err
 	}
-	res := s.db.WithContext(ctx).Model(&domain.GitWorktree{}).
+	res := s.db.WithContext(ctx).Model(&model.GitWorktree{}).
 		Where("id = ?", worktreeID).
 		Update("active_branch_id", branchID)
 	if res.Error != nil {
@@ -153,7 +155,7 @@ func (s *Store) ClearActiveBranch(ctx context.Context, worktreeID, branchID stri
 	if worktreeID == "" {
 		return fmt.Errorf("%w: worktree_id required", domain.ErrInvalidInput)
 	}
-	q := s.db.WithContext(ctx).Model(&domain.GitWorktree{}).Where("id = ?", worktreeID)
+	q := s.db.WithContext(ctx).Model(&model.GitWorktree{}).Where("id = ?", worktreeID)
 	if branchID != "" {
 		q = q.Where("active_branch_id = ?", branchID)
 	}
@@ -171,7 +173,7 @@ func (s *Store) GuardBranchNotActiveElsewhere(ctx context.Context, worktreeID, b
 
 func (s *Store) guardBranchNotActiveElsewhere(ctx context.Context, worktreeID, branchID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.guardBranchNotActiveElsewhere")
-	var other domain.GitWorktree
+	var other model.GitWorktree
 	err := s.db.WithContext(ctx).
 		Where("active_branch_id = ? AND id <> ?", branchID, worktreeID).
 		First(&other).Error

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -51,14 +52,14 @@ func SetDoneWithEvidenceInTx(
 	if err != nil {
 		return CriteriaFlagChange{}, err
 	}
-	var it domain.TaskChecklistItem
+	var it model.TaskChecklistItem
 	if err := tx.Where("id = ? AND task_id = ?", itemID, defOwner).First(&it).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return CriteriaFlagChange{}, domain.ErrNotFound
 		}
 		return CriteriaFlagChange{}, fmt.Errorf("load checklist item: %w", err)
 	}
-	row := domain.TaskChecklistCompletion{
+	drow := domain.TaskChecklistCompletion{
 		TaskID:            subjectTaskID,
 		ItemID:            itemID,
 		At:                time.Now().UTC(),
@@ -68,6 +69,7 @@ func SetDoneWithEvidenceInTx(
 		VerifierReasoning: reasoning,
 		CycleID:           strings.TrimSpace(cycleID),
 	}
+	row := model.FromDomainTaskChecklistCompletion(drow)
 	if err := tx.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "task_id"}, {Name: "item_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
@@ -82,7 +84,7 @@ func SetDoneWithEvidenceInTx(
 	}
 	b, _ := json.Marshal(map[string]any{
 		"item_id": itemID, "done": true,
-		"verified_by": string(verifier), "cycle_id": row.CycleID,
+		"verified_by": string(verifier), "cycle_id": drow.CycleID,
 	})
 	if err := kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
 		return CriteriaFlagChange{}, err

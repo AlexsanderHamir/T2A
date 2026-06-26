@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -79,7 +80,7 @@ func Start(ctx context.Context, db *gorm.DB, in StartCycleInput) (*domain.TaskCy
 			ParentCycleID: in.ParentCycleID,
 			MetaJSON:      datatypes.JSON(meta),
 		}
-		if err := tx.Omit("Task").Create(row).Error; err != nil {
+		if err := tx.Create(model.FromDomainTaskCyclePtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle: %w", err)
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
@@ -143,7 +144,7 @@ func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.C
 			"status":   status,
 			"ended_at": now,
 		}
-		if err := tx.Model(&domain.TaskCycle{}).Where("id = ?", cycle.ID).Updates(updates).Error; err != nil {
+		if err := tx.Model(&model.TaskCycle{}).Where("id = ?", cycle.ID).Updates(updates).Error; err != nil {
 			return fmt.Errorf("update task_cycle: %w", err)
 		}
 		cycle.Status = status
@@ -151,17 +152,18 @@ func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.C
 
 		failureSummary := ""
 		if mirrorEventTypeForCycleStatus(status) == domain.EventCycleFailed {
-			var lastFailedExecute domain.TaskCyclePhase
+			var lastFailedExecute model.TaskCyclePhase
 			q := tx.Where("cycle_id = ? AND phase = ? AND status = ?", cycle.ID, domain.PhaseExecute, domain.PhaseStatusFailed).
 				Order("phase_seq DESC")
 			if err := q.First(&lastFailedExecute).Error; err == nil {
+				lastPhase := model.ToDomainTaskCyclePhase(lastFailedExecute)
 				var details map[string]any
-				if len(lastFailedExecute.DetailsJSON) > 0 {
-					_ = json.Unmarshal(lastFailedExecute.DetailsJSON, &details)
+				if len(lastPhase.DetailsJSON) > 0 {
+					_ = json.Unmarshal(lastPhase.DetailsJSON, &details)
 				}
 				sum := ""
-				if lastFailedExecute.Summary != nil {
-					sum = *lastFailedExecute.Summary
+				if lastPhase.Summary != nil {
+					sum = *lastPhase.Summary
 				}
 				failureSummary = FailureSurfaceMessage(true, reason, sum, details)
 			}
@@ -233,7 +235,7 @@ func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAt
 	if limit > 200 {
 		limit = 200
 	}
-	var out []domain.TaskCycle
+	var rows []model.TaskCycle
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := kernel.LoadTask(tx, taskID); err != nil {
 			return err
@@ -242,7 +244,7 @@ func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAt
 		if beforeAttemptSeq > 0 {
 			q = q.Where("attempt_seq < ?", beforeAttemptSeq)
 		}
-		if err := q.Order("attempt_seq DESC").Limit(limit).Find(&out).Error; err != nil {
+		if err := q.Order("attempt_seq DESC").Limit(limit).Find(&rows).Error; err != nil {
 			return fmt.Errorf("list task_cycles: %w", err)
 		}
 		return nil
@@ -250,27 +252,27 @@ func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAt
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return model.ToDomainTaskCycles(rows), nil
 }
 
 // loadByIDInTx fetches one cycle by id with gorm errors mapped to the
 // domain sentinels. Shared with the phase code via the in-TX scope.
 func loadByIDInTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.loadByIDInTx")
-	var c domain.TaskCycle
+	var c model.TaskCycle
 	if err := tx.Where("id = ?", cycleID).First(&c).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
 		}
 		return nil, fmt.Errorf("load task_cycle: %w", err)
 	}
-	return &c, nil
+	return model.ToDomainTaskCyclePtr(&c), nil
 }
 
 func assertNoRunningCycleForTaskInTx(tx *gorm.DB, taskID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.assertNoRunningCycleForTaskInTx")
 	var n int64
-	if err := tx.Model(&domain.TaskCycle{}).Where("task_id = ? AND status = ?", taskID, domain.CycleStatusRunning).Count(&n).Error; err != nil {
+	if err := tx.Model(&model.TaskCycle{}).Where("task_id = ? AND status = ?", taskID, domain.CycleStatusRunning).Count(&n).Error; err != nil {
 		return fmt.Errorf("running cycle lookup: %w", err)
 	}
 	if n > 0 {

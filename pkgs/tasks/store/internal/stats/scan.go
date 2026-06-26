@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +26,7 @@ func scanTotals(ctx context.Context, db *gorm.DB, now time.Time) (totalsRow, err
 	// CASE rather than threading another `?` through the Select
 	// args. GORM's Select binds positional args left-to-right
 	// across the entire compiled SQL — including WHERE clauses
-	// implicitly added by Model(&domain.Task{}) (soft-delete
+	// implicitly added by Model(&model.Task{}) (soft-delete
 	// gating). The four literal `?` slots stay tied to ready /
 	// critical / ready (scheduled gate) / now in source order, but
 	// reusing the same enum value via interpolation removes the
@@ -37,7 +38,7 @@ func scanTotals(ctx context.Context, db *gorm.DB, now time.Time) (totalsRow, err
 		"SUM(CASE WHEN status = '%s' AND pickup_not_before IS NOT NULL AND pickup_not_before > ? THEN 1 ELSE 0 END) AS scheduled",
 		string(domain.StatusReady),
 	)
-	err := db.WithContext(ctx).Model(&domain.Task{}).
+	err := db.WithContext(ctx).Model(&model.Task{}).
 		Select(
 			"COUNT(*) AS total, "+
 				"SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS ready, "+
@@ -62,7 +63,7 @@ type statusCountRow struct {
 func scanByStatus(ctx context.Context, db *gorm.DB) ([]statusCountRow, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanByStatus")
 	var statusRows []statusCountRow
-	if err := db.WithContext(ctx).Model(&domain.Task{}).
+	if err := db.WithContext(ctx).Model(&model.Task{}).
 		Select("status, COUNT(*) AS count").
 		Group("status").
 		Scan(&statusRows).Error; err != nil {
@@ -79,7 +80,7 @@ type priorityCountRow struct {
 func scanByPriority(ctx context.Context, db *gorm.DB) ([]priorityCountRow, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanByPriority")
 	var priorityRows []priorityCountRow
-	if err := db.WithContext(ctx).Model(&domain.Task{}).
+	if err := db.WithContext(ctx).Model(&model.Task{}).
 		Select("priority, COUNT(*) AS count").
 		Group("priority").
 		Scan(&priorityRows).Error; err != nil {

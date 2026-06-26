@@ -12,6 +12,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func (s *Store) ListGitBranches(ctx context.Context, projectID, repoID string) (
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
 		return nil, err
 	}
-	var rows []domain.GitBranch
+	var rows []model.GitBranch
 	err := s.db.WithContext(ctx).
 		Where("repository_id = ?", repoID).
 		Order("name ASC").
@@ -36,14 +37,14 @@ func (s *Store) ListGitBranches(ctx context.Context, projectID, repoID string) (
 	if err != nil {
 		return nil, fmt.Errorf("list git branches: %w", err)
 	}
-	return rows, nil
+	return model.ToDomainGitBranches(rows), nil
 }
 
 // GetGitBranch returns one branch by ID. The projectID parameter is
 // accepted for API compatibility but ignored — repositories are global.
 func (s *Store) GetGitBranch(ctx context.Context, projectID, branchID string) (domain.GitBranch, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitBranch")
-	var row domain.GitBranch
+	var row model.GitBranch
 	err := s.db.WithContext(ctx).
 		Where("id = ?", branchID).
 		First(&row).Error
@@ -53,7 +54,7 @@ func (s *Store) GetGitBranch(ctx context.Context, projectID, branchID string) (d
 		}
 		return domain.GitBranch{}, fmt.Errorf("get git branch: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitBranch(row), nil
 }
 
 // CreateGitBranch creates a branch via git and inserts a row.
@@ -88,7 +89,8 @@ func (s *Store) CreateGitBranch(ctx context.Context, projectID, repoID string, i
 		HeadSHA:      created.HeadSHA,
 		CreatedAt:    time.Now().UTC(),
 	}
-	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
+	branchRow := model.FromDomainGitBranch(row)
+	if err := s.db.WithContext(ctx).Create(&branchRow).Error; err != nil {
 		if kernel.IsDuplicateKey(err) {
 			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
 		}
@@ -133,7 +135,7 @@ func (s *Store) DeleteGitBranch(ctx context.Context, projectID, branchID string,
 		}
 		return err
 	}
-	res := s.db.WithContext(ctx).Delete(&domain.GitBranch{}, "id = ?", branchID)
+	res := s.db.WithContext(ctx).Delete(&model.GitBranch{}, "id = ?", branchID)
 	if res.Error != nil {
 		return fmt.Errorf("delete git branch row: %w", res.Error)
 	}

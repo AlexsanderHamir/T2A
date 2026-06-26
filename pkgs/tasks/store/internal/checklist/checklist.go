@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -54,7 +55,7 @@ func DefinitionSourceTaskIDInTx(tx *gorm.DB, taskID string) (string, error) {
 		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	var n int64
-	if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Count(&n).Error; err != nil {
+	if err := tx.Model(&model.Task{}).Where("id = ?", taskID).Count(&n).Error; err != nil {
 		return "", fmt.Errorf("load task: %w", err)
 	}
 	if n == 0 {
@@ -93,13 +94,14 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 		for i := range items {
 			ids[i] = items[i].ID
 		}
-		var doneRows []domain.TaskChecklistCompletion
+		var doneRows []model.TaskChecklistCompletion
 		if err := tx.Where("task_id = ? AND item_id IN ?", taskID, ids).Find(&doneRows).Error; err != nil {
 			return fmt.Errorf("list checklist completions: %w", err)
 		}
 		doneByItem := make(map[string]domain.TaskChecklistCompletion, len(doneRows))
 		for _, d := range doneRows {
-			doneByItem[d.ItemID] = d
+			dd := model.ToDomainTaskChecklistCompletion(d)
+			doneByItem[dd.ItemID] = dd
 		}
 		out = make([]ItemView, 0, len(items))
 		cmdsByItem, err := commandsForItemsInTx(tx, ids)
@@ -160,31 +162,31 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands [
 			return err
 		}
 		var maxOrder int
-		row := tx.Model(&domain.TaskChecklistItem{}).Select("COALESCE(MAX(sort_order), 0)").Where("task_id = ?", taskID)
+		row := tx.Model(&model.TaskChecklistItem{}).Select("COALESCE(MAX(sort_order), 0)").Where("task_id = ?", taskID)
 		if err := row.Scan(&maxOrder).Error; err != nil {
 			return fmt.Errorf("checklist order: %w", err)
 		}
-		it := &domain.TaskChecklistItem{
+		dit := domain.TaskChecklistItem{
 			ID:        uuid.NewString(),
 			TaskID:    taskID,
 			SortOrder: maxOrder + 1,
 			Text:      text,
 		}
-		if err := tx.Create(it).Error; err != nil {
+		if err := tx.Create(model.FromDomainTaskChecklistItemPtr(&dit)).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
 		}
-		if err := replaceCommandsInTx(tx, it.ID, cmds); err != nil {
+		if err := replaceCommandsInTx(tx, dit.ID, cmds); err != nil {
 			return err
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
-		b, _ := json.Marshal(map[string]string{"item_id": it.ID, "text": it.Text})
+		b, _ := json.Marshal(map[string]string{"item_id": dit.ID, "text": dit.Text})
 		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemAdded, by, b); err != nil {
 			return err
 		}
-		created = it
+		created = &dit
 		return nil
 	})
 	if err != nil {
@@ -215,13 +217,14 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		if err := ValidateCriteriaMutable(t); err != nil {
 			return err
 		}
-		var it domain.TaskChecklistItem
+		var it model.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
+		dit := model.ToDomainTaskChecklistItem(it)
 		// Symmetric with UpdateText above: a done criterion records
 		// what was actually accepted as satisfied, and the
 		// EventChecklistItemToggled (done=true) audit row already
@@ -242,7 +245,7 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		// subject — including an inheriting child — has marked the
 		// criterion done, the audit-orphaning concern applies.
 		var doneCount int64
-		if err := tx.Model(&domain.TaskChecklistCompletion{}).
+		if err := tx.Model(&model.TaskChecklistCompletion{}).
 			Where("item_id = ?", itemID).
 			Count(&doneCount).Error; err != nil {
 			return fmt.Errorf("count completions: %w", err)
@@ -251,7 +254,7 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 			return fmt.Errorf("%w: cannot remove a criterion that has already been marked done", domain.ErrInvalidInput)
 		}
 		if doneCount > 0 {
-			if err := tx.Where("item_id = ?", itemID).Delete(&domain.TaskChecklistCompletion{}).Error; err != nil {
+			if err := tx.Where("item_id = ?", itemID).Delete(&model.TaskChecklistCompletion{}).Error; err != nil {
 				return fmt.Errorf("delete checklist completions: %w", err)
 			}
 		}
@@ -259,7 +262,7 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		if err != nil {
 			return err
 		}
-		b, _ := json.Marshal(map[string]string{"item_id": itemID, "text": it.Text})
+		b, _ := json.Marshal(map[string]string{"item_id": itemID, "text": dit.Text})
 		if err := kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemRemoved, by, b); err != nil {
 			return err
 		}
@@ -294,13 +297,14 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 		if err := ValidateCriteriaMutable(t); err != nil {
 			return err
 		}
-		var it domain.TaskChecklistItem
+		var it model.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
+		dit := model.ToDomainTaskChecklistItem(it)
 		// A done criterion records what was actually accepted as
 		// satisfied. Letting the text be retroactively rewritten
 		// would silently change the meaning of the already-emitted
@@ -320,7 +324,7 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 		// child — because the audit-rewriting concern is symmetric
 		// across every subject that already accepted the text.
 		var doneCount int64
-		if err := tx.Model(&domain.TaskChecklistCompletion{}).
+		if err := tx.Model(&model.TaskChecklistCompletion{}).
 			Where("item_id = ?", itemID).
 			Count(&doneCount).Error; err != nil {
 			return fmt.Errorf("count completions: %w", err)
@@ -328,7 +332,7 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 		if criterionLockedByCompletion(t.Status, doneCount) {
 			return fmt.Errorf("%w: cannot edit a criterion that has already been marked done", domain.ErrInvalidInput)
 		}
-		if it.Text == text {
+		if dit.Text == text {
 			return nil
 		}
 		if err := tx.Model(&it).Update("text", text).Error; err != nil {
@@ -370,14 +374,14 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 		if err != nil {
 			return err
 		}
-		var it domain.TaskChecklistItem
+		var it model.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, defOwner).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load checklist item: %w", err)
 		}
-		var existing domain.TaskChecklistCompletion
+		var existing model.TaskChecklistCompletion
 		err = tx.Where("task_id = ? AND item_id = ?", subjectTaskID, itemID).First(&existing).Error
 		switch {
 		case err == nil:
@@ -392,13 +396,14 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 			return fmt.Errorf("load completion: %w", err)
 		}
 		if done {
-			row := domain.TaskChecklistCompletion{
+			drow := domain.TaskChecklistCompletion{
 				TaskID:     subjectTaskID,
 				ItemID:     itemID,
 				At:         time.Now().UTC(),
 				By:         by,
 				VerifiedBy: domain.VerifierLegacy,
 			}
+			row := model.FromDomainTaskChecklistCompletion(drow)
 			if err := tx.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "task_id"}, {Name: "item_id"}},
 				DoUpdates: clause.AssignmentColumns([]string{"at", "done_by", "verified_by"}),
@@ -406,7 +411,7 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 				return fmt.Errorf("save completion: %w", err)
 			}
 		} else {
-			res := tx.Where("task_id = ? AND item_id = ?", subjectTaskID, itemID).Delete(&domain.TaskChecklistCompletion{})
+			res := tx.Where("task_id = ? AND item_id = ?", subjectTaskID, itemID).Delete(&model.TaskChecklistCompletion{})
 			if res.Error != nil {
 				return fmt.Errorf("delete completion: %w", res.Error)
 			}

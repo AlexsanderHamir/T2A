@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +21,7 @@ func IsTaskCycleRunning(ctx context.Context, db *gorm.DB, taskID string) (bool, 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func isTaskCycleRunningInTx(tx *gorm.DB, taskID string) (bool, error) {
 	var n int64
-	if err := tx.Model(&domain.TaskCycle{}).
+	if err := tx.Model(&model.TaskCycle{}).
 		Where("task_id = ? AND status = ?", taskID, domain.CycleStatusRunning).
 		Count(&n).Error; err != nil {
 		return false, fmt.Errorf("running cycle lookup: %w", err)
@@ -28,8 +29,8 @@ func isTaskCycleRunningInTx(tx *gorm.DB, taskID string) (bool, error) {
 	if n > 0 {
 		return true, nil
 	}
-	var t domain.Task
-	if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
+	var row model.Task
+	if err := tx.Where("id = ?", taskID).First(&row).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, domain.ErrNotFound
 		}

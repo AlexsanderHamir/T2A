@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +24,7 @@ type cycleStatusCountRow struct {
 func scanCyclesByStatus(ctx context.Context, db *gorm.DB) ([]cycleStatusCountRow, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanCyclesByStatus")
 	var rows []cycleStatusCountRow
-	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
+	if err := db.WithContext(ctx).Model(&model.TaskCycle{}).
 		Select("status, COUNT(*) AS count").
 		Group("status").
 		Scan(&rows).Error; err != nil {
@@ -40,7 +41,7 @@ type cycleActorCountRow struct {
 func scanCyclesByTriggeredBy(ctx context.Context, db *gorm.DB) ([]cycleActorCountRow, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanCyclesByTriggeredBy")
 	var rows []cycleActorCountRow
-	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
+	if err := db.WithContext(ctx).Model(&model.TaskCycle{}).
 		Select("triggered_by, COUNT(*) AS count").
 		Group("triggered_by").
 		Scan(&rows).Error; err != nil {
@@ -63,7 +64,7 @@ type phaseStatusCountRow struct {
 func scanPhasesByStatus(ctx context.Context, db *gorm.DB) ([]phaseStatusCountRow, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanPhasesByStatus")
 	var rows []phaseStatusCountRow
-	if err := db.WithContext(ctx).Model(&domain.TaskCyclePhase{}).
+	if err := db.WithContext(ctx).Model(&model.TaskCyclePhase{}).
 		Select("phase, status, COUNT(*) AS count").
 		Group("phase, status").
 		Scan(&rows).Error; err != nil {

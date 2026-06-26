@@ -29,3 +29,15 @@ func ToDomainProject(m Project) domain.Project {
 		UpdatedAt:      m.UpdatedAt,
 	}
 }
+
+// ToDomainProjects maps persistence rows to domain.Project.
+func ToDomainProjects(rows []Project) []domain.Project {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]domain.Project, len(rows))
+	for i := range rows {
+		out[i] = ToDomainProject(rows[i])
+	}
+	return out
+}

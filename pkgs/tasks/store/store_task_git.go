@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +27,7 @@ func (s *Store) GetGitWorktreeByID(ctx context.Context, worktreeID string) (doma
 	if worktreeID == "" {
 		return domain.GitWorktree{}, fmt.Errorf("%w: worktree_id required", domain.ErrInvalidInput)
 	}
-	var row domain.GitWorktree
+	var row model.GitWorktree
 	err := s.db.WithContext(ctx).Where("id = ?", worktreeID).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -34,7 +35,7 @@ func (s *Store) GetGitWorktreeByID(ctx context.Context, worktreeID string) (doma
 		}
 		return domain.GitWorktree{}, fmt.Errorf("get git worktree: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitWorktree(row), nil
 }
 
 // GetGitBranchByID loads a branch row by primary key.
@@ -44,7 +45,7 @@ func (s *Store) GetGitBranchByID(ctx context.Context, branchID string) (domain.G
 	if branchID == "" {
 		return domain.GitBranch{}, fmt.Errorf("%w: branch_id required", domain.ErrInvalidInput)
 	}
-	var row domain.GitBranch
+	var row model.GitBranch
 	err := s.db.WithContext(ctx).Where("id = ?", branchID).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -52,7 +53,7 @@ func (s *Store) GetGitBranchByID(ctx context.Context, branchID string) (domain.G
 		}
 		return domain.GitBranch{}, fmt.Errorf("get git branch: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitBranch(row), nil
 }
 
 // GetGitRepositoryByID loads a repository row by primary key.
@@ -62,7 +63,7 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 	if repoID == "" {
 		return domain.GitRepository{}, fmt.Errorf("%w: repository_id required", domain.ErrInvalidInput)
 	}
-	var row domain.GitRepository
+	var row model.GitRepository
 	err := s.db.WithContext(ctx).Where("id = ?", repoID).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -70,7 +71,7 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 		}
 		return domain.GitRepository{}, fmt.Errorf("get git repository: %w", err)
 	}
-	return row, nil
+	return model.ToDomainGitRepository(row), nil
 }
 
 // ValidateTaskWorktreeBranchBinding checks worktree_branch_id exists and, when
@@ -138,13 +139,13 @@ func (s *Store) ResolveTaskGitContextFromAssociation(ctx context.Context, worktr
 func (s *Store) AgentWorkerGitIdle(ctx context.Context) (idle bool, reason string, err error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.AgentWorkerGitIdle")
 	var repoCount int64
-	if err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).Count(&repoCount).Error; err != nil {
+	if err := s.db.WithContext(ctx).Model(&model.GitRepository{}).Count(&repoCount).Error; err != nil {
 		return false, "", fmt.Errorf("count git repositories: %w", err)
 	}
 	if repoCount == 0 {
 		return true, "no_repository_registered", nil
 	}
-	var worktrees []domain.GitWorktree
+	var worktrees []model.GitWorktree
 	if err := s.db.WithContext(ctx).Find(&worktrees).Error; err != nil {
 		return false, "", fmt.Errorf("list git worktrees: %w", err)
 	}

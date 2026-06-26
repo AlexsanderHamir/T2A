@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -67,7 +68,7 @@ func AppendStreamEvent(ctx context.Context, db *gorm.DB, in AppendStreamEventInp
 			Tool:        strings.TrimSpace(in.Tool),
 			PayloadJSON: datatypes.JSON(payload),
 		}
-		if err := tx.Omit("Task", "Cycle").Create(row).Error; err != nil {
+		if err := tx.Create(model.FromDomainTaskCycleStreamEventPtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_stream_event: %w", err)
 		}
 		out = row
@@ -93,7 +94,7 @@ func ListStreamEvents(ctx context.Context, db *gorm.DB, cycleID string, afterSeq
 	if limit > maxStreamEventLimit {
 		limit = maxStreamEventLimit
 	}
-	var out []domain.TaskCycleStreamEvent
+	var rows []model.TaskCycleStreamEvent
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := loadByIDInTx(tx, cycleID); err != nil {
 			return err
@@ -102,7 +103,7 @@ func ListStreamEvents(ctx context.Context, db *gorm.DB, cycleID string, afterSeq
 		if afterSeq > 0 {
 			q = q.Where("stream_seq > ?", afterSeq)
 		}
-		if err := q.Order("stream_seq ASC").Limit(limit).Find(&out).Error; err != nil {
+		if err := q.Order("stream_seq ASC").Limit(limit).Find(&rows).Error; err != nil {
 			return fmt.Errorf("list task_cycle_stream_events: %w", err)
 		}
 		return nil
@@ -110,7 +111,7 @@ func ListStreamEvents(ctx context.Context, db *gorm.DB, cycleID string, afterSeq
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return model.ToDomainTaskCycleStreamEvents(rows), nil
 }
 
 func nextStreamSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
