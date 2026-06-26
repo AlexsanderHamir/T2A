@@ -3,7 +3,6 @@ import {
   TaskTimelineSkeletonItems,
 } from "./taskSkeletonChunks";
 
-const TASK_GRAPH_SKELETON_CARDS = 4;
 const TASK_DRAFTS_LIST_SKELETON_ROWS = 4;
 
 export function TaskChecklistSkeleton() {
@@ -150,37 +149,5 @@ export function TaskDraftsListSkeleton() {
         </div>
       ))}
     </div>
-  );
-}
-
-/** Task graph route while the graph query is pending (DS §11). */
-export function TaskGraphPageSkeleton() {
-  return (
-    <section
-      className="panel task-graph-page task-graph-skeleton-root"
-      aria-busy="true"
-    >
-      <div className="task-graph-skeleton-nav" role="status" aria-label="Loading task graph">
-        <span className="skeleton-block skeleton-block--detail-back" aria-hidden="true" />
-      </div>
-      <div className="task-graph-skeleton-header" aria-hidden="true">
-        <span className="skeleton-block skeleton-block--detail-title" />
-        <span className="skeleton-block skeleton-block--detail-line-short" />
-      </div>
-      <div className="task-graph-skeleton-viewport">
-        <div className="task-graph-skeleton-cards">
-          {Array.from({ length: TASK_GRAPH_SKELETON_CARDS }, (_, i) => (
-            <div key={i} className="task-graph-skeleton-card">
-              <span className="skeleton-block skeleton-block--title" />
-              <span className="skeleton-block skeleton-block--prompt" />
-              <div className="task-graph-skeleton-card-meta">
-                <span className="skeleton-block skeleton-block--pill skeleton-block--pill-narrow" />
-                <span className="skeleton-block skeleton-block--pill" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
