@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ProgressRunStateKind          = "run_state"
+	ProgressRunStateKind            = "run_state"
 	ProgressRunStateIdleSuspicious  = "idle_suspicious"
 	ProgressRunStateIdleKillPending = "idle_kill_pending"
 	ProgressRunStateIdleRecovered   = "idle_recovered"
