@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Button } from "@/components/ui";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useGlobalRepository } from "./hooks/useGlobalRepository";
@@ -82,27 +83,32 @@ export function RepositoryDetailPage() {
     );
   }
 
+  const hostPath = repository?.host_path.trim() ?? "";
+  const showHostPath =
+    Boolean(repository) && hostPath !== "" && hostPath !== repository.path;
+
   return (
     <div className="task-detail-content--enter">
       <section className="panel task-detail-panel worktrees-detail">
-        <header className="worktrees-detail__header">
+        <header className="pd__header worktrees-detail__header">
           <Link to="/worktrees" className="pd__back project-context-back-link">
             <span aria-hidden="true">&#8249;</span>
             All repositories
           </Link>
           {repository ? (
             <div className="worktrees-detail__header-actions">
-              <button
+              <Button
                 type="button"
-                className="secondary"
+                variant="secondary"
                 disabled={mutations.reconcile.isPending}
                 onClick={() => void mutations.reconcile.mutate(repository.id)}
               >
                 {mutations.reconcile.isPending ? "Reconciling…" : "Reconcile"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="secondary danger"
+                variant="secondary"
+                className="worktrees-detail__delete-repo"
                 onClick={() =>
                   setDeleteTarget({
                     kind: "repository",
@@ -113,13 +119,13 @@ export function RepositoryDetailPage() {
                 }
               >
                 Delete repository
-              </button>
+              </Button>
             </div>
           ) : null}
         </header>
 
         {repositoryQuery.isLoading ? (
-          <p className="worktrees-repo-card__loading" aria-busy="true">
+          <p className="worktrees-detail__loading" aria-busy="true">
             Loading repository…
           </p>
         ) : null}
@@ -135,17 +141,15 @@ export function RepositoryDetailPage() {
         ) : null}
 
         {repository ? (
-          <>
-            <div className="worktrees-detail__title-block">
-              <h1 className="worktrees-detail__title">
-                {repositoryDisplayName(repository.path)}
-              </h1>
-              <p className="worktrees-detail__path" title={repository.path}>
-                <code>{repository.path}</code>
+          <div className="worktrees-detail__body">
+            <div className="pd__title-block">
+              <h1 className="pd__title">{repositoryDisplayName(repository.path)}</h1>
+              <p className="pd__subtitle worktrees-detail__path" title={repository.path}>
+                {repository.path}
               </p>
-              {repository.host_path.trim() !== "" ? (
-                <p className="worktrees-detail__host-path">
-                  Host path: <code>{repository.host_path}</code>
+              {showHostPath ? (
+                <p className="pd__subtitle worktrees-detail__host-path">
+                  Host path: {hostPath}
                 </p>
               ) : null}
             </div>
@@ -175,7 +179,7 @@ export function RepositoryDetailPage() {
                 })
               }
             />
-          </>
+          </div>
         ) : null}
       </section>
 
