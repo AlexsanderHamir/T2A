@@ -4,7 +4,7 @@ import { lineRangeFromSelection } from "@/lib/lineRangeFromSelection";
 import {
   filePreviewLanguageFromPath,
   highlightPreviewContent,
-} from "../file-preview";
+} from "@/components/file-preview";
 import { useMentionRangeFileLoad } from "./useMentionRangeFileLoad";
 
 export type MentionRangePanelProps = {

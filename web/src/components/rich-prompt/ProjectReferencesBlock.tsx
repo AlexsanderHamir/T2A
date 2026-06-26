@@ -1,4 +1,4 @@
-import { projectContextShortId } from "@/projects/projectContextRefs";
+import { projectContextShortId } from "@/lib/projectContextRefs";
 import type { ProjectContextItem } from "@/types";
 
 type Props = {

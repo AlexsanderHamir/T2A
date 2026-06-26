@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
 import { useProjectContext } from "./hooks";
-import type { RichPromptEditorProjectContextProps } from "@/tasks/components/rich-prompt";
+import type { RichPromptEditorProjectContextProps } from "@/components/rich-prompt";
 
 const EMPTY_CONTEXT_ITEMS: ProjectContextItem[] = [];
 const EMPTY_CONTEXT_EDGES: ProjectContextEdge[] = [];

@@ -6,7 +6,7 @@ import {
   hasProjectContextChildren,
   projectContextShortId,
   type ProjectContextAddMode,
-} from "./projectContextRefs";
+} from "@/lib/projectContextRefs";
 
 type Props = {
   /** Node the user picked from the suggestion list or the chooser. */

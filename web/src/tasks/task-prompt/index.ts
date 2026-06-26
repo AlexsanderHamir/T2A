@@ -1,1 +1,1 @@
-export * from "./promptFormat";
+export * from "@/lib/promptFormat";

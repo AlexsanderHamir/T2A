@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
-import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
+import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 
 type Props = {

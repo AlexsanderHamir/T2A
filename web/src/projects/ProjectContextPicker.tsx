@@ -3,14 +3,14 @@ import type { ProjectContextEdge, ProjectContextItem } from "@/types";
 import { Modal } from "@/shared/Modal";
 import { ProjectContextListView } from "./ProjectContextListView";
 import { ProjectContextTreeView } from "./ProjectContextTreeView";
-import { ProjectContextChoiceDialog } from "./ProjectContextChoiceDialog";
+import { ProjectContextChoiceDialog } from "@/components/project-context";
 import {
   expandProjectContextSelection,
   mergeProjectContextSelection,
   projectContextShortId,
   selectedProjectContextItems,
   type ProjectContextAddMode,
-} from "./projectContextRefs";
+} from "@/lib/projectContextRefs";
 import { useProjectContext } from "./hooks";
 
 interface ProjectContextPickerProps {

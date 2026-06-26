@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "@/shared/Modal";
-import { RichPromptEditor } from "@/tasks/components/rich-prompt";
-import { promptHasVisibleContent } from "@/tasks/task-prompt";
+import { RichPromptEditor } from "@/components/rich-prompt";
+import { promptHasVisibleContent } from "@/lib/promptFormat";
 import { type ProjectContextItem, type ProjectContextKind } from "@/types";
 import { ProjectContextKindPicker } from "./ProjectContextKindPicker";
 

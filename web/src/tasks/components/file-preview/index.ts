@@ -1,2 +1,1 @@
-export * from "./filePreviewHighlight";
-export * from "./filePreviewLanguage";
+export * from "@/components/file-preview";

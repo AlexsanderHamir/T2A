@@ -6,7 +6,7 @@ import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TASK_TIMINGS } from "@/constants/tasks";
-import { TaskDraftsListSkeleton } from "@/tasks/components/skeletons";
+import { TaskDraftsListSkeleton } from "@/components/skeletons/TaskDraftsListSkeleton";
 import { useGlobalRepositories } from "./hooks/useGlobalRepositories";
 import { useGlobalGitMutations } from "./hooks/useGlobalGitMutations";
 import { RepositoryCard } from "./components/RepositoryCard";

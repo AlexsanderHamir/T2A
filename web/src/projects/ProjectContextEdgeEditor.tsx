@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { FieldLabel } from "@/shared/FieldLabel";
-import { RichPromptEditor } from "@/tasks/components/rich-prompt";
-import { previewTextFromPrompt } from "@/tasks/task-prompt";
+import { RichPromptEditor } from "@/components/rich-prompt";
+import { previewTextFromPrompt } from "@/lib/promptFormat";
 import {
   PROJECT_CONTEXT_RELATIONS,
   type ProjectContextEdge,

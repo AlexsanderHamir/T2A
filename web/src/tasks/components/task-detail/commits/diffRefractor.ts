@@ -20,7 +20,7 @@ import toml from "refractor/lang/toml.js";
 import tsx from "refractor/lang/tsx.js";
 import typescript from "refractor/lang/typescript.js";
 import yaml from "refractor/lang/yaml.js";
-import { filePreviewLanguageFromPath } from "@/tasks/components/file-preview/filePreviewLanguage";
+import { filePreviewLanguageFromPath } from "@/components/file-preview";
 
 const languages = [
   bash,
