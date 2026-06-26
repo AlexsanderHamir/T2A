@@ -23,11 +23,15 @@ Operators manage repositories, worktrees, and branches on the **`/worktrees`** S
 
 ## Operator setup flow (SPA)
 
-Hamix expects operators to follow **repository → worktree → task**:
+Hamix expects operators to follow **repository → worktree (+ branch) → task**:
 
-1. **`/worktrees` in setup mode** — When no repositories are registered, the page shows **Repositories** with guided copy and a register CTA. When repositories exist, the same page lists registered repository cards (with worktrees and branches inside each card).
-2. **`/worktrees?register=1`** — Deep link that opens the register-repository modal on load and then strips the query param from the URL. Used by the task-create setup prompt and the create-modal repository selector.
-3. **Task create gate** — **New task** and **Start fresh** (from the draft picker) call `ensureRepositoriesRegistered` first. With zero repos, a setup prompt appears instead of the create modal; **Register repository** navigates to `/worktrees?register=1`. Template create, task edit, and draft resume are not gated.
+1. **Register repository** — path to the main git checkout only (no branch field).
+2. **Register worktree** or **Create worktree** — pick or add a linked directory and bind a branch in the same step (existing live branch or create new).
+3. **Add branch** (optional) — register additional branch associations on an existing worktree when tasks need the same directory on different branches over time.
+4. **`/worktrees?register=1`** — deep link that opens the register-repository modal.
+5. **Task create gate** — **New task** / **Start fresh** require at least one registered repository.
+
+**Runtime:** a worktree checks out one branch at a time. Sequential tasks on the same worktree may use different `worktree_branch_id` values; the worker runs `git checkout` before each run (`pkgs/agents/worker/git_run.go`), not the harness.
 
 > **Important** — Workspace trees are **read-only over HTTP**. Mutations happen when the execute agent (or the operator outside Hamix) changes files on disk.
 
