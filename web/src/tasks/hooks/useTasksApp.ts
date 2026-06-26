@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { getTaskStats, listTasks } from "../../api";
 import { flattenTaskTreeRoots } from "../task-tree";
 import { TASK_LIST_PAGE_SIZE } from "../task-paging";
-import { settingsQueryKeys, taskQueryKeys } from "../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
+import { taskQueryKeys } from "../task-query";
 import { errorMessage } from "@/lib/errorMessage";
 import {
   type Priority,

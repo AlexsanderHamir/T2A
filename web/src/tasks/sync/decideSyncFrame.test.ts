@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectQueryKeys } from "@/projects/queryKeys";
-import { settingsQueryKeys, taskQueryKeys } from "../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
+import { taskQueryKeys } from "../task-query";
 import { decideSyncFrame } from "./decideSyncFrame";
 
 describe("decideSyncFrame", () => {

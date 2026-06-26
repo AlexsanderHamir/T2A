@@ -4,7 +4,7 @@ import type { FormEvent, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDraftDetail } from "@/types";
 import { DEFAULT_PROJECT_ID } from "@/types";
-import { settingsQueryKeys } from "../../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
 
 vi.mock("@/api", () => ({

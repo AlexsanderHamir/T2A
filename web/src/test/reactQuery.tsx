@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { ToastProvider } from "@/shared/toast";
-import { settingsQueryKeys } from "@/tasks/task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import { APP_SETTINGS_DEFAULTS } from "./settingsDefaults";
 
 export function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {

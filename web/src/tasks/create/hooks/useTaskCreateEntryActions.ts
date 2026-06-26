@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { AppSettings } from "@/api/settings";
 import { errorMessage } from "@/lib/errorMessage";
-import { settingsQueryKeys } from "../../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import { hydrateFormFromComposePayload } from "../composePayload";
 import { applyResumedDraftToForm } from "../draftPayload";
 import { decideCreateEntry } from "../decideCreateEntry";

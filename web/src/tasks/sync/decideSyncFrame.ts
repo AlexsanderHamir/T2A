@@ -1,5 +1,6 @@
 import { projectQueryKeys } from "@/projects/queryKeys";
-import { settingsQueryKeys, taskQueryKeys } from "../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
+import { taskQueryKeys } from "../task-query";
 import type { DecideSyncFrameInput, SyncFrameDecision } from "./syncTypes";
 
 export function decideSyncFrame(input: DecideSyncFrameInput): SyncFrameDecision {

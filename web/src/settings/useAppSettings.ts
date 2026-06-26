@@ -9,7 +9,7 @@ import {
   patchAppSettings,
   probeCursor,
 } from "@/api/settings";
-import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 
 /**
  * React Query hook for the singleton AppSettings row. The query
