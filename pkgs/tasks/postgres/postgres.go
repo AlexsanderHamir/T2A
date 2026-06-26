@@ -51,6 +51,7 @@ func Open(dsn string, cfg *gorm.Config) (*gorm.DB, error) {
 	if cfg == nil {
 		cfg = &gorm.Config{}
 	}
+	cfg = GORMConfigDefaults(cfg)
 	db, err := gorm.Open(postgres.Open(dsn), cfg)
 	if err != nil {
 		return nil, fmt.Errorf("gorm open: %w", err)
