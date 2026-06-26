@@ -1,11 +1,13 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm/schema"
 )
 
@@ -35,7 +37,6 @@ func isAssociationField(sf reflect.StructField) bool {
 		return true
 	}
 	if sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct {
-		// Pointer to another domain/model struct without a column tag is an association.
 		if !strings.Contains(tag, "column:") && tag != "-" {
 			return true
 		}
@@ -43,15 +44,11 @@ func isAssociationField(sf reflect.StructField) bool {
 	return false
 }
 
-func domainPersistedFields(domainType reflect.Type) []reflect.StructField {
+func modelPersistedFields(modelType reflect.Type) []reflect.StructField {
 	var out []reflect.StructField
-	for i := 0; i < domainType.NumField(); i++ {
-		sf := domainType.Field(i)
+	for i := 0; i < modelType.NumField(); i++ {
+		sf := modelType.Field(i)
 		if !sf.IsExported() {
-			continue
-		}
-		tag := sf.Tag.Get("gorm")
-		if tag == "-" {
 			continue
 		}
 		if isAssociationField(sf) {
@@ -65,18 +62,43 @@ func domainPersistedFields(domainType reflect.Type) []reflect.StructField {
 	return out
 }
 
-func modelFieldByColumn(modelType reflect.Type, column string) (reflect.StructField, bool) {
-	for i := 0; i < modelType.NumField(); i++ {
-		sf := modelType.Field(i)
-		if col, ok := gormColumnName(sf); ok && col == column {
+var domainHydrationOnly = map[string]map[string]bool{
+	"Task": {
+		"DependsOn": true,
+		"CreatedAt": true,
+	},
+}
+
+func domainFieldByName(domainType reflect.Type, name string) (reflect.StructField, bool) {
+	for i := 0; i < domainType.NumField(); i++ {
+		sf := domainType.Field(i)
+		if sf.Name == name {
 			return sf, true
 		}
 	}
 	return reflect.StructField{}, false
 }
 
-// assertFieldParity reports whether every persisted domain column has a model
-// counterpart with the same Go type and column name.
+func typesCompatible(domainType, modelType reflect.Type) bool {
+	if domainType == modelType {
+		return true
+	}
+	raw := reflect.TypeOf(json.RawMessage(nil))
+	dt := reflect.TypeOf(datatypes.JSON(nil))
+	if domainType == raw && modelType == dt {
+		return true
+	}
+	if domainType.Kind() == reflect.Slice && modelType.Kind() == reflect.Slice {
+		return domainType.Elem() == modelType.Elem()
+	}
+	if domainType.Kind() == reflect.Pointer && modelType.Kind() == reflect.Pointer {
+		return typesCompatible(domainType.Elem(), modelType.Elem())
+	}
+	return false
+}
+
+// assertFieldParity reports whether every persisted model column has a domain
+// counterpart with a compatible Go type (json.RawMessage pairs with datatypes.JSON).
 func assertFieldParity(pair ParityPair) error {
 	dt := reflect.TypeOf(pair.Domain)
 	if dt.Kind() == reflect.Pointer {
@@ -86,14 +108,18 @@ func assertFieldParity(pair ParityPair) error {
 	if mt.Kind() == reflect.Pointer {
 		mt = mt.Elem()
 	}
+	skip := domainHydrationOnly[pair.Name]
 
-	for _, df := range domainPersistedFields(dt) {
-		col, _ := gormColumnName(df)
-		mf, ok := modelFieldByColumn(mt, col)
+	for _, mf := range modelPersistedFields(mt) {
+		col, _ := gormColumnName(mf)
+		df, ok := domainFieldByName(dt, mf.Name)
 		if !ok {
-			return fmt.Errorf("%s: domain field %s (column %q) missing on model", pair.Name, df.Name, col)
+			return fmt.Errorf("%s: model field %s (column %q) missing on domain", pair.Name, mf.Name, col)
 		}
-		if df.Type != mf.Type {
+		if skip != nil && skip[df.Name] {
+			return fmt.Errorf("%s: domain field %s is hydration-only but model persists column %q", pair.Name, df.Name, col)
+		}
+		if !typesCompatible(df.Type, mf.Type) {
 			return fmt.Errorf("%s: column %q type mismatch domain=%s model=%s", pair.Name, col, df.Type, mf.Type)
 		}
 	}

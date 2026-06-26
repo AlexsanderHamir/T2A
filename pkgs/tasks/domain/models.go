@@ -1,55 +1,52 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
-
-	"gorm.io/datatypes"
 )
 
 type Task struct {
-	ID            string   `json:"id" gorm:"primaryKey"`
-	Title         string   `json:"title" gorm:"not null"`
-	InitialPrompt string   `json:"initial_prompt" gorm:"type:text;not null"`
-	Status        Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed','on_hold')"`
-	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
-	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	InitialPrompt string   `json:"initial_prompt"`
+	Status        Status   `json:"status"`
+	Priority      Priority `json:"priority"`
+	ProjectID     *string  `json:"project_id,omitempty"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
-	ProjectContextItemIDs []string  `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
-	Tags                  []string  `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
-	Milestone             *string   `json:"milestone,omitempty" gorm:"index"`
-	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
-	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
-	DependsOn []DependencyEdge `json:"depends_on,omitempty" gorm:"-"`
+	ProjectContextItemIDs []string  `json:"project_context_item_ids,omitempty"`
+	Tags                  []string  `json:"tags,omitempty"`
+	Milestone             *string   `json:"milestone,omitempty"`
+	Gate                  *TaskGate `json:"gate,omitempty"`
+	// DependsOn is hydrated from task_dependencies on read; not a database column.
+	DependsOn []DependencyEdge `json:"depends_on,omitempty"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
 	// create time from the request or app defaults; must match the worker's
 	// configured runner when the task runs.
-	Runner string `json:"runner" gorm:"not null;default:'cursor'"`
+	Runner string `json:"runner"`
 	// CursorModel is forwarded to cursor-agent as --model when non-empty;
 	// empty means omit the flag for this task (same semantics as app settings).
-	CursorModel string `json:"cursor_model" gorm:"not null;default:''"`
+	CursorModel string `json:"cursor_model"`
 	// RunnerConfig stores per-task runner config overrides as a JSON blob.
 	// When non-empty, the worker merges this with the global runner config
 	// from app_settings.runner_configs for the matching runner ID.
-	RunnerConfig datatypes.JSON `json:"runner_config,omitempty" gorm:"column:runner_config;type:jsonb;not null;default:'{}'"`
+	RunnerConfig json.RawMessage `json:"runner_config,omitempty"`
 	// PickupNotBefore defers agent dequeue until this instant (UTC). NULL means
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
-	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
+	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty"`
 	// CriteriaSatisfiedAt is set when every inherited checklist item has a
 	// verified completion row; cleared when any item becomes unchecked.
 	// Maintained in checklist completion TX for SQL queue parity.
-	CriteriaSatisfiedAt *time.Time `json:"criteria_satisfied_at,omitempty" gorm:"index"`
+	CriteriaSatisfiedAt *time.Time `json:"criteria_satisfied_at,omitempty"`
 	// PendingRetry holds operator retry intent between POST /retry and worker
 	// pickup. Not exposed on the public task API (json:"-").
-	PendingRetry *PendingRetry `json:"-" gorm:"column:pending_retry;serializer:json;type:jsonb"`
+	PendingRetry *PendingRetry `json:"-"`
 	// CreatedAt is hydrated from the seq=1 task_created audit row on read;
 	// not a tasks-table column.
-	CreatedAt *time.Time `json:"created_at,omitempty" gorm:"-"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
 	// WorktreeBranchID binds the task to a worktree_branches association
 	// ("this branch, in this directory"). Plain indexed nullable column;
 	// validated on create from Cycle 4. See ADR-0037.
-	WorktreeBranchID *string `json:"worktree_branch_id,omitempty" gorm:"index"`
-
-	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
+	WorktreeBranchID *string `json:"worktree_branch_id,omitempty"`
 }
 
 // Project is shared context memory for a long-running body of work.
@@ -59,174 +56,132 @@ type Task struct {
 // with no repository. Plain indexed nullable column (no FK constraint, same
 // pattern as Task git-binding columns).
 type Project struct {
-	ID             string        `json:"id" gorm:"primaryKey"`
-	Name           string        `json:"name" gorm:"not null;index"`
-	Description    string        `json:"description" gorm:"type:text;not null;default:''"`
-	Status         ProjectStatus `json:"status" gorm:"not null;index;default:active;check:chk_projects_status,status IN ('active','archived')"`
-	ContextSummary string        `json:"context_summary" gorm:"type:text;not null;default:''"`
-	RepositoryID   *string       `json:"repository_id,omitempty" gorm:"index"`
-	CreatedAt      time.Time     `json:"created_at" gorm:"not null;index"`
-	UpdatedAt      time.Time     `json:"updated_at" gorm:"not null;index"`
+	ID             string        `json:"id"`
+	Name           string        `json:"name"`
+	Description    string        `json:"description"`
+	Status         ProjectStatus `json:"status"`
+	ContextSummary string        `json:"context_summary"`
+	RepositoryID   *string       `json:"repository_id,omitempty"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
 // ProjectContextItem is a human-inspectable memory item attached to a project.
 type ProjectContextItem struct {
-	ID            string             `json:"id" gorm:"primaryKey"`
-	ProjectID     string             `json:"project_id" gorm:"not null;index"`
-	Kind          ProjectContextKind `json:"kind" gorm:"not null;index;default:note"`
-	Title         string             `json:"title" gorm:"not null"`
-	Body          string             `json:"body" gorm:"type:text;not null"`
-	SourceTaskID  *string            `json:"source_task_id,omitempty" gorm:"index"`
-	SourceCycleID *string            `json:"source_cycle_id,omitempty" gorm:"index"`
-	CreatedBy     Actor              `json:"created_by" gorm:"column:created_by;not null"`
-	Pinned        bool               `json:"pinned" gorm:"not null;default:false;index"`
-	CreatedAt     time.Time          `json:"created_at" gorm:"not null;index"`
-	UpdatedAt     time.Time          `json:"updated_at" gorm:"not null;index"`
-
-	Project     *Project   `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
-	SourceTask  *Task      `json:"-" gorm:"foreignKey:SourceTaskID;references:ID;constraint:OnDelete:SET NULL"`
-	SourceCycle *TaskCycle `json:"-" gorm:"foreignKey:SourceCycleID;references:ID;constraint:OnDelete:SET NULL"`
+	ID            string             `json:"id"`
+	ProjectID     string             `json:"project_id"`
+	Kind          ProjectContextKind `json:"kind"`
+	Title         string             `json:"title"`
+	Body          string             `json:"body"`
+	SourceTaskID  *string            `json:"source_task_id,omitempty"`
+	SourceCycleID *string            `json:"source_cycle_id,omitempty"`
+	CreatedBy     Actor              `json:"created_by"`
+	Pinned        bool               `json:"pinned"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (ProjectContextItem) TableName() string { return "project_context_items" }
 
 // ProjectContextEdge is a user-curated relationship between two context nodes
 // owned by the same project.
 type ProjectContextEdge struct {
-	ID              string                 `json:"id" gorm:"primaryKey"`
-	ProjectID       string                 `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:1"`
-	SourceContextID string                 `json:"source_context_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:2"`
-	TargetContextID string                 `json:"target_context_id" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:3"`
-	Relation        ProjectContextRelation `json:"relation" gorm:"not null;index;uniqueIndex:idx_project_context_edge_unique,priority:4;check:chk_project_context_relation,relation IN ('supports','blocks','refines','depends_on','related')"`
-	Strength        int                    `json:"strength" gorm:"not null;default:3;check:chk_project_context_strength,strength >= 1 AND strength <= 5"`
-	Note            string                 `json:"note" gorm:"type:text;not null;default:''"`
-	CreatedAt       time.Time              `json:"created_at" gorm:"not null;index"`
-	UpdatedAt       time.Time              `json:"updated_at" gorm:"not null;index"`
-
-	Project *Project            `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
-	Source  *ProjectContextItem `json:"-" gorm:"foreignKey:SourceContextID;references:ID;constraint:OnDelete:CASCADE"`
-	Target  *ProjectContextItem `json:"-" gorm:"foreignKey:TargetContextID;references:ID;constraint:OnDelete:CASCADE"`
+	ID              string                 `json:"id"`
+	ProjectID       string                 `json:"project_id"`
+	SourceContextID string                 `json:"source_context_id"`
+	TargetContextID string                 `json:"target_context_id"`
+	Relation        ProjectContextRelation `json:"relation"`
+	Strength        int                    `json:"strength"`
+	Note            string                 `json:"note"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (ProjectContextEdge) TableName() string { return "project_context_edges" }
 
 // TaskContextSnapshot records the exact project context bundle handed to one
 // task execution attempt. It is immutable audit data, not canonical project memory.
 type TaskContextSnapshot struct {
-	ID              string         `json:"id" gorm:"primaryKey"`
-	TaskID          string         `json:"task_id" gorm:"not null;index"`
-	CycleID         string         `json:"cycle_id" gorm:"not null;index;unique"`
-	ProjectID       string         `json:"project_id" gorm:"not null;index"`
-	ContextJSON     datatypes.JSON `json:"context_json" gorm:"column:context_json;type:jsonb;not null;default:'{}'"`
-	RenderedContext string         `json:"rendered_context" gorm:"type:text;not null;default:''"`
-	TokenEstimate   int            `json:"token_estimate" gorm:"not null;default:0"`
-	CreatedAt       time.Time      `json:"created_at" gorm:"not null;index"`
-
-	Task    *Task      `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
-	Cycle   *TaskCycle `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Project *Project   `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	ID              string          `json:"id"`
+	TaskID          string          `json:"task_id"`
+	CycleID         string          `json:"cycle_id"`
+	ProjectID       string          `json:"project_id"`
+	ContextJSON     json.RawMessage `json:"context_json"`
+	RenderedContext string          `json:"rendered_context"`
+	TokenEstimate   int             `json:"token_estimate"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskContextSnapshot) TableName() string { return "task_context_snapshots" }
 
 // TaskDependency is a directed edge: task_id depends on depends_on_task_id completing first.
 type TaskDependency struct {
-	TaskID          string              `json:"task_id" gorm:"primaryKey"`
-	DependsOnTaskID string              `json:"depends_on_task_id" gorm:"primaryKey;index"`
-	Satisfies       DependencySatisfies `json:"satisfies" gorm:"not null;default:done;check:chk_task_dependencies_satisfies,satisfies IN ('done')"`
-	CreatedAt       time.Time           `json:"created_at" gorm:"not null;index"`
-
-	Task          *Task `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
-	DependsOnTask *Task `json:"-" gorm:"foreignKey:DependsOnTaskID;references:ID;constraint:OnDelete:CASCADE"`
+	TaskID          string              `json:"task_id"`
+	DependsOnTaskID string              `json:"depends_on_task_id"`
+	Satisfies       DependencySatisfies `json:"satisfies"`
+	CreatedAt       time.Time           `json:"created_at"`
 }
-
-func (TaskDependency) TableName() string { return "task_dependencies" }
 
 // TaskChecklistItem is a definition row owned by a task.
 // Completion is recorded only by the agent worker after verify (verified_by=verify_agent)
 // or when execute did not claim done (verified_by=agent_self, failure-only).
 type TaskChecklistItem struct {
-	ID        string `json:"id" gorm:"primaryKey"`
-	TaskID    string `json:"task_id" gorm:"not null;index"`
-	SortOrder int    `json:"sort_order" gorm:"not null"`
-	Text      string `json:"text" gorm:"not null;type:text"`
+	ID        string `json:"id"`
+	TaskID    string `json:"task_id"`
+	SortOrder int    `json:"sort_order"`
+	Text      string `json:"text"`
 }
-
-// TableName returns the GORM table name. Skip-listed in
-// cmd/funclogmeasure/analyze.go: pure constant return called at GORM
-// reflection time, no decision logic to trace.
-func (TaskChecklistItem) TableName() string { return "task_checklist_items" }
 
 // TaskChecklistItemCommand is an optional shell check attached to a
 // checklist definition. The worker runs these during verify and writes
 // stdout/stderr to temp files under the cycle report dir; the LLM
 // verifier interprets the artifacts against ExpectedOutcome.
 type TaskChecklistItemCommand struct {
-	ID              string `json:"id" gorm:"primaryKey"`
-	ItemID          string `json:"item_id" gorm:"not null;index"`
-	SortOrder       int    `json:"sort_order" gorm:"not null"`
-	Command         string `json:"command" gorm:"not null;type:text"`
-	ExpectedOutcome string `json:"expected_outcome" gorm:"not null;default:'';type:text"`
-
-	Item *TaskChecklistItem `json:"-" gorm:"foreignKey:ItemID;references:ID;constraint:OnDelete:CASCADE"`
+	ID              string `json:"id"`
+	ItemID          string `json:"item_id"`
+	SortOrder       int    `json:"sort_order"`
+	Command         string `json:"command"`
+	ExpectedOutcome string `json:"expected_outcome"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskChecklistItemCommand) TableName() string { return "task_checklist_item_commands" }
 
 // TaskChecklistCompletion records that subject TaskID satisfied checklist item ItemID.
 type TaskChecklistCompletion struct {
-	TaskID            string       `json:"task_id" gorm:"primaryKey"`
-	ItemID            string       `json:"item_id" gorm:"primaryKey"`
-	At                time.Time    `json:"at" gorm:"not null"`
-	By                Actor        `json:"by" gorm:"column:done_by;not null"`
-	Evidence          string       `json:"evidence" gorm:"not null;default:'';type:text"`
-	VerifiedBy        VerifierKind `json:"verified_by" gorm:"not null;default:''"`
-	VerifierReasoning string       `json:"verifier_reasoning" gorm:"not null;default:'';type:text"`
-	CycleID           string       `json:"cycle_id" gorm:"not null;default:''"`
+	TaskID            string       `json:"task_id"`
+	ItemID            string       `json:"item_id"`
+	At                time.Time    `json:"at"`
+	By                Actor        `json:"by"`
+	Evidence          string       `json:"evidence"`
+	VerifiedBy        VerifierKind `json:"verified_by"`
+	VerifierReasoning string       `json:"verifier_reasoning"`
+	CycleID           string       `json:"cycle_id"`
 }
 
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskChecklistCompletion) TableName() string { return "task_checklist_completions" }
-
 type TaskEvent struct {
-	TaskID string    `gorm:"primaryKey;index:task_events_task_id_at,priority:1;index:task_events_task_id_type,priority:1"`
-	Seq    int64     `gorm:"primaryKey;check:chk_task_events_seq,seq > 0"`
-	At     time.Time `gorm:"not null;index:task_events_task_id_at,priority:2"`
-	// Avoid GORM CHECK tags on columns named type/by; validate with EventType and Actor in Go instead.
-	Type EventType      `gorm:"column:type;not null;index:task_events_task_id_type,priority:2"`
-	By   Actor          `gorm:"column:by;not null"`
-	Data datatypes.JSON `gorm:"column:data_json;type:jsonb;not null;default:'{}'"`
+	TaskID string    `json:"task_id"`
+	Seq    int64     `json:"seq"`
+	At     time.Time `json:"at"`
+	Type   EventType `json:"type"`
+	By     Actor     `json:"by"`
+	Data   json.RawMessage `json:"data"`
 
 	// UserResponse is optional human-supplied text for event types that accept input (see EventTypeAcceptsUserResponse).
-	UserResponse *string `gorm:"column:user_response;type:text"`
+	UserResponse *string `json:"user_response,omitempty"`
 	// UserResponseAt is set when UserResponse is written or updated (UTC).
-	UserResponseAt *time.Time `gorm:"column:user_response_at"`
+	UserResponseAt *time.Time `json:"user_response_at,omitempty"`
 	// ResponseThread is an ordered JSON array of ResponseThreadEntry (user ↔ agent messages).
-	ResponseThread datatypes.JSON `gorm:"column:response_thread_json;type:jsonb"`
-
-	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	ResponseThread json.RawMessage `json:"response_thread,omitempty"`
 }
 
 // TaskDraft stores a resumable create-task draft payload.
 type TaskDraft struct {
-	ID          string         `gorm:"primaryKey"`
-	Name        string         `gorm:"not null;index"`
-	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
-	CreatedAt   time.Time      `gorm:"not null;index"`
-	UpdatedAt   time.Time      `gorm:"not null;index"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	PayloadJSON json.RawMessage `json:"payload_json"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 // TaskTemplate stores a reusable task compose blueprint (not a runnable task).
 type TaskTemplate struct {
-	ID          string         `gorm:"primaryKey"`
-	Name        string         `gorm:"not null;index"`
-	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
-	CreatedAt   time.Time      `gorm:"not null;index"`
-	UpdatedAt   time.Time      `gorm:"not null;index"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	PayloadJSON json.RawMessage `json:"payload_json"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 // TaskCycle is one execution attempt for a task. The (TaskID, AttemptSeq) pair
@@ -235,22 +190,16 @@ type TaskTemplate struct {
 // terminal statuses (Succeeded / Failed / Aborted) are immutable. See
 // docs/data-model.md.
 type TaskCycle struct {
-	ID            string      `gorm:"primaryKey"`
-	TaskID        string      `gorm:"not null;index;index:task_cycles_task_id_attempt,unique,priority:1"`
-	AttemptSeq    int64       `gorm:"not null;check:chk_task_cycles_attempt_seq,attempt_seq > 0;index:task_cycles_task_id_attempt,unique,priority:2"`
-	Status        CycleStatus `gorm:"not null;index;check:chk_task_cycles_status,status IN ('running','succeeded','failed','aborted')"`
-	StartedAt     time.Time   `gorm:"not null"`
-	EndedAt       *time.Time  `gorm:""`
-	TriggeredBy   Actor       `gorm:"column:triggered_by;not null"`
-	ParentCycleID *string     `gorm:"index"`
-	// MetaJSON is small free-form runner metadata such as {"runner":"cursor-cli","prompt_hash":"..."}.
-	MetaJSON datatypes.JSON `gorm:"column:meta_json;type:jsonb;not null;default:'{}'"`
-
-	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	ID            string          `json:"id"`
+	TaskID        string          `json:"task_id"`
+	AttemptSeq    int64           `json:"attempt_seq"`
+	Status        CycleStatus     `json:"status"`
+	StartedAt     time.Time       `json:"started_at"`
+	EndedAt       *time.Time      `json:"ended_at,omitempty"`
+	TriggeredBy   Actor           `json:"triggered_by"`
+	ParentCycleID *string         `json:"parent_cycle_id,omitempty"`
+	MetaJSON      json.RawMessage `json:"meta_json"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycle) TableName() string { return "task_cycles" }
 
 // TaskCyclePhase is one phase entry within a cycle. A single cycle can have
 // multiple rows for the same Phase value (for example a corrective Verify after
@@ -259,50 +208,38 @@ func (TaskCycle) TableName() string { return "task_cycles" }
 // phase per cycle, terminal status immutable, transitions validated by
 // ValidPhaseTransition) live at the store boundary.
 type TaskCyclePhase struct {
-	ID        string      `gorm:"primaryKey"`
-	CycleID   string      `gorm:"not null;index;index:task_cycle_phases_cycle_id_seq,unique,priority:1"`
-	Phase     Phase       `gorm:"column:phase;not null;check:chk_task_cycle_phases_phase,phase IN ('execute','verify')"`
-	PhaseSeq  int64       `gorm:"not null;check:chk_task_cycle_phases_phase_seq,phase_seq > 0;index:task_cycle_phases_cycle_id_seq,unique,priority:2"`
-	Status    PhaseStatus `gorm:"not null;index;check:chk_task_cycle_phases_status,status IN ('running','succeeded','failed','skipped')"`
-	StartedAt time.Time   `gorm:"not null"`
-	EndedAt   *time.Time  `gorm:""`
-	Summary   *string     `gorm:"type:text"`
-	// DetailsJSON is structured per-phase output (verify check results, persist artifact ids, etc.).
-	DetailsJSON datatypes.JSON `gorm:"column:details_json;type:jsonb;not null;default:'{}'"`
+	ID        string          `json:"id"`
+	CycleID   string          `json:"cycle_id"`
+	Phase     Phase           `json:"phase"`
+	PhaseSeq  int64           `json:"phase_seq"`
+	Status    PhaseStatus     `json:"status"`
+	StartedAt time.Time       `json:"started_at"`
+	EndedAt   *time.Time      `json:"ended_at,omitempty"`
+	Summary   *string         `json:"summary,omitempty"`
+	DetailsJSON json.RawMessage `json:"details_json"`
 	// EventSeq points at the task_events row that mirrors the most recent
 	// transition for this phase (set in the same SQL transaction as the mirror
 	// insert). Nullable because it is filled in by the store, not by the caller.
-	EventSeq *int64 `gorm:"column:event_seq"`
-
-	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	EventSeq *int64 `json:"event_seq,omitempty"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCyclePhase) TableName() string { return "task_cycle_phases" }
 
 // TaskCycleStreamEvent is a durable, per-attempt record of normalized runner
 // progress. It is intentionally separate from TaskEvent so high-volume tool
 // streams do not pollute the human-scale task audit timeline.
 type TaskCycleStreamEvent struct {
-	ID          string         `gorm:"primaryKey"`
-	TaskID      string         `gorm:"not null;index:task_cycle_stream_events_task_cycle_seq,priority:1"`
-	CycleID     string         `gorm:"not null;index:task_cycle_stream_events_task_cycle_seq,priority:2;index:task_cycle_stream_events_cycle_seq,unique,priority:1"`
-	PhaseSeq    int64          `gorm:"not null;check:chk_task_cycle_stream_events_phase_seq,phase_seq > 0"`
-	StreamSeq   int64          `gorm:"not null;check:chk_task_cycle_stream_events_stream_seq,stream_seq > 0;index:task_cycle_stream_events_task_cycle_seq,priority:3;index:task_cycle_stream_events_cycle_seq,unique,priority:2"`
-	At          time.Time      `gorm:"not null;index"`
-	Source      string         `gorm:"not null;index"`
-	Kind        string         `gorm:"not null;index"`
-	Subtype     string         `gorm:"not null;default:''"`
-	Message     string         `gorm:"type:text;not null;default:''"`
-	Tool        string         `gorm:"not null;default:''"`
-	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
-
-	Task  *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
-	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	ID          string          `json:"id"`
+	TaskID      string          `json:"task_id"`
+	CycleID     string          `json:"cycle_id"`
+	PhaseSeq    int64           `json:"phase_seq"`
+	StreamSeq   int64           `json:"stream_seq"`
+	At          time.Time       `json:"at"`
+	Source      string          `json:"source"`
+	Kind        string          `json:"kind"`
+	Subtype     string          `json:"subtype"`
+	Message     string          `json:"message"`
+	Tool        string          `json:"tool"`
+	PayloadJSON json.RawMessage `json:"payload_json"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycleStreamEvent) TableName() string { return "task_cycle_stream_events" }
 
 // TaskCycleCriteriaReport is the per-criterion durable record of what
 // the execute agent claimed about a single criterion in one retry
@@ -324,20 +261,14 @@ func (TaskCycleStreamEvent) TableName() string { return "task_cycle_stream_event
 //     remain readable. The handler returns the row even if the FK is
 //     stale; the SPA renders the criterion id verbatim in that case.
 type TaskCycleCriteriaReport struct {
-	ID          string    `gorm:"primaryKey"`
-	CycleID     string    `gorm:"not null;index;uniqueIndex:idx_cycle_criteria_unique,priority:1"`
-	AttemptSeq  int64     `gorm:"not null;check:chk_task_cycle_criteria_reports_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_criteria_unique,priority:2"`
-	CriterionID string    `gorm:"not null;index;uniqueIndex:idx_cycle_criteria_unique,priority:3"`
-	ClaimedDone bool      `gorm:"not null;default:false"`
-	Evidence    string    `gorm:"type:text;not null;default:''"`
-	WrittenAt   time.Time `gorm:"not null;index"`
-
-	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+	ID          string    `json:"id"`
+	CycleID     string    `json:"cycle_id"`
+	AttemptSeq  int64     `json:"attempt_seq"`
+	CriterionID string    `json:"criterion_id"`
+	ClaimedDone bool      `json:"claimed_done"`
+	Evidence    string    `json:"evidence"`
+	WrittenAt   time.Time `json:"written_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycleCriteriaReport) TableName() string { return "task_cycle_criteria_reports" }
 
 // TaskCycleVerifyReport is the per-criterion durable record of the
 // verify agent's verdict for a single criterion in one retry attempt.
@@ -348,41 +279,29 @@ func (TaskCycleCriteriaReport) TableName() string { return "task_cycle_criteria_
 // (`verify_agent`) without re-parsing the workflow — same field as
 // task_checklist_completions.VerifiedBy.
 type TaskCycleVerifyReport struct {
-	ID           string       `gorm:"primaryKey"`
-	CycleID      string       `gorm:"not null;index;uniqueIndex:idx_cycle_verify_unique,priority:1"`
-	AttemptSeq   int64        `gorm:"not null;check:chk_task_cycle_verify_reports_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_verify_unique,priority:2"`
-	CriterionID  string       `gorm:"not null;index;uniqueIndex:idx_cycle_verify_unique,priority:3"`
-	Verified     bool         `gorm:"not null;default:false"`
-	VerifierKind VerifierKind `gorm:"not null;default:''"`
-	Reasoning    string       `gorm:"type:text;not null;default:''"`
-	WrittenAt    time.Time    `gorm:"not null;index"`
-
-	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+	ID           string       `json:"id"`
+	CycleID      string       `json:"cycle_id"`
+	AttemptSeq   int64        `json:"attempt_seq"`
+	CriterionID  string       `json:"criterion_id"`
+	Verified     bool         `json:"verified"`
+	VerifierKind VerifierKind `json:"verifier_kind"`
+	Reasoning    string       `json:"reasoning"`
+	WrittenAt    time.Time    `json:"written_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycleVerifyReport) TableName() string { return "task_cycle_verify_reports" }
 
 // TaskCycleCommandRun mirrors one verify-phase command execution for a
 // criterion attempt. Output bytes live in temp files referenced by
 // MetaPath; this row is the durable audit trail for the SPA timeline.
 type TaskCycleCommandRun struct {
-	ID          string    `gorm:"primaryKey"`
-	CycleID     string    `gorm:"not null;index;uniqueIndex:idx_cycle_command_run_unique,priority:1"`
-	AttemptSeq  int64     `gorm:"not null;check:chk_task_cycle_command_runs_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_command_run_unique,priority:2"`
-	CriterionID string    `gorm:"not null;index;uniqueIndex:idx_cycle_command_run_unique,priority:3"`
-	CommandSeq  int64     `gorm:"not null;check:chk_task_cycle_command_runs_command_seq,command_seq >= 0;uniqueIndex:idx_cycle_command_run_unique,priority:4"`
-	ExitCode    int       `gorm:"not null;default:-1"`
-	MetaPath    string    `gorm:"not null;default:'';type:text"`
-	WrittenAt   time.Time `gorm:"not null;index"`
-
-	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+	ID          string    `json:"id"`
+	CycleID     string    `json:"cycle_id"`
+	AttemptSeq  int64     `json:"attempt_seq"`
+	CriterionID string    `json:"criterion_id"`
+	CommandSeq  int64     `json:"command_seq"`
+	ExitCode    int       `json:"exit_code"`
+	MetaPath    string    `json:"meta_path"`
+	WrittenAt   time.Time `json:"written_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycleCommandRun) TableName() string { return "task_cycle_command_runs" }
 
 // TaskCycleCommit is the durable worker-indexed record of one git commit
 // declared by the agent in criteria-report.json and validated at execute ingest.
@@ -391,24 +310,19 @@ func (TaskCycleCommandRun) TableName() string { return "task_cycle_command_runs"
 // Unique (cycle_id, sha) provides idempotent re-ingest across verify retries.
 // cycle_id cascades on delete; task_id is denormalized for list-by-task queries.
 type TaskCycleCommit struct {
-	ID          string     `gorm:"primaryKey"`
-	TaskID      string     `gorm:"not null;index"`
-	CycleID     string     `gorm:"not null;index;uniqueIndex:idx_cycle_commit_sha,priority:1"`
-	PhaseSeq    int64      `gorm:"not null;check:chk_task_cycle_commits_phase_seq,phase_seq > 0"`
-	Seq         int64      `gorm:"not null;check:chk_task_cycle_commits_seq,seq > 0;index:idx_cycle_commit_order,priority:2"`
-	Repo        string     `gorm:"not null;default:'';type:text"`
-	Worktree    string     `gorm:"not null;default:'';type:text"`
-	Branch      string     `gorm:"not null;default:''"`
-	SHA         string     `gorm:"not null;uniqueIndex:idx_cycle_commit_sha,priority:2"`
-	CommittedAt time.Time  `gorm:"not null;index"`
-	Message     string     `gorm:"type:text;not null;default:''"`
-	RecordedAt  time.Time  `gorm:"not null;index"`
-	Cycle       *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Task        *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	ID          string    `json:"id"`
+	TaskID      string    `json:"task_id"`
+	CycleID     string    `json:"cycle_id"`
+	PhaseSeq    int64     `json:"phase_seq"`
+	Seq         int64     `json:"seq"`
+	Repo        string    `json:"repo"`
+	Worktree    string    `json:"worktree"`
+	Branch      string    `json:"branch"`
+	SHA         string    `json:"sha"`
+	CommittedAt time.Time `json:"committed_at"`
+	Message     string    `json:"message"`
+	RecordedAt  time.Time `json:"recorded_at"`
 }
-
-// TableName: see TaskChecklistItem.TableName for skip-list rationale.
-func (TaskCycleCommit) TableName() string { return "task_cycle_commits" }
 
 // ExecuteCriteriaReportAttemptSeq is the attempt_seq used when mirroring
 // criteria-report.json at execute phase end. Verify attempts use 1..N;

@@ -6,7 +6,7 @@ func FromDomainTaskDraft(d domain.TaskDraft) TaskDraft {
 	return TaskDraft{
 		ID:          d.ID,
 		Name:        d.Name,
-		PayloadJSON: d.PayloadJSON,
+		PayloadJSON: datatypesFromRaw(d.PayloadJSON),
 		CreatedAt:   d.CreatedAt,
 		UpdatedAt:   d.UpdatedAt,
 	}
@@ -24,7 +24,7 @@ func ToDomainTaskDraft(m TaskDraft) domain.TaskDraft {
 	return domain.TaskDraft{
 		ID:          m.ID,
 		Name:        m.Name,
-		PayloadJSON: m.PayloadJSON,
+		PayloadJSON: rawFromDatatypes(m.PayloadJSON),
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
 	}
@@ -45,7 +45,7 @@ func FromDomainTaskTemplate(d domain.TaskTemplate) TaskTemplate {
 	return TaskTemplate{
 		ID:          d.ID,
 		Name:        d.Name,
-		PayloadJSON: d.PayloadJSON,
+		PayloadJSON: datatypesFromRaw(d.PayloadJSON),
 		CreatedAt:   d.CreatedAt,
 		UpdatedAt:   d.UpdatedAt,
 	}
@@ -63,7 +63,7 @@ func ToDomainTaskTemplate(m TaskTemplate) domain.TaskTemplate {
 	return domain.TaskTemplate{
 		ID:          m.ID,
 		Name:        m.Name,
-		PayloadJSON: m.PayloadJSON,
+		PayloadJSON: rawFromDatatypes(m.PayloadJSON),
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
 	}

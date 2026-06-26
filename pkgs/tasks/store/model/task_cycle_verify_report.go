@@ -16,6 +16,9 @@ type TaskCycleVerifyReport struct {
 	VerifierKind domain.VerifierKind `gorm:"not null;default:''"`
 	Reasoning    string              `gorm:"type:text;not null;default:''"`
 	WrittenAt    time.Time           `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
 }
 
 // TableName pins the task_cycle_verify_reports table name.

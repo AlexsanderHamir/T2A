@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-	"gorm.io/datatypes"
 )
 
 // TestProjectCycleMeta_extractsTypedFields pins the Phase 1b contract
@@ -114,7 +113,7 @@ func TestTaskCycleResponseFromDomain_includesCycleMeta(t *testing.T) {
 		TaskID:     "22222222-2222-4222-8222-222222222222",
 		AttemptSeq: 1,
 		Status:     domain.CycleStatusSucceeded,
-		MetaJSON: datatypes.JSON([]byte(
+		MetaJSON: json.RawMessage([]byte(
 			`{"runner":"cursor-cli","runner_version":"0.42.0",` +
 				`"cursor_model":"","cursor_model_effective":"opus",` +
 				`"prompt_hash":"deadbeef"}`,

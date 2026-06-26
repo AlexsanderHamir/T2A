@@ -14,7 +14,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -78,7 +77,7 @@ func Start(ctx context.Context, db *gorm.DB, in StartCycleInput) (*domain.TaskCy
 			StartedAt:     now,
 			TriggeredBy:   in.TriggeredBy,
 			ParentCycleID: in.ParentCycleID,
-			MetaJSON:      datatypes.JSON(meta),
+			MetaJSON:      json.RawMessage(meta),
 		}
 		if err := tx.Create(model.FromDomainTaskCyclePtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle: %w", err)

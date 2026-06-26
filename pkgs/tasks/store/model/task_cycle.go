@@ -18,6 +18,8 @@ type TaskCycle struct {
 	TriggeredBy   domain.Actor        `gorm:"column:triggered_by;not null"`
 	ParentCycleID *string             `gorm:"index"`
 	MetaJSON      datatypes.JSON      `gorm:"column:meta_json;type:jsonb;not null;default:'{}'"`
+
+	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_cycles table name.

@@ -19,6 +19,10 @@ type ProjectContextItem struct {
 	Pinned        bool                      `gorm:"not null;default:false;index"`
 	CreatedAt     time.Time                 `gorm:"not null;index"`
 	UpdatedAt     time.Time                 `gorm:"not null;index"`
+
+	Project     *Project   `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	SourceTask  *Task      `gorm:"foreignKey:SourceTaskID;references:ID;constraint:OnDelete:SET NULL"`
+	SourceCycle *TaskCycle `gorm:"foreignKey:SourceCycleID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 // TableName pins the project_context_items table name.

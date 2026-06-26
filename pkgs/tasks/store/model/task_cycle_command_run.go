@@ -12,6 +12,9 @@ type TaskCycleCommandRun struct {
 	ExitCode    int       `gorm:"not null;default:-1"`
 	MetaPath    string    `gorm:"not null;default:'';type:text"`
 	WrittenAt   time.Time `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
 }
 
 // TableName pins the task_cycle_command_runs table name.

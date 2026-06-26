@@ -16,6 +16,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 )
 
 func initBrowseTestGitRepo(t *testing.T, dir string) {
@@ -45,14 +46,14 @@ func TestHTTP_workspaceRoots_returnsRegisteredRepos(t *testing.T) {
 
 	db := tasktestdb.OpenSQLite(t)
 	now := time.Now().UTC()
-	row := domain.GitRepository{
+	row := model.FromDomainGitRepository(domain.GitRepository{
 		ID:            "test-repo-id",
 		Path:          repoPath,
 		HostPath:      "",
 		DefaultBranch: "main",
 		CreatedAt:     now,
 		UpdatedAt:     now,
-	}
+	})
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed repo: %v", err)
 	}
@@ -131,13 +132,13 @@ func TestHTTP_workspaceRoots_customOverrideReplacesDB(t *testing.T) {
 
 	db := tasktestdb.OpenSQLite(t)
 	now := time.Now().UTC()
-	row := domain.GitRepository{
+	row := model.FromDomainGitRepository(domain.GitRepository{
 		ID:            "ignored-repo",
 		Path:          t.TempDir(),
 		DefaultBranch: "main",
 		CreatedAt:     now,
 		UpdatedAt:     now,
-	}
+	})
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed repo: %v", err)
 	}

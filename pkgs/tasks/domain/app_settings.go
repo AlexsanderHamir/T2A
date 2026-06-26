@@ -1,9 +1,8 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
-
-	"gorm.io/datatypes"
 )
 
 // AppSettings is the singleton row (id=1) holding all UI-configurable
@@ -50,33 +49,33 @@ import (
 //     SSE replay is always active in the `/events` handler; this column
 //     is migrated to true on read for older databases.
 type AppSettings struct {
-	ID                         uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	AgentPaused                bool   `gorm:"not null;default:false"`
-	Runner                     string `gorm:"not null;default:'cursor'"`
-	CursorBin                  string `gorm:"not null;default:''"`
-	CursorModel                string `gorm:"not null;default:''"`
-	MaxRunDurationSeconds      int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	StreamIdleStuckSeconds     int    `gorm:"not null;default:60;check:chk_app_settings_stream_idle_stuck_seconds,stream_idle_stuck_seconds >= 0"`
-	AgentPickupDelaySeconds    int    `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
-	DisplayTimezone            string `gorm:"not null;default:''"`
-	OptimisticMutationsEnabled bool   `gorm:"not null;default:true"`
-	SSEReplayEnabled           bool   `gorm:"not null;default:true"`
+	ID                         uint   `json:"id"`
+	AgentPaused                bool   `json:"agent_paused"`
+	Runner                     string `json:"runner"`
+	CursorBin                  string `json:"cursor_bin"`
+	CursorModel                string `json:"cursor_model"`
+	MaxRunDurationSeconds      int    `json:"max_run_duration_seconds"`
+	StreamIdleStuckSeconds     int    `json:"stream_idle_stuck_seconds"`
+	AgentPickupDelaySeconds    int    `json:"agent_pickup_delay_seconds"`
+	DisplayTimezone            string `json:"display_timezone"`
+	OptimisticMutationsEnabled bool   `json:"optimistic_mutations_enabled"`
+	SSEReplayEnabled           bool   `json:"sse_replay_enabled"`
 	// RunnerConfigs stores per-runner config blobs keyed by runner ID.
 	// Example: {"cursor":{"binary_path":"...","default_model":"opus"}}.
 	// Dual-written alongside the legacy CursorBin/CursorModel columns
 	// during the migration to pluggable runners.
-	RunnerConfigs datatypes.JSON `gorm:"column:runner_configs;type:jsonb;not null;default:'{}'"`
+	RunnerConfigs json.RawMessage `json:"runner_configs"`
 	// VerifyMaxRetries is the corrective execute retries after verify failure.
-	VerifyMaxRetries int `gorm:"not null;default:2;check:chk_app_settings_verify_max_retries,verify_max_retries >= 0"`
+	VerifyMaxRetries int `json:"verify_max_retries"`
 	// VerifyRunnerName empty means use the execute runner id.
-	VerifyRunnerName string `gorm:"not null;default:''"`
+	VerifyRunnerName string `json:"verify_runner_name"`
 	// VerifyRunnerModel empty means use the verify runner's default model.
-	VerifyRunnerModel string `gorm:"not null;default:''"`
+	VerifyRunnerModel string `json:"verify_runner_model"`
 	// VerifyCommandTimeoutSeconds caps each optional criterion shell check during verify.
-	VerifyCommandTimeoutSeconds int `gorm:"not null;default:120;check:chk_app_settings_verify_command_timeout_seconds,verify_command_timeout_seconds > 0"`
+	VerifyCommandTimeoutSeconds int `json:"verify_command_timeout_seconds"`
 	// CursorSessionResumeEnabled enables ADR-0031 --resume-by-default for Cursor CLI.
-	CursorSessionResumeEnabled bool      `gorm:"not null;default:true"`
-	UpdatedAt                  time.Time `gorm:"not null"`
+	CursorSessionResumeEnabled bool      `json:"cursor_session_resume_enabled"`
+	UpdatedAt                  time.Time `json:"updated_at"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -139,8 +138,3 @@ func DefaultAppSettings() AppSettings {
 		CursorSessionResumeEnabled:  true,
 	}
 }
-
-// TableName pins the table name so Postgres migrations match between
-// dialects. Skip-listed in cmd/funclogmeasure/analyze.go for the same
-// reason as TaskChecklistItem.TableName.
-func (AppSettings) TableName() string { return "app_settings" }

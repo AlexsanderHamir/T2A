@@ -26,6 +26,8 @@ type Task struct {
 	CriteriaSatisfiedAt   *time.Time           `gorm:"index"`
 	PendingRetry          *domain.PendingRetry `gorm:"column:pending_retry;serializer:json;type:jsonb"`
 	WorktreeBranchID      *string              `gorm:"index"`
+
+	Project *Project `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 // TableName pins the tasks table name.

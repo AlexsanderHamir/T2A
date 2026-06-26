@@ -16,6 +16,9 @@ type TaskCycleCommit struct {
 	CommittedAt time.Time `gorm:"not null;index"`
 	Message     string    `gorm:"type:text;not null;default:''"`
 	RecordedAt  time.Time `gorm:"not null;index"`
+
+	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Task  *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_cycle_commits table name.

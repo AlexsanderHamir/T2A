@@ -13,7 +13,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -267,7 +266,7 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 		row.SSEReplayEnabled = *patch.SSEReplayEnabled
 	}
 	if patch.RunnerConfigs != nil {
-		row.RunnerConfigs = datatypes.JSON(*patch.RunnerConfigs)
+		row.RunnerConfigs = json.RawMessage(*patch.RunnerConfigs)
 	}
 	if patch.VerifyMaxRetries != nil {
 		row.VerifyMaxRetries = *patch.VerifyMaxRetries
@@ -320,5 +319,5 @@ func dualWriteCursorToRunnerConfigs(row *domain.AppSettings) {
 			"err", err)
 		return
 	}
-	row.RunnerConfigs = datatypes.JSON(merged)
+	row.RunnerConfigs = json.RawMessage(merged)
 }

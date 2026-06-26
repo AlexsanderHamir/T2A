@@ -91,7 +91,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 			PhaseSeq:    nextSeq,
 			Status:      domain.PhaseStatusRunning,
 			StartedAt:   now,
-			DetailsJSON: datatypes.JSON(startDetails),
+			DetailsJSON: json.RawMessage(startDetails),
 		}
 		if err := tx.Create(model.FromDomainTaskCyclePhasePtr(row)).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_phase: %w", err)
@@ -182,7 +182,7 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 		}
 		ph.Status = in.Status
 		ph.EndedAt = &now
-		ph.DetailsJSON = datatypes.JSON(mergedDetails)
+		ph.DetailsJSON = json.RawMessage(mergedDetails)
 		if in.Summary != nil {
 			s := *in.Summary
 			ph.Summary = &s
@@ -280,7 +280,7 @@ func loadPhaseByCycleSeqInTx(tx *gorm.DB, cycleID string, phaseSeq int64) (*doma
 // (ADR-0030).
 //
 //funclogmeasure:skip category=hot-path reason="Pure merge helper without I/O; operation trace is emitted by CompletePhase."
-func mergePhaseDetailsJSON(existing datatypes.JSON, incoming []byte) ([]byte, error) {
+func mergePhaseDetailsJSON(existing json.RawMessage, incoming []byte) ([]byte, error) {
 	base := map[string]any{}
 	if len(existing) > 0 {
 		if err := json.Unmarshal(existing, &base); err != nil {
@@ -392,7 +392,7 @@ func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, e
 // token usage, etc., without a separate cycle-phase fetch.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func phaseDetailsForEventPayload(detailsJSON datatypes.JSON) map[string]any {
+func phaseDetailsForEventPayload(detailsJSON json.RawMessage) map[string]any {
 	if len(detailsJSON) == 0 {
 		return nil
 	}

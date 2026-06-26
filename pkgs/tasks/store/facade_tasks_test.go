@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/prometheus/client_golang/prometheus"
 	"gorm.io/gorm"
 )
@@ -254,7 +255,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
-	err = db.Where("task_id = ?", tsk.ID).First(&domain.TaskEvent{}).Error
+	err = db.Where("task_id = ?", tsk.ID).First(&model.TaskEvent{}).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("expected events removed, got err=%v", err)
 	}

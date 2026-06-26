@@ -20,6 +20,9 @@ type TaskCycleStreamEvent struct {
 	Message     string         `gorm:"type:text;not null;default:''"`
 	Tool        string         `gorm:"not null;default:''"`
 	PayloadJSON datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null;default:'{}'"`
+
+	Task  *Task      `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	Cycle *TaskCycle `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the task_cycle_stream_events table name.

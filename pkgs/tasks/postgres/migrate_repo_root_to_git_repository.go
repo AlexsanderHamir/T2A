@@ -9,6 +9,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -43,7 +44,7 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	}
 	repoRoot := opened.Root
 	var existing int64
-	if err := db.WithContext(ctx).Model(&domain.GitRepository{}).
+	if err := db.WithContext(ctx).Model(&model.GitRepository{}).
 		Where("path = ?", repoRoot).
 		Count(&existing).Error; err != nil {
 		return err
@@ -57,14 +58,14 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 		return nil
 	}
 	now := time.Now().UTC()
-	repo := domain.GitRepository{
+	repo := model.GitRepository{
 		ID:            uuid.NewString(),
 		Path:          opened.Root,
 		DefaultBranch: "main",
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
-	mainWT := domain.GitWorktree{
+	mainWT := model.GitWorktree{
 		ID:           uuid.NewString(),
 		RepositoryID: repo.ID,
 		Path:         opened.Root,
@@ -72,9 +73,9 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 		IsMain:       true,
 		CreatedAt:    now,
 	}
-	var branchRows []domain.GitBranch
+	var branchRows []model.GitBranch
 	for _, b := range branches {
-		branchRows = append(branchRows, domain.GitBranch{
+		branchRows = append(branchRows, model.GitBranch{
 			ID:           uuid.NewString(),
 			RepositoryID: repo.ID,
 			Name:         b.Name,
@@ -83,7 +84,7 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 		})
 	}
 	if len(branchRows) == 0 {
-		branchRows = append(branchRows, domain.GitBranch{
+		branchRows = append(branchRows, model.GitBranch{
 			ID:           uuid.NewString(),
 			RepositoryID: repo.ID,
 			Name:         "main",

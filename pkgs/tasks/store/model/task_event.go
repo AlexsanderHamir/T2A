@@ -19,6 +19,8 @@ type TaskEvent struct {
 	UserResponse   *string          `gorm:"column:user_response;type:text"`
 	UserResponseAt *time.Time       `gorm:"column:user_response_at"`
 	ResponseThread datatypes.JSON   `gorm:"column:response_thread_json;type:jsonb"`
+
+	Task *Task `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // TableName pins the table name (domain relied on GORM name derivation).
