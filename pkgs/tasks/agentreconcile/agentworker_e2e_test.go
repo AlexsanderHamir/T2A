@@ -211,6 +211,95 @@ func TestAgentWorkerE2E_worktreeBranchBinding(t *testing.T) {
 	<-reconcileDone
 }
 
+// TestAgentWorkerE2E_sameWorktreeDifferentBranchesSequential verifies sequential
+// tasks on one worktree with different worktree_branch associations both run and
+// clear active_branch_id between runs.
+func TestAgentWorkerE2E_sameWorktreeDifferentBranchesSequential(t *testing.T) {
+	t.Parallel()
+
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	q := agents.NewMemoryQueue(4)
+
+	wbMain, wbFeature := seedSameWorktreeTwoBranchAssocs(t, st)
+	taskA, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:            "branch-main",
+		InitialPrompt:    "on main",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbMain,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task A: %v", err)
+	}
+	taskB, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:            "branch-feature",
+		InitialPrompt:    "on feature-b",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbFeature,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task B: %v", err)
+	}
+
+	r := runnerfake.New().WithName("fake")
+	r.Script(taskA.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "main ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+	r.Script(taskB.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "feature ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+
+	w := worker.NewWorker(st, q, r, worker.Options{RunTimeout: 30 * time.Second})
+
+	reconcileCtx, reconcileCancel := context.WithCancel(rootCtx)
+	defer reconcileCancel()
+	reconcileDone := make(chan struct{})
+	go func() {
+		defer close(reconcileDone)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick, nil)
+	}()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	defer workerCancel()
+	workerDone := make(chan error, 1)
+	go func() {
+		workerDone <- w.Run(workerCtx)
+	}()
+
+	waitTaskStatusE2E(t, rootCtx, st, taskA.ID, domain.StatusDone)
+	waitTaskStatusE2E(t, rootCtx, st, taskB.ID, domain.StatusDone)
+
+	calls := r.Calls()
+	if len(calls) != 2 {
+		t.Fatalf("runner Run calls = %d, want 2", len(calls))
+	}
+
+	wb, err := st.GetWorktreeBranchByID(rootCtx, wbMain)
+	if err != nil {
+		t.Fatalf("GetWorktreeBranchByID: %v", err)
+	}
+	wt, err := st.GetGitWorktreeByID(rootCtx, wb.WorktreeID)
+	if err != nil {
+		t.Fatalf("GetGitWorktreeByID: %v", err)
+	}
+	if wt.ActiveBranchID != nil {
+		t.Fatalf("active_branch_id = %v after runs, want cleared", *wt.ActiveBranchID)
+	}
+
+	workerCancel()
+	if err := <-workerDone; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+	reconcileCancel()
+	<-reconcileDone
+}
+
 // TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone verifies the worker
 // does not run a dependent task until every depends_on task is done.
 func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {

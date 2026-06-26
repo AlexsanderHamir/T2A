@@ -56,3 +56,37 @@ func seedAgentReconcileGit(t *testing.T, st *store.Store) (worktreeID, branchID,
 	}
 	return wts[0].ID, branches[0].ID, wb.ID
 }
+
+// seedSameWorktreeTwoBranchAssocs registers a second branch on the same worktree
+// as seedAgentReconcileGit and returns both worktree_branch association ids.
+func seedSameWorktreeTwoBranchAssocs(t *testing.T, st *store.Store) (wbMainID, wbFeatureID string) {
+	t.Helper()
+	ctx := context.Background()
+	wtID, _, wbMainID := seedAgentReconcileGit(t, st)
+	wt, err := st.GetGitWorktreeByID(ctx, wtID)
+	if err != nil {
+		t.Fatalf("GetGitWorktreeByID: %v", err)
+	}
+	repo, err := st.GetGitRepositoryByID(ctx, wt.RepositoryID)
+	if err != nil {
+		t.Fatalf("GetGitRepositoryByID: %v", err)
+	}
+	gitSvc := gitwork.New()
+	if out, err := exec.Command("git", "-C", repo.Path, "branch", "feature-b").CombinedOutput(); err != nil {
+		t.Fatalf("git branch feature-b: %v %s", err, out)
+	}
+	feature, err := st.ResolveOrCreateBranchForRepo(ctx, repo, store.BindBranchInput{
+		Name: "feature-b",
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ResolveOrCreateBranchForRepo feature-b: %v", err)
+	}
+	wbFeature, err := st.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
+		WorktreeID: wtID,
+		BranchID:   feature.ID,
+	})
+	if err != nil {
+		t.Fatalf("AssociateWorktreeBranch feature-b: %v", err)
+	}
+	return wbMainID, wbFeature.ID
+}
