@@ -13,6 +13,8 @@ const (
 )
 
 // StreamIdleProgressEvent builds a live UI progress event for stdout-silence tiers.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; callers emit operation traces."
 func StreamIdleProgressEvent(kind StreamIdleKind, stuck time.Duration) ProgressEvent {
 	switch kind {
 	case StreamIdleKillPending:
