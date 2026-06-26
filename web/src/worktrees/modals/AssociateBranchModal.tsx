@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
-import { CustomSelect } from "@/tasks/components/custom-select/CustomSelect";
+import { CustomSelect } from "@/components/custom-select";
 import { useGlobalLiveBranches } from "../hooks/useGlobalBranches";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 

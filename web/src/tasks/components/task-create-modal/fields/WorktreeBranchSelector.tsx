@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DEFAULT_PROJECT_ID } from "@/types";
 import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
-import { CustomSelect } from "@/tasks/components/custom-select/CustomSelect";
+import { CustomSelect } from "@/components/custom-select";
 import { useGlobalRepositories } from "@/worktrees/hooks/useGlobalRepositories";
 import { useGlobalWorktrees } from "@/worktrees/hooks/useGlobalWorktrees";
 import { useGlobalBranches } from "@/worktrees/hooks/useGlobalBranches";

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAppSettings, type AppSettings } from "@/api/settings";
-import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { settingsQueryKeys } from "./settingsQueryKeys";
 
 /**
  * Live behavior flags (optimistic mutations + SSE replay) are always

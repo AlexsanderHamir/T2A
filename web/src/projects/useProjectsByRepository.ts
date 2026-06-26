@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { listProjectsByRepository } from "@/api/gitGlobal";
-import { gitQueryKeys } from "@/worktrees/queryKeys";
+import { gitQueryKeys } from "@/lib/gitQueryKeys";
 
 export function useProjectsByRepository(
   repositoryId: string,

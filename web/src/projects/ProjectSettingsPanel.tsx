@@ -4,7 +4,7 @@ import { patchProject } from "@/api";
 import {
   CustomSelect,
   type CustomSelectOption,
-} from "@/tasks/components/custom-select";
+} from "@/components/custom-select";
 import {
   DEFAULT_PROJECT_ID,
   PROJECT_STATUSES,

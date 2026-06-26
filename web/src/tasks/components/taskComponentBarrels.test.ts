@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CustomSelect, isCustomSelectHeader } from "./custom-select";
+import { CustomSelect, isCustomSelectHeader } from "@/components/custom-select";
 import { DraftResumeModal } from "./draft-resume";
 import { DeleteConfirmDialog } from "./dialogs";
-import { filePreviewLanguageFromPath } from "./file-preview";
-import { MentionRangePanel, RichPromptEditor } from "./rich-prompt";
+import { filePreviewLanguageFromPath } from "@/components/file-preview";
+import { MentionRangePanel, RichPromptEditor } from "@/components/rich-prompt";
 import { taskCreateModalBusyLabel, TaskCreateModal } from "./task-create-modal";
 import { TaskChangeModelModal, TaskDetailHeader } from "./task-detail";
 import { TaskComposeFields } from "./task-compose";

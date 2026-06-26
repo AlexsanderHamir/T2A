@@ -1,5 +1,5 @@
 import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
-import { CustomSelect } from "../../custom-select";
+import { CustomSelect } from "@/components/custom-select";
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   taskListStatusFilterOptions,

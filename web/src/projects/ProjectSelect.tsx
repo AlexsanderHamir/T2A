@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CustomSelect, type CustomSelectOption } from "@/tasks/components/custom-select";
+import { CustomSelect, type CustomSelectOption } from "@/components/custom-select";
 import type { Project } from "@/types";
 import { DEFAULT_PROJECT_ID } from "@/types";
 

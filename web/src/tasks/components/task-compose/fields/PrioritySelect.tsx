@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { PRIORITIES, type PriorityChoice } from "@/types";
 import type { FieldRequirement } from "@/shared/FieldLabel";
 import { priorityPillClass } from "../../../task-display";
-import { CustomSelect, type CustomSelectOption } from "../../custom-select";
+import { CustomSelect, type CustomSelectOption } from "@/components/custom-select";
 
 type Props = {
   id: string;

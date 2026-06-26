@@ -137,6 +137,30 @@ if (Test-Path $createRoot) {
     }
 }
 
+# TypeScript: feature modules must not import other feature modules (CODE_STANDARDS Part 4).
+$featureDirs = @(
+    @{ Name = "projects"; Path = (Join-Path $srcRoot "projects"); Forbidden = @("tasks", "settings", "worktrees") },
+    @{ Name = "settings"; Path = (Join-Path $srcRoot "settings"); Forbidden = @("tasks", "projects", "worktrees") },
+    @{ Name = "worktrees"; Path = (Join-Path $srcRoot "worktrees"); Forbidden = @("tasks", "projects", "settings") }
+)
+$featureImportPat = 'from\s+["'']@/(tasks|projects|settings|worktrees)/'
+foreach ($feat in $featureDirs) {
+    if (-not (Test-Path $feat.Path)) { continue }
+    $featFiles = Get-ChildItem -Path $feat.Path -Recurse -Include *.ts, *.tsx -File
+    foreach ($f in $featFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($null -eq $text) { continue }
+        $matches = [regex]::Matches($text, $featureImportPat)
+        foreach ($m in $matches) {
+            $imported = $m.Groups[1].Value
+            if ($feat.Forbidden -contains $imported) {
+                Write-Host "VIOLATION: $($feat.Name) feature imports @$imported/: $($f.FullName)" -ForegroundColor Red
+                $failed = $true
+            }
+        }
+    }
+}
+
 if ($failed) {
     exit 1
 }

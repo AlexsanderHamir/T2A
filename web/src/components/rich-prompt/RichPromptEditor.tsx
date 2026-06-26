@@ -2,23 +2,23 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RepoFileMention } from "../../extensions/repoFileMention";
+import { RepoFileMention } from "./extensions/repoFileMention";
 import {
   RepoFileSuggestion,
   type RepoFileSuggestionOptions,
-} from "../../extensions/repoFileSuggestion";
-import { ProjectContextMention } from "../../extensions/projectContextMention";
+} from "./extensions/repoFileSuggestion";
+import { ProjectContextMention } from "./extensions/projectContextMention";
 import {
   ProjectContextSuggestion,
   type ProjectContextPickedPayload,
   type ProjectContextSuggestionOptions,
-} from "../../extensions/projectContextSuggestion";
-import { validateRepoRange } from "../../../api";
+} from "./extensions/projectContextSuggestion";
+import { validateRepoRange } from "@/api";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import {
   looksLikeStoredHtml,
   plainTextToInitialHtml,
-} from "../../task-prompt";
+} from "@/lib/promptFormat";
 import { MentionRangePanel } from "./MentionRangePanel";
 import { RichPromptMenuBar } from "./RichPromptMenuBar";
 import { RichPromptRepoHints } from "./RichPromptRepoHints";
@@ -27,13 +27,13 @@ import {
 } from "./useRepoWorkspaceProbe";
 import type { RepoWorkspaceProbe } from "@/api";
 import { Modal } from "@/shared/Modal";
-import { ProjectContextChoiceDialog } from "@/projects/ProjectContextChoiceDialog";
+import { ProjectContextChoiceDialog } from "@/components/project-context";
 import {
   expandProjectContextSelection,
   mergeProjectContextSelection,
   selectedProjectContextItems,
   type ProjectContextAddMode,
-} from "@/projects/projectContextRefs";
+} from "@/lib/projectContextRefs";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
 import { ProjectReferencesBlock } from "./ProjectReferencesBlock";
 

@@ -7,11 +7,11 @@ import {
   normalizeCursorModelSelectValue,
 } from "@/api/cursorModels";
 import { fetchAppSettings, listCursorModels } from "@/api/settings";
-import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import {
   CustomSelect,
   type CustomSelectOption,
-} from "../../custom-select";
+} from "@/components/custom-select";
 
 const RUNNERS = [{ id: "cursor", label: "Cursor CLI" }] as const;
 

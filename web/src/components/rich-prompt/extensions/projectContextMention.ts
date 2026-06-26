@@ -1,5 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
-import { projectContextShortId } from "@/projects/projectContextRefs";
+import { projectContextShortId } from "@/lib/projectContextRefs";
 
 /**
  * Render the chip text for an inserted project-context mention. Format

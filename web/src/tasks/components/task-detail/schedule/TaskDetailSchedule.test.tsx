@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "@/api/settings";
-import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import type { Status } from "@/types";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";

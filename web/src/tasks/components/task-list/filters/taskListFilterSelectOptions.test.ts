@@ -3,7 +3,7 @@ import { PRIORITIES, STATUSES, type Priority, type Status } from "@/types";
 import {
   isCustomSelectHeader,
   type CustomSelectOption,
-} from "../../custom-select";
+} from "@/components/custom-select";
 import {
   TASK_LIST_PRIORITY_FILTER_OPTIONS,
   TASK_LIST_STATUS_FILTER_OPTIONS,

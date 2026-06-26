@@ -6,7 +6,7 @@ import { shouldSuppressTaskMutationEcho } from "@/tasks/sync/mutationGuard";
 import { taskQueryKeys } from "../task-query";
 import { useTaskDetailChecklist } from "./useTaskDetailChecklist";
 import { ToastProvider } from "@/shared/toast";
-import { settingsQueryKeys } from "../task-query";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import type { AppSettings } from "@/api";
 import type { TaskChecklistResponse } from "@/types";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";

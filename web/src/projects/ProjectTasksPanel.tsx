@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { listTasks } from "@/api";
-import { taskQueryKeys } from "@/tasks/task-query";
+import { taskQueryKeys } from "@/lib/taskQueryKeys";
 
 type Props = {
   projectId: string;

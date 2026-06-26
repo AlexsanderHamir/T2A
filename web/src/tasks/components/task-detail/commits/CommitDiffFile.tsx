@@ -7,7 +7,7 @@ import {
   type FileData,
   type ViewType,
 } from "react-diff-view";
-import { filePreviewLanguageFromPath } from "@/tasks/components/file-preview/filePreviewLanguage";
+import { filePreviewLanguageFromPath } from "@/components/file-preview";
 import {
   fileAnchorId,
   fileDiffStats,

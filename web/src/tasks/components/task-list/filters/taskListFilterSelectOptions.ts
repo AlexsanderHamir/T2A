@@ -1,4 +1,4 @@
-import type { CustomSelectOption } from "../../custom-select";
+import type { CustomSelectOption } from "@/components/custom-select";
 import { PRIORITIES, STATUSES } from "@/types";
 import { priorityPillClass, statusNeedsUserInput, statusPillClass } from "../../../task-display";
 import { statusListLabel } from "../table/taskListRowSubtitle";

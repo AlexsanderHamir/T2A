@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
-import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import {
   GIT_TEST_BRANCH_ID,

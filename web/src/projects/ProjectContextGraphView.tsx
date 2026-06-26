@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { previewTextFromPrompt } from "@/tasks/task-prompt";
+import { previewTextFromPrompt } from "@/lib/promptFormat";
 import type { ProjectContextEdge, ProjectContextItem } from "@/types";
 import { projectContextKindTone } from "./projectContextKindTone";
 
