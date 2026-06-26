@@ -82,8 +82,8 @@ if [[ -n "$GROUP" ]]; then
   esac
   [[ "$INSTALL" -eq 1 ]] && TOTAL=$((TOTAL + 1))
 else
-  TOTAL=5
-  [[ "$INSTALL" -eq 1 ]] && TOTAL=6
+  TOTAL=12
+  [[ "$INSTALL" -eq 1 ]] && TOTAL=13
 fi
 
 # shellcheck source=check-lib.sh
@@ -157,7 +157,7 @@ run_web_test() {
 }
 
 run_web_lint() {
-  local label="web lint"
+  local label="web (lint)"
   local start=$SECONDS
   local log
   log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
@@ -223,63 +223,63 @@ case "$GROUP" in
   build)
     maybe_npm_ci
     pushd web >/dev/null
-    run_cmd "web build" npm run build
+    run_cmd "web (build)" npm run build
     popd >/dev/null
     complete_ok
     ;;
   test-unit)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (unit)" --project=unit
+    run_web_test "web (test-unit)" --project=unit
     popd >/dev/null
     complete_ok
     ;;
   test-components)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (components)" --project=components
+    run_web_test "web (test-components)" --project=components
     popd >/dev/null
     complete_ok
     ;;
   test-app)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (app)" --project=app
+    run_web_test "web (test-app)" --project=app
     popd >/dev/null
     complete_ok
     ;;
   test-task-pages)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (task-pages)" --project=task-pages
+    run_web_test "web (test-task-pages)" --project=task-pages
     popd >/dev/null
     complete_ok
     ;;
   test-task-create)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (task-create)" --project=task-create
+    run_web_test "web (test-task-create)" --project=task-create
     popd >/dev/null
     complete_ok
     ;;
   test-settings)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (settings)" --project=settings
+    run_web_test "web (test-settings)" --project=settings
     popd >/dev/null
     complete_ok
     ;;
   test-projects)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (projects)" --project=projects
+    run_web_test "web (test-projects)" --project=projects
     popd >/dev/null
     complete_ok
     ;;
   test-worktrees)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (worktrees)" --project=worktrees
+    run_web_test "web (test-worktrees)" --project=worktrees
     popd >/dev/null
     complete_ok
     ;;
@@ -290,18 +290,17 @@ run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
 maybe_npm_ci
 
 pushd web >/dev/null
-run_web_test "web test" \
-  --project=unit \
-  --project=components \
-  --project=app \
-  --project=task-pages \
-  --project=task-create \
-  --project=settings \
-  --project=projects \
-  --project=worktrees
+run_web_test "web (test-unit)" --project=unit
+run_web_test "web (test-components)" --project=components
+run_web_test "web (test-app)" --project=app
+run_web_test "web (test-task-pages)" --project=task-pages
+run_web_test "web (test-task-create)" --project=task-create
+run_web_test "web (test-settings)" --project=settings
+run_web_test "web (test-projects)" --project=projects
+run_web_test "web (test-worktrees)" --project=worktrees
 run_web_lint
 run_cmd "web standards" npm run check:standards
-run_cmd "web build" npm run build
+run_cmd "web (build)" npm run build
 popd >/dev/null
 
 complete_ok
