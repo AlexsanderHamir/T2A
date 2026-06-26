@@ -46,7 +46,7 @@ function Get-TotalSteps {
         "lint" { 3 }
         "build" { 1 }
         { $_ -in "test-unit", "test-components", "test-app", "test-task-pages", "test-task-create", "test-settings", "test-projects", "test-worktrees" } { 1 }
-        default { 5 }
+        default { 12 }
     }
     if ($Install) { return $base + 1 }
     return $base
@@ -192,7 +192,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-CapturedStep "web lint" { npm run lint } { param($p) Get-WebLintStats $p }
+            Invoke-CapturedStep "web (lint)" { npm run lint } { param($p) Get-WebLintStats $p }
             Invoke-CapturedStep "web standards" { npm run check:standards }
         } finally {
             Pop-Location
@@ -203,7 +203,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-CapturedStep "web build" { npm run build }
+            Invoke-CapturedStep "web (build)" { npm run build }
         } finally {
             Pop-Location
         }
@@ -213,7 +213,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (unit)" @("--project=unit")
+            Invoke-WebTest "web (test-unit)" @("--project=unit")
         } finally {
             Pop-Location
         }
@@ -223,7 +223,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (components)" @("--project=components")
+            Invoke-WebTest "web (test-components)" @("--project=components")
         } finally {
             Pop-Location
         }
@@ -233,7 +233,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (app)" @("--project=app")
+            Invoke-WebTest "web (test-app)" @("--project=app")
         } finally {
             Pop-Location
         }
@@ -243,7 +243,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (task-pages)" @("--project=task-pages")
+            Invoke-WebTest "web (test-task-pages)" @("--project=task-pages")
         } finally {
             Pop-Location
         }
@@ -253,7 +253,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (task-create)" @("--project=task-create")
+            Invoke-WebTest "web (test-task-create)" @("--project=task-create")
         } finally {
             Pop-Location
         }
@@ -263,7 +263,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (settings)" @("--project=settings")
+            Invoke-WebTest "web (test-settings)" @("--project=settings")
         } finally {
             Pop-Location
         }
@@ -273,7 +273,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (projects)" @("--project=projects")
+            Invoke-WebTest "web (test-projects)" @("--project=projects")
         } finally {
             Pop-Location
         }
@@ -283,7 +283,7 @@ switch ($Group) {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (worktrees)" @("--project=worktrees")
+            Invoke-WebTest "web (test-worktrees)" @("--project=worktrees")
         } finally {
             Pop-Location
         }
@@ -296,19 +296,17 @@ Invoke-MaybeNpmCi
 
 Push-Location $webDir
 try {
-    Invoke-WebTest "web test" @(
-        "--project=unit",
-        "--project=components",
-        "--project=app",
-        "--project=task-pages",
-        "--project=task-create",
-        "--project=settings",
-        "--project=projects",
-        "--project=worktrees"
-    )
-    Invoke-CapturedStep "web lint" { npm run lint } { param($p) Get-WebLintStats $p }
+    Invoke-WebTest "web (test-unit)"        @("--project=unit")
+    Invoke-WebTest "web (test-components)"  @("--project=components")
+    Invoke-WebTest "web (test-app)"         @("--project=app")
+    Invoke-WebTest "web (test-task-pages)"  @("--project=task-pages")
+    Invoke-WebTest "web (test-task-create)" @("--project=task-create")
+    Invoke-WebTest "web (test-settings)"    @("--project=settings")
+    Invoke-WebTest "web (test-projects)"    @("--project=projects")
+    Invoke-WebTest "web (test-worktrees)"   @("--project=worktrees")
+    Invoke-CapturedStep "web (lint)" { npm run lint } { param($p) Get-WebLintStats $p }
     Invoke-CapturedStep "web standards" { npm run check:standards }
-    Invoke-CapturedStep "web build" { npm run build }
+    Invoke-CapturedStep "web (build)" { npm run build }
 } finally {
     Pop-Location
 }

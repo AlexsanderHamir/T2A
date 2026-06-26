@@ -1,6 +1,6 @@
 # Hamix Go verification — source of truth for the CI backend job.
 #
-# Steps: gofmt, go vet, scheduling boundary, go test, funclogmeasure
+# Steps: gofmt, go vet, scheduling boundary, go tests (per group), funclogmeasure
 #
 # Usage (repo root): .\scripts\check-go.ps1 [flags]
 #
@@ -52,9 +52,9 @@ $script:StepStats = ""
 if ($TestsOnly) {
     $script:Total = if ($Group) { 2 } else { 1 }
 } elseif ($LintOnly) {
-    $script:Total = if ($SkipFunclog) { 5 } else { 6 }
+    $script:Total = if ($SkipFunclog) { 6 } else { 7 }
 } else {
-    $script:Total = if ($SkipFunclog) { 5 } else { 6 }
+    $script:Total = if ($SkipFunclog) { 9 } else { 10 }
 }
 
 function Format-Duration {
@@ -160,13 +160,6 @@ function Get-GoTestStats {
     return ""
 }
 
-function Get-GoTestTargets {
-    if ($Group) {
-        return (Get-GroupPackages $Group) -join ' '
-    }
-    return './...'
-}
-
 function Step-Gofmt {
     $label = "gofmt"
     Write-StepPrefix
@@ -264,11 +257,14 @@ function Invoke-CoverageGate {
 }
 
 function Invoke-GoTest {
-    $label = if ($Group) { "go test ($Group)" } else { "go test" }
-    $targets = Get-GoTestTargets
+    param(
+        [Parameter(Mandatory)][string]$Label,
+        [Parameter(Mandatory)][string]$Targets,
+        [bool]$WantCover = $false
+    )
     $script:CoverProfile = ""
 
-    if ($Group) {
+    if ($WantCover) {
         $script:CoverProfile = [System.IO.Path]::GetTempFileName()
         $coverArgs = @('-coverprofile=' + $script:CoverProfile)
     } else {
@@ -276,7 +272,7 @@ function Invoke-GoTest {
     }
 
     Write-StepPrefix
-    Write-Host -NoNewline "$label "
+    Write-Host -NoNewline "$Label "
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $log = [System.IO.Path]::GetTempFileName()
@@ -287,10 +283,10 @@ function Invoke-GoTest {
     try {
         if ($Verbose) {
             Write-Host "..." -ForegroundColor Cyan
-            go test $targets.Split(' ') -count=1 @coverArgs
+            go test $Targets.Split(' ') -count=1 @coverArgs
             $code = $LASTEXITCODE
         } else {
-            go test $targets.Split(' ') -count=1 @coverArgs 2>&1 | Out-File -FilePath $log -Encoding utf8
+            go test $Targets.Split(' ') -count=1 @coverArgs 2>&1 | Out-File -FilePath $log -Encoding utf8
             $code = $LASTEXITCODE
         }
         if ($null -eq $code) { $code = 0 }
@@ -308,7 +304,7 @@ function Invoke-GoTest {
             $stats = Get-GoTestStats $log
         }
         $script:Passed++
-        Write-OkLine $label $sw.Elapsed $stats
+        Write-OkLine $Label $sw.Elapsed $stats
         Remove-Item $log -Force -ErrorAction SilentlyContinue
         return
     }
@@ -320,20 +316,22 @@ function Invoke-GoTest {
         Remove-Item $script:CoverProfile -Force -ErrorAction SilentlyContinue
         $script:CoverProfile = ""
     }
-    Fail-Step $label $code
+    Fail-Step $Label $code
 }
 
 Write-Host "Hamix check (Go)"
 Write-Host ""
 
 if ($TestsOnly) {
-    Invoke-GoTest
     if ($Group) {
+        Invoke-GoTest "go-tests ($Group)" ((Get-GroupPackages $Group) -join ' ') $true
         Invoke-CoverageGate
         if ($script:CoverProfile) {
             Remove-Item $script:CoverProfile -Force -ErrorAction SilentlyContinue
             $script:CoverProfile = ""
         }
+    } else {
+        Invoke-GoTest "go test" './...' $false
     }
     Complete-Ok
 }
@@ -347,7 +345,9 @@ Step-SchedulingBoundary
 if ($LintOnly) {
     Step-TestGroupCoverage
 } else {
-    Invoke-GoTest
+    foreach ($g in Get-GroupNames) {
+        Invoke-GoTest "go-tests ($g)" ((Get-GroupPackages $g) -join ' ') $false
+    }
 }
 
 if (-not $SkipFunclog) {

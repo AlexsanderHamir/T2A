@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hamix Go verification — source of truth for the CI backend job.
 #
-# Steps: gofmt, go vet, scheduling boundary, go test, funclogmeasure
+# Steps: gofmt, go vet, scheduling boundary, go tests (per group), funclogmeasure
 #
 # Usage (repo root): ./scripts/check-go.sh [flags]
 #
@@ -85,9 +85,9 @@ elif [[ "$LINT_ONLY" -eq 1 ]]; then
   fi
 else
   if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
-    TOTAL=7
+    TOTAL=10
   else
-    TOTAL=6
+    TOTAL=9
   fi
 fi
 
@@ -100,14 +100,6 @@ go_test_stats() {
   count="$(grep -cE '^(ok|FAIL|\?)' "$log" 2>/dev/null || true)"
   if [[ "$count" -gt 0 ]]; then
     STEP_STATS="${count} packages"
-  fi
-}
-
-go_test_targets() {
-  if [[ -n "$GROUP" ]]; then
-    group_packages "$GROUP"
-  else
-    echo "./..."
   fi
 }
 
@@ -217,20 +209,16 @@ run_coverage_gate() {
 }
 
 run_go_test() {
-  local label="go test"
-  if [[ -n "$GROUP" ]]; then
-    label="go test ($GROUP)"
-  fi
+  local label="$1"
+  local targets="$2"
+  local want_cover="$3"
   local start=$SECONDS
   local log
   log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
 
-  local targets
-  targets="$(go_test_targets)"
-
   local cover_args=()
   COVER_PROFILE=""
-  if [[ -n "$GROUP" ]]; then
+  if [[ "$want_cover" == "1" ]]; then
     COVER_PROFILE="$(mktemp "${TMPDIR:-/tmp}/hamix-cover.XXXXXX")"
     cover_args=(-coverprofile="$COVER_PROFILE")
   fi
@@ -285,10 +273,12 @@ run_go_test() {
 print_banner
 
 if [[ "$TESTS_ONLY" -eq 1 ]]; then
-  run_go_test
   if [[ -n "$GROUP" ]]; then
+    run_go_test "go-tests ($GROUP)" "$(group_packages "$GROUP")" 1
     run_coverage_gate
     rm -f "${COVER_PROFILE:-}"
+  else
+    run_go_test "go test" "./..." 0
   fi
   complete_ok
 fi
@@ -302,7 +292,9 @@ step_scheduling_boundary
 if [[ "$LINT_ONLY" -eq 1 ]]; then
   step_test_group_coverage
 else
-  run_go_test
+  for g in $(group_names); do
+    run_go_test "go-tests ($g)" "$(group_packages "$g")" 0
+  done
 fi
 
 if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
