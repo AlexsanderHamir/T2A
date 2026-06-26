@@ -22,6 +22,9 @@ const (
 	RetryGitResetFailed     = "retry_git_reset_failed"
 )
 
+// ErrRetryResetAnchorMissing is returned when a fresh retry cannot resolve a git reset anchor.
+var ErrRetryResetAnchorMissing = errors.New(RetryResetAnchorMissing)
+
 // ExecuteCommitIngestOutcome summarizes commit indexing after execute.
 type ExecuteCommitIngestOutcome struct {
 	FailReason  string

@@ -238,6 +238,8 @@ func storeErrorClientMessage(err error) string {
 
 func invalidInputDetail(err error) string {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.invalidInputDetail")
+	// Seam: store layers wrap domain.ErrInvalidInput with fmt.Errorf("%w: %v", ...).
+	// Until those errors expose a typed Detail() accessor, parse the stable prefix.
 	s := err.Error()
 	const mark = "tasks: invalid input: "
 	if i := strings.Index(s, mark); i >= 0 {
@@ -248,6 +250,8 @@ func invalidInputDetail(err error) string {
 
 func conflictDetail(err error) string {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.conflictDetail")
+	// Seam: store layers wrap domain.ErrConflict with fmt.Errorf("%w: %s", ...).
+	// Until those errors expose a typed Detail() accessor, parse the stable prefix.
 	s := err.Error()
 	const mark = "tasks: conflict: "
 	if i := strings.Index(s, mark); i >= 0 {
