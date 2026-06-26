@@ -51,35 +51,45 @@ export function RegisterRepositoryModal({
               branches from the repository card.
             </p>
           </header>
-          <div className="worktrees-form-modal__picker">
-            <p className="worktrees-form-modal__picker-label">Repository path</p>
-            <button
-              type="button"
-              className="secondary"
-              disabled={pending}
-              onClick={() => setPickerOpen(true)}
+          <div className="worktrees-form-modal__body">
+            <section
+              className="worktrees-form-modal__section"
+              aria-labelledby="register-repo-section-location"
             >
-              Choose folder
-            </button>
-            {path.trim() !== "" ? (
-              <p className="worktrees-form-modal__selected">
-                Selected: <code>{path}</code>
-              </p>
-            ) : (
-              <p className="worktrees-form-modal__picker-empty">No folder selected yet.</p>
-            )}
+              <h3 id="register-repo-section-location" className="worktrees-form-modal__section-title">
+                Location
+              </h3>
+              <div className="worktrees-form-modal__picker">
+                <p className="worktrees-form-modal__picker-label">Repository path</p>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={pending}
+                  onClick={() => setPickerOpen(true)}
+                >
+                  Choose folder
+                </button>
+                {path.trim() !== "" ? (
+                  <p className="worktrees-form-modal__selected">
+                    Selected: <code>{path}</code>
+                  </p>
+                ) : (
+                  <p className="worktrees-form-modal__picker-empty">No folder selected yet.</p>
+                )}
+              </div>
+            </section>
           </div>
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
           ) : null}
-          <div className="row stack-row-actions">
+          <footer className="worktrees-form-modal__footer">
             <button type="button" className="secondary" disabled={pending} onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="btn-primary" disabled={pending || !path.trim()}>
               {pending ? "Registering…" : "Register"}
             </button>
-          </div>
+          </footer>
         </form>
       </Modal>
       <WorkspaceDirPickerModal

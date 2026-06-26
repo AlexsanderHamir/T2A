@@ -43,6 +43,7 @@ export function AssociateBranchModal({
     <Modal
       onClose={onClose}
       labelledBy="associate-branch-title"
+      describedBy="associate-branch-lead"
       busy={pending}
       dismissibleWhileBusy={false}
     >
@@ -58,53 +59,75 @@ export function AssociateBranchModal({
           }
         }}
       >
-        <h2 id="associate-branch-title">Add branch</h2>
+        <header className="worktrees-form-modal__header">
+          <h2 id="associate-branch-title">Add branch</h2>
+          <p id="associate-branch-lead" className="worktrees-form-modal__lead">
+            Link another repository branch to this worktree for agent runs.
+          </p>
+        </header>
 
-        <label className="worktrees-form-modal__checkbox">
-          <input
-            type="checkbox"
-            checked={createNew}
-            disabled={pending}
-            onChange={(e) => setCreateNew(e.target.checked)}
-          />
-          Create a new branch
-        </label>
+        <div className="worktrees-form-modal__body">
+          <section
+            className="worktrees-form-modal__section"
+            aria-labelledby="associate-branch-section-branch"
+          >
+            <h3 id="associate-branch-section-branch" className="worktrees-form-modal__section-title">
+              Branch
+            </h3>
 
-        {createNew ? (
-          <label className="field">
-            <span className="settings-field-label">New branch name</span>
-            <input
-              type="text"
-              value={newBranchName}
-              required
-              disabled={pending}
-              onChange={(e) => setNewBranchName(e.target.value)}
-            />
-          </label>
-        ) : (
-          <CustomSelect
-            id="associate-branch-select"
-            label="Branch"
-            value={selectedBranchName}
-            options={branchOptions}
-            disabled={pending || liveBranchesQuery.isLoading || branchOptions.length === 0}
-            requirement="required"
-            onChange={setSelectedBranchName}
-          />
-        )}
+            <label className="worktrees-form-modal__checkbox">
+              <input
+                type="checkbox"
+                checked={createNew}
+                disabled={pending}
+                onChange={(e) => setCreateNew(e.target.checked)}
+              />
+              Create a new branch
+            </label>
+
+            {createNew ? (
+              <label className="field">
+                <span className="settings-field-label">New branch name</span>
+                <input
+                  type="text"
+                  value={newBranchName}
+                  required
+                  disabled={pending}
+                  placeholder="e.g. feature-auth"
+                  onChange={(e) => setNewBranchName(e.target.value)}
+                />
+              </label>
+            ) : (
+              <div className="worktrees-form-modal__field-group">
+                <CustomSelect
+                  id="associate-branch-select"
+                  label="Existing repository branch"
+                  value={selectedBranchName}
+                  options={branchOptions}
+                  disabled={pending || liveBranchesQuery.isLoading || branchOptions.length === 0}
+                  requirement="required"
+                  onChange={setSelectedBranchName}
+                />
+                <p className="worktrees-form-modal__field-hint">
+                  Associate another branch from this repository with the worktree.
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
 
         {errorMessage ? (
           <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
         ) : null}
 
-        <div className="row stack-row-actions">
+        <footer className="worktrees-form-modal__footer">
           <button type="button" className="secondary" disabled={pending} onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
             {pending ? "Adding…" : "Add branch"}
           </button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );

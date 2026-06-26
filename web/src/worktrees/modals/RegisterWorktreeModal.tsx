@@ -68,6 +68,7 @@ export function RegisterWorktreeModal({
     <Modal
       onClose={onClose}
       labelledBy="register-worktree-title"
+      describedBy="register-worktree-lead"
       busy={pending}
       dismissibleWhileBusy={false}
     >
@@ -85,60 +86,90 @@ export function RegisterWorktreeModal({
       >
         <header className="worktrees-form-modal__header">
           <h2 id="register-worktree-title">Register worktree</h2>
-          <p className="worktrees-form-modal__lead">
+          <p id="register-worktree-lead" className="worktrees-form-modal__lead">
             Choose a linked worktree directory and the branch to register with it.
           </p>
         </header>
 
-        <CustomSelect
-          id="register-worktree-select"
-          label="Worktree path"
-          value={selectedPath}
-          options={worktreeOptions}
-          disabled={pending || liveWorktreesQuery.isLoading || worktreeOptions.length === 0}
-          requirement="required"
-          onChange={setSelectedPath}
-        />
+        <div className="worktrees-form-modal__body">
+          <section
+            className="worktrees-form-modal__section"
+            aria-labelledby="register-worktree-section-location"
+          >
+            <h3 id="register-worktree-section-location" className="worktrees-form-modal__section-title">
+              Location
+            </h3>
+            <CustomSelect
+              id="register-worktree-select"
+              label="Worktree path"
+              value={selectedPath}
+              options={worktreeOptions}
+              disabled={pending || liveWorktreesQuery.isLoading || worktreeOptions.length === 0}
+              requirement="required"
+              onChange={setSelectedPath}
+            />
+            {worktreeOptions.length === 0 && !liveWorktreesQuery.isLoading ? (
+              <p className="worktrees-form-modal__callout">
+                No unregistered linked worktrees found. Use Create worktree or run git worktree add
+                outside Hamix first.
+              </p>
+            ) : null}
+          </section>
 
-        {worktreeOptions.length === 0 && !liveWorktreesQuery.isLoading ? (
-          <p className="worktrees-form-modal__picker-empty">
-            No unregistered linked worktrees found. Use Create worktree or run git worktree add
-            outside Hamix first.
-          </p>
-        ) : null}
+          <section
+            className="worktrees-form-modal__section"
+            aria-labelledby="register-worktree-section-display"
+          >
+            <h3 id="register-worktree-section-display" className="worktrees-form-modal__section-title">
+              Display
+            </h3>
+            <label className="field">
+              <span className="settings-field-label">Worktree display name</span>
+              <input
+                type="text"
+                value={displayName}
+                disabled={pending}
+                placeholder="e.g. feature-auth"
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+              <span className="worktrees-form-modal__field-hint">
+                Optional label shown in Hamix instead of the directory path.
+              </span>
+            </label>
+          </section>
 
-        <label className="field">
-          <span className="settings-field-label">Display name</span>
-          <input
-            type="text"
-            value={displayName}
-            disabled={pending}
-            placeholder="Optional"
-            onChange={(e) => setDisplayName(e.target.value)}
-          />
-        </label>
-
-        <WorktreeBranchBindFields
-          repositoryId={repositoryId}
-          enabled={open && repositoryId !== ""}
-          pending={pending}
-          value={branchBind}
-          onChange={setBranchBind}
-          branchSelectId="register-worktree-branch-select"
-        />
+          <section
+            className="worktrees-form-modal__section"
+            aria-labelledby="register-worktree-section-branch"
+          >
+            <h3 id="register-worktree-section-branch" className="worktrees-form-modal__section-title">
+              Branch
+            </h3>
+            <WorktreeBranchBindFields
+              repositoryId={repositoryId}
+              enabled={open && repositoryId !== ""}
+              pending={pending}
+              value={branchBind}
+              onChange={setBranchBind}
+              branchSelectId="register-worktree-branch-select"
+              existingBranchLabel="Existing repository branch"
+              existingBranchHint="Pick a branch already in this repository to associate with the worktree. Defaults to the worktree's current checkout when available."
+            />
+          </section>
+        </div>
 
         {errorMessage ? (
           <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
         ) : null}
 
-        <div className="row stack-row-actions">
+        <footer className="worktrees-form-modal__footer">
           <button type="button" className="secondary" disabled={pending} onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
             {pending ? "Registering…" : "Register worktree"}
           </button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );

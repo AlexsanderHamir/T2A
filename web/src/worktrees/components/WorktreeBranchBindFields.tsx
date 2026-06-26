@@ -15,6 +15,10 @@ type Props = {
   onChange: (next: BranchBindValue) => void;
   branchSelectId: string;
   newBranchInputId?: string;
+  /** Label for the existing-branch picker (when not creating new). */
+  existingBranchLabel?: string;
+  /** Helper copy below the existing-branch picker. */
+  existingBranchHint?: string;
 };
 
 export function WorktreeBranchBindFields({
@@ -25,13 +29,15 @@ export function WorktreeBranchBindFields({
   onChange,
   branchSelectId,
   newBranchInputId = "worktree-branch-new-name",
+  existingBranchLabel = "Existing repository branch",
+  existingBranchHint = "Branches already registered in git for this repository.",
 }: Props) {
   const liveBranchesQuery = useGlobalLiveBranches(repositoryId, { enabled });
   const liveBranches = liveBranchesQuery.data ?? [];
   const branchOptions = liveBranches.map((b) => ({ value: b.name, label: b.name }));
 
   return (
-    <>
+    <div className="worktrees-form-modal__branch-fields">
       <label className="worktrees-form-modal__checkbox">
         <input
           type="checkbox"
@@ -51,21 +57,27 @@ export function WorktreeBranchBindFields({
             value={value.newBranchName}
             required
             disabled={pending}
+            placeholder="e.g. feature-auth"
             onChange={(e) => onChange({ ...value, newBranchName: e.target.value })}
           />
         </label>
       ) : (
-        <CustomSelect
-          id={branchSelectId}
-          label="Branch"
-          value={value.selectedBranchName}
-          options={branchOptions}
-          disabled={pending || liveBranchesQuery.isLoading || branchOptions.length === 0}
-          requirement="required"
-          onChange={(next) => onChange({ ...value, selectedBranchName: next })}
-        />
+        <div className="worktrees-form-modal__field-group">
+          <CustomSelect
+            id={branchSelectId}
+            label={existingBranchLabel}
+            value={value.selectedBranchName}
+            options={branchOptions}
+            disabled={pending || liveBranchesQuery.isLoading || branchOptions.length === 0}
+            requirement="required"
+            onChange={(next) => onChange({ ...value, selectedBranchName: next })}
+          />
+          {existingBranchHint ? (
+            <p className="worktrees-form-modal__field-hint">{existingBranchHint}</p>
+          ) : null}
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
