@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
@@ -30,6 +31,45 @@ func TestReconcileGitRepository_needsBootstrapWhenPathMissing(t *testing.T) {
 	}
 	if out.Status != reconcileStatusNeedsBootstrapPath {
 		t.Fatalf("status=%q want %q", out.Status, reconcileStatusNeedsBootstrapPath)
+	}
+}
+
+func TestReconcileGitRepository_mainRenamed_autoDiscover(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed := filepath.Join(filepath.Dir(main), "renamed-auto")
+	if err := os.Rename(main, renamed); err != nil {
+		t.Fatalf("rename main: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Rename(renamed, main) })
+
+	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{
+		AllowDiscover: true,
+		RepairGit:     true,
+		AllowRemove:   true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Status != reconcileStatusOK {
+		t.Fatalf("status=%q want ok", out.Status)
+	}
+	if out.Report.ResolutionSource != gitwork.ResolveSourceDiscovered {
+		t.Fatalf("resolution_source=%q want %q", out.Report.ResolutionSource, gitwork.ResolveSourceDiscovered)
+	}
+	if !out.Report.RepoPathUpdated {
+		t.Fatal("expected repo path update")
+	}
+	gotRepo, err := s.GetGitRepository(ctx, domain.DefaultProjectID, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worktreePathKey(gotRepo.Path) != worktreePathKey(renamed) {
+		t.Fatalf("repo path=%q want %q", gotRepo.Path, renamed)
 	}
 }
 
