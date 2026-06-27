@@ -10,11 +10,11 @@ import {
 import { worktreeGitCopy } from "../worktreeGitCopy";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import {
+  WorktreesFolderIcon,
   WorktreesMoreIcon,
   WorktreesPlusIcon,
 } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
-import { WorktreesPathChip } from "./WorktreesPathChip";
 import { WorktreeList } from "./WorktreeList";
 
 type Props = {
@@ -53,41 +53,44 @@ export function RepositoryCard({
   return (
     <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
       <header className="worktrees-repo-card__header">
-        <div className="worktrees-repo-card__heading">
+        <div className="worktrees-repo-card__title-line">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
             {repoName}
           </h2>
-          <div className="worktrees-repo-card__meta-row">
-            <WorktreesPathChip path={repository.path} />
+          <div className="worktrees-repo-card__header-actions">
+            <WorktreesMenu
+              triggerLabel={worktreeGitCopy.repositoryActions}
+              className="secondary worktrees-icon-menu-btn"
+              icon={<WorktreesMoreIcon />}
+              iconOnly
+              items={[
+                {
+                  id: "reconcile",
+                  label: reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile,
+                  onSelect: onReconcile,
+                  disabled: reconcilePending,
+                },
+                {
+                  id: "delete-repository",
+                  label: worktreeGitCopy.deleteRepository,
+                  onSelect: onDeleteRepository,
+                  danger: true,
+                },
+              ]}
+            />
           </div>
+        </div>
+        <div className="worktrees-repo-card__heading-meta">
+          <p className="worktrees-repo-card__path" title={repository.path}>
+            <WorktreesFolderIcon className="worktrees-repo-card__path-icon" aria-hidden />
+            <span className="worktrees-repo-card__path-text">{repository.path}</span>
+          </p>
           {showHostPath ? (
             <p className="worktrees-repo-card__host-path">
               <span className="worktrees-repo-card__meta-label">{worktreeGitCopy.hostPathLabel}</span>
               <code>{repository.host_path}</code>
             </p>
           ) : null}
-        </div>
-        <div className="worktrees-repo-card__header-actions">
-          <WorktreesMenu
-            triggerLabel={worktreeGitCopy.repositoryActions}
-            className="secondary worktrees-icon-menu-btn"
-            icon={<WorktreesMoreIcon />}
-            iconOnly
-            items={[
-              {
-                id: "reconcile",
-                label: reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile,
-                onSelect: onReconcile,
-                disabled: reconcilePending,
-              },
-              {
-                id: "delete-repository",
-                label: worktreeGitCopy.deleteRepository,
-                onSelect: onDeleteRepository,
-                danger: true,
-              },
-            ]}
-          />
         </div>
       </header>
 
