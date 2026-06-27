@@ -29,6 +29,7 @@ type ReconcileGitInput struct {
 	RepairGit     bool
 	DryRun        bool
 	AllowRemove   bool
+	AllowDiscover bool
 }
 
 // ReconcileGitOutput is the structured reconcile result for API and operators.
@@ -44,6 +45,8 @@ type ReconcileReport struct {
 	WorktreesAdded       int
 	WorktreesRemoved     int
 	BranchesHeadUpdated  int
+	ResolutionSource     string
+	DiscoveredPath       string
 	WorktreesSkipped     []ReconcileSkippedWorktree
 	NeedsBranchBind      []ReconcileNeedsBranchBind
 }
@@ -77,7 +80,7 @@ func (s *Store) ReconcileGitRepository(
 		gitSvc = gitwork.New()
 	}
 
-	opened, _, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), gitSvc)
+	opened, resolveMeta, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), input.AllowDiscover, gitSvc)
 	if err != nil {
 		return ReconcileGitOutput{}, err
 	}
@@ -123,6 +126,14 @@ func (s *Store) ReconcileGitRepository(
 	}
 
 	report := ReconcileReport{}
+	if resolveMeta.Source != "" && resolveMeta.Source != gitwork.ResolveSourceCache {
+		report.ResolutionSource = resolveMeta.Source
+		if resolveMeta.DiscoveredFrom != "" {
+			report.DiscoveredPath = resolveMeta.DiscoveredFrom
+		} else if resolveMeta.OpenedPath != "" {
+			report.DiscoveredPath = resolveMeta.OpenedPath
+		}
+	}
 	now := time.Now().UTC()
 
 	apply := func(fn func(tx *gorm.DB) error) error {
@@ -344,6 +355,7 @@ func (s *Store) RelocateGitRepository(
 		BootstrapPath: path,
 		RepairGit:     true,
 		AllowRemove:   true,
+		AllowDiscover: true,
 	}, gitSvc)
 }
 
@@ -429,9 +441,10 @@ func (s *Store) openRepoForReconcile(
 	ctx context.Context,
 	repo domain.GitRepository,
 	bootstrap string,
+	allowDiscover bool,
 	gitSvc gitwork.Service,
 ) (*gitwork.Repository, gitwork.ResolveResult, error) {
-	return s.openRegisteredRepo(ctx, repo, bootstrap, false, gitSvc)
+	return s.openRegisteredRepo(ctx, repo, bootstrap, allowDiscover, gitSvc)
 }
 
 func (s *Store) openRegisteredRepo(
