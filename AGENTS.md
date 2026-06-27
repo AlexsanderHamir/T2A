@@ -126,7 +126,8 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 
 ## Tooling and rules
 
-- **Cursor rules:** `CODE_STANDARDS.mdc`, `codebase_comments.mdc`, `backend-engineering-bar.mdc`, `frontend_bar.mdc`
+- **Plan mode:** `.cursor/rules/plan-mode.mdc` — agent asks **single plan vs parent + child plans** before `CreatePlan`; see umbrella + child layout under `.cursor/plans/`
+- **Cursor rules:** `CODE_STANDARDS.mdc`, `codebase_comments.mdc`, `backend-engineering-bar.mdc`, `frontend_bar.mdc`, `plan-mode.mdc` (plan mode only)
 - **CI:** `go-lint` runs `./scripts/check-go.sh --lint-only --verbose`; `go-tests` matrix runs `./scripts/check-go.sh --tests-only --group=<name> --verbose`; web job runs `./scripts/check-web.sh --install --verbose` — see `.github/workflows/ci.yml`
 - **Local bar:** see [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr)
 - **TDD default:** failing test first, then implement until green
