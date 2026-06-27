@@ -3,6 +3,7 @@ import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
+import { worktreeGitCopy } from "../worktreeGitCopy";
 import {
   WorktreeBranchBindFields,
   branchBindPayload,
@@ -69,36 +70,33 @@ export function CreateWorktreeModal({
           }}
         >
           <header className="worktrees-form-modal__header">
-            <h2 id="create-worktree-title">Create worktree</h2>
-            <p className="worktrees-form-modal__lead">
-              Add a new linked worktree directory and choose the checkout branch Hamix registers
-              with it.
-            </p>
+            <h2 id="create-worktree-title">{worktreeGitCopy.createModalTitle}</h2>
+            <p className="worktrees-form-modal__lead">{worktreeGitCopy.createModalLead}</p>
           </header>
           <div className="worktrees-form-modal__picker">
-            <p className="worktrees-form-modal__picker-label">Worktree path</p>
+            <p className="worktrees-form-modal__picker-label">{worktreeGitCopy.createModalPathLabel}</p>
             <button
               type="button"
               className="secondary"
               disabled={pending}
               onClick={() => setPickerOpen(true)}
             >
-              Choose worktree path
+              {worktreeGitCopy.createModalChoosePath}
             </button>
             {path.trim() !== "" ? (
               <p className="worktrees-form-modal__selected">
-                Path: <code>{path}</code>
+                {worktreeGitCopy.createModalPathSelectedPrefix} <code>{path}</code>
               </p>
             ) : null}
           </div>
           <label className="field">
-            <span className="settings-field-label">Display name</span>
+            <span className="settings-field-label">{worktreeGitCopy.createModalDisplayNameLabel}</span>
             <input
               type="text"
               value={name}
               disabled={pending}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Optional"
+              placeholder={worktreeGitCopy.createModalDisplayNamePlaceholder}
             />
           </label>
           <WorktreeBranchBindFields
@@ -115,14 +113,14 @@ export function CreateWorktreeModal({
           ) : null}
           <div className="row stack-row-actions">
             <button type="button" className="secondary" disabled={pending} onClick={onClose}>
-              Cancel
+              {worktreeGitCopy.cancel}
             </button>
             <button
               type="submit"
               className="btn-primary"
               disabled={pending || !canSubmit}
             >
-              {pending ? "Creating…" : "Create worktree"}
+              {pending ? worktreeGitCopy.createModalSubmitting : worktreeGitCopy.createModalSubmit}
             </button>
           </div>
         </form>
