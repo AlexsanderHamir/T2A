@@ -47,5 +47,13 @@ function summarizeReconcileReport(report: GitReconcileReport): string[] {
     const n = report.branches_head_updated;
     parts.push(`${n} branch head${n === 1 ? "" : "s"} refreshed`);
   }
+  if (report.worktrees_skipped.length > 0) {
+    const n = report.worktrees_skipped.length;
+    parts.push(`${n} worktree${n === 1 ? "" : "s"} need attention`);
+  }
+  if (report.needs_branch_bind.length > 0) {
+    const n = report.needs_branch_bind.length;
+    parts.push(`${n} path${n === 1 ? "" : "s"} need branch binding`);
+  }
   return parts;
 }

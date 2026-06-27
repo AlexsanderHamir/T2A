@@ -1,13 +1,15 @@
-import type { GitRepository } from "@/types/git";
+import type { GitRepository, GitReconcileResult } from "@/types/git";
 import { EmptyState } from "@/shared/EmptyState";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
 import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
+import { repositoryDisplayName } from "../repositoryDisplay";
 import {
-  repositoryDisplayName,
-  repositoryPathsEquivalent,
-} from "../repositoryDisplay";
+  reconcileNeedsBindSummary,
+  reconcileReportHasFollowUp,
+  reconcileSkippedSummary,
+} from "../reconcileReportDisplay";
 import { worktreeGitCopy } from "../worktreeGitCopy";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import {
@@ -28,6 +30,7 @@ type Props = {
   onReconcile: () => void;
   reconcilePending?: boolean;
   reconcileError?: unknown;
+  reconcileNotice?: GitReconcileResult;
 };
 
 export function RepositoryCard({
@@ -39,6 +42,7 @@ export function RepositoryCard({
   onReconcile,
   reconcilePending = false,
   reconcileError,
+  reconcileNotice,
 }: Props) {
   const worktreesQuery = useGlobalWorktrees(repository.id);
   const liveWorktreesQuery = useGlobalLiveWorktrees(repository.id);
@@ -53,7 +57,10 @@ export function RepositoryCard({
   const repoName = repositoryDisplayName(repository.path);
   const showHostPath =
     repository.host_path.trim() !== "" &&
-    !repositoryPathsEquivalent(repository.path, repository.host_path);
+    repository.host_path.trim() !== repository.path.trim();
+  const followUpReport = reconcileNotice?.report;
+  const showReconcileFollowUp =
+    followUpReport != null && reconcileReportHasFollowUp(followUpReport);
 
   return (
     <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
@@ -115,6 +122,35 @@ export function RepositoryCard({
         />
       ) : null}
 
+      {showReconcileFollowUp && followUpReport ? (
+        <div className="worktrees-repo-card__reconcile-notice" role="status">
+          {followUpReport.worktrees_skipped.length > 0 ? (
+            <div>
+              <p className="worktrees-repo-card__reconcile-notice-title">
+                {worktreeGitCopy.reconcileNoticeSkippedTitle}
+              </p>
+              <ul className="worktrees-repo-card__reconcile-notice-list">
+                {reconcileSkippedSummary(followUpReport).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {followUpReport.needs_branch_bind.length > 0 ? (
+            <div>
+              <p className="worktrees-repo-card__reconcile-notice-title">
+                {worktreeGitCopy.reconcileNoticeBindTitle}
+              </p>
+              <ul className="worktrees-repo-card__reconcile-notice-list">
+                {reconcileNeedsBindSummary(followUpReport).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <section
         className="worktrees-repo-card__section"
         aria-labelledby={`repo-${repository.id}-worktrees`}
@@ -165,6 +201,7 @@ export function RepositoryCard({
           <WorktreeList
             worktrees={worktrees}
             branches={branches}
+            liveWorktrees={liveWorktrees}
             onDeleteWorktree={onDeleteWorktree}
           />
         )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { GitRepository } from "@/types";
+import type { GitRepository, GitReconcileResult } from "@/types";
 import { Button } from "@/components/ui";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useOptionalToast } from "@/shared/toast";
@@ -42,6 +42,7 @@ export function WorktreesPage() {
   const [deleteError, setDeleteError] = useState<unknown>(null);
   const [relocateRepository, setRelocateRepository] = useState<GitRepository | null>(null);
   const [reconcileErrors, setReconcileErrors] = useState<Record<string, unknown>>({});
+  const [reconcileNotices, setReconcileNotices] = useState<Record<string, GitReconcileResult>>({});
   const toast = useOptionalToast();
 
   const repositories = repositoriesQuery.data ?? [];
@@ -104,6 +105,11 @@ export function WorktreesPage() {
       delete next[repository.id];
       return next;
     });
+    setReconcileNotices((prev) => {
+      const next = { ...prev };
+      delete next[repository.id];
+      return next;
+    });
     try {
       const result = await mutations.reconcile.mutateAsync({
         repositoryId: repository.id,
@@ -113,6 +119,7 @@ export function WorktreesPage() {
         setRelocateRepository(repository);
         return;
       }
+      setReconcileNotices((prev) => ({ ...prev, [repository.id]: result }));
       toast?.success(formatReconcileSuccess(result));
     } catch (err) {
       setReconcileErrors((prev) => ({ ...prev, [repository.id]: err }));
@@ -200,6 +207,7 @@ export function WorktreesPage() {
                   repository={repository}
                   reconcilePending={reconcilingRepositoryId === repository.id}
                   reconcileError={reconcileErrors[repository.id]}
+                  reconcileNotice={reconcileNotices[repository.id]}
                   onReconcile={() => void handleReconcile(repository)}
                   onRegisterWorktree={() =>
                     setActiveRepoModal({ kind: "register-worktree", repository })
@@ -302,6 +310,7 @@ export function WorktreesPage() {
             .mutateAsync({ repositoryId: repo.id, input })
             .then((result) => {
               closeRelocateModal();
+              setReconcileNotices((prev) => ({ ...prev, [repo.id]: result }));
               toast?.success(formatReconcileSuccess(result));
             });
         }}
