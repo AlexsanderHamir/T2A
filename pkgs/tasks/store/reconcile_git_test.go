@@ -158,6 +158,66 @@ func TestReconcileGitRepository_bootstrapWrongRepo(t *testing.T) {
 	}
 }
 
+func TestStore_CreateGitRepository_setsGitCommonDirAndSingleBranch(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	runGitStore(t, main, "branch", "extra")
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGitRepository: %v", err)
+	}
+	if repo.GitCommonDir == "" {
+		t.Fatal("GitCommonDir empty")
+	}
+	branches, err := s.ListGitBranches(ctx, domain.DefaultProjectID, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(branches) != 1 {
+		t.Fatalf("len(branches)=%d want 1 bound branch only", len(branches))
+	}
+	if branches[0].Name != "main" {
+		t.Fatalf("branch name=%q want main", branches[0].Name)
+	}
+}
+
+func TestReconcileGitRepository_pathMatch_reportsCheckoutMismatch(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-checkout")
+	wt, err := s.CreateGitWorktree(ctx, domain.DefaultProjectID, repo.ID, CreateGitWorktreeInput{
+		Path:         wtPath,
+		Branch:       "feature-bound",
+		CreateBranch: true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGitWorktree: %v", err)
+	}
+	runGitStore(t, wtPath, "checkout", "-b", "other-branch")
+
+	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Status != reconcileStatusPartial {
+		t.Fatalf("status=%q want partial", out.Status)
+	}
+	found := false
+	for _, skip := range out.Report.WorktreesSkipped {
+		if skip.WorktreeID == wt.ID && skip.Reason == "branch_checkout_mismatch" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected branch_checkout_mismatch skip report=%+v", out.Report)
+	}
+}
+
 func TestReconcileGitRepository_dryRun_noWrites(t *testing.T) {
 	s, ctx, gitSvc := gitTestStore(t)
 	main := initGitRepo(t)
