@@ -1,6 +1,10 @@
 import type { GitRepository } from "@/types/git";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
+import {
+  repositoryDisplayName,
+  repositoryPathsEquivalent,
+} from "../repositoryDisplay";
 import { WorktreeRow } from "./WorktreeRow";
 
 type Props = {
@@ -27,20 +31,25 @@ export function RepositoryCard({
   const worktrees = worktreesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
+  const repoName = repositoryDisplayName(repository.path);
+  const showHostPath =
+    repository.host_path.trim() !== "" &&
+    !repositoryPathsEquivalent(repository.path, repository.host_path);
 
   return (
     <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
       <header className="worktrees-repo-card__header">
         <div className="worktrees-repo-card__heading">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
-            Repository
+            {repoName}
           </h2>
           <p className="worktrees-repo-card__path" title={repository.path}>
             <code>{repository.path}</code>
           </p>
-          {repository.host_path.trim() !== "" ? (
+          {showHostPath ? (
             <p className="worktrees-repo-card__host-path">
-              Host path: <code>{repository.host_path}</code>
+              <span className="worktrees-repo-card__meta-label">Host path</span>
+              <code>{repository.host_path}</code>
             </p>
           ) : null}
         </div>
@@ -63,7 +72,7 @@ export function RepositoryCard({
         className="worktrees-repo-card__section"
         aria-labelledby={`repo-${repository.id}-worktrees`}
       >
-        <div className="worktrees-repo-card__section-header">
+        <header className="worktrees-repo-card__section-head">
           <h3
             id={`repo-${repository.id}-worktrees`}
             className="worktrees-repo-card__section-title"
@@ -78,7 +87,7 @@ export function RepositoryCard({
               Create worktree
             </button>
           </div>
-        </div>
+        </header>
         {loading ? (
           <p className="worktrees-repo-card__loading" aria-busy="true">
             Loading worktrees…
@@ -88,7 +97,7 @@ export function RepositoryCard({
             No worktrees yet. Register an existing linked directory or create a new one.
           </p>
         ) : (
-          <div className="worktree-list">
+          <div className="worktree-list table-wrap">
             <div className="worktree-list-head" role="row">
               <span className="worktree-list-head__label" role="columnheader">
                 Name

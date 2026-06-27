@@ -20,6 +20,7 @@ export function WorktreeRow({
   const branchById = new Map(branches.map((b) => [b.id, b]));
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
   const deleteBlocked = deleteDisabled || worktree.is_main;
+  const kindLabel = worktree.is_main ? "main worktree" : null;
 
   return (
     <li
@@ -28,21 +29,24 @@ export function WorktreeRow({
       aria-label={`Worktree: ${displayName}`}
     >
       <div className="draft-row__meta worktree-row__meta">
-        <div className="worktree-row__title-line">
-          <span className="draft-row__name" title={displayName}>
-            {displayName}
-          </span>
-          {worktree.is_main ? (
-            <span
-              className="worktree-row__kind"
-              title="The worktree created by git clone or git init. git worktree remove cannot delete it while linked worktrees exist."
-            >
-              main worktree
-            </span>
+        <span className="draft-row__name" title={displayName}>
+          {displayName}
+        </span>
+        <span className="draft-row__time worktree-row__sub" title={hostHint}>
+          <code className="worktree-row__path">{hostHint}</code>
+          {kindLabel ? (
+            <>
+              <span className="worktree-row__sub-sep" aria-hidden="true">
+                ·
+              </span>
+              <span
+                className="worktree-row__kind"
+                title="The worktree created by git clone or git init. git worktree remove cannot delete it while linked worktrees exist."
+              >
+                {kindLabel}
+              </span>
+            </>
           ) : null}
-        </div>
-        <span className="draft-row__time worktree-row__path" title={hostHint}>
-          <code>{hostHint}</code>
         </span>
       </div>
 
@@ -52,11 +56,11 @@ export function WorktreeRow({
         ) : worktree.branch_id ? (
           <span className="worktree-row__branch-empty">{worktree.branch_id}</span>
         ) : (
-          <span className="worktree-row__branch-empty">No branch</span>
+          <span className="worktree-row__branch-empty">Detached HEAD</span>
         )}
       </div>
 
-      <div className="draft-row__actions">
+      <div className="draft-row__actions worktree-row__actions">
         <div className="task-list-row-actions">
           <button
             type="button"
