@@ -31,48 +31,7 @@ func (s *Store) ListAllGitRepositories(ctx context.Context) ([]domain.GitReposit
 // CreateGlobalGitRepository registers a main checkout without project scoping.
 func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGlobalGitRepository")
-	path := strings.TrimSpace(input.Path)
-	if path == "" {
-		return domain.GitRepository{}, fmt.Errorf("%w: path required", domain.ErrInvalidInput)
-	}
-	if gitSvc == nil {
-		gitSvc = gitwork.New()
-	}
-	mainRoot, commonDir, err := gitSvc.ResolveRegistration(ctx, path)
-	if err != nil {
-		if errors.Is(err, gitwork.ErrNotARepository) {
-			return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeNotARepository, "path is not a git repository")
-		}
-		return domain.GitRepository{}, fmt.Errorf("resolve repository: %w", err)
-	}
-	var existing int64
-	if err := s.db.WithContext(ctx).Model(&model.GitRepository{}).
-		Where("git_common_dir = ?", commonDir).
-		Count(&existing).Error; err != nil {
-		return domain.GitRepository{}, err
-	}
-	if existing > 0 {
-		return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered")
-	}
-	now := time.Now().UTC()
-	repo := domain.GitRepository{
-		ID:           uuid.NewString(),
-		Path:         mainRoot,
-		GitCommonDir: commonDir,
-		HostPath:     strings.TrimSpace(input.HostPath),
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		repoRow := model.FromDomainGitRepository(repo)
-		if err := tx.Create(&repoRow).Error; err != nil {
-			if kernel.IsDuplicateKey(err) {
-				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered")
-			}
-			return err
-		}
-		return nil
-	})
+	return s.registerGitRepository(ctx, input, gitSvc)
 }
 
 // DeleteGlobalGitRepository removes a repository by id when no running tasks reference it.
