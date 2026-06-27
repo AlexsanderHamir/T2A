@@ -21,6 +21,8 @@ type Props = {
   requireGitRepository?: boolean;
   /** When set, path must pass async validation before confirm (e.g. repo-scoped worktree probe). */
   validatePath?: (path: string) => Promise<{ ok: boolean; message?: string }>;
+  /** Skip the roots screen and list this directory when the modal opens. */
+  initialBrowsePath?: string;
 };
 
 type LoadState =
@@ -108,6 +110,7 @@ export function WorkspaceDirPickerModal({
   lead,
   requireGitRepository = false,
   validatePath,
+  initialBrowsePath,
 }: Props) {
   const resolvedLead =
     lead ??
@@ -164,6 +167,10 @@ export function WorkspaceDirPickerModal({
           roots: roots.roots,
           environment: roots.environment,
         });
+        const startPath = initialBrowsePath?.trim() ?? "";
+        if (startPath !== "") {
+          void loadListing(startPath);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -175,7 +182,7 @@ export function WorkspaceDirPickerModal({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, initialBrowsePath, loadListing]);
 
   const crumbs = useMemo(() => {
     if (loadState.kind !== "ready") return [];

@@ -435,4 +435,66 @@ describe("WorkspaceDirPickerModal", () => {
     expect(onSelect).toHaveBeenCalledWith("/roots/my-app");
     fetchMock.mockRestore();
   });
+
+  it("skips roots and opens at initialBrowsePath when set", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [
+            {
+              id: "repo-main",
+              path: "/stale/repo",
+              label: "my-repo",
+              category: "repository",
+              available: false,
+              unavailable_reason: "directory is not accessible",
+            },
+          ],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/parent": {
+            path: "/parent",
+            parent_path: "",
+            entries: [
+              {
+                name: "Hamix",
+                path: "/parent/Hamix",
+                has_children: false,
+                is_git_repo: true,
+              },
+            ],
+          },
+          "/parent/Hamix": {
+            path: "/parent/Hamix",
+            parent_path: "/parent",
+            is_git_repo: true,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        currentPath="/stale/repo"
+        initialBrowsePath="/parent"
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("/parent").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByRole("button", { name: /my-repo/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Hamix/ })).toBeInTheDocument();
+
+    fetchMock.mockRestore();
+  });
 });
