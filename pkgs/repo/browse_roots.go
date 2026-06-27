@@ -91,6 +91,16 @@ func ResolveWorkspacePickerRoots(startDir string, registered []domain.GitReposit
 		for _, gr := range registered {
 			roots = append(roots, BrowseRootFromPath(gr.ID, gr.Path, PlaceCategoryRegistered))
 		}
+		if allBrowseRootsUnavailable(roots) {
+			reg := defaultBootstrapPlaceRegistry()
+			places, err := reg.Places(env, startDir)
+			if err != nil {
+				return nil, env, err
+			}
+			for _, p := range places {
+				roots = append(roots, placeToBrowseRoot(p))
+			}
+		}
 		return roots, env, nil
 	}
 	reg := defaultBootstrapPlaceRegistry()
@@ -216,6 +226,19 @@ func markBrowseRootAvailable(root *BrowseRoot) {
 		return
 	}
 	root.Available = true
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper; operation trace is emitted by ResolveWorkspacePickerRoots."
+func allBrowseRootsUnavailable(roots []BrowseRoot) bool {
+	if len(roots) == 0 {
+		return false
+	}
+	for _, root := range roots {
+		if root.Available {
+			return false
+		}
+	}
+	return true
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

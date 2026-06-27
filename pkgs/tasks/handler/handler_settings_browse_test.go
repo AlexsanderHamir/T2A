@@ -86,6 +86,60 @@ func TestHTTP_workspaceRoots_returnsRegisteredRepos(t *testing.T) {
 	}
 }
 
+// TestHTTP_workspaceRoots_bootstrapFallbackWhenRegisteredPathMissing verifies OS
+// bootstrap entry points are merged when all registered repo paths are unavailable.
+func TestHTTP_workspaceRoots_bootstrapFallbackWhenRegisteredPathMissing(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	now := time.Now().UTC()
+	row := domain.GitRepository{
+		ID:            "stale-repo-id",
+		Path:          filepath.Join(t.TempDir(), "missing-repo"),
+		DefaultBranch: "main",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatalf("seed repo: %v", err)
+	}
+
+	st := store.NewStore(db)
+	h := NewHandler(st, NewSSEHub(), nil)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/settings/workspace-roots")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body=%s", res.StatusCode, b)
+	}
+	var body workspaceRootsResponse
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Roots) < 2 {
+		t.Fatalf("expected registered + bootstrap roots, got %+v", body.Roots)
+	}
+	var hasStaleRegistered, hasHome bool
+	for _, root := range body.Roots {
+		if root.Category == repo.PlaceCategoryRegistered && !root.Available {
+			hasStaleRegistered = true
+		}
+		if root.Category == repo.PlaceCategoryHome && root.Available {
+			hasHome = true
+		}
+	}
+	if !hasStaleRegistered {
+		t.Fatalf("expected unavailable registered root, got %+v", body.Roots)
+	}
+	if !hasHome {
+		t.Fatalf("expected available home bootstrap root, got %+v", body.Roots)
+	}
+}
+
 // TestHTTP_workspaceRoots_bootstrapWhenNoRepos verifies OS bootstrap entry points
 // when no repositories are registered and HAMIX_BROWSE_ROOTS is unset.
 func TestHTTP_workspaceRoots_bootstrapWhenNoRepos(t *testing.T) {

@@ -3,6 +3,7 @@ import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
+import { parentBrowsePath } from "../parentBrowsePath";
 import { worktreeGitCopy } from "../worktreeGitCopy";
 
 type Props = {
@@ -28,6 +29,7 @@ export function RelocateRepositoryModal({
   if (!open) return null;
 
   const errorMessage = error != null ? gitReconcileErrorMessage(error) : null;
+  const browseParent = parentBrowsePath(storedPath);
 
   return (
     <>
@@ -102,6 +104,7 @@ export function RelocateRepositoryModal({
         nested
         requireGitRepository
         currentPath={path}
+        initialBrowsePath={browseParent !== "" ? browseParent : undefined}
         onClose={() => setPickerOpen(false)}
         onSelect={(next) => {
           setPath(next);
