@@ -13,6 +13,7 @@ type gitRepositoriesListResponse struct {
 type gitRepositoryJSON struct {
 	ID            string `json:"id"`
 	Path          string `json:"path"`
+	GitCommonDir  string `json:"git_common_dir"`
 	HostPath      string `json:"host_path"`
 	DefaultBranch string `json:"default_branch"`
 	CreatedAt     string `json:"created_at"`
@@ -96,4 +97,12 @@ type gitLiveWorktreeJSON struct {
 
 type gitLiveWorktreesListResponse struct {
 	Worktrees []gitLiveWorktreeJSON `json:"worktrees"`
+}
+
+type gitWorktreeProbeResponse struct {
+	Path       string `json:"path"`
+	Linked     bool   `json:"linked"`
+	IsMain     bool   `json:"is_main"`
+	Branch     string `json:"branch"`
+	Registered bool   `json:"registered"`
 }

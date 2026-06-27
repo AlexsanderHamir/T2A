@@ -51,12 +51,13 @@ func GitErrCode(err error) string {
 }
 
 // GitRepository is a registered main git checkout. Globally unique on Path
-// (one row per canonical path, shared across projects). See ADR-0037.
+// and GitCommonDir (one row per git object database). See ADR-0037.
 type GitRepository struct {
 	ID            string    `json:"id" gorm:"primaryKey"`
 	Path          string    `json:"path" gorm:"not null;uniqueIndex:idx_git_repo_path"`
+	GitCommonDir  string    `json:"git_common_dir" gorm:"not null;default:'';uniqueIndex:idx_git_repo_common_dir"`
 	HostPath      string    `json:"host_path" gorm:"not null;default:''"`
-	DefaultBranch string    `json:"default_branch" gorm:"not null;default:main"`
+	DefaultBranch string    `json:"default_branch" gorm:"not null;default:''"`
 	CreatedAt     time.Time `json:"created_at" gorm:"not null;index"`
 	UpdatedAt     time.Time `json:"updated_at" gorm:"not null;index"`
 }

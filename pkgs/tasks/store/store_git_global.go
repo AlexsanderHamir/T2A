@@ -39,51 +39,36 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 	if gitSvc == nil {
 		gitSvc = gitwork.New()
 	}
-	opened, err := gitSvc.OpenRepository(ctx, path)
+	mainRoot, commonDir, err := gitSvc.ResolveRegistration(ctx, path)
 	if err != nil {
 		if errors.Is(err, gitwork.ErrNotARepository) {
 			return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeNotARepository, "path is not a git repository")
 		}
-		return domain.GitRepository{}, fmt.Errorf("open repository: %w", err)
+		return domain.GitRepository{}, fmt.Errorf("resolve repository: %w", err)
 	}
 	var existing int64
 	if err := s.db.WithContext(ctx).Model(&model.GitRepository{}).
-		Where("path = ?", opened.Root).
+		Where("git_common_dir = ?", commonDir).
 		Count(&existing).Error; err != nil {
 		return domain.GitRepository{}, err
 	}
 	if existing > 0 {
-		return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
-	}
-	defaultBranch := strings.TrimSpace(input.DefaultBranch)
-	if defaultBranch == "" {
-		branches, listErr := gitSvc.ListBranches(ctx, opened)
-		if listErr == nil {
-			for _, b := range branches {
-				if b.IsCurrent && strings.TrimSpace(b.Name) != "" {
-					defaultBranch = b.Name
-					break
-				}
-			}
-		}
-		if defaultBranch == "" {
-			defaultBranch = "main"
-		}
+		return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered")
 	}
 	now := time.Now().UTC()
 	repo := domain.GitRepository{
-		ID:            uuid.NewString(),
-		Path:          opened.Root,
-		HostPath:      strings.TrimSpace(input.HostPath),
-		DefaultBranch: defaultBranch,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:           uuid.NewString(),
+		Path:         mainRoot,
+		GitCommonDir: commonDir,
+		HostPath:     strings.TrimSpace(input.HostPath),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		repoRow := model.FromDomainGitRepository(repo)
 		if err := tx.Create(&repoRow).Error; err != nil {
 			if kernel.IsDuplicateKey(err) {
-				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
+				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered")
 			}
 			return err
 		}
@@ -166,23 +151,13 @@ func (s *Store) RegisterExistingGitWorktree(
 	if gitSvc == nil {
 		gitSvc = gitwork.New()
 	}
-	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
+	inventory, err := s.RepoWorktreeInventory(ctx, repo, gitSvc)
 	if err != nil {
-		return domain.GitWorktree{}, fmt.Errorf("open repository: %w", err)
-	}
-	live, err := gitSvc.ListWorktrees(ctx, opened)
-	if err != nil {
-		return domain.GitWorktree{}, fmt.Errorf("list worktrees: %w", err)
+		return domain.GitWorktree{}, err
 	}
 	cleanPath := filepath.Clean(path)
-	var found *gitwork.Worktree
-	for i := range live {
-		if filepath.Clean(live[i].Path) == cleanPath {
-			found = &live[i]
-			break
-		}
-	}
-	if found == nil {
+	invRow, ok := FindWorktreeInInventory(inventory, cleanPath)
+	if !ok {
 		return domain.GitWorktree{}, fmt.Errorf("%w: path is not a linked worktree of this repository", domain.ErrInvalidInput)
 	}
 	label := strings.TrimSpace(name)
@@ -191,7 +166,7 @@ func (s *Store) RegisterExistingGitWorktree(
 	}
 	bindName := strings.TrimSpace(bind.Name)
 	if bindName == "" {
-		bindName = strings.TrimSpace(found.Branch)
+		bindName = strings.TrimSpace(invRow.Branch)
 	}
 	if bindName == "" {
 		return domain.GitWorktree{}, fmt.Errorf("%w: branch required", domain.ErrInvalidInput)
@@ -205,23 +180,23 @@ func (s *Store) RegisterExistingGitWorktree(
 		return domain.GitWorktree{}, err
 	}
 	now := time.Now().UTC()
-	row := domain.GitWorktree{
+	wt := domain.GitWorktree{
 		ID:           uuid.NewString(),
 		RepositoryID: repo.ID,
 		Path:         cleanPath,
 		Name:         label,
-		IsMain:       found.IsMain,
+		IsMain:       invRow.IsMain,
 		BranchID:     br.ID,
 		CreatedAt:    now,
 	}
-	wtRow := model.FromDomainGitWorktree(row)
+	wtRow := model.FromDomainGitWorktree(wt)
 	if err := s.db.WithContext(ctx).Create(&wtRow).Error; err != nil {
 		if kernel.IsDuplicateKey(err) {
 			return domain.GitWorktree{}, domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 		}
 		return domain.GitWorktree{}, fmt.Errorf("register git worktree: %w", err)
 	}
-	return row, nil
+	return wt, nil
 }
 
 // DeleteGitWorktreeByID removes a worktree from disk and the database (no project scope).

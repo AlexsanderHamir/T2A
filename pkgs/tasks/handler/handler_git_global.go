@@ -94,38 +94,45 @@ func (h *Handler) listGlobalGitWorktreesLive(w http.ResponseWriter, r *http.Requ
 		writeGitStoreError(w, r, op, err)
 		return
 	}
-	registered, err := h.store.ListGitWorktreesByRepo(r.Context(), repo.ID)
+	inventory, err := h.store.RepoWorktreeInventory(r.Context(), repo, h.gitService())
 	if err != nil {
 		writeGitStoreError(w, r, op, err)
 		return
 	}
-	registeredPaths := make(map[string]struct{}, len(registered))
-	for _, wt := range registered {
-		registeredPaths[wt.Path] = struct{}{}
-	}
-	gitSvc := h.gitService()
-	opened, err := gitSvc.OpenRepository(r.Context(), repo.Path)
-	if err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	live, err := gitSvc.ListWorktrees(r.Context(), opened)
-	if err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	out := make([]gitLiveWorktreeJSON, 0, len(live))
-	for _, wt := range live {
-		_, isRegistered := registeredPaths[wt.Path]
+	out := make([]gitLiveWorktreeJSON, 0, len(inventory))
+	for _, wt := range inventory {
 		out = append(out, gitLiveWorktreeJSON{
 			Path:       wt.Path,
 			Branch:     wt.Branch,
 			IsMain:     wt.IsMain,
-			Detached:   strings.TrimSpace(wt.Branch) == "",
-			Registered: isRegistered,
+			Detached:   wt.Detached,
+			Registered: wt.Registered,
 		})
 	}
 	writeJSON(w, r, op, http.StatusOK, gitLiveWorktreesListResponse{Worktrees: out})
+}
+
+func (h *Handler) probeGlobalGitWorktree(w http.ResponseWriter, r *http.Request) {
+	const op = "git.worktrees.probe"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.probeGlobalGitWorktree")
+	r = calltrace.WithRequestRoot(r, op)
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		writeJSONError(w, r, op, http.StatusBadRequest, "path required")
+		return
+	}
+	result, err := h.store.ProbeGitWorktree(r.Context(), r.PathValue("repoId"), path, h.gitService())
+	if err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusOK, gitWorktreeProbeResponse{
+		Path:       result.Path,
+		Linked:     result.Linked,
+		IsMain:     result.IsMain,
+		Branch:     result.Branch,
+		Registered: result.Registered,
+	})
 }
 
 func (h *Handler) createGlobalGitWorktree(w http.ResponseWriter, r *http.Request) {

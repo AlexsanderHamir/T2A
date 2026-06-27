@@ -334,7 +334,7 @@ func TestGitRepository_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
 	orig := domain.GitRepository{
-		ID: "repo-1", Path: "/repo", HostPath: "/host/repo",
+		ID: "repo-1", Path: "/repo", GitCommonDir: "/repo/.git", HostPath: "/host/repo",
 		DefaultBranch: "main", CreatedAt: now, UpdatedAt: now,
 	}
 	m := FromDomainGitRepository(orig)

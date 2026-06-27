@@ -20,7 +20,9 @@ import (
 //
 // Rev 4 (ADR-0039): git_worktrees.branch_id, tasks.worktree_id; drops
 // worktree_branches, tasks.worktree_branch_id, git_worktrees.active_branch_id.
-const SchemaRevision = 4
+//
+// Rev 5: git_repositories.git_common_dir (unique repo identity); main path normalization.
+const SchemaRevision = 5
 
 const schemaMetaRowID = 1
 

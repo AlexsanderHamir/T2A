@@ -15,6 +15,7 @@ func (h *Handler) gitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
 	return gitRepositoryJSON{
 		ID:            r.ID,
 		Path:          r.Path,
+		GitCommonDir:  r.GitCommonDir,
 		HostPath:      h.pathMap.DisplayHostPath(r.Path),
 		DefaultBranch: r.DefaultBranch,
 		CreatedAt:     r.CreatedAt.UTC().Format(time.RFC3339),

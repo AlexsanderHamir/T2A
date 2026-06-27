@@ -7,6 +7,7 @@ func FromDomainGitRepository(d domain.GitRepository) GitRepository {
 	return GitRepository{
 		ID:            d.ID,
 		Path:          d.Path,
+		GitCommonDir:  d.GitCommonDir,
 		HostPath:      d.HostPath,
 		DefaultBranch: d.DefaultBranch,
 		CreatedAt:     d.CreatedAt,
@@ -31,6 +32,7 @@ func ToDomainGitRepository(m GitRepository) domain.GitRepository {
 	return domain.GitRepository{
 		ID:            m.ID,
 		Path:          m.Path,
+		GitCommonDir:  m.GitCommonDir,
 		HostPath:      m.HostPath,
 		DefaultBranch: m.DefaultBranch,
 		CreatedAt:     m.CreatedAt,

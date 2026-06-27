@@ -151,6 +151,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := migrateFixedWorktreeBranch(ctx, db); err != nil {
 		return fmt.Errorf("fixed worktree branch: %w", err)
 	}
+	if err := migrateGitCommonDir(ctx, db); err != nil {
+		return fmt.Errorf("git common dir: %w", err)
+	}
 	if err := RecordSchemaRevision(ctx, db, time.Now().UTC()); err != nil {
 		return fmt.Errorf("record schema revision: %w", err)
 	}
