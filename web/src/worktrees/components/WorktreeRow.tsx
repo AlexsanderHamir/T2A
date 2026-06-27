@@ -1,5 +1,11 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
 import { TaskListDeleteGlyph } from "@/tasks/components/task-list/table/TaskListRowActionIcons";
+import {
+  cannotDeleteMainWorktreeAriaLabel,
+  deleteWorktreeAriaLabel,
+  worktreeAriaLabel,
+  worktreeGitCopy,
+} from "../worktreeGitCopy";
 import { BranchPill } from "./BranchPill";
 
 type Props = {
@@ -20,13 +26,13 @@ export function WorktreeRow({
   const branchById = new Map(branches.map((b) => [b.id, b]));
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
   const deleteBlocked = deleteDisabled || worktree.is_main;
-  const kindLabel = worktree.is_main ? "main worktree" : null;
+  const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeLabel : null;
 
   return (
     <li
       className="draft-row worktree-row"
       data-main={worktree.is_main ? "true" : "false"}
-      aria-label={`Worktree: ${displayName}`}
+      aria-label={worktreeAriaLabel(displayName)}
     >
       <div className="draft-row__meta worktree-row__meta">
         <span className="draft-row__name" title={displayName}>
@@ -41,7 +47,7 @@ export function WorktreeRow({
               </span>
               <span
                 className="worktree-row__kind"
-                title="The worktree created by git clone or git init. git worktree remove cannot delete it while linked worktrees exist."
+                title={worktreeGitCopy.mainWorktreeHint}
               >
                 {kindLabel}
               </span>
@@ -56,7 +62,7 @@ export function WorktreeRow({
         ) : worktree.branch_id ? (
           <span className="worktree-row__branch-empty">{worktree.branch_id}</span>
         ) : (
-          <span className="worktree-row__branch-empty">Detached HEAD</span>
+          <span className="worktree-row__branch-empty">{worktreeGitCopy.detachedHead}</span>
         )}
       </div>
 
@@ -67,14 +73,12 @@ export function WorktreeRow({
             className="task-list-icon-btn task-list-icon-btn--delete"
             disabled={deleteBlocked}
             title={
-              worktree.is_main
-                ? "git worktree remove cannot delete the main worktree while linked worktrees exist"
-                : undefined
+              worktree.is_main ? worktreeGitCopy.deleteMainWorktreeTitle : undefined
             }
             aria-label={
               worktree.is_main
-                ? `Cannot delete main worktree "${displayName}"`
-                : `Delete worktree "${displayName}"`
+                ? cannotDeleteMainWorktreeAriaLabel(displayName)
+                : deleteWorktreeAriaLabel(displayName)
             }
             onClick={(e) => {
               e.stopPropagation();

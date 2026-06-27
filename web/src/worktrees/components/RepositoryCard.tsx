@@ -6,6 +6,7 @@ import {
   repositoryDisplayName,
   repositoryPathsEquivalent,
 } from "../repositoryDisplay";
+import { worktreeGitCopy } from "../worktreeGitCopy";
 import { WorktreeList } from "./WorktreeList";
 
 type Props = {
@@ -49,13 +50,13 @@ export function RepositoryCard({
           </p>
           {showHostPath ? (
             <p className="worktrees-repo-card__host-path">
-              <span className="worktrees-repo-card__meta-label">Host path</span>
+              <span className="worktrees-repo-card__meta-label">{worktreeGitCopy.hostPathLabel}</span>
               <code>{repository.host_path}</code>
             </p>
           ) : null}
           {repository.default_branch.trim() !== "" ? (
             <p className="worktrees-repo-card__default-branch">
-              <span className="worktrees-repo-card__meta-label">Default branch</span>
+              <span className="worktrees-repo-card__meta-label">{worktreeGitCopy.defaultBranchLabel}</span>
               <code>{repository.default_branch}</code>
             </p>
           ) : null}
@@ -67,10 +68,10 @@ export function RepositoryCard({
             disabled={reconcilePending}
             onClick={onReconcile}
           >
-            {reconcilePending ? "Reconciling…" : "Reconcile"}
+            {reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile}
           </button>
           <button type="button" className="secondary danger" onClick={onDeleteRepository}>
-            Delete repository
+            {worktreeGitCopy.deleteRepository}
           </button>
         </div>
       </header>
@@ -84,14 +85,14 @@ export function RepositoryCard({
             id={`repo-${repository.id}-worktrees`}
             className="worktrees-repo-card__section-title"
           >
-            Worktrees
+            {worktreeGitCopy.sectionTitle}
           </h3>
           <div className="worktrees-repo-card__section-actions">
             <button type="button" className="secondary" onClick={onRegisterWorktree}>
-              Register worktree
+              {worktreeGitCopy.registerWorktree}
             </button>
             <button type="button" className="secondary" onClick={onCreateWorktree}>
-              Create worktree
+              {worktreeGitCopy.createWorktree}
             </button>
           </div>
         </header>
@@ -101,8 +102,8 @@ export function RepositoryCard({
           </p>
         ) : worktrees.length === 0 ? (
           <EmptyState
-            title="No worktrees yet"
-            description="Register an existing linked directory or create a new one with git worktree add."
+            title={worktreeGitCopy.emptyWorktreesTitle}
+            description={worktreeGitCopy.emptyWorktreesDescription}
             hideIcon
             className="empty-state--in-table empty-state--task-list-fresh"
           />

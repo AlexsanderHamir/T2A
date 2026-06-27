@@ -1,4 +1,5 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
+import { worktreeGitCopy } from "../worktreeGitCopy";
 import { WorktreeRow } from "./WorktreeRow";
 
 type Props = {
@@ -12,19 +13,19 @@ export function WorktreeList({ worktrees, branches, onDeleteWorktree }: Props) {
     <div className="worktree-list table-wrap">
       <div className="worktree-list-head" role="row">
         <span className="worktree-list-head__label" role="columnheader">
-          Name
+          {worktreeGitCopy.listColumnName}
         </span>
         <span
           className="worktree-list-head__label worktree-list-head__label--branch"
           role="columnheader"
         >
-          Branch
+          {worktreeGitCopy.listColumnBranch}
         </span>
         <span
           className="worktree-list-head__label worktree-list-head__label--actions"
           role="columnheader"
         >
-          Actions
+          {worktreeGitCopy.listColumnActions}
         </span>
       </div>
       <ul className="draft-row-list worktree-list-rows" aria-label="Worktrees">
