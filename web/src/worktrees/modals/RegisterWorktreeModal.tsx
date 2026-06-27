@@ -5,6 +5,10 @@ import { CustomSelect } from "@/components/custom-select";
 import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 import {
+  liveWorktreeOptionLabel,
+  worktreeGitCopy,
+} from "../worktreeGitCopy";
+import {
   WorktreeBranchBindFields,
   branchBindPayload,
   type BranchBindValue,
@@ -45,7 +49,7 @@ export function RegisterWorktreeModal({
   const liveWorktrees = (liveWorktreesQuery.data ?? []).filter((wt) => !wt.registered);
   const worktreeOptions = liveWorktrees.map((wt) => ({
     value: wt.path,
-    label: wt.is_main ? `${wt.path} (main)` : wt.path,
+    label: liveWorktreeOptionLabel(wt.path, wt.is_main),
   }));
 
   useEffect(() => {
@@ -84,15 +88,13 @@ export function RegisterWorktreeModal({
         }}
       >
         <header className="worktrees-form-modal__header">
-          <h2 id="register-worktree-title">Register worktree</h2>
-          <p className="worktrees-form-modal__lead">
-            Choose a linked worktree directory and the branch to register with it.
-          </p>
+          <h2 id="register-worktree-title">{worktreeGitCopy.registerModalTitle}</h2>
+          <p className="worktrees-form-modal__lead">{worktreeGitCopy.registerModalLead}</p>
         </header>
 
         <CustomSelect
           id="register-worktree-select"
-          label="Worktree path"
+          label={worktreeGitCopy.registerModalPathLabel}
           value={selectedPath}
           options={worktreeOptions}
           disabled={pending || liveWorktreesQuery.isLoading || worktreeOptions.length === 0}
@@ -102,18 +104,17 @@ export function RegisterWorktreeModal({
 
         {worktreeOptions.length === 0 && !liveWorktreesQuery.isLoading ? (
           <p className="worktrees-form-modal__picker-empty">
-            No unregistered linked worktrees found. Use Create worktree or run git worktree add
-            outside Hamix first.
+            {worktreeGitCopy.registerModalPathEmpty}
           </p>
         ) : null}
 
         <label className="field">
-          <span className="settings-field-label">Display name</span>
+          <span className="settings-field-label">{worktreeGitCopy.registerModalDisplayNameLabel}</span>
           <input
             type="text"
             value={displayName}
             disabled={pending}
-            placeholder="Optional"
+            placeholder={worktreeGitCopy.registerModalDisplayNamePlaceholder}
             onChange={(e) => setDisplayName(e.target.value)}
           />
         </label>
@@ -133,10 +134,10 @@ export function RegisterWorktreeModal({
 
         <div className="row stack-row-actions">
           <button type="button" className="secondary" disabled={pending} onClick={onClose}>
-            Cancel
+            {worktreeGitCopy.cancel}
           </button>
           <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
-            {pending ? "Registering…" : "Register worktree"}
+            {pending ? worktreeGitCopy.registerModalSubmitting : worktreeGitCopy.registerModalSubmit}
           </button>
         </div>
       </form>

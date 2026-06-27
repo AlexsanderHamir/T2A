@@ -1,5 +1,12 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
+import {
+  worktreeAriaLabel,
+  worktreeGitCopy,
+} from "../worktreeGitCopy";
 import { BranchPill } from "./BranchPill";
+import { WorktreesMenu } from "./WorktreesMenu";
+import { WorktreesMoreIcon } from "./WorktreesIcons";
+import { WorktreesPathChip } from "./WorktreesPathChip";
 
 type Props = {
   worktree: GitWorktree;
@@ -15,43 +22,71 @@ export function WorktreeRow({
   deleteDisabled = false,
 }: Props) {
   const displayName = worktree.name.trim() || worktree.path;
-  const hostHint = worktree.path;
   const branchById = new Map(branches.map((b) => [b.id, b]));
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
+  const deleteBlocked = deleteDisabled || worktree.is_main;
+  const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeShortLabel : null;
+
+  const deleteMenuItem = {
+    id: "delete-worktree",
+    label: worktreeGitCopy.deleteWorktree,
+    onSelect: onDelete,
+    disabled: deleteBlocked,
+    danger: true,
+  };
 
   return (
-    <div className="worktrees-row" data-main={worktree.is_main ? "true" : "false"}>
-      <div className="worktrees-row__main">
-        <p className="worktrees-row__name">{displayName}</p>
-        <p className="worktrees-row__path" title={hostHint}>
-          <code>{hostHint}</code>
-        </p>
-        {worktree.is_main ? (
-          <span className="worktrees-row__badge">Main worktree</span>
-        ) : null}
+    <li
+      className="draft-row worktree-row"
+      data-main={worktree.is_main ? "true" : "false"}
+      aria-label={worktreeAriaLabel(displayName)}
+    >
+      <div className="draft-row__meta worktree-row__meta">
+        <div className="worktree-row__title">
+          <span className="draft-row__name" title={displayName}>
+            {displayName}
+          </span>
+          {kindLabel ? (
+            <span
+              className="worktree-row__kind"
+              title={worktreeGitCopy.mainWorktreeHint}
+            >
+              {kindLabel}
+            </span>
+          ) : null}
+        </div>
+        <WorktreesPathChip path={worktree.path} compact />
       </div>
 
-      <div className="worktrees-row__branches" aria-label="Branch">
+      <div className="worktree-row__branch" aria-label="Branch">
         {branch ? (
           <BranchPill branch={branch} />
         ) : worktree.branch_id ? (
-          <span className="worktrees-row__muted">{worktree.branch_id}</span>
+          <span className="worktree-row__branch-empty">{worktree.branch_id}</span>
         ) : (
-          <span className="worktrees-row__muted">No branch</span>
+          <span className="worktree-row__branch-empty">{worktreeGitCopy.detachedHead}</span>
         )}
       </div>
 
-      <div className="worktrees-row__actions">
-        <button
-          type="button"
-          className="secondary worktrees-row__delete"
-          disabled={deleteDisabled || worktree.is_main}
-          title={worktree.is_main ? "Main worktree cannot be deleted" : undefined}
-          onClick={onDelete}
-        >
-          Delete
-        </button>
+      <div
+        className="worktree-row__status"
+        title={worktreeGitCopy.statusUnavailableTitle}
+        aria-label={worktreeGitCopy.statusUnavailableTitle}
+      >
+        <span className="worktree-row__status-value" aria-hidden>
+          {worktreeGitCopy.statusUnavailable}
+        </span>
       </div>
-    </div>
+
+      <div className="draft-row__actions worktree-row__actions">
+        <WorktreesMenu
+          triggerLabel={worktreeGitCopy.worktreeActions(displayName)}
+          className="secondary worktrees-icon-menu-btn"
+          icon={<WorktreesMoreIcon />}
+          iconOnly
+          items={[deleteMenuItem]}
+        />
+      </div>
+    </li>
   );
 }

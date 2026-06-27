@@ -1,7 +1,21 @@
 import type { GitRepository } from "@/types/git";
+import { EmptyState } from "@/shared/EmptyState";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
-import { WorktreeRow } from "./WorktreeRow";
+import {
+  repositoryDisplayName,
+  repositoryPathsEquivalent,
+} from "../repositoryDisplay";
+import { worktreeGitCopy } from "../worktreeGitCopy";
+import {
+  WorktreesBranchIcon,
+  WorktreesMoreIcon,
+  WorktreesPlusIcon,
+  WorktreesRefreshIcon,
+} from "./WorktreesIcons";
+import { WorktreesMenu } from "./WorktreesMenu";
+import { WorktreesPathChip } from "./WorktreesPathChip";
+import { WorktreeList } from "./WorktreeList";
 
 type Props = {
   repository: GitRepository;
@@ -27,35 +41,59 @@ export function RepositoryCard({
   const worktrees = worktreesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
+  const repoName = repositoryDisplayName(repository.path);
+  const showHostPath =
+    repository.host_path.trim() !== "" &&
+    !repositoryPathsEquivalent(repository.path, repository.host_path);
 
   return (
     <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
       <header className="worktrees-repo-card__header">
         <div className="worktrees-repo-card__heading">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
-            Repository
+            {repoName}
           </h2>
-          <p className="worktrees-repo-card__path" title={repository.path}>
-            <code>{repository.path}</code>
-          </p>
-          {repository.host_path.trim() !== "" ? (
+          <div className="worktrees-repo-card__meta-row">
+            <WorktreesPathChip path={repository.path} />
+            {repository.default_branch.trim() !== "" ? (
+              <div className="worktrees-default-branch">
+                <WorktreesBranchIcon className="worktrees-default-branch__icon" />
+                <span>{worktreeGitCopy.defaultBranchLabel}:</span>
+                <strong>{repository.default_branch}</strong>
+              </div>
+            ) : null}
+          </div>
+          {showHostPath ? (
             <p className="worktrees-repo-card__host-path">
-              Host path: <code>{repository.host_path}</code>
+              <span className="worktrees-repo-card__meta-label">{worktreeGitCopy.hostPathLabel}</span>
+              <code>{repository.host_path}</code>
             </p>
           ) : null}
         </div>
         <div className="worktrees-repo-card__header-actions">
           <button
             type="button"
-            className="secondary"
+            className="secondary worktrees-toolbar-btn"
             disabled={reconcilePending}
             onClick={onReconcile}
           >
-            {reconcilePending ? "Reconciling…" : "Reconcile"}
+            <WorktreesRefreshIcon className="worktrees-toolbar-btn__icon" />
+            {reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile}
           </button>
-          <button type="button" className="secondary danger" onClick={onDeleteRepository}>
-            Delete repository
-          </button>
+          <WorktreesMenu
+            triggerLabel={worktreeGitCopy.repositoryActions}
+            className="secondary worktrees-icon-menu-btn"
+            icon={<WorktreesMoreIcon />}
+            iconOnly
+            items={[
+              {
+                id: "delete-repository",
+                label: worktreeGitCopy.deleteRepository,
+                onSelect: onDeleteRepository,
+                danger: true,
+              },
+            ]}
+          />
         </div>
       </header>
 
@@ -63,46 +101,54 @@ export function RepositoryCard({
         className="worktrees-repo-card__section"
         aria-labelledby={`repo-${repository.id}-worktrees`}
       >
-        <div className="worktrees-repo-card__section-header">
+        <header className="worktrees-repo-card__section-head">
           <h3
             id={`repo-${repository.id}-worktrees`}
             className="worktrees-repo-card__section-title"
           >
-            Worktrees
+            {worktreeGitCopy.sectionTitle}
+            {!loading && worktrees.length > 0 ? (
+              <span className="worktrees-section-count" aria-label={`${worktrees.length} worktrees`}>
+                {worktrees.length}
+              </span>
+            ) : null}
           </h3>
-          <div className="worktrees-repo-card__section-actions">
-            <button type="button" className="secondary" onClick={onRegisterWorktree}>
-              Register worktree
-            </button>
-            <button type="button" className="secondary" onClick={onCreateWorktree}>
-              Create worktree
-            </button>
-          </div>
-        </div>
+          <WorktreesMenu
+            triggerLabel={worktreeGitCopy.addWorktree}
+            className="secondary worktrees-add-worktree-btn"
+            icon={<WorktreesPlusIcon className="worktrees-toolbar-btn__icon" />}
+            chevron
+            items={[
+              {
+                id: "register-worktree",
+                label: worktreeGitCopy.registerWorktree,
+                onSelect: onRegisterWorktree,
+              },
+              {
+                id: "create-worktree",
+                label: worktreeGitCopy.createWorktree,
+                onSelect: onCreateWorktree,
+              },
+            ]}
+          />
+        </header>
         {loading ? (
           <p className="worktrees-repo-card__loading" aria-busy="true">
             Loading worktrees…
           </p>
         ) : worktrees.length === 0 ? (
-          <p className="worktrees-repo-card__empty">
-            No worktrees yet. Register an existing linked directory or create a new one.
-          </p>
+          <EmptyState
+            title={worktreeGitCopy.emptyWorktreesTitle}
+            description={worktreeGitCopy.emptyWorktreesDescription}
+            hideIcon
+            className="empty-state--in-table empty-state--task-list-fresh"
+          />
         ) : (
-          <div className="worktrees-repo-card__rows">
-            {worktrees.map((worktree) => (
-              <WorktreeRow
-                key={worktree.id}
-                worktree={worktree}
-                branches={branches}
-                onDelete={() =>
-                  onDeleteWorktree(
-                    worktree.id,
-                    worktree.name.trim() || worktree.path,
-                  )
-                }
-              />
-            ))}
-          </div>
+          <WorktreeList
+            worktrees={worktrees}
+            branches={branches}
+            onDeleteWorktree={onDeleteWorktree}
+          />
         )}
       </section>
     </article>
