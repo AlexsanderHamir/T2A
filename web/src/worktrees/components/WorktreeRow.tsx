@@ -1,8 +1,9 @@
-import type { GitBranch, GitWorktree } from "@/types/git";
+import type { GitBranch, GitLiveWorktree, GitWorktree } from "@/types/git";
 import {
   worktreeAriaLabel,
   worktreeGitCopy,
 } from "../worktreeGitCopy";
+import { worktreeStatusLabel } from "../worktreeStatus";
 import { BranchPill } from "./BranchPill";
 import { WorktreesMenu } from "./WorktreesMenu";
 import { WorktreesMoreIcon } from "./WorktreesIcons";
@@ -11,6 +12,7 @@ import { WorktreesPathChip } from "./WorktreesPathChip";
 type Props = {
   worktree: GitWorktree;
   branches: GitBranch[];
+  liveWorktree?: GitLiveWorktree;
   onDelete: () => void;
   deleteDisabled?: boolean;
 };
@@ -18,14 +20,16 @@ type Props = {
 export function WorktreeRow({
   worktree,
   branches,
+  liveWorktree,
   onDelete,
   deleteDisabled = false,
 }: Props) {
   const displayName = worktree.name.trim() || worktree.path;
   const branchById = new Map(branches.map((b) => [b.id, b]));
-  const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
+  const branch = branchById.get(worktree.branch_id);
   const deleteBlocked = deleteDisabled;
   const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeShortLabel : null;
+  const status = worktreeStatusLabel(liveWorktree, worktree);
 
   const deleteMenuItem = {
     id: "delete-worktree",
@@ -61,20 +65,18 @@ export function WorktreeRow({
       <div className="worktree-row__branch" aria-label="Branch">
         {branch ? (
           <BranchPill branch={branch} />
-        ) : worktree.branch_id ? (
-          <span className="worktree-row__branch-empty">{worktree.branch_id}</span>
         ) : (
-          <span className="worktree-row__branch-empty">{worktreeGitCopy.detachedHead}</span>
+          <span className="worktree-row__branch-empty">{worktreeGitCopy.needsBranchBind}</span>
         )}
       </div>
 
       <div
         className="worktree-row__status"
-        title={worktreeGitCopy.statusUnavailableTitle}
-        aria-label={worktreeGitCopy.statusUnavailableTitle}
+        title={status.title}
+        aria-label={status.title}
       >
         <span className="worktree-row__status-value" aria-hidden>
-          {worktreeGitCopy.statusUnavailable}
+          {status.label}
         </span>
       </div>
 

@@ -19,8 +19,17 @@ export const worktreeGitCopy = {
   mainWorktreeHint:
     "The primary checkout from git clone or git init. Deleting removes Hamix registration only — the checkout stays on disk.",
   statusUnavailable: "—",
-  statusUnavailableTitle: "Worktree checkout status is not available yet",
+  statusUnavailableTitle: "Live git status not loaded for this worktree",
+  statusReady: "Ready",
+  statusReadyTitle: "Worktree path matches git and branch is bound",
+  statusLocked: "Locked",
+  statusLockedTitle: "Git has this worktree locked",
+  statusPrunable: "Prunable",
+  statusPrunableTitle: "Git marked this worktree path as prunable",
   detachedHead: "Detached HEAD",
+  detachedHeadTitle: "Git reports a detached HEAD at this path",
+  needsBranchBind: "Needs branch bind",
+  needsBranchBindTitle: "Register or reconcile to bind a branch to this worktree",
   emptyWorktreesTitle: "No worktrees yet",
   emptyWorktreesDescription:
     "Register an existing linked directory or create a new one with git worktree add.",
@@ -63,6 +72,8 @@ export const worktreeGitCopy = {
   driftBannerTitle: "Unregistered worktrees on disk",
   driftBannerDescription:
     "Git reports linked checkouts that Hamix has not registered yet. Reconcile adds discovered paths; register manually when you need branch binding.",
+  reconcileNoticeSkippedTitle: "Worktrees need attention",
+  reconcileNoticeBindTitle: "Branch binding required",
 } as const;
 
 export function worktreeAriaLabel(displayName: string): string {
