@@ -32,6 +32,27 @@ Hamix expects operators to follow **repository → worktree (+ branch) → task*
 
 **Runtime:** tasks on the same worktree run sequentially (per-worktree gate). Tasks on different worktrees may run in parallel when `HAMIX_AGENT_WORKER_CONCURRENCY` > 1. The worker does not switch branches — the worktree must already be checked out on its bound branch.
 
+## Reconcile and path repair
+
+Hamix stores **absolute paths** for repositories and worktrees. Renaming or moving directories on disk does not update the DB automatically. Use **Reconcile** on the repository card to sync Hamix with `git worktree list` while **preserving worktree IDs** (tasks and projects keep their bindings).
+
+**Operator playbook when folders move:**
+
+1. Prefer `git worktree repair` (or `git worktree move`) so git metadata stays consistent.
+2. Click **Reconcile** on `/worktrees`. When the stored main path is missing, Hamix returns `needs_bootstrap_path` and opens **Relocate repository** — pick the checkout on disk; Hamix verifies branch HEAD / common dir before updating paths.
+3. For a single linked worktree with a known new path, use `POST /git/worktrees/{worktreeId}/relocate` (API) or register/reconcile from the UI.
+
+**What reconcile does:**
+
+- Updates main and linked worktree paths when git reports the same branch at a new location (stable `worktree_id`).
+- Adds discovered linked worktrees; removes vanished rows when safe (no running tasks).
+- Refreshes branch `head_sha` from git.
+- Does **not** fix non-git paths (Cursor binary, worker scratch files, `HAMIX_PATH_MAP` display prefixes).
+
+**Drift hint:** `GET …/worktrees/live` includes `registered: false` for linked checkouts git knows about but Hamix has not registered. The SPA shows a read-only banner; reconcile may add paths but branch binding may still be required.
+
+See [ADR-0040](../adr/ADR-0040-git-reconcile-v2.md) and `HAMIX_GIT_RECONCILE_ON_STARTUP` in [configuration.md](../configuration.md) for optional startup sync.
+
 > **Important** — Workspace trees are **read-only over HTTP**. Mutations happen when the execute agent (or the operator outside Hamix) changes files on disk.
 
 ## Key concepts

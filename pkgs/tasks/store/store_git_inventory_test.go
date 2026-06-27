@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
@@ -20,6 +21,32 @@ func openGitRepo(t *testing.T, main string) *gitwork.Repository {
 
 func addWorktreeOpts(branch string, create bool) gitwork.AddWorktreeOptions {
 	return gitwork.AddWorktreeOptions{Branch: branch, CreateBranch: create}
+}
+
+func TestWorktreePathKey_matchesSlashAndCaseVariants(t *testing.T) {
+	t.Parallel()
+	if worktreePathKey(`C:\repo\main`) != worktreePathKey(`C:/repo/main`) {
+		t.Fatal("slash variants should match")
+	}
+	if worktreePathKey(`/repo/main`) != worktreePathKey(`/repo/main/`) {
+		t.Fatal("trailing slash should be ignored")
+	}
+	if runtime.GOOS == "windows" {
+		if worktreePathKey(`C:\Repo\Main`) != worktreePathKey(`c:/repo/main`) {
+			t.Fatal("case variants should match on Windows")
+		}
+	}
+}
+
+func TestFindWorktreeInInventory_normalizesPath(t *testing.T) {
+	t.Parallel()
+	rows := []WorktreeInventoryRow{
+		{Path: `C:/Users/dev/app`, Branch: "main", IsMain: true},
+	}
+	got, ok := FindWorktreeInInventory(rows, `C:\Users\dev\app`)
+	if !ok || got.Path != `C:/Users/dev/app` {
+		t.Fatalf("FindWorktreeInInventory: ok=%v got=%+v", ok, got)
+	}
 }
 
 func TestStore_CreateGlobalGitRepository_normalizesMainPath(t *testing.T) {

@@ -121,6 +121,7 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		return 1
 	}
 	app.schemaDrift = dbStartup.schemaDrift
+	maybeRunGitReconcileOnStartup(appCtx, app.taskStore)
 	shutdownViaSignal, serveErr := runTaskAPIHTTPServer(appCtx, port, host, app)
 	// Order: cancel worker ctx and wait for it to drain (best-effort
 	// aborted/cycle writes need a live DB pool) → cancel reconcile →

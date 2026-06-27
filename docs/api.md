@@ -61,7 +61,9 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | GET | `/git/repositories/{repoId}/worktrees/probe?path=` | Validate a path belongs to this repo: `{ path, linked, is_main, branch, registered }`. |
 | POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree with immutable `branch_id`. **201**. **409** `branch_bound_to_worktree` when branch is already assigned. |
 | POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Sets `branch_id` from `branch` or the worktree's current checkout; immutable after create. |
-| POST | `/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. |
+| POST | `/git/repositories/{repoId}/reconcile` | Sync DB paths with `git worktree list`. Body `{ bootstrap_path?, repair?, dry_run? }` (all optional). **202** `{ status, report }` where `status ∈ ok | needs_bootstrap_path | partial` and `report` includes path/add/remove/head counts plus optional `worktrees_skipped` / `needs_branch_bind`. **409** `has_running_task` when a vanished worktree is still referenced (global route). **409** `bootstrap_mismatch` when `bootstrap_path` is not the same git object database. |
+| POST | `/git/repositories/{repoId}/relocate` | Operator alias: body `{ path }` runs reconcile with `bootstrap_path=path`, `repair=true`. **202** same shape as reconcile. |
+| POST | `/git/worktrees/{worktreeId}/relocate` | Manual path fix for one registered worktree. Body `{ path }`. **200** worktree JSON after probe + UPDATE. **409** `bootstrap_mismatch` when path belongs to a different repo. |
 | DELETE | `/git/worktrees/{worktreeId}` | **204**. Query `?force=true`. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/branches` | Registered branches `{ branches: [...] }`. |
 | GET | `/git/repositories/{repoId}/branches/live` | Live refs from `git branch` `{ branches: [{ name, head_sha }] }`. |
@@ -81,11 +83,11 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | GET | `/projects/{id}/git/repositories/{repoId}/branches` | `{ branches: [...] }`. |
 | POST | `/projects/{id}/git/repositories/{repoId}/branches` | Body `{ name, start_point? }`. **201**. **409** `branch_exists`. |
 | DELETE | `/projects/{id}/git/branches/{branchId}` | **204**. Query `?force=true` for unmerged. **409** `has_running_task`, `branch_checked_out`. |
-| POST | `/projects/{id}/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. **409** when a missing worktree is still referenced by tasks. |
+| POST | `/projects/{id}/git/repositories/{repoId}/reconcile` | Same body/response as global reconcile. **409** when a missing worktree is still referenced by tasks. |
 
 **Projects:** `POST /projects` accepts optional `repository_id` (repo must exist). Tasks accept optional `worktree_id` (required for agent runs; branch is derived from the worktree row).
 
-Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `branch_bound_to_worktree`, `project_repo_mismatch`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
+Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `branch_bound_to_worktree`, `project_repo_mismatch`, `has_running_task`, `bootstrap_mismatch`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
 
 ## Tasks
 

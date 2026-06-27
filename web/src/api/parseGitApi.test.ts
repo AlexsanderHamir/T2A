@@ -5,6 +5,7 @@ import {
   parseGitLiveBranchList,
   parseGitRepository,
   parseGitRepositoryList,
+  parseGitReconcileResult,
   parseGitWorktree,
   parseGitWorktreeList,
 } from "./parseGitApi";
@@ -99,5 +100,25 @@ describe("parseGitApi", () => {
       branches: [{ name: "main", head_sha: "deadbeef" }],
     });
     expect(rows[0]?.name).toBe("main");
+  });
+
+  it("parses reconcile result with report", () => {
+    const result = parseGitReconcileResult({
+      status: "ok",
+      report: {
+        repo_path_updated: true,
+        worktrees_path_updated: 2,
+        worktrees_added: 1,
+        worktrees_removed: 0,
+        branches_head_updated: 3,
+        worktrees_skipped: [{ worktree_id: "00000000-0000-4000-8000-000000000020", reason: "has_tasks" }],
+        needs_branch_bind: [{ path: "/repo/feature", branch: "feature" }],
+      },
+    });
+    expect(result.status).toBe("ok");
+    expect(result.report.repo_path_updated).toBe(true);
+    expect(result.report.worktrees_path_updated).toBe(2);
+    expect(result.report.worktrees_skipped).toHaveLength(1);
+    expect(result.report.needs_branch_bind[0]?.branch).toBe("feature");
   });
 });

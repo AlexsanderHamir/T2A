@@ -118,6 +118,8 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /git/repositories/{repoId}/worktrees", http.HandlerFunc(h.createGlobalGitWorktree))
 	m.Handle("POST /git/repositories/{repoId}/worktrees/register", http.HandlerFunc(h.registerGlobalGitWorktree))
 	m.Handle("POST /git/repositories/{repoId}/reconcile", http.HandlerFunc(h.reconcileGlobalGitRepository))
+	m.Handle("POST /git/repositories/{repoId}/relocate", http.HandlerFunc(h.relocateGlobalGitRepository))
+	m.Handle("POST /git/worktrees/{worktreeId}/relocate", http.HandlerFunc(h.relocateGlobalGitWorktree))
 	m.Handle("DELETE /git/worktrees/{worktreeId}", http.HandlerFunc(h.deleteGlobalGitWorktree))
 	m.Handle("GET /git/repositories/{repoId}/branches", http.HandlerFunc(h.listGlobalGitBranches))
 	m.Handle("GET /git/repositories/{repoId}/branches/live", http.HandlerFunc(h.listGlobalGitBranchesLive))

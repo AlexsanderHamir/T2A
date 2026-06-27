@@ -3,7 +3,10 @@ import type {
   GitLiveBranch,
   GitLiveWorktree,
   GitRepository,
+  GitReconcileNeedsBranchBind,
+  GitReconcileReport,
   GitReconcileResult,
+  GitReconcileSkipped,
   GitWorktree,
   GitWorktreeProbe,
 } from "@/types/git";
@@ -163,11 +166,72 @@ export function parseGitWorktreeProbe(raw: unknown): GitWorktreeProbe {
   };
 }
 
+function parseGitReconcileSkipped(value: unknown, path: string): GitReconcileSkipped {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be object`);
+  }
+  return {
+    worktree_id: parseNonEmptyString(value.worktree_id, `${path}.worktree_id`),
+    reason: parseString(value.reason, `${path}.reason`),
+  };
+}
+
+function parseGitReconcileNeedsBranchBind(
+  value: unknown,
+  path: string,
+): GitReconcileNeedsBranchBind {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be object`);
+  }
+  return {
+    path: parseString(value.path, `${path}.path`),
+    branch: parseString(value.branch, `${path}.branch`),
+  };
+}
+
+function parseGitReconcileReport(value: unknown): GitReconcileReport {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: report must be object");
+  }
+  const skippedRaw = value.worktrees_skipped;
+  const needsBindRaw = value.needs_branch_bind;
+  const skipped: GitReconcileSkipped[] = Array.isArray(skippedRaw)
+    ? skippedRaw.map((row, i) => parseGitReconcileSkipped(row, `report.worktrees_skipped[${i}]`))
+    : [];
+  const needsBranchBind: GitReconcileNeedsBranchBind[] = Array.isArray(needsBindRaw)
+    ? needsBindRaw.map((row, i) =>
+        parseGitReconcileNeedsBranchBind(row, `report.needs_branch_bind[${i}]`),
+      )
+    : [];
+  return {
+    repo_path_updated: value.repo_path_updated === true,
+    worktrees_path_updated:
+      typeof value.worktrees_path_updated === "number" && Number.isFinite(value.worktrees_path_updated)
+        ? value.worktrees_path_updated
+        : 0,
+    worktrees_added:
+      typeof value.worktrees_added === "number" && Number.isFinite(value.worktrees_added)
+        ? value.worktrees_added
+        : 0,
+    worktrees_removed:
+      typeof value.worktrees_removed === "number" && Number.isFinite(value.worktrees_removed)
+        ? value.worktrees_removed
+        : 0,
+    branches_head_updated:
+      typeof value.branches_head_updated === "number" && Number.isFinite(value.branches_head_updated)
+        ? value.branches_head_updated
+        : 0,
+    worktrees_skipped: skipped,
+    needs_branch_bind: needsBranchBind,
+  };
+}
+
 export function parseGitReconcileResult(raw: unknown): GitReconcileResult {
   if (!isRecord(raw)) {
     throw new Error("Invalid API response: body must be object");
   }
   return {
     status: parseString(raw.status, "status"),
+    report: parseGitReconcileReport(raw.report),
   };
 }

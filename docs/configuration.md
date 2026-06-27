@@ -30,6 +30,7 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `HAMIX_LOG_LEVEL` | No | `info` | Minimum `slog` level (`debug` / `info` / `warn` / `error`). `taskapi -loglevel` flag overrides. |
 | `HAMIX_DISABLE_LOGGING` | No | — | `1`/`true`/`yes`/`on`: no JSONL file; only `slog.Error` to stderr. Same as `taskapi -disable-logging`. |
 | `HAMIX_MIGRATE` | No | — | `1`/`true`/`yes`/`on`: run `postgres.Migrate` at taskapi startup. Same as `taskapi -migrate`. Default: skip migrate. |
+| `HAMIX_GIT_RECONCILE_ON_STARTUP` | No | — | When set to `repair-only`, taskapi runs a **conservative** git reconcile for each registered repository whose stored main path still exists on disk: path updates and branch head refresh only (`AllowRemove=false`, no bootstrap, no `git worktree repair`). Skips repos when the stored path is missing — operators must use **Reconcile** / **Relocate** in the SPA. See [worktrees-and-branches.md](domain/worktrees-and-branches.md). |
 | `HAMIX_GORM_SLOW_QUERY_MS` | No | `200` | Statements slower than this log at `Warn`. `0` disables slow-SQL branch. |
 | `HAMIX_RATE_LIMIT_PER_MIN` | No | `120` | Per-IP token bucket. `0` disables. Key is `RemoteAddr` host (no trusted `X-Forwarded-For`). Exempt: `/health*`, `/metrics`. Over limit: `429 rate limit exceeded` with `Retry-After: 60`. |
 | `HAMIX_IDEMPOTENCY_TTL` | No | `24h` | Idempotency cache TTL for `Idempotency-Key`. `0` disables. In-process only — not shared across replicas. |

@@ -212,3 +212,18 @@ func TestListenHost(t *testing.T) {
 		}
 	})
 }
+
+func TestGitReconcileOnStartupMode(t *testing.T) {
+	t.Setenv(EnvGitReconcileOnStartup, "")
+	if got := GitReconcileOnStartupMode(); got != "" {
+		t.Fatalf("unset got %q", got)
+	}
+	t.Setenv(EnvGitReconcileOnStartup, "repair-only")
+	if got := GitReconcileOnStartupMode(); got != "repair-only" {
+		t.Fatalf("got %q want repair-only", got)
+	}
+	t.Setenv(EnvGitReconcileOnStartup, "aggressive")
+	if got := GitReconcileOnStartupMode(); got != "" {
+		t.Fatalf("unsupported got %q want empty", got)
+	}
+}

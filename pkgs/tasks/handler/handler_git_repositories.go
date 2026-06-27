@@ -103,20 +103,3 @@ func (h *Handler) deleteGitRepository(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
-func (h *Handler) reconcileGitRepository(w http.ResponseWriter, r *http.Request) {
-	const op = "git.repositories.reconcile"
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.reconcileGitRepository")
-	r = calltrace.WithRequestRoot(r, op)
-	projectID, err := parseGitProjectID(r)
-	if err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	repoID := r.PathValue("repoId")
-	if err := h.store.ReconcileGitRepository(r.Context(), projectID, repoID, h.gitService()); err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	writeJSON(w, r, op, http.StatusAccepted, gitReconcileResponse{Status: "ok"})
-}

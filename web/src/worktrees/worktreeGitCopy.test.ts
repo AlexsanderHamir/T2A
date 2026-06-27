@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  cannotDeleteMainWorktreeAriaLabel,
   deleteWorktreeAriaLabel,
   liveWorktreeOptionLabel,
   worktreeAriaLabel,
@@ -16,9 +15,6 @@ describe("worktreeGitCopy", () => {
   it("formats aria labels for worktree rows", () => {
     expect(worktreeAriaLabel("feature")).toBe("Worktree: feature");
     expect(deleteWorktreeAriaLabel("feature")).toBe('Delete worktree "feature"');
-    expect(cannotDeleteMainWorktreeAriaLabel("main")).toBe(
-      'Cannot delete main worktree "main"',
-    );
   });
 
   it("labels live worktree options with main worktree hint", () => {

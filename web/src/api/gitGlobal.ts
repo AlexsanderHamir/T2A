@@ -1,4 +1,14 @@
-import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind, GitWorktreeProbe } from "@/types/git";
+import type {
+  GitBranch,
+  GitLiveBranch,
+  GitLiveWorktree,
+  GitReconcileInput,
+  GitReconcileResult,
+  GitRepository,
+  GitWorktree,
+  GitWorktreeBranchBind,
+  GitWorktreeProbe,
+} from "@/types/git";
 import type { ProjectListResponse } from "@/types/project";
 import { parseProjectListResponse } from "./projects";
 import {
@@ -10,6 +20,7 @@ import {
   parseGitWorktree,
   parseGitWorktreeList,
   parseGitWorktreeProbe,
+  parseGitReconcileResult,
 } from "./parseGitApi";
 import { assertTaskPathId } from "./taskRequestBounds";
 import { apiErrorFromResponse, fetchWithTimeout, jsonHeaders } from "./shared";
@@ -182,14 +193,28 @@ export async function listGlobalGitLiveBranches(
 
 export async function reconcileGlobalGitRepository(
   repositoryId: string,
-): Promise<import("@/types/git").GitReconcileResult> {
+  input?: GitReconcileInput,
+): Promise<GitReconcileResult> {
   const repoId = assertTaskPathId(repositoryId, "repository id");
+  const body: GitReconcileInput = input ?? {};
   const res = await fetchWithTimeout(
     `${gitRoot}/repositories/${encodeURIComponent(repoId)}/reconcile`,
-    { method: "POST", headers: jsonHeaders, body: "{}" },
+    { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
-  const { parseGitReconcileResult } = await import("./parseGitApi");
+  return parseGitReconcileResult((await res.json()) as unknown);
+}
+
+export async function relocateGlobalGitRepository(
+  repositoryId: string,
+  input: { path: string },
+): Promise<GitReconcileResult> {
+  const repoId = assertTaskPathId(repositoryId, "repository id");
+  const res = await fetchWithTimeout(
+    `${gitRoot}/repositories/${encodeURIComponent(repoId)}/relocate`,
+    { method: "POST", headers: jsonHeaders, body: JSON.stringify(input) },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
   return parseGitReconcileResult((await res.json()) as unknown);
 }
 

@@ -6,7 +6,9 @@ import {
   deleteGlobalGitWorktree,
   reconcileGlobalGitRepository,
   registerGlobalGitWorktree,
+  relocateGlobalGitRepository,
 } from "@/api/gitGlobal";
+import type { GitReconcileInput } from "@/types/git";
 import { gitQueryKeys } from "../queryKeys";
 
 export function useGlobalGitMutations() {
@@ -58,8 +60,15 @@ export function useGlobalGitMutations() {
   });
 
   const reconcile = useMutation({
-    mutationFn: (repositoryId: string) => reconcileGlobalGitRepository(repositoryId),
-    onSuccess: (_data, repositoryId) => invalidateRepo(repositoryId),
+    mutationFn: (vars: { repositoryId: string; input?: GitReconcileInput }) =>
+      reconcileGlobalGitRepository(vars.repositoryId, vars.input),
+    onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
+  });
+
+  const relocateRepository = useMutation({
+    mutationFn: (vars: { repositoryId: string; input: { path: string } }) =>
+      relocateGlobalGitRepository(vars.repositoryId, vars.input),
+    onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
   });
 
   return {
@@ -69,5 +78,6 @@ export function useGlobalGitMutations() {
     registerWorktree,
     deleteWorktree,
     reconcile,
+    relocateRepository,
   };
 }

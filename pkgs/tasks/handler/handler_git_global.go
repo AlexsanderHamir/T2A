@@ -250,15 +250,3 @@ func (h *Handler) listRepoProjects(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, r, op, http.StatusOK, projectsListResponse{Projects: rows, Limit: len(rows)})
 }
-
-func (h *Handler) reconcileGlobalGitRepository(w http.ResponseWriter, r *http.Request) {
-	const op = "git.repositories.reconcile_global"
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.reconcileGlobalGitRepository")
-	r = calltrace.WithRequestRoot(r, op)
-	repoID := r.PathValue("repoId")
-	if err := h.store.ReconcileGitRepository(r.Context(), "", repoID, h.gitService()); err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	writeJSON(w, r, op, http.StatusAccepted, gitReconcileResponse{Status: "ok"})
-}

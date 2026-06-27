@@ -61,4 +61,58 @@ describe("CustomSelect", () => {
 
     expect(onChange).toHaveBeenCalledWith("running");
   });
+
+  it("shows placeholder on trigger when unset and options exist", () => {
+    render(
+      <CustomSelect
+        id="status"
+        label="Status"
+        value=""
+        options={OPTIONS}
+        placeholder="Select a status"
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("combobox", { name: /status/i })).toHaveTextContent(
+      "Select a status",
+    );
+  });
+
+  it("shows placeholder on trigger when unset and options are empty", () => {
+    render(
+      <CustomSelect
+        id="status"
+        label="Status"
+        value=""
+        options={[]}
+        placeholder="No statuses available"
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("combobox", { name: /status/i })).toHaveTextContent(
+      "No statuses available",
+    );
+  });
+
+  it("shows placeholder once in empty listbox when opened with zero options", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CustomSelect
+        id="status"
+        label="Status"
+        value=""
+        options={[]}
+        placeholder="No statuses available"
+        onChange={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: /status/i }));
+    const listbox = screen.getByRole("listbox", { name: /status/i });
+    expect(listbox).toHaveTextContent("No statuses available");
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+  });
 });

@@ -47,6 +47,9 @@ type Service interface {
 	ListWorktrees(ctx context.Context, repo *Repository) ([]Worktree, error)
 	AddWorktree(ctx context.Context, repo *Repository, path string, opts AddWorktreeOptions) (*Worktree, error)
 	RemoveWorktree(ctx context.Context, repo *Repository, path string, force bool) error
+	RepairWorktrees(ctx context.Context, repo *Repository) error
+	PruneWorktrees(ctx context.Context, repo *Repository) error
+	BranchHead(ctx context.Context, repo *Repository, branchName string) (string, error)
 
 	ListBranches(ctx context.Context, repo *Repository) ([]Branch, error)
 	CreateBranch(ctx context.Context, repo *Repository, name, startPoint string) (*Branch, error)

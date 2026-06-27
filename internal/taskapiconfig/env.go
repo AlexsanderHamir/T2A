@@ -36,7 +36,9 @@ const (
 	// to the default rather than blocking the worker.
 	EnvWorkerReportDir = "HAMIX_WORKER_REPORT_DIR"
 	// EnvAgentWorkerConcurrency is HAMIX_AGENT_WORKER_CONCURRENCY (in-process worker pool size).
-	EnvAgentWorkerConcurrency    = "HAMIX_AGENT_WORKER_CONCURRENCY"
+	EnvAgentWorkerConcurrency = "HAMIX_AGENT_WORKER_CONCURRENCY"
+	// EnvGitReconcileOnStartup is HAMIX_GIT_RECONCILE_ON_STARTUP (conservative git reconcile at boot).
+	EnvGitReconcileOnStartup     = "HAMIX_GIT_RECONCILE_ON_STARTUP"
 	defaultUserTaskAgentQueueCap = 256
 	defaultSSETestInterval       = 3 * time.Second
 	// defaultWorkerReportDirSubdir matches worker.DefaultReportDirSubdir;
@@ -202,4 +204,19 @@ func AgentWorkerConcurrency() int {
 		n = 32
 	}
 	return n
+}
+
+// GitReconcileOnStartupMode returns the startup reconcile mode when enabled.
+// Only "repair-only" is supported today; empty string means disabled.
+func GitReconcileOnStartupMode() string {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.GitReconcileOnStartupMode")
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(EnvGitReconcileOnStartup)))
+	if v == "repair-only" {
+		return v
+	}
+	if v != "" {
+		slog.Warn("unsupported git startup reconcile mode, ignoring", "cmd", calltrace.LogCmd,
+			"operation", "taskapiconfig.git_reconcile_on_startup", "value", v)
+	}
+	return ""
 }

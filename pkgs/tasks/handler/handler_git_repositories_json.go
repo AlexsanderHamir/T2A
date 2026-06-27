@@ -62,10 +62,6 @@ type gitBranchJSON struct {
 	CreatedAt    string `json:"created_at"`
 }
 
-type gitReconcileResponse struct {
-	Status string `json:"status"`
-}
-
 type gitWorktreeRegisterJSON struct {
 	Path   string                     `json:"path"`
 	Name   string                     `json:"name"`

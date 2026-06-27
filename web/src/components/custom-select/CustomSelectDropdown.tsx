@@ -11,6 +11,8 @@ type Props = {
   listboxAriaLabel: string;
   value: string;
   options: CustomSelectOption[];
+  placeholder?: string;
+  hasSelectableOptions: boolean;
   highlight: number;
   compact: boolean;
   dropdownMinWidth?: number;
@@ -31,6 +33,8 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
       listboxAriaLabel,
       value,
       options,
+      placeholder,
+      hasSelectableOptions,
       highlight,
       compact,
       dropdownMinWidth,
@@ -78,6 +82,13 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
         onKeyDown={onListKeyDown}
         onBlur={onClose}
       >
+        {!hasSelectableOptions && placeholder ? (
+          <li role="presentation" className="custom-select-empty">
+            <span className="custom-select-value-neutral custom-select-value-neutral--placeholder">
+              {placeholder}
+            </span>
+          </li>
+        ) : null}
         {options.map((o, i) =>
           isCustomSelectHeader(o) ? (
             <li

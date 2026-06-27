@@ -17,12 +17,10 @@ export const worktreeGitCopy = {
   mainWorktreeShortLabel: "main",
   mainWorktreeLabel: "main worktree",
   mainWorktreeHint:
-    "The worktree created by git clone or git init. git worktree remove cannot delete it while linked worktrees exist.",
+    "The primary checkout from git clone or git init. Deleting removes Hamix registration only — the checkout stays on disk.",
   statusUnavailable: "—",
   statusUnavailableTitle: "Worktree checkout status is not available yet",
   detachedHead: "Detached HEAD",
-  deleteMainWorktreeTitle:
-    "git worktree remove cannot delete the main worktree while linked worktrees exist",
   emptyWorktreesTitle: "No worktrees yet",
   emptyWorktreesDescription:
     "Register an existing linked directory or create a new one with git worktree add.",
@@ -30,15 +28,6 @@ export const worktreeGitCopy = {
   registerModalLead:
     "Link an existing git worktree directory and choose the branch Hamix should track.",
   registerModalPathLabel: "Worktree path",
-  registerModalPathEmpty:
-    "No unregistered linked worktrees found. Browse for a linked directory or create one with git worktree add.",
-  registerModalBrowsePath: "Browse for worktree…",
-  registerModalBrowseTitle: "Choose linked worktree",
-  registerModalBrowseLead:
-    "Select a directory that git worktree list shows as linked to this repository.",
-  registerModalPathSelectedPrefix: "Selected:",
-  registerModalProbeNotLinked: "This folder is not a linked worktree for this repository.",
-  registerModalProbeAlreadyRegistered: "This worktree is already registered in Hamix.",
   registerModalDisplayNameLabel: "Display name",
   registerModalDisplayNamePlaceholder: "Optional",
   registerModalSubmit: "Register worktree",
@@ -60,6 +49,20 @@ export const worktreeGitCopy = {
   createModalSubmit: "Create worktree",
   createModalSubmitting: "Creating…",
   cancel: "Cancel",
+  relocateModalTitle: "Relocate repository",
+  relocateModalLead:
+    "Hamix cannot find this repository at its registered path. Choose the checkout on disk — Hamix verifies it is the same repo before updating paths.",
+  relocateModalStoredPathLabel: "Registered path",
+  relocateModalPathLabel: "New checkout path",
+  relocateModalChoosePath: "Choose folder",
+  relocateModalSelectedPrefix: "Selected:",
+  relocateModalNoPath: "No folder selected yet.",
+  relocateModalSubmit: "Relocate and reconcile",
+  relocateModalSubmitting: "Relocating…",
+  reconcileErrorTitle: "Reconcile failed",
+  driftBannerTitle: "Unregistered worktrees on disk",
+  driftBannerDescription:
+    "Git reports linked checkouts that Hamix has not registered yet. Reconcile adds discovered paths; register manually when you need branch binding.",
 } as const;
 
 export function worktreeAriaLabel(displayName: string): string {
@@ -68,10 +71,6 @@ export function worktreeAriaLabel(displayName: string): string {
 
 export function deleteWorktreeAriaLabel(displayName: string): string {
   return `Delete worktree "${displayName}"`;
-}
-
-export function cannotDeleteMainWorktreeAriaLabel(displayName: string): string {
-  return `Cannot delete main worktree "${displayName}"`;
 }
 
 export function liveWorktreeOptionLabel(path: string, isMain: boolean): string {

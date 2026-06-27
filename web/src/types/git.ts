@@ -56,6 +56,33 @@ export type GitWorktreeProbe = {
   registered: boolean;
 };
 
+export type GitReconcileSkipped = {
+  worktree_id: string;
+  reason: string;
+};
+
+export type GitReconcileNeedsBranchBind = {
+  path: string;
+  branch: string;
+};
+
+export type GitReconcileReport = {
+  repo_path_updated: boolean;
+  worktrees_path_updated: number;
+  worktrees_added: number;
+  worktrees_removed: number;
+  branches_head_updated: number;
+  worktrees_skipped: GitReconcileSkipped[];
+  needs_branch_bind: GitReconcileNeedsBranchBind[];
+};
+
 export type GitReconcileResult = {
   status: string;
+  report: GitReconcileReport;
+};
+
+export type GitReconcileInput = {
+  bootstrap_path?: string;
+  repair?: boolean;
+  dry_run?: boolean;
 };

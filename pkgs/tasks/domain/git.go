@@ -22,6 +22,9 @@ const (
 	// GitCodeProjectRepoMismatch is returned when a task's project belongs to
 	// a different repository than its bound worktree.
 	GitCodeProjectRepoMismatch = "project_repo_mismatch"
+	// GitCodeBootstrapMismatch is returned when bootstrap_path does not refer
+	// to the same git repository as the registered row.
+	GitCodeBootstrapMismatch = "bootstrap_mismatch"
 )
 
 // GitErr is a domain error with a stable API code for git entity routes.

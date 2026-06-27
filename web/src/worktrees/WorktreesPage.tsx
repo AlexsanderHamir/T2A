@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import type { GitRepository } from "@/types";
 import { Button } from "@/components/ui";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { useOptionalToast } from "@/shared/toast";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TASK_TIMINGS } from "@/constants/tasks";
@@ -15,6 +16,8 @@ import type { GitDeleteTarget } from "./gitDeleteErrors";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 import { RegisterWorktreeModal } from "./modals/RegisterWorktreeModal";
 import { CreateWorktreeModal } from "./modals/CreateWorktreeModal";
+import { RelocateRepositoryModal } from "./modals/RelocateRepositoryModal";
+import { formatReconcileSuccess } from "./gitReconcileErrors";
 import {
   deriveWorktreesPageMode,
   worktreesPageErrorMessage,
@@ -37,6 +40,9 @@ export function WorktreesPage() {
   const [activeRepoModal, setActiveRepoModal] = useState<ActiveRepoModal>(null);
   const [deleteTarget, setDeleteTarget] = useState<GitDeleteTarget | null>(null);
   const [deleteError, setDeleteError] = useState<unknown>(null);
+  const [relocateRepository, setRelocateRepository] = useState<GitRepository | null>(null);
+  const [reconcileErrors, setReconcileErrors] = useState<Record<string, unknown>>({});
+  const toast = useOptionalToast();
 
   const repositories = repositoriesQuery.data ?? [];
   const repositoryCount = repositories.length;
@@ -85,6 +91,38 @@ export function WorktreesPage() {
   const deletePending =
     mutations.deleteRepository.isPending ||
     mutations.deleteWorktree.isPending;
+
+  const reconcilingRepositoryId =
+    mutations.reconcile.isPending || mutations.relocateRepository.isPending
+      ? mutations.reconcile.variables?.repositoryId ??
+        mutations.relocateRepository.variables?.repositoryId
+      : undefined;
+
+  const handleReconcile = async (repository: GitRepository) => {
+    setReconcileErrors((prev) => {
+      const next = { ...prev };
+      delete next[repository.id];
+      return next;
+    });
+    try {
+      const result = await mutations.reconcile.mutateAsync({
+        repositoryId: repository.id,
+        input: { repair: true },
+      });
+      if (result.status === "needs_bootstrap_path") {
+        setRelocateRepository(repository);
+        return;
+      }
+      toast?.success(formatReconcileSuccess(result));
+    } catch (err) {
+      setReconcileErrors((prev) => ({ ...prev, [repository.id]: err }));
+    }
+  };
+
+  const closeRelocateModal = () => {
+    setRelocateRepository(null);
+    mutations.relocateRepository.reset();
+  };
 
   const activeRepository =
     activeRepoModal?.kind === "register-worktree" ||
@@ -160,8 +198,9 @@ export function WorktreesPage() {
                 <RepositoryCard
                   key={repository.id}
                   repository={repository}
-                  reconcilePending={mutations.reconcile.isPending}
-                  onReconcile={() => void mutations.reconcile.mutate(repository.id)}
+                  reconcilePending={reconcilingRepositoryId === repository.id}
+                  reconcileError={reconcileErrors[repository.id]}
+                  onReconcile={() => void handleReconcile(repository)}
                   onRegisterWorktree={() =>
                     setActiveRepoModal({ kind: "register-worktree", repository })
                   }
@@ -248,6 +287,24 @@ export function WorktreesPage() {
         error={deleteError}
         onClose={closeDelete}
         onConfirm={() => void runDelete()}
+      />
+
+      <RelocateRepositoryModal
+        open={relocateRepository != null}
+        pending={mutations.relocateRepository.isPending}
+        error={mutations.relocateRepository.error}
+        storedPath={relocateRepository?.path ?? ""}
+        onClose={closeRelocateModal}
+        onSubmit={(input) => {
+          const repo = relocateRepository;
+          if (!repo) return;
+          void mutations.relocateRepository
+            .mutateAsync({ repositoryId: repo.id, input })
+            .then((result) => {
+              closeRelocateModal();
+              toast?.success(formatReconcileSuccess(result));
+            });
+        }}
       />
     </div>
   );

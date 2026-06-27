@@ -49,6 +49,8 @@ type Props = {
   /** Shown next to the field label (default: no badge). */
   requirement?: FieldRequirement;
   disabled?: boolean;
+  /** Shown when value is empty: closed trigger and empty open listbox. */
+  placeholder?: string;
   /** Optional `data-testid` on the combobox trigger (for tests). */
   triggerTestId?: string;
 };
@@ -66,6 +68,7 @@ export function CustomSelect({
   dropdownVariant = "default",
   requirement = "none",
   disabled = false,
+  placeholder,
   triggerTestId,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -77,6 +80,11 @@ export function CustomSelect({
   const lb = listboxName ?? label;
 
   const optionId = useCallback((v: string) => `${id}-opt-${v}`, [id]);
+
+  const hasSelectableOptions = useMemo(
+    () => options.some((o) => !isCustomSelectHeader(o)),
+    [options],
+  );
 
   const current = useMemo((): {
     value: string;
@@ -97,6 +105,9 @@ export function CustomSelect({
       } => !isCustomSelectHeader(o) && o.value === value,
     );
     if (sel) return sel;
+    if (value === "" && placeholder) {
+      return { value: "", label: placeholder };
+    }
     const first = options.find(
       (
         o,
@@ -109,7 +120,7 @@ export function CustomSelect({
       } => !isCustomSelectHeader(o),
     );
     return first ?? { value: "", label: "" };
-  }, [options, value]);
+  }, [options, value, placeholder]);
 
   const updatePosition = useCallback(() => {
     const el = buttonRef.current;
@@ -250,6 +261,8 @@ export function CustomSelect({
         listboxAriaLabel={lb}
         value={value}
         options={options}
+        placeholder={placeholder}
+        hasSelectableOptions={hasSelectableOptions}
         highlight={highlight}
         compact={compact}
         dropdownMinWidth={dropdownMinWidth}
