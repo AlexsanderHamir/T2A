@@ -170,6 +170,36 @@ func TestReconcileGitRepository_linkedWorktreeMoved_preservesID(t *testing.T) {
 	}
 }
 
+func TestReconcileGitRepository_skipsUnregisteredLiveWorktrees(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	extraPath := filepath.Join(filepath.Dir(main), "wt-unregistered")
+	runGitStore(t, main, "worktree", "add", extraPath, "-b", "orphan-branch")
+	t.Cleanup(func() { _ = os.RemoveAll(extraPath) })
+
+	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{
+		RepairGit:   true,
+		AllowRemove: true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Report.WorktreesAdded != 0 {
+		t.Fatalf("worktrees_added=%d want 0", out.Report.WorktreesAdded)
+	}
+	wts, err := s.ListGitWorktrees(ctx, domain.DefaultProjectID, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("registered worktrees=%d want 1 (main only)", len(wts))
+	}
+}
+
 func TestReconcileGitRepository_bootstrapWrongRepo(t *testing.T) {
 	s, ctx, gitSvc := gitTestStore(t)
 	mainA := initGitRepo(t)

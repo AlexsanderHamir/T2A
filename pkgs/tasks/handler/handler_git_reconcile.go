@@ -25,7 +25,7 @@ func parseGitReconcileRequest(r *http.Request) (store.ReconcileGitInput, error) 
 		RepairGit:     body.Repair,
 		DryRun:        body.DryRun,
 		AllowRemove:   true,
-		AllowDiscover: true,
+		AllowDiscover: false,
 	}, nil
 }
 

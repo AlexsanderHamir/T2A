@@ -15,8 +15,8 @@ Downstream subsystems (agent worker `WorkingDir`, `/repo/*`, `@`-mention validat
 Replace path-only reconcile with a **ReconcileEngine** (`pkgs/tasks/store/reconcile_git.go`) that:
 
 1. **Opens or bootstraps** the repository — try stored main path; when all paths are stale, require `bootstrap_path` and verify same repo via branch HEAD SHA / common dir (`bootstrap_mismatch` on mismatch).
-2. **Updates paths in place** for linked worktrees matched by branch name (preserves `worktree_id`).
-3. **Adds** live-only worktrees and **removes** vanished rows when safe (`has_running_task` → skip + report).
+2. **Updates paths in place** for registered linked worktrees matched by branch name (preserves `worktree_id`).
+3. **Removes** vanished registered rows when safe (`has_running_task` → skip + report). Does **not** bulk-import unregistered git worktrees — operators use **Register worktree** + live inventory.
 4. **Refreshes** branch `head_sha` from git.
 5. Exposes structured **`{ status, report }`** on `POST …/reconcile` and thin **`POST …/relocate`** aliases for operator flows.
 

@@ -29,6 +29,8 @@ type ReconcileGitInput struct {
 	RepairGit     bool
 	DryRun        bool
 	AllowRemove   bool
+	// AllowDiscover inserts git-linked worktrees Hamix has not registered. Default
+	// operator reconcile leaves this false — use Register worktree + live inventory.
 	AllowDiscover bool
 }
 
@@ -251,31 +253,33 @@ func (s *Store) ReconcileGitRepository(
 			dbByPath[worktreePathKey(row.Path)] = row
 		}
 
-		for _, wt := range live {
-			key := worktreePathKey(wt.Path)
-			if _, ok := matchedLive[key]; ok {
-				continue
-			}
-			if _, ok := dbByPath[key]; ok {
-				continue
-			}
-			name := "discovered-" + worktreeDisplayName(wt.Path)
-			if err := tx.Create(&model.GitWorktree{
-				ID:           uuid.NewString(),
-				RepositoryID: repoID,
-				Path:         wt.Path,
-				Name:         name,
-				IsMain:       wt.IsMain,
-				CreatedAt:    now,
-			}).Error; err != nil {
-				return err
-			}
-			report.WorktreesAdded++
-			if strings.TrimSpace(wt.Branch) != "" {
-				report.NeedsBranchBind = append(report.NeedsBranchBind, ReconcileNeedsBranchBind{
-					Path:   wt.Path,
-					Branch: wt.Branch,
-				})
+		if input.AllowDiscover {
+			for _, wt := range live {
+				key := worktreePathKey(wt.Path)
+				if _, ok := matchedLive[key]; ok {
+					continue
+				}
+				if _, ok := dbByPath[key]; ok {
+					continue
+				}
+				name := "discovered-" + worktreeDisplayName(wt.Path)
+				if err := tx.Create(&model.GitWorktree{
+					ID:           uuid.NewString(),
+					RepositoryID: repoID,
+					Path:         wt.Path,
+					Name:         name,
+					IsMain:       wt.IsMain,
+					CreatedAt:    now,
+				}).Error; err != nil {
+					return err
+				}
+				report.WorktreesAdded++
+				if strings.TrimSpace(wt.Branch) != "" {
+					report.NeedsBranchBind = append(report.NeedsBranchBind, ReconcileNeedsBranchBind{
+						Path:   wt.Path,
+						Branch: wt.Branch,
+					})
+				}
 			}
 		}
 
@@ -355,7 +359,7 @@ func (s *Store) RelocateGitRepository(
 		BootstrapPath: path,
 		RepairGit:     true,
 		AllowRemove:   true,
-		AllowDiscover: true,
+		AllowDiscover: false,
 	}, gitSvc)
 }
 
