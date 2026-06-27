@@ -88,20 +88,39 @@ export function RepositoryCard({
             No worktrees yet. Register an existing linked directory or create a new one.
           </p>
         ) : (
-          <div className="worktrees-repo-card__rows">
-            {worktrees.map((worktree) => (
-              <WorktreeRow
-                key={worktree.id}
-                worktree={worktree}
-                branches={branches}
-                onDelete={() =>
-                  onDeleteWorktree(
-                    worktree.id,
-                    worktree.name.trim() || worktree.path,
-                  )
-                }
-              />
-            ))}
+          <div className="worktree-list">
+            <div className="worktree-list-head" role="row">
+              <span className="worktree-list-head__label" role="columnheader">
+                Name
+              </span>
+              <span
+                className="worktree-list-head__label worktree-list-head__label--branch"
+                role="columnheader"
+              >
+                Branch
+              </span>
+              <span
+                className="worktree-list-head__label worktree-list-head__label--actions"
+                role="columnheader"
+              >
+                Actions
+              </span>
+            </div>
+            <ul className="draft-row-list worktree-list-rows" aria-label="Worktrees">
+              {worktrees.map((worktree) => (
+                <WorktreeRow
+                  key={worktree.id}
+                  worktree={worktree}
+                  branches={branches}
+                  onDelete={() =>
+                    onDeleteWorktree(
+                      worktree.id,
+                      worktree.name.trim() || worktree.path,
+                    )
+                  }
+                />
+              ))}
+            </ul>
           </div>
         )}
       </section>
