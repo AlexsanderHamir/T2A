@@ -9,6 +9,18 @@
   gap: var(--space-2) var(--space-3);
 }
 
+/* Repo cards stack several secondary actions; default 2.25rem + 1rem padding
+   reads heavy next to xs section labels and the table well below. */
+.worktrees-page .task-list-section-actions .ui-btn,
+.worktrees-page .worktrees-repo-card__header-actions button,
+.worktrees-page .worktrees-repo-card__section-actions button {
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  border-radius: var(--radius-md);
+}
+
 .worktrees-page__cards {
   display: flex;
   flex-direction: column;
