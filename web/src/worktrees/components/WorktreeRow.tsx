@@ -1,6 +1,10 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
 import { TaskListDeleteGlyph } from "@/shared/ListRowActionGlyphs";
 import {
+  shouldShowWorktreePath,
+  splitWorktreePath,
+} from "../repositoryDisplay";
+import {
   cannotDeleteMainWorktreeAriaLabel,
   deleteWorktreeAriaLabel,
   worktreeAriaLabel,
@@ -11,6 +15,7 @@ import { BranchPill } from "./BranchPill";
 type Props = {
   worktree: GitWorktree;
   branches: GitBranch[];
+  repositoryPath: string;
   onDelete: () => void;
   deleteDisabled?: boolean;
 };
@@ -18,6 +23,7 @@ type Props = {
 export function WorktreeRow({
   worktree,
   branches,
+  repositoryPath,
   onDelete,
   deleteDisabled = false,
 }: Props) {
@@ -27,11 +33,16 @@ export function WorktreeRow({
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
   const deleteBlocked = deleteDisabled || worktree.is_main;
   const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeLabel : null;
+  const showPath = shouldShowWorktreePath(worktree.path, repositoryPath);
+  const pathParts = splitWorktreePath(hostHint);
+  const showPathBase = pathParts.base !== displayName;
+  const showPathLine = showPath && (pathParts.parent !== "" || showPathBase);
 
   return (
     <li
       className="draft-row worktree-row"
       data-main={worktree.is_main ? "true" : "false"}
+      data-has-path={showPathLine ? "true" : "false"}
       aria-label={worktreeAriaLabel(displayName)}
     >
       <div className="draft-row__meta worktree-row__meta">
@@ -48,9 +59,16 @@ export function WorktreeRow({
             </span>
           ) : null}
         </div>
-        <span className="draft-row__time worktree-row__path-line" title={hostHint}>
-          <code className="worktree-row__path">{hostHint}</code>
-        </span>
+        {showPathLine ? (
+          <span className="worktree-row__path-line" title={hostHint}>
+            {pathParts.parent ? (
+              <span className="worktree-row__path-parent">{pathParts.parent}</span>
+            ) : null}
+            {showPathBase ? (
+              <span className="worktree-row__path-base">{pathParts.base}</span>
+            ) : null}
+          </span>
+        ) : null}
       </div>
 
       <div className="worktree-row__branch" aria-label="Branch">

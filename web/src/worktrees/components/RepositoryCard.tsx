@@ -111,6 +111,7 @@ export function RepositoryCard({
           <WorktreeList
             worktrees={worktrees}
             branches={branches}
+            repositoryPath={repository.path}
             onDeleteWorktree={onDeleteWorktree}
           />
         )}

@@ -5,10 +5,16 @@ import { WorktreeRow } from "./WorktreeRow";
 type Props = {
   worktrees: GitWorktree[];
   branches: GitBranch[];
+  repositoryPath: string;
   onDeleteWorktree: (worktreeId: string, label: string) => void;
 };
 
-export function WorktreeList({ worktrees, branches, onDeleteWorktree }: Props) {
+export function WorktreeList({
+  worktrees,
+  branches,
+  repositoryPath,
+  onDeleteWorktree,
+}: Props) {
   return (
     <div className="worktree-list table-wrap">
       <div className="worktree-list-head" role="row">
@@ -34,6 +40,7 @@ export function WorktreeList({ worktrees, branches, onDeleteWorktree }: Props) {
             key={worktree.id}
             worktree={worktree}
             branches={branches}
+            repositoryPath={repositoryPath}
             onDelete={() =>
               onDeleteWorktree(worktree.id, worktree.name.trim() || worktree.path)
             }
