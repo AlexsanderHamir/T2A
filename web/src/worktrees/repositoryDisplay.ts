@@ -1,4 +1,4 @@
-/** Last path segment for display (e.g. `C:/proj/T2A` → `T2A`). */
+/** Last path segment for display (e.g. `C:/proj/hamix` → `hamix`). */
 export function repositoryDisplayName(path: string): string {
   const normalized = path.trim().replace(/\\/g, "/").replace(/\/+$/, "");
   if (normalized === "") return path;

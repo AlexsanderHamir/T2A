@@ -179,9 +179,15 @@ describe("WorktreesPage", () => {
         name: /^repositories$/i,
       }),
     ).toBeInTheDocument();
+    const countMeta = await screen.findByText("repository");
+    expect(countMeta).toHaveTextContent("1 repository");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "main" }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("feature")).toBeInTheDocument();
-    expect(screen.getAllByText("main").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("main worktree").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
+    expect(screen.getByText("Default branch")).toBeInTheDocument();
   });
 
   it("maps delete 409 has_running_task to dialog copy", async () => {

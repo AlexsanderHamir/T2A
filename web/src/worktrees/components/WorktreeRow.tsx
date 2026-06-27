@@ -1,5 +1,5 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
-import { TaskListDeleteGlyph } from "@/tasks/components/task-list/table/TaskListRowActionIcons";
+import { TaskListDeleteGlyph } from "@/shared/ListRowActionGlyphs";
 import {
   cannotDeleteMainWorktreeAriaLabel,
   deleteWorktreeAriaLabel,

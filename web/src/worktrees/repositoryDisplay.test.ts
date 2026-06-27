@@ -6,7 +6,7 @@ import {
 
 describe("repositoryDisplayName", () => {
   it("returns the last path segment", () => {
-    expect(repositoryDisplayName("C:/Users/gomes/Documents/T2A")).toBe("T2A");
+    expect(repositoryDisplayName("C:/Users/dev/Documents/hamix")).toBe("hamix");
     expect(repositoryDisplayName("/repo/main")).toBe("main");
   });
 });
@@ -15,8 +15,8 @@ describe("repositoryPathsEquivalent", () => {
   it("treats equivalent paths as equal regardless of separators", () => {
     expect(
       repositoryPathsEquivalent(
-        "C:/Users/gomes/OneDrive/Documents/T2A",
-        "C:\\Users\\gomes\\OneDrive\\Documents\\T2A",
+        "C:/Users/dev/OneDrive/Documents/hamix",
+        "C:\\Users\\dev\\OneDrive\\Documents\\hamix",
       ),
     ).toBe(true);
   });
