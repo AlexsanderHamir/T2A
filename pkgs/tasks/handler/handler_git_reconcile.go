@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure request parser without I/O; operation trace is emitted by reconcile handlers."
 func parseGitReconcileRequest(r *http.Request) (store.ReconcileGitInput, error) {
 	var body gitReconcileRequest
 	if r.Body != nil {
@@ -27,6 +28,7 @@ func parseGitReconcileRequest(r *http.Request) (store.ReconcileGitInput, error) 
 	}, nil
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Shared reconcile handler; public routes emit trace before calling this helper."
 func (h *Handler) runGitReconcile(w http.ResponseWriter, r *http.Request, op, projectID, repoID string) {
 	input, err := parseGitReconcileRequest(r)
 	if err != nil {

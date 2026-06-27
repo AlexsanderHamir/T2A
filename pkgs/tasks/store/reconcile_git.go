@@ -373,6 +373,7 @@ func (s *Store) RelocateGitWorktree(
 	return s.GetGitWorktreeByID(ctx, worktreeID)
 }
 
+//funclogmeasure:skip category=hot-path reason="Bootstrap open helper; operation trace is emitted by ReconcileGitRepository."
 func (s *Store) openRepoForReconcile(
 	ctx context.Context,
 	repo domain.GitRepository,
@@ -402,6 +403,7 @@ func (s *Store) openRepoForReconcile(
 	return bootOpened, true, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Bootstrap identity check; operation trace is emitted by ReconcileGitRepository."
 func (s *Store) verifyBootstrapRepo(ctx context.Context, repo domain.GitRepository, opened *gitwork.Repository, gitSvc gitwork.Service) error {
 	storedBranches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
 	if err != nil {
@@ -440,6 +442,7 @@ func (s *Store) verifyBootstrapRepo(ctx context.Context, repo domain.GitReposito
 	return domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
 }
 
+//funclogmeasure:skip category=hot-path reason="Open helper for reconcile bootstrap; operation trace is emitted by ReconcileGitRepository."
 func tryOpenRepoPath(ctx context.Context, path string, gitSvc gitwork.Service) (*gitwork.Repository, error) {
 	if st, err := os.Stat(strings.TrimSpace(path)); err != nil || !st.IsDir() {
 		if err != nil && os.IsNotExist(err) {
@@ -453,6 +456,7 @@ func tryOpenRepoPath(ctx context.Context, path string, gitSvc gitwork.Service) (
 	return gitSvc.OpenRepository(ctx, path)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
 func isPathMissing(err error, path string) bool {
 	if err == nil {
 		return false
@@ -466,6 +470,7 @@ func isPathMissing(err error, path string) bool {
 	return false
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
 func filterLiveWorktrees(live []gitwork.Worktree) []gitwork.Worktree {
 	out := make([]gitwork.Worktree, 0, len(live))
 	for _, wt := range live {
@@ -477,6 +482,7 @@ func filterLiveWorktrees(live []gitwork.Worktree) []gitwork.Worktree {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
 func liveWorktreesByBranch(live []gitwork.Worktree) map[string]gitwork.Worktree {
 	out := make(map[string]gitwork.Worktree, len(live))
 	for _, wt := range live {
@@ -488,6 +494,7 @@ func liveWorktreesByBranch(live []gitwork.Worktree) map[string]gitwork.Worktree 
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
 func countBranchOwners(rows []model.GitWorktree, branchName string, branchByID map[string]domain.GitBranch) int {
 	n := 0
 	for _, row := range rows {

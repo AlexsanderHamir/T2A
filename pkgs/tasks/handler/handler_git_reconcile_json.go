@@ -41,6 +41,7 @@ type gitReconcileResponse struct {
 	Report gitReconcileReportJSON `json:"report"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure response mapper without I/O; operation trace is emitted by reconcile handlers."
 func toGitReconcileResponse(out store.ReconcileGitOutput) gitReconcileResponse {
 	skipped := make([]gitReconcileSkippedJSON, 0, len(out.Report.WorktreesSkipped))
 	for _, s := range out.Report.WorktreesSkipped {

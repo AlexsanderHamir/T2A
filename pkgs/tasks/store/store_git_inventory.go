@@ -13,6 +13,8 @@ import (
 )
 
 // worktreePathKey delegates to gitwork.PathKey for Hamix ↔ git path compare.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by RepoWorktreeInventory."
 func worktreePathKey(path string) string {
 	return gitwork.PathKey(path)
 }
@@ -76,6 +78,8 @@ func (s *Store) RepoWorktreeInventory(
 }
 
 // FindWorktreeInInventory returns the inventory row for an absolute worktree path.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by RepoWorktreeInventory."
 func FindWorktreeInInventory(rows []WorktreeInventoryRow, path string) (*WorktreeInventoryRow, bool) {
 	want := worktreePathKey(path)
 	for i := range rows {
