@@ -179,15 +179,20 @@ describe("WorktreesPage", () => {
         name: /^repositories$/i,
       }),
     ).toBeInTheDocument();
-    const countMeta = await screen.findByText("repository");
-    expect(countMeta).toHaveTextContent("1 repository");
+    const subtitle = await screen.findByText((_, el) =>
+      el?.classList.contains("worktrees-page__subtitle") &&
+      el.textContent?.replace(/\s+/g, " ").trim() === "1 repository"
+        ? true
+        : false,
+    );
+    expect(subtitle).toBeInTheDocument();
     expect(
       await screen.findByRole("heading", { level: 2, name: "main" }),
     ).toBeInTheDocument();
     expect(await screen.findByText("feature", { selector: ".draft-row__name" })).toBeInTheDocument();
-    expect(screen.getByText("/repo/")).toBeInTheDocument();
-    expect(screen.getAllByText("main worktree").length).toBeGreaterThan(0);
-    expect(screen.getByText("Default branch")).toBeInTheDocument();
+    expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("main", { selector: ".worktree-row__kind" }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Default branch/)).toBeInTheDocument();
   });
 
   it("maps delete 409 has_running_task to dialog copy", async () => {
@@ -236,10 +241,10 @@ describe("WorktreesPage", () => {
 
     renderPage();
     await screen.findByText("feature", { selector: ".draft-row__name" });
-    const deleteButton = screen.getByRole("button", {
-      name: /Delete worktree "feature"/i,
-    });
-    await userEvent.click(deleteButton);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Worktree actions for feature/i }),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: /Delete worktree/i }));
     const dialog = screen.getByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
     await waitFor(() => {
