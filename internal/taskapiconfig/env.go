@@ -34,7 +34,9 @@ const (
 	// customer working trees stay clean. The supervisor validates the
 	// path is writable at startup; failure logs a warn and falls back
 	// to the default rather than blocking the worker.
-	EnvWorkerReportDir           = "HAMIX_WORKER_REPORT_DIR"
+	EnvWorkerReportDir = "HAMIX_WORKER_REPORT_DIR"
+	// EnvAgentWorkerConcurrency is HAMIX_AGENT_WORKER_CONCURRENCY (in-process worker pool size).
+	EnvAgentWorkerConcurrency    = "HAMIX_AGENT_WORKER_CONCURRENCY"
 	defaultUserTaskAgentQueueCap = 256
 	defaultSSETestInterval       = 3 * time.Second
 	// defaultWorkerReportDirSubdir matches worker.DefaultReportDirSubdir;
@@ -45,8 +47,10 @@ const (
 	defaultWorkerReportDirSubdir = "hamix-worker"
 )
 
-// DefaultUserTaskAgentQueueCap is used when HAMIX_USER_TASK_AGENT_QUEUE_CAP is unset, invalid, or < 1.
-const DefaultUserTaskAgentQueueCap = defaultUserTaskAgentQueueCap
+// DefaultAgentWorkerConcurrency is used when HAMIX_AGENT_WORKER_CONCURRENCY is unset, invalid, or out of range.
+const DefaultAgentWorkerConcurrency = defaultAgentWorkerConcurrency
+
+const defaultAgentWorkerConcurrency = 4
 
 // DefaultSSETestTickerInterval is used when HAMIX_SSE_TEST_INTERVAL is unset or below 1s (dev only).
 const DefaultSSETestTickerInterval = defaultSSETestInterval
@@ -175,6 +179,27 @@ func UserTaskAgentQueueCap() int {
 		slog.Warn("invalid env, using default ready-task queue cap", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.agent_queue_env",
 			"var", EnvUserTaskAgentQueueCap, "value", s, "default", defaultUserTaskAgentQueueCap)
 		return defaultUserTaskAgentQueueCap
+	}
+	return n
+}
+
+// AgentWorkerConcurrency returns the in-process agent worker pool size.
+// Clamped to [1, 32]; default is 4 when unset or invalid.
+func AgentWorkerConcurrency() int {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.AgentWorkerConcurrency")
+	s := strings.TrimSpace(os.Getenv(EnvAgentWorkerConcurrency))
+	if s == "" {
+		return defaultAgentWorkerConcurrency
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		slog.Warn("invalid env, using default agent worker concurrency", "cmd", calltrace.LogCmd,
+			"operation", "taskapiconfig.agent_worker_concurrency_env",
+			"var", EnvAgentWorkerConcurrency, "value", s, "default", defaultAgentWorkerConcurrency)
+		return defaultAgentWorkerConcurrency
+	}
+	if n > 32 {
+		n = 32
 	}
 	return n
 }

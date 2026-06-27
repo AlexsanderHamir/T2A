@@ -37,6 +37,7 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `HAMIX_IDEMPOTENCY_MAX_BYTES` | No | `8388608` (8 MiB) | Max idempotency cache memory. `0` disables byte bounding. |
 | `HAMIX_MAX_REQUEST_BODY_BYTES` | No | `1048576` (1 MiB) | Reject larger bodies with `413 request body too large`. `0` disables. |
 | `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. See [domain/agent-queue.md](domain/agent-queue.md). |
+| `HAMIX_AGENT_WORKER_CONCURRENCY` | No | `4` | In-process worker pool size (`pkgs/agents/worker.Pool`). Valid range 1–32; invalid or unset values clamp to default. Slots share one queue and one `WorktreeGate` — sequential within a worktree, parallel across worktrees. See [ADR-0039](adr/ADR-0039-fixed-worktree-branch.md) and [domain/agent-queue.md](domain/agent-queue.md). |
 | `HAMIX_WORKER_REPORT_DIR` | No | `<os.TempDir()>/hamix-worker` | Worker-managed scratch root for the agent ↔ worker side-channel report files (`criteria-report.json`, `verify-report.json`). Lives outside `app_settings.repo_root` so customer working trees stay clean. The supervisor probes writability at startup; failure logs a `report_dir_not_writable` warn and the worker still starts (verify will fail loudly on the first run instead of silently). The per-cycle `<dir>/<cycle_id>/` subdirectory is GC'd at cycle terminate so disk use stays bounded. |
 | `HAMIX_SSE_TEST` | No | — | Dev: enable synthetic SSE ticker. See [api.md](./api.md). |
 | `HAMIX_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and [domain/sse-hub.md](domain/sse-hub.md). |
@@ -181,7 +182,7 @@ The variables below are silently ignored if still present in `.env`. Move the va
 | `HAMIX_AGENT_WORKER_ENABLED` | Deprecated. The agent worker always starts; use the header pause toggle (`agent_paused`) for a runtime stop. |
 | `HAMIX_AGENT_WORKER_CURSOR_BIN` | `app_settings.cursor_bin`. |
 | `HAMIX_AGENT_WORKER_RUN_TIMEOUT` | `app_settings.max_run_duration_seconds` (default `0` = no limit, not 5m). |
-| `HAMIX_AGENT_WORKER_WORKING_DIR` | Removed — register git repositories on `/worktrees`; tasks bind `worktree_id` + `branch_id`. |
+| `HAMIX_AGENT_WORKER_WORKING_DIR` | Removed — register git repositories on `/worktrees`; tasks bind `worktree_id` (branch via `git_worktrees.branch_id`). |
 | `REPO_ROOT` | Removed — same as above ([ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md)). |
 
 ### Test-only override

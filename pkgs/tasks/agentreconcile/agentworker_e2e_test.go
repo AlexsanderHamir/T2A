@@ -274,6 +274,83 @@ func TestAgentWorkerE2E_sameWorktreeSequential(t *testing.T) {
 	<-reconcileDone
 }
 
+// TestAgentWorkerE2E_differentWorktreesParallel verifies tasks on distinct
+// worktrees can run concurrently when the pool has multiple slots.
+func TestAgentWorkerE2E_differentWorktreesParallel(t *testing.T) {
+	t.Parallel()
+
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	q := agents.NewMemoryQueue(8)
+
+	wtA, _ := seedAgentReconcileGit(t, st)
+	wtB := seedSecondWorktreeOnRepo(t, st, wtA)
+	taskA, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:         "parallel-a",
+		InitialPrompt: "on wt a",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+		WorktreeID:    &wtA,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task A: %v", err)
+	}
+	taskB, err := st.Create(rootCtx, store.CreateTaskInput{
+		Title:         "parallel-b",
+		InitialPrompt: "on wt b",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+		WorktreeID:    &wtB,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task B: %v", err)
+	}
+
+	r := runnerfake.New().WithName("fake")
+	r.Script(taskA.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "a ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+	r.Script(taskB.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "b ok",
+		json.RawMessage(`{"ok":true}`), "",
+	))
+
+	pool := worker.NewPool(st, q, r, worker.Options{RunTimeout: 30 * time.Second}, 2)
+
+	reconcileCtx, reconcileCancel := context.WithCancel(rootCtx)
+	defer reconcileCancel()
+	reconcileDone := make(chan struct{})
+	go func() {
+		defer close(reconcileDone)
+		agents.RunReconcileLoop(reconcileCtx, st, q, e2eReconcileTick, nil)
+	}()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	defer workerCancel()
+	workerDone := make(chan error, 1)
+	go func() {
+		workerDone <- pool.Run(workerCtx)
+	}()
+
+	waitTaskStatusE2E(t, rootCtx, st, taskA.ID, domain.StatusDone)
+	waitTaskStatusE2E(t, rootCtx, st, taskB.ID, domain.StatusDone)
+
+	calls := r.Calls()
+	if len(calls) != 2 {
+		t.Fatalf("runner Run calls = %d, want 2", len(calls))
+	}
+
+	workerCancel()
+	if err := <-workerDone; err != nil {
+		t.Fatalf("pool exit err: %v", err)
+	}
+	reconcileCancel()
+	<-reconcileDone
+}
+
 func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 	t.Parallel()
 

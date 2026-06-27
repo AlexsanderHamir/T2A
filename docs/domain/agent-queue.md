@@ -28,7 +28,7 @@ Bounded in-memory FIFO of task snapshots for the in-process worker: notify wirin
 
 ## Overview
 
-When a task row is committed in **`status=ready`**, the store may push a **full `domain.Task` snapshot** into an optional in-process queue. A single worker goroutine consumes the queue and runs [harness.md](./harness.md) admission (`Run` or `Resume`).
+When a task row is committed in **`status=ready`**, the store may push a **full `domain.Task` snapshot** into an optional in-process queue. A **worker pool** (default 4 slots, `HAMIX_AGENT_WORKER_CONCURRENCY`) shares one queue and runs [harness.md](./harness.md) admission (`Run` or `Resume`) per dequeued task.
 
 The queue is:
 
@@ -147,14 +147,15 @@ Low-latency path for scheduled pickup; reconcile remains the durable backstop if
 
 ## Worker consumption and admission
 
-Single consumer: [`worker.Worker.Run`](../../pkgs/agents/worker/worker.go) loops on `queue.Receive(ctx)`.
+Shared consumers: [`worker.Pool.Run`](../../pkgs/agents/worker/pool.go) starts N goroutines (default 4), each looping on `queue.Receive(ctx)` against one `MemoryQueue` and one [`WorktreeGate`](../../pkgs/agents/worker/worktree_gate.go).
 
 [`processOne`](../../pkgs/agents/worker/admission.go) ordering:
 
 ```mermaid
 sequenceDiagram
   participant Q as MemoryQueue
-  participant W as Worker
+  participant W as Pool slot
+  participant G as WorktreeGate
   participant S as Store
   participant H as Harness
 
@@ -162,10 +163,16 @@ sequenceDiagram
   Note over W: defer AckAfterRecv registered first
   W->>S: reloadTask
   alt status running and open cycle
+    W->>G: Lock(worktree_id)
     W->>H: Resume
   else status ready and eligible
-    W->>S: transitionTaskToRunning
-    W->>H: Run
+    W->>G: TryLock(worktree_id)
+    alt worktree busy
+      W->>S: deferTaskPickup ~5s
+    else acquired
+      W->>S: transitionTaskToRunning
+      W->>H: Run
+    end
   else stale or not eligible
     W->>W: defer pickup or drop
   end
@@ -173,14 +180,17 @@ sequenceDiagram
   W->>Q: remove id from pending
 ```
 
-**Why defer `AckAfterRecv`:** the worker uses `Receive`, which already removes the id from **`pending`** when dequeuing. The deferred ack satisfies the `Recv()`+manual-ack contract documented on `MemoryQueue` and is idempotent. **Duplicate enqueue while a cycle runs** is prevented by `status=running` (ready reconcile skips running tasks), not by the pending set after dequeue.
+**Why defer `AckAfterRecv`:** each slot uses `Receive`, which already removes the id from **`pending`** when dequeuing. The deferred ack satisfies the `Recv()`+manual-ack contract documented on `MemoryQueue` and is idempotent. **Duplicate enqueue while a cycle runs** is prevented by `status=running` (ready reconcile skips running tasks), not by the pending set after dequeue.
+
+**Worktree gate:** ready admission uses `TryLock` so a busy worktree does not block the whole pool — the slot defers and another slot can pick up work for a different worktree. Running resume uses blocking `Lock` because the task already owns the worktree.
 
 Admission branches:
 
 | `reloadTask` status | Action |
 | --- | --- |
-| `running` + open cycle | `Harness.Resume` (post-restart continue) |
-| `ready` + `ReadyForAgentPickup` | `transitionTaskToRunning` → `Harness.Run` |
+| `running` + open cycle | `WorktreeGate.Lock` → `Harness.Resume` (post-restart continue) |
+| `ready` + `ReadyForAgentPickup` + `TryLock` ok | `transitionTaskToRunning` → `Harness.Run` |
+| `ready` + worktree busy (`TryLock` false) | `deferTaskPickup` ~5s |
 | `ready` but not eligible | `deferTaskPickup` ~60s |
 | Other | Warn stale; return (ack still runs) |
 
@@ -226,6 +236,7 @@ Full scheduling fields: [data-model.md](../data-model.md) (`pickup_not_before`).
 | Knob | Default | Reference |
 | --- | --- | --- |
 | `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | 256 | [configuration.md](../configuration.md) |
+| `HAMIX_AGENT_WORKER_CONCURRENCY` | 4 | In-process pool size (1–32); [configuration.md](../configuration.md) |
 | `agent_pickup_delay_seconds` | app_settings | Default deferral on create when client omits pickup |
 | `pickup_not_before` | per task | Operator or worker-set deferral |
 | Reconcile tick | 2m | `ReconcileTickInterval` in code |
@@ -258,7 +269,7 @@ Default CI does not require a running agent binary.
 
 - Treat reconcile as **backstop** — fix notify/pickup bugs rather than relying on the 2m tick
 - Do not block in `NotifyReadyTask` — store holds no lock across notify
-- **Single worker per process** — do not run multiple consumers on one queue
+- **Single pool per process** — do not run multiple pools on one queue
 - After adding ready transitions in store, ensure facade calls `notifyReadyTask` exactly once
 - For deferred pickup, always update pickup wake on patch (`Schedule` / `Cancel`)
 
@@ -298,5 +309,5 @@ Default CI does not require a running agent binary.
 | Reconcile | [`reconcile.go`](../../pkgs/agents/reconcile.go) |
 | Store notify | [`store.go`](../../pkgs/tasks/store/store.go), [`internal/notify/holder.go`](../../pkgs/tasks/store/internal/notify/holder.go), [`facade_tasks.go`](../../pkgs/tasks/store/facade_tasks.go) |
 | SQL candidates | [`store/internal/ready/ready.go`](../../pkgs/tasks/store/internal/ready/ready.go) |
-| Worker admission | [`pkgs/agents/worker/admission.go`](../../pkgs/agents/worker/admission.go) |
+| Worker admission | [`admission.go`](../../pkgs/agents/worker/admission.go), [`pool.go`](../../pkgs/agents/worker/pool.go), [`worktree_gate.go`](../../pkgs/agents/worker/worktree_gate.go) |
 | Startup wiring | [`cmd/taskapi/run_agentworker.go`](../../cmd/taskapi/run_agentworker.go) |

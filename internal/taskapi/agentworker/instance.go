@@ -14,7 +14,7 @@ import (
 )
 
 type instance struct {
-	worker       *worker.Worker
+	pool         *worker.Pool
 	cancelCtx    context.CancelFunc
 	doneCh       chan struct{}
 	runTimeout   time.Duration
@@ -85,7 +85,7 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.report_dir_not_writable",
 			"path", reportDir, "err", err)
 	}
-	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
+	w := worker.NewPool(s.store, s.queue, r, worker.Options{
 		RunTimeout:       runTimeout,
 		StreamIdleStuck:  streamIdleStuck,
 		ReportDir:        reportDir,
@@ -93,7 +93,7 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 		ProgressNotifier: progressNotifier,
 		Metrics:          s.metrics,
 		VerifyRunner:     verifyRunner,
-	})
+	}, taskapiconfig.AgentWorkerConcurrency())
 
 	workerCtx, cancelWorker := context.WithCancel(s.parentCtx)
 	done := make(chan struct{})
@@ -106,7 +106,7 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 	}()
 
 	return &instance{
-		worker: w, cancelCtx: cancelWorker, doneCh: done,
+		pool: w, cancelCtx: cancelWorker, doneCh: done,
 		runTimeout: runTimeout, settings: cfg, runner: r,
 		verifyRunner: verifyRunner,
 	}, verifyStatus
