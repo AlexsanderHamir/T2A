@@ -17,12 +17,10 @@ export const worktreeGitCopy = {
   mainWorktreeShortLabel: "main",
   mainWorktreeLabel: "main worktree",
   mainWorktreeHint:
-    "The worktree created by git clone or git init. git worktree remove cannot delete it while linked worktrees exist.",
+    "The primary checkout from git clone or git init. Deleting removes Hamix registration only — the checkout stays on disk.",
   statusUnavailable: "—",
   statusUnavailableTitle: "Worktree checkout status is not available yet",
   detachedHead: "Detached HEAD",
-  deleteMainWorktreeTitle:
-    "git worktree remove cannot delete the main worktree while linked worktrees exist",
   emptyWorktreesTitle: "No worktrees yet",
   emptyWorktreesDescription:
     "Register an existing linked directory or create a new one with git worktree add.",
@@ -35,10 +33,13 @@ export const worktreeGitCopy = {
   registerModalBrowsePath: "Browse for worktree…",
   registerModalBrowseTitle: "Choose linked worktree",
   registerModalBrowseLead:
-    "Select a directory that git worktree list shows as linked to this repository.",
+    "Select a linked directory from git worktree list that is not already registered in Hamix.",
+  registerModalBrowseEmptyTitle: "No new worktrees to register",
+  registerModalBrowseEmptyHint:
+    "Every linked worktree for this repository is already registered. Create a new one with git worktree add, then return here.",
+  registerModalBrowseSelectHint: "Select a linked worktree above",
+  registerModalBrowseConfirm: "Use this worktree",
   registerModalPathSelectedPrefix: "Selected:",
-  registerModalProbeNotLinked: "This folder is not a linked worktree for this repository.",
-  registerModalProbeAlreadyRegistered: "This worktree is already registered in Hamix.",
   registerModalDisplayNameLabel: "Display name",
   registerModalDisplayNamePlaceholder: "Optional",
   registerModalSubmit: "Register worktree",
@@ -68,10 +69,6 @@ export function worktreeAriaLabel(displayName: string): string {
 
 export function deleteWorktreeAriaLabel(displayName: string): string {
   return `Delete worktree "${displayName}"`;
-}
-
-export function cannotDeleteMainWorktreeAriaLabel(displayName: string): string {
-  return `Cannot delete main worktree "${displayName}"`;
 }
 
 export function liveWorktreeOptionLabel(path: string, isMain: boolean): string {

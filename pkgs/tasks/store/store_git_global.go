@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -155,14 +154,16 @@ func (s *Store) RegisterExistingGitWorktree(
 	if err != nil {
 		return domain.GitWorktree{}, err
 	}
-	cleanPath := filepath.Clean(path)
-	invRow, ok := FindWorktreeInInventory(inventory, cleanPath)
+	invRow, ok := FindWorktreeInInventory(inventory, path)
 	if !ok {
 		return domain.GitWorktree{}, fmt.Errorf("%w: path is not a linked worktree of this repository", domain.ErrInvalidInput)
 	}
+	if invRow.Registered {
+		return domain.GitWorktree{}, domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
+	}
 	label := strings.TrimSpace(name)
 	if label == "" {
-		label = worktreeDisplayName(cleanPath)
+		label = worktreeDisplayName(invRow.Path)
 	}
 	bindName := strings.TrimSpace(bind.Name)
 	if bindName == "" {
@@ -183,7 +184,7 @@ func (s *Store) RegisterExistingGitWorktree(
 	wt := domain.GitWorktree{
 		ID:           uuid.NewString(),
 		RepositoryID: repo.ID,
-		Path:         cleanPath,
+		Path:         invRow.Path,
 		Name:         label,
 		IsMain:       invRow.IsMain,
 		BranchID:     br.ID,
@@ -206,25 +207,24 @@ func (s *Store) DeleteGitWorktreeByID(ctx context.Context, worktreeID string, fo
 	if err != nil {
 		return err
 	}
-	if wt.IsMain {
-		return fmt.Errorf("%w: cannot delete main worktree", domain.ErrInvalidInput)
-	}
 	if err := guardNoRunningTask(ctx, s.db, worktreeID); err != nil {
 		return err
 	}
-	repo, err := s.GetGitRepositoryByID(ctx, wt.RepositoryID)
-	if err != nil {
-		return err
-	}
-	if gitSvc == nil {
-		gitSvc = gitwork.New()
-	}
-	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-	if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
-		return mapGitworkRemoveErr(err)
+	if !wt.IsMain {
+		repo, err := s.GetGitRepositoryByID(ctx, wt.RepositoryID)
+		if err != nil {
+			return err
+		}
+		if gitSvc == nil {
+			gitSvc = gitwork.New()
+		}
+		opened, err := gitSvc.OpenRepository(ctx, repo.Path)
+		if err != nil {
+			return fmt.Errorf("open repository: %w", err)
+		}
+		if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
+			return mapGitworkRemoveErr(err)
+		}
 	}
 	res := s.db.WithContext(ctx).Delete(&model.GitWorktree{}, "id = ?", worktreeID)
 	if res.Error != nil {

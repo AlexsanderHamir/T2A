@@ -24,7 +24,7 @@ export function WorktreeRow({
   const displayName = worktree.name.trim() || worktree.path;
   const branchById = new Map(branches.map((b) => [b.id, b]));
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
-  const deleteBlocked = deleteDisabled || worktree.is_main;
+  const deleteBlocked = deleteDisabled;
   const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeShortLabel : null;
 
   const deleteMenuItem = {

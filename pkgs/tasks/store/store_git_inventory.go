@@ -6,11 +6,22 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
+
+// worktreePathKey normalizes filesystem paths for Hamix ↔ git comparisons.
+// Git paths use forward slashes; DB rows may use OS-native separators on Windows.
+func worktreePathKey(path string) string {
+	key := filepath.ToSlash(filepath.Clean(strings.TrimSpace(path)))
+	if runtime.GOOS == "windows" {
+		key = strings.ToLower(key)
+	}
+	return key
+}
 
 // WorktreeInventoryRow is a live git worktree plus Hamix registration state.
 type WorktreeInventoryRow struct {
@@ -46,7 +57,7 @@ func (s *Store) RepoWorktreeInventory(
 	}
 	registeredPaths := make(map[string]struct{}, len(registered))
 	for _, wt := range registered {
-		registeredPaths[wt.Path] = struct{}{}
+		registeredPaths[worktreePathKey(wt.Path)] = struct{}{}
 	}
 	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
 	if err != nil {
@@ -58,7 +69,7 @@ func (s *Store) RepoWorktreeInventory(
 	}
 	out := make([]WorktreeInventoryRow, 0, len(live))
 	for _, wt := range live {
-		_, isRegistered := registeredPaths[wt.Path]
+		_, isRegistered := registeredPaths[worktreePathKey(wt.Path)]
 		out = append(out, WorktreeInventoryRow{
 			Path:       wt.Path,
 			Branch:     wt.Branch,
@@ -72,9 +83,9 @@ func (s *Store) RepoWorktreeInventory(
 
 // FindWorktreeInInventory returns the inventory row for an absolute worktree path.
 func FindWorktreeInInventory(rows []WorktreeInventoryRow, path string) (*WorktreeInventoryRow, bool) {
-	cleanPath := filepath.Clean(strings.TrimSpace(path))
+	want := worktreePathKey(path)
 	for i := range rows {
-		if filepath.Clean(rows[i].Path) == cleanPath {
+		if worktreePathKey(rows[i].Path) == want {
 			return &rows[i], true
 		}
 	}

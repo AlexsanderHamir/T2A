@@ -77,25 +77,24 @@ func (s *Store) DeleteGitWorktree(ctx context.Context, projectID, worktreeID str
 	if err != nil {
 		return err
 	}
-	if wt.IsMain {
-		return fmt.Errorf("%w: cannot delete main worktree", domain.ErrInvalidInput)
-	}
 	if err := guardNoRunningTask(ctx, s.db, worktreeID); err != nil {
 		return err
 	}
-	repo, err := s.GetGitRepository(ctx, projectID, wt.RepositoryID)
-	if err != nil {
-		return err
-	}
-	if gitSvc == nil {
-		gitSvc = gitwork.New()
-	}
-	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-	if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
-		return mapGitworkRemoveErr(err)
+	if !wt.IsMain {
+		repo, err := s.GetGitRepository(ctx, projectID, wt.RepositoryID)
+		if err != nil {
+			return err
+		}
+		if gitSvc == nil {
+			gitSvc = gitwork.New()
+		}
+		opened, err := gitSvc.OpenRepository(ctx, repo.Path)
+		if err != nil {
+			return fmt.Errorf("open repository: %w", err)
+		}
+		if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
+			return mapGitworkRemoveErr(err)
+		}
 	}
 	res := s.db.WithContext(ctx).Delete(&model.GitWorktree{}, "id = ?", worktreeID)
 	if res.Error != nil {

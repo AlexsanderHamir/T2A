@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { CustomSelect } from "@/components/custom-select";
-import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
-import { probeGlobalGitWorktree } from "@/api/gitGlobal";
 import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 import {
@@ -15,6 +13,7 @@ import {
   branchBindPayload,
   type BranchBindValue,
 } from "../components/WorktreeBranchBindFields";
+import { LinkedWorktreePickerModal } from "./LinkedWorktreePickerModal";
 
 type Props = {
   open: boolean;
@@ -40,6 +39,7 @@ export function RegisterWorktreeModal({
   const [selectedPath, setSelectedPath] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSelectedPath, setPickerSelectedPath] = useState("");
   const [branchBind, setBranchBind] = useState<BranchBindValue>({
     selectedBranchName: "",
     newBranchName: "",
@@ -59,9 +59,15 @@ export function RegisterWorktreeModal({
     if (!open) {
       setSelectedPath("");
       setDisplayName("");
+      setPickerSelectedPath("");
       setBranchBind({ selectedBranchName: "", newBranchName: "", createNew: false });
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    setPickerSelectedPath(selectedPath);
+  }, [pickerOpen, selectedPath]);
 
   useEffect(() => {
     if (!open || selectedPath === "" || branchBind.createNew) return;
@@ -172,26 +178,17 @@ export function RegisterWorktreeModal({
           </div>
         </form>
       </Modal>
-      <WorkspaceDirPickerModal
+      <LinkedWorktreePickerModal
         open={pickerOpen}
         nested
-        title={worktreeGitCopy.registerModalBrowseTitle}
-        lead={worktreeGitCopy.registerModalBrowseLead}
-        currentPath={selectedPath}
+        pending={pending}
+        loading={liveWorktreesQuery.isLoading}
+        worktrees={liveWorktrees}
+        selectedPath={pickerSelectedPath}
         onClose={() => setPickerOpen(false)}
-        validatePath={async (path) => {
-          const probe = await probeGlobalGitWorktree(repositoryId, path);
-          if (!probe.linked) {
-            return { ok: false, message: worktreeGitCopy.registerModalProbeNotLinked };
-          }
-          if (probe.registered) {
-            return { ok: false, message: worktreeGitCopy.registerModalProbeAlreadyRegistered };
-          }
-          return { ok: true };
-        }}
         onSelect={(next) => {
+          setPickerSelectedPath(next);
           setSelectedPath(next);
-          setPickerOpen(false);
         }}
       />
     </>
