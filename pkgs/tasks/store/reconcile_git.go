@@ -369,14 +369,21 @@ func (s *Store) RelocateGitWorktree(
 	if err != nil {
 		return domain.GitWorktree{}, err
 	}
-	opened, err := tryOpenRepoPath(ctx, repo.Path, gitSvc)
+	opened, _, err := s.openRegisteredRepo(ctx, repo, "", false, gitSvc)
 	if err != nil {
+		return domain.GitWorktree{}, err
+	}
+	if opened == nil {
 		opened, err = gitSvc.OpenRepository(ctx, path)
 		if err != nil {
 			return domain.GitWorktree{}, fmt.Errorf("open repository: %w", err)
 		}
-		if err := s.verifyBootstrapRepo(ctx, repo, opened, gitSvc); err != nil {
+		branches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
+		if err != nil {
 			return domain.GitWorktree{}, err
+		}
+		if err := gitSvc.VerifySameRepository(ctx, registeredCheckoutFromRepo(repo, branches), opened); err != nil {
+			return domain.GitWorktree{}, mapGitworkBootstrapErr(err)
 		}
 	}
 	belongs, err := gitSvc.BelongsToRepository(ctx, path, opened.Root)
@@ -423,100 +430,67 @@ func (s *Store) openRepoForReconcile(
 	repo domain.GitRepository,
 	bootstrap string,
 	gitSvc gitwork.Service,
-) (*gitwork.Repository, bool, error) {
-	opened, err := tryOpenRepoPath(ctx, repo.Path, gitSvc)
-	if err == nil {
-		return opened, false, nil
-	}
-	if !errors.Is(err, gitwork.ErrNotARepository) && !isPathMissing(err, repo.Path) {
-		return nil, false, fmt.Errorf("open repository: %w", err)
-	}
-	if bootstrap == "" {
-		return nil, false, nil
-	}
-	bootOpened, err := gitSvc.OpenRepository(ctx, bootstrap)
-	if err != nil {
-		if errors.Is(err, gitwork.ErrNotARepository) {
-			return nil, false, domain.NewGitErr(domain.GitCodeNotARepository, "bootstrap path is not a git repository")
-		}
-		return nil, false, fmt.Errorf("open bootstrap repository: %w", err)
-	}
-	if err := s.verifyBootstrapRepo(ctx, repo, bootOpened, gitSvc); err != nil {
-		return nil, false, err
-	}
-	return bootOpened, true, nil
+) (*gitwork.Repository, gitwork.ResolveResult, error) {
+	return s.openRegisteredRepo(ctx, repo, bootstrap, false, gitSvc)
 }
 
-//funclogmeasure:skip category=hot-path reason="Bootstrap identity check; operation trace is emitted by ReconcileGitRepository."
-func (s *Store) verifyBootstrapRepo(ctx context.Context, repo domain.GitRepository, opened *gitwork.Repository, gitSvc gitwork.Service) error {
-	storedBranches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
+func (s *Store) openRegisteredRepo(
+	ctx context.Context,
+	repo domain.GitRepository,
+	candidatePath string,
+	allowDiscover bool,
+	gitSvc gitwork.Service,
+) (*gitwork.Repository, gitwork.ResolveResult, error) {
+	branches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
 	if err != nil {
-		return err
+		return nil, gitwork.ResolveResult{}, err
 	}
-	if len(storedBranches) == 0 {
-		if cd := strings.TrimSpace(repo.GitCommonDir); cd != "" {
-			if worktreePathKey(opened.CommonDir) == worktreePathKey(cd) {
-				return nil
-			}
+	result, err := gitSvc.OpenRegisteredCheckout(ctx, gitwork.ResolveInput{
+		Registered:    registeredCheckoutFromRepo(repo, branches),
+		CandidatePath: candidatePath,
+		AllowDiscover: allowDiscover,
+	})
+	if err != nil {
+		if errors.Is(err, gitwork.ErrBootstrapMismatch) {
+			return nil, gitwork.ResolveResult{}, domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
 		}
-		return domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
+		if errors.Is(err, gitwork.ErrNotARepository) {
+			return nil, gitwork.ResolveResult{}, domain.NewGitErr(domain.GitCodeNotARepository, "bootstrap path is not a git repository")
+		}
+		if errors.Is(err, gitwork.ErrAmbiguousDiscovery) {
+			return nil, gitwork.ResolveResult{}, nil
+		}
+		return nil, gitwork.ResolveResult{}, fmt.Errorf("open registered repository: %w", err)
 	}
-	verified := false
-	for _, b := range storedBranches {
+	if result.Repo == nil {
+		return nil, gitwork.ResolveResult{}, nil
+	}
+	return result.Repo, result, nil
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure mapper without I/O; operation trace is emitted by openRegisteredRepo."
+func registeredCheckoutFromRepo(repo domain.GitRepository, branches []domain.GitBranch) gitwork.RegisteredCheckout {
+	heads := make(map[string]string, len(branches))
+	for _, b := range branches {
 		name := strings.TrimSpace(b.Name)
 		if name == "" {
 			continue
 		}
-		liveHead, err := gitSvc.BranchHead(ctx, opened, name)
-		if err != nil {
-			continue
-		}
-		storedSHA := strings.TrimSpace(b.HeadSHA)
-		if storedSHA == "" {
-			continue
-		}
-		if strings.EqualFold(storedSHA, strings.TrimSpace(liveHead)) {
-			verified = true
-			break
-		}
+		heads[name] = strings.TrimSpace(b.HeadSHA)
 	}
-	if verified {
-		return nil
+	return gitwork.RegisteredCheckout{
+		CachedMainPath:  repo.Path,
+		CachedCommonDir: repo.GitCommonDir,
+		BranchHeads:     heads,
 	}
-	if cd := strings.TrimSpace(repo.GitCommonDir); cd != "" {
-		if worktreePathKey(opened.CommonDir) == worktreePathKey(cd) {
-			return nil
-		}
-	}
-	return domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
 }
 
-//funclogmeasure:skip category=hot-path reason="Open helper for reconcile bootstrap; operation trace is emitted by ReconcileGitRepository."
-func tryOpenRepoPath(ctx context.Context, path string, gitSvc gitwork.Service) (*gitwork.Repository, error) {
-	if st, err := os.Stat(strings.TrimSpace(path)); err != nil || !st.IsDir() {
-		if err != nil && os.IsNotExist(err) {
-			return nil, gitwork.ErrNotARepository
-		}
-		if err != nil {
-			return nil, err
-		}
-		return nil, gitwork.ErrNotARepository
+//funclogmeasure:skip category=hot-path reason="Pure error mapper; operation trace is emitted by openRegisteredRepo."
+func mapGitworkBootstrapErr(err error) error {
+	if errors.Is(err, gitwork.ErrBootstrapMismatch) {
+		return domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
 	}
-	return gitSvc.OpenRepository(ctx, path)
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
-func isPathMissing(err error, path string) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, gitwork.ErrNotARepository) {
-		return true
-	}
-	if _, statErr := os.Stat(strings.TrimSpace(path)); os.IsNotExist(statErr) {
-		return true
-	}
-	return false
+	return err
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
