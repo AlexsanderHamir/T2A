@@ -1,12 +1,12 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
-import { TaskListDeleteGlyph } from "@/shared/ListRowActionGlyphs";
 import {
-  cannotDeleteMainWorktreeAriaLabel,
-  deleteWorktreeAriaLabel,
   worktreeAriaLabel,
   worktreeGitCopy,
 } from "../worktreeGitCopy";
 import { BranchPill } from "./BranchPill";
+import { WorktreesMenu } from "./WorktreesMenu";
+import { WorktreesMoreIcon } from "./WorktreesIcons";
+import { WorktreesPathChip } from "./WorktreesPathChip";
 
 type Props = {
   worktree: GitWorktree;
@@ -22,11 +22,18 @@ export function WorktreeRow({
   deleteDisabled = false,
 }: Props) {
   const displayName = worktree.name.trim() || worktree.path;
-  const hostHint = worktree.path;
   const branchById = new Map(branches.map((b) => [b.id, b]));
   const branch = worktree.branch_id ? branchById.get(worktree.branch_id) : undefined;
   const deleteBlocked = deleteDisabled || worktree.is_main;
-  const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeLabel : null;
+  const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeShortLabel : null;
+
+  const deleteMenuItem = {
+    id: "delete-worktree",
+    label: worktreeGitCopy.deleteWorktree,
+    onSelect: onDelete,
+    disabled: deleteBlocked,
+    danger: true,
+  };
 
   return (
     <li
@@ -35,25 +42,20 @@ export function WorktreeRow({
       aria-label={worktreeAriaLabel(displayName)}
     >
       <div className="draft-row__meta worktree-row__meta">
-        <span className="draft-row__name" title={displayName}>
-          {displayName}
-        </span>
-        <span className="draft-row__time worktree-row__sub" title={hostHint}>
-          <code className="worktree-row__path">{hostHint}</code>
+        <div className="worktree-row__title">
+          <span className="draft-row__name" title={displayName}>
+            {displayName}
+          </span>
           {kindLabel ? (
-            <>
-              <span className="worktree-row__sub-sep" aria-hidden="true">
-                ·
-              </span>
-              <span
-                className="worktree-row__kind"
-                title={worktreeGitCopy.mainWorktreeHint}
-              >
-                {kindLabel}
-              </span>
-            </>
+            <span
+              className="worktree-row__kind"
+              title={worktreeGitCopy.mainWorktreeHint}
+            >
+              {kindLabel}
+            </span>
           ) : null}
-        </span>
+        </div>
+        <WorktreesPathChip path={worktree.path} compact />
       </div>
 
       <div className="worktree-row__branch" aria-label="Branch">
@@ -66,28 +68,24 @@ export function WorktreeRow({
         )}
       </div>
 
+      <div
+        className="worktree-row__status"
+        title={worktreeGitCopy.statusUnavailableTitle}
+        aria-label={worktreeGitCopy.statusUnavailableTitle}
+      >
+        <span className="worktree-row__status-value" aria-hidden>
+          {worktreeGitCopy.statusUnavailable}
+        </span>
+      </div>
+
       <div className="draft-row__actions worktree-row__actions">
-        <div className="task-list-row-actions">
-          <button
-            type="button"
-            className="task-list-icon-btn task-list-icon-btn--delete"
-            disabled={deleteBlocked}
-            title={
-              worktree.is_main ? worktreeGitCopy.deleteMainWorktreeTitle : undefined
-            }
-            aria-label={
-              worktree.is_main
-                ? cannotDeleteMainWorktreeAriaLabel(displayName)
-                : deleteWorktreeAriaLabel(displayName)
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <TaskListDeleteGlyph />
-          </button>
-        </div>
+        <WorktreesMenu
+          triggerLabel={worktreeGitCopy.worktreeActions(displayName)}
+          className="secondary worktrees-icon-menu-btn"
+          icon={<WorktreesMoreIcon />}
+          iconOnly
+          items={[deleteMenuItem]}
+        />
       </div>
     </li>
   );

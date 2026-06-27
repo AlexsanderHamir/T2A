@@ -8,7 +8,11 @@ type Props = {
   onDeleteWorktree: (worktreeId: string, label: string) => void;
 };
 
-export function WorktreeList({ worktrees, branches, onDeleteWorktree }: Props) {
+export function WorktreeList({
+  worktrees,
+  branches,
+  onDeleteWorktree,
+}: Props) {
   return (
     <div className="worktree-list table-wrap">
       <div className="worktree-list-head" role="row">
@@ -22,11 +26,12 @@ export function WorktreeList({ worktrees, branches, onDeleteWorktree }: Props) {
           {worktreeGitCopy.listColumnBranch}
         </span>
         <span
-          className="worktree-list-head__label worktree-list-head__label--actions"
+          className="worktree-list-head__label worktree-list-head__label--status"
           role="columnheader"
         >
-          {worktreeGitCopy.listColumnActions}
+          {worktreeGitCopy.listColumnStatus}
         </span>
+        <span className="worktree-list-head__label worktree-list-head__label--menu" aria-hidden />
       </div>
       <ul className="draft-row-list worktree-list-rows" aria-label="Worktrees">
         {worktrees.map((worktree) => (

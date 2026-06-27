@@ -20,6 +20,8 @@ import {
   worktreesPageErrorMessage,
   worktreesPageTitle,
 } from "./worktreesPageMode";
+import { worktreeGitCopy } from "./worktreeGitCopy";
+import { WorktreesPlusIcon } from "./components/WorktreesIcons";
 
 type ActiveRepoModal =
   | { kind: "register-worktree"; repository: GitRepository }
@@ -96,16 +98,16 @@ export function WorktreesPage() {
         className="panel task-list-section-panel worktrees-page"
         aria-labelledby="worktrees-heading"
       >
-        <header className="task-list-section-head">
+        <header className="task-list-section-head worktrees-page__head">
           <div className="task-list-section-head__text">
             <h2 id="worktrees-heading" className="task-list-section-title">
               {pageTitle}
             </h2>
             {pageMode === "manage" && repositoryCount > 0 ? (
-              <span className="draft-count-pill" aria-live="polite">
-                <strong>{repositoryCount}</strong>{" "}
+              <p className="worktrees-page__subtitle" aria-live="polite">
+                <span className="worktrees-page__subtitle-count">{repositoryCount}</span>{" "}
                 {repositoryCount === 1 ? "repository" : "repositories"}
-              </span>
+              </p>
             ) : null}
           </div>
           <div className="task-list-section-actions">
@@ -113,10 +115,11 @@ export function WorktreesPage() {
               <Button
                 type="button"
                 variant="primary"
-                className="task-home-new-task-btn"
+                className="task-home-new-task-btn worktrees-register-btn"
                 onClick={() => setRegisterOpen(true)}
               >
-                Register repository
+                <WorktreesPlusIcon className="worktrees-register-btn__icon" />
+                {worktreeGitCopy.registerRepository}
               </Button>
             ) : null}
           </div>
