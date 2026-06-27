@@ -43,6 +43,9 @@ type Service interface {
 	OpenRepository(ctx context.Context, path string) (*Repository, error)
 	ResolveRegistration(ctx context.Context, path string) (mainRoot, commonDir string, err error)
 	BelongsToRepository(ctx context.Context, candidatePath, repoRootPath string) (bool, error)
+	OpenRegisteredCheckout(ctx context.Context, input ResolveInput) (ResolveResult, error)
+	VerifySameRepository(ctx context.Context, registered RegisteredCheckout, candidate *Repository) error
+	DiscoverCheckoutNearby(ctx context.Context, registered RegisteredCheckout) (*Repository, error)
 
 	ListWorktrees(ctx context.Context, repo *Repository) ([]Worktree, error)
 	AddWorktree(ctx context.Context, repo *Repository, path string, opts AddWorktreeOptions) (*Worktree, error)

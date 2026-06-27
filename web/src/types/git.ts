@@ -72,6 +72,8 @@ export type GitReconcileReport = {
   worktrees_added: number;
   worktrees_removed: number;
   branches_head_updated: number;
+  resolution_source?: string;
+  discovered_path?: string;
   worktrees_skipped: GitReconcileSkipped[];
   needs_branch_bind: GitReconcileNeedsBranchBind[];
 };

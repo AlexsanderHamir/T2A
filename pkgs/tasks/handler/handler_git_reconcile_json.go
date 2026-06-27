@@ -32,6 +32,8 @@ type gitReconcileReportJSON struct {
 	WorktreesAdded       int                               `json:"worktrees_added"`
 	WorktreesRemoved     int                               `json:"worktrees_removed"`
 	BranchesHeadUpdated  int                               `json:"branches_head_updated"`
+	ResolutionSource     string                            `json:"resolution_source,omitempty"`
+	DiscoveredPath       string                            `json:"discovered_path,omitempty"`
 	WorktreesSkipped     []gitReconcileSkippedJSON         `json:"worktrees_skipped,omitempty"`
 	NeedsBranchBind      []gitReconcileNeedsBranchBindJSON `json:"needs_branch_bind,omitempty"`
 }
@@ -65,6 +67,8 @@ func toGitReconcileResponse(out store.ReconcileGitOutput) gitReconcileResponse {
 			WorktreesAdded:       out.Report.WorktreesAdded,
 			WorktreesRemoved:     out.Report.WorktreesRemoved,
 			BranchesHeadUpdated:  out.Report.BranchesHeadUpdated,
+			ResolutionSource:     out.Report.ResolutionSource,
+			DiscoveredPath:       out.Report.DiscoveredPath,
 			WorktreesSkipped:     skipped,
 			NeedsBranchBind:      needsBind,
 		},

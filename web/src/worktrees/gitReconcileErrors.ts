@@ -28,6 +28,9 @@ export function formatReconcileSuccess(result: GitReconcileResult): string {
 
 function summarizeReconcileReport(report: GitReconcileReport): string[] {
   const parts: string[] = [];
+  if (report.resolution_source === "discovered" && report.discovered_path) {
+    parts.push(`found repository at ${report.discovered_path}`);
+  }
   if (report.repo_path_updated) {
     parts.push("repository path updated");
   }

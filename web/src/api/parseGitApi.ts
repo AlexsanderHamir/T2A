@@ -221,6 +221,10 @@ function parseGitReconcileReport(value: unknown): GitReconcileReport {
       typeof value.branches_head_updated === "number" && Number.isFinite(value.branches_head_updated)
         ? value.branches_head_updated
         : 0,
+    resolution_source:
+      typeof value.resolution_source === "string" ? value.resolution_source : undefined,
+    discovered_path:
+      typeof value.discovered_path === "string" ? value.discovered_path : undefined,
     worktrees_skipped: skipped,
     needs_branch_bind: needsBranchBind,
   };

@@ -5,6 +5,7 @@ Git worktree and branch operations for Hamix worktree management ([Issue #39](ht
 ## Scope
 
 - `OpenRepository` — validate a path is a git root
+- `OpenRegisteredCheckout` — open a registered repo from cache, candidate path, or bounded sibling discovery ([git-checkout-resolution.md](../../docs/domain/git-checkout-resolution.md))
 - Worktrees — list, add, remove (`git worktree`)
 - Branches — list, create, delete, checkout
 
