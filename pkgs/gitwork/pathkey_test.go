@@ -20,4 +20,7 @@ func TestPathKey_matchesSlashAndCaseVariants(t *testing.T) {
 			t.Fatal("case variants should match on Windows")
 		}
 	}
+	if !gitwork.PathKeyEqual(`C:/repo/main`, `C:/repo/main/`) {
+		t.Fatal("PathKeyEqual should match trailing slash variants")
+	}
 }

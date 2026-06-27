@@ -92,6 +92,9 @@ func (s *Store) ReconcileGitRepository(
 		if err := gitSvc.RepairWorktrees(ctx, opened); err != nil {
 			return ReconcileGitOutput{}, fmt.Errorf("repair worktrees: %w", err)
 		}
+		if err := gitSvc.PruneWorktrees(ctx, opened); err != nil {
+			return ReconcileGitOutput{}, fmt.Errorf("prune worktrees: %w", err)
+		}
 	}
 
 	mainRoot, commonDir, err := gitSvc.ResolveRegistration(ctx, opened.Root)
@@ -144,6 +147,7 @@ func (s *Store) ReconcileGitRepository(
 
 		matchedLive := make(map[string]struct{}, len(live))
 		matchedRowIDs := make(map[string]struct{}, len(dbRows))
+		liveByPath := liveWorktreesByPath(live)
 		liveByBranch := liveWorktreesByBranch(live)
 
 		for i := range dbRows {
@@ -166,20 +170,60 @@ func (s *Store) ReconcileGitRepository(
 				}
 				continue
 			}
-			if strings.TrimSpace(row.BranchID) == "" {
+
+			var liveWT *gitwork.Worktree
+			matched := false
+
+			if wt, ok := liveByPath[worktreePathKey(row.Path)]; ok {
+				liveWT = &wt
+				matched = true
+			} else if strings.TrimSpace(row.BranchID) != "" {
+				br, ok := branchByID[row.BranchID]
+				if !ok {
+					report.WorktreesSkipped = append(report.WorktreesSkipped, ReconcileSkippedWorktree{
+						WorktreeID: row.ID,
+						Reason:     "path_and_branch_not_found",
+					})
+					continue
+				}
+				wt, ok := liveByBranch[br.Name]
+				if !ok {
+					report.WorktreesSkipped = append(report.WorktreesSkipped, ReconcileSkippedWorktree{
+						WorktreeID: row.ID,
+						Reason:     "path_and_branch_not_found",
+					})
+					continue
+				}
+				if countBranchOwners(dbRows, br.Name, branchByID) > 1 {
+					return fmt.Errorf("%w: duplicate worktree rows for branch %q", domain.ErrInvalidInput, br.Name)
+				}
+				liveWT = &wt
+				matched = true
+			}
+
+			if !matched {
+				if strings.TrimSpace(row.BranchID) != "" {
+					report.WorktreesSkipped = append(report.WorktreesSkipped, ReconcileSkippedWorktree{
+						WorktreeID: row.ID,
+						Reason:     "path_and_branch_not_found",
+					})
+				}
 				continue
 			}
-			br, ok := branchByID[row.BranchID]
-			if !ok {
-				continue
+
+			if strings.TrimSpace(row.BranchID) != "" && strings.TrimSpace(liveWT.Branch) != "" {
+				br, ok := branchByID[row.BranchID]
+				if ok && liveWT.Branch != br.Name {
+					report.WorktreesSkipped = append(report.WorktreesSkipped, ReconcileSkippedWorktree{
+						WorktreeID: row.ID,
+						Reason:     "branch_checkout_mismatch",
+					})
+					matchedLive[worktreePathKey(liveWT.Path)] = struct{}{}
+					matchedRowIDs[row.ID] = struct{}{}
+					continue
+				}
 			}
-			liveWT, ok := liveByBranch[br.Name]
-			if !ok {
-				continue
-			}
-			if countBranchOwners(dbRows, br.Name, branchByID) > 1 {
-				return fmt.Errorf("%w: duplicate worktree rows for branch %q", domain.ErrInvalidInput, br.Name)
-			}
+
 			matchedLive[worktreePathKey(liveWT.Path)] = struct{}{}
 			matchedRowIDs[row.ID] = struct{}{}
 			if worktreePathKey(row.Path) != worktreePathKey(liveWT.Path) {
@@ -410,6 +454,11 @@ func (s *Store) verifyBootstrapRepo(ctx context.Context, repo domain.GitReposito
 		return err
 	}
 	if len(storedBranches) == 0 {
+		if cd := strings.TrimSpace(repo.GitCommonDir); cd != "" {
+			if worktreePathKey(opened.CommonDir) == worktreePathKey(cd) {
+				return nil
+			}
+		}
 		return domain.NewGitErr(domain.GitCodeBootstrapMismatch, "bootstrap path is not the same repository")
 	}
 	verified := false
@@ -478,6 +527,15 @@ func filterLiveWorktrees(live []gitwork.Worktree) []gitwork.Worktree {
 			continue
 		}
 		out = append(out, wt)
+	}
+	return out
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ReconcileGitRepository."
+func liveWorktreesByPath(live []gitwork.Worktree) map[string]gitwork.Worktree {
+	out := make(map[string]gitwork.Worktree, len(live))
+	for _, wt := range live {
+		out[worktreePathKey(wt.Path)] = wt
 	}
 	return out
 }

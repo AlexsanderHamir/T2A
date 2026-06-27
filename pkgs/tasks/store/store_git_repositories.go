@@ -8,13 +8,10 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -71,95 +68,11 @@ func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) 
 // projectID is accepted for API-route compatibility but not stored (repos are global).
 func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitRepository")
-	path := strings.TrimSpace(input.Path)
-	if path == "" {
-		return domain.GitRepository{}, fmt.Errorf("%w: path required", domain.ErrInvalidInput)
-	}
-	if gitSvc == nil {
-		gitSvc = gitwork.New()
-	}
-	opened, err := gitSvc.OpenRepository(ctx, path)
+	repo, err := s.registerGitRepository(ctx, input, gitSvc)
 	if err != nil {
-		if errors.Is(err, gitwork.ErrNotARepository) {
-			return domain.GitRepository{}, domain.NewGitErr(domain.GitCodeNotARepository, "path is not a git repository")
-		}
-		return domain.GitRepository{}, fmt.Errorf("open repository: %w", err)
+		return domain.GitRepository{}, err
 	}
-	defaultBranch := strings.TrimSpace(input.DefaultBranch)
-	if defaultBranch == "" {
-		defaultBranch = "main"
-	}
-	now := time.Now().UTC()
-	repo := domain.GitRepository{
-		ID:            uuid.NewString(),
-		Path:          opened.Root,
-		HostPath:      strings.TrimSpace(input.HostPath),
-		DefaultBranch: defaultBranch,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	mainWT := domain.GitWorktree{
-		ID:           uuid.NewString(),
-		RepositoryID: repo.ID,
-		Path:         opened.Root,
-		Name:         worktreeDisplayName(opened.Root),
-		IsMain:       true,
-		CreatedAt:    now,
-	}
-	branches, err := gitSvc.ListBranches(ctx, opened)
-	if err != nil {
-		return domain.GitRepository{}, fmt.Errorf("list branches: %w", err)
-	}
-	var branchRows []domain.GitBranch
-	var mainBranchID string
-	for _, b := range branches {
-		id := uuid.NewString()
-		branchRows = append(branchRows, domain.GitBranch{
-			ID:           id,
-			RepositoryID: repo.ID,
-			Name:         b.Name,
-			HeadSHA:      b.HeadSHA,
-			CreatedAt:    now,
-		})
-		if b.IsCurrent && strings.TrimSpace(b.Name) != "" {
-			mainBranchID = id
-		}
-	}
-	if len(branchRows) == 0 {
-		id := uuid.NewString()
-		branchRows = append(branchRows, domain.GitBranch{
-			ID:           id,
-			RepositoryID: repo.ID,
-			Name:         defaultBranch,
-			CreatedAt:    now,
-		})
-		mainBranchID = id
-	}
-	if mainBranchID == "" {
-		mainBranchID = branchRows[0].ID
-	}
-	mainWT.BranchID = mainBranchID
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		repoRow := model.FromDomainGitRepository(repo)
-		if err := tx.Create(&repoRow).Error; err != nil {
-			if kernel.IsDuplicateKey(err) {
-				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
-			}
-			return err
-		}
-		mainWTRow := model.FromDomainGitWorktree(mainWT)
-		if err := tx.Create(&mainWTRow).Error; err != nil {
-			return err
-		}
-		if len(branchRows) > 0 {
-			branchModelRows := model.FromDomainGitBranches(branchRows)
-			if err := tx.Create(&branchModelRows).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
+	if err := s.seedMainWorktreeWithCurrentBranch(ctx, repo, gitSvc); err != nil {
 		return domain.GitRepository{}, err
 	}
 	return repo, nil

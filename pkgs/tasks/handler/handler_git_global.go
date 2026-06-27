@@ -107,6 +107,8 @@ func (h *Handler) listGlobalGitWorktreesLive(w http.ResponseWriter, r *http.Requ
 			IsMain:     wt.IsMain,
 			Detached:   wt.Detached,
 			Registered: wt.Registered,
+			Locked:     wt.Locked,
+			Prunable:   wt.Prunable,
 		})
 	}
 	writeJSON(w, r, op, http.StatusOK, gitLiveWorktreesListResponse{Worktrees: out})

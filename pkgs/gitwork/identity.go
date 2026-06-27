@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"path/filepath"
 )
 
 // ResolveRegistration opens any checkout path and returns the canonical main
@@ -48,5 +47,5 @@ func (s *DefaultService) BelongsToRepository(ctx context.Context, candidatePath,
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func sameCommonDir(a, b string) bool {
-	return filepath.Clean(a) == filepath.Clean(b)
+	return PathKeyEqual(a, b)
 }

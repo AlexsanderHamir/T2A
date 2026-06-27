@@ -26,6 +26,8 @@ type WorktreeInventoryRow struct {
 	IsMain     bool
 	Detached   bool
 	Registered bool
+	Locked     bool
+	Prunable   bool
 }
 
 // GitWorktreeProbeResult describes whether a path is a linked, registerable worktree.
@@ -72,6 +74,8 @@ func (s *Store) RepoWorktreeInventory(
 			IsMain:     wt.IsMain,
 			Detached:   strings.TrimSpace(wt.Branch) == "",
 			Registered: isRegistered,
+			Locked:     wt.Locked,
+			Prunable:   wt.Prunable,
 		})
 	}
 	return out, nil

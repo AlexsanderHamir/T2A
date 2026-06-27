@@ -21,3 +21,11 @@ func PathKey(path string) string {
 	}
 	return key
 }
+
+// PathKeyEqual reports whether two paths refer to the same filesystem location
+// after PathKey normalization.
+//
+//funclogmeasure:skip category=hot-path reason="Pure path compare helper without I/O; operation trace is emitted by reconcile/inventory chokepoints."
+func PathKeyEqual(a, b string) bool {
+	return PathKey(a) == PathKey(b)
+}

@@ -89,6 +89,8 @@ type gitLiveWorktreeJSON struct {
 	IsMain     bool   `json:"is_main"`
 	Detached   bool   `json:"detached"`
 	Registered bool   `json:"registered"`
+	Locked     bool   `json:"locked"`
+	Prunable   bool   `json:"prunable"`
 }
 
 type gitLiveWorktreesListResponse struct {
