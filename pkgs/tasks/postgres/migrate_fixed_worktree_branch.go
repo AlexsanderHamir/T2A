@@ -2,16 +2,43 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"gorm.io/gorm"
 )
+
+// migrateExpandFixedWorktreeBranch runs before AutoMigrate on databases upgraded
+// from schema rev 3. GORM would otherwise ADD branch_id NOT NULL in one step while
+// existing git_worktrees rows are still null (PostgreSQL SQLSTATE 23502).
+func migrateExpandFixedWorktreeBranch(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.migrateExpandFixedWorktreeBranch")
+	if !db.Migrator().HasTable("git_worktrees") {
+		return nil
+	}
+	if !tableHasColumnPortable(db, "git_worktrees", "branch_id") {
+		if err := ensureNullableTextColumn(ctx, db, "git_worktrees", "branch_id"); err != nil {
+			return fmt.Errorf("add git_worktrees.branch_id: %w", err)
+		}
+	}
+	return backfillFixedWorktreeBranchData(ctx, db)
+}
 
 // migrateFixedWorktreeBranch is the ADR-0039 migration (schema rev 4).
 // Collapses worktree_branches into git_worktrees.branch_id and tasks.worktree_id.
 func migrateFixedWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.migrateFixedWorktreeBranch")
 
+	if err := backfillFixedWorktreeBranchData(ctx, db); err != nil {
+		return err
+	}
+	if err := dropLegacyWorktreeBranchArtifacts(ctx, db); err != nil {
+		return err
+	}
+	return nil
+}
+
+func backfillFixedWorktreeBranchData(ctx context.Context, db *gorm.DB) error {
 	if tableHasColumnPortable(db, "worktree_branches", "id") {
 		if err := backfillWorktreeBranchID(ctx, db); err != nil {
 			return err
@@ -20,11 +47,25 @@ func migrateFixedWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 			return err
 		}
 	}
-
-	if err := dropLegacyWorktreeBranchArtifacts(ctx, db); err != nil {
+	if err := backfillWorktreeBranchIDFromActive(ctx, db); err != nil {
 		return err
 	}
-	return nil
+	return backfillMainWorktreeDefaultBranch(ctx, db)
+}
+
+func ensureNullableTextColumn(ctx context.Context, db *gorm.DB, table, column string) error {
+	slog.Debug("trace", "operation", "postgres.ensureNullableTextColumn", "table", table, "column", column)
+	if tableHasColumnPortable(db, table, column) {
+		return nil
+	}
+	if isPostgres(db) {
+		return db.WithContext(ctx).Exec(fmt.Sprintf(
+			`ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s text`, table, column,
+		)).Error
+	}
+	return db.WithContext(ctx).Exec(fmt.Sprintf(
+		`ALTER TABLE %s ADD COLUMN %s text`, table, column,
+	)).Error
 }
 
 func backfillWorktreeBranchID(ctx context.Context, db *gorm.DB) error {
@@ -79,6 +120,50 @@ UPDATE tasks
    )
  WHERE worktree_branch_id IS NOT NULL
    AND (worktree_id IS NULL OR worktree_id = '')`).Error
+}
+
+func backfillWorktreeBranchIDFromActive(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.backfillWorktreeBranchIDFromActive")
+	if !tableHasColumnPortable(db, "git_worktrees", "branch_id") {
+		return nil
+	}
+	if !tableHasColumnPortable(db, "git_worktrees", "active_branch_id") {
+		return nil
+	}
+	return db.WithContext(ctx).Exec(`
+UPDATE git_worktrees
+   SET branch_id = active_branch_id
+ WHERE (branch_id IS NULL OR branch_id = '')
+   AND active_branch_id IS NOT NULL
+   AND active_branch_id <> ''`).Error
+}
+
+func backfillMainWorktreeDefaultBranch(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.backfillMainWorktreeDefaultBranch")
+	if !tableHasColumnPortable(db, "git_worktrees", "branch_id") {
+		return nil
+	}
+	if isPostgres(db) {
+		return db.WithContext(ctx).Exec(`
+UPDATE git_worktrees AS wt
+   SET branch_id = b.id
+  FROM git_repositories AS r
+  JOIN git_branches AS b ON b.repository_id = r.id AND b.name = r.default_branch
+ WHERE wt.repository_id = r.id
+   AND wt.is_main = true
+   AND (wt.branch_id IS NULL OR wt.branch_id = '')`).Error
+	}
+	return db.WithContext(ctx).Exec(`
+UPDATE git_worktrees
+   SET branch_id = (
+     SELECT b.id FROM git_branches b
+      JOIN git_repositories r ON r.id = b.repository_id
+      WHERE b.repository_id = git_worktrees.repository_id
+        AND b.name = r.default_branch
+      LIMIT 1
+   )
+ WHERE is_main = 1
+   AND (branch_id IS NULL OR branch_id = '')`).Error
 }
 
 func dropLegacyWorktreeBranchArtifacts(ctx context.Context, db *gorm.DB) error {

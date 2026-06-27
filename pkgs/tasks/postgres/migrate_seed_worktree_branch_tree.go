@@ -89,6 +89,9 @@ func backfillTaskWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 	if !tableHasColumnPortable(db, "tasks", "worktree_id") {
 		return nil
 	}
+	if !tableHasColumnPortable(db, "tasks", "branch_id") {
+		return nil
+	}
 	var pairs []worktreeBranchPair
 	if err := db.WithContext(ctx).Raw(
 		`SELECT worktree_id, branch_id FROM tasks WHERE worktree_id IS NOT NULL AND branch_id IS NOT NULL GROUP BY worktree_id, branch_id`,
