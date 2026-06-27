@@ -184,9 +184,9 @@ describe("WorktreesPage", () => {
     expect(
       await screen.findByRole("heading", { level: 2, name: "main" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("feature")).toBeInTheDocument();
+    expect(await screen.findByText("feature", { selector: ".draft-row__name" })).toBeInTheDocument();
+    expect(screen.getByText("/repo/")).toBeInTheDocument();
     expect(screen.getAllByText("main worktree").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
     expect(screen.getByText("Default branch")).toBeInTheDocument();
   });
 
@@ -235,7 +235,7 @@ describe("WorktreesPage", () => {
     });
 
     renderPage();
-    await screen.findByText("feature");
+    await screen.findByText("feature", { selector: ".draft-row__name" });
     const deleteButton = screen.getByRole("button", {
       name: /Delete worktree "feature"/i,
     });
