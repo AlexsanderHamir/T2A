@@ -2,7 +2,6 @@ import type { GitRepository } from "@/types/git";
 import { EmptyState } from "@/shared/EmptyState";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
-import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
 import {
   repositoryDisplayName,
@@ -41,13 +40,10 @@ export function RepositoryCard({
   reconcileError,
 }: Props) {
   const worktreesQuery = useGlobalWorktrees(repository.id);
-  const liveWorktreesQuery = useGlobalLiveWorktrees(repository.id);
   const branchesQuery = useGlobalBranches(repository.id);
   const worktrees = worktreesQuery.data ?? [];
-  const liveWorktrees = liveWorktreesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
-  const unregisteredLiveCount = liveWorktrees.filter((wt) => !wt.registered).length;
   const reconcileErrorMessage =
     reconcileError != null ? gitReconcileErrorMessage(reconcileError) : null;
   const repoName = repositoryDisplayName(repository.path);
@@ -98,15 +94,6 @@ export function RepositoryCard({
           />
         </div>
       </header>
-
-      {unregisteredLiveCount > 0 ? (
-        <div className="worktrees-repo-card__drift-banner" role="status">
-          <p className="worktrees-repo-card__drift-title">{worktreeGitCopy.driftBannerTitle}</p>
-          <p className="worktrees-repo-card__drift-description">
-            {worktreeGitCopy.driftBannerDescription}
-          </p>
-        </div>
-      ) : null}
 
       {reconcileErrorMessage ? (
         <MutationErrorBanner

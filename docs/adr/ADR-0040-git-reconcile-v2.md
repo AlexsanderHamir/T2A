@@ -25,7 +25,7 @@ Shared primitives:
 - **`gitwork.PathKey`** — normalize paths for compare (slash clean, Windows case-folding). Used by reconcile, inventory, and probe.
 - **`openRepoForReconcile` / `tryOpenRepoPath`** (store) — bootstrap + verify pattern reused by relocate; not a generic non-git path service.
 
-Manual UI: Reconcile button with per-repo pending, error banner, relocate modal on `needs_bootstrap_path`, drift hint from `GET …/worktrees/live` (`registered: false`).
+Manual UI: Reconcile button with per-repo pending, error banner, relocate modal on `needs_bootstrap_path`. `GET …/worktrees/live` (`registered: false`) feeds the register-worktree path picker — not a passive card banner.
 
 Optional startup: `HAMIX_GIT_RECONCILE_ON_STARTUP=repair-only` runs conservative reconcile (no bootstrap, no remove, no `git worktree repair`) when stored main path still stat's OK.
 
@@ -58,7 +58,7 @@ Optional startup: `HAMIX_GIT_RECONCILE_ON_STARTUP=repair-only` runs conservative
 |----------|------------|
 | Agent worker / harness | `git_worktrees.path` via `worktree_id` |
 | `GET /repo/*`, mention validation | `OpenWorktreeRoot` from DB path |
-| SPA `/worktrees` | Reconcile + live worktree drift hint |
+| SPA `/worktrees` | Reconcile + register-worktree live path discovery |
 
 Not covered: `app_settings.CursorBin`, `task_cycle_command_runs` artifact paths, historical verify stdout paths.
 

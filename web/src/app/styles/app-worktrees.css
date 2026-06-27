@@ -189,28 +189,6 @@
   color: var(--text-tertiary);
 }
 
-.worktrees-repo-card__drift-banner {
-  margin: 0 var(--space-6) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-warning-subtle);
-  border: 1px solid var(--warning-border-soft);
-}
-
-.worktrees-repo-card__drift-title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.worktrees-repo-card__drift-description {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .worktrees-repo-card__reconcile-error {
   margin: 0 var(--space-6) var(--space-4);
 }

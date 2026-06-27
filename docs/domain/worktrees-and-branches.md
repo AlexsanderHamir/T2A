@@ -49,7 +49,7 @@ Hamix stores **absolute paths** for repositories and worktrees. Renaming or movi
 - Refreshes branch `head_sha` from git.
 - Does **not** fix non-git paths (Cursor binary, worker scratch files, `HAMIX_PATH_MAP` display prefixes).
 
-**Drift hint:** `GET …/worktrees/live` includes `registered: false` for linked checkouts git knows about but Hamix has not registered. The SPA shows a read-only banner; reconcile may add paths but branch binding may still be required.
+**Live inventory:** `GET …/worktrees/live` includes `registered: false` for linked checkouts git knows about but Hamix has not registered. The register-worktree modal uses this list for path selection; reconcile may add discovered paths but branch binding may still be required.
 
 See [ADR-0040](../adr/ADR-0040-git-reconcile-v2.md) and `HAMIX_GIT_RECONCILE_ON_STARTUP` in [configuration.md](../configuration.md) for optional startup sync.
 
