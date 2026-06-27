@@ -2,8 +2,7 @@ import { ApiError } from "@/api";
 
 export type GitDeleteTarget =
   | { kind: "repository"; id: string; label: string; repositoryId: string }
-  | { kind: "worktree"; id: string; label: string; repositoryId: string }
-  | { kind: "branch"; id: string; label: string; repositoryId: string; worktreeId: string };
+  | { kind: "worktree"; id: string; label: string; repositoryId: string };
 
 export function gitDeleteErrorMessage(err: unknown): string {
   if (!(err instanceof ApiError)) {

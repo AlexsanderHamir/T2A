@@ -16,24 +16,22 @@ const baseFields: TaskCreateFormFields = {
   newMilestone: "",
   newDependsOn: [],
   newWorktreeID: "",
-  newBranchID: "",
-  newWorktreeBranchID: "",
   newChecklistItems: [],
   newDraftID: "",
 };
 
 describe("buildCreateTaskMutationInput", () => {
-  it("includes worktree_branch_id when set on the form", () => {
-    const wbID = "00000000-0000-4000-8000-000000000040";
+  it("includes worktree_id when set on the form", () => {
+    const wtID = "00000000-0000-4000-8000-000000000020";
     const input = buildCreateTaskMutationInput({
       ...baseFields,
-      newWorktreeBranchID: wbID,
+      newWorktreeID: wtID,
     });
-    expect(input.worktree_branch_id).toBe(wbID);
+    expect(input.worktree_id).toBe(wtID);
   });
 
-  it("passes empty worktree_branch_id when unset", () => {
+  it("passes empty worktree_id when unset", () => {
     const input = buildCreateTaskMutationInput(baseFields);
-    expect(input.worktree_branch_id).toBe("");
+    expect(input.worktree_id).toBe("");
   });
 });

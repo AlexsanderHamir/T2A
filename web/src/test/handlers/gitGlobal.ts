@@ -3,7 +3,6 @@ import {
   globalGitLiveBranchesResponse,
   globalGitRepositoriesResponse,
   globalGitWorktreesResponse,
-  worktreeBranchAssociationsResponse,
 } from "../factories/git";
 
 /** Responds to global `/git/*` REST paths (ADR-0037). */
@@ -34,9 +33,6 @@ export function respondGlobalGitApi(url: string, method = "GET"): Response | nul
     }
     if (url.includes(`${base}/repositories/`) && url.endsWith("/branches")) {
       return Response.json(globalGitBranchesResponse());
-    }
-    if (url.includes(`${base}/worktrees/`) && url.endsWith("/branches")) {
-      return Response.json(worktreeBranchAssociationsResponse());
     }
     if (url.includes(`${base}/repositories/`) && url.endsWith("/projects")) {
       return Response.json({ projects: [], limit: 100 });

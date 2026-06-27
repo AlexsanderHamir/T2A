@@ -10,7 +10,6 @@ import {
   globalGitLiveBranchesResponse,
   globalGitRepositoriesResponse,
   globalGitWorktreesResponse,
-  worktreeBranchAssociationsResponse,
 } from "../factories/git";
 
 /** MSW handlers for project-scoped git REST paths. */
@@ -43,9 +42,6 @@ export function globalGitApiHandlers() {
     ),
     http.get(new RegExp("/git/repositories/.+/branches"), () =>
       HttpResponse.json(globalGitBranchesResponse()),
-    ),
-    http.get(new RegExp("/git/worktrees/.+/branches"), () =>
-      HttpResponse.json(worktreeBranchAssociationsResponse()),
     ),
     http.get(new RegExp("/git/repositories/.+/projects"), () =>
       HttpResponse.json({ projects: [], limit: 100 }),

@@ -7,15 +7,8 @@ type Props = {
   repository: GitRepository;
   onRegisterWorktree: () => void;
   onCreateWorktree: () => void;
-  onAssociateBranch: (worktreeId: string) => void;
   onDeleteRepository: () => void;
   onDeleteWorktree: (worktreeId: string, label: string) => void;
-  onDeleteAssociation: (
-    assocId: string,
-    branchId: string,
-    worktreeId: string,
-    label: string,
-  ) => void;
   onReconcile: () => void;
   reconcilePending?: boolean;
 };
@@ -24,10 +17,8 @@ export function RepositoryCard({
   repository,
   onRegisterWorktree,
   onCreateWorktree,
-  onAssociateBranch,
   onDeleteRepository,
   onDeleteWorktree,
-  onDeleteAssociation,
   onReconcile,
   reconcilePending = false,
 }: Props) {
@@ -108,10 +99,6 @@ export function RepositoryCard({
                     worktree.id,
                     worktree.name.trim() || worktree.path,
                   )
-                }
-                onAssociateBranch={() => onAssociateBranch(worktree.id)}
-                onDeleteAssociation={(assocId, branchId, label) =>
-                  onDeleteAssociation(assocId, branchId, worktree.id, label)
                 }
               />
             ))}

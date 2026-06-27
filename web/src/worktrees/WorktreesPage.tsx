@@ -15,7 +15,6 @@ import type { GitDeleteTarget } from "./gitDeleteErrors";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 import { RegisterWorktreeModal } from "./modals/RegisterWorktreeModal";
 import { CreateWorktreeModal } from "./modals/CreateWorktreeModal";
-import { AssociateBranchModal } from "./modals/AssociateBranchModal";
 import {
   deriveWorktreesPageMode,
   worktreesPageErrorMessage,
@@ -25,7 +24,6 @@ import {
 type ActiveRepoModal =
   | { kind: "register-worktree"; repository: GitRepository }
   | { kind: "create-worktree"; repository: GitRepository }
-  | { kind: "branch"; repository: GitRepository; worktreeId: string }
   | null;
 
 export function WorktreesPage() {
@@ -69,15 +67,9 @@ export function WorktreesPage() {
     try {
       if (deleteTarget.kind === "repository") {
         await mutations.deleteRepository.mutateAsync(deleteTarget.id);
-      } else if (deleteTarget.kind === "worktree") {
+      } else {
         await mutations.deleteWorktree.mutateAsync({
           worktreeId: deleteTarget.id,
-          repositoryId: deleteTarget.repositoryId,
-        });
-      } else {
-        await mutations.removeAssociation.mutateAsync({
-          worktreeId: deleteTarget.worktreeId,
-          branchId: deleteTarget.id,
           repositoryId: deleteTarget.repositoryId,
         });
       }
@@ -89,13 +81,11 @@ export function WorktreesPage() {
 
   const deletePending =
     mutations.deleteRepository.isPending ||
-    mutations.deleteWorktree.isPending ||
-    mutations.removeAssociation.isPending;
+    mutations.deleteWorktree.isPending;
 
   const activeRepository =
     activeRepoModal?.kind === "register-worktree" ||
-    activeRepoModal?.kind === "create-worktree" ||
-    activeRepoModal?.kind === "branch"
+    activeRepoModal?.kind === "create-worktree"
       ? activeRepoModal.repository
       : null;
 
@@ -168,9 +158,6 @@ export function WorktreesPage() {
                   onCreateWorktree={() =>
                     setActiveRepoModal({ kind: "create-worktree", repository })
                   }
-                  onAssociateBranch={(worktreeId) =>
-                    setActiveRepoModal({ kind: "branch", repository, worktreeId })
-                  }
                   onDeleteRepository={() =>
                     setDeleteTarget({
                       kind: "repository",
@@ -185,15 +172,6 @@ export function WorktreesPage() {
                       id: worktreeId,
                       label,
                       repositoryId: repository.id,
-                    })
-                  }
-                  onDeleteAssociation={(assocId, _branchId, worktreeId, label) =>
-                    setDeleteTarget({
-                      kind: "branch",
-                      id: assocId,
-                      label,
-                      repositoryId: repository.id,
-                      worktreeId,
                     })
                   }
                 />
@@ -250,32 +228,6 @@ export function WorktreesPage() {
           if (!repo || activeRepoModal?.kind !== "create-worktree") return;
           void mutations.createWorktree
             .mutateAsync({ repositoryId: repo.id, input })
-            .then(() => setActiveRepoModal(null));
-        }}
-      />
-
-      <AssociateBranchModal
-        open={activeRepoModal?.kind === "branch"}
-        pending={mutations.associateBranch.isPending}
-        error={mutations.associateBranch.error}
-        repositoryId={
-          activeRepoModal?.kind === "branch"
-            ? activeRepoModal.repository.id
-            : ""
-        }
-        onClose={() => {
-          setActiveRepoModal(null);
-          mutations.associateBranch.reset();
-        }}
-        onSubmit={(input) => {
-          const modal = activeRepoModal;
-          if (modal?.kind !== "branch") return;
-          void mutations.associateBranch
-            .mutateAsync({
-              worktreeId: modal.worktreeId,
-              repositoryId: modal.repository.id,
-              input,
-            })
             .then(() => setActiveRepoModal(null));
         }}
       />

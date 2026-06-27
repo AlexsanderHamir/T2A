@@ -71,6 +71,7 @@ export async function createTask(input: {
   milestone?: string;
   gate?: TaskGate;
   depends_on?: TaskDependencyEdge[];
+  worktree_id?: string;
   checklist_items: Array<{ text: string; verify_commands?: ChecklistVerifyCommandInput[] }>;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
@@ -114,6 +115,10 @@ export async function createTask(input: {
   }
   if (input.depends_on !== undefined) {
     body.depends_on = input.depends_on;
+  }
+  const worktreeId = assertOptionalTaskPathId(input.worktree_id, "worktree_id");
+  if (worktreeId !== undefined) {
+    body.worktree_id = worktreeId;
   }
   body.checklist_items = input.checklist_items;
   const res = await fetchWithTimeout("/tasks", {

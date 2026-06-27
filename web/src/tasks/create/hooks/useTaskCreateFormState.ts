@@ -26,8 +26,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
   const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
   const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
   const [newWorktreeID, setNewWorktreeID] = useState("");
-  const [newBranchID, setNewBranchID] = useState("");
-  const [newWorktreeBranchID, setNewWorktreeBranchID] = useState("");
   const [newSchedule, setNewSchedule] = useState<string | null>(null);
   const [newAutonomyEnabled, setNewAutonomyEnabled] = useState(true);
   const [newTagsCsv, setNewTagsCsv] = useState("");
@@ -69,8 +67,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
     setNewWorktreeID("");
-    setNewBranchID("");
-    setNewWorktreeBranchID("");
     setNewSchedule(null);
     setNewAutonomyEnabled(true);
     setNewTagsCsv("");
@@ -93,9 +89,7 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTaskCursorModel(t.cursor_model ?? "");
     setNewProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs(t.project_context_item_ids ?? []);
-    setNewWorktreeID("");
-    setNewBranchID("");
-    setNewWorktreeBranchID(t.worktree_branch_id ?? "");
+    setNewWorktreeID(t.worktree_id ?? "");
     setNewSchedule(t.pickup_not_before ?? null);
     setNewAutonomyEnabled(t.status === "ready");
     setNewTagsCsv((t.tags ?? []).join(", "));
@@ -114,8 +108,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
       newProjectID,
       newProjectContextItemIDs,
       newWorktreeID,
-      newBranchID,
-      newWorktreeBranchID,
       newSchedule,
       newAutonomyEnabled,
       newTagsCsv,
@@ -133,8 +125,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
       newPriority,
       newProjectContextItemIDs,
       newWorktreeID,
-      newBranchID,
-      newWorktreeBranchID,
       newProjectID,
       newPrompt,
       newSchedule,
@@ -168,8 +158,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewProjectID,
     setNewProjectContextItemIDs,
     setNewWorktreeID,
-    setNewBranchID,
-    setNewWorktreeBranchID,
     setNewSchedule,
     setNewAutonomyEnabled,
     setNewTagsCsv,
@@ -185,8 +173,6 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     newProjectID,
     newProjectContextItemIDs,
     newWorktreeID,
-    newBranchID,
-    newWorktreeBranchID,
     newSchedule,
     newAutonomyEnabled,
     newTagsCsv,
