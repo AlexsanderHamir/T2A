@@ -224,9 +224,6 @@
 }
 
 .worktrees-menu__panel {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  z-index: 20;
   min-width: 11rem;
   padding: var(--space-1);
   border: 1px solid var(--border-hairline);
@@ -235,12 +232,8 @@
   box-shadow: var(--shadow-md);
 }
 
-.worktrees-menu__panel--end {
-  right: 0;
-}
-
-.worktrees-menu__panel--start {
-  left: 0;
+.worktrees-menu__panel--portal {
+  margin: 0;
 }
 
 .worktrees-menu__item {
