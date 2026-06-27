@@ -52,6 +52,12 @@ export function RepositoryCard({
               <code>{repository.host_path}</code>
             </p>
           ) : null}
+          {repository.default_branch.trim() !== "" ? (
+            <p className="worktrees-repo-card__default-branch">
+              <span className="worktrees-repo-card__meta-label">Default branch</span>
+              <code>{repository.default_branch}</code>
+            </p>
+          ) : null}
         </div>
         <div className="worktrees-repo-card__header-actions">
           <button
