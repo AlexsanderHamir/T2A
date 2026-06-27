@@ -10,6 +10,9 @@ node_modules/
 web/dist/
 taskapi-dev
 taskapi-dev.exe
+/worker
+/cover-agents
+cover-agents.out
 /handler
 /handler.exe
 logs/
