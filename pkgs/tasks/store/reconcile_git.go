@@ -258,6 +258,9 @@ func (s *Store) ReconcileGitRepository(
 
 		if input.AllowDiscover {
 			for _, wt := range live {
+				if wt.IsMain {
+					continue
+				}
 				key := worktreePathKey(wt.Path)
 				if _, ok := matchedLive[key]; ok {
 					continue

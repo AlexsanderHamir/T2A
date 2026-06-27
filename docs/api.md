@@ -57,7 +57,7 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | GET | `/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
 | DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
-| GET | `/git/repositories/{repoId}/worktrees/live` | Linked worktrees from `git worktree list`: `{ worktrees: [{ path, branch, is_main, detached, registered, locked, prunable }] }`. |
+| GET | `/git/repositories/{repoId}/worktrees/live` | Linked worktrees from `git worktree list`: `{ worktrees: [{ path, branch, is_main, detached, registered, locked, prunable }] }`. `registered` is true only when Hamix has a **branch-bound** worktree row at that path (repository registration alone does not count; path-only discover rows with empty `branch_id` do not count). |
 | GET | `/git/repositories/{repoId}/worktrees/probe?path=` | Validate a path belongs to this repo: `{ path, linked, is_main, branch, registered }`. |
 | POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree with immutable `branch_id`. **201**. **409** `branch_bound_to_worktree` when branch is already assigned. |
 | POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Sets `branch_id` from `branch` or the worktree's current checkout; immutable after create. |

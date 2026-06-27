@@ -28,10 +28,18 @@ func (s *Store) ListAllGitRepositories(ctx context.Context) ([]domain.GitReposit
 	return model.ToDomainGitRepositories(rows), nil
 }
 
-// CreateGlobalGitRepository registers a main checkout without project scoping.
+// CreateGlobalGitRepository registers a main checkout without project scoping and
+// seeds the main worktree row with the checkout's current branch.
 func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGlobalGitRepository")
-	return s.registerGitRepository(ctx, input, gitSvc)
+	repo, err := s.registerGitRepository(ctx, input, gitSvc)
+	if err != nil {
+		return domain.GitRepository{}, err
+	}
+	if err := s.seedMainWorktreeWithCurrentBranch(ctx, repo, gitSvc); err != nil {
+		return domain.GitRepository{}, err
+	}
+	return repo, nil
 }
 
 // DeleteGlobalGitRepository removes a repository by id when no running tasks reference it.
@@ -138,6 +146,21 @@ func (s *Store) RegisterExistingGitWorktree(
 	}, gitSvc)
 	if err != nil {
 		return domain.GitWorktree{}, err
+	}
+	if existing, found, err := s.findGitWorktreeByRepoPath(ctx, repo.ID, invRow.Path); err != nil {
+		return domain.GitWorktree{}, err
+	} else if found && !gitWorktreeIsFullyRegistered(existing) {
+		if err := s.db.WithContext(ctx).Model(&model.GitWorktree{}).Where("id = ?", existing.ID).Updates(map[string]any{
+			"name":      label,
+			"branch_id": br.ID,
+			"is_main":   invRow.IsMain,
+		}).Error; err != nil {
+			return domain.GitWorktree{}, fmt.Errorf("complete git worktree registration: %w", err)
+		}
+		existing.Name = label
+		existing.BranchID = br.ID
+		existing.IsMain = invRow.IsMain
+		return existing, nil
 	}
 	now := time.Now().UTC()
 	wt := domain.GitWorktree{

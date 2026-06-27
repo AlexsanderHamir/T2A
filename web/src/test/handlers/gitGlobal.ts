@@ -31,7 +31,7 @@ export function respondGlobalGitApi(url: string, method = "GET"): Response | nul
             branch: "main",
             is_main: true,
             detached: false,
-            registered: true,
+            registered: false,
           },
         ],
       });

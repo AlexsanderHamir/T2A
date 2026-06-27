@@ -50,7 +50,7 @@ Hamix stores **absolute paths** for repositories and worktrees. Renaming or movi
 - Does **not** insert worktrees the operator has not registered — use **Register worktree** and live inventory for that.
 - Does **not** fix non-git paths (Cursor binary, worker scratch files, `HAMIX_PATH_MAP` display prefixes).
 
-**Live inventory:** `GET …/worktrees/live` includes `registered: false` for linked checkouts git knows about but Hamix has not registered. The register-worktree modal uses this list for path selection.
+**Live inventory:** `GET …/worktrees/live` includes `registered: false` for linked checkouts Hamix has not fully registered (no branch-bound worktree row). Registering a repository does not register its main worktree — use **Register worktree** for that. The register-worktree modal uses this list for path selection.
 
 See [ADR-0040](../adr/ADR-0040-git-reconcile-v2.md), [git-checkout-resolution.md](./git-checkout-resolution.md), and `HAMIX_GIT_RECONCILE_ON_STARTUP` in [configuration.md](../configuration.md) for optional startup sync.
 

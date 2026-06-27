@@ -19,6 +19,33 @@ func worktreePathKey(path string) string {
 	return gitwork.PathKey(path)
 }
 
+// gitWorktreeIsFullyRegistered reports whether Hamix has a branch-bound worktree row.
+// Reconcile discover may insert path-only rows (empty branch_id); those are not
+// operator-registered and must remain selectable in live inventory.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by RepoWorktreeInventory."
+func gitWorktreeIsFullyRegistered(wt domain.GitWorktree) bool {
+	return strings.TrimSpace(wt.BranchID) != ""
+}
+
+// findGitWorktreeByRepoPath returns a registered row for repo+path, if any.
+func (s *Store) findGitWorktreeByRepoPath(
+	ctx context.Context,
+	repoID, path string,
+) (domain.GitWorktree, bool, error) {
+	rows, err := s.ListGitWorktreesByRepo(ctx, repoID)
+	if err != nil {
+		return domain.GitWorktree{}, false, err
+	}
+	want := worktreePathKey(path)
+	for _, row := range rows {
+		if worktreePathKey(row.Path) == want {
+			return row, true, nil
+		}
+	}
+	return domain.GitWorktree{}, false, nil
+}
+
 // WorktreeInventoryRow is a live git worktree plus Hamix registration state.
 type WorktreeInventoryRow struct {
 	Path       string
@@ -55,6 +82,9 @@ func (s *Store) RepoWorktreeInventory(
 	}
 	registeredPaths := make(map[string]struct{}, len(registered))
 	for _, wt := range registered {
+		if !gitWorktreeIsFullyRegistered(wt) {
+			continue
+		}
 		registeredPaths[worktreePathKey(wt.Path)] = struct{}{}
 	}
 	opened, err := gitSvc.OpenRepository(ctx, repo.Path)
