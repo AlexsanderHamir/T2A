@@ -7,12 +7,12 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-func seedWorkerTestGit(t *testing.T, st *store.Store) (worktreeBranchID, workDir string) {
+func seedWorkerTestGit(t *testing.T, st *store.Store) (worktreeID, workDir string) {
 	t.Helper()
-	return gittest.SeedWorktreeBranchTemp(t, st)
+	return gittest.SeedWorktreeTemp(t, st)
 }
 
 func (h *harness) gitBinding() *string {
-	wb := h.worktreeBranchID
-	return &wb
+	wt := h.worktreeID
+	return &wt
 }

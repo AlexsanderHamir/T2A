@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -104,6 +105,8 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				"operation", "agent.worker.Worker.processOne.missing_binding", "task_id", task.ID)
 			return
 		}
+		unlock := w.gate.Lock(strings.TrimSpace(*fresh.WorktreeID))
+		defer unlock()
 		w.runWithGitPrep(parentCtx, fresh, func() {
 			w.harness.Resume(parentCtx, fresh, cycle)
 		})
@@ -137,6 +140,16 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
 		return
 	}
+	wtID := strings.TrimSpace(*fresh.WorktreeID)
+	unlock, acquired := w.gate.TryLock(wtID)
+	if !acquired {
+		slog.Debug("agent worker worktree busy; deferring pickup", "cmd", calltrace.LogCmd,
+			"operation", "agent.worker.Worker.processOne.worktree_busy",
+			"task_id", task.ID, "worktree_id", wtID)
+		w.deferTaskPickup(parentCtx, task.ID, 5*time.Second)
+		return
+	}
+	defer unlock()
 	picked, consumedRetry, ok := w.transitionTaskToRunning(parentCtx, task.ID)
 	if !ok {
 		return

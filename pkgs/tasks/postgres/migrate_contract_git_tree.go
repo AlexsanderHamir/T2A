@@ -61,9 +61,15 @@ func contractDropGitRepoProjectID(ctx context.Context, db *gorm.DB) error {
 	return dropColumnSQLite(ctx, db, "git_repositories", "project_id")
 }
 
-// contractDropTaskLegacyGitColumns drops tasks.worktree_id and tasks.branch_id.
+// contractDropTaskLegacyGitColumns drops the ADR-0037 expand-phase pair
+// tasks.worktree_id + tasks.branch_id (replaced by worktree_branch_id during
+// that era). ADR-0039 reintroduces tasks.worktree_id with different semantics;
+// skip when tasks.branch_id is absent (fresh rev-4 or post-fixed migration).
 func contractDropTaskLegacyGitColumns(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.contractDropTaskLegacyGitColumns")
+	if !tableHasColumnPortable(db, "tasks", "branch_id") {
+		return nil
+	}
 	if !tableHasColumnPortable(db, "tasks", "worktree_id") {
 		return nil
 	}

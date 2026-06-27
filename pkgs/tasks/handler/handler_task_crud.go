@@ -165,7 +165,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Milestone:             body.Milestone,
 		Gate:                  gateFieldPatchToStore(body.Gate),
 		DependsOn:             dependsOnPatch,
-		WorktreeBranchID:      body.WorktreeBranchID,
+		WorktreeID:            body.WorktreeID,
 	}
 	if body.InitialPrompt != nil {
 		cur, getErr := h.store.Get(r.Context(), id)
@@ -173,16 +173,16 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 			writeStoreError(w, r, op, getErr)
 			return
 		}
-		wb := body.WorktreeBranchID
-		if wb == nil {
-			wb = cur.WorktreeBranchID
+		wt := body.WorktreeID
+		if wt == nil {
+			wt = cur.WorktreeID
 		}
-		if err := h.validatePromptMentionsForWorktreeBranch(r.Context(), wb, *body.InitialPrompt); err != nil {
+		if err := h.validatePromptMentionsForWorktree(r.Context(), wt, *body.InitialPrompt); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}
 	}
-	if body.WorktreeBranchID != nil {
+	if body.WorktreeID != nil {
 		cur, getErr := h.store.Get(r.Context(), id)
 		if getErr != nil {
 			writeStoreError(w, r, op, getErr)
@@ -192,11 +192,11 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		if body.ProjectID.Defined && !body.ProjectID.Clear {
 			projectID = &body.ProjectID.SetID
 		}
-		wb := cur.WorktreeBranchID
-		if body.WorktreeBranchID != nil {
-			wb = body.WorktreeBranchID
+		wt := cur.WorktreeID
+		if body.WorktreeID != nil {
+			wt = body.WorktreeID
 		}
-		if err := h.validateTaskGitBindingV2(r.Context(), projectID, wb); err != nil {
+		if err := h.validateTaskGitBindingV2(r.Context(), projectID, wt); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}

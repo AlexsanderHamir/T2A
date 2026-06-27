@@ -48,13 +48,13 @@ func ToDomainGitRepositories(rows []GitRepository) []domain.GitRepository {
 
 func FromDomainGitWorktree(d domain.GitWorktree) GitWorktree {
 	return GitWorktree{
-		ID:             d.ID,
-		RepositoryID:   d.RepositoryID,
-		Path:           d.Path,
-		Name:           d.Name,
-		IsMain:         d.IsMain,
-		ActiveBranchID: d.ActiveBranchID,
-		CreatedAt:      d.CreatedAt,
+		ID:           d.ID,
+		RepositoryID: d.RepositoryID,
+		Path:         d.Path,
+		Name:         d.Name,
+		IsMain:       d.IsMain,
+		BranchID:     d.BranchID,
+		CreatedAt:    d.CreatedAt,
 	}
 }
 
@@ -71,13 +71,13 @@ func FromDomainGitWorktrees(rows []domain.GitWorktree) []GitWorktree {
 
 func ToDomainGitWorktree(m GitWorktree) domain.GitWorktree {
 	return domain.GitWorktree{
-		ID:             m.ID,
-		RepositoryID:   m.RepositoryID,
-		Path:           m.Path,
-		Name:           m.Name,
-		IsMain:         m.IsMain,
-		ActiveBranchID: m.ActiveBranchID,
-		CreatedAt:      m.CreatedAt,
+		ID:           m.ID,
+		RepositoryID: m.RepositoryID,
+		Path:         m.Path,
+		Name:         m.Name,
+		IsMain:       m.IsMain,
+		BranchID:     m.BranchID,
+		CreatedAt:    m.CreatedAt,
 	}
 }
 
@@ -130,35 +130,6 @@ func ToDomainGitBranches(rows []GitBranch) []domain.GitBranch {
 	out := make([]domain.GitBranch, len(rows))
 	for i := range rows {
 		out[i] = ToDomainGitBranch(rows[i])
-	}
-	return out
-}
-
-func FromDomainWorktreeBranch(d domain.WorktreeBranch) WorktreeBranch {
-	return WorktreeBranch{
-		ID:         d.ID,
-		WorktreeID: d.WorktreeID,
-		BranchID:   d.BranchID,
-		CreatedAt:  d.CreatedAt,
-	}
-}
-
-func ToDomainWorktreeBranch(m WorktreeBranch) domain.WorktreeBranch {
-	return domain.WorktreeBranch{
-		ID:         m.ID,
-		WorktreeID: m.WorktreeID,
-		BranchID:   m.BranchID,
-		CreatedAt:  m.CreatedAt,
-	}
-}
-
-func ToDomainWorktreeBranches(rows []WorktreeBranch) []domain.WorktreeBranch {
-	if len(rows) == 0 {
-		return nil
-	}
-	out := make([]domain.WorktreeBranch, len(rows))
-	for i := range rows {
-		out[i] = ToDomainWorktreeBranch(rows[i])
 	}
 	return out
 }

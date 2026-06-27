@@ -46,7 +46,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 
 ### Git repositories, worktrees, and branches
 
-Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): global repositories, repo-scoped worktrees/branches, `worktree_branches` associations, optional project overlay. Error responses use `{ "error", "code", "request_id?" }`.
+Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (global repositories, optional project overlay) and [ADR-0039](./adr/ADR-0039-fixed-worktree-branch.md) (one fixed `branch_id` per worktree; tasks bind `worktree_id`). Worktree JSON includes `branch_id`. Error responses use `{ "error", "code", "request_id?" }`.
 
 **Global routes (preferred):**
 
@@ -58,15 +58,12 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): glo
 | DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
 | GET | `/git/repositories/{repoId}/worktrees/live` | Linked worktrees from `git worktree list`: `{ worktrees: [{ path, branch, is_main, detached, registered }] }`. |
-| POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree and associates checkout branch. **201**. |
-| POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Binds branch when `branch` or worktree checkout branch is present. |
+| POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree with immutable `branch_id`. **201**. **409** `branch_bound_to_worktree` when branch is already assigned. |
+| POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Sets `branch_id` from `branch` or the worktree's current checkout; immutable after create. |
 | POST | `/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. |
 | DELETE | `/git/worktrees/{worktreeId}` | **204**. Query `?force=true`. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/branches` | Registered branches `{ branches: [...] }`. |
 | GET | `/git/repositories/{repoId}/branches/live` | Live refs from `git branch` `{ branches: [{ name, head_sha }] }`. |
-| GET | `/git/worktrees/{worktreeId}/branches` | `{ associations: [{ id, worktree_id, branch_id, created_at }] }`. |
-| POST | `/git/worktrees/{worktreeId}/branches` | Associate or create+associate. Body `{ branch_id? }` or `{ name, start_point?, create_branch? }`. **201**. |
-| DELETE | `/git/worktrees/{worktreeId}/branches/{branchId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/projects` | Projects tied to this repo `{ projects, limit }`. |
 
 **Legacy per-project routes** (deprecated; removed after contract migration):
@@ -85,9 +82,9 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md): glo
 | DELETE | `/projects/{id}/git/branches/{branchId}` | **204**. Query `?force=true` for unmerged. **409** `has_running_task`, `branch_checked_out`. |
 | POST | `/projects/{id}/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. **409** when a missing worktree is still referenced by tasks. |
 
-**Projects:** `POST /projects` accepts optional `repository_id` (repo must exist). Tasks accept optional `worktree_branch_id` (required for agent runs once worker migration completes).
+**Projects:** `POST /projects` accepts optional `repository_id` (repo must exist). Tasks accept optional `worktree_id` (required for agent runs; branch is derived from the worktree row).
 
-Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `branch_active_elsewhere`, `branch_not_associated`, `project_repo_mismatch`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
+Stable error codes: `not_a_git_repository`, `path_exists`, `branch_exists`, `branch_checked_out`, `branch_bound_to_worktree`, `project_repo_mismatch`, `has_running_task`, `repository_not_found`, `worktree_not_found`, `branch_not_found`, `duplicate`.
 
 ## Tasks
 
@@ -95,12 +92,12 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
+| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `worktree_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). Rows are ordered **newest first** by `created_at` (from the `task_created` audit event). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
 | GET | `/tasks/cycle-failures` | Paginated terminal cycle failures. `?limit`, `?offset`, `?sort ∈ at_desc | at_asc | reason_asc | reason_desc`. |
 | GET | `/tasks/{id}` | Single flat `domain.Task`. |
-| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
+| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `worktree_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
 | DELETE | `/tasks/{id}` | `204` empty body. Publishes `task_deleted`. |
 | GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. Deep dive: [domain/task-events.md](./domain/task-events.md). |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |

@@ -83,6 +83,9 @@ type worktreeBranchPair struct {
 // function becomes a no-op on fresh databases.
 func backfillTaskWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.backfillTaskWorktreeBranch")
+	if !tableHasColumnPortable(db, "worktree_branches", "id") {
+		return nil
+	}
 	if !tableHasColumnPortable(db, "tasks", "worktree_id") {
 		return nil
 	}
@@ -130,21 +133,34 @@ func worktreeBranchEndpointsExist(ctx context.Context, db *gorm.DB, p worktreeBr
 	return wt > 0 && br > 0, nil
 }
 
+// worktreeBranchSeedRow is the legacy ADR-0037 association table (dropped in rev 4).
+type worktreeBranchSeedRow struct {
+	ID         string    `gorm:"column:id;primaryKey"`
+	WorktreeID string    `gorm:"column:worktree_id"`
+	BranchID   string    `gorm:"column:branch_id"`
+	CreatedAt  time.Time `gorm:"column:created_at"`
+}
+
+func (worktreeBranchSeedRow) TableName() string { return "worktree_branches" }
+
 // ensureWorktreeBranch upserts the association for a pair and returns its id.
 func ensureWorktreeBranch(ctx context.Context, db *gorm.DB, p worktreeBranchPair, now time.Time) (string, error) {
 	slog.Debug("trace", "operation", "postgres.ensureWorktreeBranch")
-	row := domain.WorktreeBranch{
+	row := worktreeBranchSeedRow{
 		ID:         uuid.NewString(),
 		WorktreeID: p.WorktreeID,
 		BranchID:   p.BranchID,
 		CreatedAt:  now,
 	}
 	if err := db.WithContext(ctx).
-		Clauses(clause.OnConflict{DoNothing: true}).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "worktree_id"}, {Name: "branch_id"}},
+			DoNothing: true,
+		}).
 		Create(&row).Error; err != nil {
 		return "", err
 	}
-	var existing domain.WorktreeBranch
+	var existing worktreeBranchSeedRow
 	if err := db.WithContext(ctx).
 		Where("worktree_id = ? AND branch_id = ?", p.WorktreeID, p.BranchID).
 		First(&existing).Error; err != nil {

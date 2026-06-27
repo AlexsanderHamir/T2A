@@ -204,7 +204,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 		Runner:                runner,
 		CursorModel:           in.CursorModel,
 		PickupNotBefore:       in.PickupNotBefore,
-		WorktreeBranchID:      normalizeOptionalID(in.WorktreeBranchID),
+		WorktreeID:            normalizeOptionalID(in.WorktreeID),
 	}
 	if err := normalizeCreateTaskModelFields(t, in); err != nil {
 		return nil, "", "", err

@@ -25,7 +25,7 @@ type Task struct {
 	PickupNotBefore       *time.Time           `gorm:"index"`
 	CriteriaSatisfiedAt   *time.Time           `gorm:"index"`
 	PendingRetry          *domain.PendingRetry `gorm:"column:pending_retry;serializer:json;type:jsonb"`
-	WorktreeBranchID      *string              `gorm:"index"`
+	WorktreeID            *string              `gorm:"index"`
 }
 
 // TableName pins the tasks table name.

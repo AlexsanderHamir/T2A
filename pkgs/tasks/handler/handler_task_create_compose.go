@@ -38,7 +38,7 @@ func taskCreateJSONToCompose(body taskCreateJSON) taskComposePayloadJSON {
 		Milestone:             body.Milestone,
 		DependsOn:             body.DependsOn,
 		ChecklistItems:        body.ChecklistItems,
-		WorktreeBranchID:      body.WorktreeBranchID,
+		WorktreeID:            body.WorktreeID,
 	}
 }
 
@@ -101,7 +101,7 @@ func (h *Handler) createTaskFromComposeJSON(
 		Gate:                  opts.Gate,
 		DependsOn:             dependsOn,
 		ChecklistItems:        checklistItems,
-		WorktreeBranchID:      payload.WorktreeBranchID,
+		WorktreeID:            payload.WorktreeID,
 	}, by)
 	if err != nil {
 		return nil, err
@@ -124,10 +124,10 @@ func (h *Handler) finalizeCreatedTask(ctx context.Context, t *domain.Task) (*dom
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Handler) validateComposePayload(ctx context.Context, payload taskComposePayloadJSON, settings domain.AppSettings) error {
-	if err := h.validateTaskGitBindingV2(ctx, payload.ProjectID, payload.WorktreeBranchID); err != nil {
+	if err := h.validateTaskGitBindingV2(ctx, payload.ProjectID, payload.WorktreeID); err != nil {
 		return err
 	}
-	if err := h.validatePromptMentionsForWorktreeBranch(ctx, payload.WorktreeBranchID, payload.InitialPrompt); err != nil {
+	if err := h.validatePromptMentionsForWorktree(ctx, payload.WorktreeID, payload.InitialPrompt); err != nil {
 		return err
 	}
 	if _, _, err := resolveRunnerModelFields(payload.Runner, payload.CursorModel, settings); err != nil {

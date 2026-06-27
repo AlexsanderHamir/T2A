@@ -40,6 +40,16 @@ type legacySeedTask struct {
 
 func (legacySeedTask) TableName() string { return "tasks" }
 
+// testWorktreeBranch mirrors the legacy worktree_branches table for migration tests.
+type testWorktreeBranch struct {
+	ID         string    `gorm:"column:id;primaryKey"`
+	WorktreeID string    `gorm:"column:worktree_id;not null;uniqueIndex:idx_worktree_branch_unique,priority:1"`
+	BranchID   string    `gorm:"column:branch_id;not null;uniqueIndex:idx_worktree_branch_unique,priority:2"`
+	CreatedAt  time.Time `gorm:"column:created_at;not null"`
+}
+
+func (testWorktreeBranch) TableName() string { return "worktree_branches" }
+
 func openTreeMigrateDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
@@ -54,7 +64,7 @@ func openTreeMigrateDB(t *testing.T) *gorm.DB {
 		&legacyGitRepo{},
 		&domain.GitWorktree{},
 		&domain.GitBranch{},
-		&domain.WorktreeBranch{},
+		&testWorktreeBranch{},
 		&legacySeedTask{},
 	); err != nil {
 		t.Fatal(err)
@@ -116,7 +126,7 @@ func TestMigrateSeedWorktreeBranchTree_backfills(t *testing.T) {
 		t.Fatalf("project repository_id=%v want repo-1", proj.RepositoryID)
 	}
 
-	var wb domain.WorktreeBranch
+	var wb testWorktreeBranch
 	if err := db.WithContext(ctx).First(&wb, "worktree_id = ? AND branch_id = ?", wtID, brID).Error; err != nil {
 		t.Fatalf("association not seeded: %v", err)
 	}
@@ -142,7 +152,7 @@ func TestMigrateSeedWorktreeBranchTree_idempotent(t *testing.T) {
 	}
 
 	var n int64
-	if err := db.WithContext(ctx).Model(&domain.WorktreeBranch{}).
+	if err := db.WithContext(ctx).Model(&testWorktreeBranch{}).
 		Where("worktree_id = ? AND branch_id = ?", wtID, brID).Count(&n).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +189,7 @@ func TestMigrateSeedWorktreeBranchTree_skipsOrphanPairs(t *testing.T) {
 	}
 
 	var n int64
-	if err := db.WithContext(ctx).Model(&domain.WorktreeBranch{}).Count(&n).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&testWorktreeBranch{}).Count(&n).Error; err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {

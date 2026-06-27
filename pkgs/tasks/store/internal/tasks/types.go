@@ -23,13 +23,13 @@ type CreateInput struct {
 	CursorModel           string
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
 	// until the instant has passed (UTC).
-	PickupNotBefore  *time.Time
-	Tags             []string
-	Milestone        *string
-	Gate             *domain.TaskGate
-	DependsOn        []domain.DependencyEdge
-	ChecklistItems   []checklist.CreateChecklistItemInput
-	WorktreeBranchID *string
+	PickupNotBefore *time.Time
+	Tags            []string
+	Milestone       *string
+	Gate            *domain.TaskGate
+	DependsOn       []domain.DependencyEdge
+	ChecklistItems  []checklist.CreateChecklistItemInput
+	WorktreeID      *string
 }
 
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means
@@ -60,7 +60,7 @@ type UpdateInput struct {
 	PendingRetry *domain.PendingRetry
 	// ClearPendingRetry removes pending_retry from the row.
 	ClearPendingRetry bool
-	WorktreeBranchID  *string
+	WorktreeID        *string
 }
 
 // ListFilter optionally restricts flat task listing.

@@ -33,14 +33,14 @@ type gitWorktreesListResponse struct {
 }
 
 type gitWorktreeJSON struct {
-	ID             string  `json:"id"`
-	RepositoryID   string  `json:"repository_id"`
-	Path           string  `json:"path"`
-	HostPath       string  `json:"host_path"`
-	Name           string  `json:"name"`
-	IsMain         bool    `json:"is_main"`
-	ActiveBranchID *string `json:"active_branch_id,omitempty"`
-	CreatedAt      string  `json:"created_at"`
+	ID           string `json:"id"`
+	RepositoryID string `json:"repository_id"`
+	Path         string `json:"path"`
+	HostPath     string `json:"host_path"`
+	Name         string `json:"name"`
+	IsMain       bool   `json:"is_main"`
+	BranchID     string `json:"branch_id"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type gitBranchCreateJSON struct {
@@ -75,24 +75,6 @@ type gitWorktreeBranchBindJSON struct {
 	Name         string `json:"name"`
 	CreateBranch bool   `json:"create_branch"`
 	StartPoint   string `json:"start_point"`
-}
-
-type gitWorktreeBranchAssociateJSON struct {
-	BranchID     string `json:"branch_id"`
-	Name         string `json:"name"`
-	StartPoint   string `json:"start_point"`
-	CreateBranch bool   `json:"create_branch"`
-}
-
-type gitWorktreeBranchesListResponse struct {
-	Associations []worktreeBranchJSON `json:"associations"`
-}
-
-type worktreeBranchJSON struct {
-	ID         string `json:"id"`
-	WorktreeID string `json:"worktree_id"`
-	BranchID   string `json:"branch_id"`
-	CreatedAt  string `json:"created_at"`
 }
 
 type gitLiveBranchJSON struct {

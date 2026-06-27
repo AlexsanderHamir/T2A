@@ -39,7 +39,7 @@ func gitErrHTTP(err error) (status int, code, msg string) {
 			status = http.StatusNotFound
 		case domain.GitCodeNotARepository, domain.GitCodePathExists, domain.GitCodeBranchExists,
 			domain.GitCodeBranchCheckedOut, domain.GitCodeHasRunningTask, domain.GitCodeDuplicate,
-			domain.GitCodeBranchActiveElsewhere, domain.GitCodeBranchNotAssociated, domain.GitCodeProjectRepoMismatch:
+			domain.GitCodeBranchBoundToWorktree, domain.GitCodeProjectRepoMismatch:
 			status = http.StatusConflict
 		default:
 			status = http.StatusBadRequest
