@@ -225,15 +225,6 @@ var ParityPairs = []ParityPair{
 		Table:  "git_branches",
 		DomainMigrateExtra: []any{
 			&domain.GitRepository{},
-		},
-	},
-	{
-		Name:   "WorktreeBranch",
-		Domain: &domain.WorktreeBranch{},
-		Model:  &WorktreeBranch{},
-		Table:  "worktree_branches",
-		DomainMigrateExtra: []any{
-			&domain.GitWorktree{},
 			&domain.GitBranch{},
 		},
 	},

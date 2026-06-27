@@ -111,23 +111,34 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 		return domain.GitRepository{}, fmt.Errorf("list branches: %w", err)
 	}
 	var branchRows []domain.GitBranch
+	var mainBranchID string
 	for _, b := range branches {
+		id := uuid.NewString()
 		branchRows = append(branchRows, domain.GitBranch{
-			ID:           uuid.NewString(),
+			ID:           id,
 			RepositoryID: repo.ID,
 			Name:         b.Name,
 			HeadSHA:      b.HeadSHA,
 			CreatedAt:    now,
 		})
+		if b.IsCurrent && strings.TrimSpace(b.Name) != "" {
+			mainBranchID = id
+		}
 	}
 	if len(branchRows) == 0 {
+		id := uuid.NewString()
 		branchRows = append(branchRows, domain.GitBranch{
-			ID:           uuid.NewString(),
+			ID:           id,
 			RepositoryID: repo.ID,
 			Name:         defaultBranch,
 			CreatedAt:    now,
 		})
+		mainBranchID = id
 	}
+	if mainBranchID == "" {
+		mainBranchID = branchRows[0].ID
+	}
+	mainWT.BranchID = mainBranchID
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		repoRow := model.FromDomainGitRepository(repo)
 		if err := tx.Create(&repoRow).Error; err != nil {

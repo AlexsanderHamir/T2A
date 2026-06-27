@@ -155,24 +155,24 @@ func TestTask_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	pid := "proj-1"
-	wb := "wb-1"
+	wt := "wt-1"
 	cm := "opus"
 	gate := &domain.TaskGate{Status: domain.GateStatusPendingRelease, Hold: true}
 	retry := &domain.PendingRetry{Mode: domain.RetryResume, ParentCycleID: "cyc-1"}
 	orig := domain.Task{
-		ID:               "task-1",
-		Title:            "Ship it",
-		Status:           domain.StatusReady,
-		Priority:         domain.PriorityHigh,
-		InitialPrompt:    "do the thing",
-		ProjectID:        &pid,
-		WorktreeBranchID: &wb,
-		CursorModel:      cm,
-		PickupNotBefore:  &now,
-		PendingRetry:     retry,
-		Gate:             gate,
-		Tags:             []string{"a", "b"},
-		Milestone:        strPtr("m1"),
+		ID:              "task-1",
+		Title:           "Ship it",
+		Status:          domain.StatusReady,
+		Priority:        domain.PriorityHigh,
+		InitialPrompt:   "do the thing",
+		ProjectID:       &pid,
+		WorktreeID:      &wt,
+		CursorModel:     cm,
+		PickupNotBefore: &now,
+		PendingRetry:    retry,
+		Gate:            gate,
+		Tags:            []string{"a", "b"},
+		Milestone:       strPtr("m1"),
 	}
 	m := FromDomainTask(orig)
 	back := ToDomainTask(m)
@@ -347,10 +347,9 @@ func TestGitRepository_roundTrip(t *testing.T) {
 func TestGitWorktree_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
-	active := "branch-1"
 	orig := domain.GitWorktree{
 		ID: "wt-1", RepositoryID: "repo-1", Path: "/wt", Name: "main",
-		IsMain: true, ActiveBranchID: &active, CreatedAt: now,
+		IsMain: true, BranchID: "branch-1", CreatedAt: now,
 	}
 	m := FromDomainGitWorktree(orig)
 	back := ToDomainGitWorktree(m)
@@ -373,14 +372,15 @@ func TestGitBranch_roundTrip(t *testing.T) {
 	}
 }
 
-func TestWorktreeBranch_roundTrip(t *testing.T) {
+func TestGitWorktree_branchID_roundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
-	orig := domain.WorktreeBranch{
-		ID: "wb-1", WorktreeID: "wt-1", BranchID: "branch-1", CreatedAt: now,
+	orig := domain.GitWorktree{
+		ID: "wt-1", RepositoryID: "repo-1", Path: "/repo/wt", Name: "wt",
+		BranchID: "branch-1", IsMain: false, CreatedAt: now,
 	}
-	m := FromDomainWorktreeBranch(orig)
-	back := ToDomainWorktreeBranch(m)
+	m := FromDomainGitWorktree(orig)
+	back := ToDomainGitWorktree(m)
 	if !reflect.DeepEqual(orig, back) {
 		t.Fatalf("round-trip mismatch: %+v vs %+v", orig, back)
 	}

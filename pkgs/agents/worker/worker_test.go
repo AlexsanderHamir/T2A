@@ -26,12 +26,12 @@ const pollTimeout = 3 * time.Second
 // --- shared harness ------------------------------------------------------
 
 type harness struct {
-	t                *testing.T
-	store            *store.Store
-	queue            *agents.MemoryQueue
-	notifier         *recordingNotifier
-	worktreeBranchID string
-	workDir          string
+	t          *testing.T
+	store      *store.Store
+	queue      *agents.MemoryQueue
+	notifier   *recordingNotifier
+	worktreeID string
+	workDir    string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -39,10 +39,10 @@ func newHarness(t *testing.T) *harness {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
 	st.SetReadyTaskNotifier(q)
-	wbID, dir := seedWorkerTestGit(t, st)
+	wtID, dir := seedWorkerTestGit(t, st)
 	return &harness{
 		t: t, store: st, queue: q, notifier: newRecordingNotifier(),
-		worktreeBranchID: wbID, workDir: dir,
+		worktreeID: wtID, workDir: dir,
 	}
 }
 
@@ -50,11 +50,11 @@ func (h *harness) createReadyTask(ctx context.Context, title string) *domain.Tas
 	h.t.Helper()
 	wb := h.gitBinding()
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
-		Title:            title,
-		InitialPrompt:    "do the thing",
-		Status:           domain.StatusReady,
-		Priority:         domain.PriorityMedium,
-		WorktreeBranchID: wb,
+		Title:         title,
+		InitialPrompt: "do the thing",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+		WorktreeID:    wb,
 	}, domain.ActorUser)
 	if err != nil {
 		h.t.Fatalf("create task: %v", err)
@@ -69,12 +69,12 @@ func (h *harness) createReadyTaskWithModel(ctx context.Context, title, model str
 	h.t.Helper()
 	wb := h.gitBinding()
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
-		Title:            title,
-		InitialPrompt:    "do the thing",
-		Status:           domain.StatusReady,
-		Priority:         domain.PriorityMedium,
-		CursorModel:      model,
-		WorktreeBranchID: wb,
+		Title:         title,
+		InitialPrompt: "do the thing",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+		CursorModel:   model,
+		WorktreeID:    wb,
 	}, domain.ActorUser)
 	if err != nil {
 		h.t.Fatalf("create task: %v", err)
@@ -430,7 +430,7 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 		Priority:              domain.PriorityMedium,
 		ProjectID:             &project.ID,
 		ProjectContextItemIDs: []string{selected.ID, selectedConstraint.ID},
-		WorktreeBranchID:      wb,
+		WorktreeID:            wb,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create task: %v", err)

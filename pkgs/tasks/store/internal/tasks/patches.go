@@ -55,18 +55,18 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 	if err := applyPendingRetryPatch(cur, in.PendingRetry, in.ClearPendingRetry); err != nil {
 		return err
 	}
-	if err := applyWorktreeBranchPatch(cur, in.WorktreeBranchID); err != nil {
+	if err := applyWorktreePatch(cur, in.WorktreeID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func applyWorktreeBranchPatch(cur *domain.Task, worktreeBranchID *string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyWorktreeBranchPatch")
-	if worktreeBranchID == nil {
+func applyWorktreePatch(cur *domain.Task, worktreeID *string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyWorktreePatch")
+	if worktreeID == nil {
 		return nil
 	}
-	cur.WorktreeBranchID = normalizeOptionalID(worktreeBranchID)
+	cur.WorktreeID = normalizeOptionalID(worktreeID)
 	return nil
 }
 

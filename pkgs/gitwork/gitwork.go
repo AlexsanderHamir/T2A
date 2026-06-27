@@ -49,6 +49,7 @@ type Service interface {
 	ListBranches(ctx context.Context, repo *Repository) ([]Branch, error)
 	CreateBranch(ctx context.Context, repo *Repository, name, startPoint string) (*Branch, error)
 	DeleteBranch(ctx context.Context, repo *Repository, name string, force bool) error
+	WorktreeCurrentBranch(ctx context.Context, worktreePath string) (string, error)
 	Checkout(ctx context.Context, worktreePath, branch string) error
 }
 

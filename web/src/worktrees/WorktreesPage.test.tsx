@@ -141,6 +141,7 @@ describe("WorktreesPage", () => {
               path: "/repo/main",
               name: "main",
               is_main: true,
+              branch_id: branchId,
               created_at: "2026-06-22T12:00:00Z",
             },
             {
@@ -149,6 +150,7 @@ describe("WorktreesPage", () => {
               path: "/repo/feature",
               name: "feature",
               is_main: false,
+              branch_id: branchId,
               created_at: "2026-06-22T12:00:00Z",
             },
           ],
@@ -166,9 +168,6 @@ describe("WorktreesPage", () => {
             },
           ],
         });
-      }
-      if (url.includes("/git/worktrees/") && url.endsWith("/branches")) {
-        return jsonResponse({ associations: [] });
       }
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
@@ -219,9 +218,6 @@ describe("WorktreesPage", () => {
       }
       if (method === "GET" && url.includes(`/git/repositories/${repoId}/branches`)) {
         return jsonResponse({ branches: [] });
-      }
-      if (method === "GET" && url.includes("/git/worktrees/") && url.endsWith("/branches")) {
-        return jsonResponse({ associations: [] });
       }
       if (method === "DELETE") {
         return jsonResponse(

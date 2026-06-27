@@ -4,22 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
-
-//funclogmeasure:skip category=hot-path reason="Pure DTO mapper without I/O."
-func (h *Handler) worktreeBranchJSON(wb domain.WorktreeBranch) worktreeBranchJSON {
-	return worktreeBranchJSON{
-		ID:         wb.ID,
-		WorktreeID: wb.WorktreeID,
-		BranchID:   wb.BranchID,
-		CreatedAt:  wb.CreatedAt.UTC().Format(time.RFC3339),
-	}
-}
 
 func (h *Handler) listGlobalGitRepositories(w http.ResponseWriter, r *http.Request) {
 	const op = "git.repositories.list_global"
@@ -242,81 +230,6 @@ func (h *Handler) listGlobalGitBranchesLive(w http.ResponseWriter, r *http.Reque
 		out = append(out, gitLiveBranchJSON{Name: b.Name, HeadSHA: b.HeadSHA})
 	}
 	writeJSON(w, r, op, http.StatusOK, gitLiveBranchesListResponse{Branches: out})
-}
-
-func (h *Handler) listWorktreeBranchAssociations(w http.ResponseWriter, r *http.Request) {
-	const op = "git.worktree_branches.list"
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.listWorktreeBranchAssociations")
-	r = calltrace.WithRequestRoot(r, op)
-	rows, err := h.store.ListWorktreeBranches(r.Context(), r.PathValue("worktreeId"))
-	if err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	out := make([]worktreeBranchJSON, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, h.worktreeBranchJSON(row))
-	}
-	writeJSON(w, r, op, http.StatusOK, gitWorktreeBranchesListResponse{Associations: out})
-}
-
-func (h *Handler) associateWorktreeBranch(w http.ResponseWriter, r *http.Request) {
-	const op = "git.worktree_branches.associate"
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.associateWorktreeBranch")
-	r = calltrace.WithRequestRoot(r, op)
-	worktreeID := r.PathValue("worktreeId")
-	var body gitWorktreeBranchAssociateJSON
-	if err := decodeJSON(r.Context(), r.Body, &body); err != nil {
-		writeError(w, r, op, err, http.StatusBadRequest)
-		return
-	}
-	branchID := strings.TrimSpace(body.BranchID)
-	if branchID == "" && strings.TrimSpace(body.Name) != "" {
-		wt, err := h.store.GetGitWorktreeByID(r.Context(), worktreeID)
-		if err != nil {
-			writeGitStoreError(w, r, op, err)
-			return
-		}
-		repo, err := h.store.GetGitRepositoryByID(r.Context(), wt.RepositoryID)
-		if err != nil {
-			writeGitStoreError(w, r, op, err)
-			return
-		}
-		br, err := h.store.ResolveOrCreateBranchForRepo(r.Context(), repo, store.BindBranchInput{
-			Name:         body.Name,
-			CreateBranch: body.CreateBranch,
-			StartPoint:   body.StartPoint,
-		}, h.gitService())
-		if err != nil {
-			writeGitStoreError(w, r, op, err)
-			return
-		}
-		branchID = br.ID
-	}
-	if branchID == "" {
-		writeError(w, r, op, domain.ErrInvalidInput, http.StatusBadRequest)
-		return
-	}
-	wb, err := h.store.AssociateWorktreeBranch(r.Context(), store.AssociateWorktreeBranchInput{
-		WorktreeID: worktreeID,
-		BranchID:   branchID,
-	})
-	if err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	writeJSON(w, r, op, http.StatusCreated, h.worktreeBranchJSON(wb))
-}
-
-func (h *Handler) removeWorktreeBranchAssociation(w http.ResponseWriter, r *http.Request) {
-	const op = "git.worktree_branches.remove"
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.removeWorktreeBranchAssociation")
-	r = calltrace.WithRequestRoot(r, op)
-	if err := h.store.RemoveWorktreeBranch(r.Context(), r.PathValue("worktreeId"), r.PathValue("branchId")); err != nil {
-		writeGitStoreError(w, r, op, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) listRepoProjects(w http.ResponseWriter, r *http.Request) {

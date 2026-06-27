@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -16,11 +15,10 @@ import (
 )
 
 type taskGitBinding struct {
-	WorktreeID       string
-	BranchID         string
-	WorktreeBranchID string
-	WorktreePath     string
-	BranchName       string
+	WorktreeID   string
+	BranchID     string
+	WorktreePath string
+	BranchName   string
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -28,7 +26,7 @@ func taskHasBinding(task *domain.Task) bool {
 	if task == nil {
 		return false
 	}
-	return task.WorktreeBranchID != nil && strings.TrimSpace(*task.WorktreeBranchID) != ""
+	return task.WorktreeID != nil && strings.TrimSpace(*task.WorktreeID) != ""
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -45,21 +43,16 @@ func (w *Worker) resolveTaskGitBinding(ctx context.Context, task *domain.Task) (
 	if !taskHasBinding(task) {
 		return nil, fmt.Errorf("missing_task_binding")
 	}
-	wbID := strings.TrimSpace(*task.WorktreeBranchID)
-	gitCtx, err := w.store.ResolveTaskGitContextFromAssociation(ctx, wbID)
+	wtID := strings.TrimSpace(*task.WorktreeID)
+	gitCtx, err := w.store.ResolveTaskGitContext(ctx, wtID)
 	if err != nil {
 		return nil, mapResolveGitContextError(err)
 	}
-	assoc, assocErr := w.store.GetWorktreeBranchByID(ctx, wbID)
-	if assocErr != nil {
-		return nil, mapResolveGitContextError(assocErr)
-	}
 	binding := &taskGitBinding{
-		WorktreeID:       assoc.WorktreeID,
-		BranchID:         assoc.BranchID,
-		WorktreeBranchID: wbID,
-		WorktreePath:     gitCtx.WorktreePath,
-		BranchName:       gitCtx.BranchName,
+		WorktreeID:   gitCtx.WorktreeID,
+		BranchID:     gitCtx.BranchID,
+		WorktreePath: gitCtx.WorktreePath,
+		BranchName:   gitCtx.BranchName,
 	}
 	if _, err := os.Stat(binding.WorktreePath); err != nil {
 		return nil, fmt.Errorf("worktree_missing: %w", err)
@@ -75,59 +68,27 @@ func mapResolveGitContextError(err error) error {
 	if domain.GitErrCode(err) == domain.GitCodeBranchNotFound {
 		return fmt.Errorf("branch_missing: %w", err)
 	}
-	if domain.GitErrCode(err) == domain.GitCodeBranchNotAssociated {
-		return fmt.Errorf("branch_not_associated: %w", err)
-	}
 	return err
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (w *Worker) worktreeMutex(worktreeID string) *sync.Mutex {
-	v, _ := w.worktreeLocks.LoadOrStore(worktreeID, &sync.Mutex{})
-	return v.(*sync.Mutex)
-}
-
-// prepareGitRun locks the worktree, checks out the branch, sets active_branch_id, and sets harness WorkingDir.
-func (w *Worker) prepareGitRun(ctx context.Context, binding *taskGitBinding) (release func(), err error) {
+// prepareGitRun verifies HEAD matches the bound branch and sets harness WorkingDir.
+// The caller must hold the worktree gate lock for binding.WorktreeID.
+func (w *Worker) prepareGitRun(ctx context.Context, binding *taskGitBinding) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.Worker.prepareGitRun",
 		"worktree_id", binding.WorktreeID)
-	mu := w.worktreeMutex(binding.WorktreeID)
-	mu.Lock()
-	if guardErr := w.store.GuardBranchNotActiveElsewhere(ctx, binding.WorktreeID, binding.BranchID); guardErr != nil {
-		mu.Unlock()
-		return nil, mapGitPrepError(guardErr)
+	head, headErr := w.gitService().WorktreeCurrentBranch(ctx, binding.WorktreePath)
+	if headErr != nil {
+		return mapGitPrepError(headErr)
 	}
-	checkoutErr := w.gitService().Checkout(ctx, binding.WorktreePath, binding.BranchName)
-	if checkoutErr != nil {
-		mu.Unlock()
-		return nil, mapGitPrepError(checkoutErr)
-	}
-	if setErr := w.store.SetActiveBranch(ctx, binding.WorktreeID, binding.BranchID); setErr != nil {
-		mu.Unlock()
-		return nil, mapGitPrepError(setErr)
+	if head != binding.BranchName {
+		return fmt.Errorf("branch_mismatch: worktree HEAD %q, bound branch %q", head, binding.BranchName)
 	}
 	w.harness.SetWorkingDir(binding.WorktreePath)
-	return func() {
-		if clearErr := w.store.ClearActiveBranch(ctx, binding.WorktreeID, binding.BranchID); clearErr != nil {
-			slog.Warn("agent worker clear active branch failed", "cmd", calltrace.LogCmd,
-				"operation", "agent.worker.Worker.prepareGitRun.clear_active",
-				"worktree_id", binding.WorktreeID, "branch_id", binding.BranchID, "err", clearErr)
-		}
-		mu.Unlock()
-	}, nil
+	return nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapGitPrepError(err error) error {
-	if domain.GitErrCode(err) == domain.GitCodeBranchActiveElsewhere {
-		return fmt.Errorf("branch_active_elsewhere: %w", err)
-	}
-	if errors.Is(err, gitwork.ErrDirty) {
-		return fmt.Errorf("worktree_dirty: %w", err)
-	}
-	if errors.Is(err, gitwork.ErrBranchCheckedOut) {
-		return fmt.Errorf("branch_checked_out: %w", err)
-	}
 	if errors.Is(err, gitwork.ErrNotARepository) {
 		return fmt.Errorf("worktree_missing: %w", err)
 	}
@@ -155,11 +116,9 @@ func (w *Worker) runWithGitPrep(ctx context.Context, task *domain.Task, run func
 		w.abortRunningFromGitPrep(ctx, task.ID, err)
 		return
 	}
-	release, err := w.prepareGitRun(ctx, binding)
-	if err != nil {
+	if err := w.prepareGitRun(ctx, binding); err != nil {
 		w.abortRunningFromGitPrep(ctx, task.ID, err)
 		return
 	}
-	defer release()
 	run()
 }

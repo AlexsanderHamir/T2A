@@ -16,6 +16,8 @@ import (
 
 // TaskGitContext is the resolved filesystem path and branch name for a task binding.
 type TaskGitContext struct {
+	WorktreeID   string
+	BranchID     string
 	WorktreePath string
 	BranchName   string
 }
@@ -74,28 +76,23 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 	return model.ToDomainGitRepository(row), nil
 }
 
-// ValidateTaskWorktreeBranchBinding checks worktree_branch_id exists and, when
-// projectID is set, that project.repository_id matches the association's repo.
-func (s *Store) ValidateTaskWorktreeBranchBinding(ctx context.Context, projectID *string, worktreeBranchID string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskWorktreeBranchBinding")
-	worktreeBranchID = strings.TrimSpace(worktreeBranchID)
-	if worktreeBranchID == "" {
-		return fmt.Errorf("%w: worktree_branch_id required", domain.ErrInvalidInput)
+// ValidateTaskWorktreeBinding checks worktree_id exists and, when projectID is
+// set, that project.repository_id matches the worktree's repo.
+func (s *Store) ValidateTaskWorktreeBinding(ctx context.Context, projectID *string, worktreeID string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskWorktreeBinding")
+	worktreeID = strings.TrimSpace(worktreeID)
+	if worktreeID == "" {
+		return fmt.Errorf("%w: worktree_id required", domain.ErrInvalidInput)
 	}
-	wb, err := s.GetWorktreeBranchByID(ctx, worktreeBranchID)
+	wt, err := s.GetGitWorktreeByID(ctx, worktreeID)
 	if err != nil {
 		return err
 	}
-	wt, err := s.GetGitWorktreeByID(ctx, wb.WorktreeID)
-	if err != nil {
-		return err
+	if strings.TrimSpace(wt.BranchID) == "" {
+		return fmt.Errorf("%w: worktree has no branch assigned", domain.ErrInvalidInput)
 	}
-	br, err := s.GetGitBranchByID(ctx, wb.BranchID)
-	if err != nil {
+	if _, err := s.GetGitBranchByID(ctx, wt.BranchID); err != nil {
 		return err
-	}
-	if wt.RepositoryID != br.RepositoryID {
-		return domain.NewGitErr(domain.GitCodeBranchNotAssociated, "worktree and branch belong to different repositories")
 	}
 	if projectID == nil {
 		return nil
@@ -114,25 +111,48 @@ func (s *Store) ValidateTaskWorktreeBranchBinding(ctx context.Context, projectID
 	return nil
 }
 
-// ResolveTaskGitContextFromAssociation loads worktree path and branch name via worktree_branch_id.
-func (s *Store) ResolveTaskGitContextFromAssociation(ctx context.Context, worktreeBranchID string) (TaskGitContext, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ResolveTaskGitContextFromAssociation")
-	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, worktreeBranchID); err != nil {
+// ResolveTaskGitContext loads worktree path and branch name via worktree_id.
+func (s *Store) ResolveTaskGitContext(ctx context.Context, worktreeID string) (TaskGitContext, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ResolveTaskGitContext")
+	if err := s.ValidateTaskWorktreeBinding(ctx, nil, worktreeID); err != nil {
 		return TaskGitContext{}, err
 	}
-	wb, err := s.GetWorktreeBranchByID(ctx, worktreeBranchID)
+	wt, err := s.GetGitWorktreeByID(ctx, worktreeID)
 	if err != nil {
 		return TaskGitContext{}, err
 	}
-	wt, err := s.GetGitWorktreeByID(ctx, wb.WorktreeID)
+	br, err := s.GetGitBranchByID(ctx, wt.BranchID)
 	if err != nil {
 		return TaskGitContext{}, err
 	}
-	br, err := s.GetGitBranchByID(ctx, wb.BranchID)
-	if err != nil {
-		return TaskGitContext{}, err
+	return TaskGitContext{
+		WorktreeID:   wt.ID,
+		BranchID:     br.ID,
+		WorktreePath: wt.Path,
+		BranchName:   br.Name,
+	}, nil
+}
+
+// GuardBranchNotBoundToOtherWorktree rejects when branchID is already assigned to another worktree.
+func (s *Store) GuardBranchNotBoundToOtherWorktree(ctx context.Context, branchID, exceptWorktreeID string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GuardBranchNotBoundToOtherWorktree")
+	branchID = strings.TrimSpace(branchID)
+	if branchID == "" {
+		return fmt.Errorf("%w: branch_id required", domain.ErrInvalidInput)
 	}
-	return TaskGitContext{WorktreePath: wt.Path, BranchName: br.Name}, nil
+	var other model.GitWorktree
+	q := s.db.WithContext(ctx).Where("branch_id = ?", branchID)
+	if exceptWorktreeID = strings.TrimSpace(exceptWorktreeID); exceptWorktreeID != "" {
+		q = q.Where("id <> ?", exceptWorktreeID)
+	}
+	err := q.First(&other).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check branch worktree binding: %w", err)
+	}
+	return domain.NewGitErr(domain.GitCodeBranchBoundToWorktree, "branch is already assigned to another worktree")
 }
 
 // AgentWorkerGitIdle reports whether the worker should stay idle for git registration reasons.

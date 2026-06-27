@@ -29,27 +29,27 @@ func newTaskTestServerWithStore(t *testing.T) (*httptest.Server, *store.Store) {
 	return httptest.NewServer(h), st
 }
 
-func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID, worktreeBranchID string) {
+func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID string) {
 	t.Helper()
-	return gittest.SeedWorktreeBranch(t, st, repoDir)
+	return gittest.SeedWorktree(t, st, repoDir)
 }
 
-func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, string, string, string) {
-	srv, _, wt, br, wb := newTaskTestServerWithRepoStore(t, repoDir)
-	return srv, wt, br, wb
+func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, string, string) {
+	srv, _, wt, br := newTaskTestServerWithRepoStore(t, repoDir)
+	return srv, wt, br
 }
 
-func newTaskTestServerWithRepoStore(t *testing.T, repoDir string) (*httptest.Server, *store.Store, string, string, string) {
+func newTaskTestServerWithRepoStore(t *testing.T, repoDir string) (*httptest.Server, *store.Store, string, string) {
 	t.Helper()
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
-	worktreeID, branchID, worktreeBranchID := seedTestGitWorktree(t, st, repoDir)
+	worktreeID, branchID := seedTestGitWorktree(t, st, repoDir)
 	r, err := repo.OpenRoot(repoDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	h := NewHandler(st, NewSSEHub(), r, WithRepoProvider(NewSettingsRepoProvider(st)))
-	return httptest.NewServer(h), st, worktreeID, branchID, worktreeBranchID
+	return httptest.NewServer(h), st, worktreeID, branchID
 }
 
 func repoPathWithWorktree(worktreeID, path string) string {

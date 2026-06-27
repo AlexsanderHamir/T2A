@@ -11,7 +11,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-func TestStore_ValidateTaskWorktreeBranchBinding(t *testing.T) {
+func TestStore_ValidateTaskWorktreeBinding(t *testing.T) {
 	ctx := context.Background()
 	s := store.NewStore(tasktestdb.OpenSQLite(t))
 	gitSvc := gitwork.New()
@@ -28,22 +28,11 @@ func TestStore_ValidateTaskWorktreeBranchBinding(t *testing.T) {
 	if err != nil || len(wts) == 0 {
 		t.Fatalf("ListGitWorktrees: %v", err)
 	}
-	branches, err := s.ListGitBranches(ctx, domain.DefaultProjectID, repoRow.ID)
-	if err != nil || len(branches) == 0 {
-		t.Fatalf("ListGitBranches: %v", err)
-	}
-	wb, err := s.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
-		WorktreeID: wts[0].ID,
-		BranchID:   branches[0].ID,
-	})
-	if err != nil {
-		t.Fatalf("AssociateWorktreeBranch: %v", err)
-	}
-	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, wb.ID); err != nil {
+	if err := s.ValidateTaskWorktreeBinding(ctx, nil, wts[0].ID); err != nil {
 		t.Fatalf("valid binding: %v", err)
 	}
-	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, "00000000-0000-0000-0000-000000000099"); err == nil {
-		t.Fatal("expected not found for bogus worktree_branch_id")
+	if err := s.ValidateTaskWorktreeBinding(ctx, nil, "00000000-0000-0000-0000-000000000099"); err == nil {
+		t.Fatal("expected not found for bogus worktree_id")
 	}
 }
 
@@ -59,7 +48,7 @@ func TestStore_AgentWorkerGitIdle(t *testing.T) {
 	}
 }
 
-func TestStore_ResolveTaskGitContextByWorktreeBranch(t *testing.T) {
+func TestStore_ResolveTaskGitContextByWorktree(t *testing.T) {
 	ctx := context.Background()
 	s := store.NewStore(tasktestdb.OpenSQLite(t))
 	gitSvc := gitwork.New()
@@ -72,17 +61,9 @@ func TestStore_ResolveTaskGitContextByWorktreeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	wts, _ := s.ListGitWorktrees(ctx, domain.DefaultProjectID, repoRow.ID)
-	branches, _ := s.ListGitBranches(ctx, domain.DefaultProjectID, repoRow.ID)
-	wb, err := s.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
-		WorktreeID: wts[0].ID,
-		BranchID:   branches[0].ID,
-	})
+	gitCtx, err := s.ResolveTaskGitContext(ctx, wts[0].ID)
 	if err != nil {
-		t.Fatal(err)
-	}
-	gitCtx, err := s.ResolveTaskGitContextFromAssociation(ctx, wb.ID)
-	if err != nil {
-		t.Fatalf("ResolveTaskGitContextFromAssociation: %v", err)
+		t.Fatalf("ResolveTaskGitContext: %v", err)
 	}
 	if gitCtx.WorktreePath == "" || gitCtx.BranchName == "" {
 		t.Fatalf("got %#v", gitCtx)

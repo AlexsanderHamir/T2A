@@ -1,13 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  associateWorktreeBranch,
   createGlobalGitRepository,
   createGlobalGitWorktree,
   deleteGlobalGitRepository,
   deleteGlobalGitWorktree,
   reconcileGlobalGitRepository,
   registerGlobalGitWorktree,
-  removeWorktreeBranchAssociation,
 } from "@/api/gitGlobal";
 import { gitQueryKeys } from "../queryKeys";
 
@@ -59,31 +57,6 @@ export function useGlobalGitMutations() {
     onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
   });
 
-  const associateBranch = useMutation({
-    mutationFn: (vars: {
-      worktreeId: string;
-      repositoryId: string;
-      input: Parameters<typeof associateWorktreeBranch>[1];
-    }) => associateWorktreeBranch(vars.worktreeId, vars.input),
-    onSuccess: (_data, vars) => {
-      invalidateRepo(vars.repositoryId);
-      void qc.invalidateQueries({
-        queryKey: gitQueryKeys.worktreeAssociations(vars.worktreeId),
-      });
-    },
-  });
-
-  const removeAssociation = useMutation({
-    mutationFn: (vars: { worktreeId: string; branchId: string; repositoryId: string }) =>
-      removeWorktreeBranchAssociation(vars.worktreeId, vars.branchId),
-    onSuccess: (_data, vars) => {
-      invalidateRepo(vars.repositoryId);
-      void qc.invalidateQueries({
-        queryKey: gitQueryKeys.worktreeAssociations(vars.worktreeId),
-      });
-    },
-  });
-
   const reconcile = useMutation({
     mutationFn: (repositoryId: string) => reconcileGlobalGitRepository(repositoryId),
     onSuccess: (_data, repositoryId) => invalidateRepo(repositoryId),
@@ -95,8 +68,6 @@ export function useGlobalGitMutations() {
     createWorktree,
     registerWorktree,
     deleteWorktree,
-    associateBranch,
-    removeAssociation,
     reconcile,
   };
 }

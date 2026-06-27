@@ -77,6 +77,19 @@ func (s *DefaultService) DeleteBranch(ctx context.Context, repo *Repository, nam
 	return nil
 }
 
+func (s *DefaultService) WorktreeCurrentBranch(ctx context.Context, worktreePath string) (string, error) {
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.WorktreeCurrentBranch")
+	abs, err := absPath(worktreePath)
+	if err != nil {
+		return "", err
+	}
+	out, err := s.runGit(ctx, abs, "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 func (s *DefaultService) Checkout(ctx context.Context, worktreePath, branch string) error {
 	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.Checkout")
 	abs, err := absPath(worktreePath)

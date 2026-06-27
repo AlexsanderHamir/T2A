@@ -16,8 +16,6 @@ function targetNoun(kind: GitDeleteTarget["kind"]): string {
       return "repository";
     case "worktree":
       return "worktree";
-    case "branch":
-      return "branch";
   }
 }
 

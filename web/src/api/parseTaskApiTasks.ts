@@ -390,10 +390,10 @@ export function parseTask(value: unknown): Task {
       parseNonEmptyString(raw, `project_context_item_ids[${i}]`),
     );
   }
-  if (value.worktree_branch_id !== undefined && value.worktree_branch_id !== null) {
-    const wbID = parseString(value.worktree_branch_id, "worktree_branch_id").trim();
-    if (wbID !== "") {
-      base.worktree_branch_id = wbID;
+  if (value.worktree_id !== undefined && value.worktree_id !== null) {
+    const wtID = parseString(value.worktree_id, "worktree_id").trim();
+    if (wtID !== "") {
+      base.worktree_id = wtID;
     }
   }
   if (Array.isArray(value.tags)) {

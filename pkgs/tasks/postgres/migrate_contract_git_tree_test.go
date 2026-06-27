@@ -54,7 +54,7 @@ func openContractMigrateDB(t *testing.T) *gorm.DB {
 		&legacyGitRepository{},
 		&domain.GitWorktree{},
 		&domain.GitBranch{},
-		&domain.WorktreeBranch{},
+		&testWorktreeBranch{},
 		&legacyTask{},
 	); err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestMigrateContractGitTree_dropsColumns(t *testing.T) {
 	if err := db.WithContext(ctx).Create(&br).Error; err != nil {
 		t.Fatal(err)
 	}
-	wb := domain.WorktreeBranch{ID: "wb-1", WorktreeID: wt.ID, BranchID: br.ID, CreatedAt: now}
+	wb := testWorktreeBranch{ID: "wb-1", WorktreeID: wt.ID, BranchID: br.ID, CreatedAt: now}
 	if err := db.WithContext(ctx).Create(&wb).Error; err != nil {
 		t.Fatal(err)
 	}

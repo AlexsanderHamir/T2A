@@ -108,10 +108,10 @@ func (s *Supervisor) CancelCurrentRun() bool {
 	s.mu.Lock()
 	inst := s.current
 	s.mu.Unlock()
-	if inst == nil || inst.worker == nil {
+	if inst == nil || inst.pool == nil {
 		return false
 	}
-	return inst.worker.CancelCurrentRun()
+	return inst.pool.CancelCurrentRun()
 }
 
 // Drain cancels the worker context and waits for Worker.Run to return.

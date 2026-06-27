@@ -22,48 +22,37 @@ func trimmedOptionalID(id *string) string {
 func (h *Handler) validateTaskGitBindingV2(
 	ctx context.Context,
 	projectID *string,
-	worktreeBranchID *string,
+	worktreeID *string,
 ) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validateTaskGitBindingV2")
-	wbID := trimmedOptionalID(worktreeBranchID)
-	if wbID == "" {
+	wtID := trimmedOptionalID(worktreeID)
+	if wtID == "" {
 		return nil
 	}
-	if err := h.store.ValidateTaskWorktreeBranchBinding(ctx, projectID, wbID); err != nil {
-		return err
-	}
-	assoc, err := h.store.GetWorktreeBranchByID(ctx, wbID)
-	if err != nil {
-		return err
-	}
-	return h.store.GuardBranchNotActiveElsewhere(ctx, assoc.WorktreeID, assoc.BranchID)
+	return h.store.ValidateTaskWorktreeBinding(ctx, projectID, wtID)
 }
 
-func (h *Handler) validatePromptMentionsForWorktreeBranch(ctx context.Context, worktreeBranchID *string, prompt string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsForWorktreeBranch")
-	wbID := trimmedOptionalID(worktreeBranchID)
-	if wbID == "" {
+func (h *Handler) validatePromptMentionsForWorktree(ctx context.Context, worktreeID *string, prompt string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsForWorktree")
+	wtID := trimmedOptionalID(worktreeID)
+	if wtID == "" {
 		if len(repo.ParseFileMentions(prompt)) > 0 {
-			return fmt.Errorf("%w: worktree_branch_id required for @-mentions", domain.ErrInvalidInput)
+			return fmt.Errorf("%w: worktree_id required for @-mentions", domain.ErrInvalidInput)
 		}
 		return nil
 	}
-	assoc, err := h.store.GetWorktreeBranchByID(ctx, wbID)
-	if err != nil {
-		return err
-	}
-	return h.validatePromptMentionsForWorktree(ctx, assoc.WorktreeID, prompt)
+	return h.validatePromptMentionsForWorktreeID(ctx, wtID, prompt)
 }
 
-func (h *Handler) validatePromptMentionsForWorktree(ctx context.Context, worktreeID, prompt string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsForWorktree")
+func (h *Handler) validatePromptMentionsForWorktreeID(ctx context.Context, worktreeID, prompt string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsForWorktreeID")
 	if h.repoProv == nil {
 		return nil
 	}
 	worktreeID = strings.TrimSpace(worktreeID)
 	if worktreeID == "" {
 		if len(repo.ParseFileMentions(prompt)) > 0 {
-			return fmt.Errorf("%w: worktree_branch_id required for @-mentions", domain.ErrInvalidInput)
+			return fmt.Errorf("%w: worktree_id required for @-mentions", domain.ErrInvalidInput)
 		}
 		return nil
 	}

@@ -23,7 +23,7 @@ export function buildComposePayloadFromForm(
     cursor_model: fields.newTaskCursorModel.trim(),
     project_id: fields.newProjectID.trim() || undefined,
     project_context_item_ids: fields.newProjectContextItemIDs,
-    worktree_branch_id: fields.newWorktreeBranchID.trim() || undefined,
+    worktree_id: fields.newWorktreeID.trim() || undefined,
     pickup_not_before: fields.newSchedule ?? undefined,
     tags: parseTagsFromCsv(fields.newTagsCsv),
     milestone: fields.newMilestone.trim() || undefined,
@@ -42,7 +42,7 @@ export function hydrateFormFromComposePayload(
   runner: string;
   cursorModel: string;
   projectID: string;
-  worktreeBranchID: string;
+  worktreeID: string;
   projectContextItemIDs: string[];
   schedule: string | null;
   autonomyEnabled: boolean;
@@ -63,8 +63,8 @@ export function hydrateFormFromComposePayload(
     typeof payload.project_id === "string" && payload.project_id
       ? payload.project_id
       : DEFAULT_PROJECT_ID;
-  const worktreeBranchID =
-    typeof payload.worktree_branch_id === "string" ? payload.worktree_branch_id : "";
+  const worktreeID =
+    typeof payload.worktree_id === "string" ? payload.worktree_id : "";
   const projectContextItemIDs = Array.isArray(payload.project_context_item_ids)
     ? payload.project_context_item_ids
     : [];
@@ -76,7 +76,7 @@ export function hydrateFormFromComposePayload(
     runner,
     cursorModel,
     projectID,
-    worktreeBranchID,
+    worktreeID,
     projectContextItemIDs,
     schedule: payload.pickup_not_before ?? null,
     autonomyEnabled: status === "ready",

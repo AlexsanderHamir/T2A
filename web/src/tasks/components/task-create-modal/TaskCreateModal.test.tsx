@@ -9,7 +9,6 @@ import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/settings/settingsQueryKeys";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import {
-  GIT_TEST_BRANCH_ID,
   GIT_TEST_WORKTREE_ID,
 } from "@/test/handlers/git";
 import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
@@ -69,9 +68,7 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     milestone: "",
     projectId: "",
     worktreeId: "",
-    branchId: "",
     onWorktreeChange: vi.fn(),
-    onBranchChange: vi.fn(),
     dependsOn: [],
     onTagsCsvChange: vi.fn(),
     onMilestoneChange: vi.fn(),
@@ -222,7 +219,6 @@ describe("TaskCreateModal", () => {
       title: "Reproduce me",
       checklistItems: [{ text: "Ship it" }],
       worktreeId: "wt-1",
-      branchId: "br-1",
       createError: new Error("boom"),
     });
     expect(screen.getByRole("button", { name: /^create task$/i })).not.toBeDisabled();
@@ -517,20 +513,18 @@ describe("TaskCreateModal", () => {
       });
     }
 
-    it("disables Create task until worktree and branch are selected", async () => {
+    it("disables Create task until worktree is selected", async () => {
       stubGitFetch();
-      renderModal({ worktreeId: "", branchId: "" });
+      renderModal({ worktreeId: "" });
       expect(screen.getByRole("button", { name: /Create task/i })).toBeDisabled();
     });
 
-    it("preselects when only one worktree and branch exist", async () => {
+    it("preselects when only one worktree exists", async () => {
       stubGitFetch();
       const onWorktreeChange = vi.fn();
-      const onBranchChange = vi.fn();
-      renderModal({ onWorktreeChange, onBranchChange });
+      renderModal({ onWorktreeChange });
       await waitFor(() => {
         expect(onWorktreeChange).toHaveBeenCalledWith(GIT_TEST_WORKTREE_ID);
-        expect(onBranchChange).toHaveBeenCalledWith(GIT_TEST_BRANCH_ID);
       });
     });
   });

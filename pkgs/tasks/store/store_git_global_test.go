@@ -7,7 +7,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
-func TestStore_GlobalGitRepository_andWorktreeBranch(t *testing.T) {
+func TestStore_GlobalGitRepository_andWorktreeBinding(t *testing.T) {
 	s, ctx, gitSvc := gitTestStore(t)
 	main := initGitRepo(t)
 
@@ -28,53 +28,27 @@ func TestStore_GlobalGitRepository_andWorktreeBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateGitWorktreeForRepo: %v", err)
 	}
-	branches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
-	if err != nil || len(branches) == 0 {
-		t.Fatalf("ListGitBranchesByRepo: %v len=%d", err, len(branches))
+	if wt.BranchID == "" {
+		t.Fatal("worktree missing branch_id after create")
 	}
-	var branchID string
-	for _, b := range branches {
-		if b.Name == "feature-global" {
-			branchID = b.ID
-			break
-		}
+	if err := s.ValidateTaskWorktreeBinding(ctx, nil, wt.ID); err != nil {
+		t.Fatalf("ValidateTaskWorktreeBinding: %v", err)
 	}
-	if branchID == "" {
-		t.Fatal("feature-global branch not found")
-	}
-	list, err := s.ListWorktreeBranches(ctx, wt.ID)
-	if err != nil || len(list) != 1 {
-		t.Fatalf("ListWorktreeBranches after create: %v len=%d", err, len(list))
-	}
-	wb := list[0]
-	if err := s.ValidateTaskWorktreeBranchBinding(ctx, nil, wb.ID); err != nil {
-		t.Fatalf("ValidateTaskWorktreeBranchBinding: %v", err)
-	}
-	gitCtx, err := s.ResolveTaskGitContextFromAssociation(ctx, wb.ID)
+	gitCtx, err := s.ResolveTaskGitContext(ctx, wt.ID)
 	if err != nil {
-		t.Fatalf("ResolveTaskGitContextFromAssociation: %v", err)
+		t.Fatalf("ResolveTaskGitContext: %v", err)
 	}
 	if gitCtx.WorktreePath == "" || gitCtx.BranchName != "feature-global" {
 		t.Fatalf("context=%+v", gitCtx)
 	}
-	if err := s.SetActiveBranch(ctx, wt.ID, branchID); err != nil {
-		t.Fatalf("SetActiveBranch: %v", err)
-	}
 	wt2Path := filepath.Join(filepath.Dir(main), "wt-global-2")
-	wt2, err := s.CreateGitWorktreeForRepo(ctx, repo.ID, CreateGitWorktreeInput{
+	_, err = s.CreateGitWorktreeForRepo(ctx, repo.ID, CreateGitWorktreeInput{
 		Path:         wt2Path,
-		Branch:       "feature-other",
+		Branch:       "feature-global",
 		CreateBranch: true,
 	}, gitSvc)
-	if err != nil {
-		t.Fatalf("CreateGitWorktreeForRepo wt2: %v", err)
-	}
-	err = s.SetActiveBranch(ctx, wt2.ID, branchID)
-	if domain.GitErrCode(err) != domain.GitCodeBranchActiveElsewhere {
-		t.Fatalf("SetActiveBranch elsewhere: got %v want branch_active_elsewhere", err)
-	}
-	if err := s.RemoveWorktreeBranch(ctx, wt.ID, branchID); err != nil {
-		t.Fatalf("RemoveWorktreeBranch: %v", err)
+	if domain.GitErrCode(err) != domain.GitCodeBranchBoundToWorktree {
+		t.Fatalf("duplicate branch on second worktree: got %v want branch_bound_to_worktree", err)
 	}
 	if err := s.DeleteGitWorktreeByID(ctx, wt.ID, true, gitSvc); err != nil {
 		t.Fatalf("DeleteGitWorktreeByID: %v", err)
@@ -112,13 +86,8 @@ func TestStore_ProjectRepositoryBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	list, err := s.ListWorktreeBranches(ctx, wt.ID)
-	if err != nil || len(list) != 1 {
-		t.Fatalf("ListWorktreeBranches after create: %v len=%d", err, len(list))
-	}
-	wb := list[0]
 	pid := proj.ID
-	if err := s.ValidateTaskWorktreeBranchBinding(ctx, &pid, wb.ID); err != nil {
+	if err := s.ValidateTaskWorktreeBinding(ctx, &pid, wt.ID); err != nil {
 		t.Fatalf("valid project binding: %v", err)
 	}
 	otherMain := initGitRepo(t)
@@ -135,7 +104,7 @@ func TestStore_ProjectRepositoryBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	otherPID := otherProj.ID
-	err = s.ValidateTaskWorktreeBranchBinding(ctx, &otherPID, wb.ID)
+	err = s.ValidateTaskWorktreeBinding(ctx, &otherPID, wt.ID)
 	if err == nil {
 		t.Fatal("expected project_repo_mismatch for project tied to different repo")
 	}

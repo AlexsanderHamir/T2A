@@ -18,8 +18,8 @@ Work hierarchy is **Project → Task**. Tasks may have:
 |---|---|---|
 | `id` | string (UUID) | Server-assigned when omitted. |
 | `title` | string | Required after trim. |
-| `initial_prompt` | string (HTML) | TipTap rich text; `@`-mentions validated against the task's `worktree_branch_id` when present. |
-| `worktree_branch_id` | string \| null | FK to `worktree_branches.id`; binds the task to a specific worktree+branch pair (ADR-0037). |
+| `initial_prompt` | string (HTML) | TipTap rich text; `@`-mentions validated against the task's `worktree_id` when present. |
+| `worktree_id` | string \| null | FK to `git_worktrees.id`; binds the task to a registered worktree (branch via `git_worktrees.branch_id`, ADR-0039). |
 | `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
 | `pending_retry` | JSON \| null | Ephemeral operator intent between `POST /tasks/{id}/retry` and worker pickup. `{ mode: fresh|resume, parent_cycle_id }`. Not exposed on the HTTP task JSON (`json:"-"`); consumed and cleared atomically when the worker transitions `ready→running`. |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
@@ -339,23 +339,21 @@ Mental model: project = process, task = thread. Project = shared memory; task = 
 
 Out of scope today: embeddings / vector search, autonomous memory pruning, summarization daemons, tenancy / sharing / billing, automatic migration of legacy tasks into synthetic projects.
 
-## Git workflow (`git_repositories`, `git_worktrees`, `git_branches`, `worktree_branches`)
+## Git workflow (`git_repositories`, `git_worktrees`, `git_branches`)
 
-Git context is a strict, project-free tree: **repo -> worktree -> branch -> task**, where a "branch on a worktree" is a `worktree_branches` association. A **project** is an optional overlay tied to one repo, not a node in the git chain. See [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (current model), [ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md) (original), and [domain/worktrees-and-branches.md](./domain/worktrees-and-branches.md).
+Git context is a strict, project-free chain: **repo → worktree (`branch_id`) → task (`worktree_id`)**. A **project** is an optional overlay tied to one repo, not a node in the git chain. See [ADR-0039](./adr/ADR-0039-fixed-worktree-branch.md) (current model), [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (global repos + project overlay), [ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md) (original), and [domain/worktrees-and-branches.md](./domain/worktrees-and-branches.md).
 
 ```mermaid
 flowchart TB
   Repo["git_repositories (GLOBAL)"]
-  Worktree["git_worktrees"]
+  Worktree["git_worktrees (branch_id)"]
   Branch["git_branches (repo-level refs)"]
-  WB["worktree_branches"]
-  Task["tasks (queued)"]
+  Task["tasks (worktree_id)"]
   Project["projects (optional overlay)"]
   Repo -->|"1:N"| Worktree
   Repo -->|"1:N"| Branch
-  Worktree -->|"1:N"| WB
-  Branch -.->|"ref"| WB
-  WB -->|"1:N"| Task
+  Branch -->|"1:1 per worktree"| Worktree
+  Worktree -->|"1:N"| Task
   Repo -->|"1:N"| Project
   Project -.->|"optional tag"| Task
 ```
@@ -383,7 +381,7 @@ Belong to the repo only (no `project_id`).
 | `path` | text | Working directory (main checkout or linked worktree). |
 | `name` | string | Operator label. |
 | `is_main` | bool | True for the registered main checkout row. |
-| `active_branch_id` | string fk -> `git_branches.id`, nullable | Branch currently checked out in this worktree (at most one). |
+| `branch_id` | string fk -> `git_branches.id` | Fixed branch for this worktree; immutable after create. **Unique** — each branch binds to at most one worktree. |
 | `created_at` | timestamptz | |
 
 ### `git_branches`
@@ -398,18 +396,7 @@ Repo-level refs.
 | `head_sha` | string | Cached tip SHA (reconcile refreshes). |
 | `created_at` | timestamptz | |
 
-### `worktree_branches`
-
-Association linking a repo-level branch to a worktree directory ("this branch, in this directory"). Tasks bind to this row.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid pk | |
-| `worktree_id` | string fk -> `git_worktrees.id` | |
-| `branch_id` | string fk -> `git_branches.id` | Must share `repository_id` with the worktree. |
-| `created_at` | timestamptz | |
-
-Tasks reference a single `worktree_branch_id` (FK -> `worktree_branches.id`, required) and an optional `project_id`. When `project_id` is set, `project.repository_id` must equal the association's repo. Delete returns **409** `has_running_task` when a **running** task targets the repo, worktree, branch, or association; binding/run against a branch active in another worktree returns **409** `branch_active_elsewhere`.
+Tasks reference `worktree_id` (FK -> `git_worktrees.id`, required for agent runs) and an optional `project_id`. When `project_id` is set, `project.repository_id` must equal the worktree's repo. Delete returns **409** `has_running_task` when a **running** task targets the repo, worktree, or branch; registering a worktree on a branch already bound elsewhere returns **409** `branch_bound_to_worktree`.
 
 ### `projects` (git overlay fields)
 
@@ -419,4 +406,4 @@ Tasks reference a single `worktree_branch_id` (FK -> `worktree_branches.id`, req
 
 Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, checklist events, `on_task_done`, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.
 
-`on_task_done` payload (emitted when the harness marks a task `done`): `{ "worktree_branch_id", "commits": [{ "sha", "message", ... }] }` — foundation for future PR automation; no UI in v0.1.
+`on_task_done` payload (emitted when the harness marks a task `done`): `{ "worktree_id", "commits": [{ "sha", "message", ... }] }` — foundation for future PR automation; no UI in v0.1.

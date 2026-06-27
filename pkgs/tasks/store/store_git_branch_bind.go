@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// BindBranchInput registers or creates a repo-level branch row for worktree association.
+// BindBranchInput registers or creates a repo-level branch row for worktree assignment.
 type BindBranchInput struct {
 	Name         string
 	CreateBranch bool
@@ -96,21 +96,20 @@ func (s *Store) ResolveOrCreateBranchForRepo(
 	return row, nil
 }
 
-// bindWorktreeBranch resolves or creates a branch row and associates it with the worktree.
-func (s *Store) bindWorktreeBranch(
+// resolveBranchForWorktree resolves or creates a branch and guards one-worktree-per-branch.
+func (s *Store) resolveBranchForWorktree(
 	ctx context.Context,
 	repo domain.GitRepository,
 	worktreeID string,
 	input BindBranchInput,
 	gitSvc gitwork.Service,
-) (domain.WorktreeBranch, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.bindWorktreeBranch")
+) (domain.GitBranch, error) {
 	br, err := s.ResolveOrCreateBranchForRepo(ctx, repo, input, gitSvc)
 	if err != nil {
-		return domain.WorktreeBranch{}, err
+		return domain.GitBranch{}, err
 	}
-	return s.AssociateWorktreeBranch(ctx, AssociateWorktreeBranchInput{
-		WorktreeID: worktreeID,
-		BranchID:   br.ID,
-	})
+	if err := s.GuardBranchNotBoundToOtherWorktree(ctx, br.ID, worktreeID); err != nil {
+		return domain.GitBranch{}, err
+	}
+	return br, nil
 }

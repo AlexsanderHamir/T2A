@@ -18,7 +18,7 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 	if err := os.WriteFile(p, []byte("a\nb\nc\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	srv, wtID, _, wbID := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoSearchWithWorktree(wtID, "note"))
@@ -51,8 +51,8 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 
 	res2, err := http.Post(srv.URL+"/tasks", "application/json",
 		strings.NewReader(withCreateChecklist(fmt.Sprintf(
-			`{"title":"t","initial_prompt":"@nope.txt","priority":"medium","worktree_branch_id":%q}`,
-			wbID))))
+			`{"title":"t","initial_prompt":"@nope.txt","priority":"medium","worktree_id":%q}`,
+			wtID))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,8 +71,8 @@ func TestHTTP_repo_search_and_create_rejects_bad_file_mention(t *testing.T) {
 
 	res3, err := http.Post(srv.URL+"/tasks", "application/json",
 		strings.NewReader(withCreateChecklist(fmt.Sprintf(
-			`{"title":"t2","initial_prompt":"@note.txt(1-2)","priority":"medium","worktree_branch_id":%q}`,
-			wbID))))
+			`{"title":"t2","initial_prompt":"@note.txt(1-2)","priority":"medium","worktree_id":%q}`,
+			wtID))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestHTTP_repo_file_ok(t *testing.T) {
 	if err := os.WriteFile(p, []byte("line1\nline2\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoPathWithWorktree(wtID, "note.txt"))
@@ -121,7 +121,7 @@ func TestHTTP_repo_file_ok(t *testing.T) {
 
 func TestHTTP_repo_file_and_validate_range_reject_overlong_path(t *testing.T) {
 	dir := t.TempDir()
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	longPath := strings.Repeat("a", maxRepoRelPathQueryBytes+1)
@@ -150,7 +150,7 @@ func TestHTTP_repo_validate_range_ok(t *testing.T) {
 	if err := os.WriteFile(p, []byte("line1\nline2\nline3\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoValidateRangeWithWorktree(wtID, "note.txt", "1", "2"))
@@ -175,7 +175,7 @@ func TestHTTP_repo_validate_range_ok(t *testing.T) {
 
 func TestHTTP_repo_validate_range_missing_params(t *testing.T) {
 	dir := t.TempDir()
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoValidateRangeWithWorktree(wtID, "", "", ""))
@@ -190,7 +190,7 @@ func TestHTTP_repo_validate_range_missing_params(t *testing.T) {
 
 func TestHTTP_repo_validate_range_reject_overlong_start_end(t *testing.T) {
 	dir := t.TempDir()
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	long := strings.Repeat("1", maxRepoLineQueryParamBytes+1)
@@ -215,7 +215,7 @@ func TestHTTP_repo_validate_range_reject_overlong_start_end(t *testing.T) {
 
 func TestHTTP_repo_file_resolve_error_doesNotLeakInternalPrefix(t *testing.T) {
 	dir := t.TempDir()
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoPathWithWorktree(wtID, "foo/.."))
@@ -243,7 +243,7 @@ func TestHTTP_repo_file_resolve_error_doesNotLeakInternalPrefix(t *testing.T) {
 
 func TestHTTP_repo_validate_range_resolve_error_doesNotLeakInternalPrefix(t *testing.T) {
 	dir := t.TempDir()
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoValidateRangeWithWorktree(wtID, "foo/..", "1", "1"))
@@ -279,7 +279,7 @@ func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
 	if err := os.WriteFile(p, []byte("x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoValidateRangeWithWorktree(wtID, "a.txt", "nope", "1"))
@@ -294,7 +294,7 @@ func TestHTTP_repo_validate_range_invalid_start_end(t *testing.T) {
 
 func TestHTTP_repo_routes_require_worktree_id(t *testing.T) {
 	dir := t.TempDir()
-	srv, _, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, _, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + "/repo/search?q=x")
@@ -331,7 +331,7 @@ func initHTTPTestGitRepo(t *testing.T, dir string) string {
 func TestHTTP_repo_diff_ok(t *testing.T) {
 	dir := t.TempDir()
 	sha := initHTTPTestGitRepo(t, dir)
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoDiffWithWorktree(wtID, sha))
@@ -373,7 +373,7 @@ func TestHTTP_repo_diff_ok(t *testing.T) {
 func TestHTTP_repo_diff_not_found(t *testing.T) {
 	dir := t.TempDir()
 	initHTTPTestGitRepo(t, dir)
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoDiffWithWorktree(wtID, "deadbeef"))
@@ -389,7 +389,7 @@ func TestHTTP_repo_diff_not_found(t *testing.T) {
 func TestHTTP_repo_diff_invalid_sha(t *testing.T) {
 	dir := t.TempDir()
 	initHTTPTestGitRepo(t, dir)
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + repoDiffWithWorktree(wtID, "not-a-sha"))
@@ -405,7 +405,7 @@ func TestHTTP_repo_diff_invalid_sha(t *testing.T) {
 func TestHTTP_repo_diff_missing_sha(t *testing.T) {
 	dir := t.TempDir()
 	initHTTPTestGitRepo(t, dir)
-	srv, wtID, _, _ := newTaskTestServerWithRepo(t, dir)
+	srv, wtID, _ := newTaskTestServerWithRepo(t, dir)
 	defer srv.Close()
 
 	res, err := http.Get(srv.URL + "/repo/diff?worktree_id=" + wtID)

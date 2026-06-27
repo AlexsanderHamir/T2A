@@ -95,11 +95,10 @@ func EnsureMain(t *testing.T, dir string) {
 	_ = exec.Command("git", "-C", dir, "commit", "-m", "init", "--allow-empty").Run()
 }
 
-// SeedWorktreeBranch registers repoDir in the store and returns the first
-// worktree, branch, and worktree-branch association IDs.
+// SeedWorktree registers repoDir in the store and returns the main worktree id.
 //
 //funclogmeasure:skip category=tool-required-noop reason="Test-only git bootstrap; not part of production trace paths."
-func SeedWorktreeBranch(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID, worktreeBranchID string) {
+func SeedWorktree(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID string) {
 	t.Helper()
 	EnsureMain(t, repoDir)
 	ctx := context.Background()
@@ -114,28 +113,34 @@ func SeedWorktreeBranch(t *testing.T, st *store.Store, repoDir string) (worktree
 	if err != nil || len(wts) == 0 {
 		t.Fatalf("ListGitWorktrees: %v len=%d", err, len(wts))
 	}
-	branches, err := st.ListGitBranches(ctx, domain.DefaultProjectID, repoRow.ID)
-	if err != nil || len(branches) == 0 {
-		t.Fatalf("ListGitBranches: %v len=%d", err, len(branches))
+	if wts[0].BranchID == "" {
+		t.Fatalf("main worktree missing branch_id after CreateGitRepository")
 	}
-	wb, err := st.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
-		WorktreeID: wts[0].ID,
-		BranchID:   branches[0].ID,
-	})
-	if err != nil {
-		t.Fatalf("AssociateWorktreeBranch: %v", err)
-	}
-	return wts[0].ID, branches[0].ID, wb.ID
+	return wts[0].ID, wts[0].BranchID
 }
 
-// SeedWorktreeBranchTemp creates a temp git repo, registers it in the store,
-// and returns the worktree-branch ID and repo directory path.
+// SeedWorktreeTemp creates a temp git repo, registers it in the store,
+// and returns the worktree id and repo directory path.
 //
 //funclogmeasure:skip category=tool-required-noop reason="Test-only git bootstrap; not part of production trace paths."
-func SeedWorktreeBranchTemp(t *testing.T, st *store.Store) (worktreeBranchID, workDir string) {
+func SeedWorktreeTemp(t *testing.T, st *store.Store) (worktreeID, workDir string) {
 	t.Helper()
 	dir := t.TempDir()
 	InitMain(t, dir)
-	_, _, wbID := SeedWorktreeBranch(t, st, dir)
-	return wbID, dir
+	wtID, _ := SeedWorktree(t, st, dir)
+	return wtID, dir
+}
+
+// SeedWorktreeBranch is deprecated: use SeedWorktree. Returns worktreeID twice for legacy call sites.
+func SeedWorktreeBranch(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID, worktreeBranchID string) {
+	t.Helper()
+	wtID, brID := SeedWorktree(t, st, repoDir)
+	return wtID, brID, wtID
+}
+
+// SeedWorktreeBranchTemp is deprecated: use SeedWorktreeTemp.
+func SeedWorktreeBranchTemp(t *testing.T, st *store.Store) (worktreeBranchID, workDir string) {
+	t.Helper()
+	wtID, dir := SeedWorktreeTemp(t, st)
+	return wtID, dir
 }

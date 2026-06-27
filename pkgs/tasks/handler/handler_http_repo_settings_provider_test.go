@@ -53,7 +53,7 @@ func TestHTTP_repoRoutes_followRegisteredWorktree(t *testing.T) {
 
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
-	worktreeID, _, _ := seedTestGitWorktree(t, st, dir)
+	worktreeID, _ := seedTestGitWorktree(t, st, dir)
 	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
 	srv := httptest.NewServer(h)
 	defer srv.Close()

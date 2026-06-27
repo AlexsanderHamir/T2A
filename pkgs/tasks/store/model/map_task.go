@@ -21,7 +21,7 @@ func FromDomainTask(d domain.Task) Task {
 		PickupNotBefore:       d.PickupNotBefore,
 		CriteriaSatisfiedAt:   d.CriteriaSatisfiedAt,
 		PendingRetry:          d.PendingRetry,
-		WorktreeBranchID:      d.WorktreeBranchID,
+		WorktreeID:            d.WorktreeID,
 	}
 }
 
@@ -45,7 +45,7 @@ func ToDomainTask(m Task) domain.Task {
 		PickupNotBefore:       m.PickupNotBefore,
 		CriteriaSatisfiedAt:   m.CriteriaSatisfiedAt,
 		PendingRetry:          m.PendingRetry,
-		WorktreeBranchID:      m.WorktreeBranchID,
+		WorktreeID:            m.WorktreeID,
 	}
 }
 

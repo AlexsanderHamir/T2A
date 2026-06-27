@@ -19,7 +19,7 @@ import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
 import { advancedSummaryLine } from "./advancedSummaryLine";
-import { WorktreeBranchSelector } from "./fields/WorktreeBranchSelector";
+import { WorktreeSelector } from "./fields/WorktreeSelector";
 
 const noopOnDependsOnChange = (): void => {};
 
@@ -67,11 +67,7 @@ type Props = {
   milestone: string;
   projectId: string;
   worktreeId: string;
-  branchId: string;
-  worktreeBranchId?: string;
   onWorktreeChange: (worktreeId: string) => void;
-  onBranchChange: (branchId: string) => void;
-  onWorktreeBranchChange?: (id: string) => void;
   dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
@@ -379,10 +375,7 @@ function TaskCreateModalFormBody(props: {
   milestone: string;
   projectId: string;
   worktreeId: string;
-  worktreeBranchId?: string;
   onWorktreeChange: (worktreeId: string) => void;
-  onBranchChange: (branchId: string) => void;
-  onWorktreeBranchChange?: (id: string) => void;
   dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
@@ -419,10 +412,7 @@ function TaskCreateModalFormBody(props: {
     milestone,
     projectId,
     worktreeId,
-    worktreeBranchId,
     onWorktreeChange,
-    onBranchChange,
-    onWorktreeBranchChange,
     dependsOn,
     onTagsCsvChange,
     onMilestoneChange,
@@ -463,13 +453,11 @@ function TaskCreateModalFormBody(props: {
           worktreeId={worktreeId.trim() || undefined}
           betweenTitleAndPrompt={
             presentation.isTaskEdit ? null : (
-              <WorktreeBranchSelector
+              <WorktreeSelector
                 idsPrefix={presentation.idsPrefix}
                 projectId={projectId}
-                worktreeBranchId={worktreeBranchId ?? ""}
-                onWorktreeBranchChange={onWorktreeBranchChange ?? (() => {})}
+                worktreeId={worktreeId}
                 onWorktreeChange={onWorktreeChange}
-                onBranchChange={onBranchChange}
                 disabled={presentation.disabled}
               />
             )
@@ -568,8 +556,6 @@ function TaskCreateModalActionFooter(props: {
   priority: PriorityChoice;
   checklistItems: ChecklistItemDraft[];
   worktreeId: string;
-  branchId: string;
-  worktreeBranchId?: string;
   draftSaving: boolean;
   onClose: () => void;
   onSaveDraft: () => void;
@@ -580,8 +566,6 @@ function TaskCreateModalActionFooter(props: {
     priority,
     checklistItems,
     worktreeId,
-    branchId,
-    worktreeBranchId,
     draftSaving,
     onClose,
     onSaveDraft,
@@ -616,8 +600,6 @@ function TaskCreateModalActionFooter(props: {
       priority={priority}
       checklistItems={checklistItems}
       worktreeId={worktreeId}
-      branchId={branchId}
-      worktreeBranchId={worktreeBranchId}
       requireGitBinding
       onClose={onClose}
       onSaveDraft={presentation.isTemplateMode ? undefined : onSaveDraft}
@@ -666,11 +648,7 @@ export function TaskCreateModal({
   milestone,
   projectId,
   worktreeId,
-  branchId,
-  worktreeBranchId = "",
   onWorktreeChange,
-  onBranchChange,
-  onWorktreeBranchChange,
   dependsOn,
   onTagsCsvChange,
   onMilestoneChange,
@@ -763,10 +741,7 @@ export function TaskCreateModal({
               milestone={milestone}
               projectId={projectId}
               worktreeId={worktreeId}
-              worktreeBranchId={worktreeBranchId}
               onWorktreeChange={onWorktreeChange}
-              onBranchChange={onBranchChange}
-              onWorktreeBranchChange={onWorktreeBranchChange}
               dependsOn={dependsOn}
               onTagsCsvChange={onTagsCsvChange}
               onMilestoneChange={onMilestoneChange}
@@ -787,8 +762,6 @@ export function TaskCreateModal({
               priority={priority}
               checklistItems={checklistItems}
               worktreeId={worktreeId}
-              branchId={branchId}
-              worktreeBranchId={worktreeBranchId}
               draftSaving={draftSaving}
               onClose={onClose}
               onSaveDraft={onSaveDraft}

@@ -5,7 +5,6 @@ import type {
   GitRepository,
   GitReconcileResult,
   GitWorktree,
-  WorktreeBranch,
 } from "@/types/git";
 import { isRecord, parseNonEmptyString, parseOptionalNonEmptyId, parseString } from "./parseTaskApiCore";
 
@@ -35,9 +34,9 @@ function parseGitWorktreeRow(value: unknown, path: string): GitWorktree {
     is_main: Boolean(value.is_main),
     created_at: parseString(value.created_at, `${path}.created_at`),
   };
-  const activeBranchID = parseOptionalNonEmptyId(value.active_branch_id, `${path}.active_branch_id`);
-  if (activeBranchID) {
-    row.active_branch_id = activeBranchID;
+  const branchID = parseOptionalNonEmptyId(value.branch_id, `${path}.branch_id`);
+  if (branchID) {
+    row.branch_id = branchID;
   }
   return row;
 }
@@ -51,18 +50,6 @@ function parseGitBranchRow(value: unknown, path: string): GitBranch {
     repository_id: parseNonEmptyString(value.repository_id, `${path}.repository_id`),
     name: parseString(value.name, `${path}.name`),
     head_sha: parseString(value.head_sha, `${path}.head_sha`),
-    created_at: parseString(value.created_at, `${path}.created_at`),
-  };
-}
-
-function parseWorktreeBranchRow(value: unknown, path: string): WorktreeBranch {
-  if (!isRecord(value)) {
-    throw new Error(`Invalid API response: ${path} must be object`);
-  }
-  return {
-    id: parseNonEmptyString(value.id, `${path}.id`),
-    worktree_id: parseNonEmptyString(value.worktree_id, `${path}.worktree_id`),
-    branch_id: parseNonEmptyString(value.branch_id, `${path}.branch_id`),
     created_at: parseString(value.created_at, `${path}.created_at`),
   };
 }
@@ -155,21 +142,6 @@ export function parseGitLiveWorktreeList(raw: unknown): GitLiveWorktree[] {
     throw new Error("Invalid API response: worktrees must be array");
   }
   return rows.map((row, i) => parseGitLiveWorktreeRow(row, `worktrees[${i}]`));
-}
-
-export function parseWorktreeBranchList(raw: unknown): WorktreeBranch[] {
-  if (!isRecord(raw)) {
-    throw new Error("Invalid API response: body must be object");
-  }
-  const rows = raw.associations;
-  if (!Array.isArray(rows)) {
-    throw new Error("Invalid API response: associations must be array");
-  }
-  return rows.map((row, i) => parseWorktreeBranchRow(row, `associations[${i}]`));
-}
-
-export function parseWorktreeBranch(raw: unknown): WorktreeBranch {
-  return parseWorktreeBranchRow(raw, "association");
 }
 
 export function parseGitReconcileResult(raw: unknown): GitReconcileResult {

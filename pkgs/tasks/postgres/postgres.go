@@ -104,7 +104,6 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.GitRepository{},
 		&domain.GitWorktree{},
 		&domain.GitBranch{},
-		&domain.WorktreeBranch{},
 		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
@@ -145,6 +144,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := migrateContractGitTree(ctx, db); err != nil {
 		return fmt.Errorf("contract git tree: %w", err)
+	}
+	if err := migrateFixedWorktreeBranch(ctx, db); err != nil {
+		return fmt.Errorf("fixed worktree branch: %w", err)
 	}
 	if err := RecordSchemaRevision(ctx, db, time.Now().UTC()); err != nil {
 		return fmt.Errorf("record schema revision: %w", err)

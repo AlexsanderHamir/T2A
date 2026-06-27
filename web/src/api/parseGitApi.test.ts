@@ -7,8 +7,6 @@ import {
   parseGitRepositoryList,
   parseGitWorktree,
   parseGitWorktreeList,
-  parseWorktreeBranch,
-  parseWorktreeBranchList,
 } from "./parseGitApi";
 
 const sampleRepo = {
@@ -83,17 +81,17 @@ describe("parseGitApi", () => {
     expect(() => parseGitBranch({})).toThrow(/id/);
   });
 
-  it("parses worktree with active_branch_id", () => {
+  it("parses worktree with branch_id", () => {
     const wt = parseGitWorktree({
       id: "00000000-0000-4000-8000-000000000020",
       repository_id: sampleRepo.id,
       path: "/repo/wt",
       name: "feature",
       is_main: false,
-      active_branch_id: "00000000-0000-4000-8000-000000000030",
+      branch_id: "00000000-0000-4000-8000-000000000030",
       created_at: "2026-06-22T12:00:00Z",
     });
-    expect(wt.active_branch_id).toBe("00000000-0000-4000-8000-000000000030");
+    expect(wt.branch_id).toBe("00000000-0000-4000-8000-000000000030");
   });
 
   it("parses live branch list", () => {
@@ -101,30 +99,5 @@ describe("parseGitApi", () => {
       branches: [{ name: "main", head_sha: "deadbeef" }],
     });
     expect(rows[0]?.name).toBe("main");
-  });
-
-  it("parses worktree branch associations", () => {
-    const rows = parseWorktreeBranchList({
-      associations: [
-        {
-          id: "00000000-0000-4000-8000-000000000040",
-          worktree_id: "00000000-0000-4000-8000-000000000020",
-          branch_id: "00000000-0000-4000-8000-000000000030",
-          created_at: "2026-06-22T12:00:00Z",
-        },
-      ],
-    });
-    expect(rows[0]?.branch_id).toBe("00000000-0000-4000-8000-000000000030");
-  });
-
-  it("parses single worktree branch association", () => {
-    expect(
-      parseWorktreeBranch({
-        id: "00000000-0000-4000-8000-000000000040",
-        worktree_id: "00000000-0000-4000-8000-000000000020",
-        branch_id: "00000000-0000-4000-8000-000000000030",
-        created_at: "2026-06-22T12:00:00Z",
-      }).worktree_id,
-    ).toBe("00000000-0000-4000-8000-000000000020");
   });
 });

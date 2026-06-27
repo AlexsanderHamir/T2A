@@ -13,7 +13,7 @@ export type GitWorktree = {
   path: string;
   name: string;
   is_main: boolean;
-  active_branch_id?: string;
+  branch_id?: string;
   created_at: string;
 };
 
@@ -44,14 +44,6 @@ export type GitWorktreeBranchBind = {
   name: string;
   create_branch?: boolean;
   start_point?: string;
-};
-
-/** Worktree↔branch association row. */
-export type WorktreeBranch = {
-  id: string;
-  worktree_id: string;
-  branch_id: string;
-  created_at: string;
 };
 
 export type GitReconcileResult = {

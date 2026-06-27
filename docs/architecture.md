@@ -22,6 +22,7 @@ How `taskapi` is shaped: data flow, persistence, the agent worker, and the event
 - [SSE hub](#sse-hub)
 - [Ready-task queue and reconcile](#ready-task-queue-and-reconcile)
 - [Agent worker and harness](#agent-worker-and-harness)
+  - [Worktree-bounded parallelism](#worktree-bounded-parallelism)
   - [Lifecycle of one task](#lifecycle-of-one-task)
   - [Example: from queue pickup to cycle completion](#example-from-queue-pickup-to-cycle-completion)
   - [Runner abstraction](#runner-abstraction)
@@ -100,8 +101,8 @@ The tab that submitted the form already has the new task in its response, but ot
 A task created in `status=ready` still needs to be picked up and executed, which is a separate concern from UI updates. Inline with the same commit, the store facade checks whether the task is eligible for pickup. A task is eligible when `status` is `ready` and `pickup_not_before` is not set in the future. If both conditions hold, the facade calls `notifyReadyTask`, which puts a copy of the task on `MemoryQueue`, an in-process FIFO queue used only by the worker. The browser has no visibility into this queue. Because the queue is bounded, an enqueue can fail under load. A failed enqueue does not fail the create, because the task is safely stored in Postgres and the reconcile loop will discover it on its next pass.
 *In the diagram:* `store facade → MemoryQueue` (notifyReadyTask), with the dotted `Reconcile loop → MemoryQueue` arrow acting as the backstop.
 
-**Step 5. The worker consumes the queue and the harness drives the run.**
-A single worker goroutine consumes the queue. When it receives a task, it reloads the latest row from the store, transitions the task to `running`, and hands control to the harness, the component that orchestrates one agent run from start to finish. From this point on, the worker is the active driver of writes. It records cycle and phase progress back through the store, publishes `task_cycle_changed` and `agent_run_progress` events to `SSEHub` as the run progresses, and invokes the cursor CLI inside the workspace checkout to do the actual work. The events the harness publishes travel the same hub-to-browser path used in Step 3, which is why the task detail view updates live while the agent is executing.
+**Step 5. The worker pool consumes the queue and the harness drives each run.**
+N worker goroutines (default 4, `HAMIX_AGENT_WORKER_CONCURRENCY`) share one `MemoryQueue`. When a slot receives a task, it reloads the latest row from the store, acquires the per-worktree gate, transitions the task to `running`, and hands control to the harness. Tasks on the same worktree serialize; tasks on different worktrees may run concurrently. From this point on, the worker is the active driver of writes. It records cycle and phase progress back through the store, publishes `task_cycle_changed` and `agent_run_progress` events to `SSEHub` as the run progresses, and invokes the cursor CLI inside the bound worktree checkout.
 *In the diagram:* `MemoryQueue → Agent worker + harness` (Receive task snapshot), then `Agent worker + harness → store facade` (Run / Resume), `Agent worker + harness → SSEHub` (task_cycle_changed, agent_run_progress), and `Agent worker + harness → Workspace checkout` (cursor runner).
 
 **Why the two paths stay separate.**
@@ -277,13 +278,23 @@ The queue is single-process: multiple `taskapi` replicas with the worker enabled
 
 ## Agent worker and harness
 
-`pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. The worker runs when `app_settings.repo_root` is set and can be toggled from the Settings page. Supervisor boot, reload, and hot-swap: [domain/agent-supervisor.md](domain/agent-supervisor.md).
+`pkgs/agents/worker` runs an in-process **pool** of N queue consumers on one shared `MemoryQueue` (default N=4 via `HAMIX_AGENT_WORKER_CONCURRENCY`). Each slot handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. The worker runs when `app_settings.repo_root` is set and can be toggled from the Settings page. Supervisor boot, reload, and hot-swap: [domain/agent-supervisor.md](domain/agent-supervisor.md).
 
 The harness (`pkgs/agents/harness`) wraps `runner.Run`: execute/verify phase loop, criteria injection, report-file contracts, adversarial verification, git integrity checks, and crash/shutdown recovery of in-flight cycle state. See [domain/harness.md](./domain/harness.md), [ADR-0005](./adr/ADR-0005-extract-agent-harness.md), [domain/done-criteria.md](./domain/done-criteria.md), [domain/execute-agent.md](./domain/execute-agent.md), and [domain/verify-agent.md](./domain/verify-agent.md).
 
+### Worktree-bounded parallelism
+
+Per [ADR-0039](./adr/ADR-0039-fixed-worktree-branch.md), tasks bind `worktree_id`; branch is derived from `git_worktrees.branch_id`. Execution is **sequential within a worktree, parallel across worktrees**:
+
+- **`WorktreeGate`** — one mutex per worktree id. Ready admission uses `TryLock`: if the worktree is busy, the slot defers pickup (~5s) without blocking other slots.
+- **No checkout at pickup** — `prepareGitRun` verifies HEAD matches the bound branch and sets `WorkingDir`; the worker does not run `git checkout`.
+- **Pool sizing** — `HAMIX_AGENT_WORKER_CONCURRENCY` (1–32, default 4) caps concurrent harness runs. Effective parallelism is bounded by distinct worktrees with ready tasks, not by queue depth alone.
+
+See [domain/worktrees-and-branches.md](domain/worktrees-and-branches.md) and [domain/agent-queue.md](domain/agent-queue.md).
+
 ### Lifecycle of one task
 
-One worker goroutine pulls tasks from the queue, runs the harness for each admission, and defers queue acknowledgment until the run finishes or bails out. The diagram below shows the happy path from dequeue through cycle termination.
+One pool slot pulls tasks from the queue, runs the harness for each admission, and defers queue acknowledgment until the run finishes or bails out. The diagram below shows the happy path from dequeue through cycle termination.
 
 ```mermaid
 sequenceDiagram
@@ -394,7 +405,7 @@ Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 7. Schema evolution uses GORM AutoMigrate via explicit migrate step; integer `SchemaRevision` tracks applied schema — see [ADR-0034](adr/ADR-0034-opt-in-schema-migration.md).
 8. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.
 9. **Cycles vs audit log:** typed `task_cycles` / `task_cycle_phases` are authoritative for live execution state. Every mutation mirrors into `task_events` in the same SQL transaction. Do not merge those concerns back into a single store.
-10. **Agent worker is single-process.** No retry/backoff; one attempt per task. No per-cycle workspace isolation — sequential runs share the working directory.
+10. **Agent worker is single-process.** Pool size is env-configurable (`HAMIX_AGENT_WORKER_CONCURRENCY`, default 4). No retry/backoff; one attempt per task. Runs on the same worktree share one directory and serialize via `WorktreeGate`.
 11. `dbcheck` does not serve HTTP. `GET /health` and `/health/live` are liveness-only (no DB probe); `/health/ready` does a DB ping + `SELECT 1` plus a workspace directory stat when `app_settings.repo_root` is set.
 12. `taskapi` serves plain HTTP. TLS belongs at a reverse proxy or load balancer.
 13. No CORS (assume same origin or a gateway in front).

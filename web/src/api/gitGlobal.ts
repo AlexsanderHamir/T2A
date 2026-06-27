@@ -1,4 +1,4 @@
-import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind, WorktreeBranch } from "@/types/git";
+import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind } from "@/types/git";
 import type { ProjectListResponse } from "@/types/project";
 import { parseProjectListResponse } from "./projects";
 import {
@@ -9,8 +9,6 @@ import {
   parseGitRepositoryList,
   parseGitWorktree,
   parseGitWorktreeList,
-  parseWorktreeBranch,
-  parseWorktreeBranchList,
 } from "./parseGitApi";
 import { assertTaskPathId } from "./taskRequestBounds";
 import { apiErrorFromResponse, fetchWithTimeout, jsonHeaders } from "./shared";
@@ -164,45 +162,6 @@ export async function listGlobalGitLiveBranches(
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
   return parseGitLiveBranchList((await res.json()) as unknown);
-}
-
-export async function listWorktreeBranchAssociations(
-  worktreeId: string,
-  options?: { signal?: AbortSignal },
-): Promise<WorktreeBranch[]> {
-  const wtId = assertTaskPathId(worktreeId, "worktree id");
-  const res = await fetchWithTimeout(
-    `${gitRoot}/worktrees/${encodeURIComponent(wtId)}/branches`,
-    { headers: { Accept: "application/json" }, signal: options?.signal },
-  );
-  if (!res.ok) throw await apiErrorFromResponse(res);
-  return parseWorktreeBranchList((await res.json()) as unknown);
-}
-
-export async function associateWorktreeBranch(
-  worktreeId: string,
-  input: { branch_id?: string; name?: string; start_point?: string; create_branch?: boolean },
-): Promise<WorktreeBranch> {
-  const wtId = assertTaskPathId(worktreeId, "worktree id");
-  const res = await fetchWithTimeout(
-    `${gitRoot}/worktrees/${encodeURIComponent(wtId)}/branches`,
-    { method: "POST", headers: jsonHeaders, body: JSON.stringify(input) },
-  );
-  if (!res.ok) throw await apiErrorFromResponse(res);
-  return parseWorktreeBranch((await res.json()) as unknown);
-}
-
-export async function removeWorktreeBranchAssociation(
-  worktreeId: string,
-  branchId: string,
-): Promise<void> {
-  const wtId = assertTaskPathId(worktreeId, "worktree id");
-  const brId = assertTaskPathId(branchId, "branch id");
-  const res = await fetchWithTimeout(
-    `${gitRoot}/worktrees/${encodeURIComponent(wtId)}/branches/${encodeURIComponent(brId)}`,
-    { method: "DELETE" },
-  );
-  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export async function reconcileGlobalGitRepository(
