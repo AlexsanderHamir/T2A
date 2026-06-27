@@ -255,6 +255,7 @@ func summariesFromTemplateRows(rows []model.TaskTemplate) []Summary {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func detailFromDraft(row model.TaskDraft) *Detail {
 	return &Detail{
 		ID: row.ID, Name: row.Name, Payload: json.RawMessage(row.PayloadJSON),
@@ -262,6 +263,7 @@ func detailFromDraft(row model.TaskDraft) *Detail {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func detailFromTemplate(row model.TaskTemplate) *Detail {
 	return &Detail{
 		ID: row.ID, Name: row.Name, Payload: json.RawMessage(row.PayloadJSON),

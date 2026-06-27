@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitRepository(d domain.GitRepository) GitRepository {
 	return GitRepository{
 		ID:            d.ID,
@@ -13,6 +14,7 @@ func FromDomainGitRepository(d domain.GitRepository) GitRepository {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitRepositories(rows []domain.GitRepository) []GitRepository {
 	if len(rows) == 0 {
 		return nil
@@ -24,6 +26,7 @@ func FromDomainGitRepositories(rows []domain.GitRepository) []GitRepository {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitRepository(m GitRepository) domain.GitRepository {
 	return domain.GitRepository{
 		ID:            m.ID,
@@ -35,6 +38,7 @@ func ToDomainGitRepository(m GitRepository) domain.GitRepository {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitRepositories(rows []GitRepository) []domain.GitRepository {
 	if len(rows) == 0 {
 		return nil
@@ -46,6 +50,7 @@ func ToDomainGitRepositories(rows []GitRepository) []domain.GitRepository {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitWorktree(d domain.GitWorktree) GitWorktree {
 	return GitWorktree{
 		ID:           d.ID,
@@ -58,6 +63,7 @@ func FromDomainGitWorktree(d domain.GitWorktree) GitWorktree {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitWorktrees(rows []domain.GitWorktree) []GitWorktree {
 	if len(rows) == 0 {
 		return nil
@@ -69,6 +75,7 @@ func FromDomainGitWorktrees(rows []domain.GitWorktree) []GitWorktree {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitWorktree(m GitWorktree) domain.GitWorktree {
 	return domain.GitWorktree{
 		ID:           m.ID,
@@ -81,6 +88,7 @@ func ToDomainGitWorktree(m GitWorktree) domain.GitWorktree {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitWorktrees(rows []GitWorktree) []domain.GitWorktree {
 	if len(rows) == 0 {
 		return nil
@@ -92,6 +100,7 @@ func ToDomainGitWorktrees(rows []GitWorktree) []domain.GitWorktree {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitBranch(d domain.GitBranch) GitBranch {
 	return GitBranch{
 		ID:           d.ID,
@@ -102,6 +111,7 @@ func FromDomainGitBranch(d domain.GitBranch) GitBranch {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainGitBranches(rows []domain.GitBranch) []GitBranch {
 	if len(rows) == 0 {
 		return nil
@@ -113,6 +123,7 @@ func FromDomainGitBranches(rows []domain.GitBranch) []GitBranch {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitBranch(m GitBranch) domain.GitBranch {
 	return domain.GitBranch{
 		ID:           m.ID,
@@ -123,6 +134,7 @@ func ToDomainGitBranch(m GitBranch) domain.GitBranch {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainGitBranches(rows []GitBranch) []domain.GitBranch {
 	if len(rows) == 0 {
 		return nil

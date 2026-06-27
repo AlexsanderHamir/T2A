@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCriteriaReport(d domain.TaskCycleCriteriaReport) TaskCycleCriteriaReport {
 	return TaskCycleCriteriaReport{
 		ID:          d.ID,
@@ -14,6 +15,7 @@ func FromDomainTaskCycleCriteriaReport(d domain.TaskCycleCriteriaReport) TaskCyc
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCriteriaReports(rows []domain.TaskCycleCriteriaReport) []TaskCycleCriteriaReport {
 	if len(rows) == 0 {
 		return nil
@@ -25,6 +27,7 @@ func FromDomainTaskCycleCriteriaReports(rows []domain.TaskCycleCriteriaReport) [
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCriteriaReport(m TaskCycleCriteriaReport) domain.TaskCycleCriteriaReport {
 	return domain.TaskCycleCriteriaReport{
 		ID:          m.ID,
@@ -37,6 +40,7 @@ func ToDomainTaskCycleCriteriaReport(m TaskCycleCriteriaReport) domain.TaskCycle
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCriteriaReportPtr(m *TaskCycleCriteriaReport) *domain.TaskCycleCriteriaReport {
 	if m == nil {
 		return nil
@@ -45,6 +49,7 @@ func ToDomainTaskCycleCriteriaReportPtr(m *TaskCycleCriteriaReport) *domain.Task
 	return &d
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCriteriaReports(rows []TaskCycleCriteriaReport) []domain.TaskCycleCriteriaReport {
 	if len(rows) == 0 {
 		return nil
@@ -56,6 +61,7 @@ func ToDomainTaskCycleCriteriaReports(rows []TaskCycleCriteriaReport) []domain.T
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleVerifyReport(d domain.TaskCycleVerifyReport) TaskCycleVerifyReport {
 	return TaskCycleVerifyReport{
 		ID:           d.ID,
@@ -69,6 +75,7 @@ func FromDomainTaskCycleVerifyReport(d domain.TaskCycleVerifyReport) TaskCycleVe
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleVerifyReports(rows []domain.TaskCycleVerifyReport) []TaskCycleVerifyReport {
 	if len(rows) == 0 {
 		return nil
@@ -80,6 +87,7 @@ func FromDomainTaskCycleVerifyReports(rows []domain.TaskCycleVerifyReport) []Tas
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleVerifyReport(m TaskCycleVerifyReport) domain.TaskCycleVerifyReport {
 	return domain.TaskCycleVerifyReport{
 		ID:           m.ID,
@@ -93,6 +101,7 @@ func ToDomainTaskCycleVerifyReport(m TaskCycleVerifyReport) domain.TaskCycleVeri
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleVerifyReports(rows []TaskCycleVerifyReport) []domain.TaskCycleVerifyReport {
 	if len(rows) == 0 {
 		return nil
@@ -104,6 +113,7 @@ func ToDomainTaskCycleVerifyReports(rows []TaskCycleVerifyReport) []domain.TaskC
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCommandRun(d domain.TaskCycleCommandRun) TaskCycleCommandRun {
 	return TaskCycleCommandRun{
 		ID:          d.ID,
@@ -117,6 +127,7 @@ func FromDomainTaskCycleCommandRun(d domain.TaskCycleCommandRun) TaskCycleComman
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCommandRuns(rows []domain.TaskCycleCommandRun) []TaskCycleCommandRun {
 	if len(rows) == 0 {
 		return nil
@@ -128,6 +139,7 @@ func FromDomainTaskCycleCommandRuns(rows []domain.TaskCycleCommandRun) []TaskCyc
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCommandRun(m TaskCycleCommandRun) domain.TaskCycleCommandRun {
 	return domain.TaskCycleCommandRun{
 		ID:          m.ID,
@@ -141,6 +153,7 @@ func ToDomainTaskCycleCommandRun(m TaskCycleCommandRun) domain.TaskCycleCommandR
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCommandRuns(rows []TaskCycleCommandRun) []domain.TaskCycleCommandRun {
 	if len(rows) == 0 {
 		return nil

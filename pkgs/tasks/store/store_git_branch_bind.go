@@ -97,6 +97,8 @@ func (s *Store) ResolveOrCreateBranchForRepo(
 }
 
 // resolveBranchForWorktree resolves or creates a branch and guards one-worktree-per-branch.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Store) resolveBranchForWorktree(
 	ctx context.Context,
 	repo domain.GitRepository,

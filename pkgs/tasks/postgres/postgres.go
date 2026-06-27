@@ -80,6 +80,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 			return fmt.Errorf("drop project context kind constraint: %w", err)
 		}
 	}
+	if err := migrateExpandFixedWorktreeBranch(ctx, db); err != nil {
+		return fmt.Errorf("expand fixed worktree branch: %w", err)
+	}
 	if err := db.WithContext(ctx).AutoMigrate(
 		&domain.Project{},
 		&domain.Task{},

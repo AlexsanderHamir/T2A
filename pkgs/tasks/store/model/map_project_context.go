@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainProjectContextItem(d domain.ProjectContextItem) ProjectContextItem {
 	return ProjectContextItem{
 		ID:            d.ID,
@@ -18,6 +19,7 @@ func FromDomainProjectContextItem(d domain.ProjectContextItem) ProjectContextIte
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProjectContextItem(m ProjectContextItem) domain.ProjectContextItem {
 	return domain.ProjectContextItem{
 		ID:            m.ID,
@@ -34,6 +36,7 @@ func ToDomainProjectContextItem(m ProjectContextItem) domain.ProjectContextItem 
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProjectContextItems(rows []ProjectContextItem) []domain.ProjectContextItem {
 	if len(rows) == 0 {
 		return nil
@@ -45,6 +48,7 @@ func ToDomainProjectContextItems(rows []ProjectContextItem) []domain.ProjectCont
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainProjectContextEdge(d domain.ProjectContextEdge) ProjectContextEdge {
 	return ProjectContextEdge{
 		ID:              d.ID,
@@ -59,6 +63,7 @@ func FromDomainProjectContextEdge(d domain.ProjectContextEdge) ProjectContextEdg
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProjectContextEdge(m ProjectContextEdge) domain.ProjectContextEdge {
 	return domain.ProjectContextEdge{
 		ID:              m.ID,
@@ -73,6 +78,7 @@ func ToDomainProjectContextEdge(m ProjectContextEdge) domain.ProjectContextEdge 
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProjectContextEdges(rows []ProjectContextEdge) []domain.ProjectContextEdge {
 	if len(rows) == 0 {
 		return nil

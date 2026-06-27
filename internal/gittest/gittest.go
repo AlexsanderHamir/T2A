@@ -132,6 +132,8 @@ func SeedWorktreeTemp(t *testing.T, st *store.Store) (worktreeID, workDir string
 }
 
 // SeedWorktreeBranch is deprecated: use SeedWorktree. Returns worktreeID twice for legacy call sites.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func SeedWorktreeBranch(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID, worktreeBranchID string) {
 	t.Helper()
 	wtID, brID := SeedWorktree(t, st, repoDir)
@@ -139,6 +141,8 @@ func SeedWorktreeBranch(t *testing.T, st *store.Store, repoDir string) (worktree
 }
 
 // SeedWorktreeBranchTemp is deprecated: use SeedWorktreeTemp.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func SeedWorktreeBranchTemp(t *testing.T, st *store.Store) (worktreeBranchID, workDir string) {
 	t.Helper()
 	wtID, dir := SeedWorktreeTemp(t, st)

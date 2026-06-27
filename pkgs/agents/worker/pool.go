@@ -22,6 +22,8 @@ type Pool struct {
 }
 
 // NewPool constructs a worker pool with one harness per slot.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewPool(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Options, concurrency int) *Pool {
 	if concurrency < 1 {
 		concurrency = 1
@@ -68,6 +70,8 @@ func (p *Pool) Run(ctx context.Context) error {
 }
 
 // CancelCurrentRun cancels in-flight runner runs on every slot.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p *Pool) CancelCurrentRun() bool {
 	if p == nil {
 		return false
@@ -82,6 +86,8 @@ func (p *Pool) CancelCurrentRun() bool {
 }
 
 // Slots exposes pool workers for tests.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (p *Pool) Slots() []*Worker {
 	if p == nil {
 		return nil

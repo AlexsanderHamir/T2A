@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskDraft(d domain.TaskDraft) TaskDraft {
 	return TaskDraft{
 		ID:          d.ID,
@@ -12,6 +13,7 @@ func FromDomainTaskDraft(d domain.TaskDraft) TaskDraft {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskDraftPtr(d *domain.TaskDraft) *TaskDraft {
 	if d == nil {
 		return nil
@@ -20,6 +22,7 @@ func FromDomainTaskDraftPtr(d *domain.TaskDraft) *TaskDraft {
 	return &m
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskDraft(m TaskDraft) domain.TaskDraft {
 	return domain.TaskDraft{
 		ID:          m.ID,
@@ -30,6 +33,7 @@ func ToDomainTaskDraft(m TaskDraft) domain.TaskDraft {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskDrafts(rows []TaskDraft) []domain.TaskDraft {
 	if len(rows) == 0 {
 		return nil
@@ -41,6 +45,7 @@ func ToDomainTaskDrafts(rows []TaskDraft) []domain.TaskDraft {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskTemplate(d domain.TaskTemplate) TaskTemplate {
 	return TaskTemplate{
 		ID:          d.ID,
@@ -51,6 +56,7 @@ func FromDomainTaskTemplate(d domain.TaskTemplate) TaskTemplate {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskTemplatePtr(d *domain.TaskTemplate) *TaskTemplate {
 	if d == nil {
 		return nil
@@ -59,6 +65,7 @@ func FromDomainTaskTemplatePtr(d *domain.TaskTemplate) *TaskTemplate {
 	return &m
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskTemplate(m TaskTemplate) domain.TaskTemplate {
 	return domain.TaskTemplate{
 		ID:          m.ID,
@@ -69,6 +76,7 @@ func ToDomainTaskTemplate(m TaskTemplate) domain.TaskTemplate {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskTemplates(rows []TaskTemplate) []domain.TaskTemplate {
 	if len(rows) == 0 {
 		return nil

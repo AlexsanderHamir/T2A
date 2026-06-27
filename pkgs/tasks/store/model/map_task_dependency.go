@@ -7,6 +7,8 @@ import (
 )
 
 // FromDomainTaskDependency copies a domain row to its persistence model.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskDependency(d domain.TaskDependency) TaskDependency {
 	return TaskDependency{
 		TaskID:          d.TaskID,
@@ -17,6 +19,8 @@ func FromDomainTaskDependency(d domain.TaskDependency) TaskDependency {
 }
 
 // ToDomainTaskDependency copies a persistence row to domain.TaskDependency.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskDependency(m TaskDependency) domain.TaskDependency {
 	return domain.TaskDependency{
 		TaskID:          m.TaskID,
@@ -27,6 +31,8 @@ func ToDomainTaskDependency(m TaskDependency) domain.TaskDependency {
 }
 
 // ToDomainTaskDependencies maps persistence rows to domain.TaskDependency.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskDependencies(rows []TaskDependency) []domain.TaskDependency {
 	if len(rows) == 0 {
 		return nil
@@ -39,6 +45,8 @@ func ToDomainTaskDependencies(rows []TaskDependency) []domain.TaskDependency {
 }
 
 // NewTaskDependencyRow builds a persistence row for insert.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewTaskDependencyRow(taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies, at time.Time) TaskDependency {
 	return TaskDependency{
 		TaskID:          taskID,

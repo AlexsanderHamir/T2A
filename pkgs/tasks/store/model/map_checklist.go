@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskChecklistItem(d domain.TaskChecklistItem) TaskChecklistItem {
 	return TaskChecklistItem{
 		ID:        d.ID,
@@ -11,6 +12,7 @@ func FromDomainTaskChecklistItem(d domain.TaskChecklistItem) TaskChecklistItem {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskChecklistItemPtr(d *domain.TaskChecklistItem) *TaskChecklistItem {
 	if d == nil {
 		return nil
@@ -19,6 +21,7 @@ func FromDomainTaskChecklistItemPtr(d *domain.TaskChecklistItem) *TaskChecklistI
 	return &m
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistItem(m TaskChecklistItem) domain.TaskChecklistItem {
 	return domain.TaskChecklistItem{
 		ID:        m.ID,
@@ -28,6 +31,7 @@ func ToDomainTaskChecklistItem(m TaskChecklistItem) domain.TaskChecklistItem {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistItems(rows []TaskChecklistItem) []domain.TaskChecklistItem {
 	if len(rows) == 0 {
 		return nil
@@ -39,6 +43,7 @@ func ToDomainTaskChecklistItems(rows []TaskChecklistItem) []domain.TaskChecklist
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskChecklistCompletion(d domain.TaskChecklistCompletion) TaskChecklistCompletion {
 	return TaskChecklistCompletion{
 		TaskID:            d.TaskID,
@@ -52,6 +57,7 @@ func FromDomainTaskChecklistCompletion(d domain.TaskChecklistCompletion) TaskChe
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistCompletion(m TaskChecklistCompletion) domain.TaskChecklistCompletion {
 	return domain.TaskChecklistCompletion{
 		TaskID:            m.TaskID,
@@ -65,6 +71,7 @@ func ToDomainTaskChecklistCompletion(m TaskChecklistCompletion) domain.TaskCheck
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistCompletions(rows []TaskChecklistCompletion) []domain.TaskChecklistCompletion {
 	if len(rows) == 0 {
 		return nil
@@ -76,6 +83,7 @@ func ToDomainTaskChecklistCompletions(rows []TaskChecklistCompletion) []domain.T
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskChecklistItemCommand(d domain.TaskChecklistItemCommand) TaskChecklistItemCommand {
 	return TaskChecklistItemCommand{
 		ID:              d.ID,
@@ -86,6 +94,7 @@ func FromDomainTaskChecklistItemCommand(d domain.TaskChecklistItemCommand) TaskC
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistItemCommand(m TaskChecklistItemCommand) domain.TaskChecklistItemCommand {
 	return domain.TaskChecklistItemCommand{
 		ID:              m.ID,
@@ -96,6 +105,7 @@ func ToDomainTaskChecklistItemCommand(m TaskChecklistItemCommand) domain.TaskChe
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskChecklistItemCommands(rows []TaskChecklistItemCommand) []domain.TaskChecklistItemCommand {
 	if len(rows) == 0 {
 		return nil

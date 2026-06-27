@@ -3,6 +3,8 @@ package model
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // FromDomainAppSettings copies a domain row to its persistence model.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainAppSettings(d domain.AppSettings) AppSettings {
 	return AppSettings{
 		ID:                          d.ID,
@@ -27,6 +29,8 @@ func FromDomainAppSettings(d domain.AppSettings) AppSettings {
 }
 
 // ToDomainAppSettings copies a persistence row to domain.AppSettings.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainAppSettings(m AppSettings) domain.AppSettings {
 	return domain.AppSettings{
 		ID:                          m.ID,

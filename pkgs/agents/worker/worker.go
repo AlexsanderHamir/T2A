@@ -33,6 +33,8 @@ func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Opt
 }
 
 // NewWorkerWithGate constructs a Worker that shares gate with a pool.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewWorkerWithGate(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Options, gate *WorktreeGate) *Worker {
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout

@@ -4,6 +4,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskContextSnapshot(d domain.TaskContextSnapshot) TaskContextSnapshot {
 	return TaskContextSnapshot{
 		ID:              d.ID,
@@ -17,6 +18,7 @@ func FromDomainTaskContextSnapshot(d domain.TaskContextSnapshot) TaskContextSnap
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskContextSnapshot(m TaskContextSnapshot) domain.TaskContextSnapshot {
 	return domain.TaskContextSnapshot{
 		ID:              m.ID,

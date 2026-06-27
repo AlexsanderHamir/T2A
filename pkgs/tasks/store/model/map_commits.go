@@ -2,6 +2,7 @@ package model
 
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCommit(d domain.TaskCycleCommit) TaskCycleCommit {
 	return TaskCycleCommit{
 		ID:          d.ID,
@@ -19,6 +20,7 @@ func FromDomainTaskCycleCommit(d domain.TaskCycleCommit) TaskCycleCommit {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskCycleCommits(rows []domain.TaskCycleCommit) []TaskCycleCommit {
 	if len(rows) == 0 {
 		return nil
@@ -30,6 +32,7 @@ func FromDomainTaskCycleCommits(rows []domain.TaskCycleCommit) []TaskCycleCommit
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCommit(m TaskCycleCommit) domain.TaskCycleCommit {
 	return domain.TaskCycleCommit{
 		ID:          m.ID,
@@ -47,6 +50,7 @@ func ToDomainTaskCycleCommit(m TaskCycleCommit) domain.TaskCycleCommit {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskCycleCommits(rows []TaskCycleCommit) []domain.TaskCycleCommit {
 	if len(rows) == 0 {
 		return nil

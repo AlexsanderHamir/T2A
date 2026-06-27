@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func gormColumnName(sf reflect.StructField) (string, bool) {
 	tag := sf.Tag.Get("gorm")
 	if tag == "" {
@@ -29,6 +30,7 @@ func gormColumnName(sf reflect.StructField) (string, bool) {
 	return schema.NamingStrategy{}.ColumnName("", sf.Name), true
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func isAssociationField(sf reflect.StructField) bool {
 	tag := sf.Tag.Get("gorm")
 	if strings.Contains(tag, "foreignKey:") || strings.Contains(tag, "references:") {
@@ -43,6 +45,7 @@ func isAssociationField(sf reflect.StructField) bool {
 	return false
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func domainPersistedFields(domainType reflect.Type) []reflect.StructField {
 	var out []reflect.StructField
 	for i := 0; i < domainType.NumField(); i++ {
@@ -65,6 +68,7 @@ func domainPersistedFields(domainType reflect.Type) []reflect.StructField {
 	return out
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func modelFieldByColumn(modelType reflect.Type, column string) (reflect.StructField, bool) {
 	for i := 0; i < modelType.NumField(); i++ {
 		sf := modelType.Field(i)
@@ -77,6 +81,8 @@ func modelFieldByColumn(modelType reflect.Type, column string) (reflect.StructFi
 
 // assertFieldParity reports whether every persisted domain column has a model
 // counterpart with the same Go type and column name.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func assertFieldParity(pair ParityPair) error {
 	dt := reflect.TypeOf(pair.Domain)
 	if dt.Kind() == reflect.Pointer {
@@ -100,6 +106,7 @@ func assertFieldParity(pair ParityPair) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func sortedStrings(ss []string) []string {
 	cp := append([]string(nil), ss...)
 	sort.Strings(cp)

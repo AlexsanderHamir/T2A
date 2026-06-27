@@ -12,6 +12,7 @@ type WorktreeGate struct {
 	locks sync.Map // worktreeID -> *sync.Mutex
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (g *WorktreeGate) mutex(worktreeID string) *sync.Mutex {
 	v, _ := g.locks.LoadOrStore(worktreeID, &sync.Mutex{})
 	return v.(*sync.Mutex)

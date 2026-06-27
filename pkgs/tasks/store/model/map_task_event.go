@@ -3,6 +3,8 @@ package model
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // FromDomainTaskEvent copies a domain row to its persistence model.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainTaskEvent(d domain.TaskEvent) TaskEvent {
 	return TaskEvent{
 		TaskID:         d.TaskID,
@@ -18,6 +20,8 @@ func FromDomainTaskEvent(d domain.TaskEvent) TaskEvent {
 }
 
 // ToDomainTaskEvent copies a persistence row to domain.TaskEvent.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskEvent(m TaskEvent) domain.TaskEvent {
 	return domain.TaskEvent{
 		TaskID:         m.TaskID,
@@ -33,6 +37,8 @@ func ToDomainTaskEvent(m TaskEvent) domain.TaskEvent {
 }
 
 // ToDomainTaskEvents maps a slice of persistence rows to domain.TaskEvent.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainTaskEvents(rows []TaskEvent) []domain.TaskEvent {
 	if len(rows) == 0 {
 		return nil

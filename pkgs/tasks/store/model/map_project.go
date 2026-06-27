@@ -3,6 +3,8 @@ package model
 import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 
 // FromDomainProject copies a domain row to its persistence model.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FromDomainProject(d domain.Project) Project {
 	return Project{
 		ID:             d.ID,
@@ -17,6 +19,8 @@ func FromDomainProject(d domain.Project) Project {
 }
 
 // ToDomainProject copies a persistence row to domain.Project.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProject(m Project) domain.Project {
 	return domain.Project{
 		ID:             m.ID,
@@ -31,6 +35,8 @@ func ToDomainProject(m Project) domain.Project {
 }
 
 // ToDomainProjects maps persistence rows to domain.Project.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ToDomainProjects(rows []Project) []domain.Project {
 	if len(rows) == 0 {
 		return nil
