@@ -19,15 +19,16 @@ When no git repository is registered:
 - `GET /repo/*` returns **400** without `worktree_id` query param, or **404** for unknown worktree.
 - Prompts with `@`-mentions require `worktree_id` on create/patch.
 
-Operators manage repositories, worktrees, and branches on the **`/worktrees`** SPA page (not Settings).
+Operators manage repositories, worktrees, and branches in the SPA (not Settings):
 
-## Operator setup flow (SPA)
+- **`/worktrees`** — repository list; register a main checkout here.
+- **`/worktrees/:repositoryId`** — worktrees for one repository: reconcile, register/create/unregister worktrees, delete repository.
 
 Hamix expects operators to follow **repository → worktree (+ branch) → task**:
 
-1. **Register repository** — path to the main git checkout only (no branch field).
-2. **Register worktree** or **Create worktree** — pick or add a linked directory and bind a branch in the same step (existing live branch or create new). The branch is fixed for the life of the worktree row.
-3. **`/worktrees?register=1`** — deep link that opens the register-repository modal.
+1. **Register repository** on `/worktrees` — path to the main git checkout only (no branch field).
+2. Open the repository and **Register worktree** or **Create worktree** — pick or add a linked directory and bind a branch in the same step (existing live branch or create new). The branch is fixed for the life of the worktree row.
+3. **`/worktrees?register=1`** — deep link that opens the register-repository modal on the list page.
 4. **Task create gate** — **New task** / **Start fresh** require at least one registered repository.
 
 **Unregister vs remove from disk:** **Unregister worktree** in the SPA (or `DELETE /git/worktrees/{id}`) drops only the Hamix inventory row. The linked checkout directory and `git worktree` entry stay on disk — the path reappears in live inventory (`registered: false`) so you can **Register worktree** again. To delete the directory from git, run `git worktree remove` outside Hamix. **Create worktree** is the opposite: Hamix runs `git worktree add` and registers the new row.
@@ -36,12 +37,12 @@ Hamix expects operators to follow **repository → worktree (+ branch) → task*
 
 ## Reconcile and path repair
 
-Hamix stores **absolute paths** for repositories and worktrees. Renaming or moving directories on disk does not update the DB automatically. Use **Reconcile** on the repository card to sync Hamix with `git worktree list` while **preserving worktree IDs** (tasks and projects keep their bindings).
+Hamix stores **absolute paths** for repositories and worktrees. Renaming or moving directories on disk does not update the DB automatically. Use **Reconcile** on the repository detail page to sync Hamix with `git worktree list` while **preserving worktree IDs** (tasks and projects keep their bindings).
 
 **Operator playbook when folders move:**
 
 1. Prefer `git worktree repair` (or `git worktree move`) so git metadata stays consistent.
-2. Click **Reconcile** on `/worktrees`. When the stored main path is missing, Hamix returns `needs_bootstrap_path` and opens **Relocate repository** — pick the checkout on disk. Hamix verifies branch HEAD / common dir before updating paths.
+2. Click **Reconcile** on the repository detail page (`/worktrees/:repositoryId`). When the stored main path is missing, Hamix returns `needs_bootstrap_path` and opens **Relocate repository** — pick the checkout on disk. Hamix verifies branch HEAD / common dir before updating paths.
 3. For a single linked worktree with a known new path, use `POST /git/worktrees/{worktreeId}/relocate` (API) or register/reconcile from the UI.
 
 **What reconcile does:**
