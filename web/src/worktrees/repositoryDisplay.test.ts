@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   repositoryDisplayName,
+  repositoryMatchesSearchQuery,
   repositoryPathsEquivalent,
   shouldShowWorktreePath,
   splitWorktreePath,
@@ -57,5 +58,20 @@ describe("worktreePathLabel", () => {
 
   it("shows a relative suffix when the worktree is under the repository path", () => {
     expect(worktreePathLabel("/repo/main/feature", "/repo/main")).toBe("feature");
+  });
+});
+
+describe("repositoryMatchesSearchQuery", () => {
+  const repo = {
+    path: "/repo/hamix",
+    host_path: "C:/Users/dev/Documents/hamix",
+  };
+
+  it("matches display name, path, and host path", () => {
+    expect(repositoryMatchesSearchQuery(repo, "")).toBe(true);
+    expect(repositoryMatchesSearchQuery(repo, "hamix")).toBe(true);
+    expect(repositoryMatchesSearchQuery(repo, "/repo/hamix")).toBe(true);
+    expect(repositoryMatchesSearchQuery(repo, "documents")).toBe(true);
+    expect(repositoryMatchesSearchQuery(repo, "nomatch")).toBe(false);
   });
 });

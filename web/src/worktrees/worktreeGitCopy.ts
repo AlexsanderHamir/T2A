@@ -15,6 +15,7 @@ export const worktreeGitCopy = {
   listColumnName: "Name",
   listColumnBranch: "Branch",
   listColumnWorktreeCount: "Worktrees",
+  searchRepositoriesPlaceholder: "Search by name…",
   cellNotApplicable: "—",
   mainWorktreeShortLabel: "main",
   mainWorktreeLabel: "main worktree",
@@ -69,6 +70,11 @@ export const worktreeGitCopy = {
 
 export function worktreeCountLabel(count: number): string {
   return count === 1 ? "1 worktree" : `${count} worktrees`;
+}
+
+/** Numeric count for repository list cells; the column header already says "Worktrees". */
+export function repositoryListWorktreeCountDisplay(count: number): string {
+  return String(count);
 }
 
 export function worktreeAriaLabel(displayName: string): string {
