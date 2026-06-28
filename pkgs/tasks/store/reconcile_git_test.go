@@ -437,3 +437,66 @@ func TestReconcileGitRepository_preservesRegisteredMainWorktree(t *testing.T) {
 		t.Fatalf("registered main worktree=%+v", rows)
 	}
 }
+
+func TestReconcileGitRepository_doesNotDiscoverAtMainCheckoutPath(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ReconcileGitRepository(ctx, "", repo.ID, ReconcileGitInput{
+		AllowDiscover: true,
+		AllowRemove:   true,
+		RepairGit:     true,
+	}, gitSvc); err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	rows, err := s.ListGitWorktreesByRepo(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("worktrees=%d want 1 (main only, no discover stub)", len(rows))
+	}
+	if !rows[0].IsMain || rows[0].BranchID == "" {
+		t.Fatalf("main row=%+v", rows[0])
+	}
+	for _, row := range rows {
+		if strings.HasPrefix(row.Name, "discovered-") {
+			t.Fatalf("unexpected discover stub at main path: %+v", row)
+		}
+	}
+}
+
+func TestRelocateGitRepository_globalUpdatesRepoPath(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed := filepath.Join(filepath.Dir(main), "relocated-main")
+	if err := os.Rename(main, renamed); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Rename(renamed, main) })
+
+	out, err := s.RelocateGitRepository(ctx, "", repo.ID, renamed, gitSvc)
+	if err != nil {
+		t.Fatalf("RelocateGitRepository: %v", err)
+	}
+	if out.Status != reconcileStatusOK {
+		t.Fatalf("status=%q want ok", out.Status)
+	}
+	if !out.Report.RepoPathUpdated {
+		t.Fatal("expected repo path update")
+	}
+	got, err := s.GetGitRepositoryByID(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worktreePathKey(got.Path) != worktreePathKey(renamed) {
+		t.Fatalf("repo path=%q want %q", got.Path, renamed)
+	}
+}
