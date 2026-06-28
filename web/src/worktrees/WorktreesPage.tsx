@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { GitRepository } from "@/types";
 import { Button } from "@/components/ui";
@@ -42,6 +42,7 @@ export function WorktreesPage() {
   const [deleteError, setDeleteError] = useState<unknown>(null);
   const [relocateRepository, setRelocateRepository] = useState<GitRepository | null>(null);
   const [reconcileErrors, setReconcileErrors] = useState<Record<string, unknown>>({});
+  const [autoReconcileBlocked, setAutoReconcileBlocked] = useState<Record<string, true>>({});
   const toast = useOptionalToast();
 
   const repositories = repositoriesQuery.data ?? [];
@@ -98,26 +99,30 @@ export function WorktreesPage() {
         mutations.relocateRepository.variables?.repositoryId
       : undefined;
 
-  const handleReconcile = async (repository: GitRepository) => {
-    setReconcileErrors((prev) => {
-      const next = { ...prev };
-      delete next[repository.id];
-      return next;
-    });
-    try {
-      const result = await mutations.reconcile.mutateAsync({
-        repositoryId: repository.id,
-        input: { repair: true },
+  const handleReconcile = useCallback(
+    async (repository: GitRepository) => {
+      setReconcileErrors((prev) => {
+        const next = { ...prev };
+        delete next[repository.id];
+        return next;
       });
-      if (result.status === "needs_bootstrap_path") {
-        setRelocateRepository(repository);
-        return;
+      try {
+        const result = await mutations.reconcile.mutateAsync({
+          repositoryId: repository.id,
+          input: { repair: true },
+        });
+        if (result.status === "needs_bootstrap_path") {
+          setAutoReconcileBlocked((prev) => ({ ...prev, [repository.id]: true }));
+          setRelocateRepository(repository);
+          return;
+        }
+        toast?.success(formatReconcileSuccess(result));
+      } catch (err) {
+        setReconcileErrors((prev) => ({ ...prev, [repository.id]: err }));
       }
-      toast?.success(formatReconcileSuccess(result));
-    } catch (err) {
-      setReconcileErrors((prev) => ({ ...prev, [repository.id]: err }));
-    }
-  };
+    },
+    [mutations.reconcile, toast],
+  );
 
   const closeRelocateModal = () => {
     setRelocateRepository(null);
@@ -129,6 +134,9 @@ export function WorktreesPage() {
     activeRepoModal?.kind === "create-worktree"
       ? activeRepoModal.repository
       : null;
+
+  const activeReconcileBlocked =
+    activeRepository != null && autoReconcileBlocked[activeRepository.id] === true;
 
   return (
     <div className="task-detail-content--enter">
@@ -255,6 +263,7 @@ export function WorktreesPage() {
         reconcileError={
           activeRepository != null ? reconcileErrors[activeRepository.id] : undefined
         }
+        reconcileBlocked={activeReconcileBlocked}
         onReconcile={() => {
           if (activeRepository != null) void handleReconcile(activeRepository);
         }}
@@ -281,6 +290,7 @@ export function WorktreesPage() {
         reconcileError={
           activeRepository != null ? reconcileErrors[activeRepository.id] : undefined
         }
+        reconcileBlocked={activeReconcileBlocked}
         onReconcile={() => {
           if (activeRepository != null) void handleReconcile(activeRepository);
         }}
@@ -317,6 +327,11 @@ export function WorktreesPage() {
           void mutations.relocateRepository
             .mutateAsync({ repositoryId: repo.id, input })
             .then((result) => {
+              setAutoReconcileBlocked((prev) => {
+                const next = { ...prev };
+                delete next[repo.id];
+                return next;
+              });
               closeRelocateModal();
               toast?.success(formatReconcileSuccess(result));
             });

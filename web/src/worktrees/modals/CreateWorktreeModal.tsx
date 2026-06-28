@@ -5,6 +5,8 @@ import { CustomSelect } from "@/components/custom-select";
 import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
+import { useAutoReconcileInventory } from "../hooks/useAutoReconcileInventory";
+import { useLiveInventoryUnreachable } from "../hooks/useLiveInventoryUnreachable";
 import { worktreeGitCopy } from "../worktreeGitCopy";
 import { liveWorktreeOptionLabel } from "../worktreeGitCopy";
 import {
@@ -24,6 +26,7 @@ type Props = {
   storedPath: string;
   reconcilePending?: boolean;
   reconcileError?: unknown;
+  reconcileBlocked?: boolean;
   onReconcile: () => void;
   onClose: () => void;
   onSubmit: (input: {
@@ -43,6 +46,7 @@ export function CreateWorktreeModal({
   storedPath,
   reconcilePending = false,
   reconcileError,
+  reconcileBlocked = false,
   onReconcile,
   onClose,
   onSubmit,
@@ -61,8 +65,14 @@ export function CreateWorktreeModal({
   const liveWorktreesQuery = useGlobalLiveWorktrees(repositoryId, {
     enabled: open && repositoryId !== "",
   });
-  const inventoryUnreachable =
-    liveWorktreesQuery.isError && !liveWorktreesQuery.isLoading && !liveWorktreesQuery.isFetching;
+  const inventoryUnreachable = useLiveInventoryUnreachable(liveWorktreesQuery);
+  useAutoReconcileInventory({
+    enabled: open && repositoryId !== "",
+    inventoryUnreachable,
+    reconcilePending,
+    reconcileBlocked,
+    onReconcile,
+  });
   const referenceOptions = (liveWorktreesQuery.data ?? [])
     .filter((wt) => wt.branch.trim() !== "")
     .map((wt) => ({

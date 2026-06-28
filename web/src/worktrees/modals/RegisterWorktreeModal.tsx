@@ -3,6 +3,8 @@ import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { CustomSelect } from "@/components/custom-select";
 import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
+import { useAutoReconcileInventory } from "../hooks/useAutoReconcileInventory";
+import { useLiveInventoryUnreachable } from "../hooks/useLiveInventoryUnreachable";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 import {
   liveWorktreeOptionLabel,
@@ -27,6 +29,7 @@ type Props = {
   storedPath: string;
   reconcilePending?: boolean;
   reconcileError?: unknown;
+  reconcileBlocked?: boolean;
   onReconcile: () => void;
   onClose: () => void;
   onSubmit: (input: {
@@ -44,6 +47,7 @@ export function RegisterWorktreeModal({
   storedPath,
   reconcilePending = false,
   reconcileError,
+  reconcileBlocked = false,
   onReconcile,
   onClose,
   onSubmit,
@@ -59,8 +63,14 @@ export function RegisterWorktreeModal({
   const liveWorktreesQuery = useGlobalLiveWorktrees(repositoryId, {
     enabled: open && repositoryId !== "",
   });
-  const inventoryUnreachable =
-    liveWorktreesQuery.isError && !liveWorktreesQuery.isLoading && !liveWorktreesQuery.isFetching;
+  const inventoryUnreachable = useLiveInventoryUnreachable(liveWorktreesQuery);
+  useAutoReconcileInventory({
+    enabled: open && repositoryId !== "",
+    inventoryUnreachable,
+    reconcilePending,
+    reconcileBlocked,
+    onReconcile,
+  });
   const liveWorktrees = (liveWorktreesQuery.data ?? []).filter((wt) => !wt.registered);
   const worktreeOptions = liveWorktrees.map((wt) => ({
     value: wt.path,

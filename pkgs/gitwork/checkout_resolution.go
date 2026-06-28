@@ -138,7 +138,7 @@ func (s *DefaultService) VerifySameRepository(ctx context.Context, registered Re
 }
 
 // DiscoverCheckoutNearby scans sibling directories under the parent of CachedMainPath.
-// Returns nil when no match; ErrAmbiguousDiscovery when two or more siblings verify.
+// Returns nil when no match. When multiple siblings verify, prefers the main checkout.
 func (s *DefaultService) DiscoverCheckoutNearby(ctx context.Context, registered RegisteredCheckout) (*Repository, error) {
 	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.DiscoverCheckoutNearby")
 	parent := filepath.Dir(strings.TrimSpace(registered.CachedMainPath))
@@ -177,14 +177,31 @@ func (s *DefaultService) DiscoverCheckoutNearby(ctx context.Context, registered 
 			return nil, err
 		}
 		matches = append(matches, opened)
-		if len(matches) > 1 {
-			return nil, ErrAmbiguousDiscovery
+	}
+	return s.pickMainAmongMatches(ctx, matches)
+}
+
+func (s *DefaultService) pickMainAmongMatches(ctx context.Context, matches []*Repository) (*Repository, error) {
+	switch len(matches) {
+	case 0:
+		return nil, nil
+	case 1:
+		return matches[0], nil
+	}
+	var mainCandidates []*Repository
+	for _, m := range matches {
+		mainRoot, _, err := s.ResolveRegistration(ctx, m.Root)
+		if err != nil {
+			continue
+		}
+		if PathKeyEqual(m.Root, mainRoot) {
+			mainCandidates = append(mainCandidates, m)
 		}
 	}
-	if len(matches) == 0 {
-		return nil, nil
+	if len(mainCandidates) == 1 {
+		return mainCandidates[0], nil
 	}
-	return matches[0], nil
+	return nil, ErrAmbiguousDiscovery
 }
 
 //funclogmeasure:skip category=hot-path reason="Open helper; operation trace is emitted by OpenRegisteredCheckout."

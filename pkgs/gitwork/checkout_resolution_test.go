@@ -181,6 +181,39 @@ func copyDirForTest(t *testing.T, src, dst string) {
 	}
 }
 
+func TestDiscoverCheckoutNearby_prefersMainAmongLinkedWorktrees(t *testing.T) {
+	main := initRepo(t)
+	registered := registeredFromMain(t, main)
+	parent := filepath.Dir(main)
+	wtPath := filepath.Join(parent, "linked-wt")
+	repoGit := openRepoAt(t, main)
+	if _, err := svc().AddWorktree(context.Background(), repoGit, wtPath, gitwork.AddWorktreeOptions{
+		Branch:       "feature",
+		CreateBranch: true,
+	}); err != nil {
+		t.Fatalf("AddWorktree: %v", err)
+	}
+	renamedMain := filepath.Join(parent, "renamed-main")
+	if err := os.Rename(main, renamedMain); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Rename(renamedMain, main) })
+
+	result, err := svc().OpenRegisteredCheckout(context.Background(), gitwork.ResolveInput{
+		Registered:    registered,
+		AllowDiscover: true,
+	})
+	if err != nil {
+		t.Fatalf("OpenRegisteredCheckout: %v", err)
+	}
+	if result.Source != gitwork.ResolveSourceDiscovered {
+		t.Fatalf("source=%q want discovered", result.Source)
+	}
+	if !gitwork.PathKeyEqual(result.OpenedPath, renamedMain) {
+		t.Fatalf("opened=%q want main %q", result.OpenedPath, renamedMain)
+	}
+}
+
 func TestDiscoverCheckoutNearby_ambiguous(t *testing.T) {
 	mainA := initRepo(t)
 	runGit(t, mainA, "commit", "--allow-empty", "-m", "marker")

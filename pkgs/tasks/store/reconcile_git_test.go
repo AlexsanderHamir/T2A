@@ -73,6 +73,51 @@ func TestReconcileGitRepository_mainRenamed_autoDiscover(t *testing.T) {
 	}
 }
 
+func TestReconcileGitRepository_mainRenamed_withLinkedWorktreeSibling(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := filepath.Dir(main)
+	wtPath := filepath.Join(parent, "linked-sibling")
+	repoGit, err := gitSvc.OpenRepository(ctx, main)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gitSvc.AddWorktree(ctx, repoGit, wtPath, gitwork.AddWorktreeOptions{
+		Branch:       "feature",
+		CreateBranch: true,
+	}); err != nil {
+		t.Fatalf("AddWorktree: %v", err)
+	}
+	renamed := filepath.Join(parent, "renamed-with-linked")
+	if err := os.Rename(main, renamed); err != nil {
+		t.Fatalf("rename main: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Rename(renamed, main) })
+
+	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{
+		AllowCheckoutDiscover: true,
+		RepairGit:             true,
+		AllowRemove:           true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Status != reconcileStatusOK {
+		t.Fatalf("status=%q want ok", out.Status)
+	}
+	gotRepo, err := s.GetGitRepository(ctx, domain.DefaultProjectID, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worktreePathKey(gotRepo.Path) != worktreePathKey(renamed) {
+		t.Fatalf("repo path=%q want %q", gotRepo.Path, renamed)
+	}
+}
+
 func TestReconcileGitRepository_mainRenamed_withBootstrap(t *testing.T) {
 	s, ctx, gitSvc := gitTestStore(t)
 	main := initGitRepo(t)

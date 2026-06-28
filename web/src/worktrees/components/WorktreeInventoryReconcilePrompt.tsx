@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import { worktreeGitCopy } from "../worktreeGitCopy";
@@ -17,21 +16,9 @@ export function WorktreeInventoryReconcilePrompt({
   reconcileError,
   onReconcile,
 }: Props) {
-  const autoStartedRef = useRef(false);
   const reconcileErrorMessage =
     reconcileError != null ? gitReconcileErrorMessage(reconcileError) : null;
   const showStatus = pending || reconcileErrorMessage == null;
-
-  useEffect(() => {
-    if (autoStartedRef.current) return;
-    if (pending) {
-      autoStartedRef.current = true;
-      return;
-    }
-    if (reconcileError != null) return;
-    autoStartedRef.current = true;
-    onReconcile();
-  }, [pending, reconcileError, onReconcile]);
 
   return (
     <div className="worktrees-form-modal__inventory-prompt" role="alert">
