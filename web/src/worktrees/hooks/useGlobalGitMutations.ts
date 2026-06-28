@@ -16,6 +16,7 @@ export function useGlobalGitMutations() {
 
   const invalidateRepo = (repositoryId: string) => {
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalRepositories() });
+    void qc.invalidateQueries({ queryKey: gitQueryKeys.globalRepository(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalWorktrees(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalBranches(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalLiveBranches(repositoryId) });

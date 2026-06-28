@@ -9,6 +9,8 @@ export const gitQueryKeys = {
     [...gitQueryKeys.all, "branches", projectId, repositoryId] as const,
   /** Global git tree (ADR-0037). */
   globalRepositories: () => [...gitQueryKeys.all, "global", "repositories"] as const,
+  globalRepository: (repositoryId: string) =>
+    [...gitQueryKeys.all, "global", "repository", repositoryId] as const,
   globalWorktrees: (repositoryId: string) =>
     [...gitQueryKeys.all, "global", "worktrees", repositoryId] as const,
   globalBranches: (repositoryId: string) =>
