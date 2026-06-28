@@ -230,7 +230,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.01em;
 }
 
@@ -265,7 +265,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.01em;
 }
 
@@ -899,4 +899,224 @@ button.worktrees-inventory-add-btn:focus-visible {
 .worktrees-git-selector__manage a {
   color: var(--color-brand);
   font-weight: 500;
+}
+
+/* —— Repository list ( /worktrees ) — flat list inside panel, like templates —— */
+
+.repositories-list {
+  --repositories-list-col-count: 6.5rem;
+  --repositories-list-col-chevron: 1.25rem;
+  --repositories-list-inset-start: var(--space-3);
+}
+
+.repositories-list-head {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    var(--repositories-list-col-count)
+    var(--repositories-list-col-chevron);
+  column-gap: var(--space-3);
+  align-items: center;
+  padding-inline: var(--repositories-list-inset-start) var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.repositories-list-head__label {
+  padding-block: var(--table-header-padding-y-top)
+    var(--table-header-padding-y-bottom);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.repositories-list-head__label--count {
+  justify-self: stretch;
+  text-align: center;
+}
+
+.repositories-list-head__spacer {
+  width: var(--repositories-list-col-chevron);
+  justify-self: end;
+}
+
+.repositories-list-rows {
+  margin-bottom: 0;
+}
+
+.repository-list-row.draft-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    var(--repositories-list-col-count)
+    var(--repositories-list-col-chevron);
+  align-items: center;
+  column-gap: var(--space-3);
+  padding-inline: var(--repositories-list-inset-start) var(--space-3);
+  padding-block: var(--space-3);
+}
+
+.repository-list-row__path {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.repository-list-row__path-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.repository-list-row__path-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.repository-list-row__host-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.repository-list-row__host-path code {
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+.repository-list-row__count {
+  position: relative;
+  z-index: 1;
+  justify-self: stretch;
+  display: flex;
+  justify-content: center;
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.repository-list-row__chevron {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  justify-self: end;
+  color: var(--text-tertiary);
+}
+
+/* —— Repository detail ( /worktrees/:id ) —— */
+
+.repository-detail__header {
+  margin-bottom: var(--space-4);
+}
+
+.repository-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.repository-detail__back:hover {
+  color: var(--text-primary);
+}
+
+.repository-detail__title-block {
+  margin-bottom: var(--space-6);
+}
+
+.repository-detail__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.repository-detail__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.repository-detail__path {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  word-break: break-all;
+}
+
+.repository-detail__path-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.repository-detail__host-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+.repository-detail__host-path code {
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+.worktrees-inventory--detail {
+  --worktrees-inventory-col-count: 0;
+}
+
+.worktrees-inventory--detail .worktrees-inventory-head--detail,
+.worktrees-inventory--detail .worktrees-inventory-row {
+  grid-template-columns:
+    minmax(0, 1fr)
+    var(--worktrees-inventory-col-branch)
+    var(--worktrees-inventory-col-menu);
+  grid-template-areas: "name branch menu";
+}
+
+.worktrees-inventory--detail .worktrees-inventory-row__count {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .repositories-list-head {
+    display: none;
+  }
+
+  .repository-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "main chevron"
+      "count count";
+  }
+
+  .repository-list-row__count {
+    grid-area: count;
+  }
+
+  .repository-list-row__chevron {
+    grid-area: chevron;
+  }
 }
