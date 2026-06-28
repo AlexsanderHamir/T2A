@@ -41,6 +41,7 @@ func resolveDotenvPath(workingDir, flagPath string) (string, error) {
 }
 
 func loadDotenvFile(path string) error {
+	slog.Debug("trace", "operation", "envload.loadDotenvFile")
 	if _, err := os.Stat(path); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf(".env not found at %s — copy .env.example to .env in the repo root and set DATABASE_URL", path)
