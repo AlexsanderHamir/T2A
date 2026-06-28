@@ -156,3 +156,86 @@ func TestStore_ProjectRepositoryBinding(t *testing.T) {
 		t.Fatalf("got %v want project_repo_mismatch", err)
 	}
 }
+
+func TestDeleteGitWorktreeByID_rejectsRunningTask(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-running-global")
+	wt, err := s.CreateGitWorktreeForRepo(ctx, repo.ID, CreateGitWorktreeInput{
+		Path:         wtPath,
+		Branch:       "running-global",
+		CreateBranch: true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wtID := wt.ID
+	task := domain.Task{
+		ID:            "task-global-running",
+		Title:         "running",
+		InitialPrompt: "x",
+		Status:        domain.StatusRunning,
+		Priority:      domain.PriorityMedium,
+		Runner:        "cursor",
+		WorktreeID:    &wtID,
+	}
+	if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+	err = s.DeleteGitWorktreeByID(ctx, wt.ID, true, gitSvc)
+	if domain.GitErrCode(err) != domain.GitCodeHasRunningTask {
+		t.Fatalf("got %v want has_running_task", err)
+	}
+}
+
+func TestRelocateGitWorktree_updatesRegisteredPath(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-reloc-store")
+	wt, err := s.CreateGitWorktreeForRepo(ctx, repo.ID, CreateGitWorktreeInput{
+		Path:         wtPath,
+		Branch:       "reloc-store",
+		CreateBranch: true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	movedPath := filepath.Join(filepath.Dir(main), "wt-reloc-store-moved")
+	runGitStore(t, main, "worktree", "move", wtPath, movedPath)
+	t.Cleanup(func() { _ = os.RemoveAll(movedPath) })
+
+	got, err := s.RelocateGitWorktree(ctx, wt.ID, movedPath, gitSvc)
+	if err != nil {
+		t.Fatalf("RelocateGitWorktree: %v", err)
+	}
+	if worktreePathKey(got.Path) != worktreePathKey(movedPath) {
+		t.Fatalf("path=%q want %q", got.Path, movedPath)
+	}
+}
+
+func TestCreateGitBranchForRepo_global(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	br, err := s.CreateGitBranchForRepo(ctx, repo.ID, CreateGitBranchInput{
+		Name:       "feature-global-branch",
+		StartPoint: "main",
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGitBranchForRepo: %v", err)
+	}
+	if br.Name != "feature-global-branch" || br.HeadSHA == "" {
+		t.Fatalf("branch=%+v", br)
+	}
+}

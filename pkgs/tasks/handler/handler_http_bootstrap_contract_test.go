@@ -53,6 +53,16 @@ func TestHTTP_bootstrap_returns_aggregate_envelope(t *testing.T) {
 	if tasksPayload.Limit != readpolicy.BootstrapListLimit {
 		t.Errorf("tasks.limit = %d, want %d", tasksPayload.Limit, readpolicy.BootstrapListLimit)
 	}
+
+	var projectsPayload struct {
+		Limit int `json:"limit"`
+	}
+	if err := json.Unmarshal(body["projects"], &projectsPayload); err != nil {
+		t.Fatalf("decode projects payload: %v", err)
+	}
+	if projectsPayload.Limit != readpolicy.BootstrapProjectsLimit {
+		t.Errorf("projects.limit = %d, want %d", projectsPayload.Limit, readpolicy.BootstrapProjectsLimit)
+	}
 }
 
 func TestHTTP_bootstrap_returns_304_on_if_none_match(t *testing.T) {

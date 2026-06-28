@@ -186,3 +186,76 @@ func TestRegisterExistingGitWorktree_completesIncompleteDiscoverRow(t *testing.T
 		t.Fatalf("probe after register: %+v err=%v", probe, err)
 	}
 }
+
+func TestRegisterExistingGitWorktree_rejectsDuplicateRegisteredPath(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-dup-register")
+	repoGit := openGitRepo(t, main)
+	if _, err := gitSvc.AddWorktree(ctx, repoGit, wtPath, addWorktreeOpts("dup-branch", true)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RegisterExistingGitWorktree(ctx, repo.ID, wtPath, "first", BindBranchInput{
+		Name: "dup-branch",
+	}, gitSvc); err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+	_, err = s.RegisterExistingGitWorktree(ctx, repo.ID, wtPath, "second", BindBranchInput{
+		Name: "dup-branch",
+	}, gitSvc)
+	if domain.GitErrCode(err) != domain.GitCodePathExists {
+		t.Fatalf("duplicate register: got %v want path_exists", err)
+	}
+}
+
+func TestRepoWorktreeInventory_registeredOnlyWhenBranchBound(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.RepoWorktreeInventory(ctx, repo, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mainRow *WorktreeInventoryRow
+	for i := range rows {
+		if rows[i].IsMain {
+			mainRow = &rows[i]
+			break
+		}
+	}
+	if mainRow == nil {
+		t.Fatal("inventory missing main checkout")
+	}
+	if !mainRow.Registered {
+		t.Fatal("seeded main worktree with branch_id must count as registered")
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-unreg-inv")
+	repoGit := openGitRepo(t, main)
+	if _, err := gitSvc.AddWorktree(ctx, repoGit, wtPath, addWorktreeOpts("unreg-inv", true)); err != nil {
+		t.Fatal(err)
+	}
+	rows, err = s.RepoWorktreeInventory(ctx, repo, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var linkedRow *WorktreeInventoryRow
+	for i := range rows {
+		if worktreePathKey(rows[i].Path) == worktreePathKey(wtPath) {
+			linkedRow = &rows[i]
+			break
+		}
+	}
+	if linkedRow == nil {
+		t.Fatalf("inventory missing linked worktree at %s", wtPath)
+	}
+	if linkedRow.Registered {
+		t.Fatal("unregistered linked worktree must not count as registered")
+	}
+}
