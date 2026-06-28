@@ -61,6 +61,20 @@ $port = if ($env:DEV_TASKAPI_PORT) { [int]$env:DEV_TASKAPI_PORT } else { 8080 }
 $exe = Join-Path $repo $(if ($env:OS -match 'Windows') { 'taskapi-dev.exe' } else { 'taskapi-dev' })
 $readinessSec = if ($Migrate) { Get-DevReadinessTimeoutSec } else { 30 }
 
+$envFile = Join-Path $repo ".env"
+$envExample = Join-Path $repo ".env.example"
+if (-not (Test-Path -LiteralPath $envFile)) {
+    throw @"
+.env not found at:
+  $envFile
+
+Copy .env.example to .env and set DATABASE_URL:
+  Copy-Item '$envExample' '$envFile'
+
+See CONTRIBUTING.md for setup.
+"@
+}
+
 Push-Location $repo
 $api = $null
 try {
@@ -94,7 +108,7 @@ try {
     }
 
     $code = if ($null -ne $api) { $api.ExitCode } else { -1 }
-    throw "taskapi exited on :$port (exit $code). Check logs/taskapi-*.jsonl or run .\scripts\migrate.ps1"
+    throw "taskapi exited on :$port (exit $code) before listening. See stderr above, logs/taskapi-*.jsonl, or run .\scripts\migrate.ps1 if schema changed."
 } finally {
     Pop-Location
     if ($null -ne $api -and -not $api.HasExited) {

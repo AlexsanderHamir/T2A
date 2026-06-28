@@ -14,6 +14,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+ENV_FILE="$ROOT/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo ".env not found at: $ENV_FILE" >&2
+  echo "Copy .env.example to .env and set DATABASE_URL:" >&2
+  echo "  cp .env.example .env" >&2
+  echo "See CONTRIBUTING.md for setup." >&2
+  exit 1
+fi
+
 HOST=""
 VITE_HOST=""
 RUN_MIGRATE=0
@@ -135,5 +144,5 @@ if kill -0 "$API_PID" 2>/dev/null; then
   exit 1
 fi
 
-echo "taskapi exited on :$PORT. Check logs/taskapi-*.jsonl or run ./scripts/migrate.sh" >&2
+echo "taskapi exited on :$PORT before listening. See stderr above, logs/taskapi-*.jsonl, or run ./scripts/migrate.sh if schema changed." >&2
 exit 1

@@ -106,6 +106,7 @@ func runTaskAPIService(port, host, envPath, logDir, logLevelFlag string, disable
 		if dbStartup.db != nil {
 			closeSQLDBOrLog(dbStartup.db)
 		}
+		fmt.Fprintf(os.Stderr, "%s: startup failed: %v\n", cmdName, err)
 		slog.Error("startup failed", "cmd", cmdName, "operation", "taskapi.startup_db", "err", err)
 		return 1
 	}

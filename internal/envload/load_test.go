@@ -3,6 +3,7 @@ package envload
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +32,9 @@ func TestLoad_explicitPath_missingFile(t *testing.T) {
 	_, err := Load(p)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+	if got := err.Error(); !strings.Contains(got, ".env not found") {
+		t.Fatalf("error %q should mention missing .env", got)
 	}
 }
 

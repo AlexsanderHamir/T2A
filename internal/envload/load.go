@@ -40,6 +40,19 @@ func resolveDotenvPath(workingDir, flagPath string) (string, error) {
 	return filepath.Join(root, ".env"), nil
 }
 
+func loadDotenvFile(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf(".env not found at %s — copy .env.example to .env in the repo root and set DATABASE_URL", path)
+		}
+		return fmt.Errorf("stat .env: %w", err)
+	}
+	if err := godotenv.Overload(path); err != nil {
+		return fmt.Errorf("load .env %q: %w", path, err)
+	}
+	return nil
+}
+
 func Load(envFileOverride string) (path string, err error) {
 	slog.Debug("trace", "operation", "envload.Load")
 	wd, err := os.Getwd()
@@ -50,11 +63,11 @@ func Load(envFileOverride string) (path string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve .env path: %w", err)
 	}
-	if err := godotenv.Overload(path); err != nil {
-		return path, fmt.Errorf("godotenv overload %q: %w", path, err)
+	if err := loadDotenvFile(path); err != nil {
+		return path, err
 	}
 	if os.Getenv("DATABASE_URL") == "" {
-		return path, fmt.Errorf("DATABASE_URL is empty after loading %s", path)
+		return path, fmt.Errorf("DATABASE_URL is empty in %s — set a Postgres connection string (see .env.example)", path)
 	}
 	return path, nil
 }
