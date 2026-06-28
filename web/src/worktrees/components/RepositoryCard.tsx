@@ -8,6 +8,7 @@ import {
   repositoryPathsEquivalent,
 } from "../repositoryDisplay";
 import { worktreeGitCopy } from "../worktreeGitCopy";
+import { isLinkedWorktreeForDisplay } from "../worktreeRegistration";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import {
   WorktreesFolderIcon,
@@ -41,9 +42,15 @@ export function RepositoryCard({
 }: Props) {
   const worktreesQuery = useGlobalWorktrees(repository.id);
   const branchesQuery = useGlobalBranches(repository.id);
-  const worktrees = worktreesQuery.data ?? [];
+  const worktrees = (worktreesQuery.data ?? []).filter(isLinkedWorktreeForDisplay);
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
+  const worktreesError =
+    worktreesQuery.isError && !worktreesQuery.isLoading
+      ? worktreesQuery.error instanceof Error
+        ? worktreesQuery.error.message
+        : "Could not load worktrees."
+      : null;
   const reconcileErrorMessage =
     reconcileError != null ? gitReconcileErrorMessage(reconcileError) : null;
   const repoName = repositoryDisplayName(repository.path);
@@ -147,11 +154,17 @@ export function RepositoryCard({
             ]}
           />
         </header>
+        {worktreesError ? (
+          <MutationErrorBanner
+            error={worktreesError}
+            className="worktrees-repo-card__worktrees-error"
+          />
+        ) : null}
         {loading ? (
           <p className="worktrees-repo-card__loading" aria-busy="true">
             Loading worktrees…
           </p>
-        ) : worktrees.length === 0 ? (
+        ) : worktreesError ? null : worktrees.length === 0 ? (
           <EmptyState
             title={worktreeGitCopy.emptyWorktreesTitle}
             description={worktreeGitCopy.emptyWorktreesDescription}

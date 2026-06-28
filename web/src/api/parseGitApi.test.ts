@@ -95,6 +95,34 @@ describe("parseGitApi", () => {
     expect(wt.branch_id).toBe("00000000-0000-4000-8000-000000000030");
   });
 
+  it("parses worktree list when branch_id is empty string from Go JSON", () => {
+    const rows = parseGitWorktreeList({
+      worktrees: [
+        {
+          id: "00000000-0000-4000-8000-000000000020",
+          repository_id: sampleRepo.id,
+          path: "/repo/main",
+          name: "main",
+          is_main: true,
+          branch_id: "",
+          created_at: "2026-06-22T12:00:00Z",
+        },
+        {
+          id: "00000000-0000-4000-8000-000000000021",
+          repository_id: sampleRepo.id,
+          path: "/repo/wt-01",
+          name: "wt-01",
+          is_main: false,
+          branch_id: "00000000-0000-4000-8000-000000000030",
+          created_at: "2026-06-22T12:00:00Z",
+        },
+      ],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.branch_id).toBeUndefined();
+    expect(rows[1]?.branch_id).toBe("00000000-0000-4000-8000-000000000030");
+  });
+
   it("parses live branch list", () => {
     const rows = parseGitLiveBranchList({
       branches: [{ name: "main", head_sha: "deadbeef" }],

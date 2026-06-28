@@ -6,6 +6,7 @@ import { CustomSelect } from "@/components/custom-select";
 import { useGlobalRepositories } from "@/worktrees/hooks/useGlobalRepositories";
 import { useGlobalWorktrees } from "@/worktrees/hooks/useGlobalWorktrees";
 import { useGlobalBranches } from "@/worktrees/hooks/useGlobalBranches";
+import { isFullyRegisteredWorktree } from "@/worktrees/worktreeRegistration";
 
 type Props = {
   idsPrefix: string;
@@ -44,7 +45,7 @@ export function WorktreeSelector({
   const worktreesQuery = useGlobalWorktrees(selectedRepoId, {
     enabled: selectedRepoId !== "",
   });
-  const worktrees = worktreesQuery.data ?? [];
+  const worktrees = (worktreesQuery.data ?? []).filter(isFullyRegisteredWorktree);
 
   const branchesQuery = useGlobalBranches(selectedRepoId, {
     enabled: selectedRepoId !== "",

@@ -258,7 +258,7 @@ func (s *Store) ReconcileGitRepository(
 
 		if input.AllowDiscover {
 			for _, wt := range live {
-				if wt.IsMain {
+				if wt.IsMain || worktreePathKey(wt.Path) == worktreePathKey(mainRoot) {
 					continue
 				}
 				key := worktreePathKey(wt.Path)
@@ -291,6 +291,24 @@ func (s *Store) ReconcileGitRepository(
 
 		if input.AllowRemove {
 			for _, row := range dbRows {
+				if strings.TrimSpace(row.BranchID) == "" {
+					ref, err := hasAnyTaskOnWorktree(ctx, tx, row.ID)
+					if err != nil {
+						return err
+					}
+					if ref {
+						report.WorktreesSkipped = append(report.WorktreesSkipped, ReconcileSkippedWorktree{
+							WorktreeID: row.ID,
+							Reason:     "has_task_ref",
+						})
+						continue
+					}
+					if err := tx.Delete(&model.GitWorktree{}, "id = ?", row.ID).Error; err != nil {
+						return err
+					}
+					report.WorktreesRemoved++
+					continue
+				}
 				if row.IsMain {
 					continue
 				}

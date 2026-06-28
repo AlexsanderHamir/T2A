@@ -139,6 +139,7 @@ export function parseOptionalNonEmptyId(
   field: string,
 ): string | undefined {
   if (v === undefined || v === null) return undefined;
+  if (typeof v === "string" && !v.trim()) return undefined;
   return parseNonEmptyString(v, field);
 }
 

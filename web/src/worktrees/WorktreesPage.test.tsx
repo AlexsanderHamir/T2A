@@ -191,7 +191,7 @@ describe("WorktreesPage", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("feature", { selector: ".draft-row__name" })).toBeInTheDocument();
     expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("main", { selector: ".worktree-row__kind" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("main", { selector: ".draft-row__name" })).not.toBeInTheDocument();
   });
 
   it("maps delete 409 has_running_task to dialog copy", async () => {
@@ -221,13 +221,24 @@ describe("WorktreesPage", () => {
               path: "/repo/feature",
               name: "feature",
               is_main: false,
+              branch_id: branchId,
               created_at: "2026-06-22T12:00:00Z",
             },
           ],
         });
       }
       if (method === "GET" && url.includes(`/git/repositories/${repoId}/branches`)) {
-        return jsonResponse({ branches: [] });
+        return jsonResponse({
+          branches: [
+            {
+              id: branchId,
+              repository_id: repoId,
+              name: "feature",
+              head_sha: "abc123",
+              created_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
       }
       if (method === "DELETE") {
         return jsonResponse(
