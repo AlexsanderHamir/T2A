@@ -182,6 +182,7 @@ func (s *DefaultService) DiscoverCheckoutNearby(ctx context.Context, registered 
 }
 
 func (s *DefaultService) pickMainAmongMatches(ctx context.Context, matches []*Repository) (*Repository, error) {
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.pickMainAmongMatches")
 	switch len(matches) {
 	case 0:
 		return nil, nil
